@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 
 const NAV_ITEMS = [
   { to: "/observatory", label: "Macro Observatory" },
@@ -8,9 +8,9 @@ const NAV_ITEMS = [
 export default function TopNav() {
   return (
     <div className="flex items-center border-b border-border-strong bg-bg px-4 h-10 shrink-0">
-      <div className="font-mono text-[11px] font-bold tracking-[2px] uppercase text-text mr-8 pr-8 border-r border-border">
+      <Link to="/" className="font-mono text-[11px] font-bold tracking-[2px] uppercase text-text mr-8 pr-8 border-r border-border">
         ATE OBSERVATORY
-      </div>
+      </Link>
       <div className="flex">
         {NAV_ITEMS.map((item) => (
           <NavLink
