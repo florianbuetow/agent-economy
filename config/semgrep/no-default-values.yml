@@ -1,0 +1,19 @@
+rules:
+  - id: agent-economy.no-default-parameter-values
+    languages: [python]
+    message: >
+      Default parameter values hide configuration errors. Use explicit required parameters
+      and validate at the call site instead or raise an error when a parameter unexpectedly is missing or not set.
+    severity: ERROR
+    pattern-either:
+      - pattern: |
+          def $FUNC(..., $PARAM=$DEFAULT, ...):
+              ...
+      - pattern: |
+          async def $FUNC(..., $PARAM=$DEFAULT, ...):
+              ...
+    paths:
+      include:
+        - src/
+      exclude:
+        - tests/

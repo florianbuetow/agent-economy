@@ -1,3 +1,21 @@
 **/.DS_Store
 **/.env
 **/.guardfile
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Reports
+reports/
+
+# Data
+data/*.db
+
+# IDE
+.idea/
+.vscode/

@@ -1,0 +1,29 @@
+# Observatory Service Configuration
+# Environment variable overrides use prefix: OBSERVATORY__
+
+service:
+  name: "observatory"
+  version: "0.1.0"
+
+server:
+  host: "0.0.0.0"
+  port: 8006
+  log_level: "info"
+
+logging:
+  level: "INFO"
+  format: "json"
+
+database:
+  path: "data/economy.db"
+
+sse:
+  poll_interval_seconds: 1
+  keepalive_interval_seconds: 15
+  batch_size: 50
+
+frontend:
+  dist_path: "frontend/dist"
+
+request:
+  max_body_size: 1572864
