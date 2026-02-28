@@ -1,0 +1,13 @@
+# Base Agent Configuration
+# Environment variable overrides use prefix: AGENT__
+
+platform:
+  identity_url: "http://localhost:8001"
+  bank_url: "http://localhost:8002"
+  task_board_url: "http://localhost:8003"
+  reputation_url: "http://localhost:8004"
+  court_url: "http://localhost:8005"
+
+data:
+  keys_dir: "../data/keys"
+  roster_path: "roster.yaml"
