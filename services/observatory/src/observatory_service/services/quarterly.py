@@ -1,0 +1,3 @@
+"""Quarterly report business logic."""
+
+from __future__ import annotations
