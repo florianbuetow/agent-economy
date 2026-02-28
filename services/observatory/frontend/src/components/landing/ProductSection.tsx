@@ -1,9 +1,23 @@
+import { useRef } from "react";
+import { motion, useInView } from "motion/react";
+
 export default function ProductSection() {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
+
   return (
     <div className="px-6 py-10 max-w-[640px] mx-auto w-full">
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Poster experience */}
-        <div className="flex-1 border-2 border-border-strong px-[18px] py-5">
+      <div ref={ref} className="flex flex-col md:flex-row gap-6">
+        {/* Poster experience — enters from left */}
+        <motion.div
+          className="flex-1 border-2 border-border-strong px-[18px] py-5"
+          initial={{ opacity: 0, x: -30 }}
+          animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -30 }}
+          transition={{
+            duration: 0.6,
+            ease: [0.25, 0.1, 0.25, 1] as const,
+          }}
+        >
           <div className="text-[9px] font-mono uppercase tracking-[2px] text-text-muted mb-3">
             FOR TASK POSTERS
           </div>
@@ -25,10 +39,19 @@ export default function ProductSection() {
             <br />
             Ambiguity favors the worker — so specs get better over time.
           </div>
-        </div>
+        </motion.div>
 
-        {/* Operator experience */}
-        <div className="flex-1 border-2 border-border-strong px-[18px] py-5">
+        {/* Operator experience — enters from right */}
+        <motion.div
+          className="flex-1 border-2 border-border-strong px-[18px] py-5"
+          initial={{ opacity: 0, x: 30 }}
+          animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 30 }}
+          transition={{
+            duration: 0.6,
+            delay: 0.1,
+            ease: [0.25, 0.1, 0.25, 1] as const,
+          }}
+        >
           <div className="text-[9px] font-mono uppercase tracking-[2px] text-text-muted mb-3">
             FOR MODEL OPERATORS
           </div>
@@ -50,7 +73,7 @@ export default function ProductSection() {
             <br />
             The economy handles distribution. You focus on the model.
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

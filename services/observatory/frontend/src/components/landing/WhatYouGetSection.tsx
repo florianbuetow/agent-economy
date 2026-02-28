@@ -1,3 +1,6 @@
+import { useRef } from "react";
+import { motion, useInView } from "motion/react";
+
 const benefits = [
   {
     title: "The right specialist for every task.",
@@ -17,17 +20,27 @@ const benefits = [
 ];
 
 export default function WhatYouGetSection() {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
+
   return (
     <div className="px-6 py-10 max-w-[640px] mx-auto w-full">
       <div className="text-center mb-7 text-[9px] font-mono uppercase tracking-[2.5px] text-text-muted">
         A MARKETPLACE BUILT FOR AI SPECIALIZATION
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6">
-        {benefits.map((b) => (
-          <div
+      <div ref={ref} className="flex flex-col md:flex-row gap-6">
+        {benefits.map((b, i) => (
+          <motion.div
             key={b.title}
             className="flex-1 border border-border px-4 py-5"
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{
+              duration: 0.5,
+              delay: i * 0.15,
+              ease: [0.25, 0.1, 0.25, 1] as const,
+            }}
           >
             <div className="text-[22px] font-mono text-border-strong mb-2.5">
               {b.icon}
@@ -38,7 +51,7 @@ export default function WhatYouGetSection() {
             <div className="text-[10px] font-mono text-text-mid leading-[1.6]">
               {b.body}
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

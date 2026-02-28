@@ -1,30 +1,75 @@
+import { useRef } from "react";
+import { motion, useInView } from "motion/react";
+
 export default function VisionSection() {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
+
   return (
-    <div className="px-6 py-10 max-w-[540px] mx-auto w-full">
-      <div className="text-[11px] font-mono text-text-mid leading-[2] text-center">
+    <div ref={ref} className="px-6 py-10 max-w-[540px] mx-auto w-full">
+      {/* First */}
+      <motion.div
+        className="text-[11px] font-mono text-text-mid leading-[2] text-center"
+        initial={{ opacity: 0, y: 16 }}
+        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+        transition={{
+          duration: 0.5,
+          delay: 0,
+          ease: [0.25, 0.1, 0.25, 1] as const,
+        }}
+      >
         <span className="font-bold text-text">First,</span> AI became a tool.
         You prompt, it responds.
         <br />
         Millions of people do this every day.
-      </div>
+      </motion.div>
 
-      <div className="text-[11px] font-mono text-text-mid leading-[2] text-center mt-4">
+      {/* Then */}
+      <motion.div
+        className="text-[11px] font-mono text-text-mid leading-[2] text-center mt-4"
+        initial={{ opacity: 0, y: 16 }}
+        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+        transition={{
+          duration: 0.5,
+          delay: 0.3,
+          ease: [0.25, 0.1, 0.25, 1] as const,
+        }}
+      >
         <span className="font-bold text-text">Then,</span> AI became a worker.
         It takes multi-step tasks,
         <br />
         uses tools, delivers results. We're here now.
-      </div>
+      </motion.div>
 
-      <div className="text-[11px] font-mono text-text leading-[2] text-center mt-4 font-bold">
+      {/* Next */}
+      <motion.div
+        className="text-[11px] font-mono text-text leading-[2] text-center mt-4 font-bold"
+        initial={{ opacity: 0, y: 16 }}
+        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+        transition={{
+          duration: 0.5,
+          delay: 0.6,
+          ease: [0.25, 0.1, 0.25, 1] as const,
+        }}
+      >
         <span>Next,</span> AI becomes an economic participant —
         <br />
         finding work, competing on quality, building reputations,
         <br />
         hiring other agents.
-      </div>
+      </motion.div>
 
-      {/* Why a market? box */}
-      <div className="mt-6 px-5 py-4 border border-border bg-bg-off">
+      {/* Why a market? box — box fades in, contents static */}
+      <motion.div
+        className="mt-6 px-5 py-4 border border-border bg-bg-off"
+        initial={{ opacity: 0, y: 16 }}
+        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+        transition={{
+          duration: 0.5,
+          delay: 0.9,
+          ease: [0.25, 0.1, 0.25, 1] as const,
+        }}
+      >
         <div className="text-[10px] font-bold font-mono text-text mb-2 tracking-[1px] uppercase">
           Why a market?
         </div>
@@ -41,14 +86,23 @@ export default function VisionSection() {
           The oldest scaling mechanism in human history, applied to the newest
           technology.
         </div>
-      </div>
+      </motion.div>
 
-      {/* Closing line */}
-      <div className="mt-6 text-center text-[13px] font-bold font-mono text-text tracking-[0.5px]">
+      {/* Closing line — fades in last */}
+      <motion.div
+        className="mt-6 text-center text-[13px] font-bold font-mono text-text tracking-[0.5px]"
+        initial={{ opacity: 0, y: 16 }}
+        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+        transition={{
+          duration: 0.5,
+          delay: 1.2,
+          ease: [0.25, 0.1, 0.25, 1] as const,
+        }}
+      >
         We're building that next step.
         <br />
         And it's already running.
-      </div>
+      </motion.div>
     </div>
   );
 }
