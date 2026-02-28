@@ -115,6 +115,7 @@ def _create_schema_db(tmp_path: Path, name: str = "test.db") -> Path:
 # EDGE-01: Empty database -- all endpoints return gracefully (no 500s)
 # ============================================================================
 
+
 @pytest.fixture
 async def empty_edge_client(tmp_path):
     """Client backed by a schema-only database (no rows)."""
@@ -214,6 +215,7 @@ async def test_edge_01_no_500_errors(empty_edge_client):
 # EDGE-02: Very long task spec text
 # ============================================================================
 
+
 @pytest.fixture
 async def long_spec_client(tmp_path):
     """Client backed by a DB with a task that has a 10,000 character spec."""
@@ -231,8 +233,7 @@ async def long_spec_client(tmp_path):
         ("a-poster", "Poster", "ed25519:poster-key", ts_now),
     )
     conn.execute(
-        "INSERT INTO bank_accounts (account_id, balance, created_at) "
-        "VALUES (?, ?, ?)",
+        "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?, ?, ?)",
         ("a-poster", 1000, ts_now),
     )
     # Escrow for the task
@@ -244,15 +245,38 @@ async def long_spec_client(tmp_path):
     )
 
     long_spec = "A" * 10_000
-    _insert_task(conn, (
-        "t-long", "a-poster", "Long Spec Task", long_spec, 100, "open",
-        3600, 7200, 3600,
-        bd, None, None,
-        "esc-long", None, None,
-        None, None, None, None,
-        ts_now, None, None, None,
-        None, None, None, None,
-    ))
+    _insert_task(
+        conn,
+        (
+            "t-long",
+            "a-poster",
+            "Long Spec Task",
+            long_spec,
+            100,
+            "open",
+            3600,
+            7200,
+            3600,
+            bd,
+            None,
+            None,
+            "esc-long",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            ts_now,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ),
+    )
 
     conn.commit()
     conn.close()
@@ -275,6 +299,7 @@ async def test_edge_02_very_long_task_spec(long_spec_client):
 # EDGE-03: Agent with no activity
 # ============================================================================
 
+
 @pytest.fixture
 async def inactive_agent_client(tmp_path):
     """Client backed by a DB with a single agent that has zero activity."""
@@ -290,8 +315,7 @@ async def inactive_agent_client(tmp_path):
         ("a-lonely", "Lonely Agent", "ed25519:lonely-key", ts_now),
     )
     conn.execute(
-        "INSERT INTO bank_accounts (account_id, balance, created_at) "
-        "VALUES (?, ?, ?)",
+        "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?, ?, ?)",
         ("a-lonely", 0, ts_now),
     )
 
@@ -320,6 +344,7 @@ async def test_edge_03_agent_with_no_activity(inactive_agent_client):
 # EDGE-04: Task with no bids
 # ============================================================================
 
+
 @pytest.fixture
 async def no_bids_client(tmp_path):
     """Client backed by a DB with a task in open state and zero bids."""
@@ -336,8 +361,7 @@ async def no_bids_client(tmp_path):
         ("a-poster", "Poster", "ed25519:poster-key", ts_now),
     )
     conn.execute(
-        "INSERT INTO bank_accounts (account_id, balance, created_at) "
-        "VALUES (?, ?, ?)",
+        "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?, ?, ?)",
         ("a-poster", 1000, ts_now),
     )
     conn.execute(
@@ -347,15 +371,38 @@ async def no_bids_client(tmp_path):
         ("esc-nobid", "a-poster", 75, "t-nobid", "locked", ts_now, None),
     )
 
-    _insert_task(conn, (
-        "t-nobid", "a-poster", "No Bids Task", "A task nobody wants", 75, "open",
-        3600, 7200, 3600,
-        bd, None, None,
-        "esc-nobid", None, None,
-        None, None, None, None,
-        ts_now, None, None, None,
-        None, None, None, None,
-    ))
+    _insert_task(
+        conn,
+        (
+            "t-nobid",
+            "a-poster",
+            "No Bids Task",
+            "A task nobody wants",
+            75,
+            "open",
+            3600,
+            7200,
+            3600,
+            bd,
+            None,
+            None,
+            "esc-nobid",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            ts_now,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ),
+    )
 
     conn.commit()
     conn.close()
@@ -378,6 +425,7 @@ async def test_edge_04_task_with_no_bids(no_bids_client):
 # EDGE-05: Unicode in agent names and task titles
 # ============================================================================
 
+
 @pytest.fixture
 async def unicode_client(tmp_path):
     """Client backed by a DB with Unicode agent names and task titles."""
@@ -395,8 +443,7 @@ async def unicode_client(tmp_path):
         ("a-unicode", "\u6d4b\u8bd5\u4ee3\u7406", "ed25519:unicode-key", ts_now),
     )
     conn.execute(
-        "INSERT INTO bank_accounts (account_id, balance, created_at) "
-        "VALUES (?, ?, ?)",
+        "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?, ?, ?)",
         ("a-unicode", 500, ts_now),
     )
     conn.execute(
@@ -408,16 +455,38 @@ async def unicode_client(tmp_path):
 
     # Task with French + emoji title
     unicode_title = "R\u00e9sum\u00e9 des donn\u00e9es \U0001f4ca"
-    _insert_task(conn, (
-        "t-unicode", "a-unicode", unicode_title,
-        "Spec with unicode: \u00e9\u00e8\u00ea\u00eb", 50, "open",
-        3600, 7200, 3600,
-        bd, None, None,
-        "esc-uni", None, None,
-        None, None, None, None,
-        ts_now, None, None, None,
-        None, None, None, None,
-    ))
+    _insert_task(
+        conn,
+        (
+            "t-unicode",
+            "a-unicode",
+            unicode_title,
+            "Spec with unicode: \u00e9\u00e8\u00ea\u00eb",
+            50,
+            "open",
+            3600,
+            7200,
+            3600,
+            bd,
+            None,
+            None,
+            "esc-uni",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            ts_now,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ),
+    )
 
     conn.commit()
     conn.close()
@@ -447,6 +516,7 @@ async def test_edge_05_unicode_task_title(unicode_client):
 # ============================================================================
 # RO-01: Service operates with read-only database connection
 # ============================================================================
+
 
 @pytest.fixture
 async def ro_app_state(tmp_path, schema_sql):
@@ -486,6 +556,7 @@ async def test_ro_01_database_opened_read_only(ro_app_state):
 # RO-02: All endpoints succeed with read-only connection
 # ============================================================================
 
+
 @pytest.fixture
 async def ro_seeded_client(tmp_path, seeded_db_path):
     """Client backed by the standard seeded DB opened in read-only mode."""
@@ -510,9 +581,7 @@ async def test_ro_02_all_endpoints_succeed_readonly(ro_seeded_client):
     ]
     for endpoint, expected_status in endpoints:
         r = await ro_seeded_client.get(endpoint)
-        assert r.status_code != 500, (
-            f"{endpoint} returned 500 with read-only DB: {r.text}"
-        )
+        assert r.status_code != 500, f"{endpoint} returned 500 with read-only DB: {r.text}"
         if expected_status is not None:
             assert r.status_code == expected_status, (
                 f"{endpoint} expected {expected_status}, got {r.status_code}: {r.text}"

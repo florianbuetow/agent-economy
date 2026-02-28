@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     import aiosqlite
 
 
-async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = ()) -> Any:
+async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
     """Execute query and return the first column of the first row."""
     async with db.execute(sql, params) as cursor:
         row = await cursor.fetchone()
@@ -19,19 +19,19 @@ async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = 
     return row[0]
 
 
-async def _fetchone(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = ()) -> Any:
+async def _fetchone(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
     """Execute query and return the first row."""
     async with db.execute(sql, params) as cursor:
         return await cursor.fetchone()
 
 
-async def _fetchall(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = ()) -> list:
+async def _fetchall(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> list[Any]:
     """Execute query and return all rows."""
     async with db.execute(sql, params) as cursor:
-        return await cursor.fetchall()
+        return list(await cursor.fetchall())
 
 
-async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict:
+async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[str, Any]:
     """Compute stats for a single agent."""
     tasks_posted = int(
         await _scalar(
@@ -153,59 +153,59 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict:
     }
 
 
-def _quality_sort_key(stats: dict, category: str) -> float:
+def _quality_sort_key(stats: dict[str, Any], category: str) -> float:
     """Compute proportion of extremely_satisfied for sorting."""
     quality = stats[category]
-    total = quality["extremely_satisfied"] + quality["satisfied"] + quality["dissatisfied"]
+    total: int = quality["extremely_satisfied"] + quality["satisfied"] + quality["dissatisfied"]
     if total == 0:
         return 0.0
-    return quality["extremely_satisfied"] / total
+    return float(quality["extremely_satisfied"]) / float(total)
 
 
-def _get_sort_key(stats: dict, sort_by: str) -> float | int:
+def _get_sort_key(stats: dict[str, Any], sort_by: str) -> float | int:
     """Return the value to sort by for a given sort_by field."""
-    if sort_by == "total_earned":
-        return stats["total_earned"]
-    if sort_by == "total_spent":
-        return stats["total_spent"]
-    if sort_by in ("tasks_completed", "tasks_completed_as_worker"):
-        return stats["tasks_completed_as_worker"]
-    if sort_by == "tasks_posted":
-        return stats["tasks_posted"]
-    if sort_by == "spec_quality":
-        return _quality_sort_key(stats, "spec_quality")
-    if sort_by == "delivery_quality":
-        return _quality_sort_key(stats, "delivery_quality")
-    return 0
+    sort_map: dict[str, float | int] = {
+        "total_earned": stats["total_earned"],
+        "total_spent": stats["total_spent"],
+        "tasks_completed": stats["tasks_completed_as_worker"],
+        "tasks_completed_as_worker": stats["tasks_completed_as_worker"],
+        "tasks_posted": stats["tasks_posted"],
+        "spec_quality": _quality_sort_key(stats, "spec_quality"),
+        "delivery_quality": _quality_sort_key(stats, "delivery_quality"),
+    }
+    return sort_map.get(sort_by, 0)
 
 
 async def list_agents(
     db: aiosqlite.Connection,
-    sort_by: str = "total_earned",
-    order: str = "desc",
-    limit: int = 20,
-    offset: int = 0,
-) -> dict:
+    sort_by: str,
+    order: str,
+    limit: int,
+    offset: int,
+) -> dict[str, Any]:
     """List agents with computed stats, sorted and paginated."""
     # Get all agents
     rows = await _fetchall(
         db,
         "SELECT agent_id, name, registered_at FROM identity_agents",
+        (),
     )
 
     total_count = len(rows)
 
     # Compute stats for each agent
-    agents = []
+    agents: list[dict[str, Any]] = []
     for row in rows:
         agent_id, name, registered_at = row
         stats = await _compute_agent_stats(db, agent_id)
-        agents.append({
-            "agent_id": agent_id,
-            "name": name,
-            "registered_at": registered_at,
-            "stats": stats,
-        })
+        agents.append(
+            {
+                "agent_id": agent_id,
+                "name": name,
+                "registered_at": registered_at,
+                "stats": stats,
+            }
+        )
 
     # Sort
     reverse = order == "desc"
@@ -222,7 +222,7 @@ async def list_agents(
     }
 
 
-async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict | None:
+async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str, Any] | None:
     """Get a single agent's full profile."""
     # Check agent exists
     agent_row = await _fetchone(
@@ -263,17 +263,29 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict | N
 
     recent_tasks = []
     for t in task_rows:
-        task_id_val, title, poster_id, worker_id, status, reward, approved_at, ruled_at, created_at = t
+        (
+            task_id_val,
+            title,
+            poster_id,
+            _worker_id,
+            status,
+            reward,
+            approved_at,
+            ruled_at,
+            _created_at,
+        ) = t
         role = "poster" if poster_id == agent_id else "worker"
         completed_at = approved_at or ruled_at
-        recent_tasks.append({
-            "task_id": task_id_val,
-            "title": title,
-            "role": role,
-            "status": status,
-            "reward": reward,
-            "completed_at": completed_at,
-        })
+        recent_tasks.append(
+            {
+                "task_id": task_id_val,
+                "title": title,
+                "role": role,
+                "status": status,
+                "reward": reward,
+                "completed_at": completed_at,
+            }
+        )
 
     # Recent feedback (up to 10, most recent, visible only)
     feedback_rows = await _fetchall(
@@ -290,16 +302,27 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict | N
 
     recent_feedback = []
     for fb in feedback_rows:
-        feedback_id, task_id_val, _from_agent_id, from_agent_name, category, rating, comment, submitted_at = fb
-        recent_feedback.append({
-            "feedback_id": feedback_id,
-            "task_id": task_id_val,
-            "from_agent_name": from_agent_name,
-            "category": category,
-            "rating": rating,
-            "comment": comment,
-            "submitted_at": submitted_at,
-        })
+        (
+            feedback_id,
+            task_id_val,
+            _from_agent_id,
+            from_agent_name,
+            category,
+            rating,
+            comment,
+            submitted_at,
+        ) = fb
+        recent_feedback.append(
+            {
+                "feedback_id": feedback_id,
+                "task_id": task_id_val,
+                "from_agent_name": from_agent_name,
+                "category": category,
+                "rating": rating,
+                "comment": comment,
+                "submitted_at": submitted_at,
+            }
+        )
 
     return {
         "agent_id": agent_id_val,

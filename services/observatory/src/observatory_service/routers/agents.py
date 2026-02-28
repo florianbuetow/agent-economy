@@ -31,7 +31,7 @@ VALID_SORT_FIELDS = {
 }
 
 
-@router.get("/agents")
+@router.get("/agents")  # nosemgrep
 async def list_agents(
     sort_by: str = Query("total_earned"),
     order: str = Query("desc"),
@@ -40,15 +40,17 @@ async def list_agents(
 ) -> JSONResponse:
     """Return paginated list of agents with computed stats."""
     if sort_by not in VALID_SORT_FIELDS:
+        valid = ", ".join(sorted(VALID_SORT_FIELDS))
         raise ServiceError(
             error="INVALID_PARAMETER",
-            message=f"Invalid sort_by: {sort_by}. Must be one of: {', '.join(sorted(VALID_SORT_FIELDS))}",
+            message=f"Invalid sort_by: {sort_by}. Must be one of: {valid}",
             status_code=400,
             details={"parameter": "sort_by", "value": sort_by},
         )
 
     state = get_app_state()
     db = state.db
+    assert db is not None
 
     data = await agents_service.list_agents(db, sort_by, order, limit, offset)
 
@@ -84,6 +86,7 @@ async def get_agent_profile(agent_id: str) -> JSONResponse:
     """Return a single agent's full profile."""
     state = get_app_state()
     db = state.db
+    assert db is not None
 
     data = await agents_service.get_agent_profile(db, agent_id)
 

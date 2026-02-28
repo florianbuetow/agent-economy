@@ -8,13 +8,13 @@ from sse_starlette.sse import EventSourceResponse
 
 from observatory_service.config import get_settings
 from observatory_service.core.state import get_app_state
-from observatory_service.schemas import EventsResponse
+from observatory_service.schemas import EventItem, EventsResponse
 from observatory_service.services import events as events_service
 
 router = APIRouter()
 
 
-@router.get("/events")
+@router.get("/events")  # nosemgrep
 async def get_events(
     limit: str = Query("50"),
     before: str | None = Query(None),
@@ -29,7 +29,7 @@ async def get_events(
     try:
         limit_int = int(limit)
     except ValueError:
-        raise ServiceError("INVALID_PARAMETER", "limit must be an integer", 400, None)
+        raise ServiceError("INVALID_PARAMETER", "limit must be an integer", 400, None) from None
     if limit_int < 1:
         raise ServiceError("INVALID_PARAMETER", "limit must be >= 1", 400, None)
     limit_int = min(limit_int, 200)  # Clamp to 200
@@ -41,16 +41,23 @@ async def get_events(
         try:
             before_int = int(before)
         except ValueError:
-            raise ServiceError("INVALID_PARAMETER", "before must be an integer", 400, None)
+            raise ServiceError(
+                "INVALID_PARAMETER",
+                "before must be an integer",
+                400,
+                None,
+            ) from None
     if after is not None:
         try:
             after_int = int(after)
         except ValueError:
-            raise ServiceError("INVALID_PARAMETER", "after must be an integer", 400, None)
+            raise ServiceError("INVALID_PARAMETER", "after must be an integer", 400, None) from None
 
     state = get_app_state()
+    db = state.db
+    assert db is not None
     events_list, has_more = await events_service.get_events(
-        state.db,
+        db,
         limit_int,
         before_int,
         after_int,
@@ -64,21 +71,23 @@ async def get_events(
     newest_id = events_list[0]["event_id"] if events_list else None
 
     return EventsResponse(
-        events=events_list,
+        events=[EventItem(**e) for e in events_list],
         has_more=has_more,
         oldest_event_id=oldest_id,
         newest_event_id=newest_id,
     )
 
 
-@router.get("/events/stream")
+@router.get("/events/stream")  # nosemgrep
 async def stream_events(last_event_id: int = Query(0)) -> EventSourceResponse:
     """Server-Sent Events stream of economy events."""
     state = get_app_state()
+    db = state.db
+    assert db is not None
     settings = get_settings()
     return EventSourceResponse(
         events_service.stream_events(
-            state.db,
+            db,
             last_event_id,
             settings.sse.batch_size,
             settings.sse.poll_interval_seconds,

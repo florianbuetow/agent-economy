@@ -1,9 +1,11 @@
 """Tests for agent endpoints."""
+
 import sqlite3
+
 import pytest
 
-
 # === Agent Listing Tests ===
+
 
 @pytest.mark.unit
 async def test_agt_01_returns_agents_with_stats(seeded_client):
@@ -81,7 +83,9 @@ async def test_agt_06_visible_feedback_only(seeded_client, seeded_db_path):
     conn = sqlite3.connect(str(seeded_db_path))
     conn.execute("""
         INSERT INTO reputation_feedback VALUES
-        ('fb-sealed-agt', 't-3', 'a-bob', 'a-alice', 'worker', 'spec_quality', 'dissatisfied', 'sealed', '2026-01-01T00:00:00Z', 0)
+        ('fb-sealed-agt', 't-3', 'a-bob', 'a-alice', 'worker',
+         'spec_quality', 'dissatisfied', 'sealed',
+         '2026-01-01T00:00:00Z', 0)
     """)
     conn.commit()
     conn.close()
@@ -90,10 +94,13 @@ async def test_agt_06_visible_feedback_only(seeded_client, seeded_db_path):
     agents_after = {a["agent_id"]: a for a in r2.json()["agents"]}
 
     # Alice's spec_quality should be unchanged (sealed feedback excluded)
-    assert agents_before["a-alice"]["stats"]["spec_quality"] == agents_after["a-alice"]["stats"]["spec_quality"]
+    before_sq = agents_before["a-alice"]["stats"]["spec_quality"]
+    after_sq = agents_after["a-alice"]["stats"]["spec_quality"]
+    assert before_sq == after_sq
 
 
 # === Agent Profile Tests ===
+
 
 @pytest.mark.unit
 async def test_prof_01_returns_full_profile(seeded_client):
@@ -139,7 +146,9 @@ async def test_prof_04_visible_feedback_only(seeded_client, seeded_db_path):
     conn = sqlite3.connect(str(seeded_db_path))
     conn.execute("""
         INSERT INTO reputation_feedback VALUES
-        ('fb-sealed-prof', 't-1', 'a-charlie', 'a-bob', 'worker', 'delivery_quality', 'dissatisfied', 'sealed test', '2026-01-01T00:00:00Z', 0)
+        ('fb-sealed-prof', 't-1', 'a-charlie', 'a-bob', 'worker',
+         'delivery_quality', 'dissatisfied', 'sealed test',
+         '2026-01-01T00:00:00Z', 0)
     """)
     conn.commit()
     conn.close()

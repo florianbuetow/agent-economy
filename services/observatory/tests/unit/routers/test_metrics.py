@@ -1,5 +1,7 @@
 """Tests for metrics endpoints."""
 
+import sqlite3
+
 import pytest
 
 
@@ -9,7 +11,17 @@ async def test_met_01_metrics_returns_all_fields(seeded_client):
     response = await seeded_client.get("/api/metrics")
     assert response.status_code == 200
     data = response.json()
-    for key in ["gdp", "agents", "tasks", "escrow", "spec_quality", "labor_market", "economy_phase", "computed_at"]:
+    expected_keys = [
+        "gdp",
+        "agents",
+        "tasks",
+        "escrow",
+        "spec_quality",
+        "labor_market",
+        "economy_phase",
+        "computed_at",
+    ]
+    for key in expected_keys:
         assert key in data, f"Missing key: {key}"
 
 
@@ -33,9 +45,11 @@ async def test_met_03_gdp_per_agent(seeded_client):
 @pytest.mark.unit
 async def test_met_04_active_agents_excludes_inactive(seeded_client, seeded_db_path):
     """MET-04: Dave (registered, no tasks) is not active."""
-    import sqlite3
     conn = sqlite3.connect(str(seeded_db_path))
-    conn.execute("INSERT INTO identity_agents VALUES ('a-dave', 'Dave', 'ed25519:dave_key', '2026-01-01T00:00:00Z')")
+    conn.execute(
+        "INSERT INTO identity_agents VALUES "
+        "('a-dave', 'Dave', 'ed25519:dave_key', '2026-01-01T00:00:00Z')"
+    )
     conn.commit()
     conn.close()
     response = await seeded_client.get("/api/metrics")
@@ -85,11 +99,12 @@ async def test_met_09_spec_quality_ignores_sealed(seeded_client, seeded_db_path)
     response1 = await seeded_client.get("/api/metrics")
     sq_before = response1.json()["spec_quality"]
 
-    import sqlite3
     conn = sqlite3.connect(str(seeded_db_path))
     conn.execute("""
         INSERT INTO reputation_feedback VALUES
-        ('fb-sealed-extra', 't-1', 'a-charlie', 'a-alice', 'worker', 'spec_quality', 'dissatisfied', 'bad', '2026-01-01T00:00:00Z', 0)
+        ('fb-sealed-extra', 't-1', 'a-charlie', 'a-alice', 'worker',
+         'spec_quality', 'dissatisfied', 'bad',
+         '2026-01-01T00:00:00Z', 0)
     """)
     conn.commit()
     conn.close()
@@ -140,6 +155,7 @@ async def test_met_13_empty_database(empty_client):
 
 
 # GDP History tests
+
 
 @pytest.mark.unit
 async def test_gdp_01_returns_data_points(seeded_client):

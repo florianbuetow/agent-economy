@@ -25,7 +25,7 @@ async def health_check() -> HealthResponse:
             latest_event_id = row[0] if row and row[0] is not None else 0
             database_readable = True
         except Exception:
-            pass
+            database_readable = False
 
     return HealthResponse(
         status="ok",

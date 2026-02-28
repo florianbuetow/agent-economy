@@ -1,10 +1,16 @@
 """Tests for quarterly report endpoint."""
 
+import os
 import sqlite3
 from datetime import UTC, datetime
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+
+from observatory_service.app import create_app
+from observatory_service.config import clear_settings_cache
+from observatory_service.core.lifespan import lifespan
+from observatory_service.core.state import reset_app_state
 
 
 def _current_quarter_label() -> str:
@@ -64,8 +70,7 @@ def q4q1_db_path(tmp_path, schema_sql):
 
     # Bank accounts
     conn.executemany(
-        "INSERT INTO bank_accounts "
-        "(account_id, balance, created_at) VALUES (?, ?, ?)",
+        "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?, ?, ?)",
         [
             ("a-alice", 1000, "2025-09-01T00:00:00Z"),
             ("a-bob", 1000, "2025-09-01T00:00:00Z"),
@@ -79,54 +84,138 @@ def q4q1_db_path(tmp_path, schema_sql):
         "status, created_at, resolved_at) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
         [
-            ("esc-q4", "a-alice", 200, "t-q4",
-             "released", "2025-11-01T00:00:00Z", "2025-11-15T00:00:00Z"),
-            ("esc-q1a", "a-alice", 200, "t-q1a",
-             "released", "2026-01-10T00:00:00Z", "2026-01-20T00:00:00Z"),
-            ("esc-q1b", "a-alice", 34, "t-q1b",
-             "released", "2026-02-01T00:00:00Z", "2026-02-10T00:00:00Z"),
+            (
+                "esc-q4",
+                "a-alice",
+                200,
+                "t-q4",
+                "released",
+                "2025-11-01T00:00:00Z",
+                "2025-11-15T00:00:00Z",
+            ),
+            (
+                "esc-q1a",
+                "a-alice",
+                200,
+                "t-q1a",
+                "released",
+                "2026-01-10T00:00:00Z",
+                "2026-01-20T00:00:00Z",
+            ),
+            (
+                "esc-q1b",
+                "a-alice",
+                34,
+                "t-q1b",
+                "released",
+                "2026-02-01T00:00:00Z",
+                "2026-02-10T00:00:00Z",
+            ),
         ],
     )
 
     # Q4 2025 task: approved, reward=200 -> GDP contribution = 200
-    _insert_task(conn, (
-        "t-q4", "a-alice", "Q4 task",
-        "Task in Q4 2025", 200, "approved",
-        3600, 7200, 3600,
-        "2025-11-02T00:00:00Z", "2025-11-03T00:00:00Z", "2025-11-04T00:00:00Z",
-        "esc-q4", "a-bob", "bid-q4",
-        None, None, None, None,
-        "2025-11-01T00:00:00Z", "2025-11-02T00:00:00Z",
-        "2025-11-10T00:00:00Z", "2025-11-15T00:00:00Z",
-        None, None, None, None,
-    ))
+    _insert_task(
+        conn,
+        (
+            "t-q4",
+            "a-alice",
+            "Q4 task",
+            "Task in Q4 2025",
+            200,
+            "approved",
+            3600,
+            7200,
+            3600,
+            "2025-11-02T00:00:00Z",
+            "2025-11-03T00:00:00Z",
+            "2025-11-04T00:00:00Z",
+            "esc-q4",
+            "a-bob",
+            "bid-q4",
+            None,
+            None,
+            None,
+            None,
+            "2025-11-01T00:00:00Z",
+            "2025-11-02T00:00:00Z",
+            "2025-11-10T00:00:00Z",
+            "2025-11-15T00:00:00Z",
+            None,
+            None,
+            None,
+            None,
+        ),
+    )
 
     # Q1 2026 task a: approved, reward=200 -> GDP contribution = 200
-    _insert_task(conn, (
-        "t-q1a", "a-alice", "Q1 task A",
-        "First task in Q1 2026", 200, "approved",
-        3600, 7200, 3600,
-        "2026-01-11T00:00:00Z", "2026-01-12T00:00:00Z", "2026-01-13T00:00:00Z",
-        "esc-q1a", "a-bob", "bid-q1a",
-        None, None, None, None,
-        "2026-01-10T00:00:00Z", "2026-01-11T00:00:00Z",
-        "2026-01-15T00:00:00Z", "2026-01-20T00:00:00Z",
-        None, None, None, None,
-    ))
+    _insert_task(
+        conn,
+        (
+            "t-q1a",
+            "a-alice",
+            "Q1 task A",
+            "First task in Q1 2026",
+            200,
+            "approved",
+            3600,
+            7200,
+            3600,
+            "2026-01-11T00:00:00Z",
+            "2026-01-12T00:00:00Z",
+            "2026-01-13T00:00:00Z",
+            "esc-q1a",
+            "a-bob",
+            "bid-q1a",
+            None,
+            None,
+            None,
+            None,
+            "2026-01-10T00:00:00Z",
+            "2026-01-11T00:00:00Z",
+            "2026-01-15T00:00:00Z",
+            "2026-01-20T00:00:00Z",
+            None,
+            None,
+            None,
+            None,
+        ),
+    )
 
     # Q1 2026 task b: approved, reward=34 -> GDP contribution = 34
     # Total Q1 GDP = 200 + 34 = 234
-    _insert_task(conn, (
-        "t-q1b", "a-alice", "Q1 task B",
-        "Second task in Q1 2026", 34, "approved",
-        3600, 7200, 3600,
-        "2026-02-02T00:00:00Z", "2026-02-03T00:00:00Z", "2026-02-04T00:00:00Z",
-        "esc-q1b", "a-bob", "bid-q1b",
-        None, None, None, None,
-        "2026-02-01T00:00:00Z", "2026-02-02T00:00:00Z",
-        "2026-02-05T00:00:00Z", "2026-02-10T00:00:00Z",
-        None, None, None, None,
-    ))
+    _insert_task(
+        conn,
+        (
+            "t-q1b",
+            "a-alice",
+            "Q1 task B",
+            "Second task in Q1 2026",
+            34,
+            "approved",
+            3600,
+            7200,
+            3600,
+            "2026-02-02T00:00:00Z",
+            "2026-02-03T00:00:00Z",
+            "2026-02-04T00:00:00Z",
+            "esc-q1b",
+            "a-bob",
+            "bid-q1b",
+            None,
+            None,
+            None,
+            None,
+            "2026-02-01T00:00:00Z",
+            "2026-02-02T00:00:00Z",
+            "2026-02-05T00:00:00Z",
+            "2026-02-10T00:00:00Z",
+            None,
+            None,
+            None,
+            None,
+        ),
+    )
 
     # Bids for the Q1 tasks (needed for labor market stats)
     conn.executemany(
@@ -148,13 +237,6 @@ def q4q1_db_path(tmp_path, schema_sql):
 @pytest.fixture
 async def q4q1_client(q4q1_db_path, tmp_path):
     """Async HTTP client backed by the Q4/Q1 database."""
-    import os
-
-    from observatory_service.app import create_app
-    from observatory_service.config import clear_settings_cache
-    from observatory_service.core.lifespan import lifespan
-    from observatory_service.core.state import reset_app_state
-
     config_content = f"""
 service:
   name: "observatory"

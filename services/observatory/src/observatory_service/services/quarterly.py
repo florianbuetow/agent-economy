@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import calendar
 import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -28,7 +29,7 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = ()) -> Any:
+async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
     """Execute query and return the first column of the first row."""
     async with db.execute(sql, params) as cursor:
         row = await cursor.fetchone()
@@ -37,16 +38,16 @@ async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = 
     return row[0]
 
 
-async def _fetchone(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = ()) -> Any:
+async def _fetchone(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
     """Execute query and return the first row."""
     async with db.execute(sql, params) as cursor:
         return await cursor.fetchone()
 
 
-async def _fetchall(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = ()) -> list:
+async def _fetchall(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> list[Any]:
     """Execute query and return all rows."""
     async with db.execute(sql, params) as cursor:
-        return await cursor.fetchall()
+        return list(await cursor.fetchall())
 
 
 def validate_quarter(quarter: str) -> tuple[int, int]:
@@ -77,8 +78,6 @@ def _quarter_period(year: int, q: int) -> tuple[str, str]:
     if end_month == 12:
         end = f"{year}-12-31T23:59:59Z"
     else:
-        # Last day of end_month: day before first of next month
-        import calendar
         last_day = calendar.monthrange(year, end_month)[1]
         end = f"{year}-{end_month:02d}-{last_day:02d}T23:59:59Z"
 
@@ -92,9 +91,7 @@ def _previous_quarter(year: int, q: int) -> tuple[int, int]:
     return year, q - 1
 
 
-async def _compute_gdp_for_period(
-    db: aiosqlite.Connection, start: str, end: str
-) -> int:
+async def _compute_gdp_for_period(db: aiosqlite.Connection, start: str, end: str) -> int:
     """Compute GDP for tasks approved/ruled within a period."""
     approved = await _scalar(
         db,
@@ -112,7 +109,159 @@ async def _compute_gdp_for_period(
     return int(approved) + int(ruled)
 
 
-async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[str, Any]:
+async def _compute_spec_quality(
+    db: aiosqlite.Connection,
+    start: str,
+    end: str,
+    prev_start: str,
+    prev_end: str,
+) -> dict[str, Any]:
+    """Compute spec quality metrics for a quarter and its predecessor."""
+    spec_total = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM reputation_feedback "
+            "WHERE category = 'spec_quality' AND visible = 1 "
+            "AND submitted_at >= ? AND submitted_at <= ?",
+            (start, end),
+        )
+        or 0
+    )
+
+    spec_es = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM reputation_feedback "
+            "WHERE category = 'spec_quality' AND visible = 1 "
+            "AND rating = 'extremely_satisfied' "
+            "AND submitted_at >= ? AND submitted_at <= ?",
+            (start, end),
+        )
+        or 0
+    )
+
+    avg_score = spec_es / spec_total if spec_total > 0 else 0.0
+
+    prev_spec_total = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM reputation_feedback "
+            "WHERE category = 'spec_quality' AND visible = 1 "
+            "AND submitted_at >= ? AND submitted_at <= ?",
+            (prev_start, prev_end),
+        )
+        or 0
+    )
+
+    prev_spec_es = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM reputation_feedback "
+            "WHERE category = 'spec_quality' AND visible = 1 "
+            "AND rating = 'extremely_satisfied' "
+            "AND submitted_at >= ? AND submitted_at <= ?",
+            (prev_start, prev_end),
+        )
+        or 0
+    )
+
+    prev_avg_score = prev_spec_es / prev_spec_total if prev_spec_total > 0 else 0.0
+    spec_delta = (
+        round((avg_score - prev_avg_score) / prev_avg_score * 100, 2) if prev_avg_score > 0 else 0.0
+    )
+
+    return {
+        "avg_score": round(avg_score, 2),
+        "previous_quarter_avg": round(prev_avg_score, 2),
+        "delta_pct": spec_delta,
+    }
+
+
+async def _compute_notable(
+    db: aiosqlite.Connection,
+    start: str,
+    end: str,
+) -> dict[str, Any]:
+    """Compute notable tasks and agents for a quarter period."""
+    hvt_row = await _fetchone(
+        db,
+        "SELECT task_id, title, reward FROM board_tasks "
+        "WHERE created_at >= ? AND created_at <= ? "
+        "ORDER BY reward DESC LIMIT 1",
+        (start, end),
+    )
+    highest_value_task = None
+    if hvt_row:
+        highest_value_task = {
+            "task_id": hvt_row[0],
+            "title": hvt_row[1],
+            "reward": int(hvt_row[2]),
+        }
+
+    mct_row = await _fetchone(
+        db,
+        "SELECT t.task_id, t.title, COUNT(b.bid_id) AS bid_count "
+        "FROM board_tasks t "
+        "JOIN board_bids b ON t.task_id = b.task_id "
+        "WHERE t.created_at >= ? AND t.created_at <= ? "
+        "GROUP BY t.task_id "
+        "ORDER BY bid_count DESC LIMIT 1",
+        (start, end),
+    )
+    most_competitive_task = None
+    if mct_row:
+        most_competitive_task = {
+            "task_id": mct_row[0],
+            "title": mct_row[1],
+            "bid_count": int(mct_row[2]),
+        }
+
+    top_workers_rows = await _fetchall(
+        db,
+        "SELECT a.agent_id, a.name, "
+        "  COALESCE(SUM(CASE "
+        "    WHEN t.status = 'approved' AND t.approved_at >= ? AND t.approved_at <= ? "
+        "      THEN t.reward "
+        "    WHEN t.status = 'ruled' AND t.ruled_at >= ? AND t.ruled_at <= ? "
+        "      THEN t.reward * t.worker_pct / 100 "
+        "    ELSE 0 "
+        "  END), 0) AS earned "
+        "FROM identity_agents a "
+        "JOIN board_tasks t ON a.agent_id = t.worker_id "
+        "WHERE (t.status = 'approved' AND t.approved_at >= ? AND t.approved_at <= ?) "
+        "   OR (t.status = 'ruled' AND t.ruled_at >= ? AND t.ruled_at <= ?) "
+        "GROUP BY a.agent_id "
+        "HAVING earned > 0 "
+        "ORDER BY earned DESC "
+        "LIMIT 3",
+        (start, end, start, end, start, end, start, end),
+    )
+    top_workers = [{"agent_id": r[0], "name": r[1], "earned": int(r[2])} for r in top_workers_rows]
+
+    top_posters_rows = await _fetchall(
+        db,
+        "SELECT a.agent_id, a.name, "
+        "  COALESCE(SUM(t.reward), 0) AS spent "
+        "FROM identity_agents a "
+        "JOIN board_tasks t ON a.agent_id = t.poster_id "
+        "WHERE t.created_at >= ? AND t.created_at <= ? "
+        "GROUP BY a.agent_id "
+        "HAVING spent > 0 "
+        "ORDER BY spent DESC "
+        "LIMIT 3",
+        (start, end),
+    )
+    top_posters = [{"agent_id": r[0], "name": r[1], "spent": int(r[2])} for r in top_posters_rows]
+
+    return {
+        "highest_value_task": highest_value_task,
+        "most_competitive_task": most_competitive_task,
+        "top_workers": top_workers,
+        "top_posters": top_posters,
+    }
+
+
+async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[str, Any] | None:
     """Compute and return the full quarterly report.
 
     Raises ValueError for invalid quarter format.
@@ -122,26 +271,34 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
     start, end = _quarter_period(year, q)
 
     # Check if any data exists in this quarter
-    task_count = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM board_tasks WHERE created_at >= ? AND created_at <= ?",
-        (start, end),
-    ) or 0)
+    task_count = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM board_tasks WHERE created_at >= ? AND created_at <= ?",
+            (start, end),
+        )
+        or 0
+    )
 
-    agent_count = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM identity_agents WHERE registered_at >= ? AND registered_at <= ?",
-        (start, end),
-    ) or 0)
+    agent_count = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM identity_agents WHERE registered_at >= ? AND registered_at <= ?",
+            (start, end),
+        )
+        or 0
+    )
 
-    # Also check if there are any approved/ruled tasks in this quarter
-    gdp_task_count = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM board_tasks "
-        "WHERE (status = 'approved' AND approved_at >= ? AND approved_at <= ?) "
-        "OR (status = 'ruled' AND ruled_at >= ? AND ruled_at <= ?)",
-        (start, end, start, end),
-    ) or 0)
+    gdp_task_count = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM board_tasks "
+            "WHERE (status = 'approved' AND approved_at >= ? AND approved_at <= ?) "
+            "OR (status = 'ruled' AND ruled_at >= ? AND ruled_at <= ?)",
+            (start, end, start, end),
+        )
+        or 0
+    )
 
     if task_count == 0 and agent_count == 0 and gdp_task_count == 0:
         return None
@@ -153,17 +310,16 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
     prev_start, prev_end = _quarter_period(prev_year, prev_q)
     prev_gdp = await _compute_gdp_for_period(db, prev_start, prev_end)
 
-    if prev_gdp > 0:
-        delta_pct = round((total_gdp - prev_gdp) / prev_gdp * 100, 1)
-    else:
-        delta_pct = 0.0
+    delta_pct = round((total_gdp - prev_gdp) / prev_gdp * 100, 1) if prev_gdp > 0 else 0.0
 
-    # Total agents at quarter end
-    total_agents = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM identity_agents WHERE registered_at <= ?",
-        (end,),
-    ) or 0)
+    total_agents = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM identity_agents WHERE registered_at <= ?",
+            (end,),
+        )
+        or 0
+    )
 
     per_agent = total_gdp / total_agents if total_agents > 0 else 0.0
 
@@ -175,26 +331,35 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
     }
 
     # --- Tasks ---
-    posted = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM board_tasks WHERE created_at >= ? AND created_at <= ?",
-        (start, end),
-    ) or 0)
+    posted = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM board_tasks WHERE created_at >= ? AND created_at <= ?",
+            (start, end),
+        )
+        or 0
+    )
 
-    completed = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM board_tasks "
-        "WHERE status = 'approved' AND approved_at >= ? AND approved_at <= ?",
-        (start, end),
-    ) or 0)
+    completed = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM board_tasks "
+            "WHERE status = 'approved' AND approved_at >= ? AND approved_at <= ?",
+            (start, end),
+        )
+        or 0
+    )
 
-    disputed = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM board_tasks "
-        "WHERE status IN ('disputed', 'ruled') "
-        "AND created_at >= ? AND created_at <= ?",
-        (start, end),
-    ) or 0)
+    disputed = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM board_tasks "
+            "WHERE status IN ('disputed', 'ruled') "
+            "AND created_at >= ? AND created_at <= ?",
+            (start, end),
+        )
+        or 0
+    )
 
     denom = completed + disputed
     completion_rate = round(completed / denom, 2) if denom > 0 else 0.0
@@ -243,160 +408,39 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
     }
 
     # --- Spec Quality ---
-    spec_total = int(await _scalar(
+    spec_quality = await _compute_spec_quality(
         db,
-        "SELECT COUNT(*) FROM reputation_feedback "
-        "WHERE category = 'spec_quality' AND visible = 1 "
-        "AND submitted_at >= ? AND submitted_at <= ?",
-        (start, end),
-    ) or 0)
-
-    spec_es = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM reputation_feedback "
-        "WHERE category = 'spec_quality' AND visible = 1 "
-        "AND rating = 'extremely_satisfied' "
-        "AND submitted_at >= ? AND submitted_at <= ?",
-        (start, end),
-    ) or 0)
-
-    avg_score = spec_es / spec_total if spec_total > 0 else 0.0
-
-    # Previous quarter spec quality
-    prev_spec_total = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM reputation_feedback "
-        "WHERE category = 'spec_quality' AND visible = 1 "
-        "AND submitted_at >= ? AND submitted_at <= ?",
-        (prev_start, prev_end),
-    ) or 0)
-
-    prev_spec_es = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM reputation_feedback "
-        "WHERE category = 'spec_quality' AND visible = 1 "
-        "AND rating = 'extremely_satisfied' "
-        "AND submitted_at >= ? AND submitted_at <= ?",
-        (prev_start, prev_end),
-    ) or 0)
-
-    prev_avg_score = prev_spec_es / prev_spec_total if prev_spec_total > 0 else 0.0
-    spec_delta = round((avg_score - prev_avg_score) / prev_avg_score * 100, 2) if prev_avg_score > 0 else 0.0
-
-    spec_quality = {
-        "avg_score": round(avg_score, 2),
-        "previous_quarter_avg": round(prev_avg_score, 2),
-        "delta_pct": spec_delta,
-    }
+        start,
+        end,
+        prev_start,
+        prev_end,
+    )
 
     # --- Agents ---
-    new_registrations = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM identity_agents "
-        "WHERE registered_at >= ? AND registered_at <= ?",
-        (start, end),
-    ) or 0)
+    new_registrations = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM identity_agents WHERE registered_at >= ? AND registered_at <= ?",
+            (start, end),
+        )
+        or 0
+    )
 
-    total_at_quarter_end = int(await _scalar(
-        db,
-        "SELECT COUNT(*) FROM identity_agents WHERE registered_at <= ?",
-        (end,),
-    ) or 0)
+    total_at_quarter_end = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM identity_agents WHERE registered_at <= ?",
+            (end,),
+        )
+        or 0
+    )
 
     agents = {
         "new_registrations": new_registrations,
         "total_at_quarter_end": total_at_quarter_end,
     }
 
-    # --- Notable ---
-    # Highest value task (by reward)
-    hvt_row = await _fetchone(
-        db,
-        "SELECT task_id, title, reward FROM board_tasks "
-        "WHERE created_at >= ? AND created_at <= ? "
-        "ORDER BY reward DESC LIMIT 1",
-        (start, end),
-    )
-    highest_value_task = None
-    if hvt_row:
-        highest_value_task = {
-            "task_id": hvt_row[0],
-            "title": hvt_row[1],
-            "reward": int(hvt_row[2]),
-        }
-
-    # Most competitive task (by bid count)
-    mct_row = await _fetchone(
-        db,
-        "SELECT t.task_id, t.title, COUNT(b.bid_id) AS bid_count "
-        "FROM board_tasks t "
-        "JOIN board_bids b ON t.task_id = b.task_id "
-        "WHERE t.created_at >= ? AND t.created_at <= ? "
-        "GROUP BY t.task_id "
-        "ORDER BY bid_count DESC LIMIT 1",
-        (start, end),
-    )
-    most_competitive_task = None
-    if mct_row:
-        most_competitive_task = {
-            "task_id": mct_row[0],
-            "title": mct_row[1],
-            "bid_count": int(mct_row[2]),
-        }
-
-    # Top workers: by earnings in this quarter
-    # Earnings = reward for approved tasks where they are worker
-    #          + (worker_pct/100 * reward) for ruled tasks where they are worker
-    top_workers_rows = await _fetchall(
-        db,
-        "SELECT a.agent_id, a.name, "
-        "  COALESCE(SUM(CASE "
-        "    WHEN t.status = 'approved' AND t.approved_at >= ? AND t.approved_at <= ? "
-        "      THEN t.reward "
-        "    WHEN t.status = 'ruled' AND t.ruled_at >= ? AND t.ruled_at <= ? "
-        "      THEN t.reward * t.worker_pct / 100 "
-        "    ELSE 0 "
-        "  END), 0) AS earned "
-        "FROM identity_agents a "
-        "JOIN board_tasks t ON a.agent_id = t.worker_id "
-        "WHERE (t.status = 'approved' AND t.approved_at >= ? AND t.approved_at <= ?) "
-        "   OR (t.status = 'ruled' AND t.ruled_at >= ? AND t.ruled_at <= ?) "
-        "GROUP BY a.agent_id "
-        "HAVING earned > 0 "
-        "ORDER BY earned DESC "
-        "LIMIT 3",
-        (start, end, start, end, start, end, start, end),
-    )
-    top_workers = [
-        {"agent_id": r[0], "name": r[1], "earned": int(r[2])}
-        for r in top_workers_rows
-    ]
-
-    # Top posters: by spending (total reward of tasks posted) in this quarter
-    top_posters_rows = await _fetchall(
-        db,
-        "SELECT a.agent_id, a.name, "
-        "  COALESCE(SUM(t.reward), 0) AS spent "
-        "FROM identity_agents a "
-        "JOIN board_tasks t ON a.agent_id = t.poster_id "
-        "WHERE t.created_at >= ? AND t.created_at <= ? "
-        "GROUP BY a.agent_id "
-        "HAVING spent > 0 "
-        "ORDER BY spent DESC "
-        "LIMIT 3",
-        (start, end),
-    )
-    top_posters = [
-        {"agent_id": r[0], "name": r[1], "spent": int(r[2])}
-        for r in top_posters_rows
-    ]
-
-    notable = {
-        "highest_value_task": highest_value_task,
-        "most_competitive_task": most_competitive_task,
-        "top_workers": top_workers,
-        "top_posters": top_posters,
-    }
+    notable = await _compute_notable(db, start, end)
 
     return {
         "quarter": quarter,

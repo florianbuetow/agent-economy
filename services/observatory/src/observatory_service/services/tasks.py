@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     import aiosqlite
 
 
-async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = ()) -> Any:
+async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
     """Execute query and return the first column of the first row."""
     async with db.execute(sql, params) as cursor:
         row = await cursor.fetchone()
@@ -19,19 +19,19 @@ async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = 
     return row[0]
 
 
-async def _fetchone(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = ()) -> Any:
+async def _fetchone(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
     """Execute query and return the first row."""
     async with db.execute(sql, params) as cursor:
         return await cursor.fetchone()
 
 
-async def _fetchall(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...] = ()) -> list:
+async def _fetchall(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> list[Any]:
     """Execute query and return all rows."""
     async with db.execute(sql, params) as cursor:
-        return await cursor.fetchall()
+        return list(await cursor.fetchall())
 
 
-async def _delivery_quality(db: aiosqlite.Connection, agent_id: str) -> dict:
+async def _delivery_quality(db: aiosqlite.Connection, agent_id: str) -> dict[str, Any]:
     """Compute delivery quality counts for a bidder from visible feedback."""
     es = int(
         await _scalar(
@@ -70,7 +70,7 @@ async def _delivery_quality(db: aiosqlite.Connection, agent_id: str) -> dict:
     }
 
 
-async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict | None:
+async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str, Any] | None:
     """Get a full task drilldown with bids, assets, feedback, and dispute."""
     # 1. Query the task
     task_row = await _fetchone(
@@ -87,10 +87,21 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict | N
         return None
 
     (
-        tid, poster_id, worker_id, title, spec,
-        reward, status, accepted_bid_id,
-        bidding_deadline, execution_deadline, review_deadline,
-        created_at, accepted_at, submitted_at, approved_at,
+        tid,
+        poster_id,
+        worker_id,
+        title,
+        spec,
+        reward,
+        status,
+        accepted_bid_id,
+        bidding_deadline,
+        execution_deadline,
+        review_deadline,
+        created_at,
+        accepted_at,
+        submitted_at,
+        approved_at,
     ) = task_row
 
     # 2. Resolve poster name
@@ -125,17 +136,19 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict | N
     for br in bid_rows:
         bid_id, bidder_id, bidder_name, proposal, bid_submitted_at = br
         dq = await _delivery_quality(db, bidder_id)
-        bids.append({
-            "bid_id": bid_id,
-            "bidder": {
-                "agent_id": bidder_id,
-                "name": bidder_name,
-                "delivery_quality": dq,
-            },
-            "proposal": proposal,
-            "submitted_at": bid_submitted_at,
-            "accepted": bid_id == accepted_bid_id,
-        })
+        bids.append(
+            {
+                "bid_id": bid_id,
+                "bidder": {
+                    "agent_id": bidder_id,
+                    "name": bidder_name,
+                    "delivery_quality": dq,
+                },
+                "proposal": proposal,
+                "submitted_at": bid_submitted_at,
+                "accepted": bid_id == accepted_bid_id,
+            }
+        )
 
     # 5. Assets
     asset_rows = await _fetchall(
@@ -185,8 +198,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict | N
     dispute = None
     claim_row = await _fetchone(
         db,
-        "SELECT claim_id, reason, filed_at "
-        "FROM court_claims WHERE task_id = ?",
+        "SELECT claim_id, reason, filed_at FROM court_claims WHERE task_id = ?",
         (task_id,),
     )
     if claim_row is not None:
@@ -196,8 +208,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict | N
         rebuttal = None
         reb_row = await _fetchone(
             db,
-            "SELECT content, submitted_at "
-            "FROM court_rebuttals WHERE claim_id = ?",
+            "SELECT content, submitted_at FROM court_rebuttals WHERE claim_id = ?",
             (claim_id,),
         )
         if reb_row is not None:
@@ -210,8 +221,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict | N
         ruling = None
         rul_row = await _fetchone(
             db,
-            "SELECT ruling_id, worker_pct, summary, ruled_at "
-            "FROM court_rulings WHERE claim_id = ?",
+            "SELECT ruling_id, worker_pct, summary, ruled_at FROM court_rulings WHERE claim_id = ?",
             (claim_id,),
         )
         if rul_row is not None:
@@ -258,9 +268,9 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict | N
 
 async def get_competitive_tasks(
     db: aiosqlite.Connection,
-    limit: int = 5,
-    status: str = "open",
-) -> list[dict]:
+    limit: int,
+    status: str,
+) -> list[dict[str, Any]]:
     """Return tasks sorted by bid count descending."""
     if status == "open":
         sql = (
@@ -311,9 +321,9 @@ async def get_competitive_tasks(
 
 async def get_uncontested_tasks(
     db: aiosqlite.Connection,
-    min_age_minutes: int = 10,
-    limit: int = 10,
-) -> list[dict]:
+    min_age_minutes: int,
+    limit: int,
+) -> list[dict[str, Any]]:
     """Return open tasks with zero bids older than min_age_minutes."""
     sql = (
         "SELECT bt.task_id, bt.title, bt.reward, "

@@ -6,8 +6,8 @@ import sqlite3
 
 import pytest
 
+from observatory_service.core.state import get_app_state
 from observatory_service.services import events as events_service
-
 
 # === Events History Tests ===
 
@@ -160,10 +160,8 @@ async def test_evt_13_non_integer_limit(seeded_client):
 
 
 @pytest.mark.unit
-async def test_sse_01_stream_delivers_events(seeded_app):
+async def test_sse_01_stream_delivers_events(seeded_app):  # noqa: ARG001
     """SSE-01: Stream delivers events as economy_event messages."""
-    from observatory_service.core.state import get_app_state
-
     state = get_app_state()
     gen = events_service.stream_events(
         state.db, last_event_id=0, batch_size=50, poll_interval=1, keepalive_interval=15
@@ -206,10 +204,8 @@ async def test_sse_01_stream_delivers_events(seeded_app):
 
 
 @pytest.mark.unit
-async def test_sse_02_cursor_based_resumption(seeded_app):
+async def test_sse_02_cursor_based_resumption(seeded_app):  # noqa: ARG001
     """SSE-02: Cursor-based resumption only returns events after cursor."""
-    from observatory_service.core.state import get_app_state
-
     state = get_app_state()
     gen = events_service.stream_events(
         state.db, last_event_id=10, batch_size=50, poll_interval=1, keepalive_interval=15
@@ -238,10 +234,8 @@ async def test_sse_02_cursor_based_resumption(seeded_app):
 
 
 @pytest.mark.unit
-async def test_sse_03_retry_directive(seeded_app):
+async def test_sse_03_retry_directive(seeded_app):  # noqa: ARG001
     """SSE-03: Stream starts with a retry directive."""
-    from observatory_service.core.state import get_app_state
-
     state = get_app_state()
     gen = events_service.stream_events(
         state.db, last_event_id=0, batch_size=50, poll_interval=1, keepalive_interval=15

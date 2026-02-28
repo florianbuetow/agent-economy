@@ -1,10 +1,12 @@
 """Tests for task endpoints."""
+
 import sqlite3
 from datetime import UTC, datetime, timedelta
+
 import pytest
 
-
 # === Task Drilldown Tests ===
+
 
 @pytest.mark.unit
 async def test_task_01_full_lifecycle(seeded_client):
@@ -12,7 +14,22 @@ async def test_task_01_full_lifecycle(seeded_client):
     response = await seeded_client.get("/api/tasks/t-1")
     assert response.status_code == 200
     data = response.json()
-    for key in ["task_id", "poster", "worker", "title", "spec", "reward", "status", "deadlines", "timestamps", "bids", "assets", "feedback", "dispute"]:
+    expected_keys = [
+        "task_id",
+        "poster",
+        "worker",
+        "title",
+        "spec",
+        "reward",
+        "status",
+        "deadlines",
+        "timestamps",
+        "bids",
+        "assets",
+        "feedback",
+        "dispute",
+    ]
+    for key in expected_keys:
         assert key in data
     assert data["task_id"] == "t-1"
     assert data["status"] == "approved"
@@ -96,7 +113,9 @@ async def test_task_08_visible_feedback_only(seeded_client, seeded_db_path):
     conn = sqlite3.connect(str(seeded_db_path))
     conn.execute("""
         INSERT INTO reputation_feedback VALUES
-        ('fb-sealed-task', 't-1', 'a-charlie', 'a-bob', 'worker', 'delivery_quality', 'dissatisfied', 'sealed', '2026-01-01T00:00:00Z', 0)
+        ('fb-sealed-task', 't-1', 'a-charlie', 'a-bob', 'worker',
+         'delivery_quality', 'dissatisfied', 'sealed',
+         '2026-01-01T00:00:00Z', 0)
     """)
     conn.commit()
     conn.close()
@@ -116,6 +135,7 @@ async def test_task_09_not_found(seeded_client):
 
 
 # === Competitive Tasks Tests ===
+
 
 @pytest.mark.unit
 async def test_comp_01_sorted_by_bid_count(seeded_client):
@@ -161,6 +181,7 @@ async def test_comp_04_empty_when_no_open(seeded_client, seeded_db_path):
 
 # === Uncontested Tasks Tests ===
 
+
 @pytest.mark.unit
 async def test_uncon_01_zero_bids(seeded_client, seeded_db_path):
     """UNCON-01: Returns tasks with zero bids."""
@@ -170,16 +191,22 @@ async def test_uncon_01_zero_bids(seeded_client, seeded_db_path):
     deadline = (now + timedelta(hours=1)).isoformat(timespec="seconds").replace("+00:00", "Z")
 
     conn = sqlite3.connect(str(seeded_db_path))
-    conn.execute("""
+    conn.execute(
+        """
         INSERT INTO bank_escrow VALUES ('esc-uncon', 'a-alice', 50, 't-uncon', 'locked', ?, NULL)
-    """, (created,))
-    conn.execute("""
+    """,
+        (created,),
+    )
+    conn.execute(
+        """
         INSERT INTO board_tasks (task_id, poster_id, title, spec, reward, status,
             bidding_deadline_seconds, deadline_seconds, review_deadline_seconds,
             bidding_deadline, escrow_id, created_at)
         VALUES ('t-uncon', 'a-alice', 'Uncontested task', 'spec', 50, 'open',
             3600, 7200, 3600, ?, 'esc-uncon', ?)
-    """, (deadline, created))
+    """,
+        (deadline, created),
+    )
     conn.commit()
     conn.close()
 
@@ -209,16 +236,22 @@ async def test_uncon_03_age_filter(seeded_client, seeded_db_path):
     deadline = (now + timedelta(hours=1)).isoformat(timespec="seconds").replace("+00:00", "Z")
 
     conn = sqlite3.connect(str(seeded_db_path))
-    conn.execute("""
+    conn.execute(
+        """
         INSERT INTO bank_escrow VALUES ('esc-young', 'a-bob', 30, 't-young', 'locked', ?, NULL)
-    """, (created,))
-    conn.execute("""
+    """,
+        (created,),
+    )
+    conn.execute(
+        """
         INSERT INTO board_tasks (task_id, poster_id, title, spec, reward, status,
             bidding_deadline_seconds, deadline_seconds, review_deadline_seconds,
             bidding_deadline, escrow_id, created_at)
         VALUES ('t-young', 'a-bob', 'Young task', 'spec', 30, 'open',
             3600, 7200, 3600, ?, 'esc-young', ?)
-    """, (deadline, created))
+    """,
+        (deadline, created),
+    )
     conn.commit()
     conn.close()
 

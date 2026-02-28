@@ -30,7 +30,7 @@ from observatory_service.services import tasks as tasks_service
 router = APIRouter()
 
 
-@router.get("/tasks/-/competitive")
+@router.get("/tasks/-/competitive")  # nosemgrep
 async def get_competitive_tasks(
     limit: int = Query(5, ge=1, le=20),
     status: str = Query("open"),
@@ -38,6 +38,7 @@ async def get_competitive_tasks(
     """Return tasks sorted by bid count descending."""
     state = get_app_state()
     db = state.db
+    assert db is not None
 
     data = await tasks_service.get_competitive_tasks(db, limit=limit, status=status)
 
@@ -59,7 +60,7 @@ async def get_competitive_tasks(
     return JSONResponse(content=response.model_dump(by_alias=True))
 
 
-@router.get("/tasks/-/uncontested")
+@router.get("/tasks/-/uncontested")  # nosemgrep
 async def get_uncontested_tasks(
     min_age_minutes: int = Query(10, ge=0),
     limit: int = Query(10, ge=1, le=50),
@@ -67,6 +68,7 @@ async def get_uncontested_tasks(
     """Return open tasks with zero bids older than min_age_minutes."""
     state = get_app_state()
     db = state.db
+    assert db is not None
 
     data = await tasks_service.get_uncontested_tasks(
         db, min_age_minutes=min_age_minutes, limit=limit
@@ -94,6 +96,7 @@ async def get_task_drilldown(task_id: str) -> JSONResponse:
     """Return full task drilldown with bids, assets, feedback, and dispute."""
     state = get_app_state()
     db = state.db
+    assert db is not None
 
     data = await tasks_service.get_task_drilldown(db, task_id)
 

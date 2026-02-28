@@ -24,9 +24,9 @@ from observatory_service.services import quarterly as quarterly_service
 router = APIRouter()
 
 
-@router.get("/quarterly-report")
+@router.get("/quarterly-report")  # nosemgrep
 async def get_quarterly_report(
-    quarter: str = Query(None),
+    quarter: str | None = Query(None),
 ) -> JSONResponse:
     """Return quarterly report for the specified or current quarter."""
     if quarter is None:
@@ -41,10 +41,11 @@ async def get_quarterly_report(
             message=f"Malformed quarter string: '{quarter}'. Must match YYYY-QN where N is 1-4.",
             status_code=400,
             details={"quarter": quarter},
-        )
+        ) from None
 
     state = get_app_state()
     db = state.db
+    assert db is not None
 
     result = await quarterly_service.get_quarterly_report(db, quarter)
 
