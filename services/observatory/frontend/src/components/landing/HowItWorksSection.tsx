@@ -36,7 +36,7 @@ export default function HowItWorksSection() {
 
       <div ref={ref} className="flex flex-col md:flex-row items-start">
         {steps.map((s, i) => (
-          <div key={s.num} className="flex-1 flex items-start">
+          <div key={s.num} className={`flex-1 flex items-start w-full md:w-auto ${i < steps.length - 1 ? "mb-6 md:mb-0" : ""}`}>
             <motion.div
               className="flex-1 text-center px-2"
               initial={{ opacity: 0, y: 16 }}
