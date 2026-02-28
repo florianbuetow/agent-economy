@@ -3,6 +3,7 @@
 import os
 
 import pytest
+from service_commons.config import ConfigurationError
 
 from observatory_service.config import clear_settings_cache, get_settings
 
@@ -80,7 +81,7 @@ request:
 
     clear_settings_cache()
 
-    with pytest.raises(Exception):
+    with pytest.raises(ConfigurationError):
         get_settings()
 
     clear_settings_cache()
