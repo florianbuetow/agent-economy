@@ -1,0 +1,14 @@
+rules:
+  - id: python.no-type-ignore
+    languages: [python]
+    severity: ERROR
+    message: |
+      Type-suppression is not allowed.
+      Do NOT add or keep: '# type: ignore' (including '[code]').
+      Fix the underlying typing issue instead.
+    pattern-regex: '(?m)#\s*type:\s*ignore(\[[^\]]*\])?'
+    paths:
+      include:
+        - src/
+      exclude:
+        - tests/
