@@ -1,4 +1,92 @@
 services:
+  identity:
+    build:
+      context: .
+      dockerfile: services/identity/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - CONFIG_PATH=/repo/services/identity/config.yaml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  central-bank:
+    build:
+      context: .
+      dockerfile: services/central-bank/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - CONFIG_PATH=/repo/services/central-bank/config.yaml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      identity:
+        condition: service_healthy
+
+  task-board:
+    build:
+      context: .
+      dockerfile: services/task-board/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - CONFIG_PATH=/repo/services/task-board/config.yaml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      identity:
+        condition: service_healthy
+      central-bank:
+        condition: service_healthy
+
+  reputation:
+    build:
+      context: .
+      dockerfile: services/reputation/Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - CONFIG_PATH=/repo/services/reputation/docker-config.yaml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      identity:
+        condition: service_healthy
+
+  court:
+    build:
+      context: .
+      dockerfile: services/court/Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      - CONFIG_PATH=/repo/services/court/config.yaml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      identity:
+        condition: service_healthy
+      task-board:
+        condition: service_healthy
+      reputation:
+        condition: service_healthy
+
   observatory:
     build:
       context: .
@@ -14,3 +102,14 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    depends_on:
+      identity:
+        condition: service_healthy
+      central-bank:
+        condition: service_healthy
+      task-board:
+        condition: service_healthy
+      reputation:
+        condition: service_healthy
+      court:
+        condition: service_healthy

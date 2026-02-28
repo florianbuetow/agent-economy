@@ -1,0 +1,29 @@
+# Central Bank Service Configuration
+# Environment variable overrides use prefix: CENTRAL_BANK__
+
+service:
+  name: "central-bank"
+  version: "0.1.0"
+
+server:
+  host: "0.0.0.0"
+  port: 8002
+  log_level: "info"
+
+logging:
+  level: "INFO"
+  format: "json"
+
+database:
+  path: "data/central-bank.db"
+
+identity:
+  base_url: "http://localhost:8001"
+  verify_jws_path: "/agents/verify-jws"
+  get_agent_path: "/agents"
+
+platform:
+  agent_id: "a-platform-placeholder"
+
+request:
+  max_body_size: 1048576

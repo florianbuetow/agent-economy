@@ -1,0 +1,40 @@
+services:
+  identity:
+    build:
+      context: .
+      dockerfile: services/identity/Dockerfile
+    volumes:
+      - ./services/identity/src:/repo/services/identity/src
+    command: uv run uvicorn identity_service.app:app --reload --host 0.0.0.0
+
+  central-bank:
+    build:
+      context: .
+      dockerfile: services/central-bank/Dockerfile
+    volumes:
+      - ./services/central-bank/src:/repo/services/central-bank/src
+    command: uv run uvicorn central_bank_service.app:app --reload --host 0.0.0.0
+
+  task-board:
+    build:
+      context: .
+      dockerfile: services/task-board/Dockerfile
+    volumes:
+      - ./services/task-board/src:/repo/services/task-board/src
+    command: uv run uvicorn task_board_service.app:app --reload --host 0.0.0.0
+
+  reputation:
+    build:
+      context: .
+      dockerfile: services/reputation/Dockerfile
+    volumes:
+      - ./services/reputation/src:/repo/services/reputation/src
+    command: uv run uvicorn reputation_service.app:app --reload --host 0.0.0.0
+
+  court:
+    build:
+      context: .
+      dockerfile: services/court/Dockerfile
+    volumes:
+      - ./services/court/src:/repo/services/court/src
+    command: uv run uvicorn court_service.app:app --reload --host 0.0.0.0

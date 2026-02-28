@@ -1,0 +1,20 @@
+# Semgrep ignore rules
+# See: https://semgrep.dev/docs/ignoring-files-folders-code
+
+# Virtual environments
+.venv/
+venv/
+
+# Third-party code
+scratch/
+
+# Generated / cached
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
