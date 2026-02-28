@@ -1,0 +1,16 @@
+services:
+  observatory:
+    build:
+      context: .
+      dockerfile: services/observatory/Dockerfile
+    ports:
+      - "8006:8006"
+    environment:
+      - CONFIG_PATH=/repo/services/observatory/config.yaml
+    volumes:
+      - ./data:/repo/data:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

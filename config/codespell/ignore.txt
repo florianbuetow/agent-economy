@@ -1,0 +1,18 @@
+# Domain-specific terms that codespell should ignore
+# One word per line, case-insensitive
+# Add new terms as false positives are discovered
+
+# Infrastructure & Tools
+uvicorn
+pydantic
+pytest
+mypy
+ruff
+fastapi
+httpx
+
+# Project-specific
+proto
+protobuf
+escrow
+donn
