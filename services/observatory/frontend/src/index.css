@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --font-mono: "Courier New", Courier, monospace;
+  --font-serif: Georgia, serif;
+
+  --color-bg: #ffffff;
+  --color-bg-off: #f7f7f7;
+  --color-bg-dark: #eeeeee;
+  --color-border: #cccccc;
+  --color-border-strong: #333333;
+  --color-text: #111111;
+  --color-text-mid: #444444;
+  --color-text-muted: #888888;
+  --color-text-faint: #bbbbbb;
+  --color-green: #1a7a1a;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
