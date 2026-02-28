@@ -1,21 +1,129 @@
-**/.DS_Store
-**/.env
-**/.guardfile
-
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-dist/
+*.py[codz]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Reports
-reports/
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Data
-data/*.db
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Logs
+*.log
+
+# Environments
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
 # IDE
 .idea/
 .vscode/
+.cursorignore
+.cursorindexingignore
+
+# Ruff
+.ruff_cache/
+
+# Mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyright
+.pyre/
+.pytype/
+
+# macOS
+**/.DS_Store
+.AppleDouble
+.LSOverride
+
+# Reports (except performance reports which are tracked)
+reports/*
+!reports/performance/
+
+# === Microservices ===
+
+# Per-service runtime data
+services/*/data/
+
+# Per-service artifacts
+services/*/reports/
+services/*/.venv/
+services/*/__pycache__/
+services/*/.pytest_cache/
+services/*/.mypy_cache/
+services/*/.ruff_cache/
+
+# Tools
+tools/.venv/
+tools/__pycache__/
+tools/.pytest_cache/
+tools/.mypy_cache/
+tools/.ruff_cache/
+tools/reports/
+
+# Data (keep structure, ignore contents)
+data/*
+!data/.gitkeep
+
+# Scratch (example project, not part of the repo)
+scratch/
+
+# Guard (file integrity tracking, machine-specific)
+.guardfile
+.worktrees/
+
+# Security audit (local-only)
+.appsec/*
+!.appsec/config.yaml
+
+# Claude Code
+.claude/worktrees/

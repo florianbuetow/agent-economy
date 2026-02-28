@@ -1,0 +1,27 @@
+# Identity Service Configuration
+# Environment variable overrides use prefix: IDENTITY__
+
+service:
+  name: "identity"
+  version: "0.1.0"
+
+server:
+  host: "0.0.0.0"
+  port: 8001
+  log_level: "info"
+
+logging:
+  level: "INFO"
+  format: "json"
+
+database:
+  path: "data/identity.db"
+
+crypto:
+  algorithm: "ed25519"
+  public_key_prefix: "ed25519:"
+  public_key_bytes: 32
+  signature_bytes: 64
+
+request:
+  max_body_size: 1572864

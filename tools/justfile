@@ -1,0 +1,40 @@
+# Default recipe: show available commands
+_default:
+    @just help
+
+# Show help information
+help:
+    @clear
+    @echo ""
+    @printf "\033[0;34m=== Agent Economy Tools ===\033[0m\n"
+    @echo ""
+    @printf "\033[1;33mSetup\033[0m\n"
+    @printf "  \033[0;37mjust init             \033[0;34m Initialize development environment\033[0m\n"
+    @printf "  \033[0;37mjust destroy          \033[0;34m Remove virtual environment\033[0m\n"
+    @echo ""
+    @printf "\033[1;33mSimulation\033[0m\n"
+    @printf "  \033[0;37mjust simulate         \033[0;34m Run the simulation injector\033[0m\n"
+    @echo ""
+
+# Initialize the development environment
+init:
+    @echo ""
+    @printf "\033[0;34m=== Initializing Tools Environment ===\033[0m\n"
+    @echo "Installing Python dependencies..."
+    @uv sync --all-extras
+    @printf "\033[0;32m✓ Tools environment ready\033[0m\n"
+    @echo ""
+
+# Destroy the virtual environment
+destroy:
+    @echo ""
+    @printf "\033[0;34m=== Destroying Virtual Environment ===\033[0m\n"
+    @rm -rf .venv
+    @printf "\033[0;32m✓ Virtual environment removed\033[0m\n"
+    @echo ""
+
+# Run the simulation injector (placeholder)
+simulate:
+    @echo ""
+    @printf "\033[0;33m⚠ Simulation injector not yet implemented\033[0m\n"
+    @echo ""

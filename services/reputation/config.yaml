@@ -1,0 +1,30 @@
+# Reputation Service Configuration
+# Environment variable overrides use prefix: REPUTATION__
+
+service:
+  name: "reputation"
+  version: "0.1.0"
+
+server:
+  host: "0.0.0.0"
+  port: 8004
+  log_level: "info"
+
+logging:
+  level: "INFO"
+  format: "json"
+
+identity:
+  base_url: "http://localhost:8001"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
+
+request:
+  max_body_size: 1048576  # 1MB
+
+database:
+  path: "data/reputation.db"
+
+feedback:
+  reveal_timeout_seconds: 86400  # 24 hours
+  max_comment_length: 256

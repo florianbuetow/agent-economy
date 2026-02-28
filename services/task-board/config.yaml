@@ -1,0 +1,41 @@
+# Task Board Service Configuration
+# Environment variable overrides use prefix: TASK_BOARD__
+
+service:
+  name: "task-board"
+  version: "0.1.0"
+
+server:
+  host: "0.0.0.0"
+  port: 8003
+  log_level: "info"
+
+logging:
+  level: "INFO"
+  format: "json"
+
+database:
+  path: "data/task-board.db"
+
+identity:
+  base_url: "http://localhost:8001"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
+
+central_bank:
+  base_url: "http://localhost:8002"
+  escrow_lock_path: "/escrow/lock"
+  escrow_release_path: "/escrow/{escrow_id}/release"
+  timeout_seconds: 10
+
+platform:
+  agent_id: ""
+  private_key_path: ""
+
+assets:
+  storage_path: "data/assets"
+  max_file_size: 10485760
+  max_files_per_task: 10
+
+request:
+  max_body_size: 10485760
