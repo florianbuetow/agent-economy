@@ -1,0 +1,16 @@
+{
+  "include": ["src"],
+  "exclude": ["**/__pycache__", ".venv", "tests"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "strict",
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": false,
+  "reportUnusedImport": true,
+  "reportPrivateUsage": false,
+  "venvPath": ".",
+  "venv": ".venv"
+}

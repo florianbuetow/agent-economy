@@ -1,0 +1,10 @@
+# Agent Roster — maps handles to names and types
+# Keys are stored at: data/keys/{handle}.key and data/keys/{handle}.pub
+
+agents:
+  alice:
+    name: "Alice"
+    type: "worker"
+  bob:
+    name: "Bob"
+    type: "worker"
