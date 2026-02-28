@@ -13,9 +13,15 @@
   --color-text-mid: #444444;
   --color-text-muted: #888888;
   --color-text-faint: #bbbbbb;
+  --color-green: #1a7a1a;
 }
 
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
