@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import pytest
 
 from base_agent.agent import BaseAgent
-from base_agent.config import Settings
+
+if TYPE_CHECKING:
+    from base_agent.config import Settings
 
 
 @pytest.mark.unit
@@ -20,7 +25,7 @@ class TestBaseAgentInit:
         assert agent.agent_id is None
 
     def test_generates_keys_if_missing(self, sample_settings: Settings) -> None:
-        agent = BaseAgent(handle="testbot", config=sample_settings)
+        BaseAgent(handle="testbot", config=sample_settings)
         keys_dir = Path(sample_settings.data.keys_dir)
         assert (keys_dir / "testbot.key").exists()
         assert (keys_dir / "testbot.pub").exists()

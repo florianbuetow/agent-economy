@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 import yaml
 
 from base_agent.config import Settings, clear_settings_cache
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture()
