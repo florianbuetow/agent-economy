@@ -45,7 +45,7 @@ export const THEMES: Record<string, ThemeDefinition> = {
     font: "'Courier New', Courier, monospace",
   },
   ft: {
-    name: "Financial Times",
+    name: "FT",
     description: "Salmon + Georgia serif. Warm, journalistic authority.",
     colors: {
       bg: "#FFF1E0",
@@ -66,7 +66,7 @@ export const THEMES: Record<string, ThemeDefinition> = {
     font: "Georgia, 'Times New Roman', serif",
   },
   gs: {
-    name: "Goldman Sachs",
+    name: "GS",
     description: "Navy + Helvetica. Clean, institutional precision.",
     colors: {
       bg: "#FFFFFF",
