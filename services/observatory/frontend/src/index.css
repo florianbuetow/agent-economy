@@ -14,6 +14,7 @@
   --color-text-muted: #888888;
   --color-text-faint: #bbbbbb;
   --color-green: #1a7a1a;
+  --color-red: #b91c1c;
 }
 
 @keyframes pulse-dot {

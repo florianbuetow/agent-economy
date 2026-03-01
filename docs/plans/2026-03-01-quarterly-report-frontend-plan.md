@@ -1,3 +1,247 @@
+# Quarterly Report Frontend Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** Replace the placeholder quarterly report page with a journal-style editorial layout displaying GDP, Tasks, Labor Market, and Notable Highlights from the economy, with a quarter selector for navigation.
+
+**Architecture:** Single page component fetches data from `GET /api/quarterly-report?quarter=YYYY-QN`. A custom hook manages the fetch. Types are added to the shared types file. The page renders a vertical scroll layout alternating single-column hero sections and two-column detail grids.
+
+**Tech Stack:** React 18, TypeScript, Tailwind CSS v4 (with custom theme tokens in `index.css`)
+
+**Working directory:** `/Users/ryanzidago/Projects/agent-economy-group/agent-economy/.claude/worktrees/quarterly-report`
+
+**Design doc:** `docs/plans/2026-03-01-quarterly-report-frontend-design.md`
+
+---
+
+### Task 1: Add quarterly report types to `types.ts`
+
+**Files:**
+- Modify: `services/observatory/frontend/src/types.ts`
+
+**Step 1: Add types at the end of the file**
+
+Add these interfaces after the existing `AgentListResponse` interface:
+
+```typescript
+// --- Quarterly Report ---
+export interface QuarterlyPeriod {
+  start: string;
+  end: string;
+}
+
+export interface QuarterlyGDP {
+  total: number;
+  previous_quarter: number;
+  delta_pct: number;
+  per_agent: number;
+}
+
+export interface QuarterlyTasks {
+  posted: number;
+  completed: number;
+  disputed: number;
+  completion_rate: number;
+}
+
+export interface QuarterlyLaborMarket {
+  avg_bids_per_task: number;
+  avg_time_to_acceptance_minutes: number;
+  avg_reward: number;
+}
+
+export interface QuarterlySpecQuality {
+  avg_score: number;
+  previous_quarter_avg: number;
+  delta_pct: number;
+}
+
+export interface QuarterlyAgents {
+  new_registrations: number;
+  total_at_quarter_end: number;
+}
+
+export interface NotableTask {
+  task_id: string;
+  title: string;
+  reward?: number;
+  bid_count?: number;
+}
+
+export interface NotableAgent {
+  agent_id: string;
+  name: string;
+  earned?: number;
+  spent?: number;
+}
+
+export interface QuarterlyNotable {
+  highest_value_task: NotableTask | null;
+  most_competitive_task: NotableTask | null;
+  top_workers: NotableAgent[];
+  top_posters: NotableAgent[];
+}
+
+export interface QuarterlyReportResponse {
+  quarter: string;
+  period: QuarterlyPeriod;
+  gdp: QuarterlyGDP;
+  tasks: QuarterlyTasks;
+  labor_market: QuarterlyLaborMarket;
+  spec_quality: QuarterlySpecQuality;
+  agents: QuarterlyAgents;
+  notable: QuarterlyNotable;
+}
+```
+
+**Step 2: Verify TypeScript compiles**
+
+Run from `services/observatory/frontend/`:
+```bash
+npx tsc --noEmit
+```
+Expected: No errors.
+
+**Step 3: Commit**
+
+```bash
+git add services/observatory/frontend/src/types.ts
+git commit -m "feat(observatory): add quarterly report TypeScript types"
+```
+
+---
+
+### Task 2: Create API client function
+
+**Files:**
+- Create: `services/observatory/frontend/src/api/quarterly.ts`
+
+**Step 1: Write the API client**
+
+```typescript
+import type { QuarterlyReportResponse } from "../types";
+import { fetchJSON } from "./client";
+
+export function fetchQuarterlyReport(
+  quarter: string,
+): Promise<QuarterlyReportResponse> {
+  return fetchJSON<QuarterlyReportResponse>(
+    `/api/quarterly-report?quarter=${encodeURIComponent(quarter)}`,
+  );
+}
+```
+
+**Step 2: Verify TypeScript compiles**
+
+Run from `services/observatory/frontend/`:
+```bash
+npx tsc --noEmit
+```
+Expected: No errors.
+
+**Step 3: Commit**
+
+```bash
+git add services/observatory/frontend/src/api/quarterly.ts
+git commit -m "feat(observatory): add quarterly report API client"
+```
+
+---
+
+### Task 3: Create `useQuarterlyReport` hook
+
+**Files:**
+- Create: `services/observatory/frontend/src/hooks/useQuarterlyReport.ts`
+
+**Step 1: Write the hook**
+
+```typescript
+import { useEffect, useState } from "react";
+import type { QuarterlyReportResponse } from "../types";
+import { fetchQuarterlyReport } from "../api/quarterly";
+
+interface UseQuarterlyReportResult {
+  report: QuarterlyReportResponse | null;
+  loading: boolean;
+  error: string | null;
+}
+
+function currentQuarterLabel(): string {
+  const now = new Date();
+  const q = Math.ceil((now.getMonth() + 1) / 3);
+  return `${now.getFullYear()}-Q${q}`;
+}
+
+export function useQuarterlyReport(quarter: string): UseQuarterlyReportResult {
+  const [report, setReport] = useState<QuarterlyReportResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError(null);
+
+    fetchQuarterlyReport(quarter)
+      .then((data) => {
+        if (active) {
+          setReport(data);
+          setLoading(false);
+        }
+      })
+      .catch((e) => {
+        if (active) {
+          setError(e instanceof Error ? e.message : "Unknown error");
+          setReport(null);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [quarter]);
+
+  return { report, loading, error };
+}
+
+export { currentQuarterLabel };
+```
+
+**Step 2: Verify TypeScript compiles**
+
+Run from `services/observatory/frontend/`:
+```bash
+npx tsc --noEmit
+```
+Expected: No errors.
+
+**Step 3: Commit**
+
+```bash
+git add services/observatory/frontend/src/hooks/useQuarterlyReport.ts
+git commit -m "feat(observatory): add useQuarterlyReport hook"
+```
+
+---
+
+### Task 4: Build the QuarterlyReport page
+
+**Files:**
+- Modify: `services/observatory/frontend/src/pages/QuarterlyReport.tsx` (replace placeholder entirely)
+
+**Step 1: Replace the placeholder with the full page**
+
+Reference the design doc at `docs/plans/2026-03-01-quarterly-report-frontend-design.md` for the journal-style layout. The page should:
+
+1. **Header** (single column, centered): "AGENT TASK ECONOMY / QUARTERLY REPORT · 2026-Q1" with period dates and quarter navigation arrows
+2. **GDP Hero** (single column): Large GDP total number, delta % vs previous quarter, per-agent figure
+3. **Tasks + Labor Market** (two columns side by side): Left column shows posted/completed/disputed/completion rate. Right column shows avg bids, acceptance time, avg reward
+4. **Notable** (mixed): Two-column for notable tasks (highest value + most competitive), then two-column for top workers + top posters
+
+Quarter navigation: `< Prev` and `Next >` buttons that shift the quarter string. Handle edge cases (no previous data = show error message, not crash).
+
+```tsx
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuarterlyReport, currentQuarterLabel } from "../hooks/useQuarterlyReport";
@@ -88,13 +332,13 @@ export default function QuarterlyReport() {
                 {report.gdp.total.toLocaleString()}
               </div>
               <div className="text-[10px] text-text-muted mt-1">coins produced</div>
-              <div className={`text-[11px] mt-3 ${report.gdp.delta_pct >= 0 ? "text-green" : "text-red"}`}>
+              <div className="text-[11px] text-text-mid mt-3">
                 {report.gdp.delta_pct >= 0 ? "▲" : "▼"}{" "}
-                {Math.abs(report.gdp.delta_pct).toFixed(1)}% from previous quarter
+                {Math.abs(report.gdp.delta_pct)}% from previous quarter
                 ({report.gdp.previous_quarter.toLocaleString()})
               </div>
               <div className="text-[10px] text-text-muted mt-1">
-                {report.gdp.per_agent.toFixed(1)} per agent
+                {report.gdp.per_agent} per agent
               </div>
             </div>
 
@@ -116,11 +360,11 @@ export default function QuarterlyReport() {
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-text-muted">Disputed</span>
-                    <span className={`font-bold ${report.tasks.disputed > 0 ? "text-red" : "text-text"}`}>{report.tasks.disputed}</span>
+                    <span className="text-text font-bold">{report.tasks.disputed}</span>
                   </div>
                   <div className="flex justify-between text-[11px] pt-2 border-t border-border">
                     <span className="text-text-muted">Completion rate</span>
-                    <span className={`font-bold ${report.tasks.completion_rate > 0.5 ? "text-green" : "text-red"}`}>
+                    <span className="text-text font-bold">
                       {(report.tasks.completion_rate * 100).toFixed(0)}%
                     </span>
                   </div>
@@ -244,3 +488,59 @@ export default function QuarterlyReport() {
     </div>
   );
 }
+```
+
+**Step 2: Verify TypeScript compiles**
+
+Run from `services/observatory/frontend/`:
+```bash
+npx tsc --noEmit
+```
+Expected: No errors.
+
+**Step 3: Verify the build succeeds**
+
+Run from `services/observatory/frontend/`:
+```bash
+npm run build
+```
+Expected: Build completes with no errors.
+
+**Step 4: Commit**
+
+```bash
+git add services/observatory/frontend/src/pages/QuarterlyReport.tsx
+git commit -m "feat(observatory): build quarterly report page with journal layout"
+```
+
+---
+
+### Task 5: Visual verification
+
+**Step 1: Start the observatory service**
+
+Run from `services/observatory/`:
+```bash
+just run
+```
+
+**Step 2: Open browser and verify**
+
+Navigate to `http://localhost:8006/observatory/quarterly`
+
+Verify:
+- Header shows quarter label and period dates
+- Quarter navigation arrows work (clicking prev/next updates the quarter and refetches)
+- GDP hero number displays prominently
+- Tasks and Labor Market sections render side-by-side
+- Notable section shows tasks and leaderboards
+- Error state shows gracefully when navigating to a quarter with no data
+- Loading state shows while fetching
+- Back link navigates to observatory
+
+**Step 3: Commit any visual fixes**
+
+```bash
+git add -u
+git commit -m "fix(observatory): polish quarterly report styling"
+```

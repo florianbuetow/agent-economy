@@ -1,87 +1,707 @@
-"""Create a seed database for manual testing via curl."""
+"""Seed a realistic multi-quarter economy database.
+
+Generates data across Q3 2025, Q4 2025, and Q1 2026 with:
+  - 25 agents registered in waves
+  - ~150 tasks spread realistically across months
+  - Full task lifecycles with escrow, bids, feedback, disputes
+  - Monthly salary distribution
+  - ~2000+ events in the activity stream
+
+Usage: python3 services/observatory/data/seed.py [db_path]
+"""
 
 import json
+import random
 import sqlite3
+import sys
+import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "economy.db"
-SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent.parent / "docs" / "specifications" / "schema.sql"
+SCHEMA_PATH = (
+    Path(__file__).resolve().parent.parent.parent.parent
+    / "docs"
+    / "specifications"
+    / "schema.sql"
+)
+
+# Deterministic randomness
+RNG = random.Random(2026)
+
+# ── Agent names (25 total, registered in waves) ─────────────────────────────
+
+AGENT_WAVES = [
+    # Q3 2025 founders (8)
+    {
+        "start": datetime(2025, 7, 5, tzinfo=UTC),
+        "spread_days": 30,
+        "names": ["Atlas", "Beacon", "Cipher", "Delta", "Echo", "Forge", "Glyph", "Helix"],
+    },
+    # Q4 2025 growth (7)
+    {
+        "start": datetime(2025, 10, 8, tzinfo=UTC),
+        "spread_days": 25,
+        "names": ["Index", "Jolt", "Kernel", "Lumen", "Matrix", "Nexus", "Orbit"],
+    },
+    # Q1 2026 expansion (10)
+    {
+        "start": datetime(2026, 1, 3, tzinfo=UTC),
+        "spread_days": 35,
+        "names": [
+            "Prism",
+            "Quasar",
+            "Relay",
+            "Signal",
+            "Tensor",
+            "Unity",
+            "Vector",
+            "Warden",
+            "Xenon",
+            "Zenith",
+        ],
+    },
+]
+
+# ── Task templates ───────────────────────────────────────────────────────────
+
+TITLES = [
+    "Implement user authentication flow",
+    "Build REST API for inventory management",
+    "Design database schema for analytics",
+    "Create PDF report generator",
+    "Optimize search indexing pipeline",
+    "Write unit tests for payment module",
+    "Migrate legacy CSV import to streaming parser",
+    "Build agent-to-agent messaging protocol",
+    "Implement rate limiting middleware",
+    "Create dashboard data aggregation service",
+    "Build webhook delivery system",
+    "Design task queue with retry logic",
+    "Implement Ed25519 signature verification",
+    "Create automated contract validator",
+    "Build real-time notification service",
+    "Implement escrow settlement engine",
+    "Design reputation scoring algorithm",
+    "Build specification linter and validator",
+    "Create multi-model LLM judge panel",
+    "Implement bid ranking and selection engine",
+    "Build asset storage and retrieval service",
+    "Design circuit breaker for service mesh",
+    "Implement audit log with tamper detection",
+    "Create economic simulation test harness",
+    "Build agent onboarding wizard",
+    "Implement deadline enforcement daemon",
+    "Design dispute evidence packaging format",
+    "Create cross-service health monitor",
+    "Build configurable payout splitter",
+    "Implement sealed-bid auction protocol",
+    "Write integration test suite for API",
+    "Build CLI tool for agent management",
+    "Implement streaming log aggregator",
+    "Design task template system",
+    "Create market analytics dashboard",
+    "Build automated deployment pipeline",
+    "Implement content-addressed asset store",
+    "Design multi-tenant isolation layer",
+    "Create service mesh observability stack",
+    "Build automated compliance checker",
+]
+
+SPECS = [
+    "The implementation must handle all edge cases including empty input, malformed data, and concurrent access. Include structured logging for all operations. Return appropriate HTTP status codes.",
+    "Build this as a stateless service that reads configuration from YAML. All validation must happen at the boundary. Include integration tests that cover the happy path and at least 3 error paths.",
+    "Use async IO throughout. The service must handle 100 concurrent requests without degradation. Include a health endpoint that reports uptime and request counts.",
+    "Follow the repository coding standards: no default parameter values, explicit error handling, and type-safe configuration. All public functions must have docstrings.",
+    "The deliverable must include both the implementation and a test suite with at least 80 percent coverage. Document all API endpoints in OpenAPI format.",
+    "Implement with idempotency keys to support safe retries. All state mutations must be wrapped in database transactions. Include rollback logic for partial failures.",
+    "Design for extensibility: use the strategy pattern for the core algorithm so new variants can be added without modifying existing code. Include at least 2 strategy implementations.",
+    "The system must be observable: emit structured JSON logs, expose Prometheus metrics, and include trace IDs in all cross-service calls.",
+    "Performance is critical: the P99 latency must be under 50ms for the hot path. Include benchmarks that prove this. Optimize data structures for cache locality.",
+    "Security first: all inputs must be sanitized, all outputs must be escaped, and all secrets must use environment variables. Include a threat model document.",
+]
+
+PROPOSALS = [
+    "I have built similar systems before and can deliver within the deadline. My approach uses well-tested patterns with comprehensive error handling.",
+    "I will implement this using a test-driven approach, writing failing tests first. I estimate completion in 75 percent of the allotted time.",
+    "My proposal: decompose into 3 phases - core logic, integration layer, and testing. Each phase produces a working increment.",
+    "I specialize in this domain. I will deliver clean, documented code with full test coverage and a brief architecture decision record.",
+    "I can start immediately. My implementation plan: scaffold and config, business logic, API layer, tests, documentation. Will push incremental commits.",
+    "I will use the existing service patterns in this repository to ensure consistency. Deliverable includes passing CI and a migration guide.",
+    "I bring deep expertise here. My approach: first validate requirements with you, then implement iteratively with daily progress updates.",
+    "Proposing a modular design that isolates each concern. This ensures testability and makes future modifications low-risk.",
+]
+
+DISPUTE_REASONS = [
+    "The deliverable does not implement the core requirement. The spec explicitly states the feature must handle concurrent access, but the implementation uses no locking.",
+    "The submitted code fails 3 of the 5 specified error paths. The spec requires appropriate HTTP status codes but the implementation returns 500 for all errors.",
+    "The test coverage is below the specified 80 percent threshold. Only 4 tests were provided covering approximately 40 percent of the code.",
+    "The implementation ignores the idempotency requirement. Duplicate requests create duplicate records instead of being safely deduplicated.",
+    "The API does not match the specified contract. Three endpoints return different response shapes than what was documented in the spec.",
+    "Missing critical functionality: the streaming endpoint only supports batch mode. The spec explicitly required real-time event streaming.",
+    "Documentation is incomplete. The spec required OpenAPI docs for all endpoints, but only 2 of 7 endpoints are documented.",
+]
+
+RULING_SUMMARIES = [
+    "The specification clearly required concurrent access handling. The worker did not implement this. However the remaining functionality is correct. Partial credit awarded.",
+    "The spec was ambiguous about error handling granularity. The worker implemented reasonable defaults. Per platform rules, ambiguity favors the worker.",
+    "Both parties have valid points. The spec required 80 percent coverage but did not define which code paths are critical. Split evenly.",
+    "The worker delivered functional code that meets the core requirements. The poster disputes secondary concerns not explicitly in the spec.",
+    "The implementation clearly deviates from the spec on multiple points. The spec was unambiguous. Poster receives majority of the escrow.",
+    "Worker completed the primary deliverable but missed two secondary requirements. The specification was clear on these points. 70 percent to worker.",
+]
+
+FEEDBACK_SPEC = [
+    "Spec was crystal clear, no ambiguity",
+    "Well-structured requirements with good examples",
+    "Spec could have been more specific about error handling",
+    "Missing edge case definitions but overall acceptable",
+    "Vague acceptance criteria made delivery difficult",
+    "Excellent spec, one of the best I have worked with",
+    "Requirements were thorough and testable",
+    "Good spec but assumed too much domain knowledge",
+]
+
+FEEDBACK_DELIV = [
+    "Clean code, well tested, delivered early",
+    "Solid implementation that meets all requirements",
+    "Good work but missed some edge cases",
+    "Barely meets the minimum requirements",
+    "Outstanding quality, exceeded expectations",
+    "Functional but needs refactoring for production",
+    "Comprehensive solution with excellent documentation",
+    "Met the spec precisely, no more no less",
+]
+
+FILENAMES = [
+    ("solution.zip", "application/zip"),
+    ("deliverable.tar.gz", "application/gzip"),
+    ("implementation.py", "text/x-python"),
+    ("report.pdf", "application/pdf"),
+    ("package.zip", "application/zip"),
+    ("service.py", "text/x-python"),
+    ("tests.zip", "application/zip"),
+    ("output.json", "application/json"),
+    ("module.tar.gz", "application/gzip"),
+    ("artifact.zip", "application/zip"),
+]
+
+RATINGS = ["dissatisfied", "satisfied", "satisfied", "satisfied", "extremely_satisfied", "extremely_satisfied"]
+
+# ── Task schedule per quarter ────────────────────────────────────────────────
+# (quarter_start, quarter_end, num_tasks, outcome_weights)
+QUARTER_SCHEDULE = [
+    {
+        "label": "2025-Q3",
+        "start": datetime(2025, 7, 1, tzinfo=UTC),
+        "end": datetime(2025, 9, 30, 23, 59, 59, tzinfo=UTC),
+        "num_tasks": 25,
+        "outcomes": {
+            "approved": 15,
+            "auto_approved": 3,
+            "disputed": 2,
+            "cancelled": 3,
+            "expired": 2,
+        },
+    },
+    {
+        "label": "2025-Q4",
+        "start": datetime(2025, 10, 1, tzinfo=UTC),
+        "end": datetime(2025, 12, 31, 23, 59, 59, tzinfo=UTC),
+        "num_tasks": 45,
+        "outcomes": {
+            "approved": 28,
+            "auto_approved": 5,
+            "disputed": 4,
+            "cancelled": 4,
+            "expired": 2,
+            "open": 1,
+            "submitted": 1,
+        },
+    },
+    {
+        "label": "2026-Q1",
+        "start": datetime(2026, 1, 1, tzinfo=UTC),
+        "end": datetime(2026, 2, 28, 23, 59, 59, tzinfo=UTC),
+        "num_tasks": 80,
+        "outcomes": {
+            "approved": 48,
+            "auto_approved": 9,
+            "disputed": 7,
+            "cancelled": 5,
+            "expired": 3,
+            "open": 4,
+            "accepted": 2,
+            "submitted": 2,
+        },
+    },
+]
+
+# Monthly salary dates
+SALARY_DATES = [
+    datetime(2025, 8, 1, 9, 0, tzinfo=UTC),
+    datetime(2025, 9, 1, 9, 0, tzinfo=UTC),
+    datetime(2025, 10, 1, 9, 0, tzinfo=UTC),
+    datetime(2025, 11, 1, 9, 0, tzinfo=UTC),
+    datetime(2025, 12, 1, 9, 0, tzinfo=UTC),
+    datetime(2026, 1, 1, 9, 0, tzinfo=UTC),
+    datetime(2026, 2, 1, 9, 0, tzinfo=UTC),
+]
+
+SALARY_AMOUNT = 500
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
 
 
 def ts(dt: datetime) -> str:
-    return dt.isoformat(timespec="seconds").replace("+00:00", "Z")
+    """Format datetime as ISO 8601 UTC string."""
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def main() -> None:
-    if DB_PATH.exists():
-        DB_PATH.unlink()
+def gen_id() -> str:
+    """Generate a deterministic UUID-like ID."""
+    return str(uuid.UUID(int=RNG.getrandbits(128), version=4))
 
-    schema = SCHEMA_PATH.read_text()
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.executescript(schema)
 
-    now = datetime.now(UTC)
-    t_7d = now - timedelta(days=7)
-    t_5d = now - timedelta(days=5)
-    t_3d = now - timedelta(days=3)
-    t_2d = now - timedelta(days=2)
-    t_1d = now - timedelta(days=1)
-    t_12h = now - timedelta(hours=12)
-    t_6h = now - timedelta(hours=6)
-    t_3h = now - timedelta(hours=3)
-    t_2h = now - timedelta(hours=2)
-    t_1h = now - timedelta(hours=1)
-    t_30m = now - timedelta(minutes=30)
-    t_15m = now - timedelta(minutes=15)
+def rand_dt(start: datetime, end: datetime) -> datetime:
+    """Generate a random datetime between start and end."""
+    delta = (end - start).total_seconds()
+    offset = RNG.random() * delta
+    return start + timedelta(seconds=offset)
 
-    bd = timedelta(seconds=3600)
-    ex = timedelta(seconds=7200)
-    rv = timedelta(seconds=3600)
 
-    # === AGENTS ===
-    agents = [
-        ("a-alice", "Alice", "ed25519:alice-pub", ts(t_7d)),
-        ("a-bob", "Bob", "ed25519:bob-pub", ts(t_5d)),
-        ("a-charlie", "Charlie", "ed25519:charlie-pub", ts(t_3d)),
-        ("a-diana", "Diana", "ed25519:diana-pub", ts(t_2d)),
-        ("a-eve", "Eve", "ed25519:eve-pub", ts(t_1d)),
-    ]
-    conn.executemany(
-        "INSERT INTO identity_agents (agent_id, name, public_key, registered_at) VALUES (?,?,?,?)",
-        agents,
-    )
+def pick_n(items: list, n: int, exclude: set | None = None) -> list:
+    """Pick n random items, optionally excluding some."""
+    pool = [x for x in items if exclude is None or x not in exclude]
+    return RNG.sample(pool, min(n, len(pool)))
 
-    # === BANK ACCOUNTS ===
-    conn.executemany(
-        "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?,?,?)",
-        [
-            ("a-alice", 1850, ts(t_7d)),
-            ("a-bob", 2200, ts(t_5d)),
-            ("a-charlie", 1100, ts(t_3d)),
-            ("a-diana", 750, ts(t_2d)),
-            ("a-eve", 500, ts(t_1d)),
-        ],
-    )
 
-    # === ESCROW ===
-    conn.executemany(
-        "INSERT INTO bank_escrow (escrow_id, payer_account_id, amount, task_id, status, created_at, resolved_at) VALUES (?,?,?,?,?,?,?)",
-        [
-            ("esc-1", "a-alice", 200, "t-1", "released", ts(t_6h), ts(t_3h)),
-            ("esc-2", "a-alice", 150, "t-2", "released", ts(t_12h), ts(t_6h)),
-            ("esc-3", "a-bob", 100, "t-3", "locked", ts(t_3h), None),
-            ("esc-4", "a-charlie", 80, "t-4", "locked", ts(t_2h), None),
-            ("esc-5", "a-diana", 120, "t-5", "released", ts(t_2d), ts(t_1d)),
-            ("esc-6", "a-alice", 300, "t-6", "split", ts(t_3d), ts(t_2d)),
-            ("esc-7", "a-eve", 60, "t-7", "locked", ts(t_1h), None),
-            ("esc-8", "a-bob", 250, "t-8", "released", ts(t_5d), ts(t_3d)),
-        ],
-    )
+class Economy:
+    """Tracks state and generates SQL inserts for the economy."""
 
-    # === TASKS ===
-    def insert_task(params):
-        conn.execute(
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+        self.agents: dict[str, dict] = {}  # agent_id -> {name, registered_at}
+        self.balances: dict[str, int] = {}  # agent_id -> balance
+        self.events: list[tuple] = []
+        self.tx_count = 0
+        self.task_count = 0
+        self.bid_count = 0
+        self.asset_count = 0
+        self.escrow_count = 0
+        self.feedback_count = 0
+        self.claim_count = 0
+        self.ruling_count = 0
+        self.rebuttal_count = 0
+
+    # ── Agent registration ───────────────────────────────────────────────
+
+    def register_agents(self) -> None:
+        """Register agents in waves across quarters."""
+        for wave in AGENT_WAVES:
+            start = wave["start"]
+            spread = timedelta(days=wave["spread_days"])
+            for i, name in enumerate(wave["names"]):
+                offset = spread * (i / max(len(wave["names"]) - 1, 1))
+                reg_time = start + offset + timedelta(
+                    hours=RNG.randint(8, 18),
+                    minutes=RNG.randint(0, 59),
+                )
+                aid = f"a-{gen_id()}"
+                pub_key = f"ed25519:{name.lower()}-{RNG.randbytes(16).hex()[:22]}"
+
+                self.agents[aid] = {"name": name, "registered_at": reg_time}
+                self.balances[aid] = 0
+
+                self.conn.execute(
+                    "INSERT INTO identity_agents (agent_id, name, public_key, registered_at) VALUES (?,?,?,?)",
+                    (aid, name, pub_key, ts(reg_time)),
+                )
+                self.conn.execute(
+                    "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?,?,?)",
+                    (aid, 0, ts(reg_time)),
+                )
+
+                self._emit("identity", "agent.registered", reg_time, None, aid,
+                           f"{name} joined the economy",
+                           {"agent_name": name})
+                self._emit("bank", "account.created", reg_time + timedelta(seconds=5), None, aid,
+                           f"{name} opened a bank account",
+                           {"agent_name": name})
+
+    # ── Salary ───────────────────────────────────────────────────────────
+
+    def distribute_salary(self) -> None:
+        """Distribute monthly salary to all registered agents."""
+        for salary_date in SALARY_DATES:
+            eligible = [
+                aid for aid, info in self.agents.items()
+                if info["registered_at"] < salary_date
+            ]
+            for i, aid in enumerate(eligible):
+                pay_time = salary_date + timedelta(minutes=i * 2)
+                self._credit(aid, SALARY_AMOUNT, f"salary_{ts(salary_date)[:7]}", pay_time)
+
+                name = self.agents[aid]["name"]
+                month_label = salary_date.strftime("%B %Y")
+                self._emit("bank", "salary.paid", pay_time, None, aid,
+                           f"{name} received {SALARY_AMOUNT} coins ({month_label})",
+                           {"amount": SALARY_AMOUNT, "month": month_label})
+
+    # ── Task generation ──────────────────────────────────────────────────
+
+    def generate_tasks(self) -> None:
+        """Generate tasks across all quarters."""
+        for quarter in QUARTER_SCHEDULE:
+            self._generate_quarter_tasks(quarter)
+
+    def _generate_quarter_tasks(self, quarter: dict) -> None:
+        """Generate tasks for a single quarter."""
+        q_start = quarter["start"]
+        q_end = quarter["end"]
+
+        # Build outcome list and shuffle
+        outcomes = []
+        for outcome, count in quarter["outcomes"].items():
+            outcomes.extend([outcome] * count)
+        RNG.shuffle(outcomes)
+
+        # Spread task creation dates across the quarter
+        # Use first 85% of quarter for terminal tasks, last 15% for active tasks
+        terminal_end = q_start + (q_end - q_start) * 0.75
+        active_start = q_start + (q_end - q_start) * 0.85
+
+        for i, outcome in enumerate(outcomes):
+            is_active = outcome in ("open", "accepted", "submitted")
+            if is_active:
+                created_at = rand_dt(active_start, q_end - timedelta(days=1))
+            else:
+                created_at = rand_dt(q_start + timedelta(days=2), terminal_end)
+
+            # Add weekday bias: shift weekend dates to Monday
+            if created_at.weekday() >= 5:
+                created_at += timedelta(days=7 - created_at.weekday())
+
+            # Pick business hours (8am-6pm UTC)
+            created_at = created_at.replace(
+                hour=RNG.randint(8, 17),
+                minute=RNG.randint(0, 59),
+                second=RNG.randint(0, 59),
+            )
+
+            self._create_task(created_at, outcome)
+
+    def _create_task(self, created_at: datetime, outcome: str) -> None:
+        """Create a single task with full lifecycle."""
+        self.task_count += 1
+        task_id = f"t-{gen_id()}"
+
+        # Pick poster (must be registered and have funds)
+        eligible_posters = [
+            aid for aid, info in self.agents.items()
+            if info["registered_at"] < created_at
+        ]
+        if not eligible_posters:
+            return
+
+        poster_id = RNG.choice(eligible_posters)
+        poster_name = self.agents[poster_id]["name"]
+
+        title = TITLES[self.task_count % len(TITLES)]
+        spec = RNG.choice(SPECS)
+
+        # Reward: weighted toward 80-200 range with occasional big tasks
+        r = RNG.random()
+        if r < 0.1:
+            reward = RNG.randint(30, 60) * 10  # 300-600 (big tasks)
+        elif r < 0.3:
+            reward = RNG.randint(15, 25) * 10  # 150-250 (medium-high)
+        else:
+            reward = RNG.randint(5, 15) * 10  # 50-150 (standard)
+
+        bid_dl_s = RNG.choice([3600, 7200, 14400, 28800])
+        exec_dl_s = RNG.randint(3600, 86400)
+        review_dl_s = RNG.randint(1800, 7200)
+
+        bid_dl = created_at + timedelta(seconds=bid_dl_s)
+
+        # Ensure poster can afford
+        if self.balances[poster_id] < reward:
+            shortfall = reward - self.balances[poster_id] + 100
+            self._credit(poster_id, shortfall, f"grant_{task_id}", created_at - timedelta(minutes=5))
+
+        # Lock escrow
+        self.escrow_count += 1
+        escrow_id = f"esc-{gen_id()}"
+        self._escrow_lock(poster_id, reward, task_id, escrow_id, created_at)
+
+        self._emit("board", "task.created", created_at, task_id, poster_id,
+                    f"{poster_name} posted '{title}' for {reward} coins",
+                    {"title": title, "reward": reward, "bidding_deadline": ts(bid_dl)})
+        self._emit("bank", "escrow.locked", created_at + timedelta(seconds=1), task_id, poster_id,
+                    f"{poster_name} locked {reward} coins in escrow",
+                    {"escrow_id": escrow_id, "amount": reward, "title": title})
+
+        # Generate bids
+        num_bids = self._bid_count_for_outcome(outcome)
+        eligible_bidders = [
+            aid for aid in eligible_posters
+            if aid != poster_id
+        ]
+        bidders = pick_n(eligible_bidders, num_bids)
+
+        bid_ids = []
+        for b_i, bidder_id in enumerate(bidders):
+            bid_time = created_at + timedelta(
+                minutes=RNG.randint(5, 120),
+                seconds=RNG.randint(0, 59),
+            )
+            if bid_time > bid_dl:
+                bid_time = bid_dl - timedelta(minutes=RNG.randint(1, 30))
+
+            self.bid_count += 1
+            bid_id = f"bid-{gen_id()}"
+            bid_ids.append((bid_id, bidder_id))
+
+            self.conn.execute(
+                "INSERT INTO board_bids (bid_id, task_id, bidder_id, proposal, submitted_at) VALUES (?,?,?,?,?)",
+                (bid_id, task_id, bidder_id, RNG.choice(PROPOSALS), ts(bid_time)),
+            )
+
+            bidder_name = self.agents[bidder_id]["name"]
+            self._emit("board", "bid.submitted", bid_time, task_id, bidder_id,
+                        f"{bidder_name} bid on '{title}'",
+                        {"bid_id": bid_id, "title": title, "bid_count": b_i + 1})
+
+        # Task state machine
+        worker_id = None
+        worker_name = None
+        accepted_bid_id = None
+        accepted_at = None
+        exec_dl = None
+        submitted_at = None
+        review_dl = None
+        approved_at = None
+        cancelled_at = None
+        disputed_at = None
+        ruled_at = None
+        expired_at = None
+        dispute_reason = None
+        ruling_id_val = None
+        worker_pct = None
+        ruling_summary = None
+        escrow_status = "locked"
+        escrow_resolved = None
+        final_status = outcome
+
+        # ── Acceptance ──
+        if outcome in ("approved", "auto_approved", "disputed", "accepted", "submitted") and bid_ids:
+            chosen = RNG.choice(bid_ids)
+            accepted_bid_id = chosen[0]
+            worker_id = chosen[1]
+            worker_name = self.agents[worker_id]["name"]
+
+            accepted_at = created_at + timedelta(
+                hours=RNG.randint(1, 12),
+                minutes=RNG.randint(0, 59),
+            )
+            exec_dl = accepted_at + timedelta(seconds=exec_dl_s)
+
+            self._emit("board", "task.accepted", accepted_at, task_id, poster_id,
+                        f"{poster_name} accepted {worker_name}'s bid on '{title}'",
+                        {"title": title, "worker_id": worker_id, "worker_name": worker_name, "bid_id": accepted_bid_id})
+
+        # ── Submission ──
+        if outcome in ("approved", "auto_approved", "disputed", "submitted") and worker_id:
+            # Upload assets
+            asset_count = RNG.randint(1, 3)
+            upload_base = accepted_at + timedelta(hours=RNG.randint(2, 48))
+            for a_i in range(asset_count):
+                upload_time = upload_base + timedelta(minutes=a_i * RNG.randint(5, 30))
+                self.asset_count += 1
+                asset_id = f"asset-{gen_id()}"
+                fname, fmime = RNG.choice(FILENAMES)
+                fsize = RNG.randint(8192, 2_000_000)
+
+                self.conn.execute(
+                    "INSERT INTO board_assets (asset_id, task_id, uploader_id, filename, content_type, size_bytes, storage_path, uploaded_at) VALUES (?,?,?,?,?,?,?,?)",
+                    (asset_id, task_id, worker_id, fname, fmime, fsize, f"data/assets/{task_id}/{asset_id}/{fname}", ts(upload_time)),
+                )
+                self._emit("board", "asset.uploaded", upload_time, task_id, worker_id,
+                            f"{worker_name} uploaded {fname}",
+                            {"title": title, "filename": fname, "size_bytes": fsize})
+
+            submitted_at = upload_base + timedelta(hours=RNG.randint(1, 6))
+            review_dl = submitted_at + timedelta(seconds=review_dl_s)
+
+            self._emit("board", "task.submitted", submitted_at, task_id, worker_id,
+                        f"{worker_name} submitted deliverables for '{title}'",
+                        {"title": title, "worker_id": worker_id, "worker_name": worker_name, "asset_count": asset_count})
+
+        # ── Outcome ──
+        if outcome == "approved" and worker_id and submitted_at:
+            approved_at = submitted_at + timedelta(hours=RNG.randint(1, 24))
+            escrow_status = "released"
+            escrow_resolved = ts(approved_at)
+
+            self._escrow_release(worker_id, reward, task_id, escrow_id, approved_at)
+            self._emit("board", "task.approved", approved_at, task_id, poster_id,
+                        f"{poster_name} approved '{title}'",
+                        {"title": title, "reward": reward, "auto": False})
+            self._emit("bank", "escrow.released", approved_at + timedelta(seconds=1), task_id, worker_id,
+                        f"{worker_name} received {reward} coins for '{title}'",
+                        {"escrow_id": escrow_id, "amount": reward, "recipient_id": worker_id, "recipient_name": worker_name})
+
+        elif outcome == "auto_approved" and worker_id and submitted_at and review_dl:
+            approved_at = review_dl + timedelta(minutes=RNG.randint(1, 30))
+            escrow_status = "released"
+            escrow_resolved = ts(approved_at)
+
+            self._escrow_release(worker_id, reward, task_id, escrow_id, approved_at)
+            self._emit("board", "task.auto_approved", approved_at, task_id, poster_id,
+                        f"'{title}' auto-approved (review deadline passed)",
+                        {"title": title, "reward": reward})
+            self._emit("bank", "escrow.released", approved_at + timedelta(seconds=1), task_id, worker_id,
+                        f"{worker_name} received {reward} coins (auto-approved)",
+                        {"escrow_id": escrow_id, "amount": reward, "recipient_id": worker_id, "recipient_name": worker_name})
+
+        elif outcome == "disputed" and worker_id and submitted_at:
+            disputed_at = submitted_at + timedelta(hours=RNG.randint(2, 36))
+            d_reason = RNG.choice(DISPUTE_REASONS)
+            dispute_reason = d_reason
+            final_status = "ruled"
+
+            self._emit("board", "task.disputed", disputed_at, task_id, poster_id,
+                        f"{poster_name} disputed '{title}'",
+                        {"title": title, "reason": d_reason[:80]})
+
+            # Court: claim
+            self.claim_count += 1
+            claim_id = f"clm-{gen_id()}"
+            claim_time = disputed_at + timedelta(minutes=RNG.randint(5, 60))
+            self.conn.execute(
+                "INSERT INTO court_claims (claim_id, task_id, claimant_id, respondent_id, reason, status, filed_at) VALUES (?,?,?,?,?,?,?)",
+                (claim_id, task_id, poster_id, worker_id, d_reason, "ruled", ts(claim_time)),
+            )
+            self._emit("court", "claim.filed", claim_time, task_id, poster_id,
+                        f"{poster_name} filed claim against {worker_name}",
+                        {"claim_id": claim_id, "title": title, "claimant_name": poster_name})
+
+            # Court: rebuttal
+            self.rebuttal_count += 1
+            reb_id = f"reb-{gen_id()}"
+            reb_time = claim_time + timedelta(hours=RNG.randint(2, 48))
+            self.conn.execute(
+                "INSERT INTO court_rebuttals (rebuttal_id, claim_id, agent_id, content, submitted_at) VALUES (?,?,?,?,?)",
+                (reb_id, claim_id, worker_id,
+                 "I fulfilled the specification as written. The disputed points were either ambiguous or out of scope.",
+                 ts(reb_time)),
+            )
+            self._emit("court", "rebuttal.submitted", reb_time, task_id, worker_id,
+                        f"{worker_name} submitted rebuttal",
+                        {"claim_id": claim_id, "title": title, "respondent_name": worker_name})
+
+            # Court: ruling
+            self.ruling_count += 1
+            rul_id = f"rul-{gen_id()}"
+            ruled_at = reb_time + timedelta(hours=RNG.randint(6, 72))
+            wpct = RNG.randint(20, 80)
+            r_summary = RNG.choice(RULING_SUMMARIES)
+            ruling_id_val = rul_id
+            worker_pct = wpct
+            ruling_summary = r_summary
+            escrow_status = "split"
+            escrow_resolved = ts(ruled_at)
+
+            w_amt = reward * wpct // 100
+            p_amt = reward - w_amt
+
+            judge_votes = json.dumps([
+                {"judge": "judge-1", "worker_pct": wpct, "reason": "Primary assessment"},
+                {"judge": "judge-2", "worker_pct": min(wpct + RNG.randint(-10, 10), 100), "reason": "Secondary assessment"},
+                {"judge": "judge-3", "worker_pct": max(wpct + RNG.randint(-10, 10), 0), "reason": "Tertiary assessment"},
+            ])
+            self.conn.execute(
+                "INSERT INTO court_rulings (ruling_id, claim_id, task_id, worker_pct, summary, judge_votes, ruled_at) VALUES (?,?,?,?,?,?,?)",
+                (rul_id, claim_id, task_id, wpct, r_summary, judge_votes, ts(ruled_at)),
+            )
+            self._emit("court", "ruling.delivered", ruled_at, task_id, None,
+                        f"Court ruled on '{title}': {wpct}% to worker",
+                        {"ruling_id": rul_id, "claim_id": claim_id, "worker_pct": wpct})
+            self._emit("board", "task.ruled", ruled_at + timedelta(seconds=5), task_id, None,
+                        f"'{title}' ruling recorded: {wpct}% to {worker_name}",
+                        {"title": title, "ruling_id": rul_id, "worker_pct": wpct, "worker_id": worker_id})
+
+            self._escrow_release(worker_id, w_amt, f"ruling_worker_{task_id}", escrow_id, ruled_at)
+            self._escrow_release(poster_id, p_amt, f"ruling_poster_{task_id}", escrow_id, ruled_at)
+            self._emit("bank", "escrow.split", ruled_at + timedelta(seconds=2), task_id, None,
+                        f"Escrow split: {w_amt} to {worker_name}, {p_amt} to {poster_name}",
+                        {"escrow_id": escrow_id, "worker_amount": w_amt, "poster_amount": p_amt})
+
+        elif outcome == "cancelled":
+            cancelled_at = created_at + timedelta(hours=RNG.randint(1, 48))
+            escrow_status = "released"
+            escrow_resolved = ts(cancelled_at)
+
+            self._escrow_release(poster_id, reward, f"refund_{task_id}", escrow_id, cancelled_at)
+            self._emit("board", "task.cancelled", cancelled_at, task_id, poster_id,
+                        f"{poster_name} cancelled '{title}'",
+                        {"title": title})
+            self._emit("bank", "escrow.released", cancelled_at + timedelta(seconds=1), task_id, poster_id,
+                        f"{poster_name} received {reward} coins refund",
+                        {"escrow_id": escrow_id, "amount": reward, "recipient_id": poster_id, "recipient_name": poster_name})
+
+        elif outcome == "expired":
+            expired_at = bid_dl + timedelta(minutes=RNG.randint(1, 60))
+            escrow_status = "released"
+            escrow_resolved = ts(expired_at)
+
+            self._escrow_release(poster_id, reward, f"expired_{task_id}", escrow_id, expired_at)
+            self._emit("board", "task.expired", expired_at, task_id, poster_id,
+                        f"'{title}' expired (no bids accepted)",
+                        {"title": title, "reason": "bidding"})
+            self._emit("bank", "escrow.released", expired_at + timedelta(seconds=1), task_id, poster_id,
+                        f"{poster_name} received {reward} coins refund (expired)",
+                        {"escrow_id": escrow_id, "amount": reward, "recipient_id": poster_id, "recipient_name": poster_name})
+
+        # ── Feedback for completed tasks ──
+        if outcome in ("approved", "auto_approved", "disputed") and worker_id:
+            feedback_base = (approved_at or ruled_at or submitted_at) + timedelta(minutes=RNG.randint(5, 120))
+
+            # Worker rates poster's spec quality
+            self.feedback_count += 1
+            fb1_id = f"fb-{gen_id()}"
+            r1 = RNG.choice(RATINGS)
+            c1 = RNG.choice(FEEDBACK_SPEC)
+            self.conn.execute(
+                "INSERT INTO reputation_feedback (feedback_id, task_id, from_agent_id, to_agent_id, role, category, rating, comment, submitted_at, visible) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (fb1_id, task_id, worker_id, poster_id, "worker", "spec_quality", r1, c1, ts(feedback_base), 1),
+            )
+
+            # Poster rates worker's delivery quality
+            self.feedback_count += 1
+            fb2_id = f"fb-{gen_id()}"
+            r2 = RNG.choice(RATINGS)
+            c2 = RNG.choice(FEEDBACK_DELIV)
+            fb2_time = feedback_base + timedelta(minutes=RNG.randint(5, 60))
+            self.conn.execute(
+                "INSERT INTO reputation_feedback (feedback_id, task_id, from_agent_id, to_agent_id, role, category, rating, comment, submitted_at, visible) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (fb2_id, task_id, poster_id, worker_id, "poster", "delivery_quality", r2, c2, ts(fb2_time), 1),
+            )
+
+            self._emit("reputation", "feedback.revealed", fb2_time + timedelta(seconds=5), task_id, worker_id,
+                        f"Mutual feedback revealed for '{title}'",
+                        {"task_id": task_id, "from_name": worker_name, "to_name": poster_name, "category": "spec_quality"})
+
+        # ── Write escrow row ──
+        self.conn.execute(
+            "INSERT INTO bank_escrow (escrow_id, payer_account_id, amount, task_id, status, created_at, resolved_at) VALUES (?,?,?,?,?,?,?)",
+            (escrow_id, poster_id, reward, task_id, escrow_status, ts(created_at), escrow_resolved),
+        )
+
+        # ── Write task row ──
+        self.conn.execute(
             """INSERT INTO board_tasks (
                 task_id, poster_id, title, spec, reward, status,
                 bidding_deadline_seconds, deadline_seconds, review_deadline_seconds,
@@ -91,260 +711,190 @@ def main() -> None:
                 created_at, accepted_at, submitted_at, approved_at,
                 cancelled_at, disputed_at, ruled_at, expired_at
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            params,
+            (
+                task_id, poster_id, title, spec, reward, final_status,
+                bid_dl_s, exec_dl_s, review_dl_s,
+                ts(bid_dl),
+                ts(exec_dl) if exec_dl else None,
+                ts(review_dl) if review_dl else None,
+                escrow_id, worker_id, accepted_bid_id,
+                dispute_reason, ruling_id_val, worker_pct, ruling_summary,
+                ts(created_at),
+                ts(accepted_at) if accepted_at else None,
+                ts(submitted_at) if submitted_at else None,
+                ts(approved_at) if approved_at else None,
+                ts(cancelled_at) if cancelled_at else None,
+                ts(disputed_at) if disputed_at else None,
+                ts(ruled_at) if ruled_at else None,
+                ts(expired_at) if expired_at else None,
+            ),
         )
 
-    # t-1: Alice->Bob, 200, approved 3h ago
-    insert_task((
-        "t-1", "a-alice", "Build authentication system",
-        "Implement JWT-based auth with refresh tokens, rate limiting, and OAuth2 support",
-        200, "approved", 3600, 7200, 3600,
-        ts(t_6h + bd), ts(t_6h + ex), ts(t_6h + rv),
-        "esc-1", "a-bob", "bid-1",
-        None, None, None, None,
-        ts(t_6h), ts(t_6h + timedelta(minutes=15)),
-        ts(t_3h - timedelta(minutes=30)), ts(t_3h),
-        None, None, None, None,
-    ))
+    def _bid_count_for_outcome(self, outcome: str) -> int:
+        """Return realistic bid count based on outcome."""
+        if outcome == "cancelled":
+            return RNG.randint(0, 2)
+        if outcome == "expired":
+            return RNG.randint(0, 1)
+        if outcome == "open":
+            return RNG.randint(1, 5)
+        return RNG.randint(2, 6)
 
-    # t-2: Alice->Charlie, 150, approved 6h ago
-    insert_task((
-        "t-2", "a-alice", "Design database schema",
-        "Create normalized PostgreSQL schema for user management, roles, and audit logging",
-        150, "approved", 3600, 7200, 3600,
-        ts(t_12h + bd), ts(t_12h + ex), ts(t_12h + rv),
-        "esc-2", "a-charlie", "bid-4",
-        None, None, None, None,
-        ts(t_12h), ts(t_12h + timedelta(minutes=20)),
-        ts(t_6h - timedelta(minutes=30)), ts(t_6h),
-        None, None, None, None,
-    ))
+    # ── Financial operations ─────────────────────────────────────────────
 
-    # t-3: Bob->Diana, 100, accepted (in progress)
-    insert_task((
-        "t-3", "a-bob", "Write API documentation",
-        "Document all REST endpoints with OpenAPI 3.0 spec, examples, and error codes",
-        100, "accepted", 3600, 7200, 3600,
-        ts(t_3h + bd), ts(t_3h + ex), None,
-        "esc-3", "a-diana", "bid-7",
-        None, None, None, None,
-        ts(t_3h), ts(t_2h), None, None,
-        None, None, None, None,
-    ))
+    def _credit(self, account_id: str, amount: int, reference: str, when: datetime) -> None:
+        self.balances[account_id] += amount
+        self.tx_count += 1
+        tx_id = f"tx-{gen_id()}"
+        self.conn.execute(
+            "INSERT INTO bank_transactions (tx_id, account_id, type, amount, balance_after, reference, timestamp) VALUES (?,?,?,?,?,?,?)",
+            (tx_id, account_id, "credit", amount, self.balances[account_id], reference, ts(when)),
+        )
 
-    # t-4: Charlie, 80, open (bidding)
-    insert_task((
-        "t-4", "a-charlie", "Implement caching layer",
-        "Add Redis-based caching with TTL policies for hot data paths",
-        80, "open", 3600, 7200, 3600,
-        ts(t_2h + bd), None, None,
-        "esc-4", None, None,
-        None, None, None, None,
-        ts(t_2h), None, None, None,
-        None, None, None, None,
-    ))
+    def _escrow_lock(self, account_id: str, amount: int, task_id: str, escrow_id: str, when: datetime) -> None:
+        self.balances[account_id] -= amount
+        self.tx_count += 1
+        tx_id = f"tx-{gen_id()}"
+        self.conn.execute(
+            "INSERT INTO bank_transactions (tx_id, account_id, type, amount, balance_after, reference, timestamp) VALUES (?,?,?,?,?,?,?)",
+            (tx_id, account_id, "escrow_lock", amount, self.balances[account_id], f"escrow_lock_{task_id}", ts(when)),
+        )
 
-    # t-5: Diana->Eve, 120, approved 1d ago
-    insert_task((
-        "t-5", "a-diana", "Build notification service",
-        "Real-time notifications via WebSocket with fallback to email digest",
-        120, "approved", 3600, 7200, 3600,
-        ts(t_2d + bd), ts(t_2d + ex), ts(t_2d + rv),
-        "esc-5", "a-eve", "bid-9",
-        None, None, None, None,
-        ts(t_2d), ts(t_2d + timedelta(hours=1)),
-        ts(t_1d - timedelta(hours=2)), ts(t_1d),
-        None, None, None, None,
-    ))
+    def _escrow_release(self, account_id: str, amount: int, reference: str, escrow_id: str, when: datetime) -> None:
+        self.balances[account_id] += amount
+        self.tx_count += 1
+        tx_id = f"tx-{gen_id()}"
+        self.conn.execute(
+            "INSERT INTO bank_transactions (tx_id, account_id, type, amount, balance_after, reference, timestamp) VALUES (?,?,?,?,?,?,?)",
+            (tx_id, account_id, "escrow_release", amount, self.balances[account_id], reference, ts(when)),
+        )
 
-    # t-6: Alice->Bob, 300, ruled (dispute, worker_pct=60)
-    insert_task((
-        "t-6", "a-alice", "Full-stack dashboard",
-        "Build real-time analytics dashboard with React + D3.js + streaming data",
-        300, "ruled", 3600, 7200, 3600,
-        ts(t_3d + bd), ts(t_3d + ex), ts(t_3d + rv),
-        "esc-6", "a-bob", "bid-10",
-        "Dashboard missing real-time updates and D3 visualizations",
-        "rul-1", 60, "Worker completed 60% - static charts only, no streaming",
-        ts(t_3d), ts(t_3d + timedelta(hours=2)),
-        ts(t_2d - timedelta(hours=4)), None,
-        None, ts(t_2d - timedelta(hours=2)), ts(t_2d), None,
-    ))
+    # ── Events ───────────────────────────────────────────────────────────
 
-    # t-7: Eve, 60, open (no bids - uncontested)
-    insert_task((
-        "t-7", "a-eve", "Write unit tests for auth",
-        "100% coverage for authentication module including edge cases",
-        60, "open", 3600, 7200, 3600,
-        ts(t_1h + bd), None, None,
-        "esc-7", None, None,
-        None, None, None, None,
-        ts(t_1h), None, None, None,
-        None, None, None, None,
-    ))
+    def _emit(
+        self,
+        source: str,
+        event_type: str,
+        when: datetime,
+        task_id: str | None,
+        agent_id: str | None,
+        summary: str,
+        payload: dict,
+    ) -> None:
+        self.events.append((source, event_type, ts(when), task_id, agent_id, summary, json.dumps(payload)))
 
-    # t-8: Bob->Alice, 250, approved 3d ago
-    insert_task((
-        "t-8", "a-bob", "Microservices migration plan",
-        "Architecture document for breaking monolith into microservices with migration strategy",
-        250, "approved", 3600, 7200, 3600,
-        ts(t_5d + bd), ts(t_5d + ex), ts(t_5d + rv),
-        "esc-8", "a-alice", "bid-12",
-        None, None, None, None,
-        ts(t_5d), ts(t_5d + timedelta(hours=3)),
-        ts(t_3d - timedelta(hours=6)), ts(t_3d),
-        None, None, None, None,
-    ))
+    def flush_events(self) -> None:
+        """Write all events sorted by timestamp."""
+        self.events.sort(key=lambda e: e[2])
+        self.conn.executemany(
+            "INSERT INTO events (event_source, event_type, timestamp, task_id, agent_id, summary, payload) VALUES (?,?,?,?,?,?,?)",
+            self.events,
+        )
 
-    # === BIDS ===
-    conn.executemany(
-        "INSERT INTO board_bids (bid_id, task_id, bidder_id, proposal, submitted_at) VALUES (?,?,?,?,?)",
-        [
-            # t-1: 4 bids (Bob won)
-            ("bid-1", "t-1", "a-bob", "I have deep experience with JWT and OAuth2 implementations", ts(t_6h + timedelta(minutes=5))),
-            ("bid-2", "t-1", "a-charlie", "I can implement this with best security practices", ts(t_6h + timedelta(minutes=8))),
-            ("bid-3", "t-1", "a-diana", "Auth systems are my specialty", ts(t_6h + timedelta(minutes=12))),
-            ("bid-3b", "t-1", "a-eve", "I built similar auth for 3 production apps", ts(t_6h + timedelta(minutes=15))),
-            # t-2: 3 bids (Charlie won)
-            ("bid-4", "t-2", "a-charlie", "Database design is my core strength", ts(t_12h + timedelta(minutes=5))),
-            ("bid-5", "t-2", "a-bob", "I have PostgreSQL DBA experience", ts(t_12h + timedelta(minutes=10))),
-            ("bid-6", "t-2", "a-eve", "I can design a clean normalized schema", ts(t_12h + timedelta(minutes=15))),
-            # t-3: 2 bids (Diana won)
-            ("bid-7", "t-3", "a-diana", "I write excellent technical documentation", ts(t_3h + timedelta(minutes=5))),
-            ("bid-8", "t-3", "a-charlie", "OpenAPI is my bread and butter", ts(t_3h + timedelta(minutes=10))),
-            # t-4: 3 bids (pending)
-            ("bid-4a", "t-4", "a-alice", "I have Redis expertise from production systems", ts(t_2h + timedelta(minutes=5))),
-            ("bid-4b", "t-4", "a-bob", "Caching is critical and I know how to do it right", ts(t_2h + timedelta(minutes=8))),
-            ("bid-4c", "t-4", "a-eve", "I can implement efficient cache invalidation", ts(t_2h + timedelta(minutes=12))),
-            # t-5: 2 bids (Eve won)
-            ("bid-9", "t-5", "a-eve", "WebSocket + notification systems are my focus area", ts(t_2d + timedelta(minutes=10))),
-            ("bid-9b", "t-5", "a-bob", "I can build a reliable notification pipeline", ts(t_2d + timedelta(minutes=20))),
-            # t-6: 1 bid (Bob won, then disputed)
-            ("bid-10", "t-6", "a-bob", "Full-stack React + D3 is my specialty", ts(t_3d + timedelta(minutes=10))),
-            # t-7: NO bids (uncontested)
-            # t-8: 2 bids (Alice won)
-            ("bid-12", "t-8", "a-alice", "I have architected multiple microservice migrations", ts(t_5d + timedelta(minutes=15))),
-            ("bid-13", "t-8", "a-diana", "I can create a comprehensive migration roadmap", ts(t_5d + timedelta(minutes=25))),
-        ],
-    )
+    def update_final_balances(self) -> None:
+        """Set final balances on bank_accounts."""
+        for aid, bal in self.balances.items():
+            self.conn.execute(
+                "UPDATE bank_accounts SET balance = ? WHERE account_id = ?",
+                (bal, aid),
+            )
 
-    # === ASSETS ===
-    conn.executemany(
-        "INSERT INTO board_assets (asset_id, task_id, uploader_id, filename, content_type, size_bytes, storage_path, uploaded_at) VALUES (?,?,?,?,?,?,?,?)",
-        [
-            ("asset-1", "t-1", "a-bob", "auth-module.zip", "application/zip", 245760, "/storage/auth-module.zip", ts(t_3h - timedelta(minutes=30))),
-            ("asset-2", "t-2", "a-charlie", "schema.sql", "text/plain", 8192, "/storage/schema.sql", ts(t_6h - timedelta(minutes=30))),
-            ("asset-3", "t-6", "a-bob", "dashboard-v1.tar.gz", "application/gzip", 1048576, "/storage/dashboard.tar.gz", ts(t_2d - timedelta(hours=4))),
-        ],
-    )
+    def report(self) -> None:
+        """Print summary statistics."""
+        print()
+        print("=== Seed Complete ===")
+        print()
 
-    # === FEEDBACK ===
-    conn.executemany(
-        "INSERT INTO reputation_feedback (feedback_id, task_id, from_agent_id, to_agent_id, role, category, rating, comment, submitted_at, visible) VALUES (?,?,?,?,?,?,?,?,?,?)",
-        [
-            # t-1 visible
-            ("fb-1", "t-1", "a-alice", "a-bob", "poster", "delivery_quality", "extremely_satisfied", "Excellent auth implementation, production-ready", ts(t_3h + timedelta(minutes=5)), 1),
-            ("fb-2", "t-1", "a-bob", "a-alice", "worker", "spec_quality", "extremely_satisfied", "Very clear and detailed spec", ts(t_3h + timedelta(minutes=6)), 1),
-            # t-2 visible
-            ("fb-3", "t-2", "a-alice", "a-charlie", "poster", "delivery_quality", "satisfied", "Good schema, minor normalization issues", ts(t_6h + timedelta(minutes=5)), 1),
-            ("fb-4", "t-2", "a-charlie", "a-alice", "worker", "spec_quality", "satisfied", "Spec covered requirements well", ts(t_6h + timedelta(minutes=6)), 1),
-            # t-5 visible
-            ("fb-5", "t-5", "a-diana", "a-eve", "poster", "delivery_quality", "extremely_satisfied", "Perfect notification system", ts(t_1d + timedelta(minutes=10)), 1),
-            ("fb-6", "t-5", "a-eve", "a-diana", "worker", "spec_quality", "satisfied", "Requirements were clear", ts(t_1d + timedelta(minutes=12)), 1),
-            # t-6 sealed (dispute)
-            ("fb-7", "t-6", "a-alice", "a-bob", "poster", "delivery_quality", "dissatisfied", "Missing core features", ts(t_2d - timedelta(hours=2)), 0),
-            ("fb-8", "t-6", "a-bob", "a-alice", "worker", "spec_quality", "dissatisfied", "Spec scope was unrealistic", ts(t_2d - timedelta(hours=1, minutes=50)), 0),
-            # t-8 visible
-            ("fb-9", "t-8", "a-bob", "a-alice", "poster", "delivery_quality", "extremely_satisfied", "Comprehensive migration plan", ts(t_3d + timedelta(minutes=15)), 1),
-            ("fb-10", "t-8", "a-alice", "a-bob", "worker", "spec_quality", "satisfied", "Good requirements document", ts(t_3d + timedelta(minutes=20)), 1),
-        ],
-    )
+        for table, label in [
+            ("identity_agents", "Agents"),
+            ("bank_accounts", "Accounts"),
+            ("bank_transactions", "Transactions"),
+            ("bank_escrow", "Escrows"),
+            ("board_tasks", "Tasks"),
+            ("board_bids", "Bids"),
+            ("board_assets", "Assets"),
+            ("reputation_feedback", "Feedback"),
+            ("court_claims", "Claims"),
+            ("court_rulings", "Rulings"),
+            ("events", "Events"),
+        ]:
+            row = self.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()  # noqa: S608
+            print(f"  {label:20s} {row[0]}")
 
-    # === COURT ===
-    conn.execute(
-        "INSERT INTO court_claims (claim_id, task_id, claimant_id, respondent_id, reason, status, filed_at) VALUES (?,?,?,?,?,?,?)",
-        ("clm-1", "t-6", "a-alice", "a-bob",
-         "Dashboard missing real-time updates and D3 visualizations",
-         "ruled", ts(t_2d - timedelta(hours=2))),
-    )
-    conn.execute(
-        "INSERT INTO court_rebuttals (rebuttal_id, claim_id, agent_id, content, submitted_at) VALUES (?,?,?,?,?)",
-        ("reb-1", "clm-1", "a-bob",
-         "The spec was ambiguous about streaming requirements. I delivered working charts.",
-         ts(t_2d - timedelta(hours=1))),
-    )
-    conn.execute(
-        "INSERT INTO court_rulings (ruling_id, claim_id, task_id, worker_pct, summary, judge_votes, ruled_at) VALUES (?,?,?,?,?,?,?)",
-        ("rul-1", "clm-1", "t-6", 60,
-         "Worker completed 60% - static charts only, no streaming",
-         json.dumps([
-             {"judge": "judge-1", "worker_pct": 55, "reason": "Missing streaming"},
-             {"judge": "judge-2", "worker_pct": 65, "reason": "Charts work but no D3"},
-             {"judge": "judge-3", "worker_pct": 60, "reason": "Partial delivery"},
-         ]),
-         ts(t_2d)),
-    )
+        print()
+        print("Tasks by status:")
+        for row in self.conn.execute(
+            "SELECT status, COUNT(*) FROM board_tasks GROUP BY status ORDER BY COUNT(*) DESC"
+        ):
+            print(f"  {row[0]:20s} {row[1]}")
 
-    # === TRANSACTIONS ===
-    conn.executemany(
-        "INSERT INTO bank_transactions (tx_id, account_id, type, amount, balance_after, reference, timestamp) VALUES (?,?,?,?,?,?,?)",
-        [
-            ("tx-1", "a-alice", "credit", 2000, 2000, "salary_round_1", ts(t_7d)),
-            ("tx-2", "a-bob", "credit", 2000, 2000, "salary_round_1", ts(t_5d)),
-            ("tx-3", "a-charlie", "credit", 1000, 1000, "salary_round_1", ts(t_3d)),
-            ("tx-4", "a-diana", "credit", 1000, 1000, "salary_round_1", ts(t_2d)),
-            ("tx-5", "a-eve", "credit", 500, 500, "salary_round_1", ts(t_1d)),
-            ("tx-6", "a-alice", "escrow_lock", 200, 1800, "t-1", ts(t_6h)),
-            ("tx-7", "a-alice", "escrow_lock", 150, 1650, "t-2", ts(t_12h)),
-            ("tx-8", "a-bob", "escrow_release", 200, 2200, "t-1", ts(t_3h)),
-            ("tx-9", "a-charlie", "escrow_release", 150, 1150, "t-2", ts(t_6h)),
-            ("tx-10", "a-alice", "escrow_lock", 300, 1350, "t-6", ts(t_3d)),
-            ("tx-11", "a-bob", "escrow_release", 180, 2380, "t-6", ts(t_2d)),  # 60% of 300
-            ("tx-12", "a-alice", "escrow_release", 120, 1470, "t-6", ts(t_2d)),  # 40% back
-            ("tx-13", "a-bob", "escrow_lock", 250, 2130, "t-8", ts(t_5d)),
-            ("tx-14", "a-alice", "escrow_release", 250, 1720, "t-8", ts(t_3d)),
-            ("tx-15", "a-diana", "escrow_lock", 120, 880, "t-5", ts(t_2d)),
-            ("tx-16", "a-eve", "escrow_release", 120, 620, "t-5", ts(t_1d)),
-            ("tx-17", "a-bob", "escrow_lock", 100, 2030, "t-3", ts(t_3h)),
-            ("tx-18", "a-charlie", "escrow_lock", 80, 1070, "t-4", ts(t_2h)),
-            ("tx-19", "a-eve", "escrow_lock", 60, 560, "t-7", ts(t_1h)),
-        ],
-    )
+        print()
+        print("Tasks by quarter:")
+        for label in ["2025-Q3", "2025-Q4", "2026-Q1"]:
+            year, q = label.split("-Q")
+            q_months = {1: (1, 3), 2: (4, 6), 3: (7, 9), 4: (10, 12)}
+            sm, em = q_months[int(q)]
+            start = f"{year}-{sm:02d}-01T00:00:00Z"
+            end = f"{year}-{em:02d}-31T23:59:59Z"
+            row = self.conn.execute(
+                "SELECT COUNT(*) FROM board_tasks WHERE created_at >= ? AND created_at <= ?",
+                (start, end),
+            ).fetchone()
+            print(f"  {label:20s} {row[0]}")
 
-    # === EVENTS ===
-    conn.executemany(
-        "INSERT INTO events (event_source, event_type, timestamp, task_id, agent_id, summary, payload) VALUES (?,?,?,?,?,?,?)",
-        [
-            ("identity", "agent.registered", ts(t_7d), None, "a-alice", "Alice registered as an agent", json.dumps({"agent_name": "Alice"})),
-            ("identity", "agent.registered", ts(t_5d), None, "a-bob", "Bob registered as an agent", json.dumps({"agent_name": "Bob"})),
-            ("identity", "agent.registered", ts(t_3d), None, "a-charlie", "Charlie registered as an agent", json.dumps({"agent_name": "Charlie"})),
-            ("identity", "agent.registered", ts(t_2d), None, "a-diana", "Diana registered as an agent", json.dumps({"agent_name": "Diana"})),
-            ("identity", "agent.registered", ts(t_1d), None, "a-eve", "Eve registered as an agent", json.dumps({"agent_name": "Eve"})),
-            ("board", "task.created", ts(t_6h), "t-1", "a-alice", "Alice posted 'Build authentication system' for 200 tokens", json.dumps({"title": "Build authentication system", "reward": 200})),
-            ("board", "bid.submitted", ts(t_6h + timedelta(minutes=5)), "t-1", "a-bob", "Bob bid on 'Build authentication system'", json.dumps({"bid_id": "bid-1", "title": "Build authentication system", "bid_count": 1})),
-            ("board", "task.accepted", ts(t_6h + timedelta(minutes=15)), "t-1", "a-alice", "Alice accepted Bob's bid", json.dumps({"title": "Build authentication system", "worker_id": "a-bob", "worker_name": "Bob"})),
-            ("board", "task.approved", ts(t_3h), "t-1", "a-alice", "Alice approved 'Build authentication system'", json.dumps({"title": "Build authentication system", "reward": 200, "auto": False})),
-            ("board", "task.created", ts(t_12h), "t-2", "a-alice", "Alice posted 'Design database schema' for 150 tokens", json.dumps({"title": "Design database schema", "reward": 150})),
-            ("board", "task.approved", ts(t_6h), "t-2", "a-alice", "Alice approved 'Design database schema'", json.dumps({"title": "Design database schema", "reward": 150})),
-            ("board", "task.created", ts(t_5d), "t-8", "a-bob", "Bob posted 'Microservices migration plan' for 250 tokens", json.dumps({"title": "Microservices migration plan", "reward": 250})),
-            ("board", "task.approved", ts(t_3d), "t-8", "a-bob", "Bob approved 'Microservices migration plan'", json.dumps({"title": "Microservices migration plan", "reward": 250})),
-            ("board", "task.created", ts(t_3d), "t-6", "a-alice", "Alice posted 'Full-stack dashboard' for 300 tokens", json.dumps({"title": "Full-stack dashboard", "reward": 300})),
-            ("board", "task.disputed", ts(t_2d - timedelta(hours=2)), "t-6", "a-alice", "Alice disputed 'Full-stack dashboard'", json.dumps({"title": "Full-stack dashboard", "reason": "Missing real-time updates"})),
-            ("court", "claim.filed", ts(t_2d - timedelta(hours=2)), "t-6", "a-alice", "Alice filed a claim against Bob", json.dumps({"claim_id": "clm-1", "title": "Full-stack dashboard"})),
-            ("court", "rebuttal.submitted", ts(t_2d - timedelta(hours=1)), "t-6", "a-bob", "Bob submitted a rebuttal", json.dumps({"claim_id": "clm-1", "title": "Full-stack dashboard"})),
-            ("court", "ruling.delivered", ts(t_2d), "t-6", None, "Ruling: worker receives 60%", json.dumps({"ruling_id": "rul-1", "worker_pct": 60, "summary": "Worker completed 60%"})),
-            ("board", "task.created", ts(t_2d), "t-5", "a-diana", "Diana posted 'Build notification service' for 120 tokens", json.dumps({"title": "Build notification service", "reward": 120})),
-            ("board", "task.approved", ts(t_1d), "t-5", "a-diana", "Diana approved 'Build notification service'", json.dumps({"title": "Build notification service", "reward": 120})),
-            ("board", "task.created", ts(t_3h), "t-3", "a-bob", "Bob posted 'Write API documentation' for 100 tokens", json.dumps({"title": "Write API documentation", "reward": 100})),
-            ("board", "task.accepted", ts(t_2h), "t-3", "a-bob", "Bob accepted Diana's bid", json.dumps({"title": "Write API documentation", "worker_id": "a-diana"})),
-            ("board", "task.created", ts(t_2h), "t-4", "a-charlie", "Charlie posted 'Implement caching layer' for 80 tokens", json.dumps({"title": "Implement caching layer", "reward": 80})),
-            ("board", "task.created", ts(t_1h), "t-7", "a-eve", "Eve posted 'Write unit tests for auth' for 60 tokens", json.dumps({"title": "Write unit tests for auth", "reward": 60})),
-        ],
-    )
+        print()
+        print("Date range:")
+        row = self.conn.execute("SELECT MIN(timestamp), MAX(timestamp) FROM events").fetchone()
+        print(f"  First event: {row[0]}")
+        print(f"  Last event:  {row[1]}")
 
+        print()
+        neg = self.conn.execute("SELECT COUNT(*) FROM bank_accounts WHERE balance < 0").fetchone()[0]
+        if neg > 0:
+            print(f"  WARNING: {neg} accounts with negative balance")
+        else:
+            print("  OK: No negative balances")
+
+        print()
+
+
+def main() -> None:
+    db_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DB_PATH
+
+    if db_path.exists():
+        db_path.unlink()
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    print(f"Creating database at {db_path}...")
+    schema = SCHEMA_PATH.read_text()
+    conn = sqlite3.connect(str(db_path))
+    conn.executescript(schema)
+    conn.execute("PRAGMA foreign_keys = OFF")
+
+    economy = Economy(conn)
+
+    print("Phase 1: Registering agents...")
+    economy.register_agents()
+
+    print("Phase 2: Distributing salary...")
+    economy.distribute_salary()
+
+    print("Phase 3: Generating task lifecycles...")
+    economy.generate_tasks()
+
+    print("Phase 4: Writing events...")
+    economy.flush_events()
+
+    print("Phase 5: Updating final balances...")
+    economy.update_final_balances()
+
+    conn.execute("PRAGMA foreign_keys = ON")
     conn.commit()
+
+    economy.report()
+
     conn.close()
-    print(f"Created {DB_PATH} with 5 agents, 8 tasks, 24 events")
+    print(f"Database ready at: {db_path}")
 
 
 if __name__ == "__main__":
