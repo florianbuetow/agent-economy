@@ -3,13 +3,13 @@
 // state (agents, tasks, particles, ripples), runs the update loop at 60fps,
 // and renders everything to a Canvas 2D context in back-to-front order.
 
-import type { AgentNode, TaskNode, AgentState, Particle, Ripple } from "./types.ts";
-import { BG_COLOR, CATEGORY_COLORS, STATE_LABELS } from "./types.ts";
-import { createCamera, fitToViewport, worldToScreen, isVisible } from "./camera.ts";
-import type { Camera } from "./camera.ts";
-import { createAgent, updateAgent } from "./agents.ts";
-import { createTask, updateTask } from "./tasks.ts";
-import { updateParticle, updateRipple } from "./effects.ts";
+import type { AgentNode, TaskNode, AgentState, Particle, Ripple } from "./types";
+import { BG_COLOR, CATEGORY_COLORS, STATE_LABELS } from "./types";
+import { createCamera, fitToViewport, worldToScreen, isVisible } from "./camera";
+import type { Camera } from "./camera";
+import { createAgent, updateAgent } from "./agents";
+import { createTask, updateTask } from "./tasks";
+import { updateParticle, updateRipple } from "./effects";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -419,11 +419,8 @@ export class GraphEngine {
 
       const { sx, sy } = worldToScreen(task.x, task.y, camera, w, h);
       const sr = task.r * camera.zoom;
-      ctx.fillText(
-        `${task.name} ($${Math.round(task.payoff)})`,
-        sx,
-        sy - sr - 6 * camera.zoom,
-      );
+      const displayName = task.name.length > 9 ? task.name.slice(0, 9) : task.name;
+      ctx.fillText(`${displayName} ${Math.round(task.payoff)}\u00A2`, sx, sy - sr - 6 * camera.zoom);
     }
   }
 

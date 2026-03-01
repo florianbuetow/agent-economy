@@ -1,4 +1,4 @@
-import type { Particle, Ripple } from "./types.ts";
+import type { Particle, Ripple } from "./types";
 
 // ─── Particle updates ──────────────────────────────────────────────────────────
 
