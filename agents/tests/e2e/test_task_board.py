@@ -176,3 +176,117 @@ async def test_happy_path_submit_and_approve(make_funded_agent) -> None:
         assert poster_balance["balance"] == 4500
     finally:
         await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_competing_bidders(make_funded_agent) -> None:
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster BOT", balance=5000)
+        worker1 = await make_funded_agent(name="Worker BOT 1", balance=0)
+        worker2 = await make_funded_agent(name="Worker BOT 2", balance=0)
+        worker3 = await make_funded_agent(name="Worker BOT 3", balance=0)
+        agents_to_close.extend([poster, worker1, worker2, worker3])
+
+        task = await poster.post_task(
+            title="Competing bidders task",
+            spec="Do something",
+            reward=500,
+            bidding_deadline_seconds=3600,
+            execution_deadline_seconds=7200,
+            review_deadline_seconds=3600,
+        )
+
+        bid1 = await worker1.submit_bid(task_id=task["task_id"], amount=300)
+        bid2 = await worker2.submit_bid(task_id=task["task_id"], amount=400)
+        bid3 = await worker3.submit_bid(task_id=task["task_id"], amount=350)
+
+        bids_before_accept = await poster.list_bids(task_id=task["task_id"])
+        assert len(bids_before_accept) == 3
+
+        await poster.accept_bid(task_id=task["task_id"], bid_id=bid2["bid_id"])
+
+        accepted_task = await poster.get_task(task["task_id"])
+        assert accepted_task["worker_id"] == worker2.agent_id
+
+        bids_after_accept = await poster.list_bids(task_id=task["task_id"])
+        bid_ids = {item["bid_id"] for item in bids_after_accept}
+        assert len(bids_after_accept) == 3
+        assert bid1["bid_id"] in bid_ids
+        assert bid2["bid_id"] in bid_ids
+        assert bid3["bid_id"] in bid_ids
+    finally:
+        await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_sealed_bid_visibility(make_funded_agent) -> None:
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster CIO", balance=5000)
+        worker = await make_funded_agent(name="Worker CIO", balance=0)
+        observer = await make_funded_agent(name="Observer CIO", balance=0)
+        agents_to_close.extend([poster, worker, observer])
+
+        task = await poster.post_task(
+            title="Sealed bid task",
+            spec="Do something",
+            reward=500,
+            bidding_deadline_seconds=3600,
+            execution_deadline_seconds=7200,
+            review_deadline_seconds=3600,
+        )
+        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+
+        observer_headers = observer._auth_header(
+            {
+                "action": "list_bids",
+                "task_id": task["task_id"],
+                "poster_id": observer.agent_id,
+            }
+        )
+        observer_response = await observer._request_raw(
+            "GET",
+            f"{observer.config.task_board_url}/tasks/{task['task_id']}/bids",
+            headers=observer_headers,
+        )
+        assert observer_response.status_code == 403
+
+        poster_bids = await poster.list_bids(task_id=task["task_id"])
+        assert len(poster_bids) == 1
+        assert poster_bids[0]["bid_id"] == bid["bid_id"]
+    finally:
+        await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_file_dispute(make_funded_agent) -> None:
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster 8BX", balance=5000)
+        worker = await make_funded_agent(name="Worker 8BX", balance=0)
+        agents_to_close.extend([poster, worker])
+
+        task = await poster.post_task(
+            title="Dispute task",
+            spec="Do something",
+            reward=500,
+            bidding_deadline_seconds=3600,
+            execution_deadline_seconds=7200,
+            review_deadline_seconds=3600,
+        )
+        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
+        await worker.submit_deliverable(task["task_id"])
+
+        await poster.dispute_task(task_id=task["task_id"], reason="Deliverable does not meet spec")
+
+        disputed_task = await poster.get_task(task["task_id"])
+        assert disputed_task["status"] == "disputed"
+        assert disputed_task["dispute_reason"] == "Deliverable does not meet spec"
+    finally:
+        await _close_agents(agents_to_close)
