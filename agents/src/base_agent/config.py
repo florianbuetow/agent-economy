@@ -51,7 +51,7 @@ class _DataPaths(BaseModel):
 
 
 class _FileSettings(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     platform: _PlatformUrls
     data: _DataPaths

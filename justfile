@@ -63,6 +63,10 @@ help:
     @printf "  \033[0;37mjust stop-reputation  \033[0;34m Stop reputation service\033[0m\n"
     @printf "  \033[0;37mjust stop-court       \033[0;34m Stop court service\033[0m\n"
     @printf "  \033[0;37mjust stop-observatory \033[0;34m Stop observatory service\033[0m\n"
+    @printf "  \033[0;37mjust start-feeder     \033[0;34m Start task feeder (posts math tasks)\033[0m\n"
+    @printf "  \033[0;37mjust stop-feeder      \033[0;34m Stop task feeder\033[0m\n"
+    @printf "  \033[0;37mjust start-mathbot    \033[0;34m Start math worker agent (requires services + LM Studio)\033[0m\n"
+    @printf "  \033[0;37mjust stop-mathbot     \033[0;34m Stop math worker agent\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
     @echo ""
     @printf "\033[1;33mDocker\033[0m\n"
@@ -150,6 +154,7 @@ init-all:
     cd services/reputation && just init
     cd services/court && just init
     cd services/observatory && just init
+    cd agents && just init
     cd tools && just init
     @printf "\033[0;32m✓ All services initialized\033[0m\n"
     @echo ""
@@ -257,6 +262,46 @@ stop-all:
     @printf "\033[0;32m✓ All services stopped\033[0m\n"
     @echo ""
 
+# Start task feeder (posts math tasks onto the board)
+start-feeder:
+    #!/usr/bin/env bash
+    printf "\n"
+    printf "\033[0;34m=== Starting Task Feeder ===\033[0m\n"
+    printf "\n"
+    cd agents && uv run python -m task_feeder &
+    printf "Task feeder starting in background (PID: $!)\n"
+    printf "\n"
+
+# Stop task feeder
+stop-feeder:
+    #!/usr/bin/env bash
+    printf "\n"
+    printf "\033[0;34m=== Stopping Task Feeder ===\033[0m\n"
+    pkill -f "python -m task_feeder" 2>/dev/null && \
+        printf "\033[0;32m✓ Task feeder stopped\033[0m\n" || \
+        printf "\033[0;33m⚠ Task feeder not running\033[0m\n"
+    printf "\n"
+
+# Start math worker agent (requires running services + LM Studio)
+start-mathbot:
+    #!/usr/bin/env bash
+    printf "\n"
+    printf "\033[0;34m=== Starting Math Worker Agent ===\033[0m\n"
+    printf "\n"
+    cd agents && uv run python -m math_worker &
+    printf "Math worker agent starting in background (PID: $!)\n"
+    printf "\n"
+
+# Stop math worker agent
+stop-mathbot:
+    #!/usr/bin/env bash
+    printf "\n"
+    printf "\033[0;34m=== Stopping Math Worker Agent ===\033[0m\n"
+    pkill -f "python -m math_worker" 2>/dev/null && \
+        printf "\033[0;32m✓ Math worker agent stopped\033[0m\n" || \
+        printf "\033[0;33m⚠ Math worker agent not running\033[0m\n"
+    printf "\n"
+
 # Check health status of all services
 status:
     #!/usr/bin/env bash
@@ -305,6 +350,7 @@ destroy-all:
     cd services/reputation && just destroy
     cd services/court && just destroy
     cd services/observatory && just destroy
+    cd agents && just destroy
     cd tools && just destroy
     @printf "\033[0;32m✓ All virtual environments removed\033[0m\n"
     @echo ""

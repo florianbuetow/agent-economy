@@ -11,3 +11,9 @@ agents:
   bob:
     name: "Bob"
     type: "worker"
+  mathbot:
+    name: "Math Worker Bot"
+    type: "worker"
+  feeder:
+    name: "Task Feeder"
+    type: "poster"

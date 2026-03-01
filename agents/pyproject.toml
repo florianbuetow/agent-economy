@@ -8,6 +8,7 @@ dependencies = [
     "cryptography>=44.0.0",
     "pydantic>=2.10.0",
     "strands-agents>=0.1.0",
+    "openai>=1.0.0",
     "service-commons",
     "pyyaml>=6.0.0",
 ]
@@ -34,7 +35,7 @@ build-backend = "hatchling.build"
 service-commons = { path = "../libs/service-commons", editable = true }
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/base_agent"]
+packages = ["src/base_agent", "src/math_worker", "src/task_feeder"]
 
 # === Ruff ===
 [tool.ruff]
@@ -65,7 +66,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["base_agent"]
+known-first-party = ["base_agent", "math_worker", "task_feeder"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -95,6 +96,10 @@ disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
 module = "strands.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "openai.*"
 ignore_missing_imports = true
 
 # === Bandit ===
@@ -137,6 +142,7 @@ extend_exclude = [".venv", "tests"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = [
+    "strands-agents",
     "pytest",
     "pytest-cov",
     "pytest-asyncio",
