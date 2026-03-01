@@ -209,6 +209,47 @@ class AgentProfileResponse(BaseModel):
     recent_feedback: list[FeedbackItem]
 
 
+class AgentFeedEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    event_id: int
+    event_source: str
+    event_type: str
+    timestamp: str
+    task_id: str | None
+    agent_id: str | None
+    summary: str
+    payload: dict[str, object]
+    badge: str
+    role: str | None
+    task_title: str | None
+    task_reward: int | None
+    poster_id: str | None
+    worker_id: str | None
+    poster_name: str | None
+    worker_name: str | None
+
+
+class AgentFeedResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    events: list[AgentFeedEvent]
+    has_more: bool
+
+
+class EarningsDataPoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    timestamp: str
+    cumulative: int
+
+
+class AgentEarningsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    data_points: list[EarningsDataPoint]
+    total_earned: int
+    last_7d_earned: int
+    avg_per_task: int
+    tasks_approved: int
+
+
 # ---------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------

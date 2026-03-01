@@ -130,6 +130,75 @@ export interface AgentListResponse {
   offset: number;
 }
 
+// --- Agent Profile ---
+export interface RecentTask {
+  task_id: string;
+  title: string;
+  role: string;
+  status: string;
+  reward: number;
+  completed_at: string | null;
+}
+
+export interface FeedbackItem {
+  feedback_id: string;
+  task_id: string;
+  from_agent_name: string;
+  category: string;
+  rating: string;
+  comment: string | null;
+  submitted_at: string;
+}
+
+export interface AgentProfileResponse {
+  agent_id: string;
+  name: string;
+  registered_at: string;
+  balance: number;
+  stats: AgentStats;
+  recent_tasks: RecentTask[];
+  recent_feedback: FeedbackItem[];
+}
+
+// --- Agent Feed ---
+export interface AgentFeedEvent {
+  event_id: number;
+  event_source: string;
+  event_type: string;
+  timestamp: string;
+  task_id: string | null;
+  agent_id: string | null;
+  summary: string;
+  payload: Record<string, unknown>;
+  badge: string;
+  role: string | null;
+  task_title: string | null;
+  task_reward: number | null;
+  poster_id: string | null;
+  worker_id: string | null;
+  poster_name: string | null;
+  worker_name: string | null;
+}
+
+export interface AgentFeedResponse {
+  events: AgentFeedEvent[];
+  has_more: boolean;
+}
+
+// --- Agent Earnings ---
+export interface EarningsDataPoint {
+  timestamp: string;
+  cumulative: number;
+}
+
+export interface AgentEarningsResponse {
+  data_points: EarningsDataPoint[];
+  total_earned: number;
+  last_7d_earned: number;
+  avg_per_task: number;
+  tasks_approved: number;
+}
+
 // --- Quarterly Report ---
 export interface QuarterlyPeriod {
   start: string;

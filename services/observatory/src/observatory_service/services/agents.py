@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -332,4 +333,245 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str
         "stats": stats,
         "recent_tasks": recent_tasks,
         "recent_feedback": recent_feedback,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Event types included in the agent activity feed (per spec §3)
+# ---------------------------------------------------------------------------
+_INCLUDED_EVENT_TYPES = {
+    "agent.registered",
+    "salary.paid",
+    "task.created",
+    "bid.submitted",
+    "task.accepted",
+    "asset.uploaded",
+    "task.submitted",
+    "task.approved",
+    "task.auto_approved",
+    "task.disputed",
+    "task.ruled",
+    "task.cancelled",
+    "task.expired",
+    "escrow.locked",
+    "escrow.released",
+    "escrow.split",
+    "feedback.revealed",
+}
+
+# Map event_type -> badge category (same taxonomy as macro feed)
+_EVENT_TYPE_TO_BADGE: dict[str, str] = {
+    "agent.registered": "SYSTEM",
+    "salary.paid": "SYSTEM",
+    "task.created": "TASK",
+    "bid.submitted": "BID",
+    "task.accepted": "TASK",
+    "asset.uploaded": "TASK",
+    "task.submitted": "TASK",
+    "task.approved": "PAYOUT",
+    "task.auto_approved": "PAYOUT",
+    "task.disputed": "TASK",
+    "task.ruled": "TASK",
+    "task.cancelled": "TASK",
+    "task.expired": "TASK",
+    "escrow.locked": "ESCROW",
+    "escrow.released": "PAYOUT",
+    "escrow.split": "ESCROW",
+    "feedback.revealed": "REP",
+}
+
+
+def _derive_agent_role(
+    agent_id: str,
+    event_agent_id: str | None,
+    poster_id: str | None,
+    worker_id: str | None,
+) -> str | None:
+    """Derive the agent's role in this event."""
+    if event_agent_id == agent_id:
+        if poster_id == agent_id:
+            return "POSTER"
+        if worker_id == agent_id:
+            return "WORKER"
+        return None
+    if poster_id == agent_id:
+        return "POSTER"
+    if worker_id == agent_id:
+        return "WORKER"
+    return None
+
+
+async def get_agent_feed(
+    db: aiosqlite.Connection,
+    agent_id: str,
+    limit: int,
+    before: int | None,
+    role_filter: str | None,
+    type_filter: str | None,
+    time_filter: str | None,
+) -> tuple[list[dict[str, Any]], bool]:
+    """Get agent-scoped activity feed with agent-centric framing.
+
+    Returns (events, has_more).
+    """
+    # Build the base query per spec §2: join events with board_tasks
+    # to find events where agent is actor, poster, or worker.
+    placeholders = ", ".join("?" for _ in _INCLUDED_EVENT_TYPES)
+    conditions = [f"e.event_type IN ({placeholders})"]
+    params: list[Any] = list(_INCLUDED_EVENT_TYPES)
+
+    # Agent involvement condition
+    conditions.append("(e.agent_id = ? OR t.poster_id = ? OR t.worker_id = ?)")
+    params.extend([agent_id, agent_id, agent_id])
+
+    if before is not None:
+        conditions.append("e.event_id < ?")
+        params.append(before)
+
+    if time_filter == "LAST_7D":
+        conditions.append("e.timestamp >= datetime('now', '-7 days')")
+    elif time_filter == "LAST_30D":
+        conditions.append("e.timestamp >= datetime('now', '-30 days')")
+
+    where = " AND ".join(conditions)
+
+    # Fetch limit + 1 for has_more pagination
+    sql = (
+        "SELECT DISTINCT e.event_id, e.event_source, e.event_type, "
+        "e.timestamp, e.task_id, e.agent_id, e.summary, e.payload, "
+        "t.poster_id, t.worker_id, t.title AS task_title, t.reward AS task_reward, "
+        "poster_agent.name AS poster_name, worker_agent.name AS worker_name "
+        "FROM events e "
+        "LEFT JOIN board_tasks t ON e.task_id = t.task_id "
+        "LEFT JOIN identity_agents poster_agent ON t.poster_id = poster_agent.agent_id "
+        "LEFT JOIN identity_agents worker_agent ON t.worker_id = worker_agent.agent_id "
+        f"WHERE {where} "  # nosec B608
+        "ORDER BY e.event_id DESC "
+        "LIMIT ?"
+    )
+    params.append(limit + 1)
+
+    rows = await _fetchall(db, sql, tuple(params))
+
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+
+    events: list[dict[str, Any]] = []
+    for row in rows:
+        (
+            event_id,
+            event_source,
+            event_type,
+            timestamp,
+            task_id,
+            event_agent_id,
+            summary,
+            payload_raw,
+            poster_id,
+            worker_id,
+            task_title,
+            task_reward,
+            poster_name,
+            worker_name,
+        ) = row
+
+        role = _derive_agent_role(agent_id, event_agent_id, poster_id, worker_id)
+
+        # Apply role filter after derivation
+        if role_filter == "AS_POSTER" and role != "POSTER":
+            continue
+        if role_filter == "AS_WORKER" and role != "WORKER":
+            continue
+
+        badge = _EVENT_TYPE_TO_BADGE.get(event_type, "SYSTEM")
+
+        # Apply type filter
+        if type_filter is not None and badge != type_filter:
+            continue
+
+        payload = json.loads(payload_raw) if payload_raw else {}
+
+        events.append(
+            {
+                "event_id": event_id,
+                "event_source": event_source,
+                "event_type": event_type,
+                "timestamp": timestamp,
+                "task_id": task_id,
+                "agent_id": event_agent_id,
+                "summary": summary,
+                "payload": payload,
+                "badge": badge,
+                "role": role,
+                "task_title": task_title,
+                "task_reward": task_reward,
+                "poster_id": poster_id,
+                "worker_id": worker_id,
+                "poster_name": poster_name,
+                "worker_name": worker_name,
+            }
+        )
+
+    return events, has_more
+
+
+async def get_agent_earnings(
+    db: aiosqlite.Connection,
+    agent_id: str,
+) -> dict[str, Any]:
+    """Get cumulative earnings over time for an agent.
+
+    Queries bank_transactions for escrow_release events only.
+    """
+    rows = await _fetchall(
+        db,
+        "SELECT timestamp, amount FROM bank_transactions "
+        "WHERE account_id = ? AND type = 'escrow_release' "
+        "ORDER BY timestamp ASC",
+        (agent_id,),
+    )
+
+    data_points: list[dict[str, Any]] = []
+    cumulative = 0
+    for row in rows:
+        timestamp, amount = row
+        cumulative += int(amount)
+        data_points.append(
+            {
+                "timestamp": timestamp,
+                "cumulative": cumulative,
+            }
+        )
+
+    # Last 7 days earnings
+    last_7d_earned = int(
+        await _scalar(
+            db,
+            "SELECT COALESCE(SUM(amount), 0) FROM bank_transactions "
+            "WHERE account_id = ? AND type = 'escrow_release' "
+            "AND timestamp >= datetime('now', '-7 days')",
+            (agent_id,),
+        )
+        or 0
+    )
+
+    # Count of approved tasks as worker (for avg per task)
+    tasks_approved = int(
+        await _scalar(
+            db,
+            "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = 'approved'",
+            (agent_id,),
+        )
+        or 0
+    )
+
+    total_earned = cumulative
+    avg_per_task = round(total_earned / tasks_approved) if tasks_approved > 0 else 0
+
+    return {
+        "data_points": data_points,
+        "total_earned": total_earned,
+        "last_7d_earned": last_7d_earned,
+        "avg_per_task": avg_per_task,
+        "tasks_approved": tasks_approved,
     }

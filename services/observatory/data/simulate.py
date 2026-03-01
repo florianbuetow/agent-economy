@@ -20,13 +20,7 @@ from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "economy.db"
 
-AGENTS = [
-    ("a-alice", "Alice"),
-    ("a-bob", "Bob"),
-    ("a-charlie", "Charlie"),
-    ("a-diana", "Diana"),
-    ("a-eve", "Eve"),
-]
+AGENTS: list[tuple[str, str]] = []  # populated from DB at startup
 
 TASK_TITLES = [
     "Build payment gateway integration",
@@ -90,14 +84,47 @@ FEEDBACK_COMMENTS = {
     ],
 }
 
-_task_counter = 100
-_bid_counter = 100
-_escrow_counter = 100
-_claim_counter = 100
-_ruling_counter = 100
-_rebuttal_counter = 100
-_feedback_counter = 100
-_tx_counter = 100
+_task_counter = 0
+_bid_counter = 0
+_escrow_counter = 0
+_claim_counter = 0
+_ruling_counter = 0
+_rebuttal_counter = 0
+_feedback_counter = 0
+_tx_counter = 0
+
+
+def init_counters_from_db(conn: sqlite3.Connection) -> None:
+    """Set counters past any existing sim-prefixed IDs to avoid UNIQUE collisions."""
+    global _task_counter, _bid_counter, _escrow_counter, _claim_counter
+    global _ruling_counter, _rebuttal_counter, _feedback_counter, _tx_counter
+
+    counter_queries = [
+        ("_task_counter", "SELECT MAX(CAST(REPLACE(task_id, 't-sim-', '') AS INTEGER)) FROM board_tasks WHERE task_id LIKE 't-sim-%'"),
+        ("_bid_counter", "SELECT MAX(CAST(REPLACE(bid_id, 'bid-sim-', '') AS INTEGER)) FROM board_bids WHERE bid_id LIKE 'bid-sim-%'"),
+        ("_escrow_counter", "SELECT MAX(CAST(REPLACE(escrow_id, 'esc-sim-', '') AS INTEGER)) FROM bank_escrow WHERE escrow_id LIKE 'esc-sim-%'"),
+        ("_claim_counter", "SELECT MAX(CAST(REPLACE(claim_id, 'clm-sim-', '') AS INTEGER)) FROM court_claims WHERE claim_id LIKE 'clm-sim-%'"),
+        ("_ruling_counter", "SELECT MAX(CAST(REPLACE(ruling_id, 'rul-sim-', '') AS INTEGER)) FROM court_rulings WHERE ruling_id LIKE 'rul-sim-%'"),
+        ("_rebuttal_counter", "SELECT MAX(CAST(REPLACE(rebuttal_id, 'reb-sim-', '') AS INTEGER)) FROM court_rebuttals WHERE rebuttal_id LIKE 'reb-sim-%'"),
+        ("_feedback_counter", "SELECT MAX(CAST(REPLACE(feedback_id, 'fb-sim-', '') AS INTEGER)) FROM reputation_feedback WHERE feedback_id LIKE 'fb-sim-%'"),
+        ("_tx_counter", "SELECT MAX(CAST(REPLACE(tx_id, 'tx-sim-', '') AS INTEGER)) FROM bank_transactions WHERE tx_id LIKE 'tx-sim-%'"),
+    ]
+    for counter_name, query in counter_queries:
+        try:
+            row = conn.execute(query).fetchone()
+            val = row[0] if row and row[0] is not None else 0
+            globals()[counter_name] = val
+        except sqlite3.OperationalError:
+            globals()[counter_name] = 0
+
+
+def load_agents_from_db(conn: sqlite3.Connection) -> list[tuple[str, str]]:
+    """Load agents from the identity_agents table so the simulator uses real seeded agents."""
+    rows = conn.execute("SELECT agent_id, name FROM identity_agents ORDER BY name").fetchall()
+    if not rows:
+        print("No agents found in identity_agents table. Run seed-economy.sh first.")
+        sys.exit(1)
+    return [(row[0], row[1]) for row in rows]
 
 
 def _next(prefix: str, counter_name: str) -> str:
@@ -598,6 +625,11 @@ def main() -> None:
     conn = sqlite3.connect(str(DB_PATH))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=OFF")  # relaxed for simulation
+
+    global AGENTS
+    AGENTS = load_agents_from_db(conn)
+    init_counters_from_db(conn)
+    print(f"Loaded {len(AGENTS)} agents from database: {', '.join(n for _, n in AGENTS)}\n")
 
     try:
         cycle = 0
