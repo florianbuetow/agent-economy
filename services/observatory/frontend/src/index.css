@@ -15,6 +15,10 @@
   --color-text-faint: #bbbbbb;
   --color-green: #1a7a1a;
   --color-red: #b91c1c;
+  --color-nav-bg: #ffffff;
+  --color-nav-text: #111111;
+  --color-nav-text-muted: #888888;
+  --color-nav-border: #cccccc;
 }
 
 @keyframes pulse-dot {
