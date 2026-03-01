@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from task_board_service.clients.central_bank_client import CentralBankClient
@@ -28,48 +28,6 @@ class AppState:
     escrow_coordinator: EscrowCoordinator | None = None
     token_validator: TokenValidator | None = None
     asset_manager: AssetManager | None = None
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        """Keep TaskManager dependency references in sync with AppState fields."""
-        super().__setattr__(name, value)
-
-        escrow_coordinator = self.__dict__.get("escrow_coordinator")
-        if name == "central_bank_client" and value is not None and escrow_coordinator is not None:
-            escrow_coordinator._central_bank_client = value
-
-        token_validator = self.__dict__.get("token_validator")
-        if name == "identity_client" and value is not None and token_validator is not None:
-            token_validator._identity_client = value
-
-        asset_manager = self.__dict__.get("asset_manager")
-        if (
-            name == "identity_client"
-            and value is not None
-            and asset_manager is not None
-            and asset_manager._token_validator is not None
-        ):
-            asset_manager._token_validator._identity_client = value
-
-        task_manager = self.__dict__.get("task_manager")
-        if task_manager is None:
-            return
-
-        if name == "identity_client" and value is not None:
-            task_manager.set_identity_client(value)
-        elif name == "central_bank_client" and value is not None:
-            task_manager.set_central_bank_client(value)
-        elif name == "platform_signer" and value is not None:
-            task_manager.set_platform_signer(value)
-        elif name == "task_manager" and value is not None:
-            identity_client = self.__dict__.get("identity_client")
-            central_bank_client = self.__dict__.get("central_bank_client")
-            platform_signer = self.__dict__.get("platform_signer")
-            if identity_client is not None:
-                value.set_identity_client(identity_client)
-            if central_bank_client is not None:
-                value.set_central_bank_client(central_bank_client)
-            if platform_signer is not None:
-                value.set_platform_signer(platform_signer)
 
     @property
     def uptime_seconds(self) -> float:
