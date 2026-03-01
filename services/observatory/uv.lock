@@ -1198,7 +1198,9 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
+    { name = "cryptography" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "pydantic" },
     { name = "service-commons" },
     { name = "sse-starlette" },
@@ -1230,8 +1232,10 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.21.0" },
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.0" },
     { name = "codespell", marker = "extra == 'dev'", specifier = ">=2.3.0" },
+    { name = "cryptography", specifier = ">=44.0.0" },
     { name = "deptry", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "httpx", specifier = ">=0.28.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13.0" },
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7.0" },

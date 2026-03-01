@@ -78,6 +78,20 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
+class DemoConfig(BaseModel):
+    """Demo proxy configuration for human interactions."""
+
+    model_config = ConfigDict(extra="forbid")
+    identity_url: str
+    task_board_url: str
+    central_bank_url: str
+    platform_key_path: str
+    keys_dir: str
+    human_agent_name: str
+    human_initial_balance: int
+    timeout_seconds: int
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -94,6 +108,7 @@ class Settings(BaseModel):
     sse: SSEConfig
     frontend: FrontendConfig
     request: RequestConfig
+    demo: DemoConfig
 
 
 def get_config_path() -> Path:

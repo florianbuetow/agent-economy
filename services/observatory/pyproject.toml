@@ -11,6 +11,8 @@ dependencies = [
     "service-commons",
     "aiosqlite>=0.21.0",
     "sse-starlette>=2.2.0",
+    "cryptography>=44.0.0",
+    "httpx>=0.28.0",
 ]
 
 [project.optional-dependencies]

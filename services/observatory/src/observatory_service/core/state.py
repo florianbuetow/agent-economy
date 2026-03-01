@@ -8,6 +8,9 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import aiosqlite
+    import httpx
+
+    from observatory_service.services.demo_signer import DemoSigner
 
 
 @dataclass
@@ -16,6 +19,8 @@ class AppState:
 
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     db: aiosqlite.Connection | None = field(default=None, repr=False)
+    demo_signer: DemoSigner | None = field(default=None, repr=False)
+    task_board_client: httpx.AsyncClient | None = field(default=None, repr=False)
 
     @property
     def uptime_seconds(self) -> float:
