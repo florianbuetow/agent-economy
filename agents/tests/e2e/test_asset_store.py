@@ -98,3 +98,51 @@ async def test_multiple_asset_uploads(make_funded_agent) -> None:
             assert asset["size_bytes"] > 0
     finally:
         await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_submit_without_assets_rejected(make_funded_agent) -> None:
+    """Adversarial: worker cannot submit deliverable with no uploaded assets."""
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster AS3", balance=5000)
+        worker = await make_funded_agent(name="Worker AS3", balance=0)
+        agents_to_close.extend([poster, worker])
+
+        task = await poster.post_task(
+            title="No assets task",
+            spec="Do something",
+            reward=500,
+            bidding_deadline_seconds=3600,
+            execution_deadline_seconds=7200,
+            review_deadline_seconds=3600,
+        )
+        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+
+        # Try to submit without uploading any assets
+        response = await worker._request_raw(
+            "POST",
+            f"{worker.config.task_board_url}/tasks/{task['task_id']}/submit",
+            json={
+                "token": worker._sign_jws(
+                    {
+                        "action": "submit_deliverable",
+                        "task_id": task["task_id"],
+                        "worker_id": worker.agent_id,
+                    }
+                )
+            },
+        )
+
+        # Spec says "requires at least 1 asset" — expect rejection
+        assert response.status_code in {400, 409}, (
+            f"Expected 400 or 409 for submit without assets, got {response.status_code}"
+        )
+
+        # Task should remain in accepted state
+        task_after = await poster.get_task(task["task_id"])
+        assert task_after["status"] == "accepted", "Task should remain accepted after failed submit"
+    finally:
+        await _close_agents(agents_to_close)
