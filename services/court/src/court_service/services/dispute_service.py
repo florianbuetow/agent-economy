@@ -6,11 +6,41 @@ import sqlite3
 import uuid
 from datetime import UTC, datetime, timedelta
 from threading import RLock
-from typing import Any
+from typing import Any, Protocol, cast
 
 from service_commons.exceptions import ServiceError
 
-from court_service.judges import DisputeContext, JudgeVote
+from court_service.judges import DisputeContext, Judge, JudgeVote
+
+
+class TaskBoardRulingClient(Protocol):
+    """Protocol for task-board ruling callback."""
+
+    async def record_ruling(self, task_id: str, ruling_payload: dict[str, Any]) -> None:
+        """Record a dispute ruling for a task."""
+        ...
+
+
+class CentralBankSplitClient(Protocol):
+    """Protocol for central-bank escrow split calls."""
+
+    async def split_escrow(
+        self,
+        escrow_id: str,
+        worker_account_id: str,
+        poster_account_id: str,
+        worker_pct: int,
+    ) -> dict[str, Any]:
+        """Split escrow into worker/poster portions."""
+        ...
+
+
+class ReputationFeedbackClient(Protocol):
+    """Protocol for reputation feedback submission."""
+
+    async def record_feedback(self, feedback_payload: dict[str, Any]) -> dict[str, Any]:
+        """Submit a feedback payload."""
+        ...
 
 
 class DisputeService:
@@ -94,7 +124,7 @@ class DisputeService:
 
     def _get_dispute_row(self, dispute_id: str) -> sqlite3.Row | None:
         cursor = self._db.execute("SELECT * FROM disputes WHERE dispute_id = ?", (dispute_id,))
-        return cursor.fetchone()
+        return cast("sqlite3.Row | None", cursor.fetchone())
 
     def _get_votes(self, dispute_id: str) -> list[dict[str, Any]]:
         cursor = self._db.execute(
@@ -258,13 +288,13 @@ class DisputeService:
         else:
             raise ValueError("Judge returned unsupported vote type")
 
-        if not isinstance(vote.worker_pct, int) or not 0 <= vote.worker_pct <= 100:
+        if not 0 <= vote.worker_pct <= 100:
             raise ValueError("worker_pct must be an integer in [0, 100]")
-        if not isinstance(vote.reasoning, str) or vote.reasoning.strip() == "":
+        if vote.reasoning.strip() == "":
             raise ValueError("Judge reasoning must be non-empty")
-        if not isinstance(vote.judge_id, str) or vote.judge_id.strip() == "":
+        if vote.judge_id.strip() == "":
             raise ValueError("judge_id must be non-empty")
-        if not isinstance(vote.voted_at, str) or vote.voted_at.strip() == "":
+        if vote.voted_at.strip() == "":
             raise ValueError("voted_at must be non-empty")
 
         return vote
@@ -285,17 +315,7 @@ class DisputeService:
             return "satisfied"
         return "extremely_satisfied"
 
-    async def execute_ruling(  # noqa: PLR0912, PLR0915
-        self,
-        dispute_id: str,
-        judges: list[object],
-        task_data: dict[str, Any],
-        task_board_client: object | None,
-        central_bank_client: object | None,
-        reputation_client: object | None,
-        platform_agent_id: str,
-    ) -> dict[str, Any]:
-        """Evaluate dispute via judges and commit ruled outcome with side-effects."""
+    def _validate_ruling_preconditions(self, dispute_id: str) -> sqlite3.Row:
         with self._lock:
             row = self._get_dispute_row(dispute_id)
             if row is None:
@@ -317,174 +337,239 @@ class DisputeService:
                     {},
                 )
 
+            return row
+
+    def _build_context(self, row: sqlite3.Row, task_data: dict[str, Any]) -> DisputeContext:
+        return DisputeContext(
+            task_spec=str(task_data.get("spec", "")),
+            deliverables=self._normalize_deliverables(task_data.get("deliverables")),
+            claim=str(row["claim"]),
+            rebuttal=str(row["rebuttal"]) if row["rebuttal"] is not None else None,
+            task_title=str(task_data.get("title", "")),
+            reward=int(task_data.get("reward", 0)),
+        )
+
+    async def _evaluate_judges(
+        self,
+        judges: list[Judge],
+        context: DisputeContext,
+    ) -> list[JudgeVote]:
+        if len(judges) == 0:
+            raise ServiceError("JUDGE_UNAVAILABLE", "No judges configured", 502, {})
+
+        normalized_votes: list[JudgeVote] = []
+        for index, judge in enumerate(judges):
+            try:
+                raw_vote = await judge.evaluate(context)
+            except Exception as exc:
+                raise ServiceError(
+                    "JUDGE_UNAVAILABLE",
+                    f"Judge {index} failed to evaluate dispute",
+                    502,
+                    {},
+                ) from exc
+            normalized_votes.append(self._normalize_vote(raw_vote, index))
+
+        return normalized_votes
+
+    @staticmethod
+    def _compute_ruling(votes: list[JudgeVote]) -> tuple[int, str]:
+        sorted_worker_pcts = sorted(v.worker_pct for v in votes)
+        median_worker_pct = sorted_worker_pcts[len(sorted_worker_pcts) // 2]
+        ruling_summary = "\n\n".join(v.reasoning for v in votes)
+        return median_worker_pct, ruling_summary
+
+    async def _split_escrow(
+        self,
+        central_bank_client: CentralBankSplitClient | None,
+        row: sqlite3.Row,
+        median_worker_pct: int,
+    ) -> None:
+        if central_bank_client is None:
+            raise ServiceError(
+                "CENTRAL_BANK_UNAVAILABLE",
+                "Central Bank client not initialized",
+                502,
+                {},
+            )
+        try:
+            await central_bank_client.split_escrow(
+                str(row["escrow_id"]),
+                str(row["respondent_id"]),
+                str(row["claimant_id"]),
+                median_worker_pct,
+            )
+        except ServiceError:
+            raise
+        except Exception as exc:
+            raise ServiceError(
+                "CENTRAL_BANK_UNAVAILABLE",
+                "Cannot reach Central Bank service",
+                502,
+                {},
+            ) from exc
+
+    async def _record_feedback(
+        self,
+        reputation_client: ReputationFeedbackClient | None,
+        row: sqlite3.Row,
+        median_worker_pct: int,
+        ruling_summary: str,
+        platform_agent_id: str,
+    ) -> None:
+        if reputation_client is None:
+            raise ServiceError(
+                "REPUTATION_SERVICE_UNAVAILABLE",
+                "Reputation client not initialized",
+                502,
+                {},
+            )
+
+        spec_feedback_payload = {
+            "action": "submit_feedback",
+            "task_id": str(row["task_id"]),
+            "from_agent_id": platform_agent_id,
+            "to_agent_id": str(row["claimant_id"]),
+            "category": "spec_quality",
+            "rating": self._spec_rating(median_worker_pct),
+            "comment": ruling_summary,
+        }
+        delivery_feedback_payload = {
+            "action": "submit_feedback",
+            "task_id": str(row["task_id"]),
+            "from_agent_id": platform_agent_id,
+            "to_agent_id": str(row["respondent_id"]),
+            "category": "delivery_quality",
+            "rating": self._delivery_rating(median_worker_pct),
+            "comment": ruling_summary,
+        }
+
+        try:
+            await reputation_client.record_feedback(spec_feedback_payload)
+            await reputation_client.record_feedback(delivery_feedback_payload)
+        except ServiceError:
+            raise
+        except Exception as exc:
+            raise ServiceError(
+                "REPUTATION_SERVICE_UNAVAILABLE",
+                "Cannot reach Reputation service",
+                502,
+                {},
+            ) from exc
+
+    async def _record_task_ruling(
+        self,
+        task_board_client: TaskBoardRulingClient | None,
+        row: sqlite3.Row,
+        dispute_id: str,
+        median_worker_pct: int,
+        ruling_summary: str,
+    ) -> None:
+        if task_board_client is None:
+            raise ServiceError(
+                "TASK_BOARD_UNAVAILABLE",
+                "Task Board client not initialized",
+                502,
+                {},
+            )
+
+        try:
+            await task_board_client.record_ruling(
+                str(row["task_id"]),
+                {
+                    "action": "record_ruling",
+                    "ruling_id": dispute_id,
+                    "worker_pct": median_worker_pct,
+                    "ruling_summary": ruling_summary,
+                },
+            )
+        except ServiceError:
+            raise
+        except Exception as exc:
+            raise ServiceError(
+                "TASK_BOARD_UNAVAILABLE",
+                "Cannot reach Task Board service",
+                502,
+                {},
+            ) from exc
+
+    def _persist_ruling(
+        self,
+        dispute_id: str,
+        median_worker_pct: int,
+        ruling_summary: str,
+        votes: list[JudgeVote],
+    ) -> None:
+        ruled_at = self._now_iso()
+        with self._lock:
+            self._db.execute("BEGIN IMMEDIATE")
+            self._db.execute(
+                """
+                UPDATE disputes
+                SET status = 'ruled', worker_pct = ?, ruling_summary = ?, ruled_at = ?
+                WHERE dispute_id = ?
+                """,
+                (median_worker_pct, ruling_summary, ruled_at, dispute_id),
+            )
+            for vote in votes:
+                self._db.execute(
+                    """
+                    INSERT INTO votes (
+                        vote_id, dispute_id, judge_id, worker_pct, reasoning, voted_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        self._new_vote_id(),
+                        dispute_id,
+                        vote.judge_id,
+                        vote.worker_pct,
+                        vote.reasoning,
+                        vote.voted_at,
+                    ),
+                )
+            self._db.commit()
+
+    async def execute_ruling(
+        self,
+        dispute_id: str,
+        judges: list[Judge],
+        task_data: dict[str, Any],
+        task_board_client: TaskBoardRulingClient | None,
+        central_bank_client: CentralBankSplitClient | None,
+        reputation_client: ReputationFeedbackClient | None,
+        platform_agent_id: str,
+    ) -> dict[str, Any]:
+        """Evaluate dispute via judges and commit ruled outcome with side-effects."""
+        row = self._validate_ruling_preconditions(dispute_id)
+
         self._set_status(dispute_id, "judging")
 
         try:
-            if len(judges) == 0:
-                raise ServiceError("JUDGE_UNAVAILABLE", "No judges configured", 502, {})
+            context = self._build_context(row, task_data)
+            normalized_votes = await self._evaluate_judges(judges, context)
+            median_worker_pct, ruling_summary = self._compute_ruling(normalized_votes)
 
-            context = DisputeContext(
-                task_spec=str(task_data.get("spec", "")),
-                deliverables=self._normalize_deliverables(task_data.get("deliverables")),
-                claim=str(row["claim"]),
-                rebuttal=str(row["rebuttal"]) if row["rebuttal"] is not None else None,
-                task_title=str(task_data.get("title", "")),
-                reward=int(task_data.get("reward", 0)),
+            await self._split_escrow(central_bank_client, row, median_worker_pct)
+            await self._record_feedback(
+                reputation_client,
+                row,
+                median_worker_pct,
+                ruling_summary,
+                platform_agent_id,
+            )
+            await self._record_task_ruling(
+                task_board_client,
+                row,
+                dispute_id,
+                median_worker_pct,
+                ruling_summary,
             )
 
-            normalized_votes: list[JudgeVote] = []
-            for index, judge in enumerate(judges):
-                try:
-                    raw_vote = await judge.evaluate(context)  # type: ignore[attr-defined]
-                except ServiceError as exc:
-                    raise ServiceError(
-                        "JUDGE_UNAVAILABLE",
-                        f"Judge {index} failed to evaluate dispute",
-                        502,
-                        {},
-                    ) from exc
-                except Exception as exc:
-                    raise ServiceError(
-                        "JUDGE_UNAVAILABLE",
-                        f"Judge {index} failed to evaluate dispute",
-                        502,
-                        {},
-                    ) from exc
-
-                normalized_votes.append(self._normalize_vote(raw_vote, index))
-
-            sorted_worker_pcts = sorted(v.worker_pct for v in normalized_votes)
-            median_worker_pct = sorted_worker_pcts[len(sorted_worker_pcts) // 2]
-            ruling_summary = "\n\n".join(v.reasoning for v in normalized_votes)
-
-            if central_bank_client is None:
-                raise ServiceError(
-                    "CENTRAL_BANK_UNAVAILABLE",
-                    "Central Bank client not initialized",
-                    502,
-                    {},
-                )
-            try:
-                await central_bank_client.split_escrow(
-                    str(row["escrow_id"]),
-                    str(row["respondent_id"]),
-                    str(row["claimant_id"]),
-                    median_worker_pct,
-                )
-            except ServiceError:
-                raise
-            except Exception as exc:
-                raise ServiceError(
-                    "CENTRAL_BANK_UNAVAILABLE",
-                    "Cannot reach Central Bank service",
-                    502,
-                    {},
-                ) from exc
-
-            if reputation_client is None:
-                raise ServiceError(
-                    "REPUTATION_SERVICE_UNAVAILABLE",
-                    "Reputation client not initialized",
-                    502,
-                    {},
-                )
-
-            spec_feedback_payload = {
-                "action": "submit_feedback",
-                "task_id": str(row["task_id"]),
-                "from_agent_id": platform_agent_id,
-                "to_agent_id": str(row["claimant_id"]),
-                "category": "spec_quality",
-                "rating": self._spec_rating(median_worker_pct),
-                "comment": ruling_summary,
-            }
-            delivery_feedback_payload = {
-                "action": "submit_feedback",
-                "task_id": str(row["task_id"]),
-                "from_agent_id": platform_agent_id,
-                "to_agent_id": str(row["respondent_id"]),
-                "category": "delivery_quality",
-                "rating": self._delivery_rating(median_worker_pct),
-                "comment": ruling_summary,
-            }
-
-            try:
-                if hasattr(reputation_client, "record_feedback"):
-                    await reputation_client.record_feedback(spec_feedback_payload)
-                    await reputation_client.record_feedback(delivery_feedback_payload)
-                else:
-                    await reputation_client.submit_feedback(spec_feedback_payload)
-                    await reputation_client.submit_feedback(delivery_feedback_payload)
-            except ServiceError:
-                raise
-            except Exception as exc:
-                raise ServiceError(
-                    "REPUTATION_SERVICE_UNAVAILABLE",
-                    "Cannot reach Reputation service",
-                    502,
-                    {},
-                ) from exc
-
-            if task_board_client is None:
-                raise ServiceError(
-                    "TASK_BOARD_UNAVAILABLE",
-                    "Task Board client not initialized",
-                    502,
-                    {},
-                )
-            try:
-                await task_board_client.record_ruling(
-                    str(row["task_id"]),
-                    {
-                        "action": "record_ruling",
-                        "ruling_id": dispute_id,
-                        "worker_pct": median_worker_pct,
-                        "ruling_summary": ruling_summary,
-                    },
-                )
-            except ServiceError:
-                raise
-            except Exception as exc:
-                raise ServiceError(
-                    "TASK_BOARD_UNAVAILABLE",
-                    "Cannot reach Task Board service",
-                    502,
-                    {},
-                ) from exc
-
-            ruled_at = self._now_iso()
-            with self._lock:
-                self._db.execute("BEGIN IMMEDIATE")
-                self._db.execute(
-                    """
-                    UPDATE disputes
-                    SET status = 'ruled', worker_pct = ?, ruling_summary = ?, ruled_at = ?
-                    WHERE dispute_id = ?
-                    """,
-                    (median_worker_pct, ruling_summary, ruled_at, dispute_id),
-                )
-                for vote in normalized_votes:
-                    self._db.execute(
-                        """
-                        INSERT INTO votes (
-                            vote_id, dispute_id, judge_id, worker_pct, reasoning, voted_at
-                        )
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            self._new_vote_id(),
-                            dispute_id,
-                            vote.judge_id,
-                            vote.worker_pct,
-                            vote.reasoning,
-                            vote.voted_at,
-                        ),
-                    )
-                self._db.commit()
-
-        except ServiceError:
+            self._persist_ruling(dispute_id, median_worker_pct, ruling_summary, normalized_votes)
+        except ServiceError as exc:
             self._revert_to_rebuttal_pending(dispute_id)
-            raise
+            raise exc
         except Exception as exc:
             self._revert_to_rebuttal_pending(dispute_id)
             raise ServiceError(

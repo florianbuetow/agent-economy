@@ -18,10 +18,9 @@ if TYPE_CHECKING:
     from typing import Any
 
     from fastapi import FastAPI, Request
-    from starlette.requests import Request as StarletteRequest
 
     ExceptionHandler = Callable[
-        [StarletteRequest, Exception],
+        [Request, Exception],
         Coroutine[Any, Any, JSONResponse],
     ]
 

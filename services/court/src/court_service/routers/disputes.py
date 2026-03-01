@@ -5,10 +5,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
-from starlette.concurrency import run_in_threadpool
 
 from court_service.config import get_settings
 from court_service.core.state import get_app_state
@@ -68,14 +68,6 @@ async def _verify_jws(token: str) -> tuple[str, dict[str, Any]]:
             502,
             {},
         ) from exc
-
-    if not isinstance(verified, dict):
-        raise ServiceError(
-            "IDENTITY_SERVICE_UNAVAILABLE",
-            "Identity service returned malformed verification response",
-            502,
-            {},
-        )
 
     valid = verified.get("valid")
     if isinstance(valid, bool) and not valid:
@@ -307,6 +299,12 @@ async def trigger_ruling(dispute_id: str, request: Request) -> JSONResponse:
     return JSONResponse(status_code=200, content=ruled)
 
 
+@router.api_route("/disputes/file", methods=["GET", "PUT", "PATCH", "DELETE"])
+async def file_dispute_method_not_allowed(_request: Request) -> None:
+    """Reject unsupported methods for file-dispute endpoint."""
+    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+
+
 @router.get("/disputes/{dispute_id}")
 async def get_dispute(dispute_id: str) -> JSONResponse:
     """Fetch full dispute details."""
@@ -322,24 +320,17 @@ async def get_dispute(dispute_id: str) -> JSONResponse:
 
 
 @router.get("/disputes")
-async def list_disputes(
-    task_id: str | None = Query(default=None),
-    status: str | None = Query(default=None),
-) -> JSONResponse:
+async def list_disputes(request: Request) -> JSONResponse:
     """List dispute summaries with optional filters."""
     state = get_app_state()
     if state.dispute_service is None:
         msg = "Dispute service not initialized"
         raise RuntimeError(msg)
 
+    task_id = request.query_params.get("task_id")
+    status = request.query_params.get("status")
     disputes = await run_in_threadpool(state.dispute_service.list_disputes, task_id, status)
     return JSONResponse(status_code=200, content={"disputes": disputes})
-
-
-@router.api_route("/disputes/file", methods=["GET", "PUT", "PATCH", "DELETE"])
-async def file_dispute_method_not_allowed(_request: Request) -> None:
-    """Reject unsupported methods for file-dispute endpoint."""
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
 
 
 @router.api_route("/disputes", methods=["POST", "PUT", "PATCH", "DELETE"])

@@ -49,8 +49,9 @@ class MockJudge(Judge):
         self._fixed_worker_pct = fixed_worker_pct
         self._reasoning = reasoning
 
-    async def evaluate(self, _context: DisputeContext) -> JudgeVote:
+    async def evaluate(self, context: DisputeContext) -> JudgeVote:
         """Return a fixed vote without external calls."""
+        _ = context
         return JudgeVote(
             judge_id=self._judge_id,
             worker_pct=self._fixed_worker_pct,
