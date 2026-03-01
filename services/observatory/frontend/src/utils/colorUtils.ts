@@ -2,6 +2,7 @@
 export const colors = {
   money: "text-green",
   moneyBg: "bg-green-light",
+  spent: "text-red",
   escrow: "text-amber",
   stars: "text-yellow",
   positive: "text-green",
@@ -9,6 +10,28 @@ export const colors = {
   warning: "text-amber",
   live: "bg-green",
 } as const;
+
+/** Status colors for badges and timeline dots (fixed across themes). */
+export const statusColors = {
+  accepted: { bg: "#004085", border: "#004085", text: "#fff" },
+  ruled: { bg: "#4a1580", border: "#4a1580", text: "#fff" },
+  disputeBg: "#fdf3f3",
+  rulingBorder: "#4a1580",
+  rulingBg: "#e2d5f8",
+  rulingBgAlpha: "#e2d5f81a",
+} as const;
+
+/** Standard tooltip background for Chart.js charts. */
+export const tooltipBg = "#111111";
+
+/** Read a CSS custom property value, with a fallback for SSR / missing vars. */
+export function cssVar(name: string, fallback: string): string {
+  return (
+    getComputedStyle(document.documentElement)
+      .getPropertyValue(name)
+      .trim() || fallback
+  );
+}
 
 /**
  * Returns a Tailwind text color class based on the sign of a value.
