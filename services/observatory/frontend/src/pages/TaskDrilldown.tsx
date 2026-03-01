@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTaskDrilldown } from "../hooks/useTaskDrilldown";
+import { postJSON } from "../api/client";
 import Badge from "../components/Badge";
 import { colors, statusColors } from "../utils/colorUtils";
 import type {
@@ -361,9 +362,23 @@ function LifecycleTimeline({ task }: { task: TaskDrilldownResponse }) {
 // Bid Panel
 // ---------------------------------------------------------------------------
 
-function BidPanel({ bids }: { bids: BidItem[] }) {
+function BidPanel({ bids, taskStatus, taskId }: { bids: BidItem[]; taskStatus: string; taskId: string }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [acceptingBidId, setAcceptingBidId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const acceptedBid = bids.find((b) => b.accepted);
+
+  async function handleAcceptBid(bidId: string) {
+    if (acceptingBidId !== null) return;
+    setAcceptingBidId(bidId);
+    setError(null);
+    try {
+      await postJSON(`/api/demo/tasks/${taskId}/accept-bid`, { bid_id: bidId });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to accept bid");
+      setAcceptingBidId(null);
+    }
+  }
 
   return (
     <div className="px-3.5 py-3 border-b border-border">
@@ -437,6 +452,15 @@ function BidPanel({ bids }: { bids: BidItem[] }) {
                     not selected
                   </span>
                 )}
+                {taskStatus === "open" && !acceptedBid && (
+                  <button
+                    onClick={() => handleAcceptBid(bid.bid_id)}
+                    disabled={acceptingBidId !== null}
+                    className="ml-auto px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.5px] border border-green-500 text-green-500 hover:bg-green-500 hover:text-bg transition-colors disabled:opacity-40"
+                  >
+                    {acceptingBidId === bid.bid_id ? "Accepting..." : "Accept"}
+                  </button>
+                )}
               </div>
             </div>
             <div
@@ -462,6 +486,10 @@ function BidPanel({ bids }: { bids: BidItem[] }) {
           </div>
         );
       })}
+
+      {error && (
+        <div className="mt-1.5 font-mono text-[9px] text-red-400">{error}</div>
+      )}
     </div>
   );
 }
@@ -858,6 +886,53 @@ function FeedbackSection({
 }
 
 // ---------------------------------------------------------------------------
+// Disapprove Action
+// ---------------------------------------------------------------------------
+
+function DisapproveAction({ taskId }: { taskId: string }) {
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDisapprove() {
+    if (!reason.trim() || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await postJSON(`/api/demo/tasks/${taskId}/dispute`, { reason: reason.trim() });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to file dispute");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="px-3.5 py-3 border-b border-border">
+      <div className="font-mono text-[10px] font-bold uppercase tracking-[1px] text-red-400 mb-2">
+        Review Deliverable
+      </div>
+      <textarea
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="Describe why the deliverable does not meet the specification..."
+        rows={3}
+        className="w-full bg-bg border border-border px-2 py-1.5 font-mono text-[10px] text-text placeholder:text-text-muted focus:outline-none focus:border-red-400 resize-y mb-2"
+      />
+      {error && (
+        <div className="mb-2 font-mono text-[9px] text-red-400">{error}</div>
+      )}
+      <button
+        onClick={handleDisapprove}
+        disabled={!reason.trim() || submitting}
+        className="px-3 py-1 font-mono text-[9px] uppercase tracking-[0.5px] border border-red-500 text-red-500 hover:bg-red-500 hover:text-bg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {submitting ? "Filing Dispute..." : "Disapprove \u2014 File Dispute"}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Deadline row helper
 // ---------------------------------------------------------------------------
 
@@ -1054,7 +1129,7 @@ export default function TaskDrilldown() {
         {/* LEFT COLUMN (40%) */}
         <div className="w-[40%] shrink-0 border-r border-border overflow-y-auto">
           <LifecycleTimeline task={task} />
-          <BidPanel bids={task.bids} />
+          <BidPanel bids={task.bids} taskStatus={task.status} taskId={task.task_id} />
           <EscrowPanel task={task} />
         </div>
 
@@ -1066,6 +1141,8 @@ export default function TaskDrilldown() {
             task.status === "approved" ||
             task.status === "disputed" ||
             task.status === "ruled") && <Deliverables assets={task.assets} />}
+
+          {task.status === "submitted" && <DisapproveAction taskId={task.task_id} />}
 
           {hasDispute && <DisputeSection task={task} />}
 
