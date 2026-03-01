@@ -363,7 +363,7 @@ function QualitySection({ label, stats }: { label: string; stats: QualityStats }
   }
   const rows = [
     { name: "\u2605\u2605\u2605 Extremely satisfied", count: stats.extremely_satisfied, barColor: "var(--color-green)", textColor: "text-green" },
-    { name: "\u2605\u2605  Satisfied", count: stats.satisfied, barColor: "var(--color-green)", textColor: "text-green" },
+    { name: "\u2605\u2605  Satisfied", count: stats.satisfied, barColor: "var(--color-yellow)", textColor: "text-yellow" },
     { name: "\u2605   Dissatisfied", count: stats.dissatisfied, barColor: "var(--color-red)", textColor: "text-red" },
   ];
   return (
