@@ -14,9 +14,9 @@ type Tab = "workers" | "posters";
 function QualityStars({ es, s, d }: { es: number; s: number; d: number }) {
   return (
     <span className="text-[9px] font-mono text-text-muted">
-      <span title="Extremely satisfied">{"\u2605\u2605\u2605"}{es}</span>{" "}
-      <span title="Satisfied">{"\u2605\u2605"}{s}</span>{" "}
-      <span title="Dissatisfied">{"\u2605"}{d}</span>
+      <span title="Extremely satisfied"><span className="text-yellow">{"\u2605\u2605\u2605"}</span>{es}</span>{" "}
+      <span title="Satisfied"><span className="text-yellow">{"\u2605\u2605"}</span>{s}</span>{" "}
+      <span title="Dissatisfied"><span className="text-yellow">{"\u2605"}</span>{d}</span>
     </span>
   );
 }
@@ -73,7 +73,7 @@ export default function Leaderboard({ workers, posters, metrics }: LeaderboardPr
                       {w.name}
                     </Link>
                   </div>
-                  <span className="text-[10px] font-mono text-text">
+                  <span className="text-[10px] font-mono text-green">
                     {w.stats.total_earned.toLocaleString()} {"\u00a9"} earned
                   </span>
                 </div>
@@ -128,9 +128,9 @@ export default function Leaderboard({ workers, posters, metrics }: LeaderboardPr
                     {p.stats.tasks_posted} tasks posted
                   </span>
                   <span className="text-[9px] font-mono text-text-muted">
-                    <span title="Extremely satisfied">spec: {"\u2605\u2605\u2605"}{p.stats.spec_quality.extremely_satisfied}</span>{" "}
-                    <span title="Satisfied">{"\u2605\u2605"}{p.stats.spec_quality.satisfied}</span>{" "}
-                    <span title="Dissatisfied">{"\u2605"}{p.stats.spec_quality.dissatisfied}</span>
+                    <span title="Extremely satisfied">spec: <span className="text-yellow">{"\u2605\u2605\u2605"}</span>{p.stats.spec_quality.extremely_satisfied}</span>{" "}
+                    <span title="Satisfied"><span className="text-yellow">{"\u2605\u2605"}</span>{p.stats.spec_quality.satisfied}</span>{" "}
+                    <span title="Dissatisfied"><span className="text-yellow">{"\u2605"}</span>{p.stats.spec_quality.dissatisfied}</span>
                   </span>
                 </div>
               </div>
@@ -150,7 +150,7 @@ export default function Leaderboard({ workers, posters, metrics }: LeaderboardPr
                 <div className="space-y-2">
                   <div>
                     <div className="flex justify-between text-[9px] font-mono mb-0.5">
-                      <span className="text-text-muted">{"\u2605\u2605\u2605"} Extremely satisfied</span>
+                      <span className="text-text-muted"><span className="text-yellow">{"\u2605\u2605\u2605"}</span> Extremely satisfied</span>
                       <span className="text-text">
                         {(metrics.spec_quality.extremely_satisfied_pct * 100).toFixed(0)}%
                       </span>
@@ -159,7 +159,7 @@ export default function Leaderboard({ workers, posters, metrics }: LeaderboardPr
                   </div>
                   <div>
                     <div className="flex justify-between text-[9px] font-mono mb-0.5">
-                      <span className="text-text-muted">{"\u2605\u2605"} Satisfied</span>
+                      <span className="text-text-muted"><span className="text-yellow">{"\u2605\u2605"}</span> Satisfied</span>
                       <span className="text-text">
                         {(metrics.spec_quality.satisfied_pct * 100).toFixed(0)}%
                       </span>
@@ -168,7 +168,7 @@ export default function Leaderboard({ workers, posters, metrics }: LeaderboardPr
                   </div>
                   <div>
                     <div className="flex justify-between text-[9px] font-mono mb-0.5">
-                      <span className="text-text-muted">{"\u2605"} Dissatisfied</span>
+                      <span className="text-text-muted"><span className="text-yellow">{"\u2605"}</span> Dissatisfied</span>
                       <span className="text-text">
                         {(metrics.spec_quality.dissatisfied_pct * 100).toFixed(0)}%
                       </span>
