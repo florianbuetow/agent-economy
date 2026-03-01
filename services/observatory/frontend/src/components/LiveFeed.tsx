@@ -39,17 +39,17 @@ function badgeStyle(badgeType: string): { filled: boolean; style?: React.CSSProp
     case "RULING":
       return { filled: true, style: { backgroundColor: "#4a1580", borderColor: "#4a1580", color: "#fff" } };
     case "ESCROW":
-      return { filled: false, style: { borderStyle: "dashed", borderColor: "#b45309", color: "#b45309" } };
+      return { filled: true, style: { backgroundColor: "#b45309", borderColor: "#b45309", color: "#fff" } };
     case "BID":
-      return { filled: false };
+      return { filled: true, style: { backgroundColor: "#6b7280", borderColor: "#6b7280", color: "#fff" } };
     case "CONTRACT":
-      return { filled: false, style: { borderColor: "#0B2D6E", color: "#0B2D6E" } };
+      return { filled: true, style: { backgroundColor: "#0B2D6E", borderColor: "#0B2D6E", color: "#fff" } };
     case "REP":
-      return { filled: false, style: { borderStyle: "dotted", borderColor: "#b8860b", color: "#b8860b" } };
+      return { filled: true, style: { backgroundColor: "#b8860b", borderColor: "#b8860b", color: "#fff" } };
     case "AGENT":
-      return { filled: false, style: { borderColor: "var(--color-text-muted)" } };
+      return { filled: true, style: { backgroundColor: "#555555", borderColor: "#555555", color: "#fff" } };
     default:
-      return { filled: false };
+      return { filled: true };
   }
 }
 
