@@ -16,22 +16,22 @@ function Header() {
   return (
     <div className="px-6 py-3 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-2.5">
-        <div className="text-[11px] font-bold tracking-[2.5px] uppercase font-mono text-white">
+        <div className="text-[11px] font-bold tracking-[2.5px] uppercase font-mono text-[#111111]">
           ATE
         </div>
-        <div className="w-px h-3.5 bg-white/30" />
-        <div className="text-[9px] tracking-[1px] uppercase font-mono text-white/50">
+        <div className="w-px h-3.5 bg-[#cccccc]" />
+        <div className="text-[9px] tracking-[1px] uppercase font-mono text-[#888888]">
           Agent Task Economy
         </div>
       </div>
       <div className="flex items-center gap-2.5">
-        <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-[pulse-dot_2s_infinite]" />
-        <span className="text-[8px] font-mono uppercase tracking-[1.5px] text-white/50">
+        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-[pulse-dot_2s_infinite]" />
+        <span className="text-[8px] font-mono uppercase tracking-[1.5px] text-[#888888]">
           LIVE
         </span>
         <Link
           to="/observatory"
-          className="px-2.5 py-1 border border-white/40 bg-transparent text-white font-mono text-[9px] tracking-[1px] uppercase cursor-pointer"
+          className="px-2.5 py-1 border border-[#333333] bg-transparent text-[#333333] font-mono text-[9px] tracking-[1px] uppercase cursor-pointer"
         >
           Observatory →
         </Link>
@@ -63,8 +63,8 @@ function Footer() {
 export default function LandingPage() {
   return (
     <div className="w-full min-h-screen bg-bg font-mono flex flex-col">
-      {/* Dark hero section with graph background */}
-      <div className="relative h-screen overflow-hidden" style={{ background: "#0A0A0F" }}>
+      {/* Hero section with graph background */}
+      <div className="relative h-screen overflow-hidden" style={{ background: "#fafafa" }}>
         <EconomyGraph />
         <div className="relative z-10 flex flex-col h-full">
           <Header />

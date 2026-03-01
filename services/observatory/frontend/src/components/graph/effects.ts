@@ -41,7 +41,7 @@ export function spawnCoinParticles(x: number, y: number): Particle[] {
       life,
       maxLife: life,
       size,
-      color: "#F59E0B", // gold
+      color: "#333333",
     });
   }
 

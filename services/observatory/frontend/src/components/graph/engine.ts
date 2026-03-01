@@ -2,23 +2,76 @@
 // Orchestrates the entire economy graph visualization. Owns all simulation
 // state (agents, tasks, particles, ripples), runs the update loop at 60fps,
 // and renders everything to a Canvas 2D context in back-to-front order.
+// Uses the wireframe theme: monochrome palette, hatch-pattern fills, no glow.
 
-import type { AgentNode, TaskNode, AgentState, Particle, Ripple } from "./types";
-import { BG_COLOR, CATEGORY_COLORS, STATE_LABELS } from "./types";
+import type { AgentNode, TaskNode, AgentState, Category, Particle, Ripple } from "./types";
+import { BG_COLOR, HATCH_DEFS, W, STATE_LABELS, CATEGORIES } from "./types";
 import { createCamera, fitToViewport, worldToScreen, isVisible } from "./camera";
 import type { Camera } from "./camera";
 import { createAgent, updateAgent } from "./agents";
 import { createTask, updateTask } from "./tasks";
 import { updateParticle, updateRipple } from "./effects";
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Hatch pattern factory ──────────────────────────────────────────────────
 
-/** Convert hex color to rgba with alpha */
-function adjustAlpha(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
+/** Create a repeating Canvas pattern with hatched lines at the given angle/gap. */
+function createHatchPattern(
+  ctx: CanvasRenderingContext2D,
+  angle: number,
+  gap: number,
+): CanvasPattern {
+  const size = Math.max(gap, 2);
+  const tile = document.createElement("canvas");
+  tile.width = size;
+  tile.height = size;
+  const tc = tile.getContext("2d");
+  if (!tc) throw new Error("Failed to get 2D context for hatch tile");
+
+  // Background fill
+  tc.fillStyle = W.bgNode;
+  tc.fillRect(0, 0, size, size);
+
+  // Hatch lines
+  tc.strokeStyle = W.hatchStroke;
+  tc.lineWidth = 1;
+
+  if (angle === 0) {
+    // Horizontal lines
+    tc.beginPath();
+    tc.moveTo(0, size / 2);
+    tc.lineTo(size, size / 2);
+    tc.stroke();
+  } else if (angle === 90) {
+    // Vertical lines
+    tc.beginPath();
+    tc.moveTo(size / 2, 0);
+    tc.lineTo(size / 2, size);
+    tc.stroke();
+  } else if (angle === 45) {
+    // Diagonal: bottom-left to top-right
+    tc.beginPath();
+    tc.moveTo(0, size);
+    tc.lineTo(size, 0);
+    tc.moveTo(-size, size);
+    tc.lineTo(size, -size);
+    tc.moveTo(0, 2 * size);
+    tc.lineTo(2 * size, 0);
+    tc.stroke();
+  } else if (angle === -45) {
+    // Diagonal: top-left to bottom-right
+    tc.beginPath();
+    tc.moveTo(0, 0);
+    tc.lineTo(size, size);
+    tc.moveTo(-size, 0);
+    tc.lineTo(size, 2 * size);
+    tc.moveTo(0, -size);
+    tc.lineTo(2 * size, size);
+    tc.stroke();
+  }
+
+  const pattern = ctx.createPattern(tile, "repeat");
+  if (!pattern) throw new Error("Failed to create hatch CanvasPattern");
+  return pattern;
 }
 
 // ─── Engine Class ───────────────────────────────────────────────────────────
@@ -36,6 +89,9 @@ export class GraphEngine {
   private running: boolean;
   private rafId: number;
   private lastFrame: number;
+
+  /** Pre-built hatch patterns per category (created once, reused every frame) */
+  private hatchPatterns: Record<Category, CanvasPattern>;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -55,6 +111,13 @@ export class GraphEngine {
     // Create camera and fit to viewport
     this.camera = createCamera();
     fitToViewport(this.camera, canvas.clientWidth, canvas.clientHeight);
+
+    // Pre-create hatch patterns (one offscreen canvas per category)
+    this.hatchPatterns = {} as Record<Category, CanvasPattern>;
+    for (const cat of CATEGORIES) {
+      const def = HATCH_DEFS[cat];
+      this.hatchPatterns[cat] = createHatchPattern(ctx, def.angle, def.gap);
+    }
 
     // Spawn entities
     this.agents = [];
@@ -216,7 +279,7 @@ export class GraphEngine {
     w: number,
     h: number,
   ): void {
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.strokeStyle = "rgba(51,51,51,0.12)";
     ctx.setLineDash([4 * camera.zoom, 6 * camera.zoom]);
     ctx.lineWidth = 1 * camera.zoom;
 
@@ -255,7 +318,7 @@ export class GraphEngine {
       if (!task) continue;
 
       const lw = (0.8 + agent.wealth / 5000) * camera.zoom;
-      ctx.strokeStyle = "rgba(255,255,255,0.4)";
+      ctx.strokeStyle = "rgba(51,51,51,0.35)";
       ctx.lineWidth = lw;
 
       const agentScreen = worldToScreen(agent.x, agent.y, camera, w, h);
@@ -286,7 +349,7 @@ export class GraphEngine {
 
       if (agent.role === "worker") {
         // Solid line for workers
-        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        ctx.strokeStyle = "rgba(51,51,51,0.6)";
         ctx.lineWidth = 2 * camera.zoom;
 
         ctx.beginPath();
@@ -295,7 +358,7 @@ export class GraphEngine {
         ctx.stroke();
       } else if (agent.role === "poster") {
         // Dashed line for posters
-        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.strokeStyle = "rgba(51,51,51,0.25)";
         ctx.setLineDash([4 * camera.zoom, 3 * camera.zoom]);
         ctx.lineWidth = 0.8 * camera.zoom;
 
@@ -309,7 +372,7 @@ export class GraphEngine {
     }
   }
 
-  /** (d) Task nodes with glow, gradient fill, outline, and pulse ring */
+  /** (d) Task nodes: hatch-pattern fill, white knockout center, #333 border */
   private renderTaskNodes(
     ctx: CanvasRenderingContext2D,
     camera: Camera,
@@ -322,31 +385,30 @@ export class GraphEngine {
       const { sx, sy } = worldToScreen(task.x, task.y, camera, w, h);
       const sr = task.r * camera.zoom;
 
-      // Glow
-      ctx.shadowColor = CATEGORY_COLORS[task.category];
-      ctx.shadowBlur = 12 * camera.zoom;
-
-      // Radial gradient fill
-      const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
-      const color = CATEGORY_COLORS[task.category];
-      grad.addColorStop(0, color);
-      grad.addColorStop(1, adjustAlpha(color, 0.6));
-      ctx.fillStyle = grad;
+      // Hatch-pattern fill
+      ctx.fillStyle = this.hatchPatterns[task.category];
       ctx.beginPath();
       ctx.arc(sx, sy, sr, 0, Math.PI * 2);
       ctx.fill();
 
-      // White outline
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "rgba(255,255,255,0.8)";
+      // White knockout center (62% of radius)
+      ctx.fillStyle = W.bg;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr * 0.62, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Border
+      ctx.strokeStyle = W.borderStrong;
       ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
       ctx.stroke();
 
       // Pulse ring for "open" tasks
       if (task.state === "open") {
         const pulseR = sr + (4 + Math.sin(task.pulseAge * 2.5) * 10) * camera.zoom;
-        const pulseAlpha = 0.1 + Math.sin(task.pulseAge * 2.5) * 0.09;
-        ctx.strokeStyle = `rgba(255,255,255,${pulseAlpha})`;
+        const pulseAlpha = 0.08 + Math.sin(task.pulseAge * 2.5) * 0.07;
+        ctx.strokeStyle = `rgba(51,51,51,${pulseAlpha})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(sx, sy, pulseR, 0, Math.PI * 2);
@@ -355,7 +417,7 @@ export class GraphEngine {
     }
   }
 
-  /** (e) Agent nodes with glow, gradient fill, and outline */
+  /** (e) Agent nodes: hatch-pattern fill, white knockout center, #333 border */
   private renderAgentNodes(
     ctx: CanvasRenderingContext2D,
     camera: Camera,
@@ -369,24 +431,23 @@ export class GraphEngine {
       const { sx, sy } = worldToScreen(agent.x, agent.y, camera, w, h);
       const sr = agent.r * camera.zoom;
 
-      // Glow
-      ctx.shadowColor = CATEGORY_COLORS[agent.category];
-      ctx.shadowBlur = 10 * camera.zoom;
-
-      // Radial gradient
-      const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
-      grad.addColorStop(0, CATEGORY_COLORS[agent.category]);
-      grad.addColorStop(0.7, adjustAlpha(CATEGORY_COLORS[agent.category], 0.7));
-      grad.addColorStop(1, adjustAlpha(CATEGORY_COLORS[agent.category], 0.4));
-      ctx.fillStyle = grad;
+      // Hatch-pattern fill
+      ctx.fillStyle = this.hatchPatterns[agent.category];
       ctx.beginPath();
       ctx.arc(sx, sy, sr, 0, Math.PI * 2);
       ctx.fill();
 
-      // White outline
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = "rgba(255,255,255,0.6)";
+      // White knockout center (62% of radius)
+      ctx.fillStyle = W.bg;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr * 0.62, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Border
+      ctx.strokeStyle = W.borderStrong;
       ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
       ctx.stroke();
 
       ctx.globalAlpha = 1;
@@ -400,11 +461,12 @@ export class GraphEngine {
     w: number,
     h: number,
   ): void {
-    ctx.font = `bold ${Math.max(8, 10 * camera.zoom)}px 'Courier New', monospace`;
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.textAlign = "center";
 
-    // Agent labels
+    // Agent labels — bold name
+    ctx.font = `bold ${Math.max(8, 10 * camera.zoom)}px 'Courier New', monospace`;
+    ctx.fillStyle = W.text;
+
     for (const agent of this.agents) {
       if (!isVisible(agent.x, agent.y, agent.r, camera, w, h)) continue;
 
@@ -419,8 +481,17 @@ export class GraphEngine {
 
       const { sx, sy } = worldToScreen(task.x, task.y, camera, w, h);
       const sr = task.r * camera.zoom;
+
+      // Task name in bold
+      ctx.font = `bold ${Math.max(8, 10 * camera.zoom)}px 'Courier New', monospace`;
+      ctx.fillStyle = W.text;
       const displayName = task.name.length > 9 ? task.name.slice(0, 9) : task.name;
-      ctx.fillText(`${displayName} ${Math.round(task.payoff)}\u00A2`, sx, sy - sr - 6 * camera.zoom);
+      ctx.fillText(displayName, sx, sy - sr - 12 * camera.zoom);
+
+      // Payoff in muted
+      ctx.font = `${Math.max(7, 9 * camera.zoom)}px 'Courier New', monospace`;
+      ctx.fillStyle = W.textMuted;
+      ctx.fillText(`${Math.round(task.payoff)}\u00A2`, sx, sy - sr - 3 * camera.zoom);
     }
   }
 
@@ -432,7 +503,7 @@ export class GraphEngine {
     h: number,
   ): void {
     ctx.font = `${Math.max(6, 8 * camera.zoom)}px 'Courier New', monospace`;
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.fillStyle = W.textMuted;
     ctx.textAlign = "center";
 
     for (const agent of this.agents) {
@@ -465,7 +536,7 @@ export class GraphEngine {
       const ay = sy + Math.sin(angle) * arrowDist;
       const arrowSize = 4 * camera.zoom;
 
-      ctx.fillStyle = "rgba(255,255,255,0.6)";
+      ctx.fillStyle = W.borderStrong;
       ctx.beginPath();
       ctx.moveTo(
         ax + Math.cos(angle) * arrowSize,
@@ -494,8 +565,8 @@ export class GraphEngine {
     for (const agent of this.agents) {
       if (agent.trail.length <= 1) continue;
 
-      ctx.globalAlpha = agent.opacity * 0.3;
-      ctx.strokeStyle = CATEGORY_COLORS[agent.category];
+      ctx.globalAlpha = agent.opacity * 0.2;
+      ctx.strokeStyle = W.hatchStroke;
       ctx.lineWidth = agent.r * 0.4 * camera.zoom;
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -530,11 +601,11 @@ export class GraphEngine {
     for (const ripple of this.ripples) {
       const { sx, sy } = worldToScreen(ripple.x, ripple.y, camera, w, h);
       const sr = ripple.r * camera.zoom;
-      const alpha = (ripple.life / ripple.maxLife) * 0.5;
+      const alpha = (ripple.life / ripple.maxLife) * 0.4;
 
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = ripple.color;
-      ctx.lineWidth = 2 * camera.zoom;
+      ctx.lineWidth = 1.5 * camera.zoom;
       ctx.beginPath();
       ctx.arc(sx, sy, sr, 0, Math.PI * 2);
       ctx.stroke();
@@ -542,7 +613,7 @@ export class GraphEngine {
     }
   }
 
-  /** (k) Coin particles (gold squares) */
+  /** (k) Coin particles (small squares) */
   private renderParticles(
     ctx: CanvasRenderingContext2D,
     camera: Camera,
