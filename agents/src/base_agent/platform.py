@@ -35,9 +35,7 @@ class PlatformAgent(BaseAgent):
         )
         return await self._request("POST", url, json={"token": token})
 
-    async def credit_account(
-        self, account_id: str, amount: int, reference: str
-    ) -> dict[str, Any]:
+    async def credit_account(self, account_id: str, amount: int, reference: str) -> dict[str, Any]:
         """Credit funds to an account.
 
         Args:
@@ -59,9 +57,7 @@ class PlatformAgent(BaseAgent):
         )
         return await self._request("POST", url, json={"token": token})
 
-    async def release_escrow(
-        self, escrow_id: str, recipient_account_id: str
-    ) -> dict[str, Any]:
+    async def release_escrow(self, escrow_id: str, recipient_account_id: str) -> dict[str, Any]:
         """Release escrowed funds to recipient.
 
         Args:

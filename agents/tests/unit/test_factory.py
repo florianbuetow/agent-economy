@@ -31,17 +31,13 @@ class TestAgentFactory:
         agent = factory.create_agent("alice")
         assert not isinstance(agent, PlatformAgent)
 
-    def test_platform_agent_returns_platform_agent(
-        self, config_path: Path, tmp_path: Path
-    ) -> None:
+    def test_platform_agent_returns_platform_agent(self, config_path: Path, tmp_path: Path) -> None:
         factory = AgentFactory(config_path=config_path, keys_dir=tmp_path)
         agent = factory.platform_agent()
         assert isinstance(agent, PlatformAgent)
         assert agent.name == "Platform"
 
-    def test_platform_agent_has_privileged_methods(
-        self, config_path: Path, tmp_path: Path
-    ) -> None:
+    def test_platform_agent_has_privileged_methods(self, config_path: Path, tmp_path: Path) -> None:
         factory = AgentFactory(config_path=config_path, keys_dir=tmp_path)
         agent = factory.platform_agent()
         assert hasattr(agent, "create_account")
