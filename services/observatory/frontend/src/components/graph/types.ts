@@ -25,6 +25,30 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   general: "#6B7280",
 };
 
+// ─── Hatch pattern definitions (wireframe theme) ────────────────────────────
+export const HATCH_DEFS: Record<Category, { angle: number; gap: number }> = {
+  data: { angle: 45, gap: 4 },
+  writing: { angle: -45, gap: 4 },
+  code: { angle: 90, gap: 3 },
+  research: { angle: 0, gap: 4 },
+  design: { angle: 45, gap: 8 },
+  general: { angle: 0, gap: 8 },
+};
+
+// ─── Wireframe theme palette ────────────────────────────────────────────────
+export const W = {
+  bg: "#ffffff",
+  bgCanvas: "#fafafa",
+  bgNode: "#f0f0f0",
+  border: "#cccccc",
+  borderStrong: "#333333",
+  hatchStroke: "#aaaaaa",
+  text: "#111111",
+  textMid: "#444444",
+  textMuted: "#888888",
+  textFaint: "#bbbbbb",
+} as const;
+
 // ─── State badge labels ──────────────────────────────────────────────────────
 export const STATE_LABELS: Record<AgentState, string> = {
   searching: "searching\u2026",
@@ -38,7 +62,7 @@ export const STATE_LABELS: Record<AgentState, string> = {
 
 // ─── World constants ─────────────────────────────────────────────────────────
 export const WORLD_SIZE = 3000;
-export const BG_COLOR = "#0A0A0F";
+export const BG_COLOR = "#fafafa";
 
 // ─── Agent names ─────────────────────────────────────────────────────────────
 export const AGENT_PREFIXES = [

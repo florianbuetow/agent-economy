@@ -4,7 +4,7 @@
 // and the agent visibly grows from the wealth gain.
 
 import type { TaskNode, AgentNode, Particle, Ripple, Category } from "./types";
-import { CATEGORIES, CATEGORY_COLORS, TASK_NAMES, WORLD_SIZE } from "./types";
+import { CATEGORIES, TASK_NAMES, WORLD_SIZE } from "./types";
 import { computeAgentRadius } from "./agents";
 import { spawnCoinParticles, spawnRipples } from "./effects";
 
@@ -212,7 +212,7 @@ function updateBidding(
     task.stateTimer = randomRange(2, 4);
 
     // Spawn ripple effects at task position with category color
-    return { ripples: spawnRipples(task.x, task.y, CATEGORY_COLORS[task.category]) };
+    return { ripples: spawnRipples(task.x, task.y, "#333333") };
   }
 
   return { ripples: [] };
@@ -275,7 +275,7 @@ function updateInProgress(
     if (winner) {
       return {
         particles: spawnCoinParticles(winner.x, winner.y),
-        ripples: spawnRipples(winner.x, winner.y, CATEGORY_COLORS[task.category]),
+        ripples: spawnRipples(winner.x, winner.y, "#333333"),
       };
     }
 
