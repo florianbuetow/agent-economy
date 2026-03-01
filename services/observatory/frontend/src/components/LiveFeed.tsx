@@ -28,17 +28,24 @@ const FILTER_TYPES = ["ALL", "TASK", "BID", "PAYOUT", "CONTRACT", "ESCROW", "REP
 
 function badgeStyle(badgeType: string): { filled: boolean; style?: React.CSSProperties } {
   switch (badgeType) {
-    case "TASK":
     case "PAYOUT":
-    case "DISPUTE":
+      return { filled: true, style: { backgroundColor: "#1a7a1a", borderColor: "#1a7a1a", color: "#fff" } };
+    case "TASK":
       return { filled: true };
-    case "BID":
-    case "CONTRACT":
-      return { filled: false };
+    case "SUBMIT":
+      return { filled: true, style: { backgroundColor: "#0B2D6E", borderColor: "#0B2D6E", color: "#fff" } };
+    case "DISPUTE":
+      return { filled: true, style: { backgroundColor: "#b91c1c", borderColor: "#b91c1c", color: "#fff" } };
+    case "RULING":
+      return { filled: true, style: { backgroundColor: "#4a1580", borderColor: "#4a1580", color: "#fff" } };
     case "ESCROW":
-      return { filled: false, style: { borderStyle: "dashed" } };
+      return { filled: false, style: { borderStyle: "dashed", borderColor: "#b45309", color: "#b45309" } };
+    case "BID":
+      return { filled: false };
+    case "CONTRACT":
+      return { filled: false, style: { borderColor: "#0B2D6E", color: "#0B2D6E" } };
     case "REP":
-      return { filled: false, style: { borderStyle: "dotted", backgroundColor: "var(--color-bg-dark)" } };
+      return { filled: false, style: { borderStyle: "dotted", borderColor: "#b8860b", color: "#b8860b" } };
     case "AGENT":
       return { filled: false, style: { borderColor: "var(--color-text-muted)" } };
     default:
