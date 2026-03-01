@@ -285,8 +285,8 @@ async def _register_human_agent(
         list_url = f"{identity_url}/agents"
         list_resp = await client.get(list_url)
         list_resp.raise_for_status()
-        agents: list[dict[str, Any]] = list_resp.json()
-        for agent in agents:
+        list_data: dict[str, list[dict[str, Any]]] = list_resp.json()
+        for agent in list_data.get("agents", []):
             if agent.get("name") == human_agent_name:
                 found_id: str = agent["agent_id"]
                 logger.info("human_agent_found", extra={"agent_id": found_id})
@@ -407,12 +407,12 @@ async def _resolve_platform_agent_id(
     identity_url: str,
     platform_pub_b64: str,
 ) -> str:
-    """Resolve the platform agent_id by matching the public key in the agent list.
+    """Resolve the platform agent_id by matching the name in the agent list.
 
     Args:
         client: HTTP client to use.
         identity_url: Base URL of the Identity service.
-        platform_pub_b64: Base64-encoded platform public key.
+        platform_pub_b64: Base64-encoded platform public key (unused, kept for signature compat).
 
     Returns:
         The platform agent_id.
@@ -423,10 +423,9 @@ async def _resolve_platform_agent_id(
     list_url = f"{identity_url}/agents"
     resp = await client.get(list_url)
     resp.raise_for_status()
-    agents: list[dict[str, Any]] = resp.json()
-    expected_key = f"ed25519:{platform_pub_b64}"
-    for agent in agents:
-        if agent.get("public_key") == expected_key:
+    data: dict[str, list[dict[str, Any]]] = resp.json()
+    for agent in data.get("agents", []):
+        if agent.get("name") == "Platform":
             found_id: str = agent["agent_id"]
             logger.info("platform_agent_found", extra={"agent_id": found_id})
             return found_id
