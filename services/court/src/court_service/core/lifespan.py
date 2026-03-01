@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from court_service.config import get_settings
 from court_service.core.state import init_app_state
+from court_service.judges import LLMJudge, MockJudge
 from court_service.logging import get_logger, setup_logging
 from court_service.services.central_bank_client import CentralBankClient
 from court_service.services.dispute_service import DisputeService
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:  # noqa: PLR0912
     """Manage app startup and shutdown."""
     settings = get_settings()
 
@@ -77,6 +78,32 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         )
 
     state.judges = []
+    for judge_cfg in settings.judges.judges:
+        provider = (judge_cfg.provider or "llm").lower()
+        if provider == "mock":
+            state.judges.append(
+                MockJudge(
+                    judge_id=judge_cfg.id,
+                    fixed_worker_pct=50,
+                    reasoning="Mock judge default reasoning.",
+                )
+            )
+            continue
+
+        if judge_cfg.temperature is None:
+            msg = f"Judge {judge_cfg.id} is missing required temperature"
+            raise ValueError(msg)
+        state.judges.append(
+            LLMJudge(
+                judge_id=judge_cfg.id,
+                model=judge_cfg.model,
+                temperature=judge_cfg.temperature,
+            )
+        )
+
+    if len(state.judges) != settings.judges.panel_size:
+        msg = "INVALID_PANEL_SIZE: configured judge count does not match panel_size"
+        raise ValueError(msg)
 
     logger.info(
         "Service starting",
