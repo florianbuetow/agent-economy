@@ -1,3 +1,15 @@
+/** Semantic color classes — single source of truth for color meaning. */
+export const colors = {
+  money: "text-green",
+  moneyBg: "bg-green-light",
+  escrow: "text-amber",
+  stars: "text-yellow",
+  positive: "text-green",
+  negative: "text-red",
+  warning: "text-amber",
+  live: "bg-green",
+} as const;
+
 /**
  * Returns a Tailwind text color class based on the sign of a value.
  * - "up-good": positive = green, negative = red (e.g., GDP growth)
