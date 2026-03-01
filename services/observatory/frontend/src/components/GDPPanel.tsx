@@ -103,8 +103,8 @@ export default function GDPPanel({ metrics, gdpHistory }: GDPPanelProps) {
         </div>
         <div className="text-[10px] font-mono text-text-mid">
           <span className={gdpTrend}>{metrics.gdp.rate_per_hour.toFixed(1)} ¢/hr</span>
-          {" "}&middot;{" "}
-          {metrics.gdp.last_24h.toLocaleString()} last 24h &middot;{" "}
+          {" "}-{" "}
+          {metrics.gdp.last_24h.toLocaleString()} last 24h -{" "}
           {metrics.gdp.last_7d.toLocaleString()} last 7d
         </div>
       </div>
@@ -120,7 +120,7 @@ export default function GDPPanel({ metrics, gdpHistory }: GDPPanelProps) {
         </div>
         <div className="text-[10px] font-mono text-text-muted p-2 border border-border bg-bg-off">
           {metrics.agents.active} active of {metrics.agents.total_registered} registered
-          &middot; {metrics.agents.with_completed_tasks} with completions
+          - {metrics.agents.with_completed_tasks} with completions
         </div>
       </div>
 
