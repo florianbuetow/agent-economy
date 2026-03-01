@@ -21,7 +21,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 database:
   path: "data/economy.db"
 sse:
@@ -63,7 +63,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 database:
   path: "data/economy.db"
 sse:

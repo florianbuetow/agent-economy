@@ -28,7 +28,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  format: "json"
+  directory: "data/logs"
 database:
   path: "{tmp_path / "test.db"}"
 identity:

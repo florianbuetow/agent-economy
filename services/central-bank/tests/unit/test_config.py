@@ -22,7 +22,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 database:
   path: "data/central-bank.db"
 identity:
@@ -66,7 +66,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 database:
   path: "data/central-bank.db"
 identity:

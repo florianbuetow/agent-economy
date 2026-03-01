@@ -51,7 +51,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 identity:
   base_url: "http://localhost:8001"
   verify_jws_path: "/agents/verify-jws"
@@ -173,7 +173,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 feedback:
   reveal_timeout_seconds: 86400
   max_comment_length: 256
@@ -203,7 +203,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 database: {}
 feedback:
   reveal_timeout_seconds: 86400

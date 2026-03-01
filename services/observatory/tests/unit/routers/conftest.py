@@ -27,7 +27,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  format: "json"
+  directory: "data/logs"
 database:
   path: "{db_path}"
 sse:

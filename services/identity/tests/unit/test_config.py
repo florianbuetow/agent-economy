@@ -20,7 +20,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 database:
   path: "data/test.db"
 crypto:
@@ -61,7 +61,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 database:
   path: "data/test.db"
 crypto:
