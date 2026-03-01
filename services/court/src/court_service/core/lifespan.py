@@ -61,16 +61,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         state.task_board_client = TaskBoardClient(
             base_url=settings.task_board.base_url,
             signer=signer,
+            timeout_seconds=settings.identity.timeout_seconds,
         )
     if settings.central_bank is not None and signer is not None:
         state.central_bank_client = CentralBankClient(
             base_url=settings.central_bank.base_url,
             signer=signer,
+            timeout_seconds=settings.identity.timeout_seconds,
         )
     if settings.reputation is not None and signer is not None:
         state.reputation_client = ReputationClient(
             base_url=settings.reputation.base_url,
             signer=signer,
+            timeout_seconds=settings.identity.timeout_seconds,
         )
 
     state.judges = []
