@@ -20,6 +20,7 @@ export interface ThemeDefinition {
     navBorder: string;
   };
   font: string;
+  radius: string;
 }
 
 export const THEMES: Record<string, ThemeDefinition> = {
@@ -43,6 +44,7 @@ export const THEMES: Record<string, ThemeDefinition> = {
       navBorder: "#cccccc",
     },
     font: "'Courier New', Courier, monospace",
+    radius: "0px",
   },
   ft: {
     name: "FT",
@@ -64,6 +66,7 @@ export const THEMES: Record<string, ThemeDefinition> = {
       navBorder: "#333333",
     },
     font: "Georgia, 'Times New Roman', serif",
+    radius: "0px",
   },
   gs: {
     name: "GS",
@@ -85,6 +88,7 @@ export const THEMES: Record<string, ThemeDefinition> = {
       navBorder: "#0B2D6E",
     },
     font: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+    radius: "4px",
   },
 };
 
@@ -121,6 +125,7 @@ export function applyTheme(themeKey: string) {
   root.style.setProperty("--color-nav-text-muted", theme.colors.navTextMuted);
   root.style.setProperty("--color-nav-border", theme.colors.navBorder);
   root.style.setProperty("--font-mono", theme.font);
+  root.style.setProperty("--radius", theme.radius);
 
   try {
     localStorage.setItem(STORAGE_KEY, themeKey);
