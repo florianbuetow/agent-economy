@@ -36,35 +36,43 @@ class RulingOrchestrator:
     @staticmethod
     def _normalize_vote(raw_vote: object, index: int) -> JudgeVote:
         if isinstance(raw_vote, JudgeVote):
-            vote = raw_vote
+            judge_id = raw_vote.judge_id
+            worker_pct = raw_vote.worker_pct
+            reasoning = raw_vote.reasoning
+            voted_at = raw_vote.voted_at
         elif isinstance(raw_vote, dict):
-            worker_pct = raw_vote.get("worker_pct")
-            reasoning = raw_vote.get("reasoning")
-            judge_id = raw_vote.get("judge_id")
-            voted_at = raw_vote.get("voted_at")
-            if not isinstance(judge_id, str) or judge_id == "":
-                judge_id = f"judge-{index}"
-            if not isinstance(voted_at, str) or voted_at == "":
-                voted_at = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
-            vote = JudgeVote(
-                judge_id=judge_id,
-                worker_pct=int(worker_pct) if isinstance(worker_pct, int) else -1,
-                reasoning=str(reasoning) if isinstance(reasoning, str) else "",
-                voted_at=voted_at,
+            worker_pct_value = raw_vote.get("worker_pct")
+            reasoning_value = raw_vote.get("reasoning")
+            judge_id_value = raw_vote.get("judge_id")
+            voted_at_value = raw_vote.get("voted_at")
+            judge_id = str(judge_id_value) if isinstance(judge_id_value, str) else ""
+            voted_at = str(voted_at_value) if isinstance(voted_at_value, str) else ""
+            worker_pct = worker_pct_value if isinstance(worker_pct_value, int) else 50
+            reasoning = (
+                str(reasoning_value)
+                if isinstance(reasoning_value, str) and reasoning_value.strip() != ""
+                else "No reasoning provided."
             )
         else:
             raise ValueError("Judge returned unsupported vote type")
 
-        if not 0 <= vote.worker_pct <= 100:
-            raise ValueError("worker_pct must be an integer in [0, 100]")
-        if vote.reasoning.strip() == "":
-            raise ValueError("Judge reasoning must be non-empty")
-        if vote.judge_id.strip() == "":
-            raise ValueError("judge_id must be non-empty")
-        if vote.voted_at.strip() == "":
-            raise ValueError("voted_at must be non-empty")
+        if worker_pct < 0:
+            worker_pct = 0
+        elif worker_pct > 100:
+            worker_pct = 100
+        if reasoning.strip() == "":
+            reasoning = "No reasoning provided."
+        if judge_id.strip() == "":
+            judge_id = f"judge-{index}"
+        if voted_at.strip() == "":
+            voted_at = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
-        return vote
+        return JudgeVote(
+            judge_id=judge_id,
+            worker_pct=worker_pct,
+            reasoning=reasoning,
+            voted_at=voted_at,
+        )
 
     @staticmethod
     def _delivery_rating(worker_pct: int) -> str:
@@ -95,10 +103,11 @@ class RulingOrchestrator:
                 {},
             )
 
-        if str(dispute["status"]) != "rebuttal_pending":
+        status = str(dispute["status"])
+        if status not in {"rebuttal_pending", "rebuttal_submitted"}:
             raise ServiceError(
-                "INVALID_DISPUTE_STATUS",
-                "Dispute is not in rebuttal_pending status",
+                "DISPUTE_NOT_READY",
+                "Dispute is not ready for ruling",
                 409,
                 {},
             )
