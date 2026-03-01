@@ -15,6 +15,10 @@ help:
     @printf "\033[1;33mSimulation\033[0m\n"
     @printf "  \033[0;37mjust simulate         \033[0;34m Run the simulation injector\033[0m\n"
     @echo ""
+    @printf "\033[1;33mTask Generation\033[0m\n"
+    @printf "  \033[0;37mjust generate-tasks N \033[0;34m Generate N math tasks to data/math_tasks.jsonl\033[0m\n"
+    @printf "  \033[0;37mjust math-tasks [level] [count] \033[0;34m Generate math tasks (default: level=1, count=5)\033[0m\n"
+    @echo ""
 
 # Initialize the development environment
 init:
@@ -35,6 +39,15 @@ destroy:
 
 # Run the simulation injector (placeholder)
 simulate:
+
+# Generate N math tasks to data/math_tasks.jsonl (uses PRNG for infinite variety)
+generate-tasks count:
+    uv run python -m math_task_factory --total {{count}}
+
+    @printf "\033[0;32m✓ Tasks written to data/math_tasks.jsonl\033[0m\n"
     @echo ""
-    @printf "\033[0;33m⚠ Simulation injector not yet implemented\033[0m\n"
+
+# Generate math tasks for agent economy testing (level and count)
+math-tasks level="1" count="5":
+    uv run python -m math_task_factory --level {{level}} --count {{count}} --format pretty
     @echo ""
