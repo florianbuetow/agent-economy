@@ -271,7 +271,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
       nodes.push({
         label: "RULED",
         timestamp: task.dispute.ruling.ruled_at,
-        note: `Worker ${workerPct}% \u00b7 Poster ${100 - workerPct}%`,
+        note: `Worker ${workerPct}% - Poster ${100 - workerPct}%`,
         done: true,
         color: statusColors.ruled.bg,
       });
@@ -345,7 +345,7 @@ function LifecycleTimeline({ task }: { task: TaskDrilldownResponse }) {
                 </span>
                 {node.note && (
                   <span className="text-[9px] font-mono text-text-muted">
-                    &middot; {node.note}
+                    - {node.note}
                   </span>
                 )}
               </div>
@@ -378,14 +378,14 @@ function BidPanel({ bids }: { bids: BidItem[] }) {
             {acceptedBid && (
               <>
                 {" "}
-                &middot;{" "}
+                -{" "}
                 <Link
                   to={`/observatory/agents/${acceptedBid.bidder.agent_id}`}
                   className="underline decoration-dashed underline-offset-2 hover:text-text"
                 >
                   {acceptedBid.bidder.name}
                 </Link>{" "}
-                accepted &middot; {bids.length - 1} not selected
+                accepted - {bids.length - 1} not selected
               </>
             )}
           </>
@@ -528,7 +528,7 @@ function EscrowPanel({ task }: { task: TaskDrilldownResponse }) {
               </div>
               <span className="text-[10px] font-mono" style={{ color: statusColors.rulingBorder }}>
                 {workerPayout} &copy; &rarr; {task.worker?.name ?? "worker"}{" "}
-                &middot; {posterPayout} &copy; &rarr; {task.poster.name}
+                - {posterPayout} &copy; &rarr; {task.poster.name}
               </span>
             </div>
             <span
@@ -726,7 +726,7 @@ function DisputeSection({ task }: { task: TaskDrilldownResponse }) {
                 className="text-[13px] font-bold font-mono"
                 style={{ color: statusColors.rulingBorder }}
               >
-                {workerPct}% &middot; {workerPayout} &copy;
+                {workerPct}% - {workerPayout} &copy;
               </span>
             </div>
             <div className="flex-1 border border-border p-2 bg-bg-off">
@@ -734,7 +734,7 @@ function DisputeSection({ task }: { task: TaskDrilldownResponse }) {
                 Poster receives
               </div>
               <span className="text-[13px] font-bold font-mono">
-                {100 - workerPct}% &middot; {posterPayout} &copy;
+                {100 - workerPct}% - {posterPayout} &copy;
               </span>
             </div>
           </div>
@@ -807,8 +807,8 @@ function FeedbackSection({
               >
                 <div className="text-[8px] font-mono uppercase tracking-[1.5px] text-text-muted mb-1">
                   {isWorkerToPoster
-                    ? "Worker \u2192 Poster \u00b7 Spec Quality"
-                    : "Poster \u2192 Worker \u00b7 Delivery Quality"}
+                    ? "Worker \u2192 Poster - Spec Quality"
+                    : "Poster \u2192 Worker - Delivery Quality"}
                 </div>
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <Link
@@ -972,7 +972,7 @@ export default function TaskDrilldown() {
                   (worker)
                 </span>
                 <span className="text-[10px] text-text-muted font-normal">
-                  {" "}&middot;{" "}
+                  {" "}-{" "}
                 </span>
                 <span className="text-[10px] text-red font-normal">
                   {posterPayout} &copy;

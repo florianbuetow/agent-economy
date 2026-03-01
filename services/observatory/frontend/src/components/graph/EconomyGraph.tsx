@@ -144,7 +144,7 @@ export default function EconomyGraph() {
           </div>
           <div className="text-text-mid">{tooltip.info.name}</div>
           <div className="text-text-muted">
-            {tooltip.info.state} &middot; {tooltip.info.detailLabel}: {tooltip.info.detail}
+            {tooltip.info.state} - {tooltip.info.detailLabel}: {tooltip.info.detail}
           </div>
         </div>
       )}
