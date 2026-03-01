@@ -13,7 +13,7 @@ export default function HatchBar({ pct, height = 14 }: HatchBarProps) {
         className="absolute left-0 top-0 bottom-0 border-r border-border-strong"
         style={{
           width: `${pct}%`,
-          backgroundColor: "var(--color-green-light)",
+          backgroundColor: "#e6f4e6",
         }}
       />
     </div>
