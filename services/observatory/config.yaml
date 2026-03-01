@@ -27,3 +27,13 @@ frontend:
 
 request:
   max_body_size: 1572864
+
+demo:
+  identity_url: "http://localhost:8001"
+  task_board_url: "http://localhost:8003"
+  central_bank_url: "http://localhost:8002"
+  platform_key_path: "data/keys/platform.key"
+  keys_dir: "data/keys"
+  human_agent_name: "Human (Demo)"
+  human_initial_balance: 100000
+  timeout_seconds: 10
