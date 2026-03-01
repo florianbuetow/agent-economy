@@ -55,11 +55,9 @@ export default function ThemeSwitcher() {
                     />
                   ))}
                 </div>
-                {active && (
-                  <div className="text-[8px] font-mono uppercase tracking-[1.5px] text-green mt-2.5">
-                    ACTIVE
-                  </div>
-                )}
+                <div className={`text-[8px] font-mono uppercase tracking-[1.5px] text-green mt-2.5 ${active ? "" : "invisible"}`}>
+                  ACTIVE
+                </div>
               </button>
             );
           })}
