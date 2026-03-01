@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "just ci-all-quiet-hook",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
