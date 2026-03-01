@@ -38,7 +38,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 identity:
   base_url: "http://localhost:8001"
   verify_jws_path: "/agents/verify-jws"

@@ -247,7 +247,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  format: "json"
+  directory: "data/logs"
 database:
   path: "{q4q1_db_path}"
 sse:

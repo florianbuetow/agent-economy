@@ -32,11 +32,11 @@ class TestSettingsLoad:
         assert isinstance(settings.server.log_level, str)
 
     def test_logging_section_exists(self) -> None:
-        """Settings must have a logging section with level and format."""
+        """Settings must have a logging section with level and directory."""
         settings = get_settings()
         assert settings.logging is not None
         assert isinstance(settings.logging.level, str)
-        assert isinstance(settings.logging.format, str)
+        assert isinstance(settings.logging.directory, str)
 
     def test_feedback_section_exists(self) -> None:
         """Settings must have a feedback section."""
