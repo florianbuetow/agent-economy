@@ -7,6 +7,7 @@ from typing import Any
 
 from service_commons.exceptions import ServiceError
 
+from central_bank_service.config import get_settings
 from central_bank_service.core.state import get_app_state
 
 
@@ -62,6 +63,14 @@ def require_platform(agent_id: str, platform_agent_id: str) -> None:
             403,
             {},
         )
+
+
+def get_platform_agent_id() -> str:
+    """Get platform agent_id, preferring live PlatformAgent over config."""
+    state = get_app_state()
+    if state.platform_agent is not None and state.platform_agent.agent_id is not None:
+        return str(state.platform_agent.agent_id)
+    return get_settings().platform.agent_id
 
 
 def require_account_owner(verified_agent_id: str, account_id: str) -> None:

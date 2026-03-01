@@ -7,10 +7,10 @@ from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 from starlette.concurrency import run_in_threadpool
 
-from central_bank_service.config import get_settings
 from central_bank_service.core.state import get_app_state
 from central_bank_service.logging import get_logger
 from central_bank_service.routers.helpers import (
+    get_platform_agent_id,
     parse_json_body,
     require_platform,
     verify_jws_token,
@@ -93,10 +93,8 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
     if not isinstance(data["token"], str):
         raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
 
-    settings = get_settings()
-
     verified = await verify_jws_token(data["token"])
-    require_platform(verified["agent_id"], settings.platform.agent_id)
+    require_platform(verified["agent_id"], get_platform_agent_id())
 
     payload = verified["payload"]
     action = payload.get("action")
@@ -152,10 +150,8 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
     if not isinstance(data["token"], str):
         raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
 
-    settings = get_settings()
-
     verified = await verify_jws_token(data["token"])
-    require_platform(verified["agent_id"], settings.platform.agent_id)
+    require_platform(verified["agent_id"], get_platform_agent_id())
 
     payload = verified["payload"]
     action = payload.get("action")

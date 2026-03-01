@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from base_agent.platform import PlatformAgent
+
     from central_bank_service.services.identity_client import IdentityClient
     from central_bank_service.services.ledger import Ledger
 
@@ -18,6 +20,7 @@ class AppState:
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     ledger: Ledger | None = None
     identity_client: IdentityClient | None = None
+    platform_agent: PlatformAgent | None = None
 
     @property
     def uptime_seconds(self) -> float:

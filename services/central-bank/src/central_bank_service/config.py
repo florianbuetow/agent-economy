@@ -69,6 +69,7 @@ class PlatformConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     agent_id: str
+    agent_config_path: str = ""
 
     @field_validator("agent_id")
     @classmethod
