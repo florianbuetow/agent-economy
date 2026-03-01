@@ -2,6 +2,9 @@
 # Keys are stored at: data/keys/{handle}.key and data/keys/{handle}.pub
 
 agents:
+  platform:
+    name: "Platform"
+    type: "platform"
   alice:
     name: "Alice"
     type: "worker"
