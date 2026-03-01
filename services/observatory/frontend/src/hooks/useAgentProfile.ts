@@ -49,7 +49,7 @@ export function useAgentProfile(agentId: string): UseAgentProfileResult {
         setProfile(profileData);
         setEarnings(earningsData);
       })
-      .catch(() => {})
+      .catch((e) => { console.warn("Agent profile load failed:", e); })
       .finally(() => setLoading(false));
   }, [agentId]);
 
@@ -66,7 +66,7 @@ export function useAgentProfile(agentId: string): UseAgentProfileResult {
         setFeed(data.events);
         setFeedHasMore(data.has_more);
       })
-      .catch(() => {})
+      .catch((e) => { console.warn("Agent feed load failed:", e); })
       .finally(() => setFeedLoading(false));
   }, [agentId, roleFilter, typeFilter, timeFilter]);
 
@@ -83,7 +83,7 @@ export function useAgentProfile(agentId: string): UseAgentProfileResult {
           setFeed(data.events);
           setFeedHasMore(data.has_more);
         })
-        .catch(() => {});
+        .catch((e) => { console.warn("Feed poll failed:", e); });
     }, 10000);
     return () => clearInterval(interval);
   }, [agentId, roleFilter, typeFilter, timeFilter]);
@@ -101,7 +101,7 @@ export function useAgentProfile(agentId: string): UseAgentProfileResult {
         setFeed((prev) => [...prev, ...data.events]);
         setFeedHasMore(data.has_more);
       })
-      .catch(() => {});
+      .catch((e) => { console.warn("Feed pagination failed:", e); });
   }, [agentId, feed, feedHasMore, roleFilter, typeFilter, timeFilter]);
 
   return {

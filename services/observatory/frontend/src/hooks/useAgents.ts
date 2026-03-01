@@ -9,10 +9,10 @@ export function useAgents() {
   useEffect(() => {
     fetchAgents("total_earned", "desc", 10).then((res) =>
       setWorkers(res.agents)
-    ).catch(() => {});
+    ).catch((e) => { console.warn("Top workers fetch failed:", e); });
     fetchAgents("spec_quality", "desc", 10).then((res) =>
       setPosters(res.agents)
-    ).catch(() => {});
+    ).catch((e) => { console.warn("Top posters fetch failed:", e); });
   }, []);
 
   return { workers, posters };

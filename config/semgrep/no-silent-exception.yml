@@ -1,0 +1,17 @@
+rules:
+  - id: agent-economy.no-silent-broad-except
+    languages: [python]
+    message: >
+      Broad 'except Exception' that only logs swallows errors silently.
+      Catch a specific exception type instead, or re-raise after logging.
+    severity: ERROR
+    pattern: |
+      try:
+          ...
+      except Exception:
+          $LOGGER.$METHOD(...)
+    paths:
+      include:
+        - src/
+      exclude:
+        - tests/

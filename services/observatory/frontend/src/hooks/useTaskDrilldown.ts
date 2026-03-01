@@ -44,7 +44,7 @@ export function useTaskDrilldown(taskId: string): UseTaskDrilldownResult {
     const interval = setInterval(() => {
       fetchTaskDrilldown(taskId)
         .then((data) => setTask(data))
-        .catch(() => {});
+        .catch((e) => { console.warn("Task poll failed:", e); });
     }, POLL_INTERVAL_MS);
 
     return () => clearInterval(interval);

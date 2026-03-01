@@ -36,7 +36,7 @@ export function useMetrics(pollInterval = 5000) {
       .then((data) => {
         if (active) setGdpHistory(data);
       })
-      .catch(() => {});
+      .catch((e) => { console.warn("GDP history fetch failed:", e); });
     return () => {
       active = false;
     };
