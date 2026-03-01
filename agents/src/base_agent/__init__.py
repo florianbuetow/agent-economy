@@ -6,4 +6,4 @@ from base_agent.platform import PlatformAgent
 
 __version__ = "0.1.0"
 
-__all__ = ["BaseAgent", "AgentFactory", "PlatformAgent"]
+__all__ = ["AgentFactory", "BaseAgent", "PlatformAgent"]

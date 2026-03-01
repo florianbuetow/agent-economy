@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from base_agent.config import AgentConfig
@@ -78,9 +79,7 @@ class TestCreditAccount:
         agent._sign_jws = Mock(return_value="test-jws")
         agent._request = AsyncMock(return_value=response)
 
-        result = await agent.credit_account(
-            account_id="a-alice", amount=100, reference="salary"
-        )
+        result = await agent.credit_account(account_id="a-alice", amount=100, reference="salary")
 
         assert result == response
         agent._sign_jws.assert_called_once_with(
@@ -110,9 +109,7 @@ class TestReleaseEscrow:
         agent._sign_jws = Mock(return_value="test-jws")
         agent._request = AsyncMock(return_value=response)
 
-        result = await agent.release_escrow(
-            escrow_id="esc-1", recipient_account_id="a-alice"
-        )
+        result = await agent.release_escrow(escrow_id="esc-1", recipient_account_id="a-alice")
 
         assert result == response
         agent._sign_jws.assert_called_once_with(
@@ -186,5 +183,5 @@ class TestVerifyPlatformJws:
         other_key = Ed25519PrivateKey.generate()
         token = create_jws({"action": "create_account"}, other_key, kid="a-imposter")
 
-        with pytest.raises(Exception):
+        with pytest.raises(InvalidSignature):
             agent.verify_platform_jws(token)

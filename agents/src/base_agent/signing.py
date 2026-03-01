@@ -196,4 +196,5 @@ def verify_jws(
     public_key.verify(signature, signing_input)
 
     payload_bytes = _b64url_decode(payload_b64)
-    return json.loads(payload_bytes)
+    result: dict[str, object] = json.loads(payload_bytes)
+    return result

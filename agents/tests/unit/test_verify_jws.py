@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from base_agent.signing import create_jws, verify_jws
@@ -28,7 +29,7 @@ class TestVerifyJws:
         wrong_key = Ed25519PrivateKey.generate().public_key()
         token = create_jws({"action": "test"}, private_key)
 
-        with pytest.raises(Exception):
+        with pytest.raises(InvalidSignature):
             verify_jws(token, wrong_key)
 
     def test_verify_rejects_tampered_payload(self) -> None:
@@ -40,7 +41,7 @@ class TestVerifyJws:
         parts[1] = parts[1] + "x"
         tampered = ".".join(parts)
 
-        with pytest.raises(Exception):
+        with pytest.raises(InvalidSignature):
             verify_jws(tampered, public_key)
 
     def test_verify_rejects_malformed_token(self) -> None:
