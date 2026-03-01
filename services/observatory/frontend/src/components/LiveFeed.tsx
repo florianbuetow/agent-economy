@@ -113,14 +113,17 @@ export default function LiveFeed({ events, paused, onTogglePause }: LiveFeedProp
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className="text-[8px] font-mono uppercase tracking-[1px] px-1.5 py-0.5 border cursor-pointer transition-opacity duration-150 hover:opacity-75"
-                style={
-                  isActive && bg
+                className={`text-[8px] font-mono uppercase tracking-[1px] px-1.5 py-0.5 border cursor-pointer transition-all duration-150 ${
+                  isActive ? "" : "hover:[background-color:var(--btn-bg)] hover:[border-color:var(--btn-bg)] hover:text-white"
+                }`}
+                style={{
+                  "--btn-bg": bg ?? "var(--color-border-strong)",
+                  ...(isActive && bg
                     ? { backgroundColor: bg, borderColor: bg, color: "#fff", fontWeight: "bold" }
                     : isActive
                       ? { backgroundColor: "var(--color-border-strong)", borderColor: "var(--color-border-strong)", color: "var(--color-bg)", fontWeight: "bold" }
-                      : { backgroundColor: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text-muted)" }
-                }
+                      : { backgroundColor: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text-muted)" }),
+                } as React.CSSProperties}
               >
                 {f}
               </button>
