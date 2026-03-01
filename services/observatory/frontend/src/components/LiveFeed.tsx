@@ -10,30 +10,48 @@ interface LiveFeedProps {
 }
 
 const EVENT_TYPE_TO_BADGE: Record<string, string> = {
+  // tasks
   "task.created": "TASK",
-  "bid.submitted": "BID",
-  "task.approved": "PAYOUT",
   "task.accepted": "CONTRACT",
   "task.submitted": "SUBMIT",
-  "bank.payout": "PAYOUT",
-  "bank.escrow_locked": "ESCROW",
-  "bank.escrow_released": "PAYOUT",
-  "reputation.feedback_revealed": "REP",
-  "identity.agent_registered": "AGENT",
-  "court.claim_filed": "DISPUTE",
-  "court.ruling_issued": "RULING",
+  "task.approved": "PAYOUT",
+  "task.auto_approved": "PAYOUT",
+  "task.disputed": "DISPUTE",
+  "task.ruled": "RULING",
+  "task.cancelled": "CANCEL",
+  "task.expired": "CANCEL",
+  // bids
+  "bid.submitted": "BID",
+  // bank
+  "salary.paid": "SALARY",
+  "escrow.locked": "ESCROW",
+  "escrow.released": "PAYOUT",
+  "escrow.split": "RULING",
+  "account.created": "AGENT",
+  // reputation
+  "feedback.revealed": "REP",
+  // court
+  "claim.filed": "DISPUTE",
+  "rebuttal.submitted": "DISPUTE",
+  "ruling.delivered": "RULING",
+  // identity
+  "agent.registered": "AGENT",
+  // assets
+  "asset.uploaded": "SUBMIT",
 };
 
 const BADGE_COLORS: Record<string, string> = {
   TASK: "#4a6fa5",     // muted blue
   BID: "#a06080",      // dusty rose
   PAYOUT: "#4a8c5c",   // sage green
+  SALARY: "#3a7a5a",   // darker green
   CONTRACT: "#6a5a8c", // muted violet
   SUBMIT: "#4a7a80",   // teal
   ESCROW: "#a07040",   // burnt sienna
   REP: "#8a7a3a",      // olive gold
   DISPUTE: "#8c4a4a",  // muted red
   RULING: "#6a4a80",   // plum
+  CANCEL: "#7a7a7a",   // medium gray
   AGENT: "#6a6a6a",    // gray
 };
 
