@@ -13,6 +13,8 @@ import logging
 import signal
 import sys
 
+import httpx
+
 from base_agent.agent import BaseAgent
 from base_agent.config import load_agent_config
 
@@ -44,6 +46,15 @@ async def _main() -> None:
     agent = BaseAgent(agent_config)
     await agent.register()
     logger.info("Registered as agent_id=%s", agent.agent_id)
+    # Create bank account (idempotent — 409 if already exists)
+    try:
+        await agent.create_account()
+        logger.info("Bank account created for agent_id=%s", agent.agent_id)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 409:
+            logger.info("Bank account already exists for agent_id=%s", agent.agent_id)
+        else:
+            raise
 
     # Create and run the feeder loop
     loop = TaskFeederLoop(agent=agent, config=feeder_config)
