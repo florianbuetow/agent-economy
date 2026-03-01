@@ -153,18 +153,6 @@ class TaskManager:
             "review_deadline": review_deadline,
         }
 
-    def set_identity_client(self, identity_client: IdentityClient) -> None:
-        """Replace the identity client dependency."""
-        self._identity_client = identity_client
-
-    def set_central_bank_client(self, central_bank_client: CentralBankClient) -> None:
-        """Replace the central bank client dependency."""
-        self._central_bank_client = central_bank_client
-
-    def set_platform_signer(self, platform_signer: PlatformSigner) -> None:
-        """Replace the platform signer dependency."""
-        self._platform_signer = platform_signer
-
     # ------------------------------------------------------------------
     # Public methods — called by routers
     # ------------------------------------------------------------------

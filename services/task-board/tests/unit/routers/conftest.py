@@ -176,6 +176,15 @@ limits:
         mock_bank.escrow_split = AsyncMock(return_value={"status": "split"})
         state.central_bank_client = mock_bank
 
+        # Propagate mocks to extracted services
+        if state.task_manager is not None:
+            state.task_manager._identity_client = mock_identity
+            state.task_manager._central_bank_client = mock_bank
+        if state.token_validator is not None:
+            state.token_validator._identity_client = mock_identity
+        if state.escrow_coordinator is not None:
+            state.escrow_coordinator._central_bank_client = mock_bank
+
         yield test_app
 
     reset_app_state()
