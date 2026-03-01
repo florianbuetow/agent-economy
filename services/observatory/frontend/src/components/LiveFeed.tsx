@@ -25,16 +25,16 @@ const EVENT_TYPE_TO_BADGE: Record<string, string> = {
 };
 
 const BADGE_COLORS: Record<string, string> = {
-  TASK: "#2563eb",     // blue
-  BID: "#e645a0",      // pink
-  PAYOUT: "#16a34a",   // green
-  CONTRACT: "#7c3aed", // violet
-  SUBMIT: "#0891b2",   // cyan
-  ESCROW: "#ea580c",   // orange
-  REP: "#ca8a04",      // yellow
-  DISPUTE: "#dc2626",  // red
-  RULING: "#9333ea",   // purple
-  AGENT: "#555555",    // gray
+  TASK: "#4a6fa5",     // muted blue
+  BID: "#a06080",      // dusty rose
+  PAYOUT: "#4a8c5c",   // sage green
+  CONTRACT: "#6a5a8c", // muted violet
+  SUBMIT: "#4a7a80",   // teal
+  ESCROW: "#a07040",   // burnt sienna
+  REP: "#8a7a3a",      // olive gold
+  DISPUTE: "#8c4a4a",  // muted red
+  RULING: "#6a4a80",   // plum
+  AGENT: "#6a6a6a",    // gray
 };
 
 const FILTER_TYPES = ["ALL", "TASK", "BID", "PAYOUT", "CONTRACT", "ESCROW", "REP"] as const;
