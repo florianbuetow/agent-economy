@@ -12,6 +12,7 @@ from court_service.judges import LLMJudge, MockJudge
 from court_service.logging import get_logger, setup_logging
 from court_service.services.central_bank_client import CentralBankClient
 from court_service.services.dispute_service import DisputeService
+from court_service.services.dispute_store import DisputeStore
 from court_service.services.identity_client import IdentityClient
 from court_service.services.platform_signer import PlatformSigner
 from court_service.services.reputation_client import ReputationClient
@@ -130,8 +131,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state = init_app_state()
 
     db_path = settings.database.path
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    state.dispute_service = DisputeService(db_path=db_path)
+    store = DisputeStore(db_path=db_path)
+    state.dispute_service = DisputeService(store=store)
 
     state.identity_client = IdentityClient(
         base_url=settings.identity.base_url,
