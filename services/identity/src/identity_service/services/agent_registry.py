@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import base64
 import json
-import sqlite3
-import uuid
-from datetime import UTC, datetime
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -14,6 +11,8 @@ from joserfc import jws as jws_module
 from joserfc.errors import BadSignatureError
 from joserfc.jwk import OKPKey
 from service_commons.exceptions import ServiceError
+
+from identity_service.services.agent_store import AgentStore, DuplicateAgentError
 
 
 class AgentRegistry:
@@ -25,33 +24,17 @@ class AgentRegistry:
 
     def __init__(
         self,
-        db_path: str,
+        store: AgentStore,
         algorithm: str,
         public_key_prefix: str,
         public_key_bytes: int,
         signature_bytes: int,
     ) -> None:
+        self._store = store
         self._algorithm = algorithm
         self._public_key_prefix = public_key_prefix
         self._public_key_bytes = public_key_bytes
         self._signature_bytes = signature_bytes
-        self._db = sqlite3.connect(db_path, check_same_thread=False)
-        self._db.execute("PRAGMA journal_mode=WAL")
-        self._init_schema()
-
-    def _init_schema(self) -> None:
-        """Create the agents table if it doesn't exist."""
-        self._db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS agents (
-                agent_id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                public_key TEXT NOT NULL UNIQUE,
-                registered_at TEXT NOT NULL
-            )
-            """
-        )
-        self._db.commit()
 
     def register_agent(self, name: str, public_key: str) -> dict[str, str]:
         """
@@ -66,30 +49,15 @@ class AgentRegistry:
         self._validate_name(name)
         self._validate_public_key(public_key)
 
-        agent_id = f"a-{uuid.uuid4()}"
-        registered_at = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
-
         try:
-            self._db.execute(
-                "INSERT INTO agents (agent_id, name, public_key, registered_at) "
-                "VALUES (?, ?, ?, ?)",
-                (agent_id, name, public_key, registered_at),
-            )
-            self._db.commit()
-        except sqlite3.IntegrityError as exc:
+            return self._store.insert(name, public_key)
+        except DuplicateAgentError as exc:
             raise ServiceError(
                 "PUBLIC_KEY_EXISTS",
                 "This public key is already registered",
                 409,
                 {},
             ) from exc
-
-        return {
-            "agent_id": agent_id,
-            "name": name,
-            "public_key": public_key,
-            "registered_at": registered_at,
-        }
 
     def verify_signature(
         self,
@@ -274,19 +242,7 @@ class AgentRegistry:
 
         Returns the full agent record or None if not found.
         """
-        cursor = self._db.execute(
-            "SELECT agent_id, name, public_key, registered_at FROM agents WHERE agent_id = ?",
-            (agent_id,),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        return {
-            "agent_id": row[0],
-            "name": row[1],
-            "public_key": row[2],
-            "registered_at": row[3],
-        }
+        return self._store.get_by_id(agent_id)
 
     def list_agents(self) -> list[dict[str, str]]:
         """
@@ -294,25 +250,15 @@ class AgentRegistry:
 
         Returns list of agent summaries sorted by registration time.
         """
-        cursor = self._db.execute(
-            "SELECT agent_id, name, registered_at FROM agents ORDER BY registered_at"
-        )
-        return [
-            {"agent_id": row[0], "name": row[1], "registered_at": row[2]}
-            for row in cursor.fetchall()
-        ]
+        return self._store.list_all()
 
     def count_agents(self) -> int:
         """Count total registered agents."""
-        cursor = self._db.execute("SELECT COUNT(*) FROM agents")
-        result = cursor.fetchone()
-        if result is None:
-            return 0
-        return int(result[0])
+        return self._store.count()
 
     def close(self) -> None:
         """Close the database connection."""
-        self._db.close()
+        self._store.close()
 
     def _validate_name(self, name: str) -> None:
         """Validate agent display name."""
