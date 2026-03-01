@@ -380,9 +380,9 @@ function MonthlyEarningsChart({
   }
 
   const sortedKeys = Array.from(monthlyMap.keys()).sort();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const labels = sortedKeys.map((k) => {
     const [, m] = k.split("-");
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return monthNames[parseInt(m, 10) - 1];
   });
   const values = sortedKeys.map((k) => monthlyMap.get(k) ?? 0);
