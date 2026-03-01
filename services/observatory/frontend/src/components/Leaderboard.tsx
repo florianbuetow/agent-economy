@@ -119,7 +119,7 @@ export default function Leaderboard({ workers, posters, metrics }: LeaderboardPr
                       {p.name}
                     </Link>
                   </div>
-                  <span className="text-[10px] font-mono text-text">
+                  <span className="text-[10px] font-mono text-green">
                     {p.stats.total_spent.toLocaleString()} {"\u00a9"} spent
                   </span>
                 </div>

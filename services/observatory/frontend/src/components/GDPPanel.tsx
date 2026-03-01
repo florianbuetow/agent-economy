@@ -166,6 +166,7 @@ export default function GDPPanel({ metrics, gdpHistory }: GDPPanelProps) {
         <KVRow
           label="Avg reward"
           value={`${metrics.labor_market.avg_reward.toFixed(1)} ¢`}
+          colorClass="text-green"
         />
         <KVRow
           label="Posting rate"
