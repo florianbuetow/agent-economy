@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -10,79 +9,9 @@ from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
 from task_board_service.core.state import get_app_state
+from task_board_service.routers.validation import extract_token, parse_json_body
 
 router = APIRouter()
-
-
-# ---------------------------------------------------------------------------
-# Helper: JSON body parsing and token extraction
-# ---------------------------------------------------------------------------
-
-
-def _parse_json_body(body: bytes) -> dict[str, Any]:
-    """Parse JSON body, raising ServiceError on failure."""
-    try:
-        data = json.loads(body)
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise ServiceError(
-            "INVALID_JSON",
-            "Request body is not valid JSON",
-            400,
-            {},
-        ) from exc
-
-    if not isinstance(data, dict):
-        raise ServiceError(
-            "INVALID_JSON",
-            "Request body must be a JSON object",
-            400,
-            {},
-        )
-
-    return data
-
-
-def _extract_token(data: dict[str, Any], field_name: str) -> str:
-    """Extract and validate a token field from parsed JSON body.
-
-    Validates that the field exists, is not None, is a string, and is not empty.
-    Raises INVALID_JWS on any failure.
-    """
-    if field_name not in data:
-        raise ServiceError(
-            "INVALID_JWS",
-            f"Missing required field: {field_name}",
-            400,
-            {},
-        )
-
-    value = data[field_name]
-
-    if value is None:
-        raise ServiceError(
-            "INVALID_JWS",
-            f"Field '{field_name}' must not be null",
-            400,
-            {},
-        )
-
-    if not isinstance(value, str):
-        raise ServiceError(
-            "INVALID_JWS",
-            f"Field '{field_name}' must be a string",
-            400,
-            {},
-        )
-
-    if not value:
-        raise ServiceError(
-            "INVALID_JWS",
-            f"Field '{field_name}' must not be empty",
-            400,
-            {},
-        )
-
-    return value
 
 
 # ---------------------------------------------------------------------------
@@ -94,11 +23,11 @@ def _extract_token(data: dict[str, Any], field_name: str) -> str:
 async def create_task(request: Request) -> JSONResponse:
     """Create a new task with escrow."""
     body = await request.body()
-    data = {} if body == b"" else _parse_json_body(body)
+    data = {} if body == b"" else parse_json_body(body)
 
     # Extract and validate both tokens before calling service
-    task_token = _extract_token(data, "task_token")
-    escrow_token = _extract_token(data, "escrow_token")
+    task_token = extract_token(data, "task_token")
+    escrow_token = extract_token(data, "escrow_token")
 
     state = get_app_state()
     if state.task_manager is None:
@@ -166,8 +95,8 @@ async def list_tasks(request: Request) -> dict[str, Any]:
 async def cancel_task(task_id: str, request: Request) -> JSONResponse:
     """Cancel a task and release escrow to the poster."""
     body = await request.body()
-    data = _parse_json_body(body)
-    token = _extract_token(data, "token")
+    data = parse_json_body(body)
+    token = extract_token(data, "token")
 
     state = get_app_state()
     if state.task_manager is None:
@@ -187,8 +116,8 @@ async def cancel_task(task_id: str, request: Request) -> JSONResponse:
 async def submit_deliverable(task_id: str, request: Request) -> JSONResponse:
     """Submit deliverables for review."""
     body = await request.body()
-    data = _parse_json_body(body)
-    token = _extract_token(data, "token")
+    data = parse_json_body(body)
+    token = extract_token(data, "token")
 
     state = get_app_state()
     if state.task_manager is None:
@@ -208,8 +137,8 @@ async def submit_deliverable(task_id: str, request: Request) -> JSONResponse:
 async def approve_task(task_id: str, request: Request) -> JSONResponse:
     """Approve deliverables and release payment to the worker."""
     body = await request.body()
-    data = _parse_json_body(body)
-    token = _extract_token(data, "token")
+    data = parse_json_body(body)
+    token = extract_token(data, "token")
 
     state = get_app_state()
     if state.task_manager is None:
@@ -229,8 +158,8 @@ async def approve_task(task_id: str, request: Request) -> JSONResponse:
 async def dispute_task(task_id: str, request: Request) -> JSONResponse:
     """Dispute deliverables and send to Court for resolution."""
     body = await request.body()
-    data = _parse_json_body(body)
-    token = _extract_token(data, "token")
+    data = parse_json_body(body)
+    token = extract_token(data, "token")
 
     state = get_app_state()
     if state.task_manager is None:
@@ -250,8 +179,8 @@ async def dispute_task(task_id: str, request: Request) -> JSONResponse:
 async def record_ruling(task_id: str, request: Request) -> JSONResponse:
     """Record a Court ruling (platform-signed operation)."""
     body = await request.body()
-    data = _parse_json_body(body)
-    token = _extract_token(data, "token")
+    data = parse_json_body(body)
+    token = extract_token(data, "token")
 
     state = get_app_state()
     if state.task_manager is None:

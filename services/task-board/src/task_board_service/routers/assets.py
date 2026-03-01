@@ -10,47 +10,9 @@ from service_commons.exceptions import ServiceError
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from task_board_service.core.state import get_app_state
+from task_board_service.routers.validation import extract_bearer_token
 
 router = APIRouter()
-
-
-# ---------------------------------------------------------------------------
-# Helper: Bearer token extraction from Authorization header
-# ---------------------------------------------------------------------------
-
-
-def _extract_bearer_token(authorization: str | None) -> str:
-    """Extract JWS token from Authorization header.
-
-    Unlike the bids router version, this always requires the token.
-    Raises INVALID_JWS if the header is missing, malformed, or empty.
-    """
-    if authorization is None:
-        raise ServiceError(
-            "INVALID_JWS",
-            "Missing Authorization header",
-            400,
-            {},
-        )
-
-    if not authorization.startswith("Bearer "):
-        raise ServiceError(
-            "INVALID_JWS",
-            "Authorization header must use Bearer scheme",
-            400,
-            {},
-        )
-
-    token = authorization[len("Bearer ") :]
-    if not token:
-        raise ServiceError(
-            "INVALID_JWS",
-            "Bearer token must not be empty",
-            400,
-            {},
-        )
-
-    return token
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +26,10 @@ async def upload_asset(task_id: str, request: Request) -> JSONResponse:
     """Upload a deliverable asset (multipart/form-data)."""
     # Extract auth token from Authorization header
     authorization = request.headers.get("authorization")
-    token = _extract_bearer_token(authorization)
+    token = extract_bearer_token(authorization, required=True)
+    if token is None:
+        msg = "Authorization token must be present"
+        raise RuntimeError(msg)
 
     # Parse multipart form data
     form = await request.form()
