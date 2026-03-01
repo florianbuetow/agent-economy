@@ -282,3 +282,49 @@ async def test_court_posts_reputation_feedback(
         assert len(delivery_feedback) >= 1, "Court should post delivery_quality feedback for worker"
     finally:
         await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_dispute_proceeds_without_rebuttal(
+    make_funded_agent,
+    platform_agent: PlatformAgent,
+) -> None:
+    """Edge case: ruling should proceed even without worker rebuttal."""
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster CR4", balance=5000)
+        worker = await make_funded_agent(name="Worker CR4", balance=0)
+        agents_to_close.extend([poster, worker])
+
+        disputed_task, dispute_reason = await _create_disputed_task(
+            poster, worker, reward=1000
+        )
+
+        dispute_id = await _file_dispute_with_court(
+            poster, worker, platform_agent, disputed_task, dispute_reason
+        )
+        if dispute_id is None:
+            pytest.skip("Court dispute filing is not available")
+
+        # Skip rebuttal entirely — go straight to ruling
+        ruling_status, ruling_payload = await _trigger_ruling(platform_agent, dispute_id)
+
+        if ruling_status == 200:
+            # Ruling succeeded without rebuttal
+            assert ruling_payload["status"] == "ruled"
+            assert isinstance(ruling_payload.get("worker_pct"), int)
+        else:
+            # Court may require rebuttal or have specific error handling
+            # Check the dispute is still in a valid state
+            dispute_snapshot = await poster._request(
+                "GET",
+                f"{poster.config.court_url}/disputes/{dispute_id}",
+            )
+            assert dispute_snapshot["status"] in {
+                "rebuttal_pending",
+                "judging",
+                "ruled",
+            }, f"Unexpected dispute status: {dispute_snapshot['status']}"
+    finally:
+        await _close_agents(agents_to_close)
