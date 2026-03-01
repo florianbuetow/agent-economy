@@ -83,3 +83,109 @@ async def test_sealed_feedback_invisible_until_mutual(make_funded_agent) -> None
         assert revealed_response.status_code == 200, "Feedback should be revealed after mutual submission"
     finally:
         await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_self_feedback_rejected(make_funded_agent) -> None:
+    """Adversarial: agent cannot submit feedback about themselves."""
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster RS2", balance=5000)
+        worker = await make_funded_agent(name="Worker RS2", balance=0)
+        agents_to_close.extend([poster, worker])
+
+        # Complete a task
+        task = await poster.post_task(
+            title="Self feedback task",
+            spec="Do something",
+            reward=500,
+            bidding_deadline_seconds=3600,
+            execution_deadline_seconds=7200,
+            review_deadline_seconds=3600,
+        )
+        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        await worker.upload_asset(task["task_id"], "result.txt", b"Hello")
+        await worker.submit_deliverable(task["task_id"])
+        await poster.approve_task(task["task_id"])
+
+        # Poster tries to rate themselves
+        self_fb_token = poster._sign_jws(
+            {
+                "action": "submit_feedback",
+                "from_agent_id": poster.agent_id,
+                "to_agent_id": poster.agent_id,
+                "task_id": task["task_id"],
+                "category": "spec_quality",
+                "rating": "extremely_satisfied",
+            }
+        )
+        response = await poster._request_raw(
+            "POST",
+            f"{poster.config.reputation_url}/feedback",
+            json={"token": self_fb_token},
+        )
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "SELF_FEEDBACK"
+    finally:
+        await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_duplicate_feedback_rejected(make_funded_agent) -> None:
+    """Adversarial: same (task, from, to) feedback pair cannot be submitted twice."""
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster RS3", balance=5000)
+        worker = await make_funded_agent(name="Worker RS3", balance=0)
+        agents_to_close.extend([poster, worker])
+
+        # Complete a task
+        task = await poster.post_task(
+            title="Dup feedback task",
+            spec="Do something",
+            reward=500,
+            bidding_deadline_seconds=3600,
+            execution_deadline_seconds=7200,
+            review_deadline_seconds=3600,
+        )
+        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        await worker.upload_asset(task["task_id"], "result.txt", b"Hello")
+        await worker.submit_deliverable(task["task_id"])
+        await poster.approve_task(task["task_id"])
+
+        # First feedback succeeds
+        await poster.submit_feedback(
+            task_id=task["task_id"],
+            to_agent_id=str(worker.agent_id),
+            category="delivery_quality",
+            rating="satisfied",
+            comment="Good",
+        )
+
+        # Second identical feedback should fail
+        dup_token = poster._sign_jws(
+            {
+                "action": "submit_feedback",
+                "from_agent_id": poster.agent_id,
+                "to_agent_id": worker.agent_id,
+                "task_id": task["task_id"],
+                "category": "delivery_quality",
+                "rating": "extremely_satisfied",
+                "comment": "Even better",
+            }
+        )
+        response = await poster._request_raw(
+            "POST",
+            f"{poster.config.reputation_url}/feedback",
+            json={"token": dup_token},
+        )
+
+        assert response.status_code == 409
+        assert response.json()["error"] == "FEEDBACK_EXISTS"
+    finally:
+        await _close_agents(agents_to_close)
