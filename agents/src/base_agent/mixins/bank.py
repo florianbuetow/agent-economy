@@ -22,6 +22,29 @@ class _BankClient(Protocol):
 class BankMixin:
     """Methods for interacting with the Central Bank service (port 8002)."""
 
+    async def create_account(self: _BankClient) -> dict[str, Any]:
+        """Create a zero-balance bank account for this agent.
+
+        The agent must be registered first (agent_id must be set).
+        Calls POST /accounts with a self-signed JWS token.
+        The Central Bank verifies the agent's identity before creating the account.
+
+        Returns:
+            Account creation response with account_id, balance, and created_at.
+
+        Raises:
+            httpx.HTTPStatusError: On failure (e.g., 409 if account already exists).
+        """
+        url = f"{self.config.bank_url}/accounts"
+        token = self._sign_jws(
+            {
+                "action": "create_account",
+                "agent_id": self.agent_id,
+                "initial_balance": 0,
+            }
+        )
+        return await self._request("POST", url, json={"token": token})
+
     async def get_balance(self: _BankClient) -> dict[str, Any]:
         """Get this agent's account balance."""
         url = f"{self.config.bank_url}/accounts/{self.agent_id}"
