@@ -14,7 +14,7 @@ export default function HatchBar({ pct, height = 14 }: HatchBarProps) {
         style={{
           width: `${pct}%`,
           backgroundImage:
-            "repeating-linear-gradient(45deg, #ccc 0, #ccc 1px, transparent 0, transparent 50%)",
+            "repeating-linear-gradient(45deg, var(--color-green) 0, var(--color-green) 1px, transparent 0, transparent 50%)",
           backgroundSize: "6px 6px",
         }}
       />
