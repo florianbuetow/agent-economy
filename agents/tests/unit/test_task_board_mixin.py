@@ -45,7 +45,7 @@ class TestPostTask:
         assert task_call[0][0]["title"] == "Build login"
         assert task_call[0][0]["reward"] == 5000
         escrow_call = agent._sign_jws.call_args_list[1]
-        assert escrow_call[0][0]["action"] == "lock_escrow"
+        assert escrow_call[0][0]["action"] == "escrow_lock"
         assert escrow_call[0][0]["task_id"] == "t-fake-uuid"
         assert escrow_call[0][0]["amount"] == 5000
         agent._request.assert_awaited_once_with(
