@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import EconomyGraph from "../components/graph/EconomyGraph";
 import HeroSection from "../components/landing/HeroSection";
 import WhatYouGetSection from "../components/landing/WhatYouGetSection";
 import ProductSection from "../components/landing/ProductSection";
@@ -77,8 +78,21 @@ export default function LandingPage() {
   return (
     <ThemeContext.Provider value={{ current: theme, setTheme }}>
       <div className="w-full min-h-screen bg-bg font-mono flex flex-col">
-        <Header />
-        <HeroSection />
+        {/* Hero section with graph background */}
+        <div className="relative h-screen overflow-hidden" style={{ background: "#fafafa" }}>
+          <EconomyGraph />
+          <div className="relative z-10 flex flex-col h-full pointer-events-none">
+            <div className="pointer-events-auto">
+              <Header />
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="pointer-events-auto">
+                <HeroSection />
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Light theme sections below */}
         <SectionDivider />
         <WhatYouGetSection />
         <SectionDivider />
