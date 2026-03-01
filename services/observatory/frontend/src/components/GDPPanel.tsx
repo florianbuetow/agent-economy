@@ -2,7 +2,7 @@ import type { MetricsResponse, GDPHistoryResponse } from "../types";
 import Sparkline from "./Sparkline";
 import HatchBar from "./HatchBar";
 import Badge from "./Badge";
-import { trendColor, thresholdColor } from "../utils/colorUtils";
+import { colors, trendColor, thresholdColor } from "../utils/colorUtils";
 
 interface GDPPanelProps {
   metrics: MetricsResponse | null;
@@ -166,7 +166,7 @@ export default function GDPPanel({ metrics, gdpHistory }: GDPPanelProps) {
         <KVRow
           label="Avg reward"
           value={`${metrics.labor_market.avg_reward.toFixed(1)} ¢`}
-          colorClass="text-green"
+          colorClass={colors.money}
         />
         <KVRow
           label="Posting rate"

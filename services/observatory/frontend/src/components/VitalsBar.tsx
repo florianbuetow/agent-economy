@@ -1,5 +1,5 @@
 import type { MetricsResponse } from "../types";
-import { thresholdColor } from "../utils/colorUtils";
+import { colors, thresholdColor } from "../utils/colorUtils";
 
 interface VitalsBarProps {
   metrics: MetricsResponse | null;
@@ -27,7 +27,7 @@ function formatVitals(m: MetricsResponse): Vital[] {
       value: m.gdp.total.toLocaleString(),
       delta: `${m.gdp.rate_per_hour.toFixed(1)}/hr`,
       up: true,
-      deltaColorClass: m.gdp.rate_per_hour > 0 ? "text-green" : "text-red",
+      deltaColorClass: m.gdp.rate_per_hour > 0 ? colors.positive : colors.negative,
     },
     { label: "GDP / Agent", value: m.gdp.per_agent.toFixed(1) },
     {
@@ -38,7 +38,7 @@ function formatVitals(m: MetricsResponse): Vital[] {
     {
       label: "Escrow Locked",
       value: `${m.escrow.total_locked.toLocaleString()} ¢`,
-      colorClass: "text-amber",
+      colorClass: colors.escrow,
     },
   ];
 }
@@ -75,7 +75,7 @@ export default function VitalsBar({ metrics, connected }: VitalsBarProps) {
       <div className="ml-auto flex items-center gap-1.5">
         <div
           className={`w-1.5 h-1.5 rounded-full ${
-            connected ? "bg-green" : "bg-text-muted"
+            connected ? colors.live : "bg-text-muted"
           }`}
           style={{ animation: connected ? "pulse-dot 2s infinite" : "none" }}
         />
