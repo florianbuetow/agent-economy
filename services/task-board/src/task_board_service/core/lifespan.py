@@ -15,6 +15,7 @@ from task_board_service.clients.platform_signer import PlatformSigner
 from task_board_service.config import get_settings
 from task_board_service.core.state import init_app_state
 from task_board_service.logging import get_logger, setup_logging
+from task_board_service.services.asset_manager import AssetManager
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
 from task_board_service.services.task_manager import TaskManager
@@ -100,6 +101,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     token_validator = TokenValidator(identity_client=identity_client)
     state.token_validator = token_validator
     deadline_evaluator = DeadlineEvaluator(store=store, escrow_coordinator=escrow_coordinator)
+    asset_manager = AssetManager(
+        store=store,
+        token_validator=token_validator,
+        deadline_evaluator=deadline_evaluator,
+        asset_storage_path=asset_storage_path,
+        max_file_size=max_file_size,
+        max_files_per_task=max_files_per_task,
+    )
+    state.asset_manager = asset_manager
     task_manager = TaskManager(
         store=store,
         identity_client=identity_client,
@@ -107,10 +117,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         escrow_coordinator=escrow_coordinator,
         token_validator=token_validator,
         deadline_evaluator=deadline_evaluator,
+        asset_manager=asset_manager,
         platform_signer=platform_signer,
-        asset_storage_path=asset_storage_path,
-        max_file_size=max_file_size,
-        max_files_per_task=max_files_per_task,
         platform_agent_id=settings.platform.agent_id,
     )
     state.task_manager = task_manager

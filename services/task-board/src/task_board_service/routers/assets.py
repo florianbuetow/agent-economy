@@ -57,11 +57,11 @@ async def upload_asset(task_id: str, request: Request) -> JSONResponse:
     content_type = parsed_upload_file.content_type or "application/octet-stream"
 
     state = get_app_state()
-    if state.task_manager is None:
-        msg = "TaskManager not initialized"
+    if state.asset_manager is None:
+        msg = "AssetManager not initialized"
         raise RuntimeError(msg)
 
-    result = await state.task_manager.upload_asset(
+    result = await state.asset_manager.upload_asset(
         task_id,
         token,
         content,
@@ -80,11 +80,11 @@ async def upload_asset(task_id: str, request: Request) -> JSONResponse:
 async def list_assets(task_id: str) -> dict[str, Any]:
     """List all assets for a task."""
     state = get_app_state()
-    if state.task_manager is None:
-        msg = "TaskManager not initialized"
+    if state.asset_manager is None:
+        msg = "AssetManager not initialized"
         raise RuntimeError(msg)
 
-    return await state.task_manager.list_assets(task_id)
+    return await state.asset_manager.list_assets(task_id)
 
 
 # ---------------------------------------------------------------------------
@@ -96,11 +96,11 @@ async def list_assets(task_id: str) -> dict[str, Any]:
 async def download_asset(task_id: str, asset_id: str) -> Response:
     """Download an asset file."""
     state = get_app_state()
-    if state.task_manager is None:
-        msg = "TaskManager not initialized"
+    if state.asset_manager is None:
+        msg = "AssetManager not initialized"
         raise RuntimeError(msg)
 
-    content, content_type, filename = await state.task_manager.download_asset(
+    content, content_type, filename = await state.asset_manager.download_asset(
         task_id,
         asset_id,
     )
