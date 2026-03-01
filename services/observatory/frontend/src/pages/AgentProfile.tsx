@@ -7,10 +7,11 @@ import {
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   Filler,
   Tooltip,
 } from "chart.js";
-import { Line } from "react-chartjs-2";
+import { Line, Bar } from "react-chartjs-2";
 import type {
   AgentProfileResponse,
   AgentFeedEvent,
@@ -19,7 +20,7 @@ import type {
   RecentTask,
 } from "../types";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Filler, Tooltip);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -341,6 +342,120 @@ function EarningsChart({
   return (
     <div style={{ height }}>
       <Line data={chartData} options={options as Parameters<typeof Line>[0]["options"]} />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Monthly Earnings Chart (Chart.js Bar)
+// ---------------------------------------------------------------------------
+
+function MonthlyEarningsChart({
+  data,
+  height = 80,
+}: {
+  data: { timestamp: string; cumulative: number }[];
+  height?: number;
+}) {
+  if (data.length < 2) {
+    return (
+      <div
+        className="flex items-center justify-center text-[9px] font-mono text-text-faint border border-border border-dashed"
+        style={{ height }}
+      >
+        Not enough data
+      </div>
+    );
+  }
+
+  // Derive monthly totals from cumulative data
+  const monthlyMap = new Map<string, number>();
+  let prevCumulative = 0;
+  for (const point of data) {
+    const dt = new Date(point.timestamp);
+    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    const delta = point.cumulative - prevCumulative;
+    monthlyMap.set(key, (monthlyMap.get(key) ?? 0) + delta);
+    prevCumulative = point.cumulative;
+  }
+
+  const sortedKeys = Array.from(monthlyMap.keys()).sort();
+  const labels = sortedKeys.map((k) => {
+    const [, m] = k.split("-");
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return monthNames[parseInt(m, 10) - 1];
+  });
+  const values = sortedKeys.map((k) => monthlyMap.get(k) ?? 0);
+
+  const accent = getComputedStyle(document.documentElement).getPropertyValue("--color-green").trim() || "#1a7a1a";
+  const textMuted = getComputedStyle(document.documentElement).getPropertyValue("--color-text-muted").trim() || "#888888";
+  const borderColor = getComputedStyle(document.documentElement).getPropertyValue("--color-border").trim() || "#cccccc";
+
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        data: values,
+        backgroundColor: accent + "99",
+        borderColor: accent,
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      tooltip: {
+        intersect: false,
+        backgroundColor: "#111111",
+        titleFont: { family: "'Courier New', monospace", size: 10 },
+        bodyFont: { family: "'Courier New', monospace", size: 11 },
+        padding: 8,
+        displayColors: false,
+        callbacks: {
+          title: (items: { dataIndex: number }[]) => {
+            const i = items[0].dataIndex;
+            return sortedKeys[i];
+          },
+          label: (item: { parsed: { y: number } }) =>
+            `${item.parsed.y.toLocaleString()} \u00a9 earned`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        display: true,
+        ticks: {
+          font: { family: "'Courier New', monospace", size: 8 },
+          color: textMuted,
+          maxRotation: 0,
+        },
+        grid: { display: false },
+        border: { color: borderColor },
+      },
+      y: {
+        display: true,
+        ticks: {
+          font: { family: "'Courier New', monospace", size: 8 },
+          color: textMuted,
+          maxTicksLimit: 4,
+          callback: (val: number | string) => {
+            const v = Number(val);
+            return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v;
+          },
+        },
+        grid: { color: borderColor, lineWidth: 0.5 },
+        border: { display: false },
+        beginAtZero: true,
+      },
+    },
+  } as const;
+
+  return (
+    <div style={{ height }}>
+      <Bar data={chartData} options={options as Parameters<typeof Bar>[0]["options"]} />
     </div>
   );
 }
