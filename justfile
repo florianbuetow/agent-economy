@@ -74,7 +74,7 @@ help:
     @printf "\033[1;33mCI & Code Quality\033[0m\n"
     @printf "  \033[0;37mjust test-all         \033[0;34m Run tests for all services\033[0m\n"
     @printf "  \033[0;37mjust test <service>   \033[0;34m Run tests for a specific service\033[0m\n"
-    @printf "  \033[0;37mjust ci               \033[0;34m Run CI checks (all or: just ci <service>)\033[0m\n"
+    @printf "  \033[0;37mjust ci <service>     \033[0;34m Run CI checks for a specific service\033[0m\n"
     @printf "  \033[0;37mjust ci-all           \033[0;34m Run CI checks for all services (verbose)\033[0m\n"
     @printf "  \033[0;37mjust ci-all-quiet     \033[0;34m Run CI checks for all services (quiet)\033[0m\n"
     @printf "  \033[0;37mjust format-all       \033[0;34m Auto-format all services\033[0m\n"
@@ -434,12 +434,10 @@ stats:
         printf "  \033[0;37m%-20s\033[0m %'6d lines\n" "$name" "$lines"
     }
 
-    count_loc "identity"       services/identity/src
-    count_loc "central-bank"   services/central-bank/src
-    count_loc "task-board"     services/task-board/src
-    count_loc "reputation"     services/reputation/src
-    count_loc "court"          services/court/src
-    count_loc "observatory"    services/observatory/src
+    for dir in services/*/; do
+        name=$(basename "$dir")
+        count_loc "$name" "$dir/src"
+    done
     count_loc "service-commons" libs/service-commons/src
 
     printf "\n"
@@ -459,11 +457,12 @@ stats:
 
 # Format all services
 format-all:
-    @echo ""
-    cd services/identity && just code-format
-    cd services/central-bank && just code-format
-    cd services/task-board && just code-format
-    cd services/reputation && just code-format
-    cd services/court && just code-format
-    cd services/observatory && just code-format
-    @echo ""
+    #!/usr/bin/env bash
+    echo ""
+    for dir in services/*/; do
+        name=$(basename "$dir")
+        if [ -f "$dir/justfile" ]; then
+            cd "$dir" && just code-format && cd - > /dev/null
+        fi
+    done
+    echo ""
