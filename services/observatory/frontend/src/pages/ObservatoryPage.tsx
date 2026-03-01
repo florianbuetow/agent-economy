@@ -15,7 +15,7 @@ export default function ObservatoryPage() {
         <GDPPanel metrics={metrics} gdpHistory={gdpHistory} />
       </div>
       <div className="flex-1 min-w-0 border-r border-border overflow-hidden flex flex-col">
-        <ChartPanel metrics={metrics} gdpHistory={gdpHistory} />
+        <ChartPanel gdpHistory={gdpHistory} />
       </div>
       <div className="flex-1 min-w-0 border-r border-border overflow-hidden flex flex-col">
         <LiveFeed events={events} paused={paused} onTogglePause={togglePause} />

@@ -5,12 +5,11 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  ArcElement,
   Filler,
   Tooltip,
 } from "chart.js";
-import { Line, Doughnut } from "react-chartjs-2";
-import type { MetricsResponse, GDPHistoryResponse } from "../types";
+import { Line } from "react-chartjs-2";
+import type { GDPHistoryResponse } from "../types";
 import { fetchGDPHistory } from "../api/metrics";
 import { cssVar, tooltipBg } from "../utils/colorUtils";
 
@@ -19,13 +18,9 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
-  ArcElement,
   Filler,
   Tooltip,
 );
-
-const TABS = ["GDP", "QUALITY", "TASKS"] as const;
-type Tab = (typeof TABS)[number];
 
 const GDP_WINDOWS = [
   { label: "1H", window: "1h", resolution: "1m" },
@@ -143,190 +138,14 @@ function GDPLineChart({ gdpHistory }: { gdpHistory: GDPHistoryResponse | null })
 }
 
 // ---------------------------------------------------------------------------
-// Spec Quality Doughnut
-// ---------------------------------------------------------------------------
-
-function SpecQualityDoughnut({ metrics }: { metrics: MetricsResponse }) {
-  const sq = metrics.spec_quality;
-  const total = sq.extremely_satisfied_pct + sq.satisfied_pct + sq.dissatisfied_pct;
-
-  const green = cssVar("--color-green", "#1a7a1a");
-  const amber = cssVar("--color-amber", "#b8860b");
-  const red = cssVar("--color-red", "#cc0000");
-  const textColor = cssVar("--color-text", "#333333");
-  const textMuted = cssVar("--color-text-muted", "#888888");
-
-  const chartData = {
-    labels: ["Extremely Satisfied", "Satisfied", "Dissatisfied"],
-    datasets: [
-      {
-        data: [sq.extremely_satisfied_pct, sq.satisfied_pct, sq.dissatisfied_pct],
-        backgroundColor: [green + "cc", amber + "cc", red + "cc"],
-        borderColor: [green, amber, red],
-        borderWidth: 1.5,
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: "60%",
-    plugins: {
-      tooltip: {
-        intersect: false,
-        backgroundColor: tooltipBg,
-        titleFont: { family: "'Courier New', monospace", size: 10 },
-        bodyFont: { family: "'Courier New', monospace", size: 11 },
-        padding: 8,
-        displayColors: true,
-        callbacks: {
-          label: (item: { label: string; parsed: number }) => {
-            const pct = total > 0 ? ((item.parsed / total) * 100).toFixed(1) : "0";
-            return ` ${item.label}: ${item.parsed.toFixed(1)}% (${pct}% of rated)`;
-          },
-        },
-      },
-    },
-  } as const;
-
-  const trendArrow = sq.trend_direction === "improving" ? "\u2191" : sq.trend_direction === "declining" ? "\u2193" : "\u2192";
-
-  return (
-    <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative">
-      <div className="w-full h-full max-w-[260px] relative">
-        <Doughnut data={chartData} options={options as Parameters<typeof Doughnut>[0]["options"]} />
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-[18px] font-bold font-mono" style={{ color: textColor }}>
-            {sq.avg_score.toFixed(0)}
-          </span>
-          <span className="text-[8px] font-mono uppercase tracking-[1px]" style={{ color: textMuted }}>
-            avg score
-          </span>
-        </div>
-      </div>
-      <div className="flex gap-3 mt-2 items-center">
-        {[
-          { label: "Excellent", color: green },
-          { label: "Satisfied", color: amber },
-          { label: "Dissatisfied", color: red },
-        ].map((item) => (
-          <div key={item.label} className="flex items-center gap-1">
-            <div
-              className="w-2 h-2 border"
-              style={{ backgroundColor: item.color + "cc", borderColor: item.color }}
-            />
-            <span className="text-[7px] font-mono uppercase tracking-[0.5px]" style={{ color: textMuted }}>
-              {item.label}
-            </span>
-          </div>
-        ))}
-        <span className="text-[8px] font-mono" style={{ color: textMuted }}>
-          {trendArrow} {sq.trend_direction}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Task Flow Doughnut
-// ---------------------------------------------------------------------------
-
-function TaskDoughnut({ metrics }: { metrics: MetricsResponse }) {
-  const tasks = metrics.tasks;
-  const total = tasks.open + tasks.in_execution + tasks.completed_all_time + tasks.disputed;
-
-  const amber = cssVar("--color-amber", "#b8860b");
-  const textColor = cssVar("--color-text", "#333333");
-  const green = cssVar("--color-green", "#1a7a1a");
-  const red = cssVar("--color-red", "#cc0000");
-  const border = cssVar("--color-border", "#cccccc");
-
-  const chartData = {
-    labels: ["Open", "In Execution", "Completed", "Disputed"],
-    datasets: [
-      {
-        data: [tasks.open, tasks.in_execution, tasks.completed_all_time, tasks.disputed],
-        backgroundColor: [amber + "cc", textColor + "99", green + "cc", red + "cc"],
-        borderColor: [amber, textColor, green, red],
-        borderWidth: 1.5,
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: "60%",
-    plugins: {
-      tooltip: {
-        intersect: false,
-        backgroundColor: tooltipBg,
-        titleFont: { family: "'Courier New', monospace", size: 10 },
-        bodyFont: { family: "'Courier New', monospace", size: 11 },
-        padding: 8,
-        displayColors: true,
-        callbacks: {
-          label: (item: { label: string; parsed: number }) => {
-            const pct = total > 0 ? ((item.parsed / total) * 100).toFixed(1) : "0";
-            return ` ${item.label}: ${item.parsed} (${pct}%)`;
-          },
-        },
-      },
-    },
-  } as const;
-
-  const textMuted = cssVar("--color-text-muted", "#888888");
-
-  return (
-    <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative">
-      <div className="w-full h-full max-w-[260px] relative">
-        <Doughnut data={chartData} options={options as Parameters<typeof Doughnut>[0]["options"]} />
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-        >
-          <span className="text-[18px] font-bold font-mono" style={{ color: textColor }}>
-            {total}
-          </span>
-          <span className="text-[8px] font-mono uppercase tracking-[1px]" style={{ color: textMuted }}>
-            tasks
-          </span>
-        </div>
-      </div>
-      <div className="flex gap-3 mt-2">
-        {[
-          { label: "Open", color: amber },
-          { label: "Executing", color: textColor },
-          { label: "Completed", color: green },
-          { label: "Disputed", color: red },
-        ].map((item) => (
-          <div key={item.label} className="flex items-center gap-1">
-            <div
-              className="w-2 h-2 border"
-              style={{ backgroundColor: item.color + "cc", borderColor: item.color }}
-            />
-            <span className="text-[7px] font-mono uppercase tracking-[0.5px]" style={{ color: border }}>
-              {item.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Main ChartPanel
 // ---------------------------------------------------------------------------
 
 interface ChartPanelProps {
-  metrics: MetricsResponse | null;
   gdpHistory: GDPHistoryResponse | null;
 }
 
-export default function ChartPanel({ metrics, gdpHistory }: ChartPanelProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("GDP");
+export default function ChartPanel({ gdpHistory }: ChartPanelProps) {
   const [gdpWindow, setGdpWindow] = useState<(typeof GDP_WINDOWS)[number]>(GDP_WINDOWS[2]);
   const [localGdpHistory, setLocalGdpHistory] = useState<GDPHistoryResponse | null>(gdpHistory);
 
@@ -352,65 +171,31 @@ export default function ChartPanel({ metrics, gdpHistory }: ChartPanelProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Tab bar */}
+      {/* Header bar */}
       <div className="px-3 py-2 border-b border-border bg-bg-off shrink-0 flex items-center gap-2">
         <span className="text-[9px] font-mono uppercase tracking-[1.5px] text-text-muted">
-          Charts
+          GDP
         </span>
         <div className="flex gap-1">
-          {TABS.map((tab) => (
+          {GDP_WINDOWS.map((w) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={w.label}
+              onClick={() => setGdpWindow(w)}
               className={`text-[8px] font-mono tracking-[0.5px] px-2 py-0.5 border cursor-pointer transition-colors ${
-                activeTab === tab
+                gdpWindow.label === w.label
                   ? "border-border-strong bg-border-strong text-bg"
                   : "border-border bg-bg text-text-mid hover:bg-bg-off"
               }`}
             >
-              {tab}
+              {w.label}
             </button>
           ))}
         </div>
-
-        {/* GDP window sub-badges */}
-        {activeTab === "GDP" && (
-          <>
-            <div className="w-px h-3 bg-border mx-1" />
-            <div className="flex gap-1">
-              {GDP_WINDOWS.map((w) => (
-                <button
-                  key={w.label}
-                  onClick={() => setGdpWindow(w)}
-                  className={`text-[7px] font-mono tracking-[0.5px] px-1.5 py-0.5 border cursor-pointer transition-colors ${
-                    gdpWindow.label === w.label
-                      ? "border-border bg-bg-dark text-text-mid"
-                      : "border-border bg-bg text-text-faint hover:text-text-mid"
-                  }`}
-                >
-                  {w.label}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
       </div>
 
       {/* Chart area */}
       <div className="flex-1 min-h-0 p-3 flex flex-col">
-        {activeTab === "GDP" && <GDPLineChart gdpHistory={localGdpHistory} />}
-        {activeTab === "QUALITY" && metrics && <SpecQualityDoughnut metrics={metrics} />}
-        {activeTab === "QUALITY" && !metrics && (
-          <div className="flex-1 flex items-center justify-center text-[9px] font-mono text-text-faint">
-            Loading metrics...
-          </div>
-        )}
-        {activeTab === "TASKS" && metrics && <TaskDoughnut metrics={metrics} />}
-        {activeTab === "TASKS" && !metrics && (
-          <div className="flex-1 flex items-center justify-center text-[9px] font-mono text-text-faint">
-            Loading metrics...
-          </div>
-        )}
+        <GDPLineChart gdpHistory={localGdpHistory} />
       </div>
     </div>
   );
