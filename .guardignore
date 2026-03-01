@@ -1,0 +1,3 @@
+# .guardignore works like .gitignore
+# By default guard also uses your .gitignore files (see use_gitignore in .guardfile)
+# add your custom ignore rules below

@@ -62,6 +62,7 @@ help:
     @printf "  \033[0;37mjust stop-taskboard   \033[0;34m Stop task board service\033[0m\n"
     @printf "  \033[0;37mjust stop-reputation  \033[0;34m Stop reputation service\033[0m\n"
     @printf "  \033[0;37mjust stop-court       \033[0;34m Stop court service\033[0m\n"
+    @printf "  \033[0;37mjust stop-observatory \033[0;34m Stop observatory service\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
     @echo ""
     @printf "\033[1;33mDocker\033[0m\n"
@@ -201,6 +202,7 @@ start-all:
     cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 0.0.0.0 --port 8003 &
     cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 0.0.0.0 --port 8004 &
     cd services/court && uv run uvicorn court_service.app:create_app --factory --host 0.0.0.0 --port 8005 &
+    cd services/observatory && uv run uvicorn observatory_service.app:create_app --factory --host 0.0.0.0 --port 8006 &
 
     printf "Services starting in background...\n"
 
@@ -236,6 +238,12 @@ stop-court:
     cd services/court && just kill
     @echo ""
 
+# Stop observatory service
+stop-observatory:
+    @echo ""
+    cd services/observatory && just kill
+    @echo ""
+
 # Stop all locally running services
 stop-all:
     @echo ""
@@ -245,6 +253,7 @@ stop-all:
     cd services/task-board && just kill
     cd services/reputation && just kill
     cd services/court && just kill
+    cd services/observatory && just kill
     @printf "\033[0;32m✓ All services stopped\033[0m\n"
     @echo ""
 
@@ -448,6 +457,7 @@ stats:
         count_loc "$name" "$dir/src"
     done
     count_loc "service-commons" libs/service-commons/src
+    count_loc "agents" agents/src
 
     printf "\n"
     printf "  \033[0;37m%-20s\033[0m \033[1;33m%'6d lines\033[0m\n" "TOTAL" "$total"

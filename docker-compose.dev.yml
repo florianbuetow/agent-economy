@@ -38,3 +38,11 @@ services:
     volumes:
       - ./services/court/src:/repo/services/court/src
     command: uv run uvicorn court_service.app:app --reload --host 0.0.0.0
+
+  observatory:
+    build:
+      context: .
+      dockerfile: services/observatory/Dockerfile
+    volumes:
+      - ./services/observatory/src:/repo/services/observatory/src
+    command: uv run uvicorn observatory_service.app:app --reload --host 0.0.0.0
