@@ -328,3 +328,50 @@ async def test_dispute_proceeds_without_rebuttal(
             }, f"Unexpected dispute status: {dispute_snapshot['status']}"
     finally:
         await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_duplicate_dispute_rejected(
+    make_funded_agent,
+    platform_agent: PlatformAgent,
+) -> None:
+    """Adversarial: filing a second dispute on an already-disputed task is rejected."""
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster CR5", balance=5000)
+        worker = await make_funded_agent(name="Worker CR5", balance=0)
+        agents_to_close.extend([poster, worker])
+
+        disputed_task, dispute_reason = await _create_disputed_task(
+            poster, worker, reward=1000
+        )
+
+        # First filing should succeed (or already exist)
+        dispute_id = await _file_dispute_with_court(
+            poster, worker, platform_agent, disputed_task, dispute_reason
+        )
+        if dispute_id is None:
+            pytest.skip("Court dispute filing is not available")
+
+        # Second filing should be rejected
+        duplicate_token = platform_agent._sign_jws(
+            {
+                "action": "file_dispute",
+                "task_id": str(disputed_task["task_id"]),
+                "claimant_id": poster.agent_id,
+                "respondent_id": worker.agent_id,
+                "claim": "Filing again",
+                "escrow_id": disputed_task["escrow_id"],
+            }
+        )
+        duplicate_response = await platform_agent._request_raw(
+            "POST",
+            f"{platform_agent.config.court_url}/disputes/file",
+            json={"token": duplicate_token},
+        )
+
+        assert duplicate_response.status_code == 409
+        assert duplicate_response.json()["error"] == "DISPUTE_ALREADY_EXISTS"
+    finally:
+        await _close_agents(agents_to_close)
