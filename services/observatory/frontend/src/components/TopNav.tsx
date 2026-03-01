@@ -3,6 +3,7 @@ import { NavLink, Link } from "react-router-dom";
 const NAV_ITEMS = [
   { to: "/observatory", label: "Macro Observatory" },
   { to: "/observatory/quarterly", label: "Quarterly Report" },
+  { to: "/create-task", label: "Create Task" },
 ];
 
 export default function TopNav() {

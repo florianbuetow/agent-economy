@@ -7,6 +7,7 @@ import ObservatoryPage from "./pages/ObservatoryPage";
 import TaskDrilldown from "./pages/TaskDrilldown";
 import AgentProfile from "./pages/AgentProfile";
 import QuarterlyReport from "./pages/QuarterlyReport";
+import CreateTaskPage from "./pages/CreateTaskPage";
 import "./index.css";
 
 const router = createBrowserRouter([
@@ -18,6 +19,7 @@ const router = createBrowserRouter([
       { path: "/observatory/tasks/:taskId", element: <TaskDrilldown /> },
       { path: "/observatory/agents/:agentId", element: <AgentProfile /> },
       { path: "/observatory/quarterly", element: <QuarterlyReport /> },
+      { path: "/create-task", element: <CreateTaskPage /> },
     ],
   },
 ]);
