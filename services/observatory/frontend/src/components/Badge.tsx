@@ -9,7 +9,7 @@ interface BadgeProps {
 export default function Badge({ children, filled = false, style }: BadgeProps) {
   return (
     <span
-      className={`inline-block text-[8px] font-mono tracking-wide uppercase px-[5px] py-[2px] border border-border-strong ${
+      className={`inline-block text-[8px] font-mono tracking-wide uppercase px-[5px] py-[2px] border border-border-strong transition-opacity duration-150 hover:opacity-75 ${
         filled ? "bg-border-strong text-bg" : "bg-bg text-text"
       }`}
       style={style}
