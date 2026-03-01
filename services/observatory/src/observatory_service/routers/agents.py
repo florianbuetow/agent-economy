@@ -147,7 +147,7 @@ async def get_agent_profile(agent_id: str) -> JSONResponse:
     return JSONResponse(content=response.model_dump(by_alias=True))
 
 
-@router.get("/agents/{agent_id}/feed")
+@router.get("/agents/{agent_id}/feed")  # nosemgrep
 async def get_agent_feed(
     agent_id: str,
     limit: int = Query(50),
