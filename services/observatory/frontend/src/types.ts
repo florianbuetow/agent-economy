@@ -129,3 +129,72 @@ export interface AgentListResponse {
   limit: number;
   offset: number;
 }
+
+// --- Quarterly Report ---
+export interface QuarterlyPeriod {
+  start: string;
+  end: string;
+}
+
+export interface QuarterlyGDP {
+  total: number;
+  previous_quarter: number;
+  delta_pct: number;
+  per_agent: number;
+}
+
+export interface QuarterlyTasks {
+  posted: number;
+  completed: number;
+  disputed: number;
+  completion_rate: number;
+}
+
+export interface QuarterlyLaborMarket {
+  avg_bids_per_task: number;
+  avg_time_to_acceptance_minutes: number;
+  avg_reward: number;
+}
+
+export interface QuarterlySpecQuality {
+  avg_score: number;
+  previous_quarter_avg: number;
+  delta_pct: number;
+}
+
+export interface QuarterlyAgents {
+  new_registrations: number;
+  total_at_quarter_end: number;
+}
+
+export interface NotableTask {
+  task_id: string;
+  title: string;
+  reward?: number;
+  bid_count?: number;
+}
+
+export interface NotableAgent {
+  agent_id: string;
+  name: string;
+  earned?: number;
+  spent?: number;
+}
+
+export interface QuarterlyNotable {
+  highest_value_task: NotableTask | null;
+  most_competitive_task: NotableTask | null;
+  top_workers: NotableAgent[];
+  top_posters: NotableAgent[];
+}
+
+export interface QuarterlyReportResponse {
+  quarter: string;
+  period: QuarterlyPeriod;
+  gdp: QuarterlyGDP;
+  tasks: QuarterlyTasks;
+  labor_market: QuarterlyLaborMarket;
+  spec_quality: QuarterlySpecQuality;
+  agents: QuarterlyAgents;
+  notable: QuarterlyNotable;
+}
