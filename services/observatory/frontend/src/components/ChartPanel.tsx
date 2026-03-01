@@ -155,16 +155,15 @@ function HealthRadar({ metrics }: { metrics: MetricsResponse }) {
   const border = cssVar("--color-border", "#cccccc");
 
   const completionRate = metrics.tasks.completion_rate * 100;
-  const avgBids = Math.min(metrics.labor_market.avg_bids_per_task / 10, 1) * 100;
-  const gdpRate = Math.min(metrics.gdp.rate_per_hour / 100, 1) * 100;
-  const postingRate = Math.min(metrics.labor_market.task_posting_rate / 20, 1) * 100;
   const employmentRate = (1 - metrics.labor_market.unemployment_rate) * 100;
+  const specQuality = metrics.spec_quality.avg_score;
+  const disputeHealth = (1 - metrics.economy_phase.dispute_rate) * 100;
 
   const chartData = {
-    labels: ["Completion %", "Bid Activity", "GDP Rate", "Posting Rate", "Employment"],
+    labels: ["Completion %", "Employment", "Spec Quality", "Low Disputes"],
     datasets: [
       {
-        data: [completionRate, avgBids, gdpRate, postingRate, employmentRate],
+        data: [completionRate, employmentRate, specQuality, disputeHealth],
         borderColor: green,
         backgroundColor: greenLight + "88",
         borderWidth: 2,
