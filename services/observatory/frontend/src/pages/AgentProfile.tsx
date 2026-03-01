@@ -1,7 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useAgentProfile } from "../hooks/useAgentProfile";
 import Badge from "../components/Badge";
-import HatchBar from "../components/HatchBar";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -363,9 +362,9 @@ function QualitySection({ label, stats }: { label: string; stats: QualityStats }
     );
   }
   const rows = [
-    { name: "\u2605\u2605\u2605 Extremely satisfied", count: stats.extremely_satisfied, color: "text-green" },
-    { name: "\u2605\u2605  Satisfied", count: stats.satisfied, color: "text-green" },
-    { name: "\u2605   Dissatisfied", count: stats.dissatisfied, color: "text-red" },
+    { name: "\u2605\u2605\u2605 Extremely satisfied", count: stats.extremely_satisfied, barColor: "var(--color-green)", textColor: "text-green" },
+    { name: "\u2605\u2605  Satisfied", count: stats.satisfied, barColor: "var(--color-green)", textColor: "text-green" },
+    { name: "\u2605   Dissatisfied", count: stats.dissatisfied, barColor: "var(--color-red)", textColor: "text-red" },
   ];
   return (
     <div className="px-3.5 py-3 border-b border-border">
@@ -373,15 +372,29 @@ function QualitySection({ label, stats }: { label: string; stats: QualityStats }
         {label}
       </div>
       <div className="text-[8px] font-mono text-text-muted mb-2">{total} ratings</div>
-      {rows.map((r) => (
-        <div key={r.name} className="mb-1.5">
-          <div className="flex justify-between mb-0.5">
-            <span className={`text-[9px] font-mono ${r.count > 0 ? r.color : ""}`}>{r.name}</span>
-            <span className={`text-[9px] font-mono font-bold ${r.count > 0 ? r.color : ""}`}>{r.count}</span>
+      {rows.map((r) => {
+        const pct = Math.round((r.count / total) * 100);
+        return (
+          <div key={r.name} className="mb-2">
+            <div className="flex justify-between mb-0.5">
+              <span className={`text-[9px] font-mono ${r.count > 0 ? r.textColor : ""}`}>{r.name}</span>
+              <span className={`text-[9px] font-mono font-bold ${r.count > 0 ? r.textColor : ""}`}>
+                {r.count} ({pct}%)
+              </span>
+            </div>
+            <div className="relative w-full h-[10px] bg-bg-dark border border-border">
+              <div
+                className="absolute left-0 top-0 bottom-0 transition-all duration-300"
+                style={{
+                  width: `${pct}%`,
+                  backgroundColor: r.count > 0 ? r.barColor : "var(--color-border)",
+                  opacity: r.count > 0 ? 0.7 : 0.3,
+                }}
+              />
+            </div>
           </div>
-          <HatchBar pct={Math.round((r.count / total) * 100)} height={9} />
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
