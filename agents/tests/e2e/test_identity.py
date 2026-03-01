@@ -4,8 +4,8 @@ from base_agent.agent import BaseAgent
 from base_agent.config import AgentConfig
 
 
-@pytest.mark.scenario
-class TestIdentityScenario:
+@pytest.mark.e2e
+class TestIdentityE2E:
     async def test_register_and_verify(self, agent_config: AgentConfig) -> None:
         agent = BaseAgent(config=agent_config)
         try:
@@ -20,7 +20,7 @@ class TestIdentityScenario:
             assert result2["agent_id"] == first_agent_id
 
             info = await agent.get_agent_info(agent.agent_id)
-            assert info["name"] == "Scenario Test Agent"
+            assert info["name"] == "E2E Test Agent"
             assert info["public_key"] == f"ed25519:{agent.get_public_key_b64()}"
 
             agents = await agent.list_agents()

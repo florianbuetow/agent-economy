@@ -78,6 +78,7 @@ help:
     @printf "  \033[0;37mjust ci-all           \033[0;34m Run CI checks for all services (verbose)\033[0m\n"
     @printf "  \033[0;37mjust ci-all-quiet     \033[0;34m Run CI checks for all services (quiet)\033[0m\n"
     @printf "  \033[0;37mjust format-all       \033[0;34m Auto-format all services\033[0m\n"
+    @printf "  \033[0;37mjust test-e2e   \033[0;34m Run e2e tests (requires running services)\033[0m\n"
     @printf "  \033[0;37mjust stats            \033[0;34m Show Python lines of code per service\033[0m\n"
     @echo ""
 
@@ -412,6 +413,14 @@ ci-all-quiet:
 # Run CI checks quietly (alias for pre-commit hook)
 ci-quiet:
     @just ci-all-quiet
+
+# Run e2e tests (requires running services)
+test-e2e:
+    @echo ""
+    @printf "\033[0;34m=== Running E2E Tests ===\033[0m\n"
+    cd agents && just test-e2e
+    @printf "\033[0;32m✓ E2E tests passed\033[0m\n"
+    @echo ""
 
 # Show Python lines of code per service
 stats:

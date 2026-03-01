@@ -20,7 +20,7 @@ def _require_identity_service() -> None:
 def agent_config() -> AgentConfig:
     private_key = Ed25519PrivateKey.generate()
     return AgentConfig(
-        name="Scenario Test Agent",
+        name="E2E Test Agent",
         private_key=private_key,
         public_key=private_key.public_key(),
         identity_url=IDENTITY_URL,
