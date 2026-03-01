@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { GraphEngine } from "./engine";
 import type { AgentState } from "./types";
-import { STATE_LABELS } from "./types";
+import { STATE_LABELS, AGENT_STATE_TINTS } from "./types";
 
 export default function EconomyGraph() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -50,10 +50,14 @@ export default function EconomyGraph() {
           }}
         >
           {(Object.keys(STATE_LABELS) as AgentState[]).map((state) => (
-            <span key={state} className="text-[#888888]">
+            <span key={state} className="text-[#888888] flex items-center gap-1.5">
+              <span
+                className="inline-block w-2 h-2 rounded-full border border-[#cccccc]"
+                style={{ backgroundColor: AGENT_STATE_TINTS[state] }}
+              />
               <span className="text-[#333333] font-bold">
                 {stateCounts[state] ?? 0}
-              </span>{" "}
+              </span>
               {STATE_LABELS[state]}
             </span>
           ))}

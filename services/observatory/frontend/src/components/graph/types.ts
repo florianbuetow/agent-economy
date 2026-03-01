@@ -35,6 +35,25 @@ export const HATCH_DEFS: Record<Category, { angle: number; gap: number }> = {
   general: { angle: 0, gap: 8 },
 };
 
+// ─── State tint colors (pale pastels for the knockout center) ───────────────
+export const TASK_STATE_TINTS: Record<TaskState, string> = {
+  open: "#fff3b0",       // warm yellow — available
+  bidding: "#ffd9a0",    // soft orange — attracting bids
+  awarded: "#b8d4ff",    // sky blue — decided
+  in_progress: "#b0e8b0", // mint green — work underway
+  complete: "#d4b8ff",   // soft violet — absorbing
+};
+
+export const AGENT_STATE_TINTS: Record<AgentState, string> = {
+  searching: "#e0e0e0",   // light gray — drifting
+  approaching: "#b0daff", // soft blue — heading toward task
+  inspecting: "#ffe8a0",  // warm gold — evaluating
+  orbiting: "#ffc8a0",   // soft peach — bidding
+  rejecting: "#f5b8b8",  // soft rose — walking away
+  fleeing: "#f5b8b8",    // soft rose — lost bid
+  in_progress: "#a8e0a8", // soft green — working
+};
+
 // ─── Wireframe theme palette ────────────────────────────────────────────────
 export const W = {
   bg: "#ffffff",

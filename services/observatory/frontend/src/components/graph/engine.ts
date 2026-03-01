@@ -5,7 +5,7 @@
 // Uses the wireframe theme: monochrome palette, hatch-pattern fills, no glow.
 
 import type { AgentNode, TaskNode, AgentState, Category, Particle, Ripple } from "./types";
-import { BG_COLOR, HATCH_DEFS, W, STATE_LABELS, CATEGORIES } from "./types";
+import { BG_COLOR, HATCH_DEFS, W, STATE_LABELS, CATEGORIES, TASK_STATE_TINTS, AGENT_STATE_TINTS } from "./types";
 import { createCamera, fitToViewport, worldToScreen, isVisible } from "./camera";
 import type { Camera } from "./camera";
 import { createAgent, updateAgent } from "./agents";
@@ -391,8 +391,8 @@ export class GraphEngine {
       ctx.arc(sx, sy, sr, 0, Math.PI * 2);
       ctx.fill();
 
-      // White knockout center (62% of radius)
-      ctx.fillStyle = W.bg;
+      // Tinted knockout center (62% of radius) — color reflects task state
+      ctx.fillStyle = TASK_STATE_TINTS[task.state];
       ctx.beginPath();
       ctx.arc(sx, sy, sr * 0.62, 0, Math.PI * 2);
       ctx.fill();
@@ -437,8 +437,8 @@ export class GraphEngine {
       ctx.arc(sx, sy, sr, 0, Math.PI * 2);
       ctx.fill();
 
-      // White knockout center (62% of radius)
-      ctx.fillStyle = W.bg;
+      // Tinted knockout center (62% of radius) — color reflects agent state
+      ctx.fillStyle = AGENT_STATE_TINTS[agent.state];
       ctx.beginPath();
       ctx.arc(sx, sy, sr * 0.62, 0, Math.PI * 2);
       ctx.fill();
