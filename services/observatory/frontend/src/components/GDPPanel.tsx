@@ -2,6 +2,7 @@ import type { MetricsResponse, GDPHistoryResponse } from "../types";
 import Sparkline from "./Sparkline";
 import HatchBar from "./HatchBar";
 import Badge from "./Badge";
+import { colors, trendColor, thresholdColor } from "../utils/colorUtils";
 
 interface GDPPanelProps {
   metrics: MetricsResponse | null;
@@ -16,11 +17,21 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function KVRow({ label, value }: { label: string; value: string }) {
+function KVRow({
+  label,
+  value,
+  colorClass,
+}: {
+  label: string;
+  value: string;
+  colorClass?: string;
+}) {
   return (
     <div className="flex justify-between items-baseline py-0.5">
       <span className="text-[10px] font-mono text-text-muted">{label}</span>
-      <span className="text-[11px] font-mono font-bold text-text">{value}</span>
+      <span className={`text-[11px] font-mono font-bold ${colorClass ?? "text-text"}`}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -31,6 +42,17 @@ function normalizePoints(values: number[]): number[] {
   const max = Math.max(...values);
   const range = max - min || 1;
   return values.map((v) => (v - min) / range);
+}
+
+function phaseColor(phase: string): { bg: string; border: string; text: string } {
+  switch (phase.toLowerCase()) {
+    case "growing":
+      return { bg: "var(--color-green)", border: "var(--color-green)", text: "#fff" };
+    case "contracting":
+      return { bg: "var(--color-red)", border: "var(--color-red)", text: "#fff" };
+    default:
+      return { bg: "var(--color-amber)", border: "var(--color-amber)", text: "#fff" };
+  }
 }
 
 export default function GDPPanel({ metrics, gdpHistory }: GDPPanelProps) {
@@ -52,11 +74,16 @@ export default function GDPPanel({ metrics, gdpHistory }: GDPPanelProps) {
   const rd = metrics.labor_market.reward_distribution;
   const rdTotal = rd["0_to_10"] + rd["11_to_50"] + rd["51_to_100"] + rd.over_100 || 1;
   const rdBuckets = [
-    { label: "0-10 \u00a9", count: rd["0_to_10"], pct: (rd["0_to_10"] / rdTotal) * 100 },
-    { label: "11-50 \u00a9", count: rd["11_to_50"], pct: (rd["11_to_50"] / rdTotal) * 100 },
-    { label: "51-100 \u00a9", count: rd["51_to_100"], pct: (rd["51_to_100"] / rdTotal) * 100 },
-    { label: "100+ \u00a9", count: rd.over_100, pct: (rd.over_100 / rdTotal) * 100 },
+    { label: "0-10 ¢", count: rd["0_to_10"], pct: (rd["0_to_10"] / rdTotal) * 100 },
+    { label: "11-50 ¢", count: rd["11_to_50"], pct: (rd["11_to_50"] / rdTotal) * 100 },
+    { label: "51-100 ¢", count: rd["51_to_100"], pct: (rd["51_to_100"] / rdTotal) * 100 },
+    { label: "100+ ¢", count: rd.over_100, pct: (rd.over_100 / rdTotal) * 100 },
   ];
+
+  const gdpTrend = trendColor(metrics.gdp.rate_per_hour, "up-good");
+  const completionPct = metrics.tasks.completion_rate * 100;
+  const disputePct = metrics.economy_phase.dispute_rate * 100;
+  const pc = phaseColor(metrics.economy_phase.phase);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -65,17 +92,18 @@ export default function GDPPanel({ metrics, gdpHistory }: GDPPanelProps) {
         <SectionLabel>Economy Output</SectionLabel>
         <div className="flex items-end justify-between mb-2">
           <div>
-            <div className="text-[22px] font-bold font-mono text-text leading-none">
+            <div className={`text-[22px] font-bold font-mono leading-none ${gdpTrend}`}>
               {metrics.gdp.total.toLocaleString()}
             </div>
             <div className="text-[10px] font-mono text-text-muted mt-0.5">
-              \u00a9 total GDP
+              ¢ total GDP
             </div>
           </div>
           <Sparkline points={gdpPoints} fill />
         </div>
         <div className="text-[10px] font-mono text-text-mid">
-          {metrics.gdp.rate_per_hour.toFixed(1)} \u00a9/hr &middot;{" "}
+          <span className={gdpTrend}>{metrics.gdp.rate_per_hour.toFixed(1)} ¢/hr</span>
+          {" "}&middot;{" "}
           {metrics.gdp.last_24h.toLocaleString()} last 24h &middot;{" "}
           {metrics.gdp.last_7d.toLocaleString()} last 7d
         </div>
@@ -85,7 +113,7 @@ export default function GDPPanel({ metrics, gdpHistory }: GDPPanelProps) {
       <div className="p-3 border-b border-border">
         <SectionLabel>GDP / Agent</SectionLabel>
         <div className="flex items-end justify-between mb-2">
-          <div className="text-[18px] font-bold font-mono text-text leading-none">
+          <div className={`text-[18px] font-bold font-mono leading-none ${gdpTrend}`}>
             {metrics.gdp.per_agent.toFixed(1)}
           </div>
           <Sparkline points={perAgentPoints} />
@@ -100,15 +128,22 @@ export default function GDPPanel({ metrics, gdpHistory }: GDPPanelProps) {
       <div className="p-3 border-b border-border">
         <SectionLabel>Economy Phase</SectionLabel>
         <div className="flex items-center gap-2">
-          <Badge filled>
+          <Badge
+            filled
+            style={{
+              backgroundColor: pc.bg,
+              borderColor: pc.border,
+              color: pc.text,
+            }}
+          >
             {metrics.economy_phase.phase.toUpperCase()}
           </Badge>
           <span className="text-[10px] font-mono text-text-muted">
             creation trend: {metrics.economy_phase.task_creation_trend}
           </span>
         </div>
-        <div className="text-[10px] font-mono text-text-muted mt-1">
-          dispute rate: {(metrics.economy_phase.dispute_rate * 100).toFixed(1)}%
+        <div className={`text-[10px] font-mono mt-1 ${thresholdColor(disputePct, 5, 2, true)}`}>
+          dispute rate: {disputePct.toFixed(1)}%
         </div>
       </div>
 
@@ -125,11 +160,13 @@ export default function GDPPanel({ metrics, gdpHistory }: GDPPanelProps) {
         />
         <KVRow
           label="Completion rate"
-          value={`${(metrics.tasks.completion_rate * 100).toFixed(1)}%`}
+          value={`${completionPct.toFixed(1)}%`}
+          colorClass={thresholdColor(completionPct, 80, 50)}
         />
         <KVRow
           label="Avg reward"
-          value={`${metrics.labor_market.avg_reward.toFixed(1)} \u00a9`}
+          value={`${metrics.labor_market.avg_reward.toFixed(1)} ¢`}
+          colorClass={colors.money}
         />
         <KVRow
           label="Posting rate"

@@ -25,14 +25,14 @@ export default function Sparkline({
       {fill && (
         <polygon
           points={`0,${height} ${pts} ${width},${height}`}
-          fill="#eeeeee"
+          fill="var(--color-green-light)"
           stroke="none"
         />
       )}
       <polyline
         points={pts}
         fill="none"
-        stroke="#111111"
+        stroke="var(--color-green)"
         strokeWidth={1.5}
         strokeLinejoin="round"
       />

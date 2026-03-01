@@ -1,4 +1,5 @@
 import type { MetricsResponse } from "../types";
+import { colors, thresholdColor } from "../utils/colorUtils";
 
 interface VitalsBarProps {
   metrics: MetricsResponse | null;
@@ -10,9 +11,13 @@ interface Vital {
   value: string;
   delta?: string;
   up?: boolean;
+  colorClass?: string;
+  deltaColorClass?: string;
 }
 
 function formatVitals(m: MetricsResponse): Vital[] {
+  const unemploymentPct = m.labor_market.unemployment_rate * 100;
+
   return [
     { label: "Active Agents", value: String(m.agents.active) },
     { label: "Open Tasks", value: String(m.tasks.open) },
@@ -22,15 +27,18 @@ function formatVitals(m: MetricsResponse): Vital[] {
       value: m.gdp.total.toLocaleString(),
       delta: `${m.gdp.rate_per_hour.toFixed(1)}/hr`,
       up: true,
+      deltaColorClass: m.gdp.rate_per_hour > 0 ? colors.positive : colors.negative,
     },
     { label: "GDP / Agent", value: m.gdp.per_agent.toFixed(1) },
     {
       label: "Unemployment",
-      value: `${(m.labor_market.unemployment_rate * 100).toFixed(1)}%`,
+      value: `${unemploymentPct.toFixed(1)}%`,
+      colorClass: thresholdColor(unemploymentPct, 20, 10, true),
     },
     {
       label: "Escrow Locked",
-      value: `${m.escrow.total_locked.toLocaleString()} \u00a9`,
+      value: `${m.escrow.total_locked.toLocaleString()} ¢`,
+      colorClass: colors.escrow,
     },
   ];
 }
@@ -52,12 +60,12 @@ export default function VitalsBar({ metrics, connected }: VitalsBarProps) {
               {v.label}
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-[13px] font-bold font-mono text-text">
+              <span className={`text-[13px] font-bold font-mono ${v.colorClass ?? "text-text"}`}>
                 {v.value}
               </span>
               {v.delta && (
-                <span className="text-[10px] font-mono text-text-mid">
-                  {v.up ? "\u2191" : "\u2193"}{v.delta}
+                <span className={`text-[10px] font-mono ${v.deltaColorClass ?? "text-text-mid"}`}>
+                  {v.up ? "↑" : "↓"}{v.delta}
                 </span>
               )}
             </div>
@@ -67,7 +75,7 @@ export default function VitalsBar({ metrics, connected }: VitalsBarProps) {
       <div className="ml-auto flex items-center gap-1.5">
         <div
           className={`w-1.5 h-1.5 rounded-full ${
-            connected ? "bg-border-strong" : "bg-text-muted"
+            connected ? colors.live : "bg-text-muted"
           }`}
           style={{ animation: connected ? "pulse-dot 2s infinite" : "none" }}
         />

@@ -124,7 +124,7 @@ export default function EconomyGraph() {
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full"
-        style={{ background: "#fafafa", cursor: isDragging.current ? "grabbing" : "grab" }}
+        style={{ background: "var(--color-bg-off)", cursor: isDragging.current ? "grabbing" : "grab" }}
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
@@ -132,18 +132,18 @@ export default function EconomyGraph() {
       />
       {tooltip && (
         <div
-          className="fixed z-50 pointer-events-none font-mono border border-[#cccccc] bg-white/95 backdrop-blur-sm px-3 py-2 text-[10px] leading-[1.6]"
+          className="fixed z-50 pointer-events-none font-mono border border-border bg-bg/95 backdrop-blur-sm px-3 py-2 text-[10px] leading-[1.6]"
           style={{
             left: tooltip.x + 14,
             top: tooltip.y + 14,
           }}
         >
-          <div className="text-[#111111] font-bold tracking-wide">
+          <div className="text-text font-bold tracking-wide">
             {tooltip.info.kind === "agent" ? "AGENT" : "TASK"}{" "}
-            <span className="font-normal text-[#888888]">{tooltip.info.category}</span>
+            <span className="font-normal text-text-muted">{tooltip.info.category}</span>
           </div>
-          <div className="text-[#333333]">{tooltip.info.name}</div>
-          <div className="text-[#888888]">
+          <div className="text-text-mid">{tooltip.info.name}</div>
+          <div className="text-text-muted">
             {tooltip.info.state} &middot; {tooltip.info.detailLabel}: {tooltip.info.detail}
           </div>
         </div>
@@ -152,16 +152,16 @@ export default function EconomyGraph() {
         <div
           className="absolute bottom-0 left-0 right-0 z-10 flex justify-center gap-4 py-2 font-mono text-[9px] tracking-wide"
           style={{
-            background: "linear-gradient(transparent, rgba(250,250,250,0.85))",
+            background: "linear-gradient(transparent, var(--color-bg-off))",
           }}
         >
           {(Object.keys(STATE_LABELS) as AgentState[]).map((state) => (
-            <span key={state} className="text-[#888888] flex items-center gap-1.5">
+            <span key={state} className="text-text-muted flex items-center gap-1.5">
               <span
-                className="inline-block w-2 h-2 rounded-full border border-[#cccccc]"
+                className="inline-block w-2 h-2 rounded-full border border-border"
                 style={{ backgroundColor: AGENT_STATE_TINTS[state] }}
               />
-              <span className="text-[#333333] font-bold">
+              <span className="text-text-mid font-bold">
                 {stateCounts[state] ?? 0}
               </span>
               {STATE_LABELS[state]}

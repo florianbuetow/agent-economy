@@ -10,40 +10,59 @@ interface LiveFeedProps {
 }
 
 const EVENT_TYPE_TO_BADGE: Record<string, string> = {
+  // tasks
   "task.created": "TASK",
-  "bid.submitted": "BID",
-  "task.approved": "PAYOUT",
   "task.accepted": "CONTRACT",
   "task.submitted": "SUBMIT",
-  "bank.payout": "PAYOUT",
-  "bank.escrow_locked": "ESCROW",
-  "bank.escrow_released": "PAYOUT",
-  "reputation.feedback_revealed": "REP",
-  "identity.agent_registered": "AGENT",
-  "court.claim_filed": "DISPUTE",
-  "court.ruling_issued": "RULING",
+  "task.approved": "PAYOUT",
+  "task.auto_approved": "PAYOUT",
+  "task.disputed": "DISPUTE",
+  "task.ruled": "RULING",
+  "task.cancelled": "CANCEL",
+  "task.expired": "CANCEL",
+  // bids
+  "bid.submitted": "BID",
+  // bank
+  "salary.paid": "SALARY",
+  "escrow.locked": "ESCROW",
+  "escrow.released": "PAYOUT",
+  "escrow.split": "RULING",
+  "account.created": "AGENT",
+  // reputation
+  "feedback.revealed": "REP",
+  // court
+  "claim.filed": "DISPUTE",
+  "rebuttal.submitted": "DISPUTE",
+  "ruling.delivered": "RULING",
+  // identity
+  "agent.registered": "AGENT",
+  // assets
+  "asset.uploaded": "SUBMIT",
+};
+
+const BADGE_COLORS: Record<string, string> = {
+  TASK: "#4a6fa5",     // muted blue
+  BID: "#a06080",      // dusty rose
+  PAYOUT: "#4a8c5c",   // sage green
+  SALARY: "#3a7a5a",   // darker green
+  CONTRACT: "#6a5a8c", // muted violet
+  SUBMIT: "#4a7a80",   // teal
+  ESCROW: "#a07040",   // burnt sienna
+  REP: "#8a7a3a",      // olive gold
+  DISPUTE: "#8c4a4a",  // muted red
+  RULING: "#6a4a80",   // plum
+  CANCEL: "#7a7a7a",   // medium gray
+  AGENT: "#6a6a6a",    // gray
 };
 
 const FILTER_TYPES = ["ALL", "TASK", "BID", "PAYOUT", "CONTRACT", "ESCROW", "REP"] as const;
 
 function badgeStyle(badgeType: string): { filled: boolean; style?: React.CSSProperties } {
-  switch (badgeType) {
-    case "TASK":
-    case "PAYOUT":
-    case "DISPUTE":
-      return { filled: true };
-    case "BID":
-    case "CONTRACT":
-      return { filled: false };
-    case "ESCROW":
-      return { filled: false, style: { borderStyle: "dashed" } };
-    case "REP":
-      return { filled: false, style: { borderStyle: "dotted", backgroundColor: "var(--color-bg-dark)" } };
-    case "AGENT":
-      return { filled: false, style: { borderColor: "var(--color-text-muted)" } };
-    default:
-      return { filled: false };
+  const bg = BADGE_COLORS[badgeType];
+  if (bg) {
+    return { filled: true, style: { backgroundColor: bg, borderColor: bg, color: "#fff" } };
   }
+  return { filled: true };
 }
 
 function timeAgo(timestamp: string): string {
@@ -87,19 +106,40 @@ export default function LiveFeed({ events, paused, onTogglePause }: LiveFeedProp
           </button>
         </div>
         <div className="flex gap-1 flex-wrap">
-          {FILTER_TYPES.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`text-[8px] font-mono uppercase tracking-[1px] px-1.5 py-0.5 border cursor-pointer ${
-                filter === f
-                  ? "border-border-strong bg-border-strong text-bg font-bold"
-                  : "border-border bg-bg text-text-muted"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+          {FILTER_TYPES.map((f) => {
+            const bg = BADGE_COLORS[f];
+            const isActive = filter === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                onMouseEnter={(e) => {
+                  if (!isActive && bg) {
+                    e.currentTarget.style.backgroundColor = bg;
+                    e.currentTarget.style.borderColor = bg;
+                    e.currentTarget.style.color = "#fff";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = "var(--color-bg)";
+                    e.currentTarget.style.borderColor = "var(--color-border)";
+                    e.currentTarget.style.color = "var(--color-text-muted)";
+                  }
+                }}
+                className="text-[8px] font-mono uppercase tracking-[1px] px-1.5 py-0.5 border cursor-pointer transition-all duration-150"
+                style={
+                  isActive && bg
+                    ? { backgroundColor: bg, borderColor: bg, color: "#fff", fontWeight: "bold" }
+                    : isActive
+                      ? { backgroundColor: "var(--color-border-strong)", borderColor: "var(--color-border-strong)", color: "var(--color-bg)", fontWeight: "bold" }
+                      : { backgroundColor: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text-muted)" }
+                }
+              >
+                {f}
+              </button>
+            );
+          })}
         </div>
       </div>
 
