@@ -205,3 +205,38 @@ async def test_escrow_split_proportional_payout(
         assert poster_balance["balance"] + worker_balance["balance"] == 5000
     finally:
         await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_ruling_recorded_on_task_board(
+    make_funded_agent,
+    platform_agent: PlatformAgent,
+) -> None:
+    """Confirm task record is updated with ruling details after court decision."""
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster CR2", balance=5000)
+        worker = await make_funded_agent(name="Worker CR2", balance=0)
+        agents_to_close.extend([poster, worker])
+
+        disputed_task, dispute_id, ruling_payload = await _drive_to_ruling(
+            poster, worker, platform_agent, reward=1000
+        )
+
+        # Check the task on TaskBoard has ruling details
+        task_after = await poster.get_task(str(disputed_task["task_id"]))
+        assert task_after["status"] == "ruled", (
+            f"Task status should be 'ruled', got '{task_after['status']}'"
+        )
+        assert isinstance(task_after.get("ruling_id"), str), "ruling_id should be set"
+        assert task_after["ruling_id"] != "", "ruling_id should not be empty"
+        assert isinstance(task_after.get("worker_pct"), int), "worker_pct should be set"
+        assert task_after["worker_pct"] == ruling_payload["worker_pct"], (
+            "worker_pct should match Court ruling"
+        )
+        assert isinstance(task_after.get("ruling_summary"), str), "ruling_summary should be set"
+        assert task_after["ruling_summary"] != "", "ruling_summary should not be empty"
+        assert task_after.get("ruled_at") is not None, "ruled_at timestamp should be set"
+    finally:
+        await _close_agents(agents_to_close)
