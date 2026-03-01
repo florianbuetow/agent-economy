@@ -6,8 +6,11 @@ import json
 import logging
 import random
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Iterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +48,8 @@ def load_tasks(path: Path) -> list[RawTask]:
 
     tasks: list[RawTask] = []
     with path.open() as fh:
-        for line_num, line in enumerate(fh, start=1):
-            line = line.strip()
+        for line_num, raw_line in enumerate(fh, start=1):
+            line = raw_line.strip()
             if not line:
                 continue
             try:

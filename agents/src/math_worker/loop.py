@@ -5,11 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from math_worker.config import MathWorkerConfig
 from math_worker.history import AgentHistory, TaskOutcome
-from math_worker.llm_client import LLMClient
 from math_worker.parser import parse_bid_amount, parse_solution, parse_task_selection
 from math_worker.prompts import (
     BID_AMOUNT_SYSTEM,
@@ -22,7 +20,10 @@ from math_worker.prompts import (
     build_task_selection_prompt,
 )
 
-from base_agent.agent import BaseAgent
+if TYPE_CHECKING:
+    from base_agent.agent import BaseAgent
+    from math_worker.config import MathWorkerConfig
+    from math_worker.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +159,6 @@ class MathWorkerLoop:
         elif review_outcome == "DISPUTED":
             await self._phase_disputed(task, solution)
         else:
-            # Timeout = auto-approve
             self._history.record(
                 task_id=task_id,
                 title=task.get("title", ""),
@@ -192,7 +192,11 @@ class MathWorkerLoop:
             if self._config.min_reward <= t.get("reward", 0) <= self._config.max_reward
         ]
         if not eligible:
-            logger.info("No tasks in reward range [%d, %d]", self._config.min_reward, self._config.max_reward)
+            logger.info(
+                "No tasks in reward range [%d, %d]",
+                self._config.min_reward,
+                self._config.max_reward,
+            )
             return None
 
         balance = await self._get_balance()

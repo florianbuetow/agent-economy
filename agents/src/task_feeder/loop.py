@@ -5,12 +5,13 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from base_agent.agent import BaseAgent
-
-from task_feeder.config import TaskFeederConfig
 from task_feeder.reader import RawTask, iterate_tasks, load_tasks
+
+if TYPE_CHECKING:
+    from base_agent.agent import BaseAgent
+    from task_feeder.config import TaskFeederConfig
 
 logger = logging.getLogger(__name__)
 

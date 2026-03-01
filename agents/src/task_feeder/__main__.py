@@ -17,7 +17,6 @@ import httpx
 
 from base_agent.agent import BaseAgent
 from base_agent.config import load_agent_config
-
 from task_feeder.config import load_task_feeder_settings
 from task_feeder.loop import TaskFeederLoop
 

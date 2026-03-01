@@ -55,7 +55,9 @@ class LLMClient:
         Raises:
             RuntimeError: If the response contains no content.
         """
-        logger.debug("LLM request: model=%s tokens_limit=%d", self._config.model_id, self._config.max_tokens)
+        logger.debug(
+            "LLM request: model=%s tokens_limit=%d", self._config.model_id, self._config.max_tokens
+        )
 
         response = await self._client.chat.completions.create(
             model=self._config.model_id,

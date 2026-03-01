@@ -19,7 +19,7 @@ class PlatformAgent(BaseAgent):
     platform-signed requests without calling the Identity service.
     """
 
-    async def create_account(self, agent_id: str, initial_balance: int) -> dict[str, Any]:
+    async def create_account(self, agent_id: str, initial_balance: int) -> dict[str, Any]:  # type: ignore[override]
         """Create an account for an agent in the Central Bank.
 
         Args:

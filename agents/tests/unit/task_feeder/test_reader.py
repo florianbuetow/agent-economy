@@ -1,7 +1,6 @@
 """Unit tests for task_feeder.reader."""
 
 import json
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -77,8 +76,12 @@ class TestLoadTasks:
 class TestIterateTasks:
     def test_yields_in_order(self) -> None:
         tasks = [
-            RawTask(title="A", spec="a", solutions=["1"], level=1, problem_type="x", solution_note=None),
-            RawTask(title="B", spec="b", solutions=["2"], level=2, problem_type="y", solution_note=None),
+            RawTask(
+                title="A", spec="a", solutions=["1"], level=1, problem_type="x", solution_note=None
+            ),
+            RawTask(
+                title="B", spec="b", solutions=["2"], level=2, problem_type="y", solution_note=None
+            ),
         ]
         it = iterate_tasks(tasks, shuffle=False)
         titles = [next(it).title for _ in range(6)]
@@ -86,12 +89,19 @@ class TestIterateTasks:
 
     def test_empty_list_yields_nothing(self) -> None:
         it = iterate_tasks([], shuffle=False)
-        result = list(zip(range(3), it))  # try to pull 3 items
+        result = list(zip(range(3), it, strict=False))  # try to pull 3 items
         assert result == []
 
     def test_shuffle_produces_all_tasks(self) -> None:
         tasks = [
-            RawTask(title=f"T{i}", spec="s", solutions=["x"], level=1, problem_type="t", solution_note=None)
+            RawTask(
+                title=f"T{i}",
+                spec="s",
+                solutions=["x"],
+                level=1,
+                problem_type="t",
+                solution_note=None,
+            )
             for i in range(10)
         ]
         it = iterate_tasks(tasks, shuffle=True)

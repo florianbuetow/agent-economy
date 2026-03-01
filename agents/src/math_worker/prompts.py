@@ -113,12 +113,7 @@ def build_bid_amount_prompt(
     reward = task.get("reward", 0)
     spec = task.get("spec", "no spec")
     title = task.get("title", "untitled")
-    return (
-        f"Task: {title}\n"
-        f"Reward: {reward}\n"
-        f"Your balance: {balance}\n\n"
-        f"Specification:\n{spec}"
-    )
+    return f"Task: {title}\nReward: {reward}\nYour balance: {balance}\n\nSpecification:\n{spec}"
 
 
 def build_solve_prompt(task: dict[str, Any]) -> str:
