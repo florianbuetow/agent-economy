@@ -5,13 +5,13 @@ description = "Civil claims court with LLM-as-a-Judge dispute resolution"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
+    "starlette>=0.52.0",
     "uvicorn>=0.34.0",
     "pydantic>=2.10.0",
     "httpx>=0.28.0",
     "cryptography>=44.0.0",
     "joserfc>=1.0.0",
     "litellm>=1.0.0",
-    "pyyaml>=6.0.0",
     "service-commons",
 ]
 

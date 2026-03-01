@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from court_service.judges import Judge
     from court_service.services.central_bank_client import CentralBankClient
     from court_service.services.dispute_service import DisputeService
     from court_service.services.identity_client import IdentityClient
@@ -26,7 +27,7 @@ class AppState:
     task_board_client: TaskBoardClient | None = None
     central_bank_client: CentralBankClient | None = None
     reputation_client: ReputationClient | None = None
-    judges: list[object] | None = None
+    judges: list[Judge] | None = None
 
     @property
     def uptime_seconds(self) -> float:
