@@ -52,6 +52,7 @@ async def create_account(request: Request) -> JSONResponse:
     if not agent_id or not isinstance(agent_id, str):
         raise ServiceError("INVALID_PAYLOAD", "Missing agent_id in JWS payload", 400, {})
 
+    # Non-platform callers can only create their own account
     if not is_platform and agent_id != caller_agent_id:
         raise ServiceError(
             "FORBIDDEN",
@@ -76,23 +77,14 @@ async def create_account(request: Request) -> JSONResponse:
             {},
         )
 
-    if not is_platform:
-        # Non-platform callers can only create their own account
-        if agent_id != caller_agent_id:
-            raise ServiceError(
-                "FORBIDDEN",
-                "Agents can only create their own account",
-                403,
-                {},
-            )
-        # Non-platform callers must use initial_balance of 0
-        if initial_balance != 0:
-            raise ServiceError(
-                "FORBIDDEN",
-                "Only the platform can set a non-zero initial balance",
-                403,
-                {},
-            )
+    # Non-platform callers must use initial_balance of 0
+    if not is_platform and initial_balance != 0:
+        raise ServiceError(
+            "FORBIDDEN",
+            "Only the platform can set a non-zero initial balance",
+            403,
+            {},
+        )
 
     # Verify agent exists in Identity service
     if state.identity_client is None:
