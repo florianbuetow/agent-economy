@@ -35,10 +35,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         db.row_factory = aiosqlite.Row
         state.db = db
         logger.info("Database connection opened", extra={"path": settings.database.path})
-    except Exception:
-        logger.warning(
+    except (OSError, aiosqlite.Error) as exc:
+        logger.error(
             "Database not available at startup",
-            extra={"path": settings.database.path},
+            extra={"path": settings.database.path, "error": str(exc)},
         )
 
     logger.info(

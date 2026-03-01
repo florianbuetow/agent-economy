@@ -126,10 +126,10 @@ export default function LiveProofSection() {
     let active = true;
     fetchMetrics()
       .then((m) => { if (active) setMetrics(formatMetrics(m)); })
-      .catch(() => {});
+      .catch((e) => { console.warn("Metrics fetch failed:", e); });
     fetchEvents(12)
       .then((r) => { if (active) setEvents(r.events); })
-      .catch(() => {});
+      .catch((e) => { console.warn("Events fetch failed:", e); });
     return () => { active = false; };
   }, []);
 

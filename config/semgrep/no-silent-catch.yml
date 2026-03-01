@@ -1,0 +1,17 @@
+rules:
+  - id: agent-economy.no-silent-catch
+    languages: [typescript, javascript]
+    message: >
+      Empty .catch() handler silently swallows errors. At minimum, log the error
+      with console.warn(). For user-triggered actions, set an error state instead.
+    severity: ERROR
+    pattern-either:
+      - pattern: $PROMISE.catch(() => {})
+      - pattern: $PROMISE.catch(($ERR) => {})
+    paths:
+      include:
+        - src/
+        - '**/frontend/src/'
+      exclude:
+        - tests/
+        - node_modules/
