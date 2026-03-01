@@ -113,17 +113,28 @@ export default function LiveFeed({ events, paused, onTogglePause }: LiveFeedProp
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`text-[8px] font-mono uppercase tracking-[1px] px-1.5 py-0.5 border cursor-pointer transition-all duration-150 ${
-                  isActive ? "" : "hover:[background-color:var(--btn-bg)] hover:[border-color:var(--btn-bg)] hover:text-white"
-                }`}
-                style={{
-                  "--btn-bg": bg ?? "var(--color-border-strong)",
-                  ...(isActive && bg
+                onMouseEnter={(e) => {
+                  if (!isActive && bg) {
+                    e.currentTarget.style.backgroundColor = bg;
+                    e.currentTarget.style.borderColor = bg;
+                    e.currentTarget.style.color = "#fff";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = "var(--color-bg)";
+                    e.currentTarget.style.borderColor = "var(--color-border)";
+                    e.currentTarget.style.color = "var(--color-text-muted)";
+                  }
+                }}
+                className="text-[8px] font-mono uppercase tracking-[1px] px-1.5 py-0.5 border cursor-pointer transition-all duration-150"
+                style={
+                  isActive && bg
                     ? { backgroundColor: bg, borderColor: bg, color: "#fff", fontWeight: "bold" }
                     : isActive
                       ? { backgroundColor: "var(--color-border-strong)", borderColor: "var(--color-border-strong)", color: "var(--color-bg)", fontWeight: "bold" }
-                      : { backgroundColor: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text-muted)" }),
-                } as React.CSSProperties}
+                      : { backgroundColor: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text-muted)" }
+                }
               >
                 {f}
               </button>
