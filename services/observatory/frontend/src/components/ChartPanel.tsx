@@ -6,11 +6,10 @@ import {
   PointElement,
   LineElement,
   ArcElement,
-  RadialLinearScale,
   Filler,
   Tooltip,
 } from "chart.js";
-import { Line, Doughnut, Radar } from "react-chartjs-2";
+import { Line, Doughnut } from "react-chartjs-2";
 import type { MetricsResponse, GDPHistoryResponse } from "../types";
 import { fetchGDPHistory } from "../api/metrics";
 import { cssVar, tooltipBg } from "../utils/colorUtils";
@@ -21,12 +20,11 @@ ChartJS.register(
   PointElement,
   LineElement,
   ArcElement,
-  RadialLinearScale,
   Filler,
   Tooltip,
 );
 
-const TABS = ["GDP", "HEALTH", "TASKS"] as const;
+const TABS = ["GDP", "QUALITY", "TASKS"] as const;
 type Tab = (typeof TABS)[number];
 
 const GDP_WINDOWS = [
@@ -145,30 +143,27 @@ function GDPLineChart({ gdpHistory }: { gdpHistory: GDPHistoryResponse | null })
 }
 
 // ---------------------------------------------------------------------------
-// Economy Health Radar
+// Spec Quality Doughnut
 // ---------------------------------------------------------------------------
 
-function HealthRadar({ metrics }: { metrics: MetricsResponse }) {
-  const green = cssVar("--color-green", "#1a7a1a");
-  const greenLight = cssVar("--color-green-light", "#e6f4e6");
-  const textMuted = cssVar("--color-text-muted", "#888888");
-  const border = cssVar("--color-border", "#cccccc");
+function SpecQualityDoughnut({ metrics }: { metrics: MetricsResponse }) {
+  const sq = metrics.spec_quality;
+  const total = sq.extremely_satisfied_pct + sq.satisfied_pct + sq.dissatisfied_pct;
 
-  const completionRate = metrics.tasks.completion_rate * 100;
-  const employmentRate = (1 - metrics.labor_market.unemployment_rate) * 100;
-  const specQuality = metrics.spec_quality.avg_score;
+  const green = cssVar("--color-green", "#1a7a1a");
+  const amber = cssVar("--color-amber", "#b8860b");
+  const red = cssVar("--color-red", "#cc0000");
+  const textColor = cssVar("--color-text", "#333333");
+  const textMuted = cssVar("--color-text-muted", "#888888");
 
   const chartData = {
-    labels: ["Completion %", "Employment", "Spec Quality"],
+    labels: ["Extremely Satisfied", "Satisfied", "Dissatisfied"],
     datasets: [
       {
-        data: [completionRate, employmentRate, specQuality],
-        borderColor: green,
-        backgroundColor: greenLight + "88",
-        borderWidth: 2,
-        pointRadius: 3,
-        pointBackgroundColor: green,
-        pointHoverRadius: 5,
+        data: [sq.extremely_satisfied_pct, sq.satisfied_pct, sq.dissatisfied_pct],
+        backgroundColor: [green + "cc", amber + "cc", red + "cc"],
+        borderColor: [green, amber, red],
+        borderWidth: 1.5,
       },
     ],
   };
@@ -176,6 +171,7 @@ function HealthRadar({ metrics }: { metrics: MetricsResponse }) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    cutout: "60%",
     plugins: {
       tooltip: {
         intersect: false,
@@ -183,37 +179,51 @@ function HealthRadar({ metrics }: { metrics: MetricsResponse }) {
         titleFont: { family: "'Courier New', monospace", size: 10 },
         bodyFont: { family: "'Courier New', monospace", size: 11 },
         padding: 8,
-        displayColors: false,
+        displayColors: true,
         callbacks: {
-          label: (item: { parsed: { r: number }; label: string }) =>
-            `${item.label}: ${item.parsed.r.toFixed(1)}`,
+          label: (item: { label: string; parsed: number }) => {
+            const pct = total > 0 ? ((item.parsed / total) * 100).toFixed(1) : "0";
+            return ` ${item.label}: ${item.parsed.toFixed(1)}% (${pct}% of rated)`;
+          },
         },
-      },
-    },
-    scales: {
-      r: {
-        beginAtZero: true,
-        max: 100,
-        ticks: {
-          stepSize: 25,
-          font: { family: "'Courier New', monospace", size: 7 },
-          color: textMuted,
-          backdropColor: "transparent",
-        },
-        pointLabels: {
-          font: { family: "'Courier New', monospace", size: 8 },
-          color: textMuted,
-        },
-        grid: { color: border, lineWidth: 0.5 },
-        angleLines: { color: border, lineWidth: 0.5 },
       },
     },
   } as const;
 
+  const trendArrow = sq.trend_direction === "improving" ? "\u2191" : sq.trend_direction === "declining" ? "\u2193" : "\u2192";
+
   return (
-    <div className="flex-1 min-h-0 flex items-center justify-center">
-      <div className="w-full h-full max-w-[300px]">
-        <Radar data={chartData} options={options as Parameters<typeof Radar>[0]["options"]} />
+    <div className="flex-1 min-h-0 flex flex-col items-center justify-center relative">
+      <div className="w-full h-full max-w-[260px] relative">
+        <Doughnut data={chartData} options={options as Parameters<typeof Doughnut>[0]["options"]} />
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-[18px] font-bold font-mono" style={{ color: textColor }}>
+            {sq.avg_score.toFixed(0)}
+          </span>
+          <span className="text-[8px] font-mono uppercase tracking-[1px]" style={{ color: textMuted }}>
+            avg score
+          </span>
+        </div>
+      </div>
+      <div className="flex gap-3 mt-2 items-center">
+        {[
+          { label: "Excellent", color: green },
+          { label: "Satisfied", color: amber },
+          { label: "Dissatisfied", color: red },
+        ].map((item) => (
+          <div key={item.label} className="flex items-center gap-1">
+            <div
+              className="w-2 h-2 border"
+              style={{ backgroundColor: item.color + "cc", borderColor: item.color }}
+            />
+            <span className="text-[7px] font-mono uppercase tracking-[0.5px]" style={{ color: textMuted }}>
+              {item.label}
+            </span>
+          </div>
+        ))}
+        <span className="text-[8px] font-mono" style={{ color: textMuted }}>
+          {trendArrow} {sq.trend_direction}
+        </span>
       </div>
     </div>
   );
@@ -389,8 +399,8 @@ export default function ChartPanel({ metrics, gdpHistory }: ChartPanelProps) {
       {/* Chart area */}
       <div className="flex-1 min-h-0 p-3 flex flex-col">
         {activeTab === "GDP" && <GDPLineChart gdpHistory={localGdpHistory} />}
-        {activeTab === "HEALTH" && metrics && <HealthRadar metrics={metrics} />}
-        {activeTab === "HEALTH" && !metrics && (
+        {activeTab === "QUALITY" && metrics && <SpecQualityDoughnut metrics={metrics} />}
+        {activeTab === "QUALITY" && !metrics && (
           <div className="flex-1 flex items-center justify-center text-[9px] font-mono text-text-faint">
             Loading metrics...
           </div>
