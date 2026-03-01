@@ -240,3 +240,45 @@ async def test_ruling_recorded_on_task_board(
         assert task_after.get("ruled_at") is not None, "ruled_at timestamp should be set"
     finally:
         await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_court_posts_reputation_feedback(
+    make_funded_agent,
+    platform_agent: PlatformAgent,
+) -> None:
+    """Confirm Court posts feedback to Reputation service for both parties after ruling."""
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster CR3", balance=5000)
+        worker = await make_funded_agent(name="Worker CR3", balance=0)
+        agents_to_close.extend([poster, worker])
+
+        disputed_task, dispute_id, ruling_payload = await _drive_to_ruling(
+            poster, worker, platform_agent, reward=1000
+        )
+
+        # Court should have posted two feedback records to Reputation
+        task_feedback = await poster.get_task_feedback(str(disputed_task["task_id"]))
+        assert len(task_feedback) >= 2, (
+            f"Expected at least 2 feedback records from Court, got {len(task_feedback)}"
+        )
+
+        # Check for spec_quality feedback targeting the poster
+        spec_feedback = [
+            fb
+            for fb in task_feedback
+            if fb["category"] == "spec_quality" and fb["to_agent_id"] == poster.agent_id
+        ]
+        assert len(spec_feedback) >= 1, "Court should post spec_quality feedback for poster"
+
+        # Check for delivery_quality feedback targeting the worker
+        delivery_feedback = [
+            fb
+            for fb in task_feedback
+            if fb["category"] == "delivery_quality" and fb["to_agent_id"] == worker.agent_id
+        ]
+        assert len(delivery_feedback) >= 1, "Court should post delivery_quality feedback for worker"
+    finally:
+        await _close_agents(agents_to_close)
