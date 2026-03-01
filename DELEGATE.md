@@ -114,25 +114,23 @@ START NOW by reading the spec file.
 ### Automatic Periodic Checks — MANDATORY
 After sending instructions to the agent, you MUST automatically check on it periodically. Never ask the user to check — do it yourself.
 
-**Polling schedule:**
-- **First check:** Wait 15-30 seconds after sending instructions, then check once. The agent often hits permission prompts for new tools/commands right away.
-- **Subsequent checks:** Wait 15-30 seconds between each check. Do not check more frequently — let the agent work.
-- **After agent is clearly in a working rhythm** (no prompts, actively writing/running): Check every 30-60 seconds.
+**Polling pattern — use sleep to enforce wait:**
+```bash
+sleep 30 && tmux capture-pane -t codex -p | tail -40
+```
 
-**Why wait 15-30 seconds:** Checking too frequently wastes your turns and adds noise. The agent needs time to process. When it hits a permission prompt, it will wait — a 15-30 second delay is acceptable.
+The `sleep` in the same command prevents rapid-fire polling. Adjust the sleep duration:
+- **First check after sending instructions:** `sleep 15 && ...`
+- **Agent is working normally:** `sleep 30 && ...`
+- **Agent is in a long-running task (npm install, CI):** `sleep 60 && ...`
+
+**NEVER** call `tmux capture-pane` without a preceding `sleep` in the same command. This is the only way to enforce discipline.
 
 **What to look for on each check:**
 - Is it waiting at a Yes/No permission prompt? → Answer it immediately
 - Is it stuck or asking a question? → Provide the answer or clarify instructions
 - Is it actively working (spinner, "Working")? → Leave it alone, check again later
 - Has it finished? → Review the output and proceed
-
-**How to check:**
-```bash
-tmux capture-pane -t codex -p | tail -50
-```
-
-Never use `sleep` before checking — just check immediately. If the agent is still working, check again on your next turn.
 
 ---
 
