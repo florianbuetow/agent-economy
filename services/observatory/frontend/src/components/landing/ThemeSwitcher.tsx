@@ -28,10 +28,10 @@ export default function ThemeSwitcher() {
               <button
                 key={key}
                 onClick={() => setTheme(key)}
-                className={`flex-1 text-left px-4 py-4 border cursor-pointer transition-[border-color] duration-150 ${
+                className={`flex-1 text-left px-4 py-4 border cursor-pointer transition-[border-color,opacity] duration-150 ${
                   active
-                    ? "border-border-strong"
-                    : "border-border hover:border-text-muted"
+                    ? "border-border-strong opacity-100"
+                    : "border-border opacity-50 hover:opacity-75 hover:border-text-muted"
                 }`}
               >
                 <div className="text-[11px] font-mono font-bold text-text mb-1">
@@ -55,11 +55,6 @@ export default function ThemeSwitcher() {
                     />
                   ))}
                 </div>
-                {active && (
-                  <div className="text-[8px] font-mono uppercase tracking-[1.5px] text-green mt-2.5">
-                    ACTIVE
-                  </div>
-                )}
               </button>
             );
           })}
