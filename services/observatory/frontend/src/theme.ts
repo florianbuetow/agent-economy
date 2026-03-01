@@ -14,6 +14,7 @@ export interface ThemeDefinition {
     textMuted: string;
     textFaint: string;
     green: string;
+    yellow: string;
     navBg: string;
     navText: string;
     navTextMuted: string;
@@ -38,6 +39,7 @@ export const THEMES: Record<string, ThemeDefinition> = {
       textMuted: "#888888",
       textFaint: "#bbbbbb",
       green: "#1a7a1a",
+      yellow: "#b8860b",
       navBg: "#ffffff",
       navText: "#111111",
       navTextMuted: "#888888",
@@ -60,6 +62,7 @@ export const THEMES: Record<string, ThemeDefinition> = {
       textMuted: "#9D8574",
       textFaint: "#C4A98C",
       green: "#006A4E",
+      yellow: "#a67b00",
       navBg: "#1A1919",
       navText: "#FFF1E0",
       navTextMuted: "rgba(255,255,255,0.6)",
@@ -82,6 +85,7 @@ export const THEMES: Record<string, ThemeDefinition> = {
       textMuted: "#6B7BA0",
       textFaint: "#A0AABF",
       green: "#007A5E",
+      yellow: "#9a7b00",
       navBg: "#0B2D6E",
       navText: "#ffffff",
       navTextMuted: "rgba(255,255,255,0.6)",
@@ -120,6 +124,7 @@ export function applyTheme(themeKey: string) {
   root.style.setProperty("--color-text-muted", theme.colors.textMuted);
   root.style.setProperty("--color-text-faint", theme.colors.textFaint);
   root.style.setProperty("--color-green", theme.colors.green);
+  root.style.setProperty("--color-yellow", theme.colors.yellow);
   root.style.setProperty("--color-nav-bg", theme.colors.navBg);
   root.style.setProperty("--color-nav-text", theme.colors.navText);
   root.style.setProperty("--color-nav-text-muted", theme.colors.navTextMuted);
