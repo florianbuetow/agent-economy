@@ -42,8 +42,9 @@ class TaskFeederLoop:
 
         tasks_path = Path(self._config.tasks_file)
         if not tasks_path.is_absolute():
-            # Resolve relative to project data/ dir (two levels up from agents/)
-            tasks_path = (Path(__file__).resolve().parents[3] / tasks_path)
+            # Resolve relative to agents/ directory (where config.yaml lives)
+            agents_dir = Path(__file__).resolve().parents[2]
+            tasks_path = (agents_dir / tasks_path).resolve()
 
         all_tasks = load_tasks(tasks_path)
         task_iter = iterate_tasks(all_tasks, shuffle=self._config.shuffle)
