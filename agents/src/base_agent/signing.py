@@ -1,8 +1,8 @@
 """
-Ed25519 key management and JWS token creation.
+Ed25519 key management, JWS token creation, and verification.
 
 Handles key generation, loading, and compact JWS (header.payload.signature)
-token creation using EdDSA for authenticating with platform services.
+token creation and verification using EdDSA for authenticating with platform services.
 """
 
 from __future__ import annotations
@@ -124,6 +124,14 @@ def _b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
 
+def _b64url_decode(data: str) -> bytes:
+    """Base64url-decode a string, adding padding as needed."""
+    padding = 4 - len(data) % 4
+    if padding != 4:
+        data += "=" * padding
+    return base64.urlsafe_b64decode(data)
+
+
 def create_jws(
     payload: dict[str, object],
     private_key: Ed25519PrivateKey,
@@ -154,3 +162,38 @@ def create_jws(
     signature_b64 = _b64url_encode(signature)
 
     return f"{header_b64}.{payload_b64}.{signature_b64}"
+
+
+def verify_jws(
+    token: str,
+    public_key: Ed25519PublicKey,
+) -> dict[str, object]:
+    """Verify a compact JWS token and return the decoded payload.
+
+    Verifies the Ed25519 signature against the provided public key.
+    Does NOT call any external service -- purely local cryptographic verification.
+
+    Args:
+        token: Compact JWS string (header.payload.signature).
+        public_key: Ed25519 public key to verify against.
+
+    Returns:
+        Decoded payload as a dictionary.
+
+    Raises:
+        ValueError: If the token format is invalid.
+        cryptography.exceptions.InvalidSignature: If the signature is invalid.
+    """
+    parts = token.split(".")
+    if len(parts) != 3:
+        msg = "Invalid JWS format: expected 3 dot-separated parts"
+        raise ValueError(msg)
+
+    header_b64, payload_b64, signature_b64 = parts
+    signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
+    signature = _b64url_decode(signature_b64)
+
+    public_key.verify(signature, signing_input)
+
+    payload_bytes = _b64url_decode(payload_b64)
+    return json.loads(payload_bytes)
