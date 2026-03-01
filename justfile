@@ -195,22 +195,56 @@ start-observatory:
     cd services/observatory && just run
     @echo ""
 
-# Start all services in background
+# Start all services in background (respects dependency order)
 start-all:
     #!/usr/bin/env bash
     printf "\n"
     printf "\033[0;34m=== Starting All Services (Background) ===\033[0m\n"
     printf "\n"
 
+    wait_for_health() {
+        local name=$1
+        local port=$2
+        local max_attempts=30
+        local attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+            if curl -s --connect-timeout 1 "http://localhost:${port}/health" | grep -q '"ok"' 2>/dev/null; then
+                printf "\033[0;32m✓ %s ready (port %s)\033[0m\n" "$name" "$port"
+                return 0
+            fi
+            attempt=$((attempt + 1))
+            sleep 1
+        done
+        printf "\033[0;31m✗ %s failed to start on port %s\033[0m\n" "$name" "$port"
+        return 1
+    }
+
+    # Tier 1: No dependencies
+    printf "Starting tier 1 (Identity, Reputation)...\n"
     cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host 0.0.0.0 --port 8001 &
-    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 0.0.0.0 --port 8002 &
-    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 0.0.0.0 --port 8003 &
     cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 0.0.0.0 --port 8004 &
-    cd services/court && uv run uvicorn court_service.app:create_app --factory --host 0.0.0.0 --port 8005 &
+    wait_for_health "Identity" 8001
+    wait_for_health "Reputation" 8004
+
+    # Tier 2: Depends on Identity
+    printf "Starting tier 2 (Central Bank)...\n"
+    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 0.0.0.0 --port 8002 &
+    wait_for_health "Central Bank" 8002
+
+    # Tier 3: Depends on Identity + Central Bank
+    printf "Starting tier 3 (Task Board, Observatory)...\n"
+    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 0.0.0.0 --port 8003 &
     cd services/observatory && uv run uvicorn observatory_service.app:create_app --factory --host 0.0.0.0 --port 8006 &
+    wait_for_health "Task Board" 8003
+    wait_for_health "Observatory" 8006
 
-    printf "Services starting in background...\n"
+    # Tier 4: Depends on everything
+    printf "Starting tier 4 (Court)...\n"
+    cd services/court && uv run uvicorn court_service.app:create_app --factory --host 0.0.0.0 --port 8005 &
+    wait_for_health "Court" 8005
 
+    printf "\n"
+    printf "\033[0;32m✓ All services started\033[0m\n"
     printf "\n"
 
 # Stop identity service
@@ -251,16 +285,27 @@ stop-observatory:
 
 # Stop all locally running services
 stop-all:
-    @echo ""
-    @printf "\033[0;34m=== Stopping All Services (Local) ===\033[0m\n"
-    cd services/identity && just kill
-    cd services/central-bank && just kill
-    cd services/task-board && just kill
-    cd services/reputation && just kill
-    cd services/court && just kill
-    cd services/observatory && just kill
-    @printf "\033[0;32m✓ All services stopped\033[0m\n"
-    @echo ""
+    #!/usr/bin/env bash
+    printf "\n"
+    printf "\033[0;34m=== Stopping All Services (Local) ===\033[0m\n"
+    printf "\n"
+
+    failed=0
+    for svc in identity central-bank task-board reputation court observatory; do
+        cd "services/$svc" && just kill || failed=$((failed + 1))
+        cd - > /dev/null
+    done
+
+    # Also stop agents if running
+    pkill -f "python -m task_feeder" 2>/dev/null && printf "Task feeder stopped\n" || true
+    pkill -f "python -m math_worker" 2>/dev/null && printf "Math worker stopped\n" || true
+
+    if [ "$failed" -gt 0 ]; then
+        printf "\033[0;33m⚠ %d service(s) could not be stopped\033[0m\n" "$failed"
+    else
+        printf "\033[0;32m✓ All services stopped\033[0m\n"
+    fi
+    printf "\n"
 
 # Start task feeder (posts math tasks onto the board)
 start-feeder:

@@ -50,7 +50,7 @@ class TaskBoardMixin:
         )
         escrow_token = self._sign_jws(
             {
-                "action": "lock_escrow",
+                "action": "escrow_lock",
                 "task_id": task_id,
                 "amount": reward,
                 "agent_id": self.agent_id,
