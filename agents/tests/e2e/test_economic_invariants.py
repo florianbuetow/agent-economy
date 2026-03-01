@@ -162,3 +162,53 @@ async def test_economic_cycle_with_dispute_partial_payout(
         assert final_b["balance"] == balance_b_after_r1["balance"] - reward_2
     finally:
         await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_insufficient_funds_cannot_post_task(make_funded_agent) -> None:
+    """Adversarial: agent with insufficient balance cannot post a task."""
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        agent = await make_funded_agent(name="Agent EI2", balance=100)
+        agents_to_close.append(agent)
+
+        # Try to post a task that costs more than the balance
+        response = await agent._request_raw(
+            "POST",
+            f"{agent.config.task_board_url}/tasks",
+            json={
+                "task_token": agent._sign_jws(
+                    {
+                        "action": "create_task",
+                        "task_id": "t-insufficient-funds-test",
+                        "poster_id": agent.agent_id,
+                        "title": "Expensive task",
+                        "spec": "Do something expensive",
+                        "reward": 500,
+                        "bidding_deadline_seconds": 3600,
+                        "execution_deadline_seconds": 7200,
+                        "review_deadline_seconds": 3600,
+                    }
+                ),
+                "escrow_token": agent._sign_jws(
+                    {
+                        "action": "escrow_lock",
+                        "agent_id": agent.agent_id,
+                        "amount": 500,
+                        "task_id": "t-insufficient-funds-test",
+                    }
+                ),
+            },
+        )
+
+        # Escrow lock should fail — task should not be created
+        assert response.status_code in {400, 402, 502}, (
+            f"Expected failure for insufficient funds, got {response.status_code}"
+        )
+
+        # Balance should remain unchanged
+        balance = await agent.get_balance()
+        assert balance["balance"] == 100, "Balance should be unchanged after failed task posting"
+    finally:
+        await _close_agents(agents_to_close)
