@@ -2,6 +2,16 @@ import { useParams, Link } from "react-router-dom";
 import { useAgentProfile } from "../hooks/useAgentProfile";
 import Badge from "../components/Badge";
 import HatchBar from "../components/HatchBar";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
 import type {
   AgentProfileResponse,
   AgentFeedEvent,
@@ -9,6 +19,8 @@ import type {
   QualityStats,
   RecentTask,
 } from "../types";
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -221,96 +233,113 @@ function frameEvent(ev: AgentFeedEvent, agentId: string): React.ReactNode {
 }
 
 // ---------------------------------------------------------------------------
-// Earnings Chart (SVG)
+// Earnings Chart (Chart.js)
 // ---------------------------------------------------------------------------
 
 function EarningsChart({
   data,
-  width = 172,
-  height = 60,
+  height = 80,
 }: {
   data: { timestamp: string; cumulative: number }[];
-  width?: number;
   height?: number;
 }) {
   if (data.length === 0) {
     return (
       <div
         className="flex items-center justify-center text-[9px] font-mono text-text-faint border border-border border-dashed"
-        style={{ width, height }}
+        style={{ height }}
       >
         No earnings data
       </div>
     );
   }
 
-  const max = Math.max(...data.map((d) => d.cumulative));
-  const range = max || 1;
-  const padX = 2;
-  const padY = 4;
-  const innerW = width - padX * 2;
-  const innerH = height - padY * 2;
-
-  const points = data.map((d, i) => {
-    const x = padX + (i / Math.max(data.length - 1, 1)) * innerW;
-    const y = padY + (1 - d.cumulative / range) * innerH;
-    return { x, y, ...d };
+  const labels = data.map((d) => {
+    const dt = new Date(d.timestamp);
+    return dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   });
 
-  const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
-  const area = [
-    `${points[0].x},${padY + innerH}`,
-    ...points.map((p) => `${p.x},${p.y}`),
-    `${points[points.length - 1].x},${padY + innerH}`,
-  ].join(" ");
+  const green = getComputedStyle(document.documentElement).getPropertyValue("--color-green").trim() || "#1a7a1a";
+  const greenLight = getComputedStyle(document.documentElement).getPropertyValue("--color-green-light").trim() || "#e6f4e6";
+  const textMuted = getComputedStyle(document.documentElement).getPropertyValue("--color-text-muted").trim() || "#888888";
+  const border = getComputedStyle(document.documentElement).getPropertyValue("--color-border").trim() || "#cccccc";
 
-  const guides = [0, 0.25, 0.5, 0.75, 1].map((pct) => ({
-    y: padY + (1 - pct) * innerH,
-    val: Math.round(pct * range),
-  }));
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        data: data.map((d) => d.cumulative),
+        borderColor: green,
+        backgroundColor: greenLight,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: green,
+        pointHoverRadius: 5,
+        fill: true,
+        tension: 0.3,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      tooltip: {
+        backgroundColor: "#111111",
+        titleFont: { family: "'Courier New', monospace", size: 10 },
+        bodyFont: { family: "'Courier New', monospace", size: 11 },
+        padding: 8,
+        displayColors: false,
+        callbacks: {
+          title: (items: { dataIndex: number }[]) => {
+            const i = items[0].dataIndex;
+            return new Date(data[i].timestamp).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+          },
+          label: (item: { parsed: { y: number } }) =>
+            `${item.parsed.y.toLocaleString()} \u00a9 cumulative`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        display: true,
+        ticks: {
+          font: { family: "'Courier New', monospace", size: 8 },
+          color: textMuted,
+          maxRotation: 0,
+          maxTicksLimit: 5,
+        },
+        grid: { display: false },
+        border: { color: border },
+      },
+      y: {
+        display: true,
+        ticks: {
+          font: { family: "'Courier New', monospace", size: 8 },
+          color: textMuted,
+          maxTicksLimit: 4,
+          callback: (val: number | string) => {
+            const v = Number(val);
+            return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v;
+          },
+        },
+        grid: { color: border, lineWidth: 0.5 },
+        border: { display: false },
+        beginAtZero: true,
+      },
+    },
+  } as const;
 
   return (
-    <svg width={width} height={height} className="block overflow-visible">
-      {guides.map((g) => (
-        <line
-          key={g.val}
-          x1={padX}
-          x2={padX + innerW}
-          y1={g.y}
-          y2={g.y}
-          stroke="var(--color-border)"
-          strokeWidth={0.5}
-          strokeDasharray="2,2"
-        />
-      ))}
-      {[guides[0], guides[2], guides[4]].map((g) => (
-        <text
-          key={`label-${g.val}`}
-          x={padX - 2}
-          y={g.y + 3}
-          fontSize={7}
-          fontFamily="var(--font-mono)"
-          fill="var(--color-text-faint)"
-          textAnchor="end"
-        >
-          {g.val >= 1000 ? `${(g.val / 1000).toFixed(1)}k` : g.val}
-        </text>
-      ))}
-      <polygon points={area} fill="var(--color-green-light)" stroke="none" />
-      <polyline
-        points={polyline}
-        fill="none"
-        stroke="var(--color-green)"
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-      />
-      <circle
-        cx={points[points.length - 1].x}
-        cy={points[points.length - 1].y}
-        r={2.5}
-        fill="var(--color-green)"
-      />
-    </svg>
+    <div style={{ height }}>
+      <Line data={chartData} options={options as Parameters<typeof Line>[0]["options"]} />
+    </div>
   );
 }
 
@@ -402,17 +431,7 @@ function ReputationPanel({
         </div>
         {earnings && (
           <>
-            <EarningsChart data={earnings.data_points} width={172} height={60} />
-            {earnings.data_points.length > 0 && (
-              <div className="flex justify-between mt-1">
-                <span className="text-[8px] font-mono text-text-faint">
-                  {formatDate(earnings.data_points[0].timestamp)}
-                </span>
-                <span className="text-[8px] font-mono text-text-faint">
-                  {formatDate(earnings.data_points[earnings.data_points.length - 1].timestamp)}
-                </span>
-              </div>
-            )}
+            <EarningsChart data={earnings.data_points} height={80} />
             <div className="mt-2 px-1.5 py-1 bg-green-light border border-dashed border-green/30 text-[8px] font-mono text-green leading-relaxed">
               +{earnings.last_7d_earned} &copy; last 7 days &middot; avg {earnings.avg_per_task} &copy; / task
             </div>
