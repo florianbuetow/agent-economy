@@ -58,14 +58,17 @@ function timeFilterToApi(f: string): string {
 function badgeStyle(badge: string): { filled: boolean; style?: React.CSSProperties } {
   switch (badge) {
     case "TASK":
-    case "PAYOUT":
       return { filled: true };
+    case "PAYOUT":
+      return { filled: true, style: { backgroundColor: "var(--color-green)", borderColor: "var(--color-green)" } };
     case "BID":
       return { filled: false };
     case "ESCROW":
-      return { filled: false, style: { borderStyle: "dashed" } };
+      return { filled: false, style: { borderStyle: "dashed", borderColor: "var(--color-amber)", color: "var(--color-amber)" } };
     case "REP":
-      return { filled: false, style: { borderStyle: "dotted", backgroundColor: "var(--color-bg-dark)" } };
+      return { filled: false, style: { borderStyle: "dotted", backgroundColor: "var(--color-amber-light)", borderColor: "var(--color-amber)" } };
+    case "DISPUTE":
+      return { filled: true, style: { backgroundColor: "var(--color-red)", borderColor: "var(--color-red)" } };
     case "SYSTEM":
       return { filled: false, style: { borderColor: "var(--color-text-muted)" } };
     default:
@@ -293,11 +296,11 @@ function EarningsChart({
           {g.val >= 1000 ? `${(g.val / 1000).toFixed(1)}k` : g.val}
         </text>
       ))}
-      <polygon points={area} fill="var(--color-bg-dark)" stroke="none" />
+      <polygon points={area} fill="var(--color-green-light)" stroke="none" />
       <polyline
         points={polyline}
         fill="none"
-        stroke="var(--color-border-strong)"
+        stroke="var(--color-green)"
         strokeWidth={1.5}
         strokeLinejoin="round"
       />
@@ -305,7 +308,7 @@ function EarningsChart({
         cx={points[points.length - 1].x}
         cy={points[points.length - 1].y}
         r={2.5}
-        fill="var(--color-border-strong)"
+        fill="var(--color-green)"
       />
     </svg>
   );
@@ -328,9 +331,9 @@ function QualitySection({ label, stats }: { label: string; stats: QualityStats }
     );
   }
   const rows = [
-    { name: "\u2605\u2605\u2605 Extremely satisfied", count: stats.extremely_satisfied },
-    { name: "\u2605\u2605  Satisfied", count: stats.satisfied },
-    { name: "\u2605   Dissatisfied", count: stats.dissatisfied },
+    { name: "\u2605\u2605\u2605 Extremely satisfied", count: stats.extremely_satisfied, color: "text-green" },
+    { name: "\u2605\u2605  Satisfied", count: stats.satisfied, color: "text-green" },
+    { name: "\u2605   Dissatisfied", count: stats.dissatisfied, color: "text-red" },
   ];
   return (
     <div className="px-3.5 py-3 border-b border-border">
@@ -341,8 +344,8 @@ function QualitySection({ label, stats }: { label: string; stats: QualityStats }
       {rows.map((r) => (
         <div key={r.name} className="mb-1.5">
           <div className="flex justify-between mb-0.5">
-            <span className="text-[9px] font-mono">{r.name}</span>
-            <span className="text-[9px] font-mono">{r.count}</span>
+            <span className={`text-[9px] font-mono ${r.count > 0 ? r.color : ""}`}>{r.name}</span>
+            <span className={`text-[9px] font-mono font-bold ${r.count > 0 ? r.color : ""}`}>{r.count}</span>
           </div>
           <HatchBar pct={Math.round((r.count / total) * 100)} height={9} />
         </div>
@@ -359,10 +362,10 @@ function ReputationPanel({
   earnings: AgentEarningsResponse | null;
 }) {
   const summaryStats = [
-    { label: "Tasks worked", val: String(profile.stats.tasks_completed_as_worker) },
-    { label: "Tasks posted", val: String(profile.stats.tasks_posted) },
-    { label: "Total earned", val: `${profile.stats.total_earned} \u00a9` },
-    { label: "Total spent", val: `${profile.stats.total_spent} \u00a9` },
+    { label: "Tasks worked", val: String(profile.stats.tasks_completed_as_worker), color: "" },
+    { label: "Tasks posted", val: String(profile.stats.tasks_posted), color: "" },
+    { label: "Total earned", val: `${profile.stats.total_earned} \u00a9`, color: "text-green" },
+    { label: "Total spent", val: `${profile.stats.total_spent} \u00a9`, color: "text-red" },
   ];
 
   return (
@@ -380,7 +383,7 @@ function ReputationPanel({
             className="flex justify-between py-1 border-b border-dotted border-border items-baseline"
           >
             <span className="text-[10px] font-mono text-text-mid">{s.label}</span>
-            <span className="text-[11px] font-bold font-mono">{s.val}</span>
+            <span className={`text-[11px] font-bold font-mono ${s.color}`}>{s.val}</span>
           </div>
         ))}
       </div>
@@ -393,7 +396,7 @@ function ReputationPanel({
           <span className="text-[9px] font-mono text-text-muted">
             cumulative &middot; all-time
           </span>
-          <span className="text-[11px] font-bold font-mono">
+          <span className="text-[11px] font-bold font-mono text-green">
             {earnings ? `${earnings.total_earned.toLocaleString()} \u00a9` : "\u2014"}
           </span>
         </div>
@@ -410,7 +413,7 @@ function ReputationPanel({
                 </span>
               </div>
             )}
-            <div className="mt-2 px-1.5 py-1 bg-bg-off border border-dashed border-border text-[8px] font-mono text-text-muted leading-relaxed">
+            <div className="mt-2 px-1.5 py-1 bg-green-light border border-dashed border-green/30 text-[8px] font-mono text-green leading-relaxed">
               +{earnings.last_7d_earned} &copy; last 7 days &middot; avg {earnings.avg_per_task} &copy; / task
             </div>
           </>
@@ -421,7 +424,7 @@ function ReputationPanel({
         <div className="text-[9px] font-mono uppercase tracking-[1.5px] text-text-muted mb-1">
           Account Balance
         </div>
-        <div className="text-[13px] font-bold font-mono">
+        <div className="text-[13px] font-bold font-mono text-green">
           {profile.balance.toLocaleString()} &copy;
         </div>
       </div>
@@ -614,7 +617,7 @@ function TaskHistoryPanel({ tasks }: { tasks: RecentTask[] }) {
               >
                 {t.title}
               </Link>
-              <span className="text-[10px] font-bold font-mono shrink-0">
+              <span className="text-[10px] font-bold font-mono shrink-0 text-green">
                 {t.reward} &copy;
               </span>
             </div>
@@ -622,7 +625,14 @@ function TaskHistoryPanel({ tasks }: { tasks: RecentTask[] }) {
               <Badge style={{ fontSize: 7 }}>{t.role.toUpperCase()}</Badge>
               <Badge
                 filled={t.status.toLowerCase() === "approved"}
-                style={{ fontSize: 7 }}
+                style={{
+                  fontSize: 7,
+                  ...(t.status.toLowerCase() === "approved"
+                    ? { backgroundColor: "var(--color-green)", borderColor: "var(--color-green)" }
+                    : t.status.toLowerCase() === "disputed" || t.status.toLowerCase() === "ruled"
+                      ? { borderColor: "var(--color-red)", color: "var(--color-red)" }
+                      : {}),
+                }}
               >
                 {t.status.toUpperCase()}
               </Badge>
@@ -709,16 +719,16 @@ export default function AgentProfile() {
           </div>
           <div className="flex gap-6">
             {[
-              { label: "Tasks worked", val: String(profile.stats.tasks_completed_as_worker) },
-              { label: "Tasks posted", val: String(profile.stats.tasks_posted) },
-              { label: "Total earned", val: `${profile.stats.total_earned} \u00a9` },
-              { label: "Total spent", val: `${profile.stats.total_spent} \u00a9` },
+              { label: "Tasks worked", val: String(profile.stats.tasks_completed_as_worker), color: "" },
+              { label: "Tasks posted", val: String(profile.stats.tasks_posted), color: "" },
+              { label: "Total earned", val: `${profile.stats.total_earned} \u00a9`, color: "text-green" },
+              { label: "Total spent", val: `${profile.stats.total_spent} \u00a9`, color: "text-red" },
             ].map((s) => (
               <div key={s.label} className="text-right">
                 <div className="text-[8px] font-mono uppercase tracking-[1.5px] text-text-muted">
                   {s.label}
                 </div>
-                <div className="text-[16px] font-bold font-mono">{s.val}</div>
+                <div className={`text-[16px] font-bold font-mono ${s.color}`}>{s.val}</div>
               </div>
             ))}
           </div>

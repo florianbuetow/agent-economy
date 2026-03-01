@@ -14,7 +14,11 @@
   --color-text-muted: #888888;
   --color-text-faint: #bbbbbb;
   --color-green: #1a7a1a;
+  --color-green-light: #e6f4e6;
   --color-red: #b91c1c;
+  --color-red-light: #fde8e8;
+  --color-amber: #b45309;
+  --color-amber-light: #fef3c7;
   --color-nav-bg: #ffffff;
   --color-nav-text: #111111;
   --color-nav-text-muted: #888888;
