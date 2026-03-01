@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 from datetime import UTC, datetime
+from logging.handlers import TimedRotatingFileHandler
 from typing import Any
 
 
@@ -66,13 +68,31 @@ class JSONFormatter(logging.Formatter):
 VALID_LOG_LEVELS: frozenset[str] = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
 
 
-def setup_logging(level: str, service_name: str) -> logging.Logger:
+def _log_namer(default_name: str) -> str:
+    """
+    Rename rotated log files to YYYY-MM-DD.log format.
+
+    TimedRotatingFileHandler appends a date suffix to the base filename
+    (e.g. current.log.2026-03-01). This namer replaces the full path
+    with just the date suffix + .log extension in the same directory.
+    """
+    directory = os.path.dirname(default_name)
+    # default_name is like /path/to/current.log.2026-03-01
+    suffix = default_name.rsplit(".", 1)[-1]  # "2026-03-01"
+    return os.path.join(directory, f"{suffix}.log")
+
+
+def setup_logging(level: str, service_name: str, log_directory: str) -> logging.Logger:
     """
     Configure structured JSON logging for a service.
+
+    Logs to both stdout and a daily rotating file in log_directory.
+    File naming: YYYY-MM-DD.log.
 
     Args:
         level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         service_name: Name of the service for logger identification
+        log_directory: Directory for rotating log files
 
     Returns:
         Configured logger instance
@@ -90,10 +110,23 @@ def setup_logging(level: str, service_name: str) -> logging.Logger:
     logger.setLevel(numeric_level)
     logger.handlers.clear()
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(numeric_level)
-    handler.setFormatter(JSONFormatter())
-    logger.addHandler(handler)
+    formatter = JSONFormatter()
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(numeric_level)
+    stdout_handler.setFormatter(formatter)
+    logger.addHandler(stdout_handler)
+
+    os.makedirs(log_directory, exist_ok=True)
+    file_handler = TimedRotatingFileHandler(
+        filename=os.path.join(log_directory, "current.log"),
+        when="midnight",
+        utc=True,
+    )
+    file_handler.namer = _log_namer
+    file_handler.setLevel(numeric_level)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
     logger.propagate = False
     return logger
