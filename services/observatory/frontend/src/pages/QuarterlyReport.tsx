@@ -88,7 +88,7 @@ export default function QuarterlyReport() {
                 {report.gdp.total.toLocaleString()}
               </div>
               <div className="text-[10px] text-text-muted mt-1">coins produced</div>
-              <div className="text-[11px] text-text-mid mt-3">
+              <div className={`text-[11px] mt-3 ${report.gdp.delta_pct >= 0 ? "text-green" : "text-red"}`}>
                 {report.gdp.delta_pct >= 0 ? "▲" : "▼"}{" "}
                 {Math.abs(report.gdp.delta_pct).toFixed(1)}% from previous quarter
                 ({report.gdp.previous_quarter.toLocaleString()})
@@ -116,11 +116,11 @@ export default function QuarterlyReport() {
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-text-muted">Disputed</span>
-                    <span className="text-text font-bold">{report.tasks.disputed}</span>
+                    <span className={`font-bold ${report.tasks.disputed > 0 ? "text-red" : "text-text"}`}>{report.tasks.disputed}</span>
                   </div>
                   <div className="flex justify-between text-[11px] pt-2 border-t border-border">
                     <span className="text-text-muted">Completion rate</span>
-                    <span className="text-text font-bold">
+                    <span className={`font-bold ${report.tasks.completion_rate > 0.5 ? "text-green" : "text-red"}`}>
                       {(report.tasks.completion_rate * 100).toFixed(0)}%
                     </span>
                   </div>
