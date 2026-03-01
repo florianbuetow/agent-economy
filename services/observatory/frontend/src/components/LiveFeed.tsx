@@ -113,7 +113,7 @@ export default function LiveFeed({ events, paused, onTogglePause }: LiveFeedProp
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className="text-[8px] font-mono uppercase tracking-[1px] px-1.5 py-0.5 border cursor-pointer"
+                className="text-[8px] font-mono uppercase tracking-[1px] px-1.5 py-0.5 border cursor-pointer transition-opacity duration-150 hover:opacity-75"
                 style={
                   isActive && bg
                     ? { backgroundColor: bg, borderColor: bg, color: "#fff", fontWeight: "bold" }
