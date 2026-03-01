@@ -6,11 +6,22 @@
 
 import type { AgentNode, TaskNode, AgentState, Category, Particle, Ripple } from "./types";
 import { BG_COLOR, HATCH_DEFS, W, STATE_LABELS, CATEGORIES, TASK_STATE_TINTS, AGENT_STATE_TINTS } from "./types";
-import { createCamera, fitToViewport, worldToScreen, isVisible } from "./camera";
+import { createCamera, fitToViewport, worldToScreen, screenToWorld, isVisible } from "./camera";
 import type { Camera } from "./camera";
 import { createAgent, updateAgent } from "./agents";
 import { createTask, updateTask } from "./tasks";
 import { updateParticle, updateRipple } from "./effects";
+
+// ─── Hit-test result type ───────────────────────────────────────────────────
+
+export interface HitInfo {
+  kind: "agent" | "task";
+  name: string;
+  state: string;
+  category: string;
+  detail: string;
+  detailLabel: string;
+}
 
 // ─── Hatch pattern factory ──────────────────────────────────────────────────
 
@@ -180,6 +191,72 @@ export class GraphEngine {
     }
 
     return counts;
+  }
+
+  /** Hit-test: find the nearest node under the given screen coordinates */
+  hitTest(screenX: number, screenY: number): HitInfo | null {
+    const w = this.canvas.clientWidth;
+    const h = this.canvas.clientHeight;
+    const { wx, wy } = screenToWorld(screenX, screenY, this.camera, w, h);
+
+    // Check agents first (rendered on top of tasks)
+    for (const agent of this.agents) {
+      const dx = wx - agent.x;
+      const dy = wy - agent.y;
+      if (dx * dx + dy * dy <= agent.r * agent.r) {
+        return {
+          kind: "agent",
+          name: agent.name,
+          state: STATE_LABELS[agent.state],
+          category: agent.category,
+          detail: `${Math.round(agent.wealth)}¢`,
+          detailLabel: "wealth",
+        };
+      }
+    }
+
+    // Then tasks
+    for (const task of this.tasks) {
+      const dx = wx - task.x;
+      const dy = wy - task.y;
+      if (dx * dx + dy * dy <= task.r * task.r) {
+        return {
+          kind: "task",
+          name: task.name,
+          state: task.state,
+          category: task.category,
+          detail: `${Math.round(task.payoff)}¢`,
+          detailLabel: "payoff",
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /** Pan the camera by a screen-space delta */
+  panBy(dsx: number, dsy: number): void {
+    this.camera.x -= dsx / this.camera.zoom;
+    this.camera.y -= dsy / this.camera.zoom;
+  }
+
+  /** Zoom toward/away from a screen point */
+  zoomAt(screenX: number, screenY: number, factor: number): void {
+    const w = this.canvas.clientWidth;
+    const h = this.canvas.clientHeight;
+
+    // World point under cursor before zoom
+    const before = screenToWorld(screenX, screenY, this.camera, w, h);
+
+    // Apply zoom (clamp to reasonable range)
+    this.camera.zoom = Math.max(0.04, Math.min(2, this.camera.zoom * factor));
+
+    // World point under cursor after zoom
+    const after = screenToWorld(screenX, screenY, this.camera, w, h);
+
+    // Adjust camera so the world point stays under cursor
+    this.camera.x -= after.wx - before.wx;
+    this.camera.y -= after.wy - before.wy;
   }
 
   // ─── Main Loop ──────────────────────────────────────────────────────────

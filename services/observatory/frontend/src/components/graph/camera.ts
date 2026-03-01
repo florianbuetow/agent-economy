@@ -37,6 +37,20 @@ export function worldToScreen(
   };
 }
 
+/** Convert screen coordinates back to world coordinates */
+export function screenToWorld(
+  sx: number,
+  sy: number,
+  camera: Camera,
+  canvasW: number,
+  canvasH: number,
+): { wx: number; wy: number } {
+  return {
+    wx: (sx - canvasW / 2) / camera.zoom + camera.x,
+    wy: (sy - canvasH / 2) / camera.zoom + camera.y,
+  };
+}
+
 /** Check if a circle at world position is visible on screen */
 export function isVisible(
   wx: number,
