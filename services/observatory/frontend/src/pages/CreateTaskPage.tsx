@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { postJSON } from "../api/client";
+import { fetchTaskDrilldown } from "../api/tasks";
 
 interface CreateTaskResponse {
   task_id: string;
 }
+
+const POLL_INTERVAL_MS = 2000;
 
 export default function CreateTaskPage() {
   const navigate = useNavigate();
@@ -13,6 +16,31 @@ export default function CreateTaskPage() {
   const [reward, setReward] = useState<number | "">(100);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [waitingForTaskId, setWaitingForTaskId] = useState<string | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Poll the Observatory DB until the task appears, then redirect
+  useEffect(() => {
+    if (!waitingForTaskId) return;
+
+    function poll() {
+      fetchTaskDrilldown(waitingForTaskId!)
+        .then(() => {
+          navigate(`/observatory/tasks/${waitingForTaskId}`);
+        })
+        .catch(() => {
+          // Not in DB yet — keep polling
+        });
+    }
+
+    // First attempt immediately
+    poll();
+    intervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [waitingForTaskId, navigate]);
 
   const canSubmit = title.trim() !== "" && spec.trim() !== "" && reward !== "" && reward > 0;
 
@@ -27,11 +55,33 @@ export default function CreateTaskPage() {
         spec: spec.trim(),
         reward: Number(reward),
       });
-      navigate(`/observatory/tasks/${result.task_id}`);
+      setWaitingForTaskId(result.task_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create task");
       setSubmitting(false);
     }
+  }
+
+  if (waitingForTaskId) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-4">
+        <div className="flex gap-1">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-2 h-2 bg-text-muted rounded-full animate-bounce"
+              style={{ animationDelay: `${i * 150}ms` }}
+            />
+          ))}
+        </div>
+        <div className="font-mono text-[11px] text-text-muted uppercase tracking-[2px]">
+          Task posted — waiting for sync
+        </div>
+        <div className="font-mono text-[10px] text-text-faint">
+          {waitingForTaskId}
+        </div>
+      </div>
+    );
   }
 
   return (
