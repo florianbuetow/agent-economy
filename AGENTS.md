@@ -80,7 +80,14 @@ config/
   semgrep/              Static analysis rules
   codespell/            Spell-check ignore list
 docs/
-  specifications/       API specs per service
+  plans/                Design documents and implementation plans (date-prefixed)
+  specifications/
+    service-api/        API specs per service
+    service-tests/      Test specs per service
+  codex-tasks/          Phased implementation task plans for agents
+  diagrams/             System diagrams and sequence diagrams
+  demo-scenarios/       Demo scenario descriptions
+  explanations/         Technical explainers
   service-implementation-guide.md   How to implement a service from scaffolding
 ```
 
