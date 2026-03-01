@@ -24,33 +24,27 @@ const EVENT_TYPE_TO_BADGE: Record<string, string> = {
   "court.ruling_issued": "RULING",
 };
 
+const BADGE_COLORS: Record<string, string> = {
+  TASK: "#2563eb",     // blue
+  BID: "#e645a0",      // pink
+  PAYOUT: "#16a34a",   // green
+  CONTRACT: "#7c3aed", // violet
+  SUBMIT: "#0891b2",   // cyan
+  ESCROW: "#ea580c",   // orange
+  REP: "#ca8a04",      // yellow
+  DISPUTE: "#dc2626",  // red
+  RULING: "#9333ea",   // purple
+  AGENT: "#555555",    // gray
+};
+
 const FILTER_TYPES = ["ALL", "TASK", "BID", "PAYOUT", "CONTRACT", "ESCROW", "REP"] as const;
 
 function badgeStyle(badgeType: string): { filled: boolean; style?: React.CSSProperties } {
-  switch (badgeType) {
-    case "PAYOUT":
-      return { filled: true, style: { backgroundColor: "#1a7a1a", borderColor: "#1a7a1a", color: "#fff" } };
-    case "TASK":
-      return { filled: true };
-    case "SUBMIT":
-      return { filled: true, style: { backgroundColor: "#0B2D6E", borderColor: "#0B2D6E", color: "#fff" } };
-    case "DISPUTE":
-      return { filled: true, style: { backgroundColor: "#b91c1c", borderColor: "#b91c1c", color: "#fff" } };
-    case "RULING":
-      return { filled: true, style: { backgroundColor: "#4a1580", borderColor: "#4a1580", color: "#fff" } };
-    case "ESCROW":
-      return { filled: true, style: { backgroundColor: "#b45309", borderColor: "#b45309", color: "#fff" } };
-    case "BID":
-      return { filled: true, style: { backgroundColor: "#6b7280", borderColor: "#6b7280", color: "#fff" } };
-    case "CONTRACT":
-      return { filled: true, style: { backgroundColor: "#0B2D6E", borderColor: "#0B2D6E", color: "#fff" } };
-    case "REP":
-      return { filled: true, style: { backgroundColor: "#b8860b", borderColor: "#b8860b", color: "#fff" } };
-    case "AGENT":
-      return { filled: true, style: { backgroundColor: "#555555", borderColor: "#555555", color: "#fff" } };
-    default:
-      return { filled: true };
+  const bg = BADGE_COLORS[badgeType];
+  if (bg) {
+    return { filled: true, style: { backgroundColor: bg, borderColor: bg, color: "#fff" } };
   }
+  return { filled: true };
 }
 
 function timeAgo(timestamp: string): string {
@@ -94,19 +88,26 @@ export default function LiveFeed({ events, paused, onTogglePause }: LiveFeedProp
           </button>
         </div>
         <div className="flex gap-1 flex-wrap">
-          {FILTER_TYPES.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`text-[8px] font-mono uppercase tracking-[1px] px-1.5 py-0.5 border cursor-pointer ${
-                filter === f
-                  ? "border-border-strong bg-border-strong text-bg font-bold"
-                  : "border-border bg-bg text-text-muted"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+          {FILTER_TYPES.map((f) => {
+            const bg = BADGE_COLORS[f];
+            const isActive = filter === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className="text-[8px] font-mono uppercase tracking-[1px] px-1.5 py-0.5 border cursor-pointer"
+                style={
+                  isActive && bg
+                    ? { backgroundColor: bg, borderColor: bg, color: "#fff", fontWeight: "bold" }
+                    : isActive
+                      ? { backgroundColor: "var(--color-border-strong)", borderColor: "var(--color-border-strong)", color: "var(--color-bg)", fontWeight: "bold" }
+                      : { backgroundColor: "var(--color-bg)", borderColor: "var(--color-border)", color: "var(--color-text-muted)" }
+                }
+              >
+                {f}
+              </button>
+            );
+          })}
         </div>
       </div>
 
