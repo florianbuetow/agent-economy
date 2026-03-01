@@ -6,7 +6,6 @@ import base64
 import hashlib
 import json
 import re
-import sqlite3
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -15,6 +14,7 @@ from typing import TYPE_CHECKING, Any, cast
 from service_commons.exceptions import ServiceError
 
 from task_board_service.logging import get_logger
+from task_board_service.services.task_store import DuplicateBidError, DuplicateTaskError, TaskStore
 
 if TYPE_CHECKING:
     from task_board_service.clients.central_bank_client import CentralBankClient
@@ -89,13 +89,13 @@ class TaskManager:
     Manages the full task lifecycle: creation, bidding, acceptance,
     execution, submission, review, dispute, and ruling.
 
-    Owns the SQLite database, delegates authentication to the Identity
-    service via IdentityClient, and manages escrow via CentralBankClient.
+    Delegates persistence to TaskStore, authentication to the Identity
+    service via IdentityClient, and escrow operations via CentralBankClient.
     """
 
     def __init__(
         self,
-        db_path: str,
+        store: TaskStore,
         identity_client: IdentityClient,
         central_bank_client: CentralBankClient,
         platform_signer: PlatformSigner,
@@ -104,6 +104,7 @@ class TaskManager:
         max_file_size: int,
         max_files_per_task: int,
     ) -> None:
+        self._store = store
         self._identity_client = identity_client
         self._central_bank_client = central_bank_client
         self._platform_signer = platform_signer
@@ -116,123 +117,9 @@ class TaskManager:
         # Ensure asset storage directory exists
         Path(self._asset_storage_path).mkdir(parents=True, exist_ok=True)
 
-        # Initialize SQLite database
-        self._db = sqlite3.connect(db_path, check_same_thread=False)
-        self._db.execute("PRAGMA journal_mode=WAL")
-        self._init_schema()
-
-    def _init_schema(self) -> None:
-        """Create database tables if they do not exist."""
-        self._db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS tasks (
-                task_id TEXT PRIMARY KEY,
-                poster_id TEXT NOT NULL,
-                title TEXT NOT NULL,
-                spec TEXT NOT NULL,
-                reward INTEGER NOT NULL,
-                bidding_deadline_seconds INTEGER NOT NULL,
-                deadline_seconds INTEGER NOT NULL,
-                review_deadline_seconds INTEGER NOT NULL,
-                status TEXT NOT NULL DEFAULT 'open',
-                escrow_id TEXT NOT NULL,
-                bid_count INTEGER NOT NULL DEFAULT 0,
-                worker_id TEXT,
-                accepted_bid_id TEXT,
-                created_at TEXT NOT NULL,
-                accepted_at TEXT,
-                submitted_at TEXT,
-                approved_at TEXT,
-                cancelled_at TEXT,
-                disputed_at TEXT,
-                dispute_reason TEXT,
-                ruling_id TEXT,
-                ruled_at TEXT,
-                worker_pct INTEGER,
-                ruling_summary TEXT,
-                expired_at TEXT,
-                escrow_pending INTEGER NOT NULL DEFAULT 0
-            )
-            """
-        )
-        self._db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS bids (
-                bid_id TEXT PRIMARY KEY,
-                task_id TEXT NOT NULL,
-                bidder_id TEXT NOT NULL,
-                amount INTEGER NOT NULL,
-                submitted_at TEXT NOT NULL,
-                UNIQUE(task_id, bidder_id)
-            )
-            """
-        )
-        self._db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS assets (
-                asset_id TEXT PRIMARY KEY,
-                task_id TEXT NOT NULL,
-                uploader_id TEXT NOT NULL,
-                filename TEXT NOT NULL,
-                content_type TEXT NOT NULL,
-                size_bytes INTEGER NOT NULL,
-                content_hash TEXT NOT NULL,
-                uploaded_at TEXT NOT NULL
-            )
-            """
-        )
-        self._db.commit()
-
     # ------------------------------------------------------------------
     # Private helper methods
     # ------------------------------------------------------------------
-
-    def _get_task(self, task_id: str) -> dict[str, Any] | None:
-        """Fetch a task by ID. Returns dict or None."""
-        cursor = self._db.execute(
-            """
-            SELECT task_id, poster_id, title, spec, reward,
-                   bidding_deadline_seconds, deadline_seconds, review_deadline_seconds,
-                   status, escrow_id, bid_count, worker_id, accepted_bid_id,
-                   created_at, accepted_at, submitted_at, approved_at,
-                   cancelled_at, disputed_at, dispute_reason, ruling_id,
-                   ruled_at, worker_pct, ruling_summary, expired_at, escrow_pending
-            FROM tasks WHERE task_id = ?
-            """,
-            (task_id,),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        columns = [
-            "task_id",
-            "poster_id",
-            "title",
-            "spec",
-            "reward",
-            "bidding_deadline_seconds",
-            "deadline_seconds",
-            "review_deadline_seconds",
-            "status",
-            "escrow_id",
-            "bid_count",
-            "worker_id",
-            "accepted_bid_id",
-            "created_at",
-            "accepted_at",
-            "submitted_at",
-            "approved_at",
-            "cancelled_at",
-            "disputed_at",
-            "dispute_reason",
-            "ruling_id",
-            "ruled_at",
-            "worker_pct",
-            "ruling_summary",
-            "expired_at",
-            "escrow_pending",
-        ]
-        return dict(zip(columns, row, strict=True))
 
     def _compute_deadline(self, base_timestamp: str | None, seconds: int) -> str | None:
         """Compute a deadline by adding seconds to a base ISO timestamp."""
@@ -378,21 +265,13 @@ class TaskManager:
         """
         try:
             await self._release_escrow(escrow_id, recipient_id)
-            self._db.execute(
-                "UPDATE tasks SET escrow_pending = 0 WHERE task_id = ?",
-                (task_id,),
-            )
-            self._db.commit()
+            self._store.update_task(task_id, {"escrow_pending": 0}, expected_status=None)
         except ServiceError:
             self._logger.warning(
                 "Escrow release failed during deadline evaluation, marking pending",
                 extra={"task_id": task_id, "escrow_id": escrow_id},
             )
-            self._db.execute(
-                "UPDATE tasks SET escrow_pending = 1 WHERE task_id = ?",
-                (task_id,),
-            )
-            self._db.commit()
+            self._store.update_task(task_id, {"escrow_pending": 1}, expected_status=None)
 
     async def _retry_pending_escrow(self, task: dict[str, Any]) -> dict[str, Any]:
         """
@@ -415,11 +294,11 @@ class TaskManager:
 
         try:
             await self._release_escrow(task["escrow_id"], recipient_id)
-            self._db.execute(
-                "UPDATE tasks SET escrow_pending = 0 WHERE task_id = ?",
-                (task["task_id"],),
+            self._store.update_task(
+                str(task["task_id"]),
+                {"escrow_pending": 0},
+                expected_status=None,
             )
-            self._db.commit()
             task["escrow_pending"] = 0
         except ServiceError:
             self._logger.warning(
@@ -457,16 +336,12 @@ class TaskManager:
                 deadline_dt = datetime.fromisoformat(bidding_deadline.replace("Z", "+00:00"))
                 if now >= deadline_dt and int(task["bid_count"]) == 0:
                     expired_at = _now_iso()
-                    cursor = self._db.execute(
-                        """
-                        UPDATE tasks
-                        SET status = 'expired', expired_at = ?, escrow_pending = 1
-                        WHERE task_id = ? AND status = 'open'
-                        """,
-                        (expired_at, task["task_id"]),
+                    changed_rows = self._store.update_task(
+                        str(task["task_id"]),
+                        {"status": "expired", "expired_at": expired_at, "escrow_pending": 1},
+                        expected_status="open",
                     )
-                    self._db.commit()
-                    if cursor.rowcount > 0:
+                    if changed_rows > 0:
                         task["status"] = "expired"
                         task["expired_at"] = expired_at
                         task["escrow_pending"] = 1
@@ -474,7 +349,7 @@ class TaskManager:
                             task["task_id"], task["escrow_id"], task["poster_id"]
                         )
                         # Re-read to get final escrow_pending state
-                        refreshed = self._get_task(task["task_id"])
+                        refreshed = self._store.get_task(task["task_id"])
                         if refreshed is not None:
                             task = refreshed
 
@@ -486,23 +361,19 @@ class TaskManager:
                 deadline_dt = datetime.fromisoformat(execution_deadline.replace("Z", "+00:00"))
                 if now >= deadline_dt:
                     expired_at = _now_iso()
-                    cursor = self._db.execute(
-                        """
-                        UPDATE tasks
-                        SET status = 'expired', expired_at = ?, escrow_pending = 1
-                        WHERE task_id = ? AND status = 'accepted'
-                        """,
-                        (expired_at, task["task_id"]),
+                    changed_rows = self._store.update_task(
+                        str(task["task_id"]),
+                        {"status": "expired", "expired_at": expired_at, "escrow_pending": 1},
+                        expected_status="accepted",
                     )
-                    self._db.commit()
-                    if cursor.rowcount > 0:
+                    if changed_rows > 0:
                         task["status"] = "expired"
                         task["expired_at"] = expired_at
                         task["escrow_pending"] = 1
                         await self._try_release_escrow(
                             task["task_id"], task["escrow_id"], task["poster_id"]
                         )
-                        refreshed = self._get_task(task["task_id"])
+                        refreshed = self._store.get_task(task["task_id"])
                         if refreshed is not None:
                             task = refreshed
 
@@ -514,16 +385,12 @@ class TaskManager:
                 deadline_dt = datetime.fromisoformat(review_deadline.replace("Z", "+00:00"))
                 if now >= deadline_dt:
                     approved_at = _now_iso()
-                    cursor = self._db.execute(
-                        """
-                        UPDATE tasks
-                        SET status = 'approved', approved_at = ?, escrow_pending = 1
-                        WHERE task_id = ? AND status = 'submitted'
-                        """,
-                        (approved_at, task["task_id"]),
+                    changed_rows = self._store.update_task(
+                        str(task["task_id"]),
+                        {"status": "approved", "approved_at": approved_at, "escrow_pending": 1},
+                        expected_status="submitted",
                     )
-                    self._db.commit()
-                    if cursor.rowcount > 0:
+                    if changed_rows > 0:
                         task["status"] = "approved"
                         task["approved_at"] = approved_at
                         task["escrow_pending"] = 1
@@ -532,7 +399,7 @@ class TaskManager:
                             task["escrow_id"],
                             task["worker_id"],
                         )
-                        refreshed = self._get_task(task["task_id"])
+                        refreshed = self._store.get_task(task["task_id"])
                         if refreshed is not None:
                             task = refreshed
 
@@ -884,7 +751,7 @@ class TaskManager:
             )
 
         # Step 10 (variant): Check task_id not already in DB
-        existing = self._get_task(task_id)
+        existing = self._store.get_task(task_id)
         if existing is not None:
             raise ServiceError(
                 "TASK_ALREADY_EXISTS",
@@ -921,34 +788,37 @@ class TaskManager:
         # Insert task into DB
         created_at = _now_iso()
         try:
-            self._db.execute(
-                """
-                INSERT INTO tasks (
-                    task_id, poster_id, title, spec, reward,
-                    bidding_deadline_seconds, deadline_seconds, review_deadline_seconds,
-                    status, escrow_id, bid_count, worker_id, accepted_bid_id,
-                    created_at, accepted_at, submitted_at, approved_at,
-                    cancelled_at, disputed_at, dispute_reason, ruling_id,
-                    ruled_at, worker_pct, ruling_summary, expired_at, escrow_pending
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, 0, NULL, NULL,
-                          ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                          NULL, NULL, NULL, NULL, 0)
-                """,
-                (
-                    task_id,
-                    poster_id,
-                    title,
-                    spec,
-                    reward_int,
-                    bidding_deadline_seconds_int,
-                    deadline_seconds_int,
-                    review_deadline_seconds_int,
-                    escrow_id,
-                    created_at,
-                ),
+            self._store.insert_task(
+                {
+                    "task_id": task_id,
+                    "poster_id": poster_id,
+                    "title": title,
+                    "spec": spec,
+                    "reward": reward_int,
+                    "bidding_deadline_seconds": bidding_deadline_seconds_int,
+                    "deadline_seconds": deadline_seconds_int,
+                    "review_deadline_seconds": review_deadline_seconds_int,
+                    "status": "open",
+                    "escrow_id": escrow_id,
+                    "bid_count": 0,
+                    "worker_id": None,
+                    "accepted_bid_id": None,
+                    "created_at": created_at,
+                    "accepted_at": None,
+                    "submitted_at": None,
+                    "approved_at": None,
+                    "cancelled_at": None,
+                    "disputed_at": None,
+                    "dispute_reason": None,
+                    "ruling_id": None,
+                    "ruled_at": None,
+                    "worker_pct": None,
+                    "ruling_summary": None,
+                    "expired_at": None,
+                    "escrow_pending": 0,
+                }
             )
-            self._db.commit()
-        except sqlite3.IntegrityError as exc:
+        except DuplicateTaskError as exc:
             # DB insert failed (e.g., race condition on duplicate task_id)
             # Rollback escrow: release back to poster
             try:
@@ -965,7 +835,7 @@ class TaskManager:
                 {},
             ) from exc
 
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             msg = f"Task {task_id} not found after insert"
             raise RuntimeError(msg)
@@ -978,7 +848,7 @@ class TaskManager:
         Raises:
             ServiceError: TASK_NOT_FOUND
         """
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
         task = await self._evaluate_deadline(task)
@@ -997,71 +867,13 @@ class TaskManager:
 
         Returns a list of task summary dicts.
         """
-        query = """
-            SELECT task_id, poster_id, title, spec, reward,
-                   bidding_deadline_seconds, deadline_seconds, review_deadline_seconds,
-                   status, escrow_id, bid_count, worker_id, accepted_bid_id,
-                   created_at, accepted_at, submitted_at, approved_at,
-                   cancelled_at, disputed_at, dispute_reason, ruling_id,
-                   ruled_at, worker_pct, ruling_summary, expired_at, escrow_pending
-            FROM tasks WHERE 1=1
-        """
-        params: list[object] = []
-
-        if status is not None:
-            query += " AND status = ?"
-            params.append(status)
-
-        if poster_id is not None:
-            query += " AND poster_id = ?"
-            params.append(poster_id)
-
-        if worker_id is not None:
-            query += " AND worker_id = ?"
-            params.append(worker_id)
-
-        query += " ORDER BY created_at DESC"
-
-        if limit is not None:
-            query += " LIMIT ?"
-            params.append(limit)
-
-        if offset is not None:
-            query += " OFFSET ?"
-            params.append(offset)
-
-        cursor = self._db.execute(query, params)
-        rows = cursor.fetchall()
-
-        columns = [
-            "task_id",
-            "poster_id",
-            "title",
-            "spec",
-            "reward",
-            "bidding_deadline_seconds",
-            "deadline_seconds",
-            "review_deadline_seconds",
-            "status",
-            "escrow_id",
-            "bid_count",
-            "worker_id",
-            "accepted_bid_id",
-            "created_at",
-            "accepted_at",
-            "submitted_at",
-            "approved_at",
-            "cancelled_at",
-            "disputed_at",
-            "dispute_reason",
-            "ruling_id",
-            "ruled_at",
-            "worker_pct",
-            "ruling_summary",
-            "expired_at",
-            "escrow_pending",
-        ]
-        tasks = [dict(zip(columns, row, strict=True)) for row in rows]
+        tasks = self._store.list_tasks(
+            status=status,
+            poster_id=poster_id,
+            worker_id=worker_id,
+            limit=limit,
+            offset=offset,
+        )
 
         # Evaluate deadlines for all tasks
         tasks = await self._evaluate_deadlines_batch(tasks)
@@ -1106,7 +918,7 @@ class TaskManager:
             raise ServiceError("FORBIDDEN", "Signer does not match poster_id", 403, {})
 
         # Step 10: Load task
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
@@ -1131,13 +943,13 @@ class TaskManager:
 
         # Update task status
         cancelled_at = _now_iso()
-        self._db.execute(
-            "UPDATE tasks SET status = 'cancelled', cancelled_at = ? WHERE task_id = ?",
-            (cancelled_at, task_id),
+        self._store.update_task(
+            task_id,
+            {"status": "cancelled", "cancelled_at": cancelled_at},
+            expected_status=None,
         )
-        self._db.commit()
 
-        updated = self._get_task(task_id)
+        updated = self._store.get_task(task_id)
         if updated is None:
             msg = f"Task {task_id} not found after update"
             raise RuntimeError(msg)
@@ -1191,7 +1003,7 @@ class TaskManager:
             raise ServiceError("FORBIDDEN", "Signer does not match bidder_id", 403, {})
 
         # Step 10: Load task
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
@@ -1230,20 +1042,16 @@ class TaskManager:
         submitted_at = _now_iso()
 
         try:
-            self._db.execute(
-                (
-                    "INSERT INTO bids "
-                    "(bid_id, task_id, bidder_id, amount, submitted_at) "
-                    "VALUES (?, ?, ?, ?, ?)"
-                ),
-                (bid_id, task_id, bidder_id, amount_int, submitted_at),
+            self._store.insert_bid(
+                {
+                    "bid_id": bid_id,
+                    "task_id": task_id,
+                    "bidder_id": bidder_id,
+                    "amount": amount_int,
+                    "submitted_at": submitted_at,
+                }
             )
-            self._db.execute(
-                "UPDATE tasks SET bid_count = bid_count + 1 WHERE task_id = ?",
-                (task_id,),
-            )
-            self._db.commit()
-        except sqlite3.IntegrityError as exc:
+        except DuplicateBidError as exc:
             raise ServiceError(
                 "BID_ALREADY_EXISTS",
                 "This agent already bid on this task",
@@ -1274,7 +1082,7 @@ class TaskManager:
         # come before task lookup in standard precedence, BUT the task_id
         # is in the URL (not the token), so we need the task to determine
         # if auth is required. Load task, then check status, then enforce auth.
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
@@ -1317,23 +1125,14 @@ class TaskManager:
                 )
 
         # Fetch all bids for this task
-        cursor = self._db.execute(
-            (
-                "SELECT bid_id, bidder_id, amount, submitted_at "
-                "FROM bids WHERE task_id = ? ORDER BY submitted_at"
-            ),
-            (task_id,),
-        )
-        rows = cursor.fetchall()
-
         bids = [
             {
-                "bid_id": row[0],
-                "bidder_id": row[1],
-                "amount": row[2],
-                "submitted_at": row[3],
+                "bid_id": str(row["bid_id"]),
+                "bidder_id": str(row["bidder_id"]),
+                "amount": int(row["amount"]),
+                "submitted_at": str(row["submitted_at"]),
             }
-            for row in rows
+            for row in self._store.get_bids_for_task(task_id)
         ]
 
         return {"task_id": task_id, "bids": bids}
@@ -1387,7 +1186,7 @@ class TaskManager:
             raise ServiceError("FORBIDDEN", "Signer does not match poster_id", 403, {})
 
         # Step 10: Load task
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
@@ -1408,29 +1207,26 @@ class TaskManager:
             raise ServiceError("FORBIDDEN", "Only the poster can accept bids", 403, {})
 
         # Step 12: Find the bid
-        cursor = self._db.execute(
-            "SELECT bid_id, bidder_id FROM bids WHERE bid_id = ? AND task_id = ?",
-            (bid_id, task_id),
-        )
-        bid_row = cursor.fetchone()
-        if bid_row is None:
+        bid = self._store.get_bid(bid_id, task_id)
+        if bid is None:
             raise ServiceError("BID_NOT_FOUND", "Bid not found", 404, {})
 
-        worker_id = bid_row[1]
+        worker_id = str(bid["bidder_id"])
         accepted_at = _now_iso()
 
         # Update task
-        self._db.execute(
-            """
-            UPDATE tasks
-            SET status = 'accepted', worker_id = ?, accepted_bid_id = ?, accepted_at = ?
-            WHERE task_id = ?
-            """,
-            (worker_id, bid_id, accepted_at, task_id),
+        self._store.update_task(
+            task_id,
+            {
+                "status": "accepted",
+                "worker_id": worker_id,
+                "accepted_bid_id": bid_id,
+                "accepted_at": accepted_at,
+            },
+            expected_status=None,
         )
-        self._db.commit()
 
-        updated = self._get_task(task_id)
+        updated = self._store.get_task(task_id)
         if updated is None:
             msg = f"Task {task_id} not found after update"
             raise RuntimeError(msg)
@@ -1479,7 +1275,7 @@ class TaskManager:
             raise ServiceError("FORBIDDEN", "Signer does not match worker_id", 403, {})
 
         # Step 10: Load task
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
@@ -1537,25 +1333,18 @@ class TaskManager:
         content_hash = hashlib.sha256(file_content).hexdigest()
 
         # Insert asset record
-        self._db.execute(
-            """
-            INSERT INTO assets (
-                asset_id, task_id, uploader_id, filename,
-                content_type, size_bytes, content_hash, uploaded_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                asset_id,
-                task_id,
-                signer_id,
-                filename,
-                content_type,
-                len(file_content),
-                content_hash,
-                uploaded_at,
-            ),
+        self._store.insert_asset(
+            {
+                "asset_id": asset_id,
+                "task_id": task_id,
+                "uploader_id": signer_id,
+                "filename": filename,
+                "content_type": content_type,
+                "size_bytes": len(file_content),
+                "content_hash": content_hash,
+                "uploaded_at": uploaded_at,
+            }
         )
-        self._db.commit()
 
         return {
             "asset_id": asset_id,
@@ -1575,31 +1364,21 @@ class TaskManager:
         Raises:
             ServiceError: TASK_NOT_FOUND
         """
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
-        cursor = self._db.execute(
-            """
-            SELECT asset_id, uploader_id, filename, content_type,
-                   size_bytes, content_hash, uploaded_at
-            FROM assets WHERE task_id = ? ORDER BY uploaded_at
-            """,
-            (task_id,),
-        )
-        rows = cursor.fetchall()
-
         assets = [
             {
-                "asset_id": row[0],
-                "uploader_id": row[1],
-                "filename": row[2],
-                "content_type": row[3],
-                "size_bytes": row[4],
-                "content_hash": row[5],
-                "uploaded_at": row[6],
+                "asset_id": str(row["asset_id"]),
+                "uploader_id": str(row["uploader_id"]),
+                "filename": str(row["filename"]),
+                "content_type": str(row["content_type"]),
+                "size_bytes": int(row["size_bytes"]),
+                "content_hash": str(row["content_hash"]),
+                "uploaded_at": str(row["uploaded_at"]),
             }
-            for row in rows
+            for row in self._store.get_assets_for_task(task_id)
         ]
 
         return {"task_id": task_id, "assets": assets}
@@ -1613,23 +1392,16 @@ class TaskManager:
         Raises:
             ServiceError: TASK_NOT_FOUND, ASSET_NOT_FOUND
         """
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
-        cursor = self._db.execute(
-            (
-                "SELECT asset_id, filename, content_type "
-                "FROM assets WHERE asset_id = ? AND task_id = ?"
-            ),
-            (asset_id, task_id),
-        )
-        row = cursor.fetchone()
-        if row is None:
+        asset = self._store.get_asset(asset_id, task_id)
+        if asset is None:
             raise ServiceError("ASSET_NOT_FOUND", "Asset not found", 404, {})
 
-        filename: str = row[1]
-        content_type: str = row[2]
+        filename = str(asset["filename"])
+        content_type = str(asset["content_type"])
 
         # Resolve the file path safely — prevent path traversal
         asset_dir = Path(self._asset_storage_path) / task_id / asset_id
@@ -1688,7 +1460,7 @@ class TaskManager:
             raise ServiceError("FORBIDDEN", "Signer does not match worker_id", 403, {})
 
         # Step 10: Load task
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
@@ -1728,13 +1500,13 @@ class TaskManager:
 
         # Update task
         submitted_at = _now_iso()
-        self._db.execute(
-            "UPDATE tasks SET status = 'submitted', submitted_at = ? WHERE task_id = ?",
-            (submitted_at, task_id),
+        self._store.update_task(
+            task_id,
+            {"status": "submitted", "submitted_at": submitted_at},
+            expected_status=None,
         )
-        self._db.commit()
 
-        updated = self._get_task(task_id)
+        updated = self._store.get_task(task_id)
         if updated is None:
             msg = f"Task {task_id} not found after update"
             raise RuntimeError(msg)
@@ -1778,7 +1550,7 @@ class TaskManager:
             raise ServiceError("FORBIDDEN", "Signer does not match poster_id", 403, {})
 
         # Step 10: Load task
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
@@ -1803,13 +1575,13 @@ class TaskManager:
 
         # Update task
         approved_at = _now_iso()
-        self._db.execute(
-            "UPDATE tasks SET status = 'approved', approved_at = ? WHERE task_id = ?",
-            (approved_at, task_id),
+        self._store.update_task(
+            task_id,
+            {"status": "approved", "approved_at": approved_at},
+            expected_status=None,
         )
-        self._db.commit()
 
-        updated = self._get_task(task_id)
+        updated = self._store.get_task(task_id)
         if updated is None:
             msg = f"Task {task_id} not found after update"
             raise RuntimeError(msg)
@@ -1853,7 +1625,7 @@ class TaskManager:
             raise ServiceError("FORBIDDEN", "Signer does not match poster_id", 403, {})
 
         # Step 10: Load task
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
@@ -1893,16 +1665,13 @@ class TaskManager:
 
         # Update task
         disputed_at = _now_iso()
-        self._db.execute(
-            (
-                "UPDATE tasks SET status = 'disputed', disputed_at = ?, "
-                "dispute_reason = ? WHERE task_id = ?"
-            ),
-            (disputed_at, reason, task_id),
+        self._store.update_task(
+            task_id,
+            {"status": "disputed", "disputed_at": disputed_at, "dispute_reason": reason},
+            expected_status=None,
         )
-        self._db.commit()
 
-        updated = self._get_task(task_id)
+        updated = self._store.get_task(task_id)
         if updated is None:
             msg = f"Task {task_id} not found after update"
             raise RuntimeError(msg)
@@ -2004,7 +1773,7 @@ class TaskManager:
             )
 
         # Step 10: Load task
-        task = self._get_task(task_id)
+        task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
@@ -2046,18 +1815,19 @@ class TaskManager:
 
         # Update task
         ruled_at = _now_iso()
-        self._db.execute(
-            """
-            UPDATE tasks
-            SET status = 'ruled', ruled_at = ?, ruling_id = ?,
-                worker_pct = ?, ruling_summary = ?
-            WHERE task_id = ?
-            """,
-            (ruled_at, ruling_id, worker_pct_int, ruling_summary, task_id),
+        self._store.update_task(
+            task_id,
+            {
+                "status": "ruled",
+                "ruled_at": ruled_at,
+                "ruling_id": ruling_id,
+                "worker_pct": worker_pct_int,
+                "ruling_summary": ruling_summary,
+            },
+            expected_status=None,
         )
-        self._db.commit()
 
-        updated = self._get_task(task_id)
+        updated = self._store.get_task(task_id)
         if updated is None:
             msg = f"Task {task_id} not found after update"
             raise RuntimeError(msg)
@@ -2076,33 +1846,20 @@ class TaskManager:
 
     def count_tasks(self) -> int:
         """Count total tasks."""
-        cursor = self._db.execute("SELECT COUNT(*) FROM tasks")
-        result = cursor.fetchone()
-        if result is None:
-            return 0
-        return int(result[0])
+        return self._store.count_tasks()
 
     def count_tasks_by_status(self) -> dict[str, int]:
         """Count tasks grouped by status. Returns all 8 statuses with 0 defaults."""
         counts: dict[str, int] = dict.fromkeys(_VALID_STATUSES, 0)
-        cursor = self._db.execute("SELECT status, COUNT(*) FROM tasks GROUP BY status")
-        for row in cursor.fetchall():
-            status_val = str(row[0])
+        for status_val, count in self._store.count_tasks_by_status().items():
             if status_val in counts:
-                counts[status_val] = int(row[1])
+                counts[status_val] = int(count)
         return counts
 
     def count_assets(self, task_id: str) -> int:
         """Count assets for a specific task."""
-        cursor = self._db.execute(
-            "SELECT COUNT(*) FROM assets WHERE task_id = ?",
-            (task_id,),
-        )
-        result = cursor.fetchone()
-        if result is None:
-            return 0
-        return int(result[0])
+        return self._store.count_assets(task_id)
 
     def close(self) -> None:
         """Close the database connection."""
-        self._db.close()
+        self._store.close()

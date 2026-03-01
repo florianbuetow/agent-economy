@@ -16,6 +16,7 @@ from task_board_service.config import get_settings
 from task_board_service.core.state import init_app_state
 from task_board_service.logging import get_logger, setup_logging
 from task_board_service.services.task_manager import TaskManager
+from task_board_service.services.task_store import TaskStore
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -34,10 +35,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     state = init_app_state()
 
-    # Ensure database directory exists
     db_path = settings.database.path
     db_directory = Path(db_path).parent
-    db_directory.mkdir(parents=True, exist_ok=True)
 
     # Resolve asset settings from explicit assets section or legacy limits section
     if settings.assets is not None:
@@ -92,8 +91,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.central_bank_client = central_bank_client
 
     # Initialize TaskManager (all business logic)
+    store = TaskStore(db_path=db_path)
     task_manager = TaskManager(
-        db_path=db_path,
+        store=store,
         identity_client=identity_client,
         central_bank_client=central_bank_client,
         platform_signer=platform_signer,
