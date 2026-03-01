@@ -8,11 +8,15 @@ from service_commons.exceptions import ServiceError
 
 from observatory_service.core.state import get_app_state
 from observatory_service.schemas import (
+    AgentEarningsResponse,
+    AgentFeedEvent,
+    AgentFeedResponse,
     AgentListItem,
     AgentListResponse,
     AgentProfileResponse,
     AgentStats,
     DeliveryQualityStats,
+    EarningsDataPoint,
     FeedbackItem,
     RecentTask,
     SpecQualityStats,
@@ -140,4 +144,48 @@ async def get_agent_profile(agent_id: str) -> JSONResponse:
         recent_feedback=recent_feedback,
     )
 
+    return JSONResponse(content=response.model_dump(by_alias=True))
+
+
+@router.get("/agents/{agent_id}/feed")
+async def get_agent_feed(
+    agent_id: str,
+    limit: int = Query(50),
+    before: int | None = Query(None),
+    role: str | None = Query(None),
+    type: str | None = Query(None),
+    time: str | None = Query(None),
+) -> JSONResponse:
+    """Return agent-scoped activity feed with agent-centric framing."""
+    state = get_app_state()
+    db = state.db
+    assert db is not None
+
+    limit = min(max(limit, 1), 200)
+
+    events_list, has_more = await agents_service.get_agent_feed(
+        db, agent_id, limit, before, role, type, time
+    )
+
+    events = [AgentFeedEvent(**e) for e in events_list]
+    response = AgentFeedResponse(events=events, has_more=has_more)
+    return JSONResponse(content=response.model_dump(by_alias=True))
+
+
+@router.get("/agents/{agent_id}/earnings")
+async def get_agent_earnings(agent_id: str) -> JSONResponse:
+    """Return cumulative earnings over time for an agent."""
+    state = get_app_state()
+    db = state.db
+    assert db is not None
+
+    data = await agents_service.get_agent_earnings(db, agent_id)
+
+    response = AgentEarningsResponse(
+        data_points=[EarningsDataPoint(**dp) for dp in data["data_points"]],
+        total_earned=data["total_earned"],
+        last_7d_earned=data["last_7d_earned"],
+        avg_per_task=data["avg_per_task"],
+        tasks_approved=data["tasks_approved"],
+    )
     return JSONResponse(content=response.model_dump(by_alias=True))
