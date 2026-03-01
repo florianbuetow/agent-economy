@@ -24,6 +24,7 @@ identity:
 
 platform:
   agent_id: "a-platform-placeholder"
+  agent_config_path: "../../agents/config.yaml"
 
 request:
   max_body_size: 1048576

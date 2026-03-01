@@ -6,7 +6,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from central_bank_service.config import get_settings
+from base_agent.factory import AgentFactory
+
+from central_bank_service.config import get_config_path, get_settings
 from central_bank_service.core.state import init_app_state
 from central_bank_service.logging import get_logger, setup_logging
 from central_bank_service.services.identity_client import IdentityClient
@@ -43,6 +45,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         get_agent_path=settings.identity.get_agent_path,
     )
 
+    if settings.platform.agent_config_path:
+        config_path = Path(settings.platform.agent_config_path)
+        if not config_path.is_absolute():
+            config_path = Path(get_config_path()).parent / config_path
+        factory = AgentFactory(config_path=config_path)
+        state.platform_agent = factory.platform_agent()
+        await state.platform_agent.register()
+        logger.info("Platform agent registered", extra={"agent_id": state.platform_agent.agent_id})
+
     logger.info(
         "Service starting",
         extra={
@@ -56,5 +67,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # === SHUTDOWN ===
     logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
+    if state.platform_agent is not None:
+        await state.platform_agent.close()
     await state.identity_client.close()
     state.ledger.close()

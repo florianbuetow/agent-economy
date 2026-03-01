@@ -7,10 +7,10 @@ from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 from starlette.concurrency import run_in_threadpool
 
-from central_bank_service.config import get_settings
 from central_bank_service.core.state import get_app_state
 from central_bank_service.logging import get_logger
 from central_bank_service.routers.helpers import (
+    get_platform_agent_id,
     parse_json_body,
     require_account_owner,
     require_platform,
@@ -39,10 +39,8 @@ async def create_account(request: Request) -> JSONResponse:
         msg = "Ledger not initialized"
         raise RuntimeError(msg)
 
-    settings = get_settings()
-
     verified = await verify_jws_token(data["token"])
-    require_platform(verified["agent_id"], settings.platform.agent_id)
+    require_platform(verified["agent_id"], get_platform_agent_id())
 
     payload = verified["payload"]
     action = payload.get("action")
@@ -109,10 +107,8 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
         msg = "Ledger not initialized"
         raise RuntimeError(msg)
 
-    settings = get_settings()
-
     verified = await verify_jws_token(data["token"])
-    require_platform(verified["agent_id"], settings.platform.agent_id)
+    require_platform(verified["agent_id"], get_platform_agent_id())
 
     payload = verified["payload"]
     action = payload.get("action")
