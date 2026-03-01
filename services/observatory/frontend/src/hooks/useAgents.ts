@@ -10,7 +10,7 @@ export function useAgents() {
     fetchAgents("total_earned", "desc", 10).then((res) =>
       setWorkers(res.agents)
     ).catch(() => {});
-    fetchAgents("total_spent", "desc", 10).then((res) =>
+    fetchAgents("spec_quality", "desc", 10).then((res) =>
       setPosters(res.agents)
     ).catch(() => {});
   }, []);
