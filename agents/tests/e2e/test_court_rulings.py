@@ -177,7 +177,7 @@ async def test_escrow_split_proportional_payout(
         agents_to_close.extend([poster, worker])
 
         reward = 1000
-        disputed_task, dispute_id, ruling_payload = await _drive_to_ruling(
+        _disputed_task, _dispute_id, ruling_payload = await _drive_to_ruling(
             poster, worker, platform_agent, reward=reward
         )
 
@@ -220,7 +220,7 @@ async def test_ruling_recorded_on_task_board(
         worker = await make_funded_agent(name="Worker CR2", balance=0)
         agents_to_close.extend([poster, worker])
 
-        disputed_task, dispute_id, ruling_payload = await _drive_to_ruling(
+        disputed_task, _dispute_id, ruling_payload = await _drive_to_ruling(
             poster, worker, platform_agent, reward=1000
         )
 
@@ -255,7 +255,7 @@ async def test_court_posts_reputation_feedback(
         worker = await make_funded_agent(name="Worker CR3", balance=0)
         agents_to_close.extend([poster, worker])
 
-        disputed_task, dispute_id, ruling_payload = await _drive_to_ruling(
+        disputed_task, _dispute_id, _ruling_payload = await _drive_to_ruling(
             poster, worker, platform_agent, reward=1000
         )
 
@@ -297,9 +297,7 @@ async def test_dispute_proceeds_without_rebuttal(
         worker = await make_funded_agent(name="Worker CR4", balance=0)
         agents_to_close.extend([poster, worker])
 
-        disputed_task, dispute_reason = await _create_disputed_task(
-            poster, worker, reward=1000
-        )
+        disputed_task, dispute_reason = await _create_disputed_task(poster, worker, reward=1000)
 
         dispute_id = await _file_dispute_with_court(
             poster, worker, platform_agent, disputed_task, dispute_reason
@@ -343,9 +341,7 @@ async def test_duplicate_dispute_rejected(
         worker = await make_funded_agent(name="Worker CR5", balance=0)
         agents_to_close.extend([poster, worker])
 
-        disputed_task, dispute_reason = await _create_disputed_task(
-            poster, worker, reward=1000
-        )
+        disputed_task, dispute_reason = await _create_disputed_task(poster, worker, reward=1000)
 
         # First filing should succeed (or already exist)
         dispute_id = await _file_dispute_with_court(

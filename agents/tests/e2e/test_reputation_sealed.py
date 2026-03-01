@@ -73,14 +73,18 @@ async def test_sealed_feedback_invisible_until_mutual(make_funded_agent) -> None
 
         # Now both should be visible
         task_feedback_after = await poster.get_task_feedback(task["task_id"])
-        assert len(task_feedback_after) == 2, "Both feedbacks should be visible after mutual submission"
+        assert len(task_feedback_after) == 2, (
+            "Both feedbacks should be visible after mutual submission"
+        )
 
         # Direct lookup should now succeed
         revealed_response = await poster._request_raw(
             "GET",
             f"{poster.config.reputation_url}/feedback/{poster_fb_id}",
         )
-        assert revealed_response.status_code == 200, "Feedback should be revealed after mutual submission"
+        assert revealed_response.status_code == 200, (
+            "Feedback should be revealed after mutual submission"
+        )
     finally:
         await _close_agents(agents_to_close)
 

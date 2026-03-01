@@ -84,9 +84,7 @@ async def _drive_dispute_to_ruling(
     )
 
     # Ruling
-    ruling_token = platform_agent._sign_jws(
-        {"action": "trigger_ruling", "dispute_id": dispute_id}
-    )
+    ruling_token = platform_agent._sign_jws({"action": "trigger_ruling", "dispute_id": dispute_id})
     ruling_resp = await platform_agent._request_raw(
         "POST",
         f"{platform_agent.config.court_url}/disputes/{dispute_id}/rule",
