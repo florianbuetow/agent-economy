@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from task_board_service.clients.central_bank_client import CentralBankClient
     from task_board_service.clients.identity_client import IdentityClient
     from task_board_service.clients.platform_signer import PlatformSigner
+    from task_board_service.services.escrow_coordinator import EscrowCoordinator
     from task_board_service.services.task_manager import TaskManager
 
 
@@ -22,10 +23,15 @@ class AppState:
     identity_client: IdentityClient | None = None
     central_bank_client: CentralBankClient | None = None
     platform_signer: PlatformSigner | None = None
+    escrow_coordinator: EscrowCoordinator | None = None
 
     def __setattr__(self, name: str, value: Any) -> None:
         """Keep TaskManager dependency references in sync with AppState fields."""
         super().__setattr__(name, value)
+
+        escrow_coordinator = self.__dict__.get("escrow_coordinator")
+        if name == "central_bank_client" and value is not None and escrow_coordinator is not None:
+            escrow_coordinator._central_bank_client = value
 
         task_manager = self.__dict__.get("task_manager")
         if task_manager is None:
