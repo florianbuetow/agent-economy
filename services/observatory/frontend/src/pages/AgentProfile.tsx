@@ -273,6 +273,7 @@ function EarningsChart({
         backgroundColor: greenLight,
         borderWidth: 2,
         pointRadius: 0,
+        pointHitRadius: 20,
         pointBackgroundColor: green,
         pointHoverRadius: 4,
         fill: true,
@@ -286,6 +287,8 @@ function EarningsChart({
     maintainAspectRatio: false,
     plugins: {
       tooltip: {
+        intersect: false,
+        mode: "index" as const,
         backgroundColor: "#111111",
         titleFont: { family: "'Courier New', monospace", size: 10 },
         bodyFont: { family: "'Courier New', monospace", size: 11 },
