@@ -18,6 +18,7 @@ from task_board_service.logging import get_logger, setup_logging
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
 from task_board_service.services.task_manager import TaskManager
 from task_board_service.services.task_store import TaskStore
+from task_board_service.services.token_validator import TokenValidator
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -95,11 +96,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     store = TaskStore(db_path=db_path)
     escrow_coordinator = EscrowCoordinator(central_bank_client=central_bank_client, store=store)
     state.escrow_coordinator = escrow_coordinator
+    token_validator = TokenValidator(identity_client=identity_client)
+    state.token_validator = token_validator
     task_manager = TaskManager(
         store=store,
         identity_client=identity_client,
         central_bank_client=central_bank_client,
         escrow_coordinator=escrow_coordinator,
+        token_validator=token_validator,
         platform_signer=platform_signer,
         asset_storage_path=asset_storage_path,
         max_file_size=max_file_size,
