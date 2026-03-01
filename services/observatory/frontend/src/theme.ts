@@ -14,6 +14,11 @@ export interface ThemeDefinition {
     textMuted: string;
     textFaint: string;
     green: string;
+    greenLight: string;
+    red: string;
+    redLight: string;
+    amber: string;
+    amberLight: string;
     yellow: string;
     navBg: string;
     navText: string;
@@ -39,6 +44,11 @@ export const THEMES: Record<string, ThemeDefinition> = {
       textMuted: "#888888",
       textFaint: "#bbbbbb",
       green: "#1a7a1a",
+      greenLight: "#e6f4e6",
+      red: "#b91c1c",
+      redLight: "#fde8e8",
+      amber: "#b45309",
+      amberLight: "#fef3c7",
       yellow: "#b8860b",
       navBg: "#ffffff",
       navText: "#111111",
@@ -62,6 +72,11 @@ export const THEMES: Record<string, ThemeDefinition> = {
       textMuted: "#9D8574",
       textFaint: "#C4A98C",
       green: "#006A4E",
+      greenLight: "#d4e8df",
+      red: "#a3231a",
+      redLight: "#f5dbd8",
+      amber: "#8a5d00",
+      amberLight: "#f5e6c8",
       yellow: "#a67b00",
       navBg: "#1A1919",
       navText: "#FFF1E0",
@@ -85,6 +100,11 @@ export const THEMES: Record<string, ThemeDefinition> = {
       textMuted: "#6B7BA0",
       textFaint: "#A0AABF",
       green: "#007A5E",
+      greenLight: "#d6ede6",
+      red: "#b91c1c",
+      redLight: "#fde8e8",
+      amber: "#b45309",
+      amberLight: "#fef3c7",
       yellow: "#9a7b00",
       navBg: "#0B2D6E",
       navText: "#ffffff",
@@ -124,6 +144,11 @@ export function applyTheme(themeKey: string) {
   root.style.setProperty("--color-text-muted", theme.colors.textMuted);
   root.style.setProperty("--color-text-faint", theme.colors.textFaint);
   root.style.setProperty("--color-green", theme.colors.green);
+  root.style.setProperty("--color-green-light", theme.colors.greenLight);
+  root.style.setProperty("--color-red", theme.colors.red);
+  root.style.setProperty("--color-red-light", theme.colors.redLight);
+  root.style.setProperty("--color-amber", theme.colors.amber);
+  root.style.setProperty("--color-amber-light", theme.colors.amberLight);
   root.style.setProperty("--color-yellow", theme.colors.yellow);
   root.style.setProperty("--color-nav-bg", theme.colors.navBg);
   root.style.setProperty("--color-nav-text", theme.colors.navText);
