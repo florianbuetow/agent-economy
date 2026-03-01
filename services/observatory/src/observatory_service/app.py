@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from observatory_service.config import get_settings
 from observatory_service.core.exceptions import register_exception_handlers
 from observatory_service.core.lifespan import lifespan
-from observatory_service.routers import agents, events, health, metrics, quarterly, tasks
+from observatory_service.routers import agents, demo, events, health, metrics, quarterly, tasks
 
 
 def create_app() -> FastAPI:
@@ -33,5 +33,6 @@ def create_app() -> FastAPI:
     app.include_router(agents.router, prefix="/api", tags=["Agents"])
     app.include_router(tasks.router, prefix="/api", tags=["Tasks"])
     app.include_router(quarterly.router, prefix="/api", tags=["Quarterly"])
+    app.include_router(demo.router, prefix="/api", tags=["Demo"])
 
     return app
