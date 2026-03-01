@@ -115,11 +115,11 @@ START NOW by reading the spec file.
 After sending instructions to the agent, you MUST automatically check on it periodically. Never ask the user to check — do it yourself.
 
 **Polling schedule:**
-- **First 30 seconds:** Check every 10 seconds. The agent often hits permission prompts for new tools/commands right away. Every second you waste waiting is time the agent sits idle.
-- **After first minute:** Check every 30 seconds.
-- **After agent is clearly in a working rhythm** (no prompts, actively writing/running): Check every 60 seconds.
+- **First check:** Wait 15-30 seconds after sending instructions, then check once. The agent often hits permission prompts for new tools/commands right away.
+- **Subsequent checks:** Wait 15-30 seconds between each check. Do not check more frequently — let the agent work.
+- **After agent is clearly in a working rhythm** (no prompts, actively writing/running): Check every 30-60 seconds.
 
-**Why check quickly at first:** When the agent runs a tool or command for the first time (e.g., `just init`, `uv run pytest`, a new script), it will likely prompt for permission. If you wait 2 minutes to check, that's 2 minutes of wasted idle time. Check back fast, approve or answer, then let it continue.
+**Why wait 15-30 seconds:** Checking too frequently wastes your turns and adds noise. The agent needs time to process. When it hits a permission prompt, it will wait — a 15-30 second delay is acceptable.
 
 **What to look for on each check:**
 - Is it waiting at a Yes/No permission prompt? → Answer it immediately
