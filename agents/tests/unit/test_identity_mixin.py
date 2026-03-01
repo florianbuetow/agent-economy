@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call
 
 import httpx
 import pytest
@@ -11,15 +11,15 @@ import pytest
 from base_agent.agent import BaseAgent
 
 if TYPE_CHECKING:
-    from base_agent.config import Settings
+    from base_agent.config import AgentConfig
 
 
 @pytest.mark.unit
 class TestRegister:
     """Tests for agent registration behavior."""
 
-    async def test_register_success(self, sample_settings: Settings) -> None:
-        agent = BaseAgent(handle="testbot", config=sample_settings)
+    async def test_register_success(self, sample_config: AgentConfig) -> None:
+        agent = BaseAgent(config=sample_config)
         response_data = {
             "agent_id": "a-123",
             "name": "Test Bot",
@@ -29,9 +29,7 @@ class TestRegister:
         response = httpx.Response(
             status_code=201,
             json=response_data,
-            request=httpx.Request(
-                "POST", f"{sample_settings.platform.identity_url}/agents/register"
-            ),
+            request=httpx.Request("POST", f"{sample_config.identity_url}/agents/register"),
         )
         agent._request_raw = AsyncMock(return_value=response)
 
@@ -41,7 +39,7 @@ class TestRegister:
         assert agent.agent_id == "a-123"
         agent._request_raw.assert_awaited_once_with(
             "POST",
-            f"{sample_settings.platform.identity_url}/agents/register",
+            f"{sample_config.identity_url}/agents/register",
             json={
                 "name": "Test Bot",
                 "public_key": f"ed25519:{agent.get_public_key_b64()}",
@@ -49,17 +47,21 @@ class TestRegister:
         )
         await agent.close()
 
-    async def test_register_idempotent_409(self, sample_settings: Settings) -> None:
-        agent = BaseAgent(handle="testbot", config=sample_settings)
+    async def test_register_idempotent_409(self, sample_config: AgentConfig) -> None:
+        agent = BaseAgent(config=sample_config)
         conflict_response = httpx.Response(
             status_code=409,
             json={"error": "PUBLIC_KEY_EXISTS", "message": "Public key already registered"},
-            request=httpx.Request(
-                "POST", f"{sample_settings.platform.identity_url}/agents/register"
-            ),
+            request=httpx.Request("POST", f"{sample_config.identity_url}/agents/register"),
         )
+
         list_agents_response = {
             "agents": [
+                {
+                    "agent_id": "a-other",
+                    "name": "Not Us",
+                    "registered_at": "2026-02-20T10:30:00Z",
+                },
                 {
                     "agent_id": "a-existing",
                     "name": "Test Bot",
@@ -67,7 +69,13 @@ class TestRegister:
                 },
             ],
         }
-        get_agent_response = {
+        other_agent_full = {
+            "agent_id": "a-other",
+            "name": "Not Us",
+            "public_key": "ed25519:not-our-key",
+            "registered_at": "2026-02-20T10:30:00Z",
+        }
+        matching_agent_full = {
             "agent_id": "a-existing",
             "name": "Test Bot",
             "public_key": f"ed25519:{agent.get_public_key_b64()}",
@@ -75,22 +83,25 @@ class TestRegister:
         }
 
         agent._request_raw = AsyncMock(return_value=conflict_response)
-        agent._request = AsyncMock(side_effect=[list_agents_response, get_agent_response])
+        agent._request = AsyncMock(
+            side_effect=[
+                list_agents_response,
+                other_agent_full,
+                matching_agent_full,
+                matching_agent_full,
+            ]
+        )
 
         result = await agent.register()
 
-        assert result == get_agent_response
+        assert result == matching_agent_full
         assert agent.agent_id == "a-existing"
         agent._request_raw.assert_awaited_once()
         assert agent._request.await_args_list == [
-            (
-                ("GET", f"{sample_settings.platform.identity_url}/agents"),
-                {},
-            ),
-            (
-                ("GET", f"{sample_settings.platform.identity_url}/agents/a-existing"),
-                {},
-            ),
+            call("GET", f"{sample_config.identity_url}/agents"),
+            call("GET", f"{sample_config.identity_url}/agents/a-other"),
+            call("GET", f"{sample_config.identity_url}/agents/a-existing"),
+            call("GET", f"{sample_config.identity_url}/agents/a-existing"),
         ]
         await agent.close()
 
@@ -99,8 +110,8 @@ class TestRegister:
 class TestGetAgentInfo:
     """Tests for get_agent_info."""
 
-    async def test_get_agent_info_returns_record(self, sample_settings: Settings) -> None:
-        agent = BaseAgent(handle="testbot", config=sample_settings)
+    async def test_get_agent_info_returns_record(self, sample_config: AgentConfig) -> None:
+        agent = BaseAgent(config=sample_config)
         agent_record = {
             "agent_id": "a-123",
             "name": "Test Bot",
@@ -114,7 +125,7 @@ class TestGetAgentInfo:
         assert result == agent_record
         agent._request.assert_awaited_once_with(
             "GET",
-            f"{sample_settings.platform.identity_url}/agents/a-123",
+            f"{sample_config.identity_url}/agents/a-123",
         )
         await agent.close()
 
@@ -123,8 +134,8 @@ class TestGetAgentInfo:
 class TestListAgents:
     """Tests for list_agents."""
 
-    async def test_list_agents_returns_list(self, sample_settings: Settings) -> None:
-        agent = BaseAgent(handle="testbot", config=sample_settings)
+    async def test_list_agents_returns_list(self, sample_config: AgentConfig) -> None:
+        agent = BaseAgent(config=sample_config)
         list_response = {
             "agents": [
                 {
@@ -141,7 +152,7 @@ class TestListAgents:
         assert result == list_response["agents"]
         agent._request.assert_awaited_once_with(
             "GET",
-            f"{sample_settings.platform.identity_url}/agents",
+            f"{sample_config.identity_url}/agents",
         )
         await agent.close()
 
@@ -150,8 +161,8 @@ class TestListAgents:
 class TestVerifyJws:
     """Tests for verify_jws."""
 
-    async def test_verify_jws_valid(self, sample_settings: Settings) -> None:
-        agent = BaseAgent(handle="testbot", config=sample_settings)
+    async def test_verify_jws_valid(self, sample_config: AgentConfig) -> None:
+        agent = BaseAgent(config=sample_config)
         verify_response = {"valid": True, "agent_id": "a-123"}
         agent._request = AsyncMock(return_value=verify_response)
 
@@ -160,13 +171,13 @@ class TestVerifyJws:
         assert result == verify_response
         agent._request.assert_awaited_once_with(
             "POST",
-            f"{sample_settings.platform.identity_url}/agents/verify-jws",
+            f"{sample_config.identity_url}/agents/verify-jws",
             json={"token": "token-123"},
         )
         await agent.close()
 
-    async def test_verify_jws_invalid(self, sample_settings: Settings) -> None:
-        agent = BaseAgent(handle="testbot", config=sample_settings)
+    async def test_verify_jws_invalid(self, sample_config: AgentConfig) -> None:
+        agent = BaseAgent(config=sample_config)
         verify_response = {"valid": False, "reason": "signature mismatch"}
         agent._request = AsyncMock(return_value=verify_response)
 
@@ -175,7 +186,7 @@ class TestVerifyJws:
         assert result == verify_response
         agent._request.assert_awaited_once_with(
             "POST",
-            f"{sample_settings.platform.identity_url}/agents/verify-jws",
+            f"{sample_config.identity_url}/agents/verify-jws",
             json={"token": "bad-token"},
         )
         await agent.close()

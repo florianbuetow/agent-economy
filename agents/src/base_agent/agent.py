@@ -8,11 +8,9 @@ config) live here.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import httpx
-import yaml
 
 from base_agent.mixins import (
     BankMixin,
@@ -21,113 +19,23 @@ from base_agent.mixins import (
     ReputationMixin,
     TaskBoardMixin,
 )
-from base_agent.signing import (
-    create_jws,
-    generate_keypair,
-    load_private_key,
-    load_public_key,
-    public_key_to_b64,
-)
+from base_agent.signing import create_jws, public_key_to_b64
 
 if TYPE_CHECKING:
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import (
-        Ed25519PrivateKey,
-        Ed25519PublicKey,
-    )
-
-    from base_agent.config import Settings
+    from base_agent.config import AgentConfig
 
 
 class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, CourtMixin):
-    """Programmable client for the Agent Task Economy platform.
+    """Programmable client for the Agent Task Economy platform."""
 
-    Holds agent identity (keypair, handle, name) and provides HTTP + signing
-    internals used by all service mixins. Methods on mixins are dual-use:
-    callable directly from Python and usable as Strands @tool functions.
-
-    Usage::
-
-        config = get_settings()
-        agent = BaseAgent(handle="alice", config=config)
-        await agent.register()
-        tasks = await agent.list_tasks(status="open")
-    """
-
-    def __init__(self, handle: str, config: Settings) -> None:
-        """Initialize the agent with a handle and configuration.
-
-        Loads the keypair from disk (or generates one if missing) and reads
-        the agent's name from the roster file.
-
-        Args:
-            handle: Agent handle from roster (e.g. "alice").
-                    Maps to key files: {keys_dir}/alice.key, {keys_dir}/alice.pub
-            config: Loaded Settings object with platform URLs and data paths.
-        """
-        self.handle = handle
+    def __init__(self, config: AgentConfig) -> None:
+        """Initialize the agent from a fully materialized AgentConfig."""
         self.config = config
+        self.name = config.name
         self.agent_id: str | None = None
-
-        # Resolve paths relative to config file directory
-        config_dir = Path(config.data.keys_dir)
-        if not config_dir.is_absolute():
-            config_dir = Path.cwd() / config_dir
-        self._keys_dir = config_dir.resolve()
-
-        # Load roster
-        roster_path = Path(config.data.roster_path)
-        if not roster_path.is_absolute():
-            roster_path = Path.cwd() / roster_path
-        roster = self._load_roster(roster_path.resolve())
-        self.name: str = roster["agents"][handle]["name"]
-        self.agent_type: str = roster["agents"][handle]["type"]
-
-        # Load or generate keypair
-        self._private_key, self._public_key = self._load_or_generate_keys()
-
-        # HTTP client
+        self._private_key = config.private_key
+        self._public_key = config.public_key
         self._http = httpx.AsyncClient()
-
-    @staticmethod
-    def _load_roster(roster_path: Path) -> dict[str, Any]:
-        """Load the agent roster from a YAML file.
-
-        Args:
-            roster_path: Absolute path to roster.yaml.
-
-        Returns:
-            Parsed roster dictionary.
-
-        Raises:
-            FileNotFoundError: If roster file does not exist.
-            ValueError: If roster file is empty or invalid.
-        """
-        if not roster_path.exists():
-            msg = f"Roster file not found: {roster_path}"
-            raise FileNotFoundError(msg)
-
-        with roster_path.open() as f:
-            roster = yaml.safe_load(f)
-
-        if not isinstance(roster, dict) or "agents" not in roster:
-            msg = f"Invalid roster file: {roster_path} — must contain 'agents' key"
-            raise ValueError(msg)
-
-        return roster
-
-    def _load_or_generate_keys(self) -> tuple[Ed25519PrivateKey, Ed25519PublicKey]:
-        """Load keypair from disk, or generate if missing.
-
-        Returns:
-            Tuple of (private_key, public_key).
-        """
-        private_path = self._keys_dir / f"{self.handle}.key"
-        public_path = self._keys_dir / f"{self.handle}.pub"
-
-        if private_path.exists() and public_path.exists():
-            return load_private_key(private_path), load_public_key(public_path)
-
-        return generate_keypair(self.handle, self._keys_dir)
 
     def get_public_key_b64(self) -> str:
         """Return the public key as a base64-encoded string.
@@ -222,4 +130,4 @@ class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, Court
 
     def __repr__(self) -> str:
         registered = f", agent_id={self.agent_id!r}" if self.agent_id else ""
-        return f"BaseAgent(handle={self.handle!r}, name={self.name!r}{registered})"
+        return f"BaseAgent(name={self.name!r}{registered})"
