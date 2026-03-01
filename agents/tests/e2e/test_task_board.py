@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 import pytest
@@ -288,5 +289,69 @@ async def test_file_dispute(make_funded_agent) -> None:
         disputed_task = await poster.get_task(task["task_id"])
         assert disputed_task["status"] == "disputed"
         assert disputed_task["dispute_reason"] == "Deliverable does not meet spec"
+    finally:
+        await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_execution_deadline_expiry(make_funded_agent) -> None:
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster NB6", balance=5000)
+        worker = await make_funded_agent(name="Worker NB6", balance=0)
+        agents_to_close.extend([poster, worker])
+
+        task = await poster.post_task(
+            title="Execution deadline task",
+            spec="Do something quickly",
+            reward=500,
+            bidding_deadline_seconds=5,
+            execution_deadline_seconds=2,
+            review_deadline_seconds=3600,
+        )
+        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+
+        await asyncio.sleep(5)
+
+        expired_task = await poster.get_task(task["task_id"])
+        assert expired_task["status"] == "expired"
+
+        poster_balance = await poster.get_balance()
+        assert poster_balance["balance"] == 5000
+    finally:
+        await _close_agents(agents_to_close)
+
+
+@pytest.mark.e2e
+async def test_auto_approve_on_review_timeout(make_funded_agent) -> None:
+    agents_to_close: list[BaseAgent] = []
+
+    try:
+        poster = await make_funded_agent(name="Poster ZYY", balance=5000)
+        worker = await make_funded_agent(name="Worker ZYY", balance=0)
+        agents_to_close.extend([poster, worker])
+
+        task = await poster.post_task(
+            title="Review timeout task",
+            spec="Do something quickly",
+            reward=500,
+            bidding_deadline_seconds=3600,
+            execution_deadline_seconds=7200,
+            review_deadline_seconds=2,
+        )
+        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
+        await worker.submit_deliverable(task["task_id"])
+
+        await asyncio.sleep(5)
+
+        approved_task = await poster.get_task(task["task_id"])
+        assert approved_task["status"] == "approved"
+
+        worker_balance = await worker.get_balance()
+        assert worker_balance["balance"] == 500
     finally:
         await _close_agents(agents_to_close)
