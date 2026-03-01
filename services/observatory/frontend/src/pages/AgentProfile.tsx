@@ -570,6 +570,15 @@ function ReputationPanel({
         )}
       </div>
 
+      {earnings && earnings.data_points.length >= 2 && (
+        <div className="px-3.5 py-3 border-b border-border">
+          <div className="text-[9px] font-mono uppercase tracking-[1.5px] text-text-muted border-b border-border pb-1 mb-2">
+            Monthly Earnings
+          </div>
+          <MonthlyEarningsChart data={earnings.data_points} height={80} />
+        </div>
+      )}
+
       <div className="px-3.5 py-3">
         <div className="text-[9px] font-mono uppercase tracking-[1.5px] text-text-muted mb-1">
           Account Balance
