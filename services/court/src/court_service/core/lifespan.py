@@ -16,6 +16,7 @@ from court_service.services.dispute_store import DisputeStore
 from court_service.services.identity_client import IdentityClient
 from court_service.services.platform_signer import PlatformSigner
 from court_service.services.reputation_client import ReputationClient
+from court_service.services.ruling_orchestrator import RulingOrchestrator
 from court_service.services.task_board_client import TaskBoardClient
 
 if TYPE_CHECKING:
@@ -132,7 +133,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     db_path = settings.database.path
     store = DisputeStore(db_path=db_path)
-    state.dispute_service = DisputeService(store=store)
+    orchestrator = RulingOrchestrator(store=store)
+    state.dispute_service = DisputeService(store=store, orchestrator=orchestrator)
 
     state.identity_client = IdentityClient(
         base_url=settings.identity.base_url,
