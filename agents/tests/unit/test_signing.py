@@ -20,6 +20,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@pytest.fixture()
+def tmp_keys_dir(tmp_path: Path) -> Path:
+    keys_dir = tmp_path / "keys"
+    keys_dir.mkdir()
+    return keys_dir
+
+
 @pytest.mark.unit
 class TestGenerateKeypair:
     """Tests for generate_keypair."""

@@ -111,6 +111,7 @@ addopts = "-v --tb=short --strict-markers"
 markers = [
     "unit: Unit tests (fast, isolated, no external dependencies)",
     "integration: Integration tests (require running services)",
+    "scenario: Scenario tests (require running services)",
 ]
 
 # === Coverage ===
