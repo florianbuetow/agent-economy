@@ -289,7 +289,14 @@ class CentralBankClient:
         poster_account_id: str,
         worker_pct: int,
     ) -> dict[str, Any]:
-        """Split escrow funds between worker and poster via a platform-signed token."""
+        """
+        Split escrow funds between worker and poster via a platform-signed token.
+
+        Raises:
+            ServiceError: NOT_FOUND (404) if escrow/account does not exist in Central Bank
+            ServiceError: FORBIDDEN (403) if authorization failed
+            ServiceError: CENTRAL_BANK_UNAVAILABLE (502) on connection/timeout/unexpected errors
+        """
         logger = get_logger(__name__)
 
         if self._escrow_split_path is None:
@@ -351,6 +358,33 @@ class CentralBankClient:
         if response.status_code == 200:
             result: dict[str, Any] = response.json()
             return result
+
+        if response.status_code == 404:
+            error_body = response.json()
+            raise ServiceError(
+                error=error_body.get("error", "NOT_FOUND"),
+                message=error_body.get("message", "Resource not found in Central Bank"),
+                status_code=404,
+                details=error_body.get("details", {}),
+            )
+
+        if response.status_code == 403:
+            error_body = response.json()
+            raise ServiceError(
+                error=error_body.get("error", "FORBIDDEN"),
+                message=error_body.get("message", "Central Bank authorization failed"),
+                status_code=403,
+                details=error_body.get("details", {}),
+            )
+
+        if response.status_code == 409:
+            error_body = response.json()
+            raise ServiceError(
+                error=error_body.get("error", "CONFLICT"),
+                message=error_body.get("message", "Central Bank conflict"),
+                status_code=409,
+                details=error_body.get("details", {}),
+            )
 
         logger.warning(
             "Central Bank unexpected status on escrow split",
