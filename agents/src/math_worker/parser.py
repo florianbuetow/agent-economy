@@ -41,7 +41,7 @@ def parse_bid_amount(response: str, max_reward: int) -> int | None:
         max_reward: Maximum valid bid (the task reward).
 
     Returns:
-        The bid amount, or ``None`` if unparseable or out of range.
+        The bid amount, or ``None`` if unparsable or out of range.
     """
     text = response.strip()
 

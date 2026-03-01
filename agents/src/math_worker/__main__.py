@@ -15,9 +15,8 @@ import sys
 
 import httpx
 
-from base_agent.config import load_agent_config
 from base_agent.agent import BaseAgent
-
+from base_agent.config import load_agent_config
 from math_worker.config import load_math_worker_settings
 from math_worker.llm_client import LLMClient
 from math_worker.loop import MathWorkerLoop
