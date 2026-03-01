@@ -1,42 +1,31 @@
 #!/usr/bin/env bash
-# ci-all-quiet-hook.sh — Claude Code Stop hook: runs CI only when tracked files changed.
+# ci-all-quiet-hook.sh — Claude Code PreToolUse hook for git commit.
 #
-# Behavior:
-#   - No uncommitted changes → skip CI, exit 0
-#   - Changes detected → run `just ci-all-quiet`
-#   - CI passes → exit 0
-#   - CI fails → output JSON block decision (keeps Claude working)
-#   - After 2 consecutive failures → give up, exit 0
+# Receives tool input on stdin. If the command is a git commit,
+# runs `just ci-all-quiet` first. Blocks the commit (exit 2) if CI fails.
+# All other commands pass through immediately.
 #
-# Usage: just ci-all-quiet-hook  (or directly: bash scripts/ci-all-quiet-hook.sh)
+# Usage: Configured as a PreToolUse hook in .claude/settings.json
 
 set -euo pipefail
 
-PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-RETRY_FILE="/tmp/ci-all-quiet-hook-$(echo "$PROJECT_DIR" | shasum -a 256 | cut -c1-12)"
+INPUT=$(cat)
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
+# Only intercept git commit commands
+if ! echo "$COMMAND" | grep -qE 'git commit'; then
+    exit 0
+fi
+
+PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
+if [ -z "$PROJECT_DIR" ]; then
+    PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+fi
 cd "$PROJECT_DIR"
 
-# No uncommitted changes to tracked files? Skip CI.
-if git diff --quiet HEAD 2>/dev/null && git diff --cached --quiet 2>/dev/null; then
-    rm -f "$RETRY_FILE"
-    exit 0
+if ! just ci-all-quiet 2>&1; then
+    echo "CI failed — fix all errors before committing." >&2
+    exit 2
 fi
 
-# Guard against infinite retry loops (max 2 attempts)
-retries=$(cat "$RETRY_FILE" 2>/dev/null || echo 0)
-if [ "$retries" -ge 2 ]; then
-    rm -f "$RETRY_FILE"
-    printf "\033[0;33m⚠ ci-all-quiet-hook: giving up after %d failed attempts\033[0m\n" "$retries"
-    exit 0
-fi
-echo $((retries + 1)) > "$RETRY_FILE"
-
-# Run CI
-if just ci-all-quiet 2>&1; then
-    rm -f "$RETRY_FILE"
-    printf "\033[0;32m✓ ci-all-quiet-hook passed\033[0m\n"
-    exit 0
-else
-    printf '{"decision":"block","reason":"CI failed on modified files. Please fix before stopping."}\n'
-fi
+exit 0

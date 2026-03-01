@@ -82,7 +82,7 @@ help:
     @printf "  \033[0;37mjust ci <service>     \033[0;34m Run CI checks for a specific service\033[0m\n"
     @printf "  \033[0;37mjust ci-all           \033[0;34m Run CI checks for all services (verbose)\033[0m\n"
     @printf "  \033[0;37mjust ci-all-quiet     \033[0;34m Run CI checks for all services (quiet)\033[0m\n"
-    @printf "  \033[0;37mjust ci-all-quiet-hook\033[0;34m CI hook for Claude Code (runs CI only when files changed)\033[0m\n"
+    @printf "  \033[0;37mjust ci-all-quiet-hook\033[0;34m CI hook for Claude Code (blocks git commit if CI fails)\033[0m\n"
     @printf "  \033[0;37mjust format-all       \033[0;34m Auto-format all services\033[0m\n"
     @printf "  \033[0;37mjust test-e2e         \033[0;34m Run e2e tests (requires running services)\033[0m\n"
     @printf "  \033[0;37mjust stats            \033[0;34m Show Python lines of code per service\033[0m\n"
@@ -515,7 +515,7 @@ ci-all-quiet:
 ci-quiet:
     @just ci-all-quiet
 
-# CI hook for Claude Code Stop event — runs CI only when tracked files changed
+# CI hook for Claude Code — blocks git commit if CI fails
 ci-all-quiet-hook:
     @bash scripts/ci-all-quiet-hook.sh
 
