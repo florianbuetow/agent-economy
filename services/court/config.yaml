@@ -12,4 +12,4 @@ server:
 
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"

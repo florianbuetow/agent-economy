@@ -12,7 +12,7 @@ server:
 
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 
 database:
   path: "data/identity.db"
