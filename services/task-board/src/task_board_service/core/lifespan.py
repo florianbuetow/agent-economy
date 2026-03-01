@@ -15,6 +15,7 @@ from task_board_service.clients.platform_signer import PlatformSigner
 from task_board_service.config import get_settings
 from task_board_service.core.state import init_app_state
 from task_board_service.logging import get_logger, setup_logging
+from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
 from task_board_service.services.task_manager import TaskManager
 from task_board_service.services.task_store import TaskStore
@@ -98,12 +99,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.escrow_coordinator = escrow_coordinator
     token_validator = TokenValidator(identity_client=identity_client)
     state.token_validator = token_validator
+    deadline_evaluator = DeadlineEvaluator(store=store, escrow_coordinator=escrow_coordinator)
     task_manager = TaskManager(
         store=store,
         identity_client=identity_client,
         central_bank_client=central_bank_client,
         escrow_coordinator=escrow_coordinator,
         token_validator=token_validator,
+        deadline_evaluator=deadline_evaluator,
         platform_signer=platform_signer,
         asset_storage_path=asset_storage_path,
         max_file_size=max_file_size,

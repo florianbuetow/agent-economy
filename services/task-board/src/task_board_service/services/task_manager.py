@@ -5,13 +5,14 @@ from __future__ import annotations
 import hashlib
 import re
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from service_commons.exceptions import ServiceError
 
 from task_board_service.logging import get_logger
+from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.task_store import DuplicateBidError, DuplicateTaskError, TaskStore
 from task_board_service.services.token_validator import decode_base64url_json
 
@@ -32,9 +33,6 @@ _TASK_ID_RE = re.compile(
 _VALID_STATUSES = frozenset(
     {"open", "accepted", "submitted", "approved", "cancelled", "disputed", "ruled", "expired"}
 )
-
-# Terminal statuses — no further transitions
-_TERMINAL_STATUSES = frozenset({"approved", "cancelled", "ruled", "expired"})
 
 
 def _now_iso() -> str:
@@ -68,6 +66,7 @@ class TaskManager:
         central_bank_client: CentralBankClient,
         escrow_coordinator: EscrowCoordinator,
         token_validator: TokenValidator,
+        deadline_evaluator: DeadlineEvaluator,
         platform_signer: PlatformSigner,
         platform_agent_id: str,
         asset_storage_path: str,
@@ -79,6 +78,7 @@ class TaskManager:
         self._central_bank_client = central_bank_client
         self._escrow_coordinator = escrow_coordinator
         self._token_validator = token_validator
+        self._deadline_evaluator = deadline_evaluator
         self._platform_signer = platform_signer
         self._platform_agent_id = platform_agent_id
         self._asset_storage_path = asset_storage_path
@@ -93,21 +93,15 @@ class TaskManager:
     # Private helper methods
     # ------------------------------------------------------------------
 
-    def _compute_deadline(self, base_timestamp: str | None, seconds: int) -> str | None:
-        """Compute a deadline by adding seconds to a base ISO timestamp."""
-        if base_timestamp is None:
-            return None
-        base_dt = datetime.fromisoformat(base_timestamp.replace("Z", "+00:00"))
-        deadline_dt = base_dt + timedelta(seconds=seconds)
-        return deadline_dt.isoformat(timespec="seconds").replace("+00:00", "Z")
-
     def _task_to_response(self, row: dict[str, Any]) -> dict[str, Any]:
         """Convert a DB row dict to a full task response dict."""
-        bidding_deadline = self._compute_deadline(
+        bidding_deadline = DeadlineEvaluator.compute_deadline(
             row["created_at"], row["bidding_deadline_seconds"]
         )
-        execution_deadline = self._compute_deadline(row["accepted_at"], row["deadline_seconds"])
-        review_deadline = self._compute_deadline(
+        execution_deadline = DeadlineEvaluator.compute_deadline(
+            row["accepted_at"], row["deadline_seconds"]
+        )
+        review_deadline = DeadlineEvaluator.compute_deadline(
             row["submitted_at"], row["review_deadline_seconds"]
         )
         return {
@@ -144,11 +138,13 @@ class TaskManager:
 
     def _task_to_summary(self, row: dict[str, Any]) -> dict[str, Any]:
         """Convert a DB row dict to a summary dict for list views."""
-        bidding_deadline = self._compute_deadline(
+        bidding_deadline = DeadlineEvaluator.compute_deadline(
             row["created_at"], row["bidding_deadline_seconds"]
         )
-        execution_deadline = self._compute_deadline(row["accepted_at"], row["deadline_seconds"])
-        review_deadline = self._compute_deadline(
+        execution_deadline = DeadlineEvaluator.compute_deadline(
+            row["accepted_at"], row["deadline_seconds"]
+        )
+        review_deadline = DeadlineEvaluator.compute_deadline(
             row["submitted_at"], row["review_deadline_seconds"]
         )
         return {
@@ -176,111 +172,6 @@ class TaskManager:
     def set_platform_signer(self, platform_signer: PlatformSigner) -> None:
         """Replace the platform signer dependency."""
         self._platform_signer = platform_signer
-
-    async def _evaluate_deadline(self, task: dict[str, Any]) -> dict[str, Any]:
-        """
-        Lazy deadline evaluation.
-
-        Checks if any active deadline has passed and transitions the task
-        to the appropriate status. Uses a database transaction with a
-        WHERE status = current_status clause to ensure atomicity.
-
-        After transition, attempts escrow release. If escrow fails,
-        escrow_pending is set to True for later retry.
-        """
-        # Skip terminal statuses — no further transitions possible
-        if task["status"] in _TERMINAL_STATUSES:
-            return task
-
-        # Retry any pending escrow releases first
-        task = await self._escrow_coordinator.retry_pending_escrow(task)
-
-        now = datetime.now(UTC)
-
-        if task["status"] == "open":
-            bidding_deadline = self._compute_deadline(
-                task["created_at"], task["bidding_deadline_seconds"]
-            )
-            if bidding_deadline is not None:
-                deadline_dt = datetime.fromisoformat(bidding_deadline.replace("Z", "+00:00"))
-                if now >= deadline_dt and int(task["bid_count"]) == 0:
-                    expired_at = _now_iso()
-                    changed_rows = self._store.update_task(
-                        str(task["task_id"]),
-                        {"status": "expired", "expired_at": expired_at, "escrow_pending": 1},
-                        expected_status="open",
-                    )
-                    if changed_rows > 0:
-                        task["status"] = "expired"
-                        task["expired_at"] = expired_at
-                        task["escrow_pending"] = 1
-                        await self._escrow_coordinator.try_release_escrow(
-                            task["task_id"], task["escrow_id"], task["poster_id"]
-                        )
-                        # Re-read to get final escrow_pending state
-                        refreshed = self._store.get_task(task["task_id"])
-                        if refreshed is not None:
-                            task = refreshed
-
-        elif task["status"] == "accepted":
-            execution_deadline = self._compute_deadline(
-                task["accepted_at"], task["deadline_seconds"]
-            )
-            if execution_deadline is not None:
-                deadline_dt = datetime.fromisoformat(execution_deadline.replace("Z", "+00:00"))
-                if now >= deadline_dt:
-                    expired_at = _now_iso()
-                    changed_rows = self._store.update_task(
-                        str(task["task_id"]),
-                        {"status": "expired", "expired_at": expired_at, "escrow_pending": 1},
-                        expected_status="accepted",
-                    )
-                    if changed_rows > 0:
-                        task["status"] = "expired"
-                        task["expired_at"] = expired_at
-                        task["escrow_pending"] = 1
-                        await self._escrow_coordinator.try_release_escrow(
-                            task["task_id"], task["escrow_id"], task["poster_id"]
-                        )
-                        refreshed = self._store.get_task(task["task_id"])
-                        if refreshed is not None:
-                            task = refreshed
-
-        elif task["status"] == "submitted":
-            review_deadline = self._compute_deadline(
-                task["submitted_at"], task["review_deadline_seconds"]
-            )
-            if review_deadline is not None:
-                deadline_dt = datetime.fromisoformat(review_deadline.replace("Z", "+00:00"))
-                if now >= deadline_dt:
-                    approved_at = _now_iso()
-                    changed_rows = self._store.update_task(
-                        str(task["task_id"]),
-                        {"status": "approved", "approved_at": approved_at, "escrow_pending": 1},
-                        expected_status="submitted",
-                    )
-                    if changed_rows > 0:
-                        task["status"] = "approved"
-                        task["approved_at"] = approved_at
-                        task["escrow_pending"] = 1
-                        await self._escrow_coordinator.try_release_escrow(
-                            task["task_id"],
-                            task["escrow_id"],
-                            task["worker_id"],
-                        )
-                        refreshed = self._store.get_task(task["task_id"])
-                        if refreshed is not None:
-                            task = refreshed
-
-        return task
-
-    async def _evaluate_deadlines_batch(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Evaluate deadlines for a list of tasks."""
-        result: list[dict[str, Any]] = []
-        for task in tasks:
-            evaluated = await self._evaluate_deadline(task)
-            result.append(evaluated)
-        return result
 
     # ------------------------------------------------------------------
     # Public methods — called by routers
@@ -568,7 +459,7 @@ class TaskManager:
         task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
-        task = await self._evaluate_deadline(task)
+        task = await self._deadline_evaluator.evaluate_deadline(task)
         return self._task_to_response(task)
 
     async def list_tasks(
@@ -593,7 +484,7 @@ class TaskManager:
         )
 
         # Evaluate deadlines for all tasks
-        tasks = await self._evaluate_deadlines_batch(tasks)
+        tasks = await self._deadline_evaluator.evaluate_deadlines_batch(tasks)
 
         return [self._task_to_summary(t) for t in tasks]
 
@@ -640,7 +531,7 @@ class TaskManager:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
         # Evaluate deadline first (task may have expired)
-        task = await self._evaluate_deadline(task)
+        task = await self._deadline_evaluator.evaluate_deadline(task)
 
         # Step 11: Check status
         if task["status"] != "open":
@@ -725,7 +616,7 @@ class TaskManager:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
         # Evaluate deadline first
-        task = await self._evaluate_deadline(task)
+        task = await self._deadline_evaluator.evaluate_deadline(task)
 
         # Step 11: Check status
         if task["status"] != "open":
@@ -736,7 +627,7 @@ class TaskManager:
                 {},
             )
 
-        bidding_deadline = self._compute_deadline(
+        bidding_deadline = DeadlineEvaluator.compute_deadline(
             task["created_at"],
             task["bidding_deadline_seconds"],
         )
@@ -804,7 +695,7 @@ class TaskManager:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
         # Evaluate deadline
-        task = await self._evaluate_deadline(task)
+        task = await self._deadline_evaluator.evaluate_deadline(task)
 
         if task["status"] == "open":
             # Sealed bids — require poster authentication
@@ -908,7 +799,7 @@ class TaskManager:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
         # Evaluate deadline
-        task = await self._evaluate_deadline(task)
+        task = await self._deadline_evaluator.evaluate_deadline(task)
 
         # Step 11: Check status
         if task["status"] != "open":
@@ -997,7 +888,7 @@ class TaskManager:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
         # Evaluate deadline
-        task = await self._evaluate_deadline(task)
+        task = await self._deadline_evaluator.evaluate_deadline(task)
 
         # Step 11: Check status (MUST come before role check — see error precedence notes)
         if task["status"] != "accepted":
@@ -1182,7 +1073,7 @@ class TaskManager:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
         # Evaluate deadline
-        task = await self._evaluate_deadline(task)
+        task = await self._deadline_evaluator.evaluate_deadline(task)
 
         # Step 11: Check status
         if task["status"] != "accepted":
@@ -1272,7 +1163,7 @@ class TaskManager:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
         # Evaluate deadline
-        task = await self._evaluate_deadline(task)
+        task = await self._deadline_evaluator.evaluate_deadline(task)
 
         # Step 11: Check status
         if task["status"] != "submitted":
@@ -1350,7 +1241,7 @@ class TaskManager:
             raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
 
         # Evaluate deadline
-        task = await self._evaluate_deadline(task)
+        task = await self._deadline_evaluator.evaluate_deadline(task)
 
         # Step 11: Check status
         if task["status"] != "submitted":
