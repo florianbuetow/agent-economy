@@ -54,7 +54,7 @@ class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, Court
         Returns:
             Compact JWS string (header.payload.signature).
         """
-        return create_jws(payload, self._private_key)
+        return create_jws(payload, self._private_key, kid=self.agent_id)
 
     def _auth_header(self, payload: dict[str, object]) -> dict[str, str]:
         """Create an Authorization header with a signed JWS token.

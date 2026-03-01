@@ -124,7 +124,11 @@ def _b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
 
-def create_jws(payload: dict[str, object], private_key: Ed25519PrivateKey) -> str:
+def create_jws(
+    payload: dict[str, object],
+    private_key: Ed25519PrivateKey,
+    kid: str | None = None,
+) -> str:
     """Create a compact JWS token (header.payload.signature) using EdDSA.
 
     Produces a three-part dot-separated string:
@@ -134,11 +138,14 @@ def create_jws(payload: dict[str, object], private_key: Ed25519PrivateKey) -> st
     Args:
         payload: Dictionary to sign as the JWS payload.
         private_key: Ed25519 private key used for signing.
+        kid: Optional key ID (agent_id) to include in the JWS header.
 
     Returns:
         Compact JWS string.
     """
-    header = {"alg": "EdDSA", "typ": "JWT"}
+    header: dict[str, str] = {"alg": "EdDSA", "typ": "JWT"}
+    if kid is not None:
+        header["kid"] = kid
     header_b64 = _b64url_encode(json.dumps(header, separators=(",", ":")).encode())
     payload_b64 = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode())
 
