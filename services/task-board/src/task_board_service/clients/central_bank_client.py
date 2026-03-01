@@ -61,6 +61,8 @@ class CentralBankClient:
 
         Raises:
             ServiceError: INSUFFICIENT_FUNDS (402) if the poster cannot cover the reward
+            ServiceError: ACCOUNT_NOT_FOUND (404) if the poster has no bank account
+            ServiceError: FORBIDDEN (403) if authorization failed
             ServiceError: CENTRAL_BANK_UNAVAILABLE (502) on connection/timeout/unexpected errors
         """
         logger = get_logger(__name__)
@@ -104,6 +106,33 @@ class CentralBankClient:
                 message="Poster has insufficient funds to cover the task reward",
                 status_code=402,
                 details=error_body,
+            )
+
+        if response.status_code == 404:
+            error_body = response.json()
+            raise ServiceError(
+                error=error_body.get("error", "ACCOUNT_NOT_FOUND"),
+                message=error_body.get("message", "Account not found in Central Bank"),
+                status_code=404,
+                details=error_body.get("details", {}),
+            )
+
+        if response.status_code == 403:
+            error_body = response.json()
+            raise ServiceError(
+                error=error_body.get("error", "FORBIDDEN"),
+                message=error_body.get("message", "Central Bank authorization failed"),
+                status_code=403,
+                details=error_body.get("details", {}),
+            )
+
+        if response.status_code == 409:
+            error_body = response.json()
+            raise ServiceError(
+                error=error_body.get("error", "CONFLICT"),
+                message=error_body.get("message", "Central Bank conflict"),
+                status_code=409,
+                details=error_body.get("details", {}),
             )
 
         logger.warning(
