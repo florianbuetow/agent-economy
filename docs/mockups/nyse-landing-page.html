@@ -26,6 +26,9 @@
     --orange:    #ff9100;
     --accent:    #00e5ff;
     --mono:      'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    /* ── Central scale factors ── Adjust these to resize everything ── */
+    --scale:       1.5;   /* ticker, nav, below-fold sections              */
+    --hero-scale:  2.0;   /* hero text + KPI strip (the big splash area)   */
   }
   html { font-size: 14px; }
   body {
@@ -93,7 +96,7 @@
   .ticker-strip {
     height: 32px; background: #070a0f; border-bottom: 1px solid var(--border);
     overflow: hidden; display: flex; align-items: center; position: relative;
-    flex-shrink: 0;
+    flex-shrink: 0; zoom: var(--scale);
   }
   .ticker-track {
     display: inline-flex; gap: 28px; white-space: nowrap; padding-left: 100%;
@@ -114,14 +117,14 @@
   /* ── Nav ─────────────────────────────────────────────── */
   .nav {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 32px; height: 52px; border-bottom: 1px solid var(--border);
-    background: var(--bg); flex-shrink: 0;
+    padding: 0 24px; height: 44px; border-bottom: 1px solid var(--border);
+    background: var(--bg); flex-shrink: 0; zoom: var(--scale);
   }
   .nav-brand {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 10px;
   }
   .nav-brand .logo {
-    font-size: 18px; font-weight: 900; letter-spacing: 4px;
+    font-size: 14px; font-weight: 900; letter-spacing: 3px;
     background: linear-gradient(135deg, var(--cyan), var(--green));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
@@ -151,7 +154,8 @@
 
   /* ── Above-the-fold viewport container ───────────────── */
   .viewport-splash {
-    display: flex; flex-direction: column; height: 100vh; min-height: 600px;
+    display: flex; flex-direction: column;
+    height: 100vh; min-height: 600px;
   }
 
   /* ── Hero ─────────────────────────────────────────────── */
@@ -159,56 +163,54 @@
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center; padding: 24px 24px;
     position: relative; overflow: hidden;
+    zoom: var(--hero-scale);
   }
   .hero::before {
-    content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%);
-    width: 800px; height: 800px; border-radius: 50%;
+    content: ''; position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 600px; border-radius: 50%;
     background: radial-gradient(circle, var(--cyan-dim) 0%, transparent 70%);
     pointer-events: none; opacity: .35;
   }
   .hero h1 {
-    font-size: 48px; font-weight: 800; line-height: 1.2; letter-spacing: -1.5px;
-    max-width: 800px; margin: 0 auto;
+    font-size: 32px; font-weight: 800; line-height: 1.25; letter-spacing: -1px;
+    max-width: 680px; margin: 0 auto;
     animation: fade-in-up .7s ease-out both;
   }
   .hero h1 .accent { color: var(--cyan); }
   .hero .subtitle {
-    font-size: 15px; color: var(--text-mid); margin-top: 20px; line-height: 1.7;
-    max-width: 600px; margin-left: auto; margin-right: auto;
+    font-size: 13px; color: var(--text-mid); margin-top: 14px; line-height: 1.6;
+    max-width: 520px; margin-left: auto; margin-right: auto;
     animation: fade-in-up .7s ease-out .15s both;
   }
   .hero .cta-row {
-    margin-top: 36px; display: flex; justify-content: center; gap: 16px;
+    margin-top: 28px; display: flex; justify-content: center; gap: 12px;
     animation: fade-in-up .7s ease-out .3s both;
   }
-  .hero .cta-row .nav-btn {
-    padding: 8px 22px; font-size: 12px; letter-spacing: 1.5px;
-  }
   .hero-tag {
-    display: inline-block; font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
-    color: var(--text-dim); margin-top: 28px;
+    display: inline-block; font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--text-dim); margin-top: 22px;
     animation: fade-in-up .7s ease-out .45s both;
   }
 
   /* ── KPI Strip ───────────────────────────────────────── */
   .kpi-strip {
     display: flex; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-    background: var(--bg-card); flex-shrink: 0;
+    background: var(--bg-card); flex-shrink: 0; zoom: var(--hero-scale);
   }
   .kpi-cell {
-    flex: 1; text-align: center; padding: 22px 12px;
+    flex: 1; text-align: center; padding: 18px 8px;
     border-right: 1px solid var(--border); position: relative;
     animation: fade-in-up .5s ease-out both;
   }
   .kpi-cell:last-child { border-right: none; }
-  .kpi-cell .kpi-label { font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
-  .kpi-cell .kpi-value { font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; }
+  .kpi-cell .kpi-label { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .kpi-cell .kpi-value { font-size: 24px; font-weight: 800; color: var(--text); line-height: 1; }
   .kpi-cell .kpi-value.counting { animation: counter-glow 2s ease-in-out; }
-  .kpi-cell .kpi-note { font-size: 11px; margin-top: 7px; font-weight: 600; }
+  .kpi-cell .kpi-note { font-size: 9px; margin-top: 5px; font-weight: 600; }
 
   /* ── Exchange Board ──────────────────────────────────── */
   .exchange-board {
-    max-width: 1100px; margin: 0 auto; padding: 32px 24px;
+    max-width: 1100px; margin: 0 auto; padding: 32px 24px; zoom: var(--scale);
   }
   .exchange-board .board-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -238,7 +240,7 @@
 
   /* ── Market Story ────────────────────────────────────── */
   .story-section {
-    max-width: 1100px; margin: 0 auto; padding: 24px;
+    max-width: 1100px; margin: 0 auto; padding: 24px; zoom: var(--scale);
   }
   .story-card {
     border: 1px solid var(--border); background: var(--bg-card); padding: 20px 24px;
@@ -260,7 +262,7 @@
 
   /* ── How It Works ────────────────────────────────────── */
   .how-section {
-    max-width: 1100px; margin: 0 auto; padding: 24px;
+    max-width: 1100px; margin: 0 auto; padding: 24px; zoom: var(--scale);
   }
   .how-strip {
     display: flex; gap: 1px; background: var(--border); border: 1px solid var(--border);
@@ -280,7 +282,7 @@
 
   /* ── Leaderboard ─────────────────────────────────────── */
   .lb-section {
-    max-width: 1100px; margin: 0 auto; padding: 32px 24px;
+    max-width: 1100px; margin: 0 auto; padding: 32px 24px; zoom: var(--scale);
   }
   .lb-container {
     display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
@@ -322,7 +324,7 @@
   /* ── CTA Band ────────────────────────────────────────── */
   .cta-band {
     text-align: center; padding: 48px 24px; border-top: 1px solid var(--border);
-    position: relative; overflow: hidden;
+    position: relative; overflow: hidden; zoom: var(--scale);
   }
   .cta-band::before {
     content: ''; position: absolute; bottom: -60px; left: 50%; transform: translateX(-50%);
@@ -339,6 +341,7 @@
   .bottom-ticker {
     height: 30px; background: #070a0f; border-top: 1px solid var(--border);
     overflow: hidden; display: flex; align-items: center; position: relative;
+    zoom: var(--scale);
   }
   .bottom-ticker .ticker-track { animation-duration: 35s; }
   .bt-item {
@@ -355,7 +358,7 @@
   /* ── Footer ──────────────────────────────────────────── */
   .footer {
     display: flex; justify-content: center; gap: 24px; padding: 10px 24px;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--border); zoom: var(--scale);
   }
   .footer span { font-size: 8px; letter-spacing: .5px; color: var(--text-dim); }
 </style>
