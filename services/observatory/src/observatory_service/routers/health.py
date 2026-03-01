@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from observatory_service.core.state import get_app_state
+from observatory_service.logging import get_logger
 from observatory_service.schemas import HealthResponse
 
 router = APIRouter()
@@ -25,6 +26,10 @@ async def health_check() -> HealthResponse:
             latest_event_id = row[0] if row and row[0] is not None else 0
             database_readable = True
         except Exception:
+            get_logger(__name__).error(
+                "Database query failed during health check",
+                exc_info=True,
+            )
             database_readable = False
 
     return HealthResponse(

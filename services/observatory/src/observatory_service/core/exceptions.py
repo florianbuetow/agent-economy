@@ -23,7 +23,8 @@ __all__ = ["ServiceError", "register_exception_handlers"]
 async def service_error_handler(request: Request, exc: ServiceError) -> JSONResponse:
     """Handle ServiceError exceptions."""
     logger = get_logger(__name__)
-    logger.warning(
+    log_method = logger.error if exc.status_code >= 500 else logger.warning
+    log_method(
         "Service error",
         extra={
             "error_code": exc.error,
