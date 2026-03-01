@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import sys
+import time
 from datetime import UTC, datetime
 from logging.handlers import TimedRotatingFileHandler
 from typing import Any
@@ -68,18 +69,27 @@ class JSONFormatter(logging.Formatter):
 VALID_LOG_LEVELS: frozenset[str] = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
 
 
-def _log_namer(default_name: str) -> str:
-    """
-    Rename rotated log files to YYYY-MM-DD.log format.
+class DailyRotatingFileHandler(TimedRotatingFileHandler):
+    """Rotating file handler that names files as YYYY-MM-DD.log."""
 
-    TimedRotatingFileHandler appends a date suffix to the base filename
-    (e.g. current.log.2026-03-01). This namer replaces the full path
-    with just the date suffix + .log extension in the same directory.
-    """
-    directory = os.path.dirname(default_name)
-    # default_name is like /path/to/current.log.2026-03-01
-    suffix = default_name.rsplit(".", 1)[-1]  # "2026-03-01"
-    return os.path.join(directory, f"{suffix}.log")
+    def __init__(self, directory: str) -> None:
+        self._log_directory = directory
+        filename = self._make_filename()
+        super().__init__(filename, when="midnight", utc=True)
+
+    def _make_filename(self) -> str:
+        today = datetime.now(tz=UTC).strftime("%Y-%m-%d")
+        return os.path.join(self._log_directory, f"{today}.log")
+
+    def doRollover(self) -> None:  # noqa: N802
+        if self.stream:
+            self.stream.close()
+            self.stream = None  # type: ignore[assignment]
+        self.baseFilename = os.path.abspath(self._make_filename())
+        if not self.delay:
+            self.stream = self._open()
+        current_time = int(time.time())
+        self.rolloverAt = self.computeRollover(current_time)
 
 
 def setup_logging(level: str, service_name: str, log_directory: str) -> logging.Logger:
@@ -118,12 +128,7 @@ def setup_logging(level: str, service_name: str, log_directory: str) -> logging.
     logger.addHandler(stdout_handler)
 
     os.makedirs(log_directory, exist_ok=True)
-    file_handler = TimedRotatingFileHandler(
-        filename=os.path.join(log_directory, "current.log"),
-        when="midnight",
-        utc=True,
-    )
-    file_handler.namer = _log_namer
+    file_handler = DailyRotatingFileHandler(directory=log_directory)
     file_handler.setLevel(numeric_level)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
