@@ -54,10 +54,6 @@ export function createAgent(id: number): AgentNode {
 
 // ─── State Machine ──────────────────────────────────────────────────────────
 
-// Internal frame counter for random impulse timing (shared across agents, but
-// that's fine -- it just gates impulse frequency roughly).
-let frameCount = 0;
-
 /** Tick the agent state machine. Mutates agent in place for performance. */
 export function updateAgent(
   agent: AgentNode,
@@ -65,7 +61,6 @@ export function updateAgent(
   agents: AgentNode[],
   dt: number,
 ): void {
-  frameCount++;
 
   switch (agent.state) {
     case "searching":
@@ -100,8 +95,8 @@ function updateSearching(
   agents: AgentNode[],
   dt: number,
 ): void {
-  // Random velocity impulses: every ~20 frames add small random impulse
-  if (frameCount % 20 === 0) {
+  // Random velocity impulses: ~1/20 chance per frame per agent
+  if (Math.random() < 0.05) {
     agent.vx += (Math.random() - 0.5) * 0.3;
     agent.vy += (Math.random() - 0.5) * 0.3;
   }
@@ -318,6 +313,10 @@ function updateRejecting(agent: AgentNode, dt: number): void {
     agent.opacity = 1;
     agent.targetTaskId = null;
   }
+
+  // Hard clamp to world bounds
+  agent.x = Math.max(0, Math.min(WORLD_SIZE, agent.x));
+  agent.y = Math.max(0, Math.min(WORLD_SIZE, agent.y));
 }
 
 // ─── orbiting ───────────────────────────────────────────────────────────────
@@ -381,6 +380,10 @@ function updateFleeing(agent: AgentNode, dt: number): void {
     agent.targetTaskId = null;
     agent.role = null;
   }
+
+  // Hard clamp to world bounds
+  agent.x = Math.max(0, Math.min(WORLD_SIZE, agent.x));
+  agent.y = Math.max(0, Math.min(WORLD_SIZE, agent.y));
 }
 
 // ─── in_progress ────────────────────────────────────────────────────────────

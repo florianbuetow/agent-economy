@@ -96,6 +96,7 @@ export interface TaskNode {
   posterId: number | null;
   pulseAge: number;
   // absorption animation
+  absorbStart: { x: number; y: number } | null;
   absorbTarget: { x: number; y: number } | null;
   absorbProgress: number;
   absorbStartR: number;

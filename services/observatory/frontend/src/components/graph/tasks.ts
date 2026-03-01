@@ -3,10 +3,10 @@
 // The key visual moment is "complete" where the task flies into the winning agent
 // and the agent visibly grows from the wealth gain.
 
-import type { TaskNode, AgentNode, Particle, Ripple, Category } from "./types.ts";
-import { CATEGORIES, CATEGORY_COLORS, TASK_NAMES, WORLD_SIZE } from "./types.ts";
-import { computeAgentRadius } from "./agents.ts";
-import { spawnCoinParticles, spawnRipples } from "./effects.ts";
+import type { TaskNode, AgentNode, Particle, Ripple, Category } from "./types";
+import { CATEGORIES, CATEGORY_COLORS, TASK_NAMES, WORLD_SIZE } from "./types";
+import { computeAgentRadius } from "./agents";
+import { spawnCoinParticles, spawnRipples } from "./effects";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -55,6 +55,7 @@ export function createTask(id: number): TaskNode {
     winnerId: null,
     posterId: null,
     pulseAge: 0,
+    absorbStart: null,
     absorbTarget: null,
     absorbProgress: 0,
     absorbStartR: 0,
@@ -80,6 +81,7 @@ export function respawnTask(task: TaskNode): void {
   task.winnerId = null;
   task.posterId = null;
   task.pulseAge = 0;
+  task.absorbStart = null;
   task.absorbTarget = null;
   task.absorbProgress = 0;
   task.absorbStartR = 0;
@@ -249,6 +251,7 @@ function updateInProgress(
       winner.r = computeAgentRadius(winner.wealth);
 
       // Start absorption animation: task flies into winner
+      task.absorbStart = { x: task.x, y: task.y };
       task.absorbTarget = { x: winner.x, y: winner.y };
       task.absorbProgress = 0;
       task.absorbStartR = task.r;
@@ -289,10 +292,10 @@ function updateComplete(task: TaskNode, agents: AgentNode[], dt: number): void {
   task.absorbProgress += dt / 1.0;
 
   // Interpolate task position toward target using smoothstep
-  if (task.absorbTarget) {
+  if (task.absorbTarget && task.absorbStart) {
     const t = smoothstep(task.absorbProgress);
-    task.x = lerp(task.x, task.absorbTarget.x, t);
-    task.y = lerp(task.y, task.absorbTarget.y, t);
+    task.x = lerp(task.absorbStart.x, task.absorbTarget.x, t);
+    task.y = lerp(task.absorbStart.y, task.absorbTarget.y, t);
     // Shrink radius
     task.r = task.absorbStartR * (1 - task.absorbProgress);
   }
