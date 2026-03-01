@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTaskDrilldown } from "../hooks/useTaskDrilldown";
 import Badge from "../components/Badge";
+import { colors, statusColors } from "../utils/colorUtils";
 import type {
   TaskDrilldownResponse,
   BidItem,
@@ -96,8 +97,8 @@ function statusBadgeProps(status: string): {
       return {
         filled: true,
         style: {
-          backgroundColor: "#004085",
-          borderColor: "#004085",
+          backgroundColor: statusColors.accepted.bg,
+          borderColor: statusColors.accepted.border,
         },
       };
     case "submitted":
@@ -129,8 +130,8 @@ function statusBadgeProps(status: string): {
       return {
         filled: true,
         style: {
-          backgroundColor: "#4a1580",
-          borderColor: "#4a1580",
+          backgroundColor: statusColors.ruled.bg,
+          borderColor: statusColors.ruled.border,
         },
       };
     case "cancelled":
@@ -207,7 +208,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
         ? `${acceptedBid.bidder.name}`
         : task.worker?.name ?? undefined,
       done: true,
-      color: "#004085",
+      color: statusColors.accepted.bg,
     });
   } else if (
     task.status !== "open" &&
@@ -272,7 +273,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
         timestamp: task.dispute.ruling.ruled_at,
         note: `Worker ${workerPct}% \u00b7 Poster ${100 - workerPct}%`,
         done: true,
-        color: "#4a1580",
+        color: statusColors.ruled.bg,
       });
     } else {
       nodes.push({ label: "RULED", timestamp: null, done: false });
@@ -514,25 +515,25 @@ function EscrowPanel({ task }: { task: TaskDrilldownResponse }) {
           <div
             className="flex justify-between items-center border p-2"
             style={{
-              borderColor: "#4a1580",
-              backgroundColor: "#e2d5f81a",
+              borderColor: statusColors.rulingBorder,
+              backgroundColor: statusColors.rulingBgAlpha,
             }}
           >
             <div>
               <div
                 className="text-[8px] font-mono uppercase tracking-[1.5px] mb-0.5"
-                style={{ color: "#4a1580" }}
+                style={{ color: statusColors.rulingBorder }}
               >
                 Split &mdash; court ruling
               </div>
-              <span className="text-[10px] font-mono" style={{ color: "#4a1580" }}>
+              <span className="text-[10px] font-mono" style={{ color: statusColors.rulingBorder }}>
                 {workerPayout} &copy; &rarr; {task.worker?.name ?? "worker"}{" "}
                 &middot; {posterPayout} &copy; &rarr; {task.poster.name}
               </span>
             </div>
             <span
               className="text-[9px] font-mono"
-              style={{ color: "#4a1580" }}
+              style={{ color: statusColors.rulingBorder }}
             >
               {task.dispute?.ruling?.ruled_at
                 ? formatTimestamp(task.dispute.ruling.ruled_at)
@@ -651,7 +652,7 @@ function DisputeSection({ task }: { task: TaskDrilldownResponse }) {
   return (
     <div
       className="px-3.5 py-3 border-b border-border"
-      style={{ backgroundColor: "#fdf3f3" }}
+      style={{ backgroundColor: statusColors.disputeBg }}
     >
       <div className="text-[9px] font-mono uppercase tracking-[1.5px] border-b pb-1 mb-3 text-red border-red/30">
         Dispute & Ruling
@@ -711,19 +712,19 @@ function DisputeSection({ task }: { task: TaskDrilldownResponse }) {
             <div
               className="flex-1 border p-2"
               style={{
-                borderColor: "#4a1580",
-                backgroundColor: "#e2d5f8",
+                borderColor: statusColors.rulingBorder,
+                backgroundColor: statusColors.rulingBg,
               }}
             >
               <div
                 className="text-[8px] font-mono uppercase tracking-[1.5px] mb-0.5"
-                style={{ color: "#4a1580" }}
+                style={{ color: statusColors.rulingBorder }}
               >
                 Worker receives
               </div>
               <span
                 className="text-[13px] font-bold font-mono"
-                style={{ color: "#4a1580" }}
+                style={{ color: statusColors.rulingBorder }}
               >
                 {workerPct}% &middot; {workerPayout} &copy;
               </span>
@@ -740,7 +741,7 @@ function DisputeSection({ task }: { task: TaskDrilldownResponse }) {
 
           <div
             className="font-mono text-[9px] leading-relaxed bg-bg border p-2 text-text-mid mb-2"
-            style={{ borderColor: "#4a1580" }}
+            style={{ borderColor: statusColors.rulingBorder }}
           >
             {ruling.summary}
           </div>
@@ -872,21 +873,21 @@ function deadlineNote(
   if (label === "bidding") {
     return deadline < now
       ? { text: "closed", color: "text-text-muted" }
-      : { text: timeAgo(value), color: "text-amber" };
+      : { text: timeAgo(value), color: colors.warning };
   }
   if (label === "execution") {
-    if (task.timestamps.submitted_at) return { text: "met", color: "text-green" };
-    if (task.status === "expired") return { text: "missed", color: "text-red" };
+    if (task.timestamps.submitted_at) return { text: "met", color: colors.positive };
+    if (task.status === "expired") return { text: "missed", color: colors.negative };
     return deadline < now
-      ? { text: "passed", color: "text-red" }
-      : { text: timeAgo(value), color: "text-amber" };
+      ? { text: "passed", color: colors.negative }
+      : { text: timeAgo(value), color: colors.warning };
   }
   if (label === "review") {
-    if (task.timestamps.approved_at) return { text: "closed", color: "text-green" };
-    if (task.dispute) return { text: "waived \u2014 dispute filed", color: "text-red" };
+    if (task.timestamps.approved_at) return { text: "closed", color: colors.positive };
+    if (task.dispute) return { text: "waived \u2014 dispute filed", color: colors.negative };
     return deadline < now
       ? { text: "passed", color: "text-text-muted" }
-      : { text: timeAgo(value), color: "text-amber" };
+      : { text: timeAgo(value), color: colors.warning };
   }
   return { text: "", color: "" };
 }
@@ -963,11 +964,11 @@ export default function TaskDrilldown() {
           <Badge filled={sbProps.filled} style={sbProps.style}>
             {task.status.toUpperCase()}
           </Badge>
-          <span className="ml-auto text-[18px] font-mono font-bold text-green">
+          <span className={`ml-auto text-[18px] font-mono font-bold ${colors.money}`}>
             {hasRuling ? (
               <>
                 {workerPayout} &copy;{" "}
-                <span className="text-[10px] font-normal" style={{ color: "#4a1580" }}>
+                <span className="text-[10px] font-normal" style={{ color: statusColors.rulingBorder }}>
                   (worker)
                 </span>
                 <span className="text-[10px] text-text-muted font-normal">

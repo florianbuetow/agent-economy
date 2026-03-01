@@ -79,7 +79,7 @@ export default function LandingPage() {
     <ThemeContext.Provider value={{ current: theme, setTheme }}>
       <div className="w-full min-h-screen bg-bg font-mono flex flex-col">
         {/* Hero section with graph background */}
-        <div className="relative h-screen overflow-hidden" style={{ background: "#fafafa" }}>
+        <div className="relative h-screen overflow-hidden" style={{ background: "var(--color-bg-off)" }}>
           <EconomyGraph />
           <div className="relative z-10 flex flex-col h-full pointer-events-none">
             <div className="pointer-events-auto">

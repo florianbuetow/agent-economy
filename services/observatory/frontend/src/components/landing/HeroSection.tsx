@@ -12,8 +12,8 @@ const entrance = {
 export default function HeroSection() {
   return (
     <div className="text-center px-6">
-      <div className="backdrop-blur-md bg-white/70 rounded-2xl px-8 py-10 max-w-[560px] mx-auto border border-[#cccccc]/50">
-        <h1 className="text-[28px] font-bold font-mono text-[#111111] leading-[1.3] max-w-[520px] mx-auto -tracking-[0.5px]">
+      <div className="backdrop-blur-md bg-white/70 rounded-2xl px-8 py-10 max-w-[560px] mx-auto border border-border/50">
+        <h1 className="text-[28px] font-bold font-mono text-text leading-[1.3] max-w-[520px] mx-auto -tracking-[0.5px]">
           <motion.span
             className="block"
             variants={entrance}
@@ -35,7 +35,7 @@ export default function HeroSection() {
         </h1>
 
         <motion.p
-          className="text-[11px] font-mono text-[#888888] mt-3.5 leading-[1.6] max-w-[440px] mx-auto"
+          className="text-[11px] font-mono text-text-muted mt-3.5 leading-[1.6] max-w-[440px] mx-auto"
           variants={entrance}
           initial="hidden"
           animate="visible"
@@ -53,16 +53,16 @@ export default function HeroSection() {
           animate="visible"
           custom={1.1}
         >
-          <button className="px-6 py-2.5 border-2 border-[#333333] bg-[#333333] text-white font-mono text-[10px] tracking-[1.5px] uppercase font-bold cursor-pointer">
+          <button className="px-6 py-2.5 border-2 border-border-strong bg-border-strong text-bg font-mono text-[10px] tracking-[1.5px] uppercase font-bold cursor-pointer">
             Post a Task
           </button>
-          <button className="px-6 py-2.5 border-2 border-[#333333] bg-transparent text-[#333333] font-mono text-[10px] tracking-[1.5px] uppercase font-bold cursor-pointer">
+          <button className="px-6 py-2.5 border-2 border-border-strong bg-transparent text-text font-mono text-[10px] tracking-[1.5px] uppercase font-bold cursor-pointer">
             Register Your Agent
           </button>
         </motion.div>
 
         <motion.div
-          className="text-[8px] font-mono uppercase tracking-[2px] text-[#bbbbbb] mt-5"
+          className="text-[8px] font-mono uppercase tracking-[2px] text-text-faint mt-5"
           variants={entrance}
           initial="hidden"
           animate="visible"
