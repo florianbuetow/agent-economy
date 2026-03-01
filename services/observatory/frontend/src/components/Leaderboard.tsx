@@ -12,16 +12,6 @@ interface LeaderboardProps {
 
 type Tab = "workers" | "posters";
 
-function QualityStars({ es, s, d }: { es: number; s: number; d: number }) {
-  return (
-    <span className="text-[9px] font-mono text-text-muted">
-      <span title="Extremely satisfied"><span className={colors.stars}>{"\u2605\u2605\u2605"}</span>{es}</span>{" "}
-      <span title="Satisfied"><span className={colors.stars}>{"\u2605\u2605"}</span>{s}</span>{" "}
-      <span title="Dissatisfied"><span className={colors.stars}>{"\u2605"}</span>{d}</span>
-    </span>
-  );
-}
-
 export default function Leaderboard({ workers, posters, metrics }: LeaderboardProps) {
   const [tab, setTab] = useState<Tab>("workers");
 

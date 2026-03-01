@@ -83,6 +83,8 @@ check:
     check_tool "curl"    curl    "--version"
     check_tool "jq"      jq      "--version"
     check_tool "lsof"    lsof    "-v"
+    check_tool "node"    node   "--version"
+    check_tool "npm"     npm    "--version"
 
     printf "\n"
     if [ "$missing" -gt 0 ]; then
@@ -105,7 +107,17 @@ init:
     @mkdir -p reports/deptry
     @echo "Installing Python dependencies..."
     @uv sync --all-extras
+    @echo "Installing frontend dependencies..."
+    @cd frontend && npm install
     @printf "\033[0;32m✓ Development environment ready\033[0m\n"
+    @echo ""
+
+# Build frontend for production
+build-frontend:
+    @echo ""
+    @printf "\033[0;34m=== Building Frontend ===\033[0m\n"
+    @cd frontend && npm run build
+    @printf "\033[0;32m✓ Frontend built to frontend/dist/\033[0m\n"
     @echo ""
 
 # Destroy the virtual environment
