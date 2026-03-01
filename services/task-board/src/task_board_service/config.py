@@ -81,6 +81,7 @@ class PlatformConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     agent_id: str
     private_key_path: str | None = None
+    agent_config_path: str | None = None
 
 
 class AssetsConfig(BaseModel):

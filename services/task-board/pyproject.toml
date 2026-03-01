@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn>=0.34.0",
     "pydantic>=2.10.0",
     "service-commons",
+    "base-agent",
     "cryptography>=44.0.0",
     "httpx>=0.28.0",
     "joserfc>=1.0.0",
@@ -45,6 +46,7 @@ build-backend = "hatchling.build"
 
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
+base-agent = { path = "../../agents", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/task_board_service"]
@@ -109,6 +111,10 @@ files = ["src"]
 module = "tests.*"
 disallow_untyped_defs = false
 
+[[tool.mypy.overrides]]
+module = ["base_agent", "base_agent.*"]
+ignore_missing_imports = true
+
 # === Bandit ===
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
@@ -155,6 +161,7 @@ DEP002 = [
     "uvicorn",
     "pydantic",
     "service-commons",
+    "base-agent",
     "cryptography",
     "pytest",
     "pytest-cov",
