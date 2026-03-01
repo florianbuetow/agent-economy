@@ -78,7 +78,7 @@ async def test_escrow_lock_insufficient_funds(
             json={"token": token},
         )
 
-        assert response.status_code == 400
+        assert response.status_code == 402
         assert response.json()["error"] == "INSUFFICIENT_FUNDS"
     finally:
         await agent.close()
