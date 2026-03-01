@@ -90,11 +90,11 @@ export default function QuarterlyReport() {
               <div className="text-[10px] text-text-muted mt-1">coins produced</div>
               <div className="text-[11px] text-text-mid mt-3">
                 {report.gdp.delta_pct >= 0 ? "▲" : "▼"}{" "}
-                {Math.abs(report.gdp.delta_pct)}% from previous quarter
+                {Math.abs(report.gdp.delta_pct).toFixed(1)}% from previous quarter
                 ({report.gdp.previous_quarter.toLocaleString()})
               </div>
               <div className="text-[10px] text-text-muted mt-1">
-                {report.gdp.per_agent} per agent
+                {report.gdp.per_agent.toFixed(1)} per agent
               </div>
             </div>
 

@@ -23,6 +23,7 @@ export function useQuarterlyReport(quarter: string): UseQuarterlyReportResult {
     let active = true;
     setLoading(true);
     setError(null);
+    setReport(null);
 
     fetchQuarterlyReport(quarter)
       .then((data) => {
