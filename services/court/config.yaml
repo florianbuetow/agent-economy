@@ -13,3 +13,40 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
+
+database:
+  path: "data/court.db"
+
+identity:
+  base_url: "http://localhost:8001"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
+
+task_board:
+  base_url: "http://localhost:8003"
+
+central_bank:
+  base_url: "http://localhost:8002"
+
+reputation:
+  base_url: "http://localhost:8004"
+
+platform:
+  agent_id: "a-platform-local"
+  private_key_path: "data/platform.key"
+
+disputes:
+  rebuttal_deadline_seconds: 86400
+  max_claim_length: 10000
+  max_rebuttal_length: 10000
+
+judges:
+  panel_size: 1
+  judges:
+    - id: "judge-0"
+      provider: "mock"
+      model: "gpt-4o-mini"
+      temperature: 0.3
+
+request:
+  max_body_size: 1048576
