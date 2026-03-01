@@ -61,7 +61,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         )
         logger.info("Demo proxy initialized", extra={"agent_id": state.demo_signer.human_agent_id})
     except Exception:
-        logger.warning("Demo proxy not available (services may not be running)")
+        logger.warning("Demo proxy not available (services may not be running)", exc_info=True)
 
     logger.info(
         "Service starting",

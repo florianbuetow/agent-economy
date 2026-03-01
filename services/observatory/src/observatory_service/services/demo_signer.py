@@ -268,7 +268,7 @@ async def _register_human_agent(
         "public_key": f"ed25519:{public_key_b64}",
     }
 
-    logger.info("registering_human_agent", extra={"name": human_agent_name, "url": register_url})
+    logger.info("registering_human_agent", extra={"agent_name": human_agent_name, "url": register_url})
     resp = await client.post(register_url, json=body)
 
     if resp.status_code == 201:
@@ -280,7 +280,7 @@ async def _register_human_agent(
     if resp.status_code == 409:
         logger.info(
             "human_agent_already_registered",
-            extra={"name": human_agent_name},
+            extra={"agent_name": human_agent_name},
         )
         list_url = f"{identity_url}/agents"
         list_resp = await client.get(list_url)
@@ -397,7 +397,7 @@ async def bootstrap_demo_agent(
 
     logger.info(
         "demo_agent_bootstrapped",
-        extra={"agent_id": human_agent_id, "name": human_agent_name},
+        extra={"agent_id": human_agent_id, "agent_name": human_agent_name},
     )
     return signer
 
