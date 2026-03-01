@@ -16,7 +16,7 @@ function SectionDivider() {
 
 function Header() {
   return (
-    <div className="px-6 py-3 border-b border-nav-border bg-nav-bg flex items-center justify-between shrink-0">
+    <div className="sticky top-0 z-50 px-6 py-3 border-b border-nav-border bg-nav-bg flex items-center justify-between shrink-0">
       <div className="flex items-center gap-2.5">
         <div className="text-[11px] font-bold tracking-[2.5px] uppercase font-mono text-nav-text">
           ATE
