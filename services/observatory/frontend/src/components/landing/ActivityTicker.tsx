@@ -58,7 +58,7 @@ export default function ActivityTicker({ events }: { events?: EventItem[] }) {
                 {ev.amount}
               </span>
             )}
-            <span className="text-border text-[9px]">·</span>
+            <span className="text-border text-[9px]">-</span>
           </div>
         ))}
       </div>

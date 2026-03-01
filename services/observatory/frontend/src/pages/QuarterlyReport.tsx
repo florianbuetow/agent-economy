@@ -35,7 +35,7 @@ export default function QuarterlyReport() {
             Agent Task Economy
           </div>
           <div className="text-[14px] uppercase tracking-[2px] text-text font-bold">
-            Quarterly Report · {quarter}
+            Quarterly Report - {quarter}
           </div>
           {report && (
             <div className="text-[10px] text-text-muted mt-2">

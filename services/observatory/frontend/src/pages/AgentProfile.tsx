@@ -125,13 +125,13 @@ function frameEvent(ev: AgentFeedEvent, agentId: string): React.ReactNode {
 
   switch (ev.event_type) {
     case "agent.registered":
-      return <>Joined the economy {payload.salary ? `\u00b7 ${payload.salary} \u00a9 starting salary` : ""}</>;
+      return <>Joined the economy {payload.salary ? `- ${payload.salary} \u00a9 starting salary` : ""}</>;
 
     case "salary.paid":
       return <>Received {payload.amount ? `${payload.amount}` : ""} \u00a9 salary from platform</>;
 
     case "task.created":
-      return <>Posted {taskLink} \u00b7 {ev.task_reward} \u00a9 reward</>;
+      return <>Posted {taskLink} - {ev.task_reward} \u00a9 reward</>;
 
     case "bid.submitted":
       if (isActor) {
@@ -139,18 +139,18 @@ function frameEvent(ev: AgentFeedEvent, agentId: string): React.ReactNode {
       }
       return (
         <>
-          Received bid from {counterpartyLink} \u00b7{" "}
+          Received bid from {counterpartyLink} -{" "}
           {payload.amount ? `${payload.amount} \u00a9` : ""}{" "}
-          {payload.bid_count ? `\u00b7 ${payload.bid_count} bids total` : ""}{" "}
-          \u00b7 {taskLink}
+          {payload.bid_count ? `- ${payload.bid_count} bids total` : ""}{" "}
+          - {taskLink}
         </>
       );
 
     case "task.accepted":
       if (isActor && ev.role === "POSTER") {
-        return <>Accepted {counterpartyLink}&apos;s bid \u00b7 {taskLink}</>;
+        return <>Accepted {counterpartyLink}&apos;s bid - {taskLink}</>;
       }
-      return <>Bid accepted by {counterpartyLink} \u00b7 work begins \u00b7 {taskLink}</>;
+      return <>Bid accepted by {counterpartyLink} - work begins - {taskLink}</>;
 
     case "asset.uploaded":
       return (
@@ -158,7 +158,7 @@ function frameEvent(ev: AgentFeedEvent, agentId: string): React.ReactNode {
           Uploaded{" "}
           <span className="italic">{payload.filename ? String(payload.filename) : "file"}</span>{" "}
           {payload.size_bytes ? `(${Math.round(Number(payload.size_bytes) / 1024)} KB)` : ""}{" "}
-          \u00b7 {taskLink}
+          - {taskLink}
         </>
       );
 
@@ -166,31 +166,31 @@ function frameEvent(ev: AgentFeedEvent, agentId: string): React.ReactNode {
       if (isActor) {
         return <>Submitted work on {taskLink}</>;
       }
-      return <>{counterpartyLink} submitted work for review \u00b7 {taskLink}</>;
+      return <>{counterpartyLink} submitted work for review - {taskLink}</>;
 
     case "task.approved":
       if (isActor && ev.role === "POSTER") {
-        return <>Approved {counterpartyLink}&apos;s submission \u00b7 {ev.task_reward} \u00a9 released \u00b7 {taskLink}</>;
+        return <>Approved {counterpartyLink}&apos;s submission - {ev.task_reward} \u00a9 released - {taskLink}</>;
       }
-      return <>Work approved by {counterpartyLink} \u00b7 {ev.task_reward} \u00a9 received \u00b7 {taskLink}</>;
+      return <>Work approved by {counterpartyLink} - {ev.task_reward} \u00a9 received - {taskLink}</>;
 
     case "task.auto_approved":
       if (ev.role === "POSTER") {
-        return <>Review window expired \u00b7 {counterpartyLink}&apos;s work auto-approved \u00b7 {ev.task_reward} \u00a9 released \u00b7 {taskLink}</>;
+        return <>Review window expired - {counterpartyLink}&apos;s work auto-approved - {ev.task_reward} \u00a9 released - {taskLink}</>;
       }
-      return <>Work auto-approved (poster did not review) \u00b7 {ev.task_reward} \u00a9 received \u00b7 {taskLink}</>;
+      return <>Work auto-approved (poster did not review) - {ev.task_reward} \u00a9 received - {taskLink}</>;
 
     case "task.disputed":
       if (isActor) {
-        return <>Filed dispute \u00b7 {taskLink}</>;
+        return <>Filed dispute - {taskLink}</>;
       }
-      return <>{counterpartyLink} disputed submission \u00b7 {taskLink}</>;
+      return <>{counterpartyLink} disputed submission - {taskLink}</>;
 
     case "task.ruled":
       return (
         <>
           Court ruled: {payload.worker_pct ? `${payload.worker_pct}% to worker` : ""}{" "}
-          \u00b7 {taskLink}
+          - {taskLink}
         </>
       );
 
@@ -199,23 +199,23 @@ function frameEvent(ev: AgentFeedEvent, agentId: string): React.ReactNode {
 
     case "task.expired":
       if (ev.role === "POSTER") {
-        return <>Task expired without bids \u00b7 {taskLink} \u00b7 {ev.task_reward} \u00a9 returned</>;
+        return <>Task expired without bids - {taskLink} - {ev.task_reward} \u00a9 returned</>;
       }
-      return <>Execution deadline missed \u00b7 {taskLink}</>;
+      return <>Execution deadline missed - {taskLink}</>;
 
     case "escrow.locked":
-      return <>Locked {payload.amount ? `${payload.amount}` : ev.task_reward} \u00a9 in escrow \u00b7 {taskLink}</>;
+      return <>Locked {payload.amount ? `${payload.amount}` : ev.task_reward} \u00a9 in escrow - {taskLink}</>;
 
     case "escrow.released":
-      return <>{payload.amount ? `${payload.amount}` : ""} \u00a9 released from escrow \u00b7 {taskLink}</>;
+      return <>{payload.amount ? `${payload.amount}` : ""} \u00a9 released from escrow - {taskLink}</>;
 
     case "escrow.split":
       return (
         <>
           Escrow split:{" "}
           {payload.worker_amount ? `${payload.worker_amount} \u00a9 to worker` : ""}{" "}
-          {payload.poster_amount ? `\u00b7 ${payload.poster_amount} \u00a9 returned to poster` : ""}{" "}
-          \u00b7 {taskLink}
+          {payload.poster_amount ? `- ${payload.poster_amount} \u00a9 returned to poster` : ""}{" "}
+          - {taskLink}
         </>
       );
 
@@ -223,9 +223,9 @@ function frameEvent(ev: AgentFeedEvent, agentId: string): React.ReactNode {
       const category = payload.category ? String(payload.category) : "";
       const rating = payload.rating ? ratingStars(String(payload.rating)) : "";
       if (ev.role === "WORKER" || payload.to_agent_id === agentId) {
-        return <>Received feedback from {counterpartyLink} \u00b7 {rating} {category}</>;
+        return <>Received feedback from {counterpartyLink} - {rating} {category}</>;
       }
-      return <>Feedback to {counterpartyLink} revealed \u00b7 {rating} {category}</>;
+      return <>Feedback to {counterpartyLink} revealed - {rating} {category}</>;
     }
 
     default:
@@ -555,7 +555,7 @@ function ReputationPanel({
         </div>
         <div className="flex justify-between items-baseline mb-1.5">
           <span className="text-[9px] font-mono text-text-muted">
-            cumulative &middot; all-time
+            cumulative - all-time
           </span>
           <span className={`text-[11px] font-bold font-mono ${colors.money}`}>
             {earnings ? `${earnings.total_earned.toLocaleString()} \u00a9` : "\u2014"}
@@ -565,7 +565,7 @@ function ReputationPanel({
           <>
             <EarningsChart data={earnings.data_points} height={80} />
             <div className={`mt-2 px-1.5 py-1 ${colors.moneyBg} border border-dashed border-green/30 text-[8px] font-mono ${colors.money} leading-relaxed`}>
-              +{earnings.last_7d_earned} &copy; last 7 days &middot; avg {earnings.avg_per_task} &copy; / task
+              +{earnings.last_7d_earned} &copy; last 7 days - avg {earnings.avg_per_task} &copy; / task
             </div>
           </>
         )}
@@ -685,9 +685,9 @@ function ActivityFeed({
       <div className="px-3.5 py-1 border-b border-border shrink-0 bg-bg">
         <span className="text-[8px] font-mono uppercase tracking-[1.5px] text-text-muted">
           {feed.length} events
-          {roleDisplay !== "ALL" && ` \u00b7 ${roleDisplay}`}
-          {typeDisplay !== "ALL" && ` \u00b7 ${typeDisplay}`}
-          {timeDisplay !== "ALL TIME" && ` \u00b7 ${timeDisplay}`}
+          {roleDisplay !== "ALL" && ` - ${roleDisplay}`}
+          {typeDisplay !== "ALL" && ` - ${typeDisplay}`}
+          {timeDisplay !== "ALL TIME" && ` - ${timeDisplay}`}
         </span>
       </div>
 
@@ -874,7 +874,7 @@ export default function AgentProfile() {
               {profile.name}
             </div>
             <div className="text-[9px] font-mono text-text-muted mt-0.5">
-              {profile.agent_id} &middot; registered {formatDate(profile.registered_at)}
+              {profile.agent_id} - registered {formatDate(profile.registered_at)}
             </div>
           </div>
           <div className="flex gap-6">
@@ -926,7 +926,7 @@ export default function AgentProfile() {
           "Role chip = POSTER or WORKER on that event",
           "Click task titles to open task drilldown",
           "Click agent names to open their profile",
-          "\u00a9 = coins \u00b7 Poll interval: 10s",
+          "\u00a9 = coins - Poll interval: 10s",
         ].map((hint) => (
           <span
             key={hint}
