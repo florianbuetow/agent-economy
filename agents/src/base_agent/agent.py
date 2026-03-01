@@ -8,14 +8,12 @@ config) live here.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import yaml
 
-from base_agent.config import Settings
 from base_agent.mixins import (
     BankMixin,
     CourtMixin,
@@ -24,14 +22,20 @@ from base_agent.mixins import (
     TaskBoardMixin,
 )
 from base_agent.signing import (
-    Ed25519PrivateKey,
-    Ed25519PublicKey,
     create_jws,
     generate_keypair,
     load_private_key,
     load_public_key,
     public_key_to_b64,
 )
+
+if TYPE_CHECKING:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+        Ed25519PrivateKey,
+        Ed25519PublicKey,
+    )
+
+    from base_agent.config import Settings
 
 
 class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, CourtMixin):
@@ -109,7 +113,7 @@ class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, Court
             msg = f"Invalid roster file: {roster_path} — must contain 'agents' key"
             raise ValueError(msg)
 
-        return roster  # type: ignore[no-any-return]
+        return roster
 
     def _load_or_generate_keys(self) -> tuple[Ed25519PrivateKey, Ed25519PublicKey]:
         """Load keypair from disk, or generate if missing.

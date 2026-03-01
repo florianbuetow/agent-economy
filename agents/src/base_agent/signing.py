@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import base64
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from cryptography.hazmat.primitives import serialization
+
+if TYPE_CHECKING:
+    from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PrivateKey,
     Ed25519PublicKey,
@@ -124,8 +127,9 @@ def _b64url_encode(data: bytes) -> str:
 def create_jws(payload: dict[str, object], private_key: Ed25519PrivateKey) -> str:
     """Create a compact JWS token (header.payload.signature) using EdDSA.
 
-    Produces a three-part dot-separated string: base64url(header).base64url(payload).base64url(signature).
-    The header specifies alg=EdDSA. The signature covers the ASCII bytes of "header.payload".
+    Produces a three-part dot-separated string:
+    base64url(header).base64url(payload).base64url(signature).
+    The header specifies alg=EdDSA. The signature covers "header.payload".
 
     Args:
         payload: Dictionary to sign as the JWS payload.

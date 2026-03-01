@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -16,13 +16,16 @@ from base_agent.signing import (
     public_key_to_b64,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 @pytest.mark.unit
 class TestGenerateKeypair:
     """Tests for generate_keypair."""
 
     def test_creates_key_files(self, tmp_keys_dir: Path) -> None:
-        private_key, public_key = generate_keypair("alice", tmp_keys_dir)
+        _private_key, _public_key = generate_keypair("alice", tmp_keys_dir)
         assert (tmp_keys_dir / "alice.key").exists()
         assert (tmp_keys_dir / "alice.pub").exists()
 
@@ -58,8 +61,8 @@ class TestLoadKeys:
             load_private_key(bad_file)
 
     def test_roundtrip(self, tmp_keys_dir: Path) -> None:
-        original_private, original_public = generate_keypair("roundtrip", tmp_keys_dir)
-        loaded_private = load_private_key(tmp_keys_dir / "roundtrip.key")
+        _original_private, original_public = generate_keypair("roundtrip", tmp_keys_dir)
+        load_private_key(tmp_keys_dir / "roundtrip.key")
         loaded_public = load_public_key(tmp_keys_dir / "roundtrip.pub")
         assert public_key_to_b64(original_public) == public_key_to_b64(loaded_public)
 
@@ -113,5 +116,4 @@ class TestCreateJws:
         signing_input = f"{parts[0]}.{parts[1]}".encode("ascii")
         sig_padding = "=" * (4 - len(parts[2]) % 4)
         signature = base64.urlsafe_b64decode(parts[2] + sig_padding)
-        # This will raise if signature is invalid
         public_key.verify(signature, signing_input)
