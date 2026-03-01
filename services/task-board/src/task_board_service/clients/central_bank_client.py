@@ -259,6 +259,15 @@ class CentralBankClient:
                 details=error_body.get("details", {}),
             )
 
+        if response.status_code == 400:
+            error_body = response.json()
+            raise ServiceError(
+                error=error_body.get("error", "BAD_REQUEST"),
+                message=error_body.get("message", "Central Bank rejected the request"),
+                status_code=400,
+                details=error_body.get("details", {}),
+            )
+
         logger.warning(
             "Central Bank unexpected status on escrow release",
             extra={
@@ -383,6 +392,15 @@ class CentralBankClient:
                 error=error_body.get("error", "CONFLICT"),
                 message=error_body.get("message", "Central Bank conflict"),
                 status_code=409,
+                details=error_body.get("details", {}),
+            )
+
+        if response.status_code == 400:
+            error_body = response.json()
+            raise ServiceError(
+                error=error_body.get("error", "BAD_REQUEST"),
+                message=error_body.get("message", "Central Bank rejected the request"),
+                status_code=400,
                 details=error_body.get("details", {}),
             )
 

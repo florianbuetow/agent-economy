@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from base_agent.platform import PlatformAgent
+
     from task_board_service.clients.central_bank_client import CentralBankClient
     from task_board_service.clients.identity_client import IdentityClient
     from task_board_service.clients.platform_signer import PlatformSigner
@@ -25,6 +27,7 @@ class AppState:
     identity_client: IdentityClient | None = None
     central_bank_client: CentralBankClient | None = None
     platform_signer: PlatformSigner | None = None
+    platform_agent: PlatformAgent | None = None
     escrow_coordinator: EscrowCoordinator | None = None
     token_validator: TokenValidator | None = None
     asset_manager: AssetManager | None = None

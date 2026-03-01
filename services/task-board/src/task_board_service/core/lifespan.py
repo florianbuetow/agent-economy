@@ -6,13 +6,15 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from base_agent.factory import AgentFactory
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+from service_commons.config import load_yaml_config
 
 from task_board_service.clients.central_bank_client import CentralBankClient
 from task_board_service.clients.identity_client import IdentityClient
 from task_board_service.clients.platform_signer import PlatformSigner
-from task_board_service.config import get_settings
+from task_board_service.config import get_config_path, get_settings
 from task_board_service.core.state import init_app_state
 from task_board_service.logging import get_logger, setup_logging
 from task_board_service.services.asset_manager import AssetManager
@@ -56,22 +58,57 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         raise RuntimeError(msg)
     Path(asset_storage_path).mkdir(parents=True, exist_ok=True)
 
-    # Resolve platform private key path (use configured path or fallback in data dir)
+    # Resolve platform key material and platform agent identity.
     private_key_path = settings.platform.private_key_path
-    if not private_key_path:
-        private_key_path = str(db_directory / "platform.pem")
+    platform_agent_id = settings.platform.agent_id
 
-    private_key_file = Path(private_key_path)
-    if not private_key_file.exists():
-        key = Ed25519PrivateKey.generate()
-        pem = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
-        private_key_file.parent.mkdir(parents=True, exist_ok=True)
-        private_key_file.write_bytes(pem)
+    if settings.platform.agent_config_path:
+        config_path = Path(settings.platform.agent_config_path)
+        if not config_path.is_absolute():
+            config_path = Path(get_config_path()).parent / config_path
+
+        factory = AgentFactory(config_path=config_path)
+        platform_agent = factory.platform_agent()
+        await platform_agent.register()
+        state.platform_agent = platform_agent
+
+        if platform_agent.agent_id is None:
+            msg = "Platform agent registration did not return an agent_id"
+            raise RuntimeError(msg)
+        platform_agent_id = platform_agent.agent_id
+
+        agent_config = load_yaml_config(config_path)
+        data_config = agent_config.get("data")
+        if not isinstance(data_config, dict):
+            msg = "Invalid agent config: missing data section"
+            raise RuntimeError(msg)
+
+        keys_dir = data_config.get("keys_dir")
+        if not isinstance(keys_dir, str):
+            msg = "Invalid agent config: data.keys_dir must be a string"
+            raise RuntimeError(msg)
+
+        keys_dir_path = Path(keys_dir)
+        if not keys_dir_path.is_absolute():
+            keys_dir_path = config_path.parent / keys_dir_path
+        private_key_path = str((keys_dir_path / "platform.key").resolve())
+
+        logger.info("Platform agent registered", extra={"agent_id": platform_agent_id})
+    else:
+        if not private_key_path:
+            private_key_path = str(db_directory / "platform.pem")
+
+        private_key_file = Path(private_key_path)
+        if not private_key_file.exists():
+            key = Ed25519PrivateKey.generate()
+            pem = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+            private_key_file.parent.mkdir(parents=True, exist_ok=True)
+            private_key_file.write_bytes(pem)
 
     # Initialize PlatformSigner (loads Ed25519 private key from disk)
     platform_signer = PlatformSigner(
         private_key_path=private_key_path,
-        platform_agent_id=settings.platform.agent_id,
+        platform_agent_id=platform_agent_id,
     )
     state.platform_signer = platform_signer
 
@@ -119,7 +156,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         deadline_evaluator=deadline_evaluator,
         asset_manager=asset_manager,
         platform_signer=platform_signer,
-        platform_agent_id=settings.platform.agent_id,
+        platform_agent_id=platform_agent_id,
     )
     state.task_manager = task_manager
 
@@ -133,7 +170,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             "asset_storage_path": asset_storage_path,
             "identity_base_url": settings.identity.base_url,
             "central_bank_base_url": settings.central_bank.base_url,
-            "platform_agent_id": settings.platform.agent_id,
+            "platform_agent_id": platform_agent_id,
         },
     )
 
@@ -144,6 +181,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # Close task manager (closes SQLite database)
     task_manager.close()
+
+    if state.platform_agent is not None:
+        await state.platform_agent.close()
 
     # Close HTTP clients (closes httpx async clients)
     await identity_client.close()
