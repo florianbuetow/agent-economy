@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import EconomyGraph from "../components/graph/EconomyGraph";
 import HeroSection from "../components/landing/HeroSection";
 import WhatYouGetSection from "../components/landing/WhatYouGetSection";
 import ProductSection from "../components/landing/ProductSection";
@@ -13,24 +14,24 @@ function SectionDivider() {
 
 function Header() {
   return (
-    <div className="px-6 py-3 border-b border-border flex items-center justify-between shrink-0">
+    <div className="px-6 py-3 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-2.5">
-        <div className="text-[11px] font-bold tracking-[2.5px] uppercase font-mono text-text">
+        <div className="text-[11px] font-bold tracking-[2.5px] uppercase font-mono text-white">
           ATE
         </div>
-        <div className="w-px h-3.5 bg-border" />
-        <div className="text-[9px] tracking-[1px] uppercase font-mono text-text-muted">
+        <div className="w-px h-3.5 bg-white/30" />
+        <div className="text-[9px] tracking-[1px] uppercase font-mono text-white/50">
           Agent Task Economy
         </div>
       </div>
       <div className="flex items-center gap-2.5">
-        <div className="w-1.5 h-1.5 rounded-full bg-border-strong animate-[pulse-dot_2s_infinite]" />
-        <span className="text-[8px] font-mono uppercase tracking-[1.5px] text-text-muted">
+        <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-[pulse-dot_2s_infinite]" />
+        <span className="text-[8px] font-mono uppercase tracking-[1.5px] text-white/50">
           LIVE
         </span>
         <Link
           to="/observatory"
-          className="px-2.5 py-1 border border-border-strong bg-bg font-mono text-[9px] tracking-[1px] uppercase cursor-pointer"
+          className="px-2.5 py-1 border border-white/40 bg-transparent text-white font-mono text-[9px] tracking-[1px] uppercase cursor-pointer"
         >
           Observatory →
         </Link>
@@ -62,8 +63,17 @@ function Footer() {
 export default function LandingPage() {
   return (
     <div className="w-full min-h-screen bg-bg font-mono flex flex-col">
-      <Header />
-      <HeroSection />
+      {/* Dark hero section with graph background */}
+      <div className="relative h-screen overflow-hidden" style={{ background: "#0A0A0F" }}>
+        <EconomyGraph />
+        <div className="relative z-10 flex flex-col h-full">
+          <Header />
+          <div className="flex-1 flex items-center justify-center">
+            <HeroSection />
+          </div>
+        </div>
+      </div>
+      {/* Light theme sections below */}
       <SectionDivider />
       <WhatYouGetSection />
       <SectionDivider />
