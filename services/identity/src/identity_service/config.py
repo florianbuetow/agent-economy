@@ -45,7 +45,7 @@ class LoggingConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     level: str
-    format: str
+    directory: str
 
 
 class DatabaseConfig(BaseModel):
