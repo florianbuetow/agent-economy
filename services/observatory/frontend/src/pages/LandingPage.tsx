@@ -66,10 +66,14 @@ export default function LandingPage() {
       {/* Hero section with graph background */}
       <div className="relative h-screen overflow-hidden" style={{ background: "#fafafa" }}>
         <EconomyGraph />
-        <div className="relative z-10 flex flex-col h-full">
-          <Header />
+        <div className="relative z-10 flex flex-col h-full pointer-events-none">
+          <div className="pointer-events-auto">
+            <Header />
+          </div>
           <div className="flex-1 flex items-center justify-center">
-            <HeroSection />
+            <div className="pointer-events-auto">
+              <HeroSection />
+            </div>
           </div>
         </div>
       </div>
