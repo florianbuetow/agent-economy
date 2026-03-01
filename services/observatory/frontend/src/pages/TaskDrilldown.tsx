@@ -168,6 +168,7 @@ interface TimelineNode {
   timestamp: string | null;
   note?: string;
   done: boolean;
+  color?: string; // CSS color for the dot
 }
 
 function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
@@ -180,6 +181,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
     timestamp: ts.created_at,
     note: task.poster.name,
     done: true,
+    color: "var(--color-green)",
   });
 
   // BIDDING
@@ -192,6 +194,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
         ? `${bidCount} agent${bidCount !== 1 ? "s" : ""} competed`
         : "no bids",
     done: true,
+    color: "var(--color-amber)",
   });
 
   // ACCEPTED
@@ -204,6 +207,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
         ? `${acceptedBid.bidder.name}`
         : task.worker?.name ?? undefined,
       done: true,
+      color: "#004085",
     });
   } else if (
     task.status !== "open" &&
@@ -220,6 +224,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
       timestamp: ts.submitted_at,
       note: `${task.assets.length} asset${task.assets.length !== 1 ? "s" : ""}`,
       done: true,
+      color: "var(--color-amber)",
     });
   } else if (
     task.status === "accepted" ||
@@ -236,6 +241,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
       timestamp: ts.approved_at,
       note: "poster approved",
       done: true,
+      color: "var(--color-green)",
     });
   } else if (task.dispute) {
     // DISPUTED
@@ -244,6 +250,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
       timestamp: task.dispute.filed_at,
       note: "poster rejected",
       done: true,
+      color: "var(--color-red)",
     });
 
     if (task.dispute.rebuttal) {
@@ -254,6 +261,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
           ? `${task.worker.name} responded`
           : "worker responded",
         done: true,
+        color: "var(--color-red)",
       });
     }
 
@@ -264,6 +272,7 @@ function buildTimeline(task: TaskDrilldownResponse): TimelineNode[] {
         timestamp: task.dispute.ruling.ruled_at,
         note: `Worker ${workerPct}% \u00b7 Poster ${100 - workerPct}%`,
         done: true,
+        color: "#4a1580",
       });
     } else {
       nodes.push({ label: "RULED", timestamp: null, done: false });
@@ -290,11 +299,18 @@ function LifecycleTimeline({ task }: { task: TaskDrilldownResponse }) {
           <div key={i} className="flex gap-0">
             <div className="flex flex-col items-center mr-2.5">
               <div
-                className={`w-2 h-2 rounded-full mt-0.5 shrink-0 border ${
+                className="w-2 h-2 rounded-full mt-0.5 shrink-0 border"
+                style={
                   node.done
-                    ? "bg-border-strong border-border-strong"
-                    : "bg-bg-dark border-border"
-                }`}
+                    ? {
+                        backgroundColor: node.color ?? "var(--color-border-strong)",
+                        borderColor: node.color ?? "var(--color-border-strong)",
+                      }
+                    : {
+                        backgroundColor: "var(--color-bg-dark)",
+                        borderColor: "var(--color-border)",
+                      }
+                }
               />
               {i < nodes.length - 1 && (
                 <div
@@ -307,9 +323,12 @@ function LifecycleTimeline({ task }: { task: TaskDrilldownResponse }) {
             <div className="pb-3">
               <div className="flex gap-2.5 items-baseline">
                 <span
-                  className={`text-[10px] font-mono font-bold ${
-                    node.done ? "text-text" : "text-text-faint"
-                  }`}
+                  className="text-[10px] font-mono font-bold"
+                  style={{
+                    color: node.done
+                      ? node.color ?? "var(--color-text)"
+                      : "var(--color-text-faint)",
+                  }}
                 >
                   {node.label}
                 </span>
@@ -461,14 +480,14 @@ function EscrowPanel({ task }: { task: TaskDrilldownResponse }) {
       <SectionLabel>Escrow & Money Flow</SectionLabel>
       <div className="flex flex-col gap-1.5">
         {/* Locked */}
-        <div className="flex justify-between items-center border border-border p-2 bg-bg-off">
+        <div className="flex justify-between items-center border border-amber p-2 bg-amber-light">
           <div>
-            <div className="text-[8px] font-mono uppercase tracking-[1.5px] text-text-muted mb-0.5">
+            <div className="text-[8px] font-mono uppercase tracking-[1.5px] text-amber mb-0.5">
               Escrow locked
             </div>
-            <span className="text-[10px] font-mono">{task.reward} &copy;</span>
+            <span className="text-[10px] font-mono text-amber font-bold">{task.reward} &copy;</span>
           </div>
-          <span className="text-[9px] font-mono text-text-muted">
+          <span className="text-[9px] font-mono text-amber">
             {formatTimestamp(task.timestamps.created_at)}
           </span>
         </div>
@@ -747,6 +766,12 @@ const RATING_COLOR: Record<string, string> = {
   extremely_satisfied: "var(--color-green)",
 };
 
+const RATING_BG: Record<string, string> = {
+  dissatisfied: "var(--color-red-light)",
+  satisfied: "var(--color-amber-light)",
+  extremely_satisfied: "var(--color-green-light)",
+};
+
 function FeedbackSection({
   feedback,
   task,
@@ -773,7 +798,11 @@ function FeedbackSection({
             return (
               <div
                 key={fb.feedback_id}
-                className="flex-1 border border-border p-2.5"
+                className="flex-1 border p-2.5"
+                style={{
+                  borderColor: RATING_COLOR[fb.rating] ?? "var(--color-border)",
+                  backgroundColor: RATING_BG[fb.rating] ?? "var(--color-bg)",
+                }}
               >
                 <div className="text-[8px] font-mono uppercase tracking-[1.5px] text-text-muted mb-1">
                   {isWorkerToPoster
@@ -835,25 +864,31 @@ function deadlineNote(
   label: string,
   value: string | null,
   task: TaskDrilldownResponse,
-): string {
-  if (!value) return "";
+): { text: string; color: string } {
+  if (!value) return { text: "", color: "" };
   const deadline = new Date(value).getTime();
   const now = Date.now();
 
   if (label === "bidding") {
-    return deadline < now ? "closed" : timeAgo(value);
+    return deadline < now
+      ? { text: "closed", color: "text-text-muted" }
+      : { text: timeAgo(value), color: "text-amber" };
   }
   if (label === "execution") {
-    if (task.timestamps.submitted_at) return "met";
-    if (task.status === "expired") return "missed";
-    return deadline < now ? "passed" : timeAgo(value);
+    if (task.timestamps.submitted_at) return { text: "met", color: "text-green" };
+    if (task.status === "expired") return { text: "missed", color: "text-red" };
+    return deadline < now
+      ? { text: "passed", color: "text-red" }
+      : { text: timeAgo(value), color: "text-amber" };
   }
   if (label === "review") {
-    if (task.timestamps.approved_at) return "closed";
-    if (task.dispute) return "waived \u2014 dispute filed";
-    return deadline < now ? "passed" : timeAgo(value);
+    if (task.timestamps.approved_at) return { text: "closed", color: "text-green" };
+    if (task.dispute) return { text: "waived \u2014 dispute filed", color: "text-red" };
+    return deadline < now
+      ? { text: "passed", color: "text-text-muted" }
+      : { text: timeAgo(value), color: "text-amber" };
   }
-  return "";
+  return { text: "", color: "" };
 }
 
 // ---------------------------------------------------------------------------
@@ -928,12 +963,21 @@ export default function TaskDrilldown() {
           <Badge filled={sbProps.filled} style={sbProps.style}>
             {task.status.toUpperCase()}
           </Badge>
-          <span className="ml-auto text-[18px] font-mono font-bold">
+          <span className="ml-auto text-[18px] font-mono font-bold text-green">
             {hasRuling ? (
               <>
                 {workerPayout} &copy;{" "}
+                <span className="text-[10px] font-normal" style={{ color: "#4a1580" }}>
+                  (worker)
+                </span>
                 <span className="text-[10px] text-text-muted font-normal">
-                  (worker) &middot; {posterPayout} &copy; (poster)
+                  {" "}&middot;{" "}
+                </span>
+                <span className="text-[10px] text-red font-normal">
+                  {posterPayout} &copy;
+                </span>
+                <span className="text-[10px] text-text-muted font-normal">
+                  {" "}(poster)
                 </span>
               </>
             ) : (
@@ -982,22 +1026,25 @@ export default function TaskDrilldown() {
 
         {/* Deadlines row */}
         <div className="flex gap-6 border-t border-border pt-2">
-          {deadlines.map(
-            (d) =>
-              d.value && (
-                <div key={d.key}>
-                  <div className="text-[8px] font-mono uppercase tracking-[1.5px] text-text-muted mb-0.5">
-                    {d.key} deadline
-                  </div>
-                  <span className="text-[11px] font-mono">
-                    {formatTimestamp(d.value)}
-                  </span>
-                  <span className="text-[8px] font-mono uppercase tracking-[1.5px] text-text-muted ml-1.5">
-                    {deadlineNote(d.key, d.value, task)}
-                  </span>
+          {deadlines.map((d) => {
+            if (!d.value) return null;
+            const note = deadlineNote(d.key, d.value, task);
+            return (
+              <div key={d.key}>
+                <div className="text-[8px] font-mono uppercase tracking-[1.5px] text-text-muted mb-0.5">
+                  {d.key} deadline
                 </div>
-              ),
-          )}
+                <span className="text-[11px] font-mono">
+                  {formatTimestamp(d.value)}
+                </span>
+                {note.text && (
+                  <span className={`text-[8px] font-mono uppercase tracking-[1.5px] ml-1.5 font-bold ${note.color}`}>
+                    {note.text}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
