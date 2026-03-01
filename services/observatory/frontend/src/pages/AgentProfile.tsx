@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useAgentProfile } from "../hooks/useAgentProfile";
 import Badge from "../components/Badge";
+import { colors, cssVar, tooltipBg } from "../utils/colorUtils";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -259,10 +260,10 @@ function EarningsChart({
     return dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   });
 
-  const green = getComputedStyle(document.documentElement).getPropertyValue("--color-green").trim() || "#1a7a1a";
-  const greenLight = getComputedStyle(document.documentElement).getPropertyValue("--color-green-light").trim() || "#e6f4e6";
-  const textMuted = getComputedStyle(document.documentElement).getPropertyValue("--color-text-muted").trim() || "#888888";
-  const border = getComputedStyle(document.documentElement).getPropertyValue("--color-border").trim() || "#cccccc";
+  const green = cssVar("--color-green", "#1a7a1a");
+  const greenLight = cssVar("--color-green-light", "#e6f4e6");
+  const textMuted = cssVar("--color-text-muted", "#888888");
+  const border = cssVar("--color-border", "#cccccc");
 
   const chartData = {
     labels,
@@ -289,7 +290,7 @@ function EarningsChart({
       tooltip: {
         intersect: false,
         mode: "index" as const,
-        backgroundColor: "#111111",
+        backgroundColor: tooltipBg,
         titleFont: { family: "'Courier New', monospace", size: 10 },
         bodyFont: { family: "'Courier New', monospace", size: 11 },
         padding: 8,
@@ -387,9 +388,9 @@ function MonthlyEarningsChart({
   });
   const values = sortedKeys.map((k) => monthlyMap.get(k) ?? 0);
 
-  const accent = getComputedStyle(document.documentElement).getPropertyValue("--color-green").trim() || "#1a7a1a";
-  const textMuted = getComputedStyle(document.documentElement).getPropertyValue("--color-text-muted").trim() || "#888888";
-  const borderColor = getComputedStyle(document.documentElement).getPropertyValue("--color-border").trim() || "#cccccc";
+  const accent = cssVar("--color-green", "#1a7a1a");
+  const textMuted = cssVar("--color-text-muted", "#888888");
+  const borderColor = cssVar("--color-border", "#cccccc");
 
   const chartData = {
     labels,
@@ -409,7 +410,7 @@ function MonthlyEarningsChart({
     plugins: {
       tooltip: {
         intersect: false,
-        backgroundColor: "#111111",
+        backgroundColor: tooltipBg,
         titleFont: { family: "'Courier New', monospace", size: 10 },
         bodyFont: { family: "'Courier New', monospace", size: 11 },
         padding: 8,
@@ -524,8 +525,8 @@ function ReputationPanel({
   const summaryStats = [
     { label: "Tasks worked", val: String(profile.stats.tasks_completed_as_worker), color: "" },
     { label: "Tasks posted", val: String(profile.stats.tasks_posted), color: "" },
-    { label: "Total earned", val: `${profile.stats.total_earned} \u00a9`, color: "text-green" },
-    { label: "Total spent", val: `${profile.stats.total_spent} \u00a9`, color: "text-red" },
+    { label: "Total earned", val: `${profile.stats.total_earned} \u00a9`, color: colors.money },
+    { label: "Total spent", val: `${profile.stats.total_spent} \u00a9`, color: colors.spent },
   ];
 
   return (
@@ -556,14 +557,14 @@ function ReputationPanel({
           <span className="text-[9px] font-mono text-text-muted">
             cumulative &middot; all-time
           </span>
-          <span className="text-[11px] font-bold font-mono text-green">
+          <span className={`text-[11px] font-bold font-mono ${colors.money}`}>
             {earnings ? `${earnings.total_earned.toLocaleString()} \u00a9` : "\u2014"}
           </span>
         </div>
         {earnings && (
           <>
             <EarningsChart data={earnings.data_points} height={80} />
-            <div className="mt-2 px-1.5 py-1 bg-green-light border border-dashed border-green/30 text-[8px] font-mono text-green leading-relaxed">
+            <div className={`mt-2 px-1.5 py-1 ${colors.moneyBg} border border-dashed border-green/30 text-[8px] font-mono ${colors.money} leading-relaxed`}>
               +{earnings.last_7d_earned} &copy; last 7 days &middot; avg {earnings.avg_per_task} &copy; / task
             </div>
           </>
@@ -583,7 +584,7 @@ function ReputationPanel({
         <div className="text-[9px] font-mono uppercase tracking-[1.5px] text-text-muted mb-1">
           Account Balance
         </div>
-        <div className="text-[13px] font-bold font-mono text-green">
+        <div className={`text-[13px] font-bold font-mono ${colors.money}`}>
           {profile.balance.toLocaleString()} &copy;
         </div>
       </div>
@@ -776,7 +777,7 @@ function TaskHistoryPanel({ tasks }: { tasks: RecentTask[] }) {
               >
                 {t.title}
               </Link>
-              <span className="text-[10px] font-bold font-mono shrink-0 text-green">
+              <span className={`text-[10px] font-bold font-mono shrink-0 ${colors.money}`}>
                 {t.reward} &copy;
               </span>
             </div>
@@ -880,8 +881,8 @@ export default function AgentProfile() {
             {[
               { label: "Tasks worked", val: String(profile.stats.tasks_completed_as_worker), color: "" },
               { label: "Tasks posted", val: String(profile.stats.tasks_posted), color: "" },
-              { label: "Total earned", val: `${profile.stats.total_earned} \u00a9`, color: "text-green" },
-              { label: "Total spent", val: `${profile.stats.total_spent} \u00a9`, color: "text-red" },
+              { label: "Total earned", val: `${profile.stats.total_earned} \u00a9`, color: colors.money },
+              { label: "Total spent", val: `${profile.stats.total_spent} \u00a9`, color: colors.spent },
             ].map((s) => (
               <div key={s.label} className="text-right">
                 <div className="text-[8px] font-mono uppercase tracking-[1.5px] text-text-muted">

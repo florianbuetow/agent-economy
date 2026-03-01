@@ -4,6 +4,7 @@ import { motion, useInView } from "motion/react";
 import { fetchMetrics } from "../../api/metrics";
 import { fetchEvents } from "../../api/events";
 import type { MetricsResponse, EventItem } from "../../types";
+import { colors } from "../../utils/colorUtils";
 import ActivityTicker from "./ActivityTicker";
 
 interface MetricDisplay {
@@ -183,7 +184,7 @@ export default function LiveProofSection() {
                   m.value
                 )}
               </div>
-              <div className="text-[8px] font-mono text-green mt-1">
+              <div className={`text-[8px] font-mono ${colors.positive} mt-1`}>
                 {m.note}
               </div>
             </div>

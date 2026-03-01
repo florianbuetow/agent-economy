@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuarterlyReport, currentQuarterLabel } from "../hooks/useQuarterlyReport";
+import { colors, trendColor, thresholdColor } from "../utils/colorUtils";
 
 function shiftQuarter(quarter: string, delta: number): string {
   const match = quarter.match(/^(\d{4})-Q([1-4])$/);
@@ -88,7 +89,7 @@ export default function QuarterlyReport() {
                 {report.gdp.total.toLocaleString()}
               </div>
               <div className="text-[10px] text-text-muted mt-1">coins produced</div>
-              <div className={`text-[11px] mt-3 ${report.gdp.delta_pct >= 0 ? "text-green" : "text-red"}`}>
+              <div className={`text-[11px] mt-3 ${trendColor(report.gdp.delta_pct, "up-good")}`}>
                 {report.gdp.delta_pct >= 0 ? "▲" : "▼"}{" "}
                 {Math.abs(report.gdp.delta_pct).toFixed(1)}% from previous quarter
                 ({report.gdp.previous_quarter.toLocaleString()})
@@ -116,11 +117,11 @@ export default function QuarterlyReport() {
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-text-muted">Disputed</span>
-                    <span className={`font-bold ${report.tasks.disputed > 0 ? "text-red" : "text-text"}`}>{report.tasks.disputed}</span>
+                    <span className={`font-bold ${report.tasks.disputed > 0 ? colors.negative : "text-text"}`}>{report.tasks.disputed}</span>
                   </div>
                   <div className="flex justify-between text-[11px] pt-2 border-t border-border">
                     <span className="text-text-muted">Completion rate</span>
-                    <span className={`font-bold ${report.tasks.completion_rate > 0.5 ? "text-green" : "text-red"}`}>
+                    <span className={`font-bold ${thresholdColor(report.tasks.completion_rate * 100, 80, 50)}`}>
                       {(report.tasks.completion_rate * 100).toFixed(0)}%
                     </span>
                   </div>
@@ -203,7 +204,7 @@ export default function QuarterlyReport() {
                         <span className="text-text-faint mr-1">{i + 1}.</span>
                         {w.name}
                       </span>
-                      <span className="text-text-muted">{w.earned?.toLocaleString()} earned</span>
+                      <span className={colors.money}>{w.earned?.toLocaleString()} earned</span>
                     </div>
                   ))}
                 </div>
@@ -222,7 +223,7 @@ export default function QuarterlyReport() {
                         <span className="text-text-faint mr-1">{i + 1}.</span>
                         {p.name}
                       </span>
-                      <span className="text-text-muted">{p.spent?.toLocaleString()} spent</span>
+                      <span className={colors.spent}>{p.spent?.toLocaleString()} spent</span>
                     </div>
                   ))}
                 </div>
