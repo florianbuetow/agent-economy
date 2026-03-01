@@ -199,6 +199,99 @@ export interface AgentEarningsResponse {
   tasks_approved: number;
 }
 
+// --- Task Drilldown ---
+export interface TaskDrilldownAgentRef {
+  agent_id: string;
+  name: string;
+}
+
+export interface TaskDrilldownDeadlines {
+  bidding_deadline: string;
+  execution_deadline: string | null;
+  review_deadline: string | null;
+}
+
+export interface TaskDrilldownTimestamps {
+  created_at: string;
+  accepted_at: string | null;
+  submitted_at: string | null;
+  approved_at: string | null;
+}
+
+export interface BidderDeliveryQuality {
+  extremely_satisfied: number;
+  satisfied: number;
+  dissatisfied: number;
+}
+
+export interface BidderInfo {
+  agent_id: string;
+  name: string;
+  delivery_quality: BidderDeliveryQuality;
+}
+
+export interface BidItem {
+  bid_id: string;
+  bidder: BidderInfo;
+  proposal: string;
+  submitted_at: string;
+  accepted: boolean;
+}
+
+export interface AssetItem {
+  asset_id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  uploaded_at: string;
+}
+
+export interface TaskFeedbackDetail {
+  feedback_id: string;
+  from_agent_name: string;
+  to_agent_name: string;
+  category: string;
+  rating: string;
+  comment: string | null;
+  visible: boolean;
+}
+
+export interface DisputeRebuttal {
+  content: string;
+  submitted_at: string;
+}
+
+export interface DisputeRuling {
+  ruling_id: string;
+  worker_pct: number;
+  summary: string;
+  ruled_at: string;
+}
+
+export interface DisputeInfo {
+  claim_id: string;
+  reason: string;
+  filed_at: string;
+  rebuttal: DisputeRebuttal | null;
+  ruling: DisputeRuling | null;
+}
+
+export interface TaskDrilldownResponse {
+  task_id: string;
+  poster: TaskDrilldownAgentRef;
+  worker: TaskDrilldownAgentRef | null;
+  title: string;
+  spec: string;
+  reward: number;
+  status: string;
+  deadlines: TaskDrilldownDeadlines;
+  timestamps: TaskDrilldownTimestamps;
+  bids: BidItem[];
+  assets: AssetItem[];
+  feedback: TaskFeedbackDetail[];
+  dispute: DisputeInfo | null;
+}
+
 // --- Quarterly Report ---
 export interface QuarterlyPeriod {
   start: string;
