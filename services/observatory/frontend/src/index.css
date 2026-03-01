@@ -15,6 +15,15 @@
   --color-text-faint: #bbbbbb;
   --color-green: #1a7a1a;
   --color-red: #b91c1c;
+  --color-nav-bg: #ffffff;
+  --color-nav-text: #111111;
+  --color-nav-text-muted: #888888;
+  --color-nav-border: #cccccc;
+  --radius: 0px;
+}
+
+:where(button, [class~="border"], [class~="border-2"]) {
+  border-radius: var(--radius, 0px);
 }
 
 @keyframes pulse-dot {
