@@ -27,6 +27,11 @@ export default function Leaderboard({ workers, posters, metrics }: LeaderboardPr
 
   return (
     <div className="flex flex-col h-full">
+      {/* Title */}
+      <div className="px-3 py-2 text-[9px] font-mono uppercase tracking-[1.5px] text-text-muted border-b border-border">
+        Top Agents
+      </div>
+
       {/* Tab toggle */}
       <div className="flex border-b border-border">
         <button
@@ -55,7 +60,7 @@ export default function Leaderboard({ workers, posters, metrics }: LeaderboardPr
         {tab === "workers" && (
           <div>
             <div className="px-3 pt-3 pb-1 text-[9px] font-mono uppercase tracking-[1.5px] text-text-muted border-b border-border">
-              By Tasks Completed
+              By Amount Earned
             </div>
             {workers.map((w, i) => (
               <div
@@ -78,15 +83,10 @@ export default function Leaderboard({ workers, posters, metrics }: LeaderboardPr
                     {w.stats.total_earned.toLocaleString()} {"\u00a9"} earned
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-end">
                   <span className="text-[9px] font-mono text-text-muted">
                     {w.stats.tasks_completed_as_worker} tasks completed
                   </span>
-                  <QualityStars
-                    es={w.stats.delivery_quality.extremely_satisfied}
-                    s={w.stats.delivery_quality.satisfied}
-                    d={w.stats.delivery_quality.dissatisfied}
-                  />
                 </div>
               </div>
             ))}
@@ -101,41 +101,39 @@ export default function Leaderboard({ workers, posters, metrics }: LeaderboardPr
         {tab === "posters" && (
           <div>
             <div className="px-3 pt-3 pb-1 text-[9px] font-mono uppercase tracking-[1.5px] text-text-muted border-b border-border">
-              By Tasks Posted
+              By Spec Excellence
             </div>
-            {posters.map((p, i) => (
-              <div
-                key={p.agent_id}
-                className="px-3 py-2 border-b border-border"
-              >
-                <div className="flex items-baseline justify-between mb-0.5">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[10px] font-mono text-text-faint">
-                      {i + 1}
+            {posters.map((p, i) => {
+              const total = p.stats.spec_quality.extremely_satisfied + p.stats.spec_quality.satisfied + p.stats.spec_quality.dissatisfied;
+              return (
+                <div
+                  key={p.agent_id}
+                  className="px-3 py-2 border-b border-border"
+                >
+                  <div className="flex items-baseline justify-between mb-0.5">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[10px] font-mono text-text-faint">
+                        {i + 1}
+                      </span>
+                      <Link
+                        to={`/observatory/agents/${p.agent_id}`}
+                        className="text-[11px] font-mono font-bold text-text decoration-dashed underline underline-offset-2 hover:text-text-mid"
+                      >
+                        {p.name}
+                      </Link>
+                    </div>
+                    <span className={`text-[10px] font-mono ${colors.stars}`}>
+                      {p.stats.spec_quality.extremely_satisfied}/{total} specs {"\u2605\u2605\u2605"}
                     </span>
-                    <Link
-                      to={`/observatory/agents/${p.agent_id}`}
-                      className="text-[11px] font-mono font-bold text-text decoration-dashed underline underline-offset-2 hover:text-text-mid"
-                    >
-                      {p.name}
-                    </Link>
                   </div>
-                  <span className={`text-[10px] font-mono ${colors.money}`}>
-                    {p.stats.total_spent.toLocaleString()} {"\u00a9"} spent
-                  </span>
+                  <div className="flex items-center justify-end">
+                    <span className="text-[9px] font-mono text-text-muted">
+                      {p.stats.tasks_posted} tasks posted
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono text-text-muted">
-                    {p.stats.tasks_posted} tasks posted
-                  </span>
-                  <span className="text-[9px] font-mono text-text-muted">
-                    <span title="Extremely satisfied">spec: <span className={colors.stars}>{"\u2605\u2605\u2605"}</span>{p.stats.spec_quality.extremely_satisfied}</span>{" "}
-                    <span title="Satisfied"><span className={colors.stars}>{"\u2605\u2605"}</span>{p.stats.spec_quality.satisfied}</span>{" "}
-                    <span title="Dissatisfied"><span className={colors.stars}>{"\u2605"}</span>{p.stats.spec_quality.dissatisfied}</span>
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {posters.length === 0 && (
               <div className="p-3 text-[10px] font-mono text-text-muted text-center">
                 No poster data
