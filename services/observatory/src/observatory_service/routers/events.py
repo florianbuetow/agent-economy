@@ -29,9 +29,9 @@ async def get_events(
     try:
         limit_int = int(limit)
     except ValueError:
-        raise ServiceError("invalid_parameter", "limit must be an integer", 400, None) from None
+        raise ServiceError("invalid_parameter", "limit must be an integer", 400, {}) from None
     if limit_int < 1:
-        raise ServiceError("invalid_parameter", "limit must be >= 1", 400, None)
+        raise ServiceError("invalid_parameter", "limit must be >= 1", 400, {})
     limit_int = min(limit_int, 200)  # Clamp to 200
 
     # Parse before/after
@@ -45,13 +45,13 @@ async def get_events(
                 "invalid_parameter",
                 "before must be an integer",
                 400,
-                None,
+                {},
             ) from None
     if after is not None:
         try:
             after_int = int(after)
         except ValueError:
-            raise ServiceError("invalid_parameter", "after must be an integer", 400, None) from None
+            raise ServiceError("invalid_parameter", "after must be an integer", 400, {}) from None
 
     state = get_app_state()
     db = state.db
