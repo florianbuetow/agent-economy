@@ -24,8 +24,11 @@ RULES:
 - Make the problem feel like a real-world scenario
 - The answer must remain identical
 - Keep the OUTPUT FORMAT and VERIFICATION sections from the original
+- Do NOT solve the problem or include the answer anywhere in your output
+- Do NOT include lines like "Output:", "Answer:", or "Solution:"
+- Do NOT include any preamble, explanation, or markdown headers before the problem
 
-Output ONLY the rewritten problem specification. Do not include any preamble or explanation.\
+Output ONLY the rewritten problem specification text, nothing else.\
 """
 
 
@@ -75,7 +78,7 @@ class LLMDressUp:
                     logger.warning("LLM returned empty content (attempt %d)", attempt)
                     continue
 
-                new_spec = content.strip()
+                new_spec = _strip_answer_leakage(content.strip())
 
                 # Sanity check: all original numbers should appear in the new spec
                 missing = _check_numbers_preserved(original_numbers, new_spec)
@@ -84,6 +87,14 @@ class LLMDressUp:
                         "Dress-up attempt %d: missing numbers %s, retrying",
                         attempt,
                         missing,
+                    )
+                    continue
+
+                # Check the LLM didn't leak the answer
+                if _has_answer_leakage(new_spec, task.solutions):
+                    logger.warning(
+                        "Dress-up attempt %d: answer leaked in spec, retrying",
+                        attempt,
                     )
                     continue
 
@@ -127,3 +138,35 @@ def _check_numbers_preserved(
 ) -> list[str]:
     """Return list of original numbers not found in new_text."""
     return [n for n in original_numbers if n not in new_text]
+
+
+def _strip_answer_leakage(text: str) -> str:
+    """Remove lines that look like the LLM solving the problem."""
+    import re
+
+    # Strip common preamble/answer patterns at the start
+    lines = text.split("\n")
+    cleaned: list[str] = []
+    for line in lines:
+        stripped = line.strip().lower()
+        if re.match(
+            r"^(\*\*)?(?:output|answer|solution|result)\s*[:=]",
+            stripped,
+        ):
+            continue
+        cleaned.append(line)
+    return "\n".join(cleaned).strip()
+
+
+def _has_answer_leakage(spec: str, solutions: list[str]) -> bool:
+    """Check if the spec contains a line that directly states the answer."""
+    import re
+
+    for line in spec.split("\n"):
+        stripped = line.strip().lower()
+        # Look for "the answer is X" or "= X" patterns outside VERIFICATION
+        if re.match(r"^(?:the\s+)?(?:answer|result|solution)\s+is\s+", stripped):
+            for sol in solutions:
+                if sol.strip().lower() in stripped:
+                    return True
+    return False
