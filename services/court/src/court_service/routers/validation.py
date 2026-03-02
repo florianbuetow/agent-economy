@@ -17,24 +17,24 @@ def parse_json_body(raw_body: bytes) -> dict[str, Any]:
     try:
         parsed = json.loads(raw_body)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise ServiceError("INVALID_JSON", "Request body is not valid JSON", 400, {}) from exc
+        raise ServiceError("invalid_json", "Request body is not valid JSON", 400, {}) from exc
     if not isinstance(parsed, dict):
-        raise ServiceError("INVALID_JSON", "Request body must be a JSON object", 400, {})
+        raise ServiceError("invalid_json", "Request body must be a JSON object", 400, {})
     return parsed
 
 
 def extract_jws_token(data: dict[str, Any], field: str) -> str:
     """Extract and validate JWS compact token from request body."""
     if field not in data or data[field] is None:
-        raise ServiceError("INVALID_JWS", "Missing JWS token in request body", 400, {})
+        raise ServiceError("invalid_jws", "Missing JWS token in request body", 400, {})
     token = data[field]
     if not isinstance(token, str):
-        raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
+        raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
     if token == "":  # nosec B105
-        raise ServiceError("INVALID_JWS", "JWS token must not be empty", 400, {})
+        raise ServiceError("invalid_jws", "JWS token must not be empty", 400, {})
     if len(token.split(".")) != 3:
         raise ServiceError(
-            "INVALID_JWS",
+            "invalid_jws",
             "JWS token must be a three-part compact serialization",
             400,
             {},
@@ -65,17 +65,17 @@ def verify_platform_token(token: str, platform_agent: PlatformAgent | None) -> d
     try:
         payload = platform_agent.validate_certificate(token)
     except (InvalidSignature, ValueError) as exc:
-        raise ServiceError("FORBIDDEN", "JWS signature verification failed", 403, {}) from exc
+        raise ServiceError("forbidden", "JWS signature verification failed", 403, {}) from exc
     except Exception as exc:
         raise ServiceError(
-            "IDENTITY_SERVICE_UNAVAILABLE",
+            "identity_service_unavailable",
             "Cannot reach Identity service",
             502,
             {},
         ) from exc
 
     if not isinstance(payload, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-        raise ServiceError("INVALID_PAYLOAD", "JWS payload must be a JSON object", 400, {})
+        raise ServiceError("invalid_payload", "JWS payload must be a JSON object", 400, {})
 
     return payload
 
@@ -85,7 +85,7 @@ def require_action(payload: dict[str, Any], expected_action: str) -> None:
     action = payload.get("action")
     if action != expected_action:
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             f'JWS payload action must be "{expected_action}"',
             400,
             {},
@@ -97,7 +97,7 @@ def require_platform_signer(payload: dict[str, Any], platform_agent_id: str) -> 
     agent_id = payload.get("agent_id")
     if not isinstance(agent_id, str) or agent_id != platform_agent_id:
         raise ServiceError(
-            "FORBIDDEN",
+            "forbidden",
             "Only the platform agent can perform this operation",
             403,
             {},
@@ -109,7 +109,7 @@ def require_non_empty_string(data: dict[str, Any], field: str) -> str:
     value = data.get(field)
     if not isinstance(value, str) or value.strip() == "":
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             f"JWS payload must contain {field}",
             400,
             {},

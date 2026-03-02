@@ -64,7 +64,7 @@ async def http_exception_handler(_request: Request, exc: StarletteHTTPException)
         return JSONResponse(
             status_code=405,
             content={
-                "error": "METHOD_NOT_ALLOWED",
+                "error": "method_not_allowed",
                 "message": "Method not allowed",
                 "details": {},
             },
@@ -72,7 +72,7 @@ async def http_exception_handler(_request: Request, exc: StarletteHTTPException)
     return JSONResponse(
         status_code=exc.status_code,
         content={
-            "error": "HTTP_ERROR",
+            "error": "http_error",
             "message": str(exc.detail),
             "details": {},
         },

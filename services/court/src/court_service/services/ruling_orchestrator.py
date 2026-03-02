@@ -91,11 +91,11 @@ class RulingOrchestrator:
     def _validate_ruling_preconditions(self, dispute_id: str) -> dict[str, Any]:
         dispute = self._store.get_dispute(dispute_id)
         if dispute is None:
-            raise ServiceError("DISPUTE_NOT_FOUND", "Dispute not found", 404, {})
+            raise ServiceError("dispute_not_found", "Dispute not found", 404, {})
 
         if str(dispute["status"]) == "ruled" or dispute["ruled_at"] is not None:
             raise ServiceError(
-                "DISPUTE_ALREADY_RULED",
+                "dispute_already_ruled",
                 "Dispute has already been ruled",
                 409,
                 {},
@@ -104,7 +104,7 @@ class RulingOrchestrator:
         status = str(dispute["status"])
         if status not in {"rebuttal_pending", "rebuttal_submitted"}:
             raise ServiceError(
-                "DISPUTE_NOT_READY",
+                "dispute_not_ready",
                 "Dispute is not ready for ruling",
                 409,
                 {},
@@ -128,7 +128,7 @@ class RulingOrchestrator:
         context: DisputeContext,
     ) -> list[JudgeVote]:
         if len(judges) == 0:
-            raise ServiceError("JUDGE_UNAVAILABLE", "No judges configured", 502, {})
+            raise ServiceError("judge_unavailable", "No judges configured", 502, {})
 
         normalized_votes: list[JudgeVote] = []
         for index, judge in enumerate(judges):
@@ -136,7 +136,7 @@ class RulingOrchestrator:
                 raw_vote = await judge.evaluate(context)
             except Exception as exc:
                 raise ServiceError(
-                    "JUDGE_UNAVAILABLE",
+                    "judge_unavailable",
                     f"Judge {index} failed to evaluate dispute",
                     502,
                     {},
@@ -167,7 +167,7 @@ class RulingOrchestrator:
             )
         except httpx.HTTPStatusError as exc:
             raise ServiceError(
-                "CENTRAL_BANK_UNAVAILABLE",
+                "central_bank_unavailable",
                 "Cannot reach Central Bank service",
                 502,
                 {},
@@ -176,7 +176,7 @@ class RulingOrchestrator:
             raise
         except Exception as exc:
             raise ServiceError(
-                "CENTRAL_BANK_UNAVAILABLE",
+                "central_bank_unavailable",
                 "Cannot reach Central Bank service",
                 502,
                 {},
@@ -215,7 +215,7 @@ class RulingOrchestrator:
             await platform_agent.submit_platform_feedback(delivery_feedback_payload)
         except httpx.HTTPStatusError as exc:
             raise ServiceError(
-                "REPUTATION_SERVICE_UNAVAILABLE",
+                "reputation_service_unavailable",
                 "Cannot reach Reputation service",
                 502,
                 {},
@@ -224,7 +224,7 @@ class RulingOrchestrator:
             raise
         except Exception as exc:
             raise ServiceError(
-                "REPUTATION_SERVICE_UNAVAILABLE",
+                "reputation_service_unavailable",
                 "Cannot reach Reputation service",
                 502,
                 {},
@@ -251,7 +251,7 @@ class RulingOrchestrator:
             )
         except httpx.HTTPStatusError as exc:
             raise ServiceError(
-                "TASK_BOARD_UNAVAILABLE",
+                "task_board_unavailable",
                 "Cannot reach Task Board service",
                 502,
                 {},
@@ -260,7 +260,7 @@ class RulingOrchestrator:
             raise
         except Exception as exc:
             raise ServiceError(
-                "TASK_BOARD_UNAVAILABLE",
+                "task_board_unavailable",
                 "Cannot reach Task Board service",
                 502,
                 {},
@@ -314,7 +314,7 @@ class RulingOrchestrator:
         except Exception as exc:
             self._store.revert_to_rebuttal_pending(dispute_id)
             raise ServiceError(
-                "JUDGE_UNAVAILABLE",
+                "judge_unavailable",
                 "Failed to evaluate dispute",
                 502,
                 {},

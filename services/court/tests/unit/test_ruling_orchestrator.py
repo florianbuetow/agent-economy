@@ -80,7 +80,7 @@ async def test_validate_ruling_preconditions_dispute_not_found(tmp_path) -> None
             platform_agent=platform_agent,
         )
 
-    assert exc.value.error == "DISPUTE_NOT_FOUND"
+    assert exc.value.error == "dispute_not_found"
     store.close()
 
 
@@ -108,7 +108,7 @@ async def test_validate_ruling_preconditions_wrong_status(tmp_path) -> None:
             platform_agent=platform_agent,
         )
 
-    assert exc.value.error == "DISPUTE_NOT_READY"
+    assert exc.value.error == "dispute_not_ready"
     store.close()
 
 

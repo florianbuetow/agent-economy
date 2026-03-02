@@ -120,16 +120,16 @@ class TestFileDispute:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 409
-        assert response.json()["error"] == "DISPUTE_ALREADY_EXISTS"
+        assert response.json()["error"] == "dispute_already_exists"
 
     async def test_file_05_task_not_found(self, client: AsyncClient) -> None:
         """FILE-05: Task not found in Task Board."""
-        inject_task_board_error(ServiceError("TASK_NOT_FOUND", "Not found", status_code=404))
+        inject_task_board_error(ServiceError("task_not_found", "Not found", status_code=404))
         payload = file_dispute_payload()
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 404
-        assert response.json()["error"] == "TASK_NOT_FOUND"
+        assert response.json()["error"] == "task_not_found"
 
     async def test_file_06_missing_claim(self, client: AsyncClient) -> None:
         """FILE-06: Missing claim text."""
@@ -138,7 +138,7 @@ class TestFileDispute:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_file_07_empty_claim(self, client: AsyncClient) -> None:
         """FILE-07: Empty claim text."""
@@ -146,7 +146,7 @@ class TestFileDispute:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_file_08_claim_too_long(self, client: AsyncClient) -> None:
         """FILE-08: Claim exceeds 10,000 characters."""
@@ -154,7 +154,7 @@ class TestFileDispute:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_file_09_missing_task_id(self, client: AsyncClient) -> None:
         """FILE-09: Missing task_id."""
@@ -163,7 +163,7 @@ class TestFileDispute:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_file_10_missing_claimant_id(self, client: AsyncClient) -> None:
         """FILE-10: Missing claimant_id."""
@@ -172,7 +172,7 @@ class TestFileDispute:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_file_11_missing_respondent_id(self, client: AsyncClient) -> None:
         """FILE-11: Missing respondent_id."""
@@ -181,7 +181,7 @@ class TestFileDispute:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_file_12_missing_escrow_id(self, client: AsyncClient) -> None:
         """FILE-12: Missing escrow_id."""
@@ -190,7 +190,7 @@ class TestFileDispute:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_file_13_wrong_action(self, client: AsyncClient) -> None:
         """FILE-13: Wrong action value."""
@@ -198,7 +198,7 @@ class TestFileDispute:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_file_14_non_platform_signer(self, client: AsyncClient) -> None:
         """FILE-14: Non-platform signer is rejected."""
@@ -206,7 +206,7 @@ class TestFileDispute:
         inject_identity_verify(ROGUE_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload, kid=ROGUE_AGENT_ID))
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_file_15_tampered_jws(self, client: AsyncClient) -> None:
         """FILE-15: Tampered JWS is rejected."""
@@ -218,13 +218,13 @@ class TestFileDispute:
         token = make_tampered_jws(payload, kid=PLATFORM_AGENT_ID)
         response = await client.post("/disputes/file", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_file_16_missing_token(self, client: AsyncClient) -> None:
         """FILE-16: Missing token field."""
         response = await client.post("/disputes/file", json={})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_file_17_task_board_unavailable(self, client: AsyncClient) -> None:
         """FILE-17: Task Board unavailable."""
@@ -233,7 +233,7 @@ class TestFileDispute:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 502
-        assert response.json()["error"] == "TASK_BOARD_UNAVAILABLE"
+        assert response.json()["error"] == "task_board_unavailable"
 
 
 @pytest.mark.unit
@@ -265,7 +265,7 @@ class TestSubmitRebuttal:
             json=token_body(reb_pay),
         )
         assert response.status_code == 404
-        assert response.json()["error"] == "DISPUTE_NOT_FOUND"
+        assert response.json()["error"] == "dispute_not_found"
 
     async def test_reb_03_duplicate_rebuttal(self, client: AsyncClient) -> None:
         """REB-03: Second rebuttal is rejected with 409."""
@@ -278,7 +278,7 @@ class TestSubmitRebuttal:
             json=token_body(reb_pay),
         )
         assert response.status_code == 409
-        assert response.json()["error"] == "REBUTTAL_ALREADY_SUBMITTED"
+        assert response.json()["error"] == "rebuttal_already_submitted"
 
     async def test_reb_04_rebuttal_after_ruling(self, client: AsyncClient) -> None:
         """REB-04: Rebuttal after ruling is rejected with 409."""
@@ -291,7 +291,7 @@ class TestSubmitRebuttal:
             json=token_body(reb_pay),
         )
         assert response.status_code == 409
-        assert response.json()["error"] == "INVALID_DISPUTE_STATUS"
+        assert response.json()["error"] == "invalid_dispute_status"
 
     async def test_reb_05_missing_rebuttal_field(self, client: AsyncClient) -> None:
         """REB-05: Missing rebuttal field returns 400."""
@@ -305,7 +305,7 @@ class TestSubmitRebuttal:
             json=token_body(reb_pay),
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_reb_06_empty_rebuttal(self, client: AsyncClient) -> None:
         """REB-06: Empty rebuttal text returns 400."""
@@ -318,7 +318,7 @@ class TestSubmitRebuttal:
             json=token_body(reb_pay),
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_reb_07_rebuttal_too_long(self, client: AsyncClient) -> None:
         """REB-07: Rebuttal exceeding 10,000 chars returns 400."""
@@ -331,7 +331,7 @@ class TestSubmitRebuttal:
             json=token_body(reb_pay),
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_reb_08_wrong_action(self, client: AsyncClient) -> None:
         """REB-08: Wrong action value returns 400."""
@@ -344,7 +344,7 @@ class TestSubmitRebuttal:
             json=token_body(reb_pay),
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_reb_09_non_platform_signer(self, client: AsyncClient) -> None:
         """REB-09: Non-platform signer is rejected."""
@@ -357,7 +357,7 @@ class TestSubmitRebuttal:
             json=token_body(reb_pay, kid=ROGUE_AGENT_ID),
         )
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_reb_10_status_after_rebuttal(self, client: AsyncClient) -> None:
         """REB-10: Status remains rebuttal_pending after rebuttal, rebuttal fields set."""
@@ -478,7 +478,7 @@ class TestTriggerRuling:
             json=token_body(rule_pay),
         )
         assert response.status_code == 404
-        assert response.json()["error"] == "DISPUTE_NOT_FOUND"
+        assert response.json()["error"] == "dispute_not_found"
 
     async def test_rule_13_already_ruled_after_rebuttal(self, client: AsyncClient) -> None:
         """RULE-13: Ruling again after file+rebut+rule returns 409."""
@@ -491,7 +491,7 @@ class TestTriggerRuling:
             json=token_body(rule_pay),
         )
         assert response.status_code == 409
-        assert response.json()["error"] == "DISPUTE_ALREADY_RULED"
+        assert response.json()["error"] == "dispute_already_ruled"
 
     async def test_rule_14_already_ruled_without_rebuttal(self, client: AsyncClient) -> None:
         """RULE-14: File dispute, rule without rebuttal, try to rule again."""
@@ -513,7 +513,7 @@ class TestTriggerRuling:
             json=token_body(rule_pay2),
         )
         assert response2.status_code == 409
-        assert response2.json()["error"] == "DISPUTE_ALREADY_RULED"
+        assert response2.json()["error"] == "dispute_already_ruled"
 
     async def test_rule_15_judge_unavailable(self, client: AsyncClient) -> None:
         """RULE-15: Judge failure returns 502, status remains rebuttal_pending."""
@@ -527,7 +527,7 @@ class TestTriggerRuling:
             json=token_body(rule_pay),
         )
         assert response.status_code == 502
-        assert response.json()["error"] == "JUDGE_UNAVAILABLE"
+        assert response.json()["error"] == "judge_unavailable"
 
         get_response = await client.get(f"/disputes/{dispute_id}")
         assert get_response.json()["status"] == "rebuttal_pending"
@@ -545,7 +545,7 @@ class TestTriggerRuling:
             json=token_body(rule_pay),
         )
         assert response.status_code == 502
-        assert response.json()["error"] == "CENTRAL_BANK_UNAVAILABLE"
+        assert response.json()["error"] == "central_bank_unavailable"
 
         get_response = await client.get(f"/disputes/{dispute_id}")
         assert get_response.json()["status"] == "rebuttal_pending"
@@ -563,7 +563,7 @@ class TestTriggerRuling:
             json=token_body(rule_pay),
         )
         assert response.status_code == 502
-        assert response.json()["error"] == "REPUTATION_SERVICE_UNAVAILABLE"
+        assert response.json()["error"] == "reputation_service_unavailable"
 
         get_response = await client.get(f"/disputes/{dispute_id}")
         assert get_response.json()["status"] == "rebuttal_pending"
@@ -579,7 +579,7 @@ class TestTriggerRuling:
             json=token_body(rule_pay),
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_rule_19_ruling_without_rebuttal(self, client: AsyncClient) -> None:
         """RULE-19: Ruling without rebuttal succeeds."""
@@ -651,7 +651,7 @@ class TestGetDispute:
         fake_id = "disp-00000000-0000-0000-0000-000000000000"
         response = await client.get(f"/disputes/{fake_id}")
         assert response.status_code == 404
-        assert response.json()["error"] == "DISPUTE_NOT_FOUND"
+        assert response.json()["error"] == "dispute_not_found"
 
     async def test_get_05_public_endpoint(self, client: AsyncClient) -> None:
         """GET-05: GET dispute requires no auth."""
@@ -765,7 +765,7 @@ class TestHTTPMethods:
         """HTTP-01: Unsupported HTTP methods return 405."""
         response = await client.request(method, path)
         assert response.status_code == 405
-        assert response.json()["error"] == "METHOD_NOT_ALLOWED"
+        assert response.json()["error"] == "method_not_allowed"
 
 
 @pytest.mark.unit
@@ -774,18 +774,18 @@ class TestCrossCuttingSecurity:
 
     async def test_sec_01_error_response_format(self, client: AsyncClient) -> None:
         """SEC-01: Error responses have error and message fields."""
-        # INVALID_JWS
+        # invalid_jws
         resp1 = await client.post("/disputes/file", json={})
         assert isinstance(resp1.json()["error"], str)
         assert isinstance(resp1.json()["message"], str)
 
-        # DISPUTE_NOT_FOUND
+        # dispute_not_found
         fake_id = "disp-00000000-0000-0000-0000-000000000000"
         resp2 = await client.get(f"/disputes/{fake_id}")
         assert isinstance(resp2.json()["error"], str)
         assert isinstance(resp2.json()["message"], str)
 
-        # FORBIDDEN
+        # forbidden
         payload = file_dispute_payload()
         inject_identity_verify(ROGUE_AGENT_ID, payload)
         resp3 = await client.post("/disputes/file", json=token_body(payload, kid=ROGUE_AGENT_ID))
@@ -805,20 +805,20 @@ class TestCrossCuttingSecurity:
             ".py",
         ]
 
-        # INVALID_JWS
+        # invalid_jws
         resp1 = await client.post("/disputes/file", json={})
         msg1 = resp1.json()["message"]
         for pattern in sensitive_patterns:
             assert pattern not in msg1
 
-        # DISPUTE_NOT_FOUND
+        # dispute_not_found
         fake_id = "disp-00000000-0000-0000-0000-000000000000"
         resp2 = await client.get(f"/disputes/{fake_id}")
         msg2 = resp2.json()["message"]
         for pattern in sensitive_patterns:
             assert pattern not in msg2
 
-        # FORBIDDEN
+        # forbidden
         payload = file_dispute_payload()
         inject_identity_verify(ROGUE_AGENT_ID, payload)
         resp3 = await client.post("/disputes/file", json=token_body(payload, kid=ROGUE_AGENT_ID))
@@ -920,7 +920,7 @@ class TestDisputeLifecycle:
         inject_identity_verify(PLATFORM_AGENT_ID, payload2)
         response = await client.post("/disputes/file", json=token_body(payload2))
         assert response.status_code == 409
-        assert response.json()["error"] == "DISPUTE_ALREADY_EXISTS"
+        assert response.json()["error"] == "dispute_already_exists"
 
     async def test_life_04_rebuttal_after_ruling_rejected(self, client: AsyncClient) -> None:
         """LIFE-04: Rebuttal after ruling is rejected."""
@@ -941,7 +941,7 @@ class TestDisputeLifecycle:
             json=token_body(reb_pay),
         )
         assert response.status_code == 409
-        assert response.json()["error"] == "INVALID_DISPUTE_STATUS"
+        assert response.json()["error"] == "invalid_dispute_status"
 
     async def test_life_05_double_ruling_rejected(self, client: AsyncClient) -> None:
         """LIFE-05: Double ruling is rejected."""
@@ -954,7 +954,7 @@ class TestDisputeLifecycle:
             json=token_body(rule_pay),
         )
         assert response.status_code == 409
-        assert response.json()["error"] == "DISPUTE_ALREADY_RULED"
+        assert response.json()["error"] == "dispute_already_ruled"
 
 
 @pytest.mark.unit
@@ -1018,13 +1018,13 @@ class TestPlatformJWS:
             json={"task_id": "t-xxx", "claim": "test"},
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_05_null_token(self, client: AsyncClient) -> None:
         """AUTH-05: Null token value returns 400."""
         response = await client.post("/disputes/file", json={"token": None})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     @pytest.mark.parametrize(
         "bad_token",
@@ -1035,13 +1035,13 @@ class TestPlatformJWS:
         """AUTH-06: Non-string token types return 400."""
         response = await client.post("/disputes/file", json={"token": bad_token})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_07_empty_token(self, client: AsyncClient) -> None:
         """AUTH-07: Empty string token returns 400."""
         response = await client.post("/disputes/file", json={"token": ""})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     @pytest.mark.parametrize(
         "bad_jws",
@@ -1052,7 +1052,7 @@ class TestPlatformJWS:
         """AUTH-08: Malformed JWS strings return 400."""
         response = await client.post("/disputes/file", json={"token": bad_jws})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_09_tampered_jws(self, client: AsyncClient) -> None:
         """AUTH-09: Tampered JWS returns 403."""
@@ -1064,7 +1064,7 @@ class TestPlatformJWS:
         token = make_tampered_jws(payload, kid=PLATFORM_AGENT_ID)
         response = await client.post("/disputes/file", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_auth_10_non_platform_signer_file(self, client: AsyncClient) -> None:
         """AUTH-10: Non-platform signer on POST /disputes/file."""
@@ -1072,7 +1072,7 @@ class TestPlatformJWS:
         inject_identity_verify(ROGUE_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload, kid=ROGUE_AGENT_ID))
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_auth_11_non_platform_signer_rebuttal(self, client: AsyncClient) -> None:
         """AUTH-11: Non-platform signer on POST /disputes/{id}/rebuttal."""
@@ -1085,7 +1085,7 @@ class TestPlatformJWS:
             json=token_body(reb_pay, kid=ROGUE_AGENT_ID),
         )
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_auth_12_non_platform_signer_rule(self, client: AsyncClient) -> None:
         """AUTH-12: Non-platform signer on POST /disputes/{id}/rule."""
@@ -1098,7 +1098,7 @@ class TestPlatformJWS:
             json=token_body(rule_pay, kid=ROGUE_AGENT_ID),
         )
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_auth_13_wrong_action_on_file(self, client: AsyncClient) -> None:
         """AUTH-13: Wrong action 'create_task' on POST /disputes/file."""
@@ -1106,7 +1106,7 @@ class TestPlatformJWS:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_auth_14_missing_action_field(self, client: AsyncClient) -> None:
         """AUTH-14: Missing action field on POST /disputes/file."""
@@ -1115,7 +1115,7 @@ class TestPlatformJWS:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_auth_15_malformed_json(self, client: AsyncClient) -> None:
         """AUTH-15: Malformed JSON body returns 400."""
@@ -1125,7 +1125,7 @@ class TestPlatformJWS:
             headers={"content-type": "application/json"},
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JSON"
+        assert response.json()["error"] == "invalid_json"
 
     async def test_auth_16_non_object_json(self, client: AsyncClient) -> None:
         """AUTH-16: Non-object JSON body returns 400."""
@@ -1135,7 +1135,7 @@ class TestPlatformJWS:
             headers={"content-type": "application/json"},
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JSON"
+        assert response.json()["error"] == "invalid_json"
 
 
 @pytest.mark.unit
@@ -1175,7 +1175,7 @@ class TestIdentityDependency:
         payload = file_dispute_payload()
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 502
-        assert response.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert response.json()["error"] == "identity_service_unavailable"
 
     async def test_idep_02_timeout_error(self, client: AsyncClient) -> None:
         """IDEP-02: Identity TimeoutError returns 502."""
@@ -1183,7 +1183,7 @@ class TestIdentityDependency:
         payload = file_dispute_payload()
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 502
-        assert response.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert response.json()["error"] == "identity_service_unavailable"
 
     async def test_idep_03_runtime_error(self, client: AsyncClient) -> None:
         """IDEP-03: Identity RuntimeError returns 502."""
@@ -1191,7 +1191,7 @@ class TestIdentityDependency:
         payload = file_dispute_payload()
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 502
-        assert response.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert response.json()["error"] == "identity_service_unavailable"
 
 
 @pytest.mark.unit
@@ -1204,7 +1204,7 @@ class TestTokenReplay:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_replay_02_file_action_on_rule(self, client: AsyncClient) -> None:
         """REPLAY-02: JWS with file_dispute action sent to /disputes/{id}/rule."""
@@ -1217,7 +1217,7 @@ class TestTokenReplay:
             json=token_body(rule_pay),
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
 
 @pytest.mark.unit
@@ -1232,7 +1232,7 @@ class TestErrorPrecedence:
             headers={"content-type": "text/plain"},
         )
         assert response.status_code == 415
-        assert response.json()["error"] == "UNSUPPORTED_MEDIA_TYPE"
+        assert response.json()["error"] == "unsupported_media_type"
 
     async def test_prec_02_payload_too_large(self, client: AsyncClient) -> None:
         """PREC-02: Oversized body returns 413."""
@@ -1242,23 +1242,23 @@ class TestErrorPrecedence:
             headers={"content-type": "application/json"},
         )
         assert response.status_code == 413
-        assert response.json()["error"] == "PAYLOAD_TOO_LARGE"
+        assert response.json()["error"] == "payload_too_large"
 
     async def test_prec_03_invalid_json_before_jws(self, client: AsyncClient) -> None:
-        """PREC-03: Invalid JSON returns 400 INVALID_JSON."""
+        """PREC-03: Invalid JSON returns 400 invalid_json."""
         response = await client.post(
             "/disputes/file",
             content=b"{not json",
             headers={"content-type": "application/json"},
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JSON"
+        assert response.json()["error"] == "invalid_json"
 
     async def test_prec_04_jws_type_before_payload(self, client: AsyncClient) -> None:
-        """PREC-04: Non-string token returns INVALID_JWS before INVALID_PAYLOAD."""
+        """PREC-04: Non-string token returns invalid_jws before invalid_payload."""
         response = await client.post("/disputes/file", json={"token": 12345})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_prec_05_action_checked_before_signer(self, client: AsyncClient) -> None:
         """PREC-05: Signature verification rejects rogue signer before action check.
@@ -1270,7 +1270,7 @@ class TestErrorPrecedence:
         inject_identity_verify(ROGUE_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload, kid=ROGUE_AGENT_ID))
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_prec_06_identity_checked_before_payload(self, client: AsyncClient) -> None:
         """PREC-06: Identity error takes precedence over wrong action."""
@@ -1278,7 +1278,7 @@ class TestErrorPrecedence:
         payload = file_dispute_payload(action="wrong_action")
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 502
-        assert response.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert response.json()["error"] == "identity_service_unavailable"
 
 
 @pytest.mark.unit
@@ -1287,14 +1287,14 @@ class TestAuthSecurity:
 
     async def test_sec_auth_01_error_format(self, client: AsyncClient) -> None:
         """SEC-AUTH-01: Auth errors have error, message, and details fields."""
-        # INVALID_JWS
+        # invalid_jws
         resp1 = await client.post("/disputes/file", json={})
         data1 = resp1.json()
         assert isinstance(data1["error"], str)
         assert isinstance(data1["message"], str)
         assert isinstance(data1["details"], dict)
 
-        # INVALID_PAYLOAD
+        # invalid_payload
         payload = file_dispute_payload(action="wrong_action")
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         resp2 = await client.post("/disputes/file", json=token_body(payload))
@@ -1303,7 +1303,7 @@ class TestAuthSecurity:
         assert isinstance(data2["message"], str)
         assert isinstance(data2["details"], dict)
 
-        # FORBIDDEN
+        # forbidden
         payload3 = file_dispute_payload()
         inject_identity_verify(ROGUE_AGENT_ID, payload3)
         resp3 = await client.post("/disputes/file", json=token_body(payload3, kid=ROGUE_AGENT_ID))
@@ -1312,7 +1312,7 @@ class TestAuthSecurity:
         assert isinstance(data3["message"], str)
         assert isinstance(data3["details"], dict)
 
-        # IDENTITY_SERVICE_UNAVAILABLE
+        # identity_service_unavailable
         inject_identity_error(ConnectionError("Connection refused"))
         payload4 = file_dispute_payload()
         resp4 = await client.post("/disputes/file", json=token_body(payload4))
@@ -1333,13 +1333,13 @@ class TestAuthSecurity:
             "Ed25519",
         ]
 
-        # INVALID_JWS
+        # invalid_jws
         resp1 = await client.post("/disputes/file", json={})
         msg1 = resp1.json()["message"]
         for pattern in sensitive_patterns:
             assert pattern not in msg1
 
-        # FORBIDDEN
+        # forbidden
         payload = file_dispute_payload()
         inject_identity_verify(ROGUE_AGENT_ID, payload)
         resp2 = await client.post("/disputes/file", json=token_body(payload, kid=ROGUE_AGENT_ID))
@@ -1347,7 +1347,7 @@ class TestAuthSecurity:
         for pattern in sensitive_patterns:
             assert pattern not in msg2
 
-        # IDENTITY_SERVICE_UNAVAILABLE
+        # identity_service_unavailable
         inject_identity_error(ConnectionError("Connection refused"))
         payload3 = file_dispute_payload()
         resp3 = await client.post("/disputes/file", json=token_body(payload3))
@@ -1361,4 +1361,4 @@ class TestAuthSecurity:
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"

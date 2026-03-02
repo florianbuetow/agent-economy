@@ -77,7 +77,7 @@ class DisputeService:
             )
         except DuplicateDisputeError as exc:
             raise ServiceError(
-                "DISPUTE_ALREADY_EXISTS",
+                "dispute_already_exists",
                 "A dispute already exists for this task",
                 409,
                 {},
@@ -87,12 +87,12 @@ class DisputeService:
         """Submit rebuttal for a dispute."""
         dispute = self._store.get_dispute(dispute_id)
         if dispute is None:
-            raise ServiceError("DISPUTE_NOT_FOUND", "Dispute not found", 404, {})
+            raise ServiceError("dispute_not_found", "Dispute not found", 404, {})
 
         status = str(dispute["status"])
         if status != "rebuttal_pending":
             raise ServiceError(
-                "INVALID_DISPUTE_STATUS",
+                "invalid_dispute_status",
                 "Dispute is not in rebuttal_pending status",
                 409,
                 {},
@@ -100,7 +100,7 @@ class DisputeService:
 
         if dispute["rebuttal"] is not None:
             raise ServiceError(
-                "REBUTTAL_ALREADY_SUBMITTED",
+                "rebuttal_already_submitted",
                 "Rebuttal has already been submitted",
                 409,
                 {},

@@ -23,10 +23,10 @@ def test_parse_json_body_valid() -> None:
 
 @pytest.mark.unit
 def test_parse_json_body_invalid_json() -> None:
-    """parse_json_body raises INVALID_JSON for malformed JSON."""
+    """parse_json_body raises invalid_json for malformed JSON."""
     with pytest.raises(ServiceError) as exc:
         parse_json_body(b"{not-json")
-    assert exc.value.error == "INVALID_JSON"
+    assert exc.value.error == "invalid_json"
 
 
 @pytest.mark.unit
@@ -34,7 +34,7 @@ def test_parse_json_body_not_object() -> None:
     """parse_json_body rejects non-object JSON values."""
     with pytest.raises(ServiceError) as exc:
         parse_json_body(b'"string"')
-    assert exc.value.error == "INVALID_JSON"
+    assert exc.value.error == "invalid_json"
 
 
 @pytest.mark.unit
@@ -46,18 +46,18 @@ def test_extract_jws_token_valid() -> None:
 
 @pytest.mark.unit
 def test_extract_jws_token_missing_field() -> None:
-    """extract_jws_token raises INVALID_JWS when field missing."""
+    """extract_jws_token raises invalid_jws when field missing."""
     with pytest.raises(ServiceError) as exc:
         extract_jws_token({}, "token")
-    assert exc.value.error == "INVALID_JWS"
+    assert exc.value.error == "invalid_jws"
 
 
 @pytest.mark.unit
 def test_extract_jws_token_not_string() -> None:
-    """extract_jws_token raises INVALID_JWS for non-string token."""
+    """extract_jws_token raises invalid_jws for non-string token."""
     with pytest.raises(ServiceError) as exc:
         extract_jws_token({"token": 123}, "token")
-    assert exc.value.error == "INVALID_JWS"
+    assert exc.value.error == "invalid_jws"
 
 
 @pytest.mark.unit
@@ -71,7 +71,7 @@ def test_require_action_wrong() -> None:
     """require_action rejects non-matching action value."""
     with pytest.raises(ServiceError) as exc:
         require_action({"action": "submit_rebuttal"}, "file_dispute")
-    assert exc.value.error == "INVALID_PAYLOAD"
+    assert exc.value.error == "invalid_payload"
 
 
 @pytest.mark.unit
@@ -79,7 +79,7 @@ def test_require_action_missing() -> None:
     """require_action rejects missing action value."""
     with pytest.raises(ServiceError) as exc:
         require_action({}, "file_dispute")
-    assert exc.value.error == "INVALID_PAYLOAD"
+    assert exc.value.error == "invalid_payload"
 
 
 @pytest.mark.unit
@@ -93,7 +93,7 @@ def test_require_platform_signer_wrong() -> None:
     """require_platform_signer rejects wrong platform agent."""
     with pytest.raises(ServiceError) as exc:
         require_platform_signer({"agent_id": "agent-rogue"}, "agent-platform")
-    assert exc.value.error == "FORBIDDEN"
+    assert exc.value.error == "forbidden"
 
 
 @pytest.mark.unit
@@ -108,7 +108,7 @@ def test_require_non_empty_string_missing() -> None:
     """require_non_empty_string rejects missing required field."""
     with pytest.raises(ServiceError) as exc:
         require_non_empty_string({}, "task_id")
-    assert exc.value.error == "INVALID_PAYLOAD"
+    assert exc.value.error == "invalid_payload"
 
 
 @pytest.mark.unit
@@ -116,4 +116,4 @@ def test_require_non_empty_string_empty() -> None:
     """require_non_empty_string rejects empty string field."""
     with pytest.raises(ServiceError) as exc:
         require_non_empty_string({"task_id": "   "}, "task_id")
-    assert exc.value.error == "INVALID_PAYLOAD"
+    assert exc.value.error == "invalid_payload"

@@ -34,9 +34,9 @@ async def _fetch_task(task_id: str) -> dict[str, Any]:
         return result
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 404:
-            raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {}) from exc
+            raise ServiceError("task_not_found", "Task not found", 404, {}) from exc
         raise ServiceError(
-            "TASK_BOARD_UNAVAILABLE",
+            "task_board_unavailable",
             "Cannot reach Task Board service",
             502,
             {},
@@ -45,7 +45,7 @@ async def _fetch_task(task_id: str) -> dict[str, Any]:
         raise
     except Exception as exc:
         raise ServiceError(
-            "TASK_BOARD_UNAVAILABLE",
+            "task_board_unavailable",
             "Cannot reach Task Board service",
             502,
             {},
@@ -78,7 +78,7 @@ async def file_dispute(request: Request) -> JSONResponse:
 
     if len(claim) > settings.disputes.max_claim_length:
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             "Claim exceeds maximum length",
             400,
             {},
@@ -119,7 +119,7 @@ async def submit_rebuttal(dispute_id: str, request: Request) -> JSONResponse:
     payload_dispute_id = require_non_empty_string(payload, "dispute_id")
     if payload_dispute_id != dispute_id:
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             "Payload dispute_id does not match URL",
             400,
             {},
@@ -128,7 +128,7 @@ async def submit_rebuttal(dispute_id: str, request: Request) -> JSONResponse:
     rebuttal = require_non_empty_string(payload, "rebuttal")
     if len(rebuttal) > settings.disputes.max_rebuttal_length:
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             "Rebuttal exceeds maximum length",
             400,
             {},
@@ -158,7 +158,7 @@ async def trigger_ruling(dispute_id: str, request: Request) -> JSONResponse:
     payload_dispute_id = require_non_empty_string(payload, "dispute_id")
     if payload_dispute_id != dispute_id:
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             "Payload dispute_id does not match URL",
             400,
             {},
@@ -166,7 +166,7 @@ async def trigger_ruling(dispute_id: str, request: Request) -> JSONResponse:
 
     dispute = await run_in_threadpool(state.dispute_service.get_dispute, dispute_id)
     if dispute is None:
-        raise ServiceError("DISPUTE_NOT_FOUND", "Dispute not found", 404, {})
+        raise ServiceError("dispute_not_found", "Dispute not found", 404, {})
 
     task_id = str(dispute["task_id"])
     task_data = await _fetch_task(task_id)
@@ -184,7 +184,7 @@ async def trigger_ruling(dispute_id: str, request: Request) -> JSONResponse:
 @router.api_route("/disputes/file", methods=["GET", "PUT", "PATCH", "DELETE"])
 async def file_dispute_method_not_allowed(_request: Request) -> None:
     """Reject unsupported methods for file-dispute endpoint."""
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
 
 
 @router.get("/disputes/{dispute_id}")
@@ -197,7 +197,7 @@ async def get_dispute(dispute_id: str) -> JSONResponse:
 
     dispute = await run_in_threadpool(state.dispute_service.get_dispute, dispute_id)
     if dispute is None:
-        raise ServiceError("DISPUTE_NOT_FOUND", "Dispute not found", 404, {})
+        raise ServiceError("dispute_not_found", "Dispute not found", 404, {})
     return JSONResponse(status_code=200, content=dispute)
 
 
@@ -218,4 +218,4 @@ async def list_disputes(request: Request) -> JSONResponse:
 @router.api_route("/disputes", methods=["POST", "PUT", "PATCH", "DELETE"])
 async def disputes_collection_method_not_allowed(_request: Request) -> None:
     """Reject unsupported methods for disputes collection endpoint."""
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
