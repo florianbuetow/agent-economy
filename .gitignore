@@ -93,6 +93,9 @@ reports/*
 
 # Per-service runtime data
 services/*/data/
+!services/ui/data/
+services/ui/data/*
+!services/ui/data/web/
 
 # Per-service artifacts
 services/*/reports/
