@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from base_agent.factory import AgentFactory
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -26,6 +26,7 @@ from task_board_service.services.token_validator import TokenValidator
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from base_agent.platform import PlatformAgent
     from fastapi import FastAPI
 
 
@@ -126,7 +127,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     store = TaskStore(db_path=db_path)
     escrow_coordinator = EscrowCoordinator(central_bank_client=central_bank_client, store=store)
     state.escrow_coordinator = escrow_coordinator
-    token_validator = TokenValidator(platform_agent=state.platform_agent)
+    token_validator = TokenValidator(platform_agent=cast("PlatformAgent", state.platform_agent))
     state.token_validator = token_validator
     deadline_evaluator = DeadlineEvaluator(store=store, escrow_coordinator=escrow_coordinator)
     asset_manager = AssetManager(

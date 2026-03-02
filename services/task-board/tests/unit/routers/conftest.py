@@ -177,6 +177,8 @@ limits:
         # Propagate mocks to extracted services
         if state.task_manager is not None:
             state.task_manager._central_bank_client = mock_bank
+        if state.token_validator is not None:
+            state.token_validator._platform_agent = mock_platform
         if state.escrow_coordinator is not None:
             state.escrow_coordinator._central_bank_client = mock_bank
 

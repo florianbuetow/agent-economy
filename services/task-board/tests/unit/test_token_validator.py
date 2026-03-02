@@ -6,15 +6,19 @@ import base64
 import json
 from unittest.mock import MagicMock
 
-from cryptography.exceptions import InvalidSignature
 import pytest
+from cryptography.exceptions import InvalidSignature
 from service_commons.exceptions import ServiceError
 
 from task_board_service.services.token_validator import TokenValidator
 from tests.helpers import generate_keypair, make_jws_token
 
 
-def _platform_mock(*, return_value: object | None = None, side_effect: object | None = None) -> MagicMock:
+def _platform_mock(
+    *,
+    return_value: object | None = None,
+    side_effect: object | None = None,
+) -> MagicMock:
     """Build a platform agent mock with validate_certificate configured."""
     platform = MagicMock()
     if side_effect is not None:
