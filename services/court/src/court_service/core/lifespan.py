@@ -6,74 +6,24 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from court_service.config import get_settings
+from base_agent.factory import AgentFactory
+
+from court_service.config import get_config_path, get_settings
 from court_service.core.state import init_app_state
 from court_service.judges import LLMJudge, MockJudge
 from court_service.logging import get_logger, setup_logging
-from court_service.services.central_bank_client import CentralBankClient
 from court_service.services.dispute_service import DisputeService
 from court_service.services.dispute_store import DisputeStore
 from court_service.services.identity_client import IdentityClient
-from court_service.services.platform_signer import PlatformSigner
-from court_service.services.reputation_client import ReputationClient
 from court_service.services.ruling_orchestrator import RulingOrchestrator
-from court_service.services.task_board_client import TaskBoardClient
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
-    from logging import Logger
 
     from fastapi import FastAPI
 
     from court_service.config import Settings
-    from court_service.core.state import AppState
     from court_service.judges import Judge
-
-
-def _init_platform_signer(settings: Settings, logger: Logger) -> PlatformSigner | None:
-    if settings.platform.private_key_path is None:
-        return None
-
-    private_key_path = Path(settings.platform.private_key_path)
-    if not private_key_path.exists():
-        logger.warning(
-            "Platform signer key file not found; downstream signed clients not initialized",
-            extra={"private_key_path": str(private_key_path)},
-        )
-        return None
-
-    return PlatformSigner(
-        private_key_path=str(private_key_path),
-        platform_agent_id=settings.platform.agent_id,
-    )
-
-
-def _init_downstream_clients(
-    state: AppState,
-    settings: Settings,
-    signer: PlatformSigner | None,
-) -> None:
-    if signer is None:
-        return
-
-    if settings.task_board is not None:
-        state.task_board_client = TaskBoardClient(
-            base_url=settings.task_board.base_url,
-            signer=signer,
-            timeout_seconds=settings.identity.timeout_seconds,
-        )
-    if settings.central_bank is not None:
-        state.central_bank_client = CentralBankClient(
-            base_url=settings.central_bank.base_url,
-            signer=signer,
-            timeout_seconds=settings.identity.timeout_seconds,
-        )
-    if settings.reputation is not None:
-        state.reputation_client = ReputationClient(
-            base_url=settings.reputation.base_url,
-            signer=signer,
-            timeout_seconds=settings.identity.timeout_seconds,
-        )
 
 
 def _build_judges(settings: Settings) -> list[Judge]:
@@ -108,19 +58,6 @@ def _build_judges(settings: Settings) -> list[Judge]:
     return judges
 
 
-async def _close_resources(state: AppState) -> None:
-    if state.identity_client is not None:
-        await state.identity_client.close()
-    if state.task_board_client is not None:
-        await state.task_board_client.close()
-    if state.central_bank_client is not None:
-        await state.central_bank_client.close()
-    if state.reputation_client is not None:
-        await state.reputation_client.close()
-    if state.dispute_service is not None:
-        state.dispute_service.close()
-
-
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Manage app startup and shutdown."""
@@ -142,10 +79,25 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         timeout_seconds=settings.identity.timeout_seconds,
     )
 
-    signer = _init_platform_signer(settings, logger)
-    state.platform_signer = signer
+    # Instantiate the platform agent from the agent config.
+    # This loads the platform's Ed25519 keypair and registers with Identity.
+    if settings.platform.agent_config_path:
+        config_path = Path(settings.platform.agent_config_path)
+        if not config_path.is_absolute():
+            config_path = Path(get_config_path()).parent / config_path
 
-    _init_downstream_clients(state, settings, signer)
+        factory = AgentFactory(config_path=config_path)
+        platform_agent = factory.platform_agent()
+        await platform_agent.register()
+        state.platform_agent = platform_agent
+
+        if platform_agent.agent_id is None:
+            msg = "Platform agent registration did not return an agent_id"
+            raise RuntimeError(msg)
+
+        settings.platform.agent_id = platform_agent.agent_id
+        logger.info("Platform agent registered", extra={"agent_id": platform_agent.agent_id})
+
     state.judges = _build_judges(settings)
 
     logger.info(
@@ -154,6 +106,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             "service": settings.service.name,
             "version": settings.service.version,
             "port": settings.server.port,
+            "platform_agent_id": settings.platform.agent_id,
         },
     )
 
@@ -161,4 +114,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
 
-    await _close_resources(state)
+    if state.platform_agent is not None:
+        await state.platform_agent.close()
+    if state.identity_client is not None:  # pyright: ignore[reportUnnecessaryComparison]
+        await state.identity_client.close()
+    if state.dispute_service is not None:  # pyright: ignore[reportUnnecessaryComparison]
+        state.dispute_service.close()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from service_commons.exceptions import ServiceError
@@ -12,36 +13,14 @@ from court_service.services.dispute_store import DisputeStore
 from court_service.services.ruling_orchestrator import RulingOrchestrator
 
 
-class _TaskBoardClientMock:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, dict[str, object]]] = []
-
-    async def record_ruling(self, task_id: str, ruling_payload: dict[str, object]) -> None:
-        self.calls.append((task_id, ruling_payload))
-
-
-class _CentralBankClientMock:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, str, str, int]] = []
-
-    async def split_escrow(
-        self,
-        escrow_id: str,
-        worker_account_id: str,
-        poster_account_id: str,
-        worker_pct: int,
-    ) -> dict[str, object]:
-        self.calls.append((escrow_id, worker_account_id, poster_account_id, worker_pct))
-        return {"status": "ok"}
-
-
-class _ReputationClientMock:
-    def __init__(self) -> None:
-        self.calls: list[dict[str, object]] = []
-
-    async def record_feedback(self, feedback_payload: dict[str, object]) -> dict[str, object]:
-        self.calls.append(feedback_payload)
-        return {"status": "ok"}
+def _make_mock_platform_agent(agent_id: str = "agent-platform") -> MagicMock:
+    """Create a minimal mock PlatformAgent for orchestrator tests."""
+    mock = MagicMock()
+    mock.agent_id = agent_id
+    mock.split_escrow = AsyncMock(return_value={"status": "ok"})
+    mock.record_ruling = AsyncMock(return_value={"status": "ok"})
+    mock.submit_platform_feedback = AsyncMock(return_value={"status": "ok"})
+    return mock
 
 
 @pytest.mark.unit
@@ -65,9 +44,7 @@ async def test_execute_ruling_with_mock_judges(tmp_path) -> None:
         MockJudge(judge_id="judge-2", fixed_worker_pct=70, reasoning="Vote two"),
         MockJudge(judge_id="judge-3", fixed_worker_pct=80, reasoning="Vote three"),
     ]
-    task_board_client = _TaskBoardClientMock()
-    central_bank_client = _CentralBankClientMock()
-    reputation_client = _ReputationClientMock()
+    platform_agent = _make_mock_platform_agent()
 
     ruled = await orchestrator.execute_ruling(
         dispute_id=str(dispute["dispute_id"]),
@@ -78,10 +55,7 @@ async def test_execute_ruling_with_mock_judges(tmp_path) -> None:
             "title": "Task 1",
             "reward": 100,
         },
-        task_board_client=task_board_client,
-        central_bank_client=central_bank_client,
-        reputation_client=reputation_client,
-        platform_agent_id="agent-platform",
+        platform_agent=platform_agent,
     )
 
     assert ruled["status"] == "ruled"
@@ -96,16 +70,14 @@ async def test_validate_ruling_preconditions_dispute_not_found(tmp_path) -> None
     """execute_ruling() fails when dispute_id does not exist."""
     store = DisputeStore(db_path=str(tmp_path / "court.db"))
     orchestrator = RulingOrchestrator(store=store)
+    platform_agent = _make_mock_platform_agent()
 
     with pytest.raises(ServiceError) as exc:
         await orchestrator.execute_ruling(
             dispute_id="disp-00000000-0000-0000-0000-000000000000",
             judges=[],
             task_data={},
-            task_board_client=None,
-            central_bank_client=None,
-            reputation_client=None,
-            platform_agent_id="agent-platform",
+            platform_agent=platform_agent,
         )
 
     assert exc.value.error == "DISPUTE_NOT_FOUND"
@@ -126,16 +98,14 @@ async def test_validate_ruling_preconditions_wrong_status(tmp_path) -> None:
     )
     store.set_status(str(dispute["dispute_id"]), "filed")
     orchestrator = RulingOrchestrator(store=store)
+    platform_agent = _make_mock_platform_agent()
 
     with pytest.raises(ServiceError) as exc:
         await orchestrator.execute_ruling(
             dispute_id=str(dispute["dispute_id"]),
             judges=[],
             task_data={},
-            task_board_client=None,
-            central_bank_client=None,
-            reputation_client=None,
-            platform_agent_id="agent-platform",
+            platform_agent=platform_agent,
         )
 
     assert exc.value.error == "DISPUTE_NOT_READY"

@@ -5,17 +5,15 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+import httpx
 from service_commons.exceptions import ServiceError
 
 from court_service.judges import DisputeContext, JudgeVote
 
 if TYPE_CHECKING:
+    from base_agent.platform import PlatformAgent
+
     from court_service.judges.base import Judge
-    from court_service.services.dispute_service import (
-        CentralBankSplitClient,
-        ReputationFeedbackClient,
-        TaskBoardRulingClient,
-    )
     from court_service.services.dispute_store import DisputeStore
 
 
@@ -156,24 +154,24 @@ class RulingOrchestrator:
 
     async def _split_escrow(
         self,
-        central_bank_client: CentralBankSplitClient | None,
+        platform_agent: PlatformAgent,
         dispute: dict[str, Any],
         median_worker_pct: int,
     ) -> None:
-        if central_bank_client is None:
-            raise ServiceError(
-                "CENTRAL_BANK_UNAVAILABLE",
-                "Central Bank client not initialized",
-                502,
-                {},
-            )
         try:
-            await central_bank_client.split_escrow(
+            await platform_agent.split_escrow(
                 str(dispute["escrow_id"]),
                 str(dispute["respondent_id"]),
                 str(dispute["claimant_id"]),
                 median_worker_pct,
             )
+        except httpx.HTTPStatusError as exc:
+            raise ServiceError(
+                "CENTRAL_BANK_UNAVAILABLE",
+                "Cannot reach Central Bank service",
+                502,
+                {},
+            ) from exc
         except ServiceError:
             raise
         except Exception as exc:
@@ -186,21 +184,14 @@ class RulingOrchestrator:
 
     async def _record_feedback(
         self,
-        reputation_client: ReputationFeedbackClient | None,
+        platform_agent: PlatformAgent,
         dispute: dict[str, Any],
         median_worker_pct: int,
         ruling_summary: str,
-        platform_agent_id: str,
     ) -> None:
-        if reputation_client is None:
-            raise ServiceError(
-                "REPUTATION_SERVICE_UNAVAILABLE",
-                "Reputation client not initialized",
-                502,
-                {},
-            )
+        platform_agent_id = platform_agent.agent_id or ""
 
-        spec_feedback_payload = {
+        spec_feedback_payload: dict[str, object] = {
             "action": "submit_feedback",
             "task_id": str(dispute["task_id"]),
             "from_agent_id": platform_agent_id,
@@ -209,7 +200,7 @@ class RulingOrchestrator:
             "rating": self._spec_rating(median_worker_pct),
             "comment": ruling_summary,
         }
-        delivery_feedback_payload = {
+        delivery_feedback_payload: dict[str, object] = {
             "action": "submit_feedback",
             "task_id": str(dispute["task_id"]),
             "from_agent_id": platform_agent_id,
@@ -220,8 +211,15 @@ class RulingOrchestrator:
         }
 
         try:
-            await reputation_client.record_feedback(spec_feedback_payload)
-            await reputation_client.record_feedback(delivery_feedback_payload)
+            await platform_agent.submit_platform_feedback(spec_feedback_payload)
+            await platform_agent.submit_platform_feedback(delivery_feedback_payload)
+        except httpx.HTTPStatusError as exc:
+            raise ServiceError(
+                "REPUTATION_SERVICE_UNAVAILABLE",
+                "Cannot reach Reputation service",
+                502,
+                {},
+            ) from exc
         except ServiceError:
             raise
         except Exception as exc:
@@ -234,22 +232,14 @@ class RulingOrchestrator:
 
     async def _record_task_ruling(
         self,
-        task_board_client: TaskBoardRulingClient | None,
+        platform_agent: PlatformAgent,
         dispute: dict[str, Any],
         dispute_id: str,
         median_worker_pct: int,
         ruling_summary: str,
     ) -> None:
-        if task_board_client is None:
-            raise ServiceError(
-                "TASK_BOARD_UNAVAILABLE",
-                "Task Board client not initialized",
-                502,
-                {},
-            )
-
         try:
-            await task_board_client.record_ruling(
+            await platform_agent.record_ruling(
                 str(dispute["task_id"]),
                 {
                     "action": "record_ruling",
@@ -259,6 +249,13 @@ class RulingOrchestrator:
                     "ruling_summary": ruling_summary,
                 },
             )
+        except httpx.HTTPStatusError as exc:
+            raise ServiceError(
+                "TASK_BOARD_UNAVAILABLE",
+                "Cannot reach Task Board service",
+                502,
+                {},
+            ) from exc
         except ServiceError:
             raise
         except Exception as exc:
@@ -274,10 +271,7 @@ class RulingOrchestrator:
         dispute_id: str,
         judges: list[Judge],
         task_data: dict[str, Any],
-        task_board_client: TaskBoardRulingClient | None,
-        central_bank_client: CentralBankSplitClient | None,
-        reputation_client: ReputationFeedbackClient | None,
-        platform_agent_id: str,
+        platform_agent: PlatformAgent,
     ) -> dict[str, Any]:
         """Evaluate dispute via judges and commit ruled outcome with side-effects."""
         dispute = self._validate_ruling_preconditions(dispute_id)
@@ -289,16 +283,15 @@ class RulingOrchestrator:
             normalized_votes = await self._evaluate_judges(judges, context)
             median_worker_pct, ruling_summary = self._compute_ruling(normalized_votes)
 
-            await self._split_escrow(central_bank_client, dispute, median_worker_pct)
+            await self._split_escrow(platform_agent, dispute, median_worker_pct)
             await self._record_feedback(
-                reputation_client,
+                platform_agent,
                 dispute,
                 median_worker_pct,
                 ruling_summary,
-                platform_agent_id,
             )
             await self._record_task_ruling(
-                task_board_client,
+                platform_agent,
                 dispute,
                 dispute_id,
                 median_worker_pct,

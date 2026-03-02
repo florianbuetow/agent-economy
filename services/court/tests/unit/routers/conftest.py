@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, Any
+from unittest.mock import MagicMock
 
 import pytest
+from cryptography.exceptions import InvalidSignature
 from httpx import ASGITransport, AsyncClient
 
 from court_service.app import create_app
@@ -13,11 +15,9 @@ from court_service.config import clear_settings_cache
 from court_service.core.state import get_app_state, reset_app_state
 from tests.helpers import (
     make_jws_token,
-    make_mock_central_bank_client,
     make_mock_identity_client,
     make_mock_judge,
-    make_mock_reputation_client,
-    make_mock_task_board_client,
+    make_mock_platform_agent,
     make_task_data,
     new_escrow_id,
     new_task_id,
@@ -43,7 +43,7 @@ service:
   name: "court"
   version: "0.1.0"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8005
   log_level: "info"
 logging:
@@ -94,9 +94,10 @@ async def app(tmp_path: Any) -> AsyncIterator[FastAPI]:
                 "payload": {},
             }
         )
-        state.task_board_client = make_mock_task_board_client(task_response=make_task_data())
-        state.central_bank_client = make_mock_central_bank_client()
-        state.reputation_client = make_mock_reputation_client()
+        state.platform_agent = make_mock_platform_agent(
+            agent_id=PLATFORM_AGENT_ID,
+            task_response=make_task_data(),
+        )
         state.judges = [make_mock_judge()]
         yield test_app
 
@@ -170,31 +171,37 @@ def inject_identity_verify(
     payload: dict[str, Any],
     valid: bool = True,
 ) -> None:
-    """Update the mock identity client to return a specific verify response."""
+    """Configure the mock platform agent for token verification.
+
+    When agent_id matches the platform agent, validate_certificate returns
+    the payload. When agent_id is different (rogue agent) or valid=False,
+    validate_certificate raises InvalidSignature.
+    """
     state = get_app_state()
-    state.identity_client = make_mock_identity_client(
-        verify_response={"valid": valid, "agent_id": agent_id, "payload": payload}
-    )
+    if agent_id != PLATFORM_AGENT_ID or not valid:
+        state.platform_agent.validate_certificate = MagicMock(side_effect=InvalidSignature())
+    else:
+        state.platform_agent.validate_certificate = MagicMock(return_value=payload)
 
 
 def inject_identity_error(error: Exception) -> None:
-    """Update the mock identity client to raise an error."""
+    """Configure the mock platform agent to raise an error during verification."""
     state = get_app_state()
-    state.identity_client = make_mock_identity_client(verify_side_effect=error)
+    state.platform_agent.validate_certificate = MagicMock(side_effect=error)
 
 
 def inject_task_board_response(task_data: dict[str, Any] | None = None) -> None:
-    """Update the mock task board client response."""
+    """Update the mock platform agent's get_task response."""
     state = get_app_state()
     if task_data is None:
         task_data = make_task_data()
-    state.task_board_client = make_mock_task_board_client(task_response=task_data)
+    state.platform_agent.get_task.return_value = task_data
 
 
 def inject_task_board_error(error: Exception) -> None:
-    """Update the mock task board client to raise an error."""
+    """Update the mock platform agent's get_task to raise an error."""
     state = get_app_state()
-    state.task_board_client = make_mock_task_board_client(task_side_effect=error)
+    state.platform_agent.get_task.side_effect = error
 
 
 def inject_judge(
@@ -210,15 +217,15 @@ def inject_judge(
 
 
 def inject_central_bank_error(error: Exception) -> None:
-    """Update the mock central bank client to raise an error."""
+    """Update the mock platform agent's split_escrow to raise an error."""
     state = get_app_state()
-    state.central_bank_client = make_mock_central_bank_client(split_side_effect=error)
+    state.platform_agent.split_escrow.side_effect = error
 
 
 def inject_reputation_error(error: Exception) -> None:
-    """Update the mock reputation client to raise an error."""
+    """Update the mock platform agent's submit_platform_feedback to raise an error."""
     state = get_app_state()
-    state.reputation_client = make_mock_reputation_client(feedback_side_effect=error)
+    state.platform_agent.submit_platform_feedback.side_effect = error
 
 
 async def file_dispute(

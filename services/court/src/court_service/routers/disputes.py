@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+import httpx
 from fastapi import APIRouter, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
@@ -14,11 +17,39 @@ from court_service.routers.validation import (
     parse_json_body,
     require_action,
     require_non_empty_string,
-    require_platform_signer,
-    verify_jws,
+    verify_platform_token,
 )
 
 router = APIRouter()
+
+
+async def _fetch_task(task_id: str) -> dict[str, Any]:
+    """Fetch task data from Task Board via the platform agent."""
+    state = get_app_state()
+    if state.platform_agent is None:
+        msg = "Platform agent not initialized"
+        raise RuntimeError(msg)
+    try:
+        result: dict[str, Any] = await state.platform_agent.get_task(task_id)
+        return result
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {}) from exc
+        raise ServiceError(
+            "TASK_BOARD_UNAVAILABLE",
+            "Cannot reach Task Board service",
+            502,
+            {},
+        ) from exc
+    except ServiceError:
+        raise
+    except Exception as exc:
+        raise ServiceError(
+            "TASK_BOARD_UNAVAILABLE",
+            "Cannot reach Task Board service",
+            502,
+            {},
+        ) from exc
 
 
 @router.post("/disputes/file", status_code=201)
@@ -29,25 +60,15 @@ async def file_dispute(request: Request) -> JSONResponse:
     if state.dispute_service is None:
         msg = "Dispute service not initialized"
         raise RuntimeError(msg)
-    if state.task_board_client is None:
-        msg = "Task Board client not initialized"
+    if state.platform_agent is None:
+        msg = "Platform agent not initialized"
         raise RuntimeError(msg)
 
     data = parse_json_body(await request.body())
     token = extract_jws_token(data, field="token")
-    verified_payload = await verify_jws(token, state.identity_client)
-    signer_agent_id = require_non_empty_string(verified_payload, "agent_id")
-    payload = verified_payload.get("payload")
-    if not isinstance(payload, dict):
-        raise ServiceError(
-            "IDENTITY_SERVICE_UNAVAILABLE",
-            "Identity service returned malformed verification response",
-            502,
-            {},
-        )
+    payload = verify_platform_token(token, state.platform_agent)
 
     require_action(payload, "file_dispute")
-    require_platform_signer({"agent_id": signer_agent_id}, settings.platform.agent_id)
 
     task_id = require_non_empty_string(payload, "task_id")
     claimant_id = require_non_empty_string(payload, "claimant_id")
@@ -63,26 +84,7 @@ async def file_dispute(request: Request) -> JSONResponse:
             {},
         )
 
-    try:
-        await state.task_board_client.get_task(task_id)
-    except ServiceError as exc:
-        if exc.error == "TASK_NOT_FOUND":
-            raise
-        if exc.error == "TASK_BOARD_UNAVAILABLE" or exc.status_code >= 500:
-            raise ServiceError(
-                "TASK_BOARD_UNAVAILABLE",
-                "Cannot reach Task Board service",
-                502,
-                {},
-            ) from exc
-        raise
-    except Exception as exc:
-        raise ServiceError(
-            "TASK_BOARD_UNAVAILABLE",
-            "Cannot reach Task Board service",
-            502,
-            {},
-        ) from exc
+    await _fetch_task(task_id)
 
     created = await run_in_threadpool(
         state.dispute_service.file_dispute,
@@ -104,22 +106,15 @@ async def submit_rebuttal(dispute_id: str, request: Request) -> JSONResponse:
     if state.dispute_service is None:
         msg = "Dispute service not initialized"
         raise RuntimeError(msg)
+    if state.platform_agent is None:
+        msg = "Platform agent not initialized"
+        raise RuntimeError(msg)
 
     data = parse_json_body(await request.body())
     token = extract_jws_token(data, field="token")
-    verified_payload = await verify_jws(token, state.identity_client)
-    signer_agent_id = require_non_empty_string(verified_payload, "agent_id")
-    payload = verified_payload.get("payload")
-    if not isinstance(payload, dict):
-        raise ServiceError(
-            "IDENTITY_SERVICE_UNAVAILABLE",
-            "Identity service returned malformed verification response",
-            502,
-            {},
-        )
+    payload = verify_platform_token(token, state.platform_agent)
 
     require_action(payload, "submit_rebuttal")
-    require_platform_signer({"agent_id": signer_agent_id}, settings.platform.agent_id)
 
     payload_dispute_id = require_non_empty_string(payload, "dispute_id")
     if payload_dispute_id != dispute_id:
@@ -146,36 +141,19 @@ async def submit_rebuttal(dispute_id: str, request: Request) -> JSONResponse:
 @router.post("/disputes/{dispute_id}/rule")
 async def trigger_ruling(dispute_id: str, request: Request) -> JSONResponse:
     """Trigger dispute ruling (platform-signed)."""
-    settings = get_settings()
     state = get_app_state()
     if state.dispute_service is None:
         msg = "Dispute service not initialized"
         raise RuntimeError(msg)
-    if state.task_board_client is None:
-        msg = "Task Board client not initialized"
-        raise RuntimeError(msg)
-    if state.central_bank_client is None:
-        msg = "Central Bank client not initialized"
-        raise RuntimeError(msg)
-    if state.reputation_client is None:
-        msg = "Reputation client not initialized"
+    if state.platform_agent is None:
+        msg = "Platform agent not initialized"
         raise RuntimeError(msg)
 
     data = parse_json_body(await request.body())
     token = extract_jws_token(data, field="token")
-    verified_payload = await verify_jws(token, state.identity_client)
-    signer_agent_id = require_non_empty_string(verified_payload, "agent_id")
-    payload = verified_payload.get("payload")
-    if not isinstance(payload, dict):
-        raise ServiceError(
-            "IDENTITY_SERVICE_UNAVAILABLE",
-            "Identity service returned malformed verification response",
-            502,
-            {},
-        )
+    payload = verify_platform_token(token, state.platform_agent)
 
     require_action(payload, "trigger_ruling")
-    require_platform_signer({"agent_id": signer_agent_id}, settings.platform.agent_id)
 
     payload_dispute_id = require_non_empty_string(payload, "dispute_id")
     if payload_dispute_id != dispute_id:
@@ -191,39 +169,14 @@ async def trigger_ruling(dispute_id: str, request: Request) -> JSONResponse:
         raise ServiceError("DISPUTE_NOT_FOUND", "Dispute not found", 404, {})
 
     task_id = str(dispute["task_id"])
-    try:
-        task_data = await state.task_board_client.get_task(task_id)
-    except ServiceError as exc:
-        if exc.error == "TASK_BOARD_UNAVAILABLE" or exc.status_code >= 500:
-            raise ServiceError(
-                "TASK_BOARD_UNAVAILABLE",
-                "Cannot reach Task Board service",
-                502,
-                {},
-            ) from exc
-        raise ServiceError(
-            "TASK_BOARD_UNAVAILABLE",
-            "Cannot fetch task context from Task Board",
-            502,
-            {},
-        ) from exc
-    except Exception as exc:
-        raise ServiceError(
-            "TASK_BOARD_UNAVAILABLE",
-            "Cannot reach Task Board service",
-            502,
-            {},
-        ) from exc
+    task_data = await _fetch_task(task_id)
 
     judges = state.judges if state.judges is not None else []
     ruled = await state.dispute_service.execute_ruling(
         dispute_id=dispute_id,
         judges=judges,
         task_data=task_data,
-        task_board_client=state.task_board_client,
-        central_bank_client=state.central_bank_client,
-        reputation_client=state.reputation_client,
-        platform_agent_id=settings.platform.agent_id,
+        platform_agent=state.platform_agent,
     )
     return JSONResponse(status_code=200, content=ruled)
 

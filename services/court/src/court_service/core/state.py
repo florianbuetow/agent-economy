@@ -7,13 +7,11 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from base_agent.platform import PlatformAgent
+
     from court_service.judges import Judge
-    from court_service.services.central_bank_client import CentralBankClient
     from court_service.services.dispute_service import DisputeService
     from court_service.services.identity_client import IdentityClient
-    from court_service.services.platform_signer import PlatformSigner
-    from court_service.services.reputation_client import ReputationClient
-    from court_service.services.task_board_client import TaskBoardClient
 
 
 @dataclass
@@ -23,11 +21,23 @@ class AppState:
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     dispute_service: DisputeService | None = None
     identity_client: IdentityClient | None = None
-    platform_signer: PlatformSigner | None = None
-    task_board_client: TaskBoardClient | None = None
-    central_bank_client: CentralBankClient | None = None
-    reputation_client: ReputationClient | None = None
+    platform_agent: PlatformAgent | None = None
     judges: list[Judge] | None = None
+
+    @property
+    def central_bank_client(self) -> PlatformAgent | None:
+        """Backward-compat alias — delegates to platform_agent."""
+        return self.platform_agent
+
+    @property
+    def reputation_client(self) -> PlatformAgent | None:
+        """Backward-compat alias — delegates to platform_agent."""
+        return self.platform_agent
+
+    @property
+    def task_board_client(self) -> PlatformAgent | None:
+        """Backward-compat alias — delegates to platform_agent."""
+        return self.platform_agent
 
     @property
     def uptime_seconds(self) -> float:

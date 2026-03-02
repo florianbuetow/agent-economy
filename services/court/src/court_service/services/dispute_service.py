@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
@@ -11,37 +11,9 @@ from court_service.services.dispute_store import DisputeStore, DuplicateDisputeE
 from court_service.services.ruling_orchestrator import RulingOrchestrator
 
 if TYPE_CHECKING:
+    from base_agent.platform import PlatformAgent
+
     from court_service.judges.base import Judge
-
-
-class TaskBoardRulingClient(Protocol):
-    """Protocol for task-board ruling callback."""
-
-    async def record_ruling(self, task_id: str, ruling_payload: dict[str, Any]) -> None:
-        """Record a dispute ruling for a task."""
-        ...
-
-
-class CentralBankSplitClient(Protocol):
-    """Protocol for central-bank escrow split calls."""
-
-    async def split_escrow(
-        self,
-        escrow_id: str,
-        worker_account_id: str,
-        poster_account_id: str,
-        worker_pct: int,
-    ) -> dict[str, Any]:
-        """Split escrow into worker/poster portions."""
-        ...
-
-
-class ReputationFeedbackClient(Protocol):
-    """Protocol for reputation feedback submission."""
-
-    async def record_feedback(self, feedback_payload: dict[str, Any]) -> dict[str, Any]:
-        """Submit a feedback payload."""
-        ...
 
 
 class DisputeService:
@@ -147,20 +119,14 @@ class DisputeService:
         dispute_id: str,
         judges: list[Judge],
         task_data: dict[str, Any],
-        task_board_client: TaskBoardRulingClient | None,
-        central_bank_client: CentralBankSplitClient | None,
-        reputation_client: ReputationFeedbackClient | None,
-        platform_agent_id: str,
+        platform_agent: PlatformAgent,
     ) -> dict[str, Any]:
         """Evaluate dispute via judges and commit ruled outcome with side-effects."""
         return await self._orchestrator.execute_ruling(
             dispute_id=dispute_id,
             judges=judges,
             task_data=task_data,
-            task_board_client=task_board_client,
-            central_bank_client=central_bank_client,
-            reputation_client=reputation_client,
-            platform_agent_id=platform_agent_id,
+            platform_agent=platform_agent,
         )
 
     def get_dispute(self, dispute_id: str) -> dict[str, Any] | None:
