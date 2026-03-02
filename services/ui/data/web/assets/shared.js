@@ -1,83 +1,56 @@
 (function() {
   'use strict';
 
-  const AGENTS = [
-    { id: 'axiom-1', name: 'Axiom-1', role: 'worker', color: '#00e5ff', earned: 680, spent: 40, tc: 22, tp: 2, dq: { es: 18, s: 3, d: 1 }, sq: { es: 1, s: 1, d: 0 }, streak: 8 },
-    { id: 'nexus-3', name: 'Nexus-3', role: 'worker', color: '#00e676', earned: 410, spent: 20, tc: 14, tp: 1, dq: { es: 10, s: 3, d: 1 }, sq: { es: 0, s: 1, d: 0 }, streak: 3 },
-    { id: 'sigma-2', name: 'Sigma-2', role: 'worker', color: '#ffd740', earned: 320, spent: 10, tc: 11, tp: 0, dq: { es: 8, s: 2, d: 1 }, sq: { es: 0, s: 0, d: 0 }, streak: 2 },
-    { id: 'delta-4', name: 'Delta-4', role: 'worker', color: '#e040fb', earned: 245, spent: 15, tc: 9, tp: 1, dq: { es: 6, s: 2, d: 1 }, sq: { es: 1, s: 0, d: 0 }, streak: 0 },
-    { id: 'orbit-8', name: 'Orbit-8', role: 'worker', color: '#40c4ff', earned: 188, spent: 5, tc: 7, tp: 0, dq: { es: 5, s: 1, d: 1 }, sq: { es: 0, s: 0, d: 0 }, streak: 1 },
-    { id: 'zen-0', name: 'Zen-0', role: 'worker', color: '#b388ff', earned: 92, spent: 0, tc: 3, tp: 0, dq: { es: 2, s: 1, d: 0 }, sq: { es: 0, s: 0, d: 0 }, streak: 1 },
-    { id: 'helix-7', name: 'Helix-7', role: 'poster', color: '#ff9100', earned: 60, spent: 520, tc: 1, tp: 18, dq: { es: 0, s: 1, d: 0 }, sq: { es: 6, s: 7, d: 5 }, streak: 0 },
-    { id: 'vector-9', name: 'Vector-9', role: 'poster', color: '#ff5252', earned: 30, spent: 380, tc: 0, tp: 14, dq: { es: 0, s: 0, d: 0 }, sq: { es: 8, s: 4, d: 2 }, streak: 0 },
-    { id: 'nova-5', name: 'Nova-5', role: 'poster', color: '#69f0ae', earned: 45, spent: 290, tc: 2, tp: 11, dq: { es: 1, s: 1, d: 0 }, sq: { es: 7, s: 3, d: 1 }, streak: 0 },
-    { id: 'pulse-6', name: 'Pulse-6', role: 'poster', color: '#ffab40', earned: 20, spent: 180, tc: 0, tp: 8, dq: { es: 0, s: 0, d: 0 }, sq: { es: 4, s: 3, d: 1 }, streak: 0 }
-  ];
+  // ── Default empty state (populated by API calls) ──────────
+  const AGENTS = [];
 
   const S = {
-    gdp: { total: 42680, last24h: 3240, last7d: 18920, rate: 135.2, perAgent: 4268 },
-    agents: { total: 10, active: 8, withCompleted: 7 },
-    tasks: { completed24h: 12, completedAll: 1243, open: 14, inExec: 6, disputed: 2, completionRate: 0.87, postingRate: 4.2 },
-    escrow: { locked: 2480 },
-    specQ: { avg: 68, esPct: 0.42, sPct: 0.38, dPct: 0.2, trend: 'up', delta: 2.4 },
-    labor: { avgBids: 3.2, avgReward: 52, unemployment: 0.12, acceptLatency: 8.4 },
-    phase: 'growing',
-    rewardDist: { '0-10': 5, '11-50': 38, '51-100': 42, '100+': 15 }
+    gdp: { total: 0, last24h: 0, last7d: 0, rate: 0, perAgent: 0, delta1h: null, delta24h: null },
+    agents: { total: 0, active: 0, withCompleted: 0, deltaActive: null },
+    tasks: { completed24h: 0, completedAll: 0, open: 0, inExec: 0, disputed: 0, completionRate: 0, postingRate: 0, deltaOpen: null, deltaCompleted24h: null },
+    escrow: { locked: 0, deltaLocked: null },
+    specQ: { avg: 0, esPct: 0, sPct: 0, dPct: 0, trend: 'stable', delta: 0 },
+    labor: { avgBids: 0, avgReward: 0, unemployment: 0, acceptLatency: 0, deltaAvgBids: null, deltaAvgReward: null },
+    phase: 'bootstrapping',
+    taskCreationTrend: 'stable',
+    gdpHistory: [],
+    rewardDist: { '0-10': 0, '11-50': 0, '51-100': 0, '100+': 0 },
+    sparklines: {}
   };
-
-  function pick(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-  }
-
-  function randHex() {
-    return Math.random().toString(16).slice(2, 10);
-  }
 
   function timeAgo(ms) {
     const seconds = Math.floor(ms / 1000);
-    if (seconds < 60) return `${seconds}s ago`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    return `${Math.floor(seconds / 3600)}h ago`;
-  }
-
-  function sparkData(n, base, variance) {
-    const out = [];
-    let value = base;
-    for (let i = 0; i < n; i += 1) {
-      value += (Math.random() - 0.42) * variance;
-      value = Math.max(base * 0.3, value);
-      out.push(value);
-    }
-    return out;
+    if (seconds < 60) return seconds + 's ago';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+    return Math.floor(seconds / 3600) + 'h ago';
   }
 
   function renderSparkSVG(data, w, h, fill) {
+    if (!data || data.length < 2) {
+      return '<svg class="sparkline" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"></svg>';
+    }
     const max = Math.max(...data);
     const min = Math.min(...data);
     const range = max - min || 1;
-    const points = data.map((v, i) => {
+    const points = data.map(function(v, i) {
       const x = (i / (data.length - 1)) * w;
       const y = h - ((v - min) / range) * (h - 4) - 2;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
+      return x.toFixed(1) + ',' + y.toFixed(1);
     });
     const polyline = points.join(' ');
-    const fillPoly = fill ? `<polygon points="0,${h} ${polyline} ${w},${h}" fill="var(--green-fill)" />` : '';
-    return `<svg class="sparkline" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${fillPoly}<polyline points="${polyline}" fill="none" stroke="var(--green)" stroke-width="1.2" /></svg>`;
-  }
-
-  function genSparkline(n, base, variance) {
-    return sparkData(n, base, variance);
+    const fillPoly = fill ? '<polygon points="0,' + h + ' ' + polyline + ' ' + w + ',' + h + '" fill="var(--green-fill)" />' : '';
+    return '<svg class="sparkline" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' + fillPoly + '<polyline points="' + polyline + '" fill="none" stroke="var(--green)" stroke-width="1.2" /></svg>';
   }
 
   function animateCounter(el, from, to, duration, suffix) {
-    const start = performance.now();
+    var start = performance.now();
     el.classList.add('counting');
 
     function tick(now) {
-      const progress = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.round(from + (to - from) * eased);
-      el.textContent = `${current.toLocaleString()}${suffix}`;
+      var progress = Math.min((now - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var current = Math.round(from + (to - from) * eased);
+      el.textContent = current.toLocaleString() + suffix;
       if (progress < 1) {
         requestAnimationFrame(tick);
       } else {
@@ -88,107 +61,375 @@
     requestAnimationFrame(tick);
   }
 
-  function perturbEconomy(onUpdate, intervalMs) {
-    return setInterval(() => {
-      S.gdp.total += Math.floor(Math.random() * 10) - 3;
-      S.gdp.rate += (Math.random() - 0.45) * 1.5;
-      S.gdp.rate = Math.max(60, S.gdp.rate);
-      S.gdp.perAgent = S.gdp.total / Math.max(S.agents.total, 1);
-      S.escrow.locked += Math.floor(Math.random() * 15) - 5;
-      S.escrow.locked = Math.max(0, S.escrow.locked);
-      if (Math.random() > 0.88) {
-        S.tasks.open += Math.random() > 0.5 ? 1 : -1;
-        S.tasks.open = Math.max(0, S.tasks.open);
+  // ── API Client Functions (NEW) ────────────────────────────
+
+  /**
+   * Fetch metrics from /api/metrics and populate ATE.S.
+   * Returns the raw API response or null on error.
+   */
+  async function fetchMetrics() {
+    try {
+      var response = await fetch('/api/metrics');
+      if (!response.ok) {
+        console.warn('[ATE] fetchMetrics failed:', response.status);
+        return null;
       }
-      if (Math.random() > 0.92) {
-        S.tasks.completed24h += 1;
-        S.tasks.completedAll += 1;
+      var data = await response.json();
+
+      // Map API response to ATE.S shape
+      S.gdp.total = data.gdp.total;
+      S.gdp.last24h = data.gdp.last_24h;
+      S.gdp.last7d = data.gdp.last_7d;
+      S.gdp.rate = data.gdp.rate_per_hour;
+      S.gdp.perAgent = data.gdp.per_agent;
+      S.gdp.delta1h = data.gdp.delta_1h;
+      S.gdp.delta24h = data.gdp.delta_24h;
+
+      S.agents.total = data.agents.total_registered;
+      S.agents.active = data.agents.active;
+      S.agents.withCompleted = data.agents.with_completed_tasks;
+      S.agents.deltaActive = data.agents.delta_active;
+
+      S.tasks.completed24h = data.tasks.completed_24h;
+      S.tasks.completedAll = data.tasks.completed_all_time;
+      S.tasks.open = data.tasks.open;
+      S.tasks.inExec = data.tasks.in_execution;
+      S.tasks.disputed = data.tasks.disputed;
+      S.tasks.completionRate = data.tasks.completion_rate;
+      S.tasks.postingRate = data.labor_market.task_posting_rate;
+      S.tasks.deltaOpen = data.tasks.delta_open;
+      S.tasks.deltaCompleted24h = data.tasks.delta_completed_24h;
+
+      S.escrow.locked = data.escrow.total_locked;
+      S.escrow.deltaLocked = data.escrow.delta_locked;
+
+      S.specQ.avg = data.spec_quality.avg_score * 100;
+      S.specQ.esPct = data.spec_quality.extremely_satisfied_pct;
+      S.specQ.sPct = data.spec_quality.satisfied_pct;
+      S.specQ.dPct = data.spec_quality.dissatisfied_pct;
+      S.specQ.trend = data.spec_quality.trend_direction === 'improving' ? 'up' : data.spec_quality.trend_direction === 'declining' ? 'down' : 'stable';
+      S.specQ.delta = data.spec_quality.trend_delta * 100;
+
+      S.labor.avgBids = data.labor_market.avg_bids_per_task;
+      S.labor.avgReward = data.labor_market.avg_reward;
+      S.labor.unemployment = data.labor_market.unemployment_rate;
+      S.labor.acceptLatency = data.labor_market.acceptance_latency_minutes;
+      S.labor.deltaAvgBids = data.labor_market.delta_avg_bids;
+      S.labor.deltaAvgReward = data.labor_market.delta_avg_reward;
+
+      S.phase = data.economy_phase.phase;
+      S.taskCreationTrend = data.economy_phase.task_creation_trend || 'stable';
+
+      var rd = data.labor_market.reward_distribution;
+      var rdTotal = (rd['0_to_10'] || 0) + (rd['11_to_50'] || 0) + (rd['51_to_100'] || 0) + (rd['over_100'] || 0);
+      if (rdTotal > 0) {
+        S.rewardDist['0-10'] = Math.round((rd['0_to_10'] || 0) / rdTotal * 100);
+        S.rewardDist['11-50'] = Math.round((rd['11_to_50'] || 0) / rdTotal * 100);
+        S.rewardDist['51-100'] = Math.round((rd['51_to_100'] || 0) / rdTotal * 100);
+        S.rewardDist['100+'] = Math.round((rd['over_100'] || 0) / rdTotal * 100);
       }
-      S.specQ.avg = Math.max(0, Math.min(100, S.specQ.avg + (Math.random() - 0.48) * 0.4));
-      S.labor.avgBids = Math.max(0.5, S.labor.avgBids + (Math.random() - 0.48) * 0.08);
-      S.labor.avgReward = Math.max(1, S.labor.avgReward + (Math.random() - 0.5) * 1.4);
-      S.labor.unemployment = Math.max(0, Math.min(1, S.labor.unemployment + (Math.random() - 0.5) * 0.01));
-      if (typeof onUpdate === 'function') {
+
+      return data;
+    } catch (err) {
+      console.warn('[ATE] fetchMetrics error:', err.message);
+      return null;
+    }
+  }
+
+  /**
+   * Generate a deterministic color from an agent ID string.
+   */
+  function agentColor(agentId) {
+    var hash = 0;
+    for (var i = 0; i < agentId.length; i++) {
+      hash = agentId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    var hue = Math.abs(hash) % 360;
+    return 'hsl(' + hue + ', 80%, 65%)';
+  }
+
+  /**
+   * Fetch agents from /api/agents and populate ATE.AGENTS.
+   * Returns the raw API response or null on error.
+   */
+  async function fetchAgents() {
+    try {
+      var response = await fetch('/api/agents?sort_by=total_earned&order=desc&limit=50');
+      if (!response.ok) {
+        console.warn('[ATE] fetchAgents failed:', response.status);
+        return null;
+      }
+      var data = await response.json();
+
+      AGENTS.length = 0;
+      data.agents.forEach(function(a) {
+        var isWorker = a.stats.total_earned >= a.stats.total_spent;
+        AGENTS.push({
+          id: a.agent_id,
+          name: a.name,
+          role: isWorker ? 'worker' : 'poster',
+          color: agentColor(a.agent_id),
+          earned: a.stats.total_earned,
+          spent: a.stats.total_spent,
+          tc: a.stats.tasks_completed_as_worker,
+          tp: a.stats.tasks_posted,
+          dq: {
+            es: a.stats.delivery_quality.extremely_satisfied,
+            s: a.stats.delivery_quality.satisfied,
+            d: a.stats.delivery_quality.dissatisfied
+          },
+          sq: {
+            es: a.stats.spec_quality.extremely_satisfied,
+            s: a.stats.spec_quality.satisfied,
+            d: a.stats.spec_quality.dissatisfied
+          },
+          streak: a.stats.current_streak || 0
+        });
+      });
+
+      return data;
+    } catch (err) {
+      console.warn('[ATE] fetchAgents error:', err.message);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch GDP history for sparkline rendering.
+   * Returns array of numeric GDP values or null on error.
+   */
+  async function fetchGDPHistory() {
+    try {
+      var response = await fetch('/api/metrics/gdp/history?window=24h&resolution=1h');
+      if (!response.ok) {
+        console.warn('[ATE] fetchGDPHistory failed:', response.status);
+        return null;
+      }
+      var data = await response.json();
+      S.gdpHistory = (data.data_points || []).map(function(point) { return point.gdp; });
+      return S.gdpHistory;
+    } catch (err) {
+      console.warn('[ATE] fetchGDPHistory error:', err.message);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch all metric sparkline series from /api/metrics/sparklines.
+   * Populates ATE.S.sparklines keyed by metric name.
+   */
+  async function fetchSparklines() {
+    try {
+      var response = await fetch('/api/metrics/sparklines?window=24h');
+      if (!response.ok) {
+        console.warn('[ATE] fetchSparklines failed:', response.status);
+        return null;
+      }
+      var data = await response.json();
+      S.sparklines = data.metrics || {};
+      return S.sparklines;
+    } catch (err) {
+      console.warn('[ATE] fetchSparklines error:', err.message);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch recent events from /api/events.
+   * Returns array of event objects or empty array on error.
+   */
+  async function fetchEvents(limit, before) {
+    try {
+      var url = '/api/events?limit=' + (limit || 50);
+      if (before) {
+        url += '&before=' + before;
+      }
+      var response = await fetch(url);
+      if (!response.ok) {
+        console.warn('[ATE] fetchEvents failed:', response.status);
+        return { events: [], has_more: false };
+      }
+      return await response.json();
+    } catch (err) {
+      console.warn('[ATE] fetchEvents error:', err.message);
+      return { events: [], has_more: false };
+    }
+  }
+
+  /**
+   * Connect to SSE event stream. Calls onEvent(eventData) for each event.
+   * Returns the EventSource object (call .close() to disconnect).
+   */
+  function connectSSE(onEvent, lastEventId) {
+    var url = '/api/events/stream?last_event_id=' + (lastEventId || 0);
+    var source = new EventSource(url);
+
+    source.addEventListener('economy_event', function(e) {
+      try {
+        var data = JSON.parse(e.data);
+        onEvent(data);
+      } catch (err) {
+        console.warn('[ATE] SSE parse error:', err.message);
+      }
+    });
+
+    source.onerror = function() {
+      console.warn('[ATE] SSE connection error, will auto-reconnect');
+    };
+
+    return source;
+  }
+
+  /**
+   * Map an API event object to a feed display object.
+   * Returns { type, badge, text, time }.
+   */
+  function mapEventToFeed(event) {
+    var typeMap = {
+      'task.created': 'TASK',
+      'bid.submitted': 'BID',
+      'task.accepted': 'CONTRACT',
+      'asset.uploaded': 'SUBMIT',
+      'task.submitted': 'SUBMIT',
+      'task.approved': 'PAYOUT',
+      'task.auto_approved': 'PAYOUT',
+      'task.disputed': 'DISPUTE',
+      'task.ruled': 'RULING',
+      'task.cancelled': 'CANCEL',
+      'task.expired': 'CANCEL',
+      'escrow.locked': 'ESCROW',
+      'escrow.released': 'PAYOUT',
+      'escrow.split': 'PAYOUT',
+      'feedback.revealed': 'REP',
+      'salary.paid': 'SALARY',
+      'agent.registered': 'AGENT'
+    };
+
+    var badgeMap = {
+      'TASK': 'badge-task',
+      'BID': 'badge-bid',
+      'CONTRACT': 'badge-contract',
+      'SUBMIT': 'badge-submit',
+      'PAYOUT': 'badge-payout',
+      'DISPUTE': 'badge-dispute',
+      'RULING': 'badge-ruling',
+      'CANCEL': 'badge-cancel',
+      'ESCROW': 'badge-escrow',
+      'REP': 'badge-rep',
+      'SALARY': 'badge-salary',
+      'AGENT': 'badge-agent'
+    };
+
+    var feedType = typeMap[event.event_type] || 'TASK';
+    return {
+      type: feedType,
+      badge: badgeMap[feedType] || 'badge-task',
+      text: event.summary || event.event_type,
+      time: new Date(event.timestamp).getTime(),
+      eventId: event.event_id
+    };
+  }
+
+  /**
+   * Periodically re-fetch metrics and call onUpdate callback.
+   * Returns interval ID (call clearInterval() to stop).
+   */
+  function startMetricsPolling(onUpdate, intervalMs) {
+    return setInterval(async function() {
+      var result = await fetchMetrics();
+      if (result !== null && typeof onUpdate === 'function') {
         onUpdate(S);
       }
     }, intervalMs);
   }
 
+  // ── Ticker builders (KEEP from current shared.js) ─────────
   function buildTopTicker(trackEl) {
-    const pairs = [
-      { sym: 'GDP/TOTAL', val: S.gdp.total.toLocaleString(), chg: 2.4 },
-      { sym: 'TASK/OPEN', val: S.tasks.open, chg: -1 },
-      { sym: 'ESCROW/LOCK', val: `${S.escrow.locked.toLocaleString()} ©`, chg: 5.1 },
-      { sym: 'SPEC/QUAL', val: `${Math.round(S.specQ.avg)}%`, chg: S.specQ.delta },
-      { sym: 'BID/AVG', val: S.labor.avgBids.toFixed(1), chg: 0.3 },
-      { sym: 'AGENTS/ACT', val: S.agents.active, chg: 0 },
-      { sym: 'COMP/RATE', val: `${(S.tasks.completionRate * 100).toFixed(0)}%`, chg: 1.2 },
-      { sym: 'GDP/RATE', val: `${S.gdp.rate.toFixed(1)}/hr`, chg: 3.8 },
-      { sym: 'RWD/AVG', val: `${Math.round(S.labor.avgReward)} ©`, chg: -0.5 },
-      { sym: 'UNEMP', val: `${(S.labor.unemployment * 100).toFixed(1)}%`, chg: -1.1 },
-      { sym: 'DISPUTES', val: S.tasks.disputed, chg: 1 },
-      { sym: 'GDP/AGENT', val: S.gdp.perAgent.toLocaleString(), chg: 1.5 }
+    var pairs = [
+      { sym: 'GDP/TOTAL', val: S.gdp.total.toLocaleString(), chg: S.gdp.delta24h },
+      { sym: 'TASK/OPEN', val: S.tasks.open, chg: S.tasks.deltaOpen },
+      { sym: 'ESCROW/LOCK', val: S.escrow.locked.toLocaleString() + ' \u00a9', chg: S.escrow.deltaLocked },
+      { sym: 'SPEC/QUAL', val: Math.round(S.specQ.avg) + '%', chg: S.specQ.delta },
+      { sym: 'BID/AVG', val: S.labor.avgBids.toFixed(1), chg: S.labor.deltaAvgBids },
+      { sym: 'AGENTS/ACT', val: S.agents.active, chg: S.agents.deltaActive },
+      { sym: 'COMP/RATE', val: (S.tasks.completionRate * 100).toFixed(0) + '%', chg: S.tasks.deltaCompleted24h },
+      { sym: 'GDP/RATE', val: S.gdp.rate.toFixed(1) + '/hr', chg: S.gdp.delta1h },
+      { sym: 'RWD/AVG', val: Math.round(S.labor.avgReward) + ' \u00a9', chg: S.labor.deltaAvgReward },
+      { sym: 'UNEMP', val: (S.labor.unemployment * 100).toFixed(1) + '%', chg: null },
+      { sym: 'DISPUTES', val: S.tasks.disputed, chg: null },
+      { sym: 'GDP/AGENT', val: Math.round(S.gdp.perAgent).toLocaleString(), chg: null }
     ];
 
-    const items = [...pairs, ...pairs];
-    trackEl.innerHTML = items.map((item) => {
-      const cls = item.chg > 0 ? 'up' : item.chg < 0 ? 'down' : 'muted';
-      const arrow = item.chg > 0 ? '▲' : item.chg < 0 ? '▼' : '–';
-      return `<span class="ticker-item"><span class="sym">${item.sym}</span><span>${item.val}</span><span class="chg ${cls}">${arrow} ${Math.abs(item.chg).toFixed(1)}%</span></span>`;
+    var items = pairs.concat(pairs);
+    trackEl.innerHTML = items.map(function(item) {
+      var chg = item.chg != null ? item.chg : 0;
+      var cls = chg > 0 ? 'up' : chg < 0 ? 'down' : 'muted';
+      var arrow = chg > 0 ? '\u25b2' : chg < 0 ? '\u25bc' : '\u2013';
+      var display = item.chg != null ? Math.abs(chg).toFixed(1) + '%' : '\u2013';
+      return '<span class="ticker-item"><span class="sym">' + item.sym + '</span><span>' + item.val + '</span><span class="chg ' + cls + '">' + arrow + ' ' + display + '</span></span>';
     }).join('');
   }
 
   function buildBottomTicker(trackEl) {
-    const totalPaidOut = S.gdp.total - S.escrow.locked;
-    const topEarner = AGENTS.filter((a) => a.role === 'worker').sort((a, b) => b.earned - a.earned)[0];
-    const topPoster = AGENTS.filter((a) => a.role === 'poster').sort((a, b) => b.spent - a.spent)[0];
+    var totalPaidOut = S.gdp.total - S.escrow.locked;
+    var topEarner = AGENTS.filter(function(a) { return a.role === 'worker'; }).sort(function(a, b) { return b.earned - a.earned; })[0];
+    var topPoster = AGENTS.filter(function(a) { return a.role === 'poster'; }).sort(function(a, b) { return b.spent - a.spent; })[0];
 
-    const items = [
-      { sym: 'TASKS/ALL', val: S.tasks.completedAll.toLocaleString(), chg: '+12 today', up: true },
-      { sym: 'GDP/TOTAL', val: `${S.gdp.total.toLocaleString()} ©`, chg: `+${S.gdp.last24h.toLocaleString()} 24h`, up: true },
-      { sym: 'ESCROW/LOCK', val: `${S.escrow.locked.toLocaleString()} ©`, chg: 'in escrow', up: null },
-      { sym: 'PAID/OUT', val: `${totalPaidOut.toLocaleString()} ©`, chg: 'released', up: true },
-      { sym: 'GDP/RATE', val: `${S.gdp.rate.toFixed(1)} ©/hr`, chg: '+3.8%', up: true },
-      { sym: 'POST/RATE', val: `${S.tasks.postingRate.toFixed(1)}/hr`, chg: 'new tasks', up: null },
-      { sym: 'BID/AVG', val: `${S.labor.avgBids.toFixed(1)}/task`, chg: '+0.3', up: true },
-      { sym: 'COMP/RATE', val: `${(S.tasks.completionRate * 100).toFixed(0)}%`, chg: '+1.2%', up: true },
-      { sym: 'SPEC/QUAL', val: `${Math.round(S.specQ.avg)}%`, chg: `↑${S.specQ.delta}%`, up: true },
-      { sym: 'UNEMP', val: `${(S.labor.unemployment * 100).toFixed(1)}%`, chg: '-1.1%', up: true },
-      { sym: 'LATENCY', val: `${S.labor.acceptLatency.toFixed(0)} min`, chg: 'avg accept', up: null },
-      { sym: 'AVG/RWD', val: `${Math.round(S.labor.avgReward)} ©`, chg: 'per task', up: null },
-      { sym: 'TOP/EARNER', val: topEarner.name, chg: `${topEarner.earned} © earned`, up: true },
-      { sym: 'TOP/POSTER', val: topPoster.name, chg: `${topPoster.spent} © spent`, up: null },
-      { sym: 'AGENTS/REG', val: String(S.agents.total), chg: `${S.agents.active} active`, up: null },
-      { alert: 'info', text: 'Spec quality climbing — vague specs penalized in court' },
-      { alert: 'alert', text: `${topEarner.name} extends streak to ${topEarner.streak} tasks` },
-      { alert: 'info', text: 'Economy in GROWING phase — task creation trending up' },
-      { alert: 'alert', text: `${S.tasks.disputed} active disputes awaiting court ruling` }
+    var items = [
+      { sym: 'TASKS/ALL', val: S.tasks.completedAll.toLocaleString(), chg: '+' + S.tasks.completed24h + ' today', up: true },
+      { sym: 'GDP/TOTAL', val: S.gdp.total.toLocaleString() + ' \u00a9', chg: '+' + S.gdp.last24h.toLocaleString() + ' 24h', up: true },
+      { sym: 'ESCROW/LOCK', val: S.escrow.locked.toLocaleString() + ' \u00a9', chg: 'in escrow', up: null },
+      { sym: 'PAID/OUT', val: totalPaidOut.toLocaleString() + ' \u00a9', chg: 'released', up: true },
+      { sym: 'GDP/RATE', val: S.gdp.rate.toFixed(1) + ' \u00a9/hr', chg: S.gdp.delta1h != null ? (S.gdp.delta1h >= 0 ? '+' : '') + S.gdp.delta1h.toFixed(1) + '%' : '\u2013', up: S.gdp.delta1h != null ? S.gdp.delta1h >= 0 : null },
+      { sym: 'POST/RATE', val: S.tasks.postingRate.toFixed(1) + '/hr', chg: 'new tasks', up: null },
+      { sym: 'BID/AVG', val: S.labor.avgBids.toFixed(1) + '/task', chg: S.labor.deltaAvgBids != null ? (S.labor.deltaAvgBids >= 0 ? '+' : '') + S.labor.deltaAvgBids.toFixed(1) + '%' : '\u2013', up: S.labor.deltaAvgBids != null ? S.labor.deltaAvgBids >= 0 : null },
+      { sym: 'COMP/RATE', val: (S.tasks.completionRate * 100).toFixed(0) + '%', chg: S.tasks.deltaCompleted24h != null ? (S.tasks.deltaCompleted24h >= 0 ? '+' : '') + S.tasks.deltaCompleted24h.toFixed(1) + '%' : '\u2013', up: S.tasks.deltaCompleted24h != null ? S.tasks.deltaCompleted24h >= 0 : null },
+      { sym: 'SPEC/QUAL', val: Math.round(S.specQ.avg) + '%', chg: (S.specQ.delta >= 0 ? '\u2191' : '\u2193') + Math.abs(S.specQ.delta).toFixed(1) + '%', up: S.specQ.delta > 0 ? true : S.specQ.delta < 0 ? false : null },
+      { sym: 'UNEMP', val: (S.labor.unemployment * 100).toFixed(1) + '%', chg: '\u2013', up: null },
+      { sym: 'LATENCY', val: S.labor.acceptLatency.toFixed(0) + ' min', chg: 'avg accept', up: null },
+      { sym: 'AVG/RWD', val: Math.round(S.labor.avgReward) + ' \u00a9', chg: 'per task', up: null }
     ];
 
-    const doubled = [...items, ...items];
-    trackEl.innerHTML = doubled.map((item) => {
+    if (topEarner) {
+      items.push({ sym: 'TOP/EARNER', val: topEarner.name, chg: topEarner.earned + ' \u00a9 earned', up: true });
+    }
+    if (topPoster) {
+      items.push({ sym: 'TOP/POSTER', val: topPoster.name, chg: topPoster.spent + ' \u00a9 spent', up: null });
+    }
+
+    items.push({ sym: 'AGENTS/REG', val: String(S.agents.total), chg: S.agents.active + ' active', up: null });
+
+    var doubled = items.concat(items);
+    trackEl.innerHTML = doubled.map(function(item) {
       if (item.alert) {
-        const color = item.alert === 'alert' ? 'var(--amber)' : 'var(--cyan)';
-        return `<span class="bt-item"><span class="bt-alert" style="border-color:${color};color:${color}">${item.alert === 'alert' ? '⚡ ALERT' : 'ℹ INFO'}</span><span>${item.text}</span><span class="bt-sep">·</span></span>`;
+        var color = item.alert === 'alert' ? 'var(--amber)' : 'var(--cyan)';
+        return '<span class="bt-item"><span class="bt-alert" style="border-color:' + color + ';color:' + color + '">' + (item.alert === 'alert' ? '\u26a1 ALERT' : '\u2139 INFO') + '</span><span>' + item.text + '</span><span class="bt-sep">\u00b7</span></span>';
       }
-      const color = item.up === true ? 'var(--green)' : item.up === false ? 'var(--red)' : 'var(--text-dim)';
-      return `<span class="bt-item"><span class="bt-sym">${item.sym}</span><span class="bt-val">${item.val}</span><span class="bt-chg" style="color:${color}">${item.chg}</span><span class="bt-sep">·</span></span>`;
+      var color2 = item.up === true ? 'var(--green)' : item.up === false ? 'var(--red)' : 'var(--text-dim)';
+      return '<span class="bt-item"><span class="bt-sym">' + item.sym + '</span><span class="bt-val">' + item.val + '</span><span class="bt-chg" style="color:' + color2 + '">' + item.chg + '</span><span class="bt-sep">\u00b7</span></span>';
     }).join('');
   }
 
+  // ── Export ────────────────────────────────────────────────
   window.ATE = {
-    AGENTS,
-    S,
-    pick,
-    randHex,
-    timeAgo,
-    sparkData,
-    renderSparkSVG,
-    genSparkline,
-    animateCounter,
-    perturbEconomy,
-    startEconomyPerturbation: perturbEconomy,
-    buildTopTicker,
-    buildBottomTicker
+    AGENTS: AGENTS,
+    S: S,
+    // Utilities
+    timeAgo: timeAgo,
+    renderSparkSVG: renderSparkSVG,
+    animateCounter: animateCounter,
+    agentColor: agentColor,
+    // API client
+    fetchMetrics: fetchMetrics,
+    fetchAgents: fetchAgents,
+    fetchGDPHistory: fetchGDPHistory,
+    fetchSparklines: fetchSparklines,
+    fetchEvents: fetchEvents,
+    connectSSE: connectSSE,
+    mapEventToFeed: mapEventToFeed,
+    startMetricsPolling: startMetricsPolling,
+    // Ticker builders
+    buildTopTicker: buildTopTicker,
+    buildBottomTicker: buildBottomTicker
   };
 })();

@@ -13,6 +13,8 @@ async def test_health_returns_ok(client):
     assert data["status"] == "ok"
     assert isinstance(data["uptime_seconds"], (int, float))
     assert isinstance(data["started_at"], str)
+    assert isinstance(data["latest_event_id"], int)
+    assert isinstance(data["database_readable"], bool)
 
 
 @pytest.mark.unit

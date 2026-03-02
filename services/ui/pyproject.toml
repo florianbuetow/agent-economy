@@ -9,6 +9,9 @@ dependencies = [
     "starlette>=0.47.2",
     "pydantic>=2.10.0",
     "service-commons",
+    "base-agent",
+    "aiosqlite>=0.20.0",
+    "sse-starlette>=2.2.1",
 ]
 
 [project.optional-dependencies]
@@ -17,6 +20,9 @@ dev = [
     "pytest-cov>=6.0.0",
     "pytest-asyncio>=0.24.0",
     "httpx>=0.28.0",
+    "pytest-playwright>=0.6.2",
+    "playwright>=1.49.0",
+    "pytest-base-url>=2.1.0",
     "ruff>=0.8.0",
     "mypy>=1.13.0",
     "pyright>=1.1.390",
@@ -27,6 +33,7 @@ dev = [
     "pip-audit>=2.7.0",
     "pygount>=1.8.0",
     "types-PyYAML>=6.0.0",
+    "pytestarch>=2.0.0",
 ]
 
 [build-system]
@@ -35,6 +42,7 @@ build-backend = "hatchling.build"
 
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
+base-agent = { path = "../../agents", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ui_service"]
@@ -96,6 +104,18 @@ files = ["src"]
 module = "tests.*"
 disallow_untyped_defs = false
 
+[[tool.mypy.overrides]]
+module = "aiosqlite.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sse_starlette.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "base_agent.*"
+ignore_missing_imports = true
+
 # === Bandit ===
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
@@ -110,8 +130,10 @@ addopts = "-v --tb=short --strict-markers"
 markers = [
     "unit: Unit tests (fast, isolated, no external dependencies)",
     "integration: Integration tests (require running services)",
+    "e2e: End-to-end browser tests (require Playwright)",
     "slow: Tests that take more than 1 second",
     "performance: Performance benchmark tests",
+    "architecture: Architecture constraint tests",
 ]
 
 # === Coverage ===
@@ -152,4 +174,9 @@ DEP002 = [
     "pip-audit",
     "pygount",
     "types-PyYAML",
+    "cryptography",
+    "pytest-playwright",
+    "playwright",
+    "pytest-base-url",
+    "pytestarch",
 ]

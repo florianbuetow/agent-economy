@@ -21,6 +21,12 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
+database:
+  path: "data/economy.db"
+sse:
+  poll_interval_seconds: 1
+  keepalive_interval_seconds: 15
+  batch_size: 50
 frontend:
   web_root: "data/web"
 request:
@@ -36,6 +42,8 @@ request:
     assert isinstance(settings, Settings)
     assert settings.service.name == "ui"
     assert settings.server.port == 8008
+    assert settings.database.path == "data/economy.db"
+    assert settings.sse.poll_interval_seconds == 1
     assert settings.frontend.web_root == "data/web"
     assert settings.request.max_body_size == 1572864
 
@@ -57,6 +65,12 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
+database:
+  path: "data/economy.db"
+sse:
+  poll_interval_seconds: 1
+  keepalive_interval_seconds: 15
+  batch_size: 50
 frontend:
   web_root: "data/web"
 request:

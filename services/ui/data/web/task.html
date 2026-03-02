@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ATE — Task Lifecycle Demo</title>
+<title>ATE — Task Lifecycle</title>
 <link rel="stylesheet" href="/assets/style.css">
 <style>
 /* Task-only styles */
@@ -51,6 +51,8 @@
   .phase-step.completed { color: var(--green); border-bottom-color: var(--green); }
   .phase-step.active { color: var(--cyan); border-bottom-color: var(--cyan); background: var(--cyan-dim); }
   .phase-step.pending { color: var(--text-faint); }
+  .phase-step.completed, .phase-step.active { cursor: pointer; }
+  .phase-step.pending { cursor: not-allowed; }
   .phase-step .phase-icon { font-size: 14px; display: block; margin-bottom: 3px; }
   .phase-step .phase-check {
     position: absolute; top: 4px; right: 6px; font-size: 8px; color: var(--green);
@@ -216,24 +218,6 @@
     display: flex; align-items: center; gap: 6px;
   }
 
-  /* ── Progress overlay ────────────────────── */
-  .demo-controls {
-    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 10px;
-    background: var(--bg-card); border: 1px solid var(--border-hi);
-    padding: 8px 16px; z-index: 100; box-shadow: 0 4px 24px rgba(0,0,0,.5);
-  }
-  .demo-controls .btn { font-size: 11px; padding: 5px 12px; }
-  .demo-step-label {
-    font-size: 11px; color: var(--text-mid); letter-spacing: .5px; min-width: 200px;
-  }
-  .demo-progress {
-    width: 180px; height: 4px; background: var(--border);
-    position: relative; overflow: hidden;
-  }
-  .demo-progress-fill {
-    height: 100%; background: var(--cyan); transition: width .4s ease-out;
-  }
 </style>
 </head>
 <body>
@@ -307,17 +291,6 @@
   <div class="ticker-fade-l"></div>
   <div class="ticker-track" id="ticker-track"></div>
   <div class="ticker-fade-r"></div>
-</div>
-
-<!-- ═══ DEMO CONTROLS ══════════════════════════════════════════ -->
-<div class="demo-controls">
-  <button class="btn btn-cyan" id="btn-prev" disabled>← PREV</button>
-  <div class="demo-progress">
-    <div class="demo-progress-fill" id="progress-fill" style="width:0%"></div>
-  </div>
-  <span class="demo-step-label" id="step-label">Step 1/12 — Create Task</span>
-  <button class="btn btn-cyan solid" id="btn-next">NEXT →</button>
-  <button class="btn btn-amber" id="btn-auto">▶ AUTO</button>
 </div>
 
 <script src="/assets/shared.js"></script>

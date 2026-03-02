@@ -30,6 +30,12 @@ server:
 logging:
   level: "WARNING"
   directory: "data/logs"
+database:
+  path: "data/economy.db"
+sse:
+  poll_interval_seconds: 1
+  keepalive_interval_seconds: 15
+  batch_size: 50
 frontend:
   web_root: "{web_dir}"
 request:
