@@ -27,7 +27,7 @@ http_get_with_bearer "/accounts/$ALICE_ID" "$JWS_TOKEN"
 
 step "Assert forbidden"
 assert_status "403"
-assert_json_eq ".error" "FORBIDDEN"
+assert_json_eq ".error" "forbidden"
 assert_error_envelope
 
 test_end

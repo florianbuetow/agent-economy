@@ -56,7 +56,7 @@ class TestJWSVerificationFailure:
         )
         response = await client.post("/accounts", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_escrow_lock_invalid_jws_returns_403(self, client, agent_keypair):
         """Invalid JWS on escrow lock returns 403."""
@@ -73,7 +73,7 @@ class TestJWSVerificationFailure:
         )
         response = await client.post("/escrow/lock", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_credit_invalid_jws_returns_403(self, client, platform_keypair):
         """Invalid JWS on credit returns 403."""
@@ -125,7 +125,7 @@ class TestPayloadMismatch:
         )
         response = await client.post("/accounts/a-bob/credit", json={"token": token})
         assert response.status_code == 400
-        assert response.json()["error"] == "PAYLOAD_MISMATCH"
+        assert response.json()["error"] == "payload_mismatch"
 
     async def test_escrow_release_payload_mismatch_returns_400(self, client, platform_keypair):
         """Release with mismatched URL and payload escrow_id returns 400."""
@@ -147,7 +147,7 @@ class TestPayloadMismatch:
             json={"token": token},
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "PAYLOAD_MISMATCH"
+        assert response.json()["error"] == "payload_mismatch"
 
     async def test_escrow_split_payload_mismatch_returns_400(self, client, platform_keypair):
         """Split with mismatched URL and payload escrow_id returns 400."""
@@ -171,7 +171,7 @@ class TestPayloadMismatch:
             json={"token": token},
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "PAYLOAD_MISMATCH"
+        assert response.json()["error"] == "payload_mismatch"
 
 
 @pytest.mark.unit

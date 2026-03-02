@@ -107,7 +107,7 @@ class TestAgentSelfServiceAccountCreation:
 
         response = await client.post("/accounts", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_agent_cannot_create_account_with_nonzero_balance(self, client, agent_keypair):
         state = get_app_state()
@@ -127,7 +127,7 @@ class TestAgentSelfServiceAccountCreation:
 
         response = await client.post("/accounts", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_agent_duplicate_account_returns_409(self, client, agent_keypair):
         state = get_app_state()
@@ -150,7 +150,7 @@ class TestAgentSelfServiceAccountCreation:
 
         second_response = await client.post("/accounts", json={"token": token})
         assert second_response.status_code == 409
-        assert second_response.json()["error"] == "ACCOUNT_EXISTS"
+        assert second_response.json()["error"] == "account_exists"
 
     async def test_agent_not_found_in_identity_returns_404(self, client, agent_keypair):
         state = get_app_state()
@@ -170,7 +170,7 @@ class TestAgentSelfServiceAccountCreation:
 
         response = await client.post("/accounts", json={"token": token})
         assert response.status_code == 404
-        assert response.json()["error"] == "AGENT_NOT_FOUND"
+        assert response.json()["error"] == "agent_not_found"
 
     async def test_platform_still_creates_accounts_with_balance(self, client, platform_keypair):
         state = get_app_state()

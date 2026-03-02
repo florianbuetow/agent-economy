@@ -22,7 +22,7 @@ http_post "/accounts" "$BODY"
 
 step "Assert conflict"
 assert_status "409"
-assert_json_eq ".error" "ACCOUNT_EXISTS"
+assert_json_eq ".error" "account_exists"
 assert_error_envelope
 
 test_end

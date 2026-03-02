@@ -68,7 +68,7 @@ class RequestValidationMiddleware:
             response = JSONResponse(
                 status_code=415,
                 content={
-                    "error": "UNSUPPORTED_MEDIA_TYPE",
+                    "error": "unsupported_media_type",
                     "message": "Content-Type must be application/json",
                     "details": {},
                 },
@@ -90,7 +90,7 @@ class RequestValidationMiddleware:
                 response = JSONResponse(
                     status_code=413,
                     content={
-                        "error": "PAYLOAD_TOO_LARGE",
+                        "error": "payload_too_large",
                         "message": "Request body exceeds maximum allowed size",
                         "details": {},
                     },

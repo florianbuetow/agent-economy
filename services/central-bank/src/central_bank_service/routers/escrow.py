@@ -29,25 +29,25 @@ async def escrow_lock(request: Request) -> JSONResponse:
     data = parse_json_body(body)
 
     if "token" not in data or data["token"] is None:
-        raise ServiceError("INVALID_JWS", "Missing JWS token in request body", 400, {})
+        raise ServiceError("invalid_jws", "Missing JWS token in request body", 400, {})
     if not isinstance(data["token"], str):
-        raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
+        raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
 
     verified = verify_jws_token(data["token"])
     payload = verified["payload"]
 
     action = payload.get("action")
     if action != "escrow_lock":
-        raise ServiceError("INVALID_PAYLOAD", "Invalid action in JWS payload", 400, {})
+        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
 
     # Agent must be the one whose funds are locked
     agent_id = payload.get("agent_id")
     if not agent_id or not isinstance(agent_id, str):
-        raise ServiceError("INVALID_PAYLOAD", "Missing agent_id in JWS payload", 400, {})
+        raise ServiceError("invalid_payload", "Missing agent_id in JWS payload", 400, {})
 
     if verified["agent_id"] != agent_id:
         raise ServiceError(
-            "FORBIDDEN",
+            "forbidden",
             "You can only lock your own funds",
             403,
             {},
@@ -55,11 +55,11 @@ async def escrow_lock(request: Request) -> JSONResponse:
 
     amount = payload.get("amount")
     if not isinstance(amount, int) or amount <= 0:
-        raise ServiceError("INVALID_AMOUNT", "Amount must be a positive integer", 400, {})
+        raise ServiceError("invalid_amount", "Amount must be a positive integer", 400, {})
 
     task_id = payload.get("task_id")
     if not task_id or not isinstance(task_id, str):
-        raise ServiceError("INVALID_PAYLOAD", "Missing task_id in JWS payload", 400, {})
+        raise ServiceError("invalid_payload", "Missing task_id in JWS payload", 400, {})
 
     state = get_app_state()
     if state.ledger is None:
@@ -89,9 +89,9 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
     data = parse_json_body(body)
 
     if "token" not in data or data["token"] is None:
-        raise ServiceError("INVALID_JWS", "Missing JWS token in request body", 400, {})
+        raise ServiceError("invalid_jws", "Missing JWS token in request body", 400, {})
     if not isinstance(data["token"], str):
-        raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
+        raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
 
     verified = verify_jws_token(data["token"])
     require_platform(verified["agent_id"], get_platform_agent_id())
@@ -99,12 +99,12 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
     payload = verified["payload"]
     action = payload.get("action")
     if action != "escrow_release":
-        raise ServiceError("INVALID_PAYLOAD", "Invalid action in JWS payload", 400, {})
+        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
 
     recipient_account_id = payload.get("recipient_account_id")
     if not recipient_account_id or not isinstance(recipient_account_id, str):
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             "Missing recipient_account_id in JWS payload",
             400,
             {},
@@ -113,7 +113,7 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
     payload_escrow_id = payload.get("escrow_id")
     if payload_escrow_id is not None and payload_escrow_id != escrow_id:
         raise ServiceError(
-            "PAYLOAD_MISMATCH",
+            "payload_mismatch",
             "JWS payload escrow_id does not match URL",
             400,
             {},
@@ -146,9 +146,9 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
     data = parse_json_body(body)
 
     if "token" not in data or data["token"] is None:
-        raise ServiceError("INVALID_JWS", "Missing JWS token in request body", 400, {})
+        raise ServiceError("invalid_jws", "Missing JWS token in request body", 400, {})
     if not isinstance(data["token"], str):
-        raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
+        raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
 
     verified = verify_jws_token(data["token"])
     require_platform(verified["agent_id"], get_platform_agent_id())
@@ -156,12 +156,12 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
     payload = verified["payload"]
     action = payload.get("action")
     if action != "escrow_split":
-        raise ServiceError("INVALID_PAYLOAD", "Invalid action in JWS payload", 400, {})
+        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
 
     worker_account_id = payload.get("worker_account_id")
     if not worker_account_id or not isinstance(worker_account_id, str):
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             "Missing worker_account_id in JWS payload",
             400,
             {},
@@ -170,7 +170,7 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
     poster_account_id = payload.get("poster_account_id")
     if not poster_account_id or not isinstance(poster_account_id, str):
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             "Missing poster_account_id in JWS payload",
             400,
             {},
@@ -178,12 +178,12 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
 
     worker_pct = payload.get("worker_pct")
     if not isinstance(worker_pct, int):
-        raise ServiceError("INVALID_PAYLOAD", "worker_pct must be an integer", 400, {})
+        raise ServiceError("invalid_payload", "worker_pct must be an integer", 400, {})
 
     payload_escrow_id = payload.get("escrow_id")
     if payload_escrow_id is not None and payload_escrow_id != escrow_id:
         raise ServiceError(
-            "PAYLOAD_MISMATCH",
+            "payload_mismatch",
             "JWS payload escrow_id does not match URL",
             400,
             {},
@@ -224,4 +224,4 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
 )
 async def escrow_lock_method_not_allowed(_request: Request) -> None:
     """Reject wrong methods on /escrow/lock."""
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
