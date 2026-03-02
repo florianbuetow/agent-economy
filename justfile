@@ -67,6 +67,7 @@ help:
     @printf "  \033[0;37mjust stop-feeder      \033[0;34m Stop task feeder\033[0m\n"
     @printf "  \033[0;37mjust start-mathbot    \033[0;34m Start math worker agent (requires services + LM Studio)\033[0m\n"
     @printf "  \033[0;37mjust stop-mathbot     \033[0;34m Stop math worker agent\033[0m\n"
+    @printf "  \033[0;37mjust fund-feeder <amount>\033[0;34m Fund the feeder agent with initial coins\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
     @echo ""
     @printf "\033[1;33mDocker\033[0m\n"
@@ -346,6 +347,23 @@ stop-mathbot:
     pkill -f "python -m math_worker" 2>/dev/null && \
         printf "\033[0;32m✓ Math worker agent stopped\033[0m\n" || \
         printf "\033[0;33m⚠ Math worker agent not running\033[0m\n"
+    printf "\n"
+
+# Fund the feeder agent with initial coins
+fund-feeder amount:
+    #!/usr/bin/env bash
+    printf "\n"
+    printf "\033[0;34m=== Funding Feeder Agent ===\033[0m\n"
+    printf "\n"
+    cd agents && uv run python -m fund_feeder_cli {{amount}}
+    exit_code=$?
+    printf "\n"
+    if [ $exit_code -eq 0 ]; then
+        printf "\033[0;32m✓ Feeder agent funded successfully\033[0m\n"
+    else
+        printf "\033[0;31m✗ Failed to fund feeder agent\033[0m\n"
+        exit 1
+    fi
     printf "\n"
 
 # Check health status of all services
