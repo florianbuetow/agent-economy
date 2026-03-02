@@ -90,7 +90,7 @@ help:
     @printf "  \033[0;37mjust ci-all-quiet-hook\033[0;34m CI hook for Claude Code (blocks git commit if CI fails)\033[0m\n"
     @printf "  \033[0;37mjust format-all       \033[0;34m Auto-format all services\033[0m\n"
     @printf "  \033[0;37mjust test-e2e         \033[0;34m Run e2e tests (requires running services)\033[0m\n"
-    @printf "  \033[0;37mjust stats            \033[0;34m Show Python lines of code per service\033[0m\n"
+    @printf "  \033[0;37mjust stats            \033[0;34m Show lines of code across the project\033[0m\n"
     @echo ""
 
 # --- Setup ---
@@ -579,56 +579,36 @@ ci-quiet:
 ci-all-quiet-hook:
     @bash scripts/ci-all-quiet-hook.sh
 
-# Run e2e tests (requires running services)
+# Run e2e tests (restarts all services with clean data, then runs tests)
 test-e2e:
-    @echo ""
-    @printf "\033[0;34m=== Running E2E Tests ===\033[0m\n"
-    cd agents && just test-e2e
-    @printf "\033[0;32m✓ E2E tests passed\033[0m\n"
-    @echo ""
-
-# Show Python lines of code per service
-stats:
     #!/usr/bin/env bash
+    set -euo pipefail
     printf "\n"
-    printf "\033[0;34m=== Python Lines of Code ===\033[0m\n"
+    printf "\033[0;34m=== Running E2E Tests ===\033[0m\n"
     printf "\n"
 
-    total=0
+    printf "\033[0;34m--- Stopping all services ---\033[0m\n"
+    just stop-all
 
-    count_loc() {
-        local name=$1
-        local dir=$2
-        if [ -d "$dir" ]; then
-            lines=$(find "$dir" -name '*.py' -type f | xargs cat 2>/dev/null | wc -l | tr -d ' ')
-        else
-            lines=0
-        fi
-        total=$((total + lines))
-        printf "  \033[0;37m%-20s\033[0m %'6d lines\n" "$name" "$lines"
-    }
-
-    for dir in services/*/; do
-        name=$(basename "$dir")
-        count_loc "$name" "$dir/src"
+    printf "\033[0;34m--- Wiping service databases ---\033[0m\n"
+    for svc in services/*/; do
+        rm -f "$svc"data/*.db "$svc"data/*.db-wal "$svc"data/*.db-shm
     done
-    count_loc "service-commons" libs/service-commons/src
-    count_loc "agents" agents/src
+    printf "\033[0;32m✓ Service databases wiped\033[0m\n"
+
+    printf "\033[0;34m--- Starting all services ---\033[0m\n"
+    just start-all
+
+    printf "\033[0;34m--- Running e2e tests ---\033[0m\n"
+    cd agents && just test-e2e
 
     printf "\n"
-    printf "  \033[0;37m%-20s\033[0m \033[1;33m%'6d lines\033[0m\n" "TOTAL" "$total"
-
-    printf "\n"
-    printf "\033[0;34m=== Documentation (Markdown) ===\033[0m\n"
+    printf "\033[0;32m✓ E2E tests passed\033[0m\n"
     printf "\n"
 
-    if [ -d "docs" ]; then
-        doc_lines=$(find docs -name '*.md' -type f | xargs cat 2>/dev/null | wc -l | tr -d ' ')
-    else
-        doc_lines=0
-    fi
-    printf "  \033[0;37m%-20s\033[0m %'6d lines\n" "docs/" "$doc_lines"
-    printf "\n"
+# Show lines of code across the project
+stats:
+    @bash scripts/stats.sh
 
 # Format all services
 format-all:
