@@ -1,5 +1,5 @@
 """API routers."""
 
-from ui_service.routers import health
+from ui_service.routers import agents, events, health, metrics, quarterly, tasks
 
-__all__ = ["health"]
+__all__ = ["agents", "events", "health", "metrics", "quarterly", "tasks"]

@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from ui_service.config import get_settings
 from ui_service.core.exceptions import register_exception_handlers
 from ui_service.core.lifespan import lifespan
-from ui_service.routers import health
+from ui_service.routers import agents, events, health, metrics, proxy, quarterly, tasks
 
 
 def create_app() -> FastAPI:
@@ -19,7 +19,7 @@ def create_app() -> FastAPI:
     Create and configure FastAPI application.
 
     Returns:
-        Configured FastAPI instance with health router and static frontend.
+        Configured FastAPI instance with all routers registered.
     """
     settings = get_settings()
 
@@ -32,7 +32,14 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
 
     app.include_router(health.router, tags=["Operations"])
+    app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
+    app.include_router(agents.router, prefix="/api", tags=["Agents"])
+    app.include_router(tasks.router, prefix="/api", tags=["Tasks"])
+    app.include_router(events.router, prefix="/api", tags=["Events"])
+    app.include_router(quarterly.router, prefix="/api", tags=["Quarterly"])
+    app.include_router(proxy.router, prefix="/api", tags=["Proxy"])
 
+    # Keep static frontend mount last, because SPA fallback captures all unmatched paths.
     _mount_frontend(app, settings.frontend.web_root)
 
     return app

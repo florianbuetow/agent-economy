@@ -14,8 +14,19 @@ logging:
   level: "INFO"
   directory: "data/logs"
 
+database:
+  path: "../db-gateway/data/economy.db"
+
+sse:
+  poll_interval_seconds: 1
+  keepalive_interval_seconds: 15
+  batch_size: 50
+
 frontend:
   web_root: "data/web"
 
 request:
   max_body_size: 1572864
+
+user_agent:
+  agent_config_path: "../../agents/config.yaml"
