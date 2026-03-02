@@ -46,7 +46,7 @@ async def list_agents(
     if sort_by not in VALID_SORT_FIELDS:
         valid = ", ".join(sorted(VALID_SORT_FIELDS))
         raise ServiceError(
-            error="INVALID_PARAMETER",
+            error="invalid_parameter",
             message=f"Invalid sort_by: {sort_by}. Must be one of: {valid}",
             status_code=400,
             details={"parameter": "sort_by", "value": sort_by},
@@ -96,7 +96,7 @@ async def get_agent_profile(agent_id: str) -> JSONResponse:
 
     if data is None:
         raise ServiceError(
-            error="AGENT_NOT_FOUND",
+            error="agent_not_found",
             message=f"Agent '{agent_id}' not found",
             status_code=404,
             details={"agent_id": agent_id},

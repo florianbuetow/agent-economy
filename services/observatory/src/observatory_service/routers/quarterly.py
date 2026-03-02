@@ -37,7 +37,7 @@ async def get_quarterly_report(
         quarterly_service.validate_quarter(quarter)
     except ValueError:
         raise ServiceError(
-            error="INVALID_QUARTER",
+            error="invalid_quarter",
             message=f"Malformed quarter string: '{quarter}'. Must match YYYY-QN where N is 1-4.",
             status_code=400,
             details={"quarter": quarter},
@@ -51,7 +51,7 @@ async def get_quarterly_report(
 
     if result is None:
         raise ServiceError(
-            error="NO_DATA",
+            error="no_data",
             message=f"No economy data exists for quarter {quarter}",
             status_code=404,
             details={"quarter": quarter},

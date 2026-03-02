@@ -188,7 +188,7 @@ async def test_gdp_03_invalid_window(seeded_client):
     """GDP-03: Invalid window returns 400."""
     response = await seeded_client.get("/api/metrics/gdp/history?window=2h")
     assert response.status_code == 400
-    assert response.json()["error"] == "INVALID_PARAMETER"
+    assert response.json()["error"] == "invalid_parameter"
 
 
 @pytest.mark.unit
@@ -196,7 +196,7 @@ async def test_gdp_04_invalid_resolution(seeded_client):
     """GDP-04: Invalid resolution returns 400."""
     response = await seeded_client.get("/api/metrics/gdp/history?window=1h&resolution=30s")
     assert response.status_code == 400
-    assert response.json()["error"] == "INVALID_PARAMETER"
+    assert response.json()["error"] == "invalid_parameter"
 
 
 @pytest.mark.unit

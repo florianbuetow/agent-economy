@@ -186,11 +186,11 @@ async def test_edge_01_empty_gdp_history(empty_edge_client):
 
 @pytest.mark.unit
 async def test_edge_01_empty_quarterly_report(empty_edge_client):
-    """EDGE-01g: GET /api/quarterly-report returns 404 with NO_DATA on empty DB."""
+    """EDGE-01g: GET /api/quarterly-report returns 404 with no_data on empty DB."""
     r = await empty_edge_client.get("/api/quarterly-report")
     assert r.status_code == 404
     data = r.json()
-    assert data["error"] == "NO_DATA"
+    assert data["error"] == "no_data"
 
 
 @pytest.mark.unit

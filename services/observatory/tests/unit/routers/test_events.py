@@ -123,7 +123,7 @@ async def test_evt_11_invalid_limit_below_minimum(seeded_client):
     """EVT-11: limit=-1 returns 400."""
     response = await seeded_client.get("/api/events?limit=-1")
     assert response.status_code == 400
-    assert response.json()["error"] == "INVALID_PARAMETER"
+    assert response.json()["error"] == "invalid_parameter"
 
 
 @pytest.mark.unit
@@ -151,7 +151,7 @@ async def test_evt_13_non_integer_limit(seeded_client):
     """EVT-13: Non-integer limit returns 400."""
     response = await seeded_client.get("/api/events?limit=abc")
     assert response.status_code == 400
-    assert response.json()["error"] == "INVALID_PARAMETER"
+    assert response.json()["error"] == "invalid_parameter"
 
 
 # === SSE Stream Tests ===

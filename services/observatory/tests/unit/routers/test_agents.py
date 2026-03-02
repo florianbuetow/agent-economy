@@ -69,7 +69,7 @@ async def test_agt_05_invalid_sort_by(seeded_client):
     """AGT-05: Invalid sort_by returns 400."""
     response = await seeded_client.get("/api/agents?sort_by=nonexistent")
     assert response.status_code == 400
-    assert response.json()["error"] == "INVALID_PARAMETER"
+    assert response.json()["error"] == "invalid_parameter"
 
 
 @pytest.mark.unit
@@ -166,4 +166,4 @@ async def test_prof_05_agent_not_found(seeded_client):
     """PROF-05: Nonexistent agent returns 404."""
     response = await seeded_client.get("/api/agents/a-nonexistent")
     assert response.status_code == 404
-    assert response.json()["error"] == "AGENT_NOT_FOUND"
+    assert response.json()["error"] == "agent_not_found"

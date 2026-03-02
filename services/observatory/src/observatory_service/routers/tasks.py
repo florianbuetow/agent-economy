@@ -102,7 +102,7 @@ async def get_task_drilldown(task_id: str) -> JSONResponse:
 
     if data is None:
         raise ServiceError(
-            error="TASK_NOT_FOUND",
+            error="task_not_found",
             message=f"Task '{task_id}' not found",
             status_code=404,
             details={"task_id": task_id},

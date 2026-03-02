@@ -81,7 +81,7 @@ async def get_gdp_history(
     """Return GDP time series data."""
     if window not in VALID_WINDOWS:
         raise ServiceError(
-            error="INVALID_PARAMETER",
+            error="invalid_parameter",
             message=f"Invalid window: {window}. Must be one of: {', '.join(sorted(VALID_WINDOWS))}",
             status_code=400,
             details={"parameter": "window", "value": window},
@@ -89,7 +89,7 @@ async def get_gdp_history(
 
     if resolution not in VALID_RESOLUTIONS:
         raise ServiceError(
-            error="INVALID_PARAMETER",
+            error="invalid_parameter",
             message=(
                 f"Invalid resolution: {resolution}. "
                 f"Must be one of: {', '.join(sorted(VALID_RESOLUTIONS))}"

@@ -368,10 +368,10 @@ async def test_qtr_04_notable(seeded_client):
 # ===========================================================================
 @pytest.mark.unit
 async def test_qtr_05_quarter_out_of_range(seeded_client):
-    """QTR-05: Q5 is out of range -> 400 INVALID_QUARTER."""
+    """QTR-05: Q5 is out of range -> 400 invalid_quarter."""
     response = await seeded_client.get("/api/quarterly-report?quarter=2026-Q5")
     assert response.status_code == 400
-    assert response.json()["error"] == "INVALID_QUARTER"
+    assert response.json()["error"] == "invalid_quarter"
 
 
 # ===========================================================================
@@ -379,10 +379,10 @@ async def test_qtr_05_quarter_out_of_range(seeded_client):
 # ===========================================================================
 @pytest.mark.unit
 async def test_qtr_06_malformed_quarter(seeded_client):
-    """QTR-06: Malformed quarter format -> 400 INVALID_QUARTER."""
+    """QTR-06: Malformed quarter format -> 400 invalid_quarter."""
     response = await seeded_client.get("/api/quarterly-report?quarter=Q1-2026")
     assert response.status_code == 400
-    assert response.json()["error"] == "INVALID_QUARTER"
+    assert response.json()["error"] == "invalid_quarter"
 
 
 # ===========================================================================
@@ -390,7 +390,7 @@ async def test_qtr_06_malformed_quarter(seeded_client):
 # ===========================================================================
 @pytest.mark.unit
 async def test_qtr_07_no_data(seeded_client):
-    """QTR-07: Quarter with no economy data -> 404 NO_DATA."""
+    """QTR-07: Quarter with no economy data -> 404 no_data."""
     response = await seeded_client.get("/api/quarterly-report?quarter=2020-Q1")
     assert response.status_code == 404
-    assert response.json()["error"] == "NO_DATA"
+    assert response.json()["error"] == "no_data"

@@ -131,7 +131,7 @@ async def test_task_09_not_found(seeded_client):
     """TASK-09: Nonexistent task returns 404."""
     response = await seeded_client.get("/api/tasks/t-nonexistent")
     assert response.status_code == 404
-    assert response.json()["error"] == "TASK_NOT_FOUND"
+    assert response.json()["error"] == "task_not_found"
 
 
 # === Competitive Tasks Tests ===
