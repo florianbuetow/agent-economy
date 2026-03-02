@@ -42,7 +42,7 @@ def test_credit_duplicate_reference_different_amount_errors(tmp_path):
         with pytest.raises(ServiceError) as exc_info:
             ledger.credit("a-test", 11, "salary_round_1")
 
-        assert exc_info.value.error == "PAYLOAD_MISMATCH"
+        assert exc_info.value.error == "payload_mismatch"
         account = ledger.get_account("a-test")
         assert account is not None
         assert account["balance"] == 10
@@ -80,7 +80,7 @@ def test_escrow_lock_same_task_different_amount_conflicts(tmp_path):
         with pytest.raises(ServiceError) as exc_info:
             ledger.escrow_lock("a-payer", 60, "T-001")
 
-        assert exc_info.value.error == "ESCROW_ALREADY_LOCKED"
+        assert exc_info.value.error == "escrow_already_locked"
         assert exc_info.value.status_code == 409
         account = ledger.get_account("a-payer")
         assert account is not None
@@ -117,7 +117,7 @@ def test_escrow_release_is_atomic(tmp_path):
         assert len(results) == 1
         assert len(errors) == 1
         assert isinstance(errors[0], ServiceError)
-        assert errors[0].error == "ESCROW_ALREADY_RESOLVED"
+        assert errors[0].error == "escrow_already_resolved"
 
         worker = ledger_a.get_account("a-worker")
         assert worker is not None
@@ -155,7 +155,7 @@ def test_escrow_split_is_atomic(tmp_path):
         assert len(results) == 1
         assert len(errors) == 1
         assert isinstance(errors[0], ServiceError)
-        assert errors[0].error == "ESCROW_ALREADY_RESOLVED"
+        assert errors[0].error == "escrow_already_resolved"
 
         worker = ledger_a.get_account("a-worker")
         poster = ledger_a.get_account("a-poster")

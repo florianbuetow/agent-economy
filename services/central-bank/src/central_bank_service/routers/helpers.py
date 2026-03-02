@@ -19,7 +19,7 @@ def parse_json_body(body: bytes) -> dict[str, Any]:
         data = json.loads(body)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise ServiceError(
-            "INVALID_JSON",
+            "invalid_json",
             "Request body is not valid JSON",
             400,
             {},
@@ -27,7 +27,7 @@ def parse_json_body(body: bytes) -> dict[str, Any]:
 
     if not isinstance(data, dict):
         raise ServiceError(
-            "INVALID_JSON",
+            "invalid_json",
             "Request body must be a JSON object",
             400,
             {},
@@ -51,7 +51,7 @@ def verify_jws_token(token: str) -> dict[str, Any]:
         valid = legacy_return.get("valid")
         if isinstance(valid, bool) and not valid:
             raise ServiceError(
-                "FORBIDDEN",
+                "forbidden",
                 "JWS signature verification failed",
                 403,
                 {},
@@ -61,14 +61,14 @@ def verify_jws_token(token: str) -> dict[str, Any]:
         payload = state.platform_agent.validate_certificate(token)
     except (InvalidSignature, ValueError) as exc:
         raise ServiceError(
-            "FORBIDDEN",
+            "forbidden",
             "JWS signature verification failed",
             403,
             {},
         ) from exc
     except Exception as exc:
         raise ServiceError(
-            "IDENTITY_SERVICE_UNAVAILABLE",
+            "identity_service_unavailable",
             "Cannot reach Identity service",
             502,
             {},
@@ -76,7 +76,7 @@ def verify_jws_token(token: str) -> dict[str, Any]:
 
     if not isinstance(payload, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             "JWS payload must be a JSON object",
             400,
             {},
@@ -94,7 +94,7 @@ def require_platform(agent_id: str, platform_agent_id: str) -> None:
     """Check that the verified agent is the platform."""
     if agent_id != platform_agent_id:
         raise ServiceError(
-            "FORBIDDEN",
+            "forbidden",
             "Only the platform agent can perform this operation",
             403,
             {},
@@ -113,7 +113,7 @@ def require_account_owner(verified_agent_id: str, account_id: str) -> None:
     """Check that the verified agent owns the account."""
     if verified_agent_id != account_id:
         raise ServiceError(
-            "FORBIDDEN",
+            "forbidden",
             "You can only access your own account",
             403,
             {},

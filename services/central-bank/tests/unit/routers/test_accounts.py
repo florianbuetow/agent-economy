@@ -114,7 +114,7 @@ class TestCreateAccount:
         await client.post("/accounts", json={"token": token})
         response = await client.post("/accounts", json={"token": token})
         assert response.status_code == 409
-        assert response.json()["error"] == "ACCOUNT_EXISTS"
+        assert response.json()["error"] == "account_exists"
 
     async def test_create_account_agent_not_found(self, client, platform_keypair):
         """Account for non-existent agent returns 404."""
@@ -130,7 +130,7 @@ class TestCreateAccount:
 
         response = await client.post("/accounts", json={"token": token})
         assert response.status_code == 404
-        assert response.json()["error"] == "AGENT_NOT_FOUND"
+        assert response.json()["error"] == "agent_not_found"
 
     async def test_create_account_non_platform_forbidden(self, client, agent_keypair):
         """Non-platform agent cannot create accounts."""
@@ -155,13 +155,13 @@ class TestCreateAccount:
 
         response = await client.post("/accounts", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_create_account_missing_token(self, client):
         """Missing token returns 400."""
         response = await client.post("/accounts", json={})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
 
 @pytest.mark.unit
@@ -223,7 +223,7 @@ class TestCreditAccount:
             json={"token": token},
         )
         assert response.status_code == 404
-        assert response.json()["error"] == "ACCOUNT_NOT_FOUND"
+        assert response.json()["error"] == "account_not_found"
 
 
 @pytest.mark.unit
@@ -287,13 +287,13 @@ class TestGetBalance:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_get_balance_missing_auth_header(self, client):
         """Missing Authorization header returns 400."""
         response = await client.get("/accounts/a-test")
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
 
 @pytest.mark.unit

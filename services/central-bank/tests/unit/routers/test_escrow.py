@@ -106,7 +106,7 @@ class TestEscrowLock:
         )
         response = await client.post("/escrow/lock", json={"token": token})
         assert response.status_code == 402
-        assert response.json()["error"] == "INSUFFICIENT_FUNDS"
+        assert response.json()["error"] == "insufficient_funds"
 
     async def test_escrow_lock_wrong_agent_forbidden(self, client, platform_keypair, agent_keypair):
         """Agent cannot lock another agent's funds."""
@@ -144,7 +144,7 @@ class TestEscrowLock:
         )
         response = await client.post("/escrow/lock", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
 
 @pytest.mark.unit
@@ -232,7 +232,7 @@ class TestEscrowRelease:
         # Try to release again
         response = await client.post(f"/escrow/{escrow_id}/release", json={"token": release_token})
         assert response.status_code == 409
-        assert response.json()["error"] == "ESCROW_ALREADY_RESOLVED"
+        assert response.json()["error"] == "escrow_already_resolved"
 
     async def test_escrow_not_found(self, client, platform_keypair):
         """Release of non-existent escrow returns 404."""
@@ -254,7 +254,7 @@ class TestEscrowRelease:
             json={"token": release_token},
         )
         assert response.status_code == 404
-        assert response.json()["error"] == "ESCROW_NOT_FOUND"
+        assert response.json()["error"] == "escrow_not_found"
 
 
 @pytest.mark.unit

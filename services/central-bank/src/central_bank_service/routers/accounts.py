@@ -30,9 +30,9 @@ async def create_account(request: Request) -> JSONResponse:
     data = parse_json_body(body)
 
     if "token" not in data or data["token"] is None:
-        raise ServiceError("INVALID_JWS", "Missing JWS token in request body", 400, {})
+        raise ServiceError("invalid_jws", "Missing JWS token in request body", 400, {})
     if not isinstance(data["token"], str):
-        raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
+        raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
 
     state = get_app_state()
     if state.ledger is None:
@@ -46,16 +46,16 @@ async def create_account(request: Request) -> JSONResponse:
     payload = verified["payload"]
     action = payload.get("action")
     if action != "create_account":
-        raise ServiceError("INVALID_PAYLOAD", "Invalid action in JWS payload", 400, {})
+        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
 
     agent_id = payload.get("agent_id")
     if not agent_id or not isinstance(agent_id, str):
-        raise ServiceError("INVALID_PAYLOAD", "Missing agent_id in JWS payload", 400, {})
+        raise ServiceError("invalid_payload", "Missing agent_id in JWS payload", 400, {})
 
     # Non-platform callers can only create their own account
     if not is_platform and agent_id != caller_agent_id:
         raise ServiceError(
-            "FORBIDDEN",
+            "forbidden",
             "Agents can only create their own account",
             403,
             {},
@@ -64,14 +64,14 @@ async def create_account(request: Request) -> JSONResponse:
     initial_balance = payload.get("initial_balance")
     if initial_balance is None:
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             "Missing initial_balance in JWS payload",
             400,
             {},
         )
     if not isinstance(initial_balance, int) or initial_balance < 0:
         raise ServiceError(
-            "INVALID_AMOUNT",
+            "invalid_amount",
             "initial_balance must be a non-negative integer",
             400,
             {},
@@ -80,7 +80,7 @@ async def create_account(request: Request) -> JSONResponse:
     # Non-platform callers must use initial_balance of 0
     if not is_platform and initial_balance != 0:
         raise ServiceError(
-            "FORBIDDEN",
+            "forbidden",
             "Only the platform can set a non-zero initial balance",
             403,
             {},
@@ -93,7 +93,7 @@ async def create_account(request: Request) -> JSONResponse:
     agent = await state.identity_client.get_agent(agent_id)
     if agent is None:
         raise ServiceError(
-            "AGENT_NOT_FOUND",
+            "agent_not_found",
             "Agent does not exist in Identity service",
             404,
             {},
@@ -117,9 +117,9 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
     data = parse_json_body(body)
 
     if "token" not in data or data["token"] is None:
-        raise ServiceError("INVALID_JWS", "Missing JWS token in request body", 400, {})
+        raise ServiceError("invalid_jws", "Missing JWS token in request body", 400, {})
     if not isinstance(data["token"], str):
-        raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
+        raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
 
     state = get_app_state()
     if state.ledger is None:
@@ -132,12 +132,12 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
     payload = verified["payload"]
     action = payload.get("action")
     if action != "credit":
-        raise ServiceError("INVALID_PAYLOAD", "Invalid action in JWS payload", 400, {})
+        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
 
     payload_account_id = payload.get("account_id")
     if payload_account_id is not None and payload_account_id != account_id:
         raise ServiceError(
-            "PAYLOAD_MISMATCH",
+            "payload_mismatch",
             "JWS payload account_id does not match URL",
             400,
             {},
@@ -145,18 +145,18 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
 
     amount = payload.get("amount")
     if not isinstance(amount, int) or amount <= 0:
-        raise ServiceError("INVALID_AMOUNT", "Amount must be a positive integer", 400, {})
+        raise ServiceError("invalid_amount", "Amount must be a positive integer", 400, {})
 
     reference = payload.get("reference")
     if reference is None:
         raise ServiceError(
-            "INVALID_PAYLOAD",
+            "invalid_payload",
             "Missing reference in JWS payload",
             400,
             {},
         )
     if not isinstance(reference, str):
-        raise ServiceError("INVALID_PAYLOAD", "reference must be a string", 400, {})
+        raise ServiceError("invalid_payload", "reference must be a string", 400, {})
 
     result = await run_in_threadpool(state.ledger.credit, account_id, amount, reference)
     get_logger(__name__).info(
@@ -180,7 +180,7 @@ async def get_balance(request: Request, account_id: str) -> dict[str, object]:
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
         raise ServiceError(
-            "INVALID_JWS",
+            "invalid_jws",
             "Missing Bearer token in Authorization header",
             400,
             {},
@@ -194,12 +194,12 @@ async def get_balance(request: Request, account_id: str) -> dict[str, object]:
 
     action = payload.get("action")
     if action != "get_balance":
-        raise ServiceError("INVALID_PAYLOAD", "Invalid action in JWS payload", 400, {})
+        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
 
     payload_account_id = payload.get("account_id")
     if payload_account_id is not None and payload_account_id != account_id:
         raise ServiceError(
-            "PAYLOAD_MISMATCH",
+            "payload_mismatch",
             "JWS payload account_id does not match URL",
             400,
             {},
@@ -212,7 +212,7 @@ async def get_balance(request: Request, account_id: str) -> dict[str, object]:
 
     account = await run_in_threadpool(state.ledger.get_account, account_id)
     if account is None:
-        raise ServiceError("ACCOUNT_NOT_FOUND", "Account not found", 404, {})
+        raise ServiceError("account_not_found", "Account not found", 404, {})
 
     return account
 
@@ -226,7 +226,7 @@ async def get_transactions(request: Request, account_id: str) -> dict[str, list[
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
         raise ServiceError(
-            "INVALID_JWS",
+            "invalid_jws",
             "Missing Bearer token in Authorization header",
             400,
             {},
@@ -240,12 +240,12 @@ async def get_transactions(request: Request, account_id: str) -> dict[str, list[
 
     action = payload.get("action")
     if action != "get_transactions":
-        raise ServiceError("INVALID_PAYLOAD", "Invalid action in JWS payload", 400, {})
+        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
 
     payload_account_id = payload.get("account_id")
     if payload_account_id is not None and payload_account_id != account_id:
         raise ServiceError(
-            "PAYLOAD_MISMATCH",
+            "payload_mismatch",
             "JWS payload account_id does not match URL",
             400,
             {},
@@ -269,4 +269,4 @@ async def get_transactions(request: Request, account_id: str) -> dict[str, list[
 )
 async def accounts_method_not_allowed(_request: Request) -> None:
     """Reject wrong methods on /accounts."""
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})

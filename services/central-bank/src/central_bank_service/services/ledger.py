@@ -106,7 +106,7 @@ class Ledger:
         """
         if initial_balance < 0:
             raise ServiceError(
-                "INVALID_AMOUNT",
+                "invalid_amount",
                 "Initial balance must be non-negative",
                 400,
                 {},
@@ -141,7 +141,7 @@ class Ledger:
             except sqlite3.IntegrityError as exc:
                 self._db.rollback()
                 raise ServiceError(
-                    "ACCOUNT_EXISTS",
+                    "account_exists",
                     "Account already exists for this agent",
                     409,
                     {},
@@ -190,7 +190,7 @@ class Ledger:
         """
         if amount <= 0:
             raise ServiceError(
-                "INVALID_AMOUNT",
+                "invalid_amount",
                 "Amount must be a positive integer",
                 400,
                 {},
@@ -207,7 +207,7 @@ class Ledger:
                     (amount, account_id),
                 )
                 if cursor.rowcount == 0:
-                    raise ServiceError("ACCOUNT_NOT_FOUND", "Account not found", 404, {})
+                    raise ServiceError("account_not_found", "Account not found", 404, {})
 
                 row = self._db.execute(
                     "SELECT balance FROM accounts WHERE account_id = ?",
@@ -242,7 +242,7 @@ class Ledger:
 
                 if existing_amount != amount:
                     raise ServiceError(
-                        "PAYLOAD_MISMATCH",
+                        "payload_mismatch",
                         "Duplicate credit reference used with a different amount",
                         400,
                         {},
@@ -267,7 +267,7 @@ class Ledger:
         """
         account = self.get_account(account_id)
         if account is None:
-            raise ServiceError("ACCOUNT_NOT_FOUND", "Account not found", 404, {})
+            raise ServiceError("account_not_found", "Account not found", 404, {})
 
         with self._lock:
             cursor = self._db.execute(
@@ -304,7 +304,7 @@ class Ledger:
         """
         if amount <= 0:
             raise ServiceError(
-                "INVALID_AMOUNT",
+                "invalid_amount",
                 "Amount must be a positive integer",
                 400,
                 {},
@@ -325,7 +325,7 @@ class Ledger:
 
                     if existing_task_id != task_id or existing_amount != amount:
                         raise ServiceError(
-                            "ESCROW_ALREADY_LOCKED",
+                            "escrow_already_locked",
                             "Escrow already locked for this task with a different amount",
                             409,
                             {},
@@ -352,9 +352,9 @@ class Ledger:
                     # Distinguish between not found and insufficient funds
                     account = self.get_account(payer_account_id)
                     if account is None:
-                        raise ServiceError("ACCOUNT_NOT_FOUND", "Account not found", 404, {})
+                        raise ServiceError("account_not_found", "Account not found", 404, {})
                     raise ServiceError(
-                        "INSUFFICIENT_FUNDS",
+                        "insufficient_funds",
                         "Insufficient funds for escrow lock",
                         402,
                         {},
@@ -399,7 +399,7 @@ class Ledger:
 
                 if existing_task_id != task_id or existing_amount != amount:
                     raise ServiceError(
-                        "ESCROW_ALREADY_LOCKED",
+                        "escrow_already_locked",
                         "Escrow already locked for this task with a different amount",
                         409,
                         {},
@@ -442,10 +442,10 @@ class Ledger:
 
                 escrow = self._get_escrow(escrow_id)
                 if escrow is None:
-                    raise ServiceError("ESCROW_NOT_FOUND", "Escrow not found", 404, {})
+                    raise ServiceError("escrow_not_found", "Escrow not found", 404, {})
                 if escrow["status"] != "locked":
                     raise ServiceError(
-                        "ESCROW_ALREADY_RESOLVED",
+                        "escrow_already_resolved",
                         "Escrow has already been resolved",
                         409,
                         {},
@@ -461,7 +461,7 @@ class Ledger:
                 )
                 if cursor.rowcount == 0:
                     raise ServiceError(
-                        "ACCOUNT_NOT_FOUND",
+                        "account_not_found",
                         "Recipient account not found",
                         404,
                         {},
@@ -497,7 +497,7 @@ class Ledger:
                 )
                 if escrow_cursor.rowcount != 1:
                     raise ServiceError(
-                        "ESCROW_ALREADY_RESOLVED",
+                        "escrow_already_resolved",
                         "Escrow has already been resolved",
                         409,
                         {},
@@ -540,7 +540,7 @@ class Ledger:
         )
         if cursor.rowcount == 0:
             raise ServiceError(
-                "ACCOUNT_NOT_FOUND",
+                "account_not_found",
                 f"{role} account not found",
                 404,
                 {},
@@ -588,7 +588,7 @@ class Ledger:
         """
         if not (0 <= worker_pct <= 100):
             raise ServiceError(
-                "INVALID_AMOUNT",
+                "invalid_amount",
                 "worker_pct must be between 0 and 100",
                 400,
                 {},
@@ -600,10 +600,10 @@ class Ledger:
 
                 escrow = self._get_escrow(escrow_id)
                 if escrow is None:
-                    raise ServiceError("ESCROW_NOT_FOUND", "Escrow not found", 404, {})
+                    raise ServiceError("escrow_not_found", "Escrow not found", 404, {})
                 if escrow["status"] != "locked":
                     raise ServiceError(
-                        "ESCROW_ALREADY_RESOLVED",
+                        "escrow_already_resolved",
                         "Escrow has already been resolved",
                         409,
                         {},
@@ -612,7 +612,7 @@ class Ledger:
                 payer_account_id = cast("str", escrow["payer_account_id"])
                 if poster_account_id != payer_account_id:
                     raise ServiceError(
-                        "PAYLOAD_MISMATCH",
+                        "payload_mismatch",
                         "poster_account_id must match the escrow payer_account_id",
                         400,
                         {},
@@ -646,7 +646,7 @@ class Ledger:
                 )
                 if escrow_cursor.rowcount != 1:
                     raise ServiceError(
-                        "ESCROW_ALREADY_RESOLVED",
+                        "escrow_already_resolved",
                         "Escrow has already been resolved",
                         409,
                         {},
