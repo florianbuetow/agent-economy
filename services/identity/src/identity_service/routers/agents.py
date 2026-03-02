@@ -25,7 +25,7 @@ def _parse_json_body(body: bytes) -> dict[str, Any]:
         data = json.loads(body)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise ServiceError(
-            "INVALID_JSON",
+            "invalid_json",
             "Request body is not valid JSON",
             400,
             {},
@@ -33,7 +33,7 @@ def _parse_json_body(body: bytes) -> dict[str, Any]:
 
     if not isinstance(data, dict):
         raise ServiceError(
-            "INVALID_JSON",
+            "invalid_json",
             "Request body must be a JSON object",
             400,
             {},
@@ -47,7 +47,7 @@ def _validate_required_fields(data: dict[str, Any], fields: list[str]) -> None:
     for field_name in fields:
         if field_name not in data or data[field_name] is None:
             raise ServiceError(
-                "MISSING_FIELD",
+                "missing_field",
                 f"Missing required field: {field_name}",
                 400,
                 {"field": field_name},
@@ -59,7 +59,7 @@ def _validate_string_fields(data: dict[str, Any], fields: list[str]) -> None:
     for field_name in fields:
         if not isinstance(data[field_name], str):
             raise ServiceError(
-                "INVALID_FIELD_TYPE",
+                "invalid_field_type",
                 f"Field '{field_name}' must be a string",
                 400,
                 {"field": field_name},
@@ -143,7 +143,7 @@ async def verify_jws(request: Request) -> dict[str, object]:
 )
 async def register_method_not_allowed(_request: Request) -> None:
     """Reject wrong methods on /agents/register."""
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
 
 
 @router.api_route(
@@ -152,7 +152,7 @@ async def register_method_not_allowed(_request: Request) -> None:
 )
 async def verify_method_not_allowed(_request: Request) -> None:
     """Reject wrong methods on /agents/verify."""
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
 
 
 @router.api_route(
@@ -161,7 +161,7 @@ async def verify_method_not_allowed(_request: Request) -> None:
 )
 async def verify_jws_method_not_allowed(_request: Request) -> None:
     """Reject wrong methods on /agents/verify-jws."""
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
 
 
 # ---------------------------------------------------------------------------
@@ -196,5 +196,5 @@ async def get_agent(agent_id: str) -> dict[str, str]:
 
     agent = state.registry.get_agent(agent_id)
     if agent is None:
-        raise ServiceError("AGENT_NOT_FOUND", "Agent not found", 404, {})
+        raise ServiceError("agent_not_found", "Agent not found", 404, {})
     return agent

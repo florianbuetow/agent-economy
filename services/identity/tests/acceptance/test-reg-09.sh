@@ -10,6 +10,6 @@ http_post "/agents/register" '{"name":123,"public_key":true}'
 
 step "Assert invalid field type error"
 assert_status "400"
-assert_json_eq ".error" "INVALID_FIELD_TYPE"
+assert_json_eq ".error" "invalid_field_type"
 
 test_end

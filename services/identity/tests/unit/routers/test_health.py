@@ -21,4 +21,4 @@ async def test_health_post_not_allowed(client):
     """POST /health returns 405."""
     response = await client.post("/health")
     assert response.status_code == 405
-    assert response.json()["error"] == "METHOD_NOT_ALLOWED"
+    assert response.json()["error"] == "method_not_allowed"

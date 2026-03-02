@@ -53,7 +53,7 @@ class AgentRegistry:
             return self._store.insert(name, public_key)
         except DuplicateAgentError as exc:
             raise ServiceError(
-                "PUBLIC_KEY_EXISTS",
+                "public_key_exists",
                 "This public key is already registered",
                 409,
                 {},
@@ -75,14 +75,14 @@ class AgentRegistry:
         """
         agent = self.get_agent(agent_id)
         if agent is None:
-            raise ServiceError("AGENT_NOT_FOUND", "Agent not found", 404, {})
+            raise ServiceError("agent_not_found", "Agent not found", 404, {})
 
         # Decode base64 payload
         try:
             payload_bytes = base64.b64decode(payload_b64, validate=True)
         except Exception as exc:
             raise ServiceError(
-                "INVALID_BASE64",
+                "invalid_base64",
                 "payload is not valid base64",
                 400,
                 {},
@@ -93,7 +93,7 @@ class AgentRegistry:
             sig_bytes = base64.b64decode(signature_b64, validate=True)
         except Exception as exc:
             raise ServiceError(
-                "INVALID_BASE64",
+                "invalid_base64",
                 "signature is not valid base64",
                 400,
                 {},
@@ -102,7 +102,7 @@ class AgentRegistry:
         # Validate signature length
         if len(sig_bytes) != self._signature_bytes:
             raise ServiceError(
-                "INVALID_SIGNATURE_LENGTH",
+                "invalid_signature_length",
                 f"Signature must be exactly {self._signature_bytes} bytes",
                 400,
                 {},
@@ -141,7 +141,7 @@ class AgentRegistry:
             parts = token.split(".")
             if len(parts) != 3:
                 raise ServiceError(
-                    "INVALID_JWS",
+                    "invalid_jws",
                     "Token is not a valid JWS compact serialization",
                     400,
                     {},
@@ -159,7 +159,7 @@ class AgentRegistry:
             raise
         except Exception as exc:
             raise ServiceError(
-                "INVALID_JWS",
+                "invalid_jws",
                 "Token is not a valid JWS compact serialization",
                 400,
                 {},
@@ -169,7 +169,7 @@ class AgentRegistry:
         alg = header.get("alg")
         if alg != "EdDSA":
             raise ServiceError(
-                "INVALID_JWS",
+                "invalid_jws",
                 "Only EdDSA algorithm is supported",
                 400,
                 {},
@@ -178,7 +178,7 @@ class AgentRegistry:
         kid = header.get("kid")
         if not kid or not isinstance(kid, str):
             raise ServiceError(
-                "INVALID_JWS",
+                "invalid_jws",
                 "JWS header must contain a 'kid' field with the agent_id",
                 400,
                 {},
@@ -187,7 +187,7 @@ class AgentRegistry:
         # Look up agent
         agent = self.get_agent(kid)
         if agent is None:
-            raise ServiceError("AGENT_NOT_FOUND", "Agent not found", 404, {})
+            raise ServiceError("agent_not_found", "Agent not found", 404, {})
 
         # Extract raw public key bytes
         public_key_str: str = agent["public_key"]
@@ -209,7 +209,7 @@ class AgentRegistry:
             return {"valid": False, "reason": "signature mismatch"}
         except Exception as exc:
             raise ServiceError(
-                "INVALID_JWS",
+                "invalid_jws",
                 "Token verification failed",
                 400,
                 {},
@@ -220,7 +220,7 @@ class AgentRegistry:
             payload = json.loads(obj.payload)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             raise ServiceError(
-                "INVALID_JWS",
+                "invalid_jws",
                 "JWS payload is not valid JSON",
                 400,
                 {},
@@ -228,7 +228,7 @@ class AgentRegistry:
 
         if not isinstance(payload, dict):
             raise ServiceError(
-                "INVALID_JWS",
+                "invalid_jws",
                 "JWS payload must be a JSON object",
                 400,
                 {},
@@ -264,7 +264,7 @@ class AgentRegistry:
         """Validate agent display name."""
         if not name or not name.strip():
             raise ServiceError(
-                "INVALID_NAME",
+                "invalid_name",
                 "Name cannot be empty or whitespace-only",
                 400,
                 {},
@@ -278,7 +278,7 @@ class AgentRegistry:
         """
         if not public_key.startswith(self._public_key_prefix):
             raise ServiceError(
-                "INVALID_PUBLIC_KEY",
+                "invalid_public_key",
                 f"Public key must start with '{self._public_key_prefix}'",
                 400,
                 {},
@@ -290,7 +290,7 @@ class AgentRegistry:
             key_bytes = base64.b64decode(key_b64, validate=True)
         except Exception as exc:
             raise ServiceError(
-                "INVALID_PUBLIC_KEY",
+                "invalid_public_key",
                 "Public key contains invalid base64",
                 400,
                 {},
@@ -298,7 +298,7 @@ class AgentRegistry:
 
         if len(key_bytes) != self._public_key_bytes:
             raise ServiceError(
-                "INVALID_PUBLIC_KEY",
+                "invalid_public_key",
                 f"Public key must be exactly {self._public_key_bytes} bytes",
                 400,
                 {},
@@ -307,7 +307,7 @@ class AgentRegistry:
         # Reject all-zero key (degenerate identity point)
         if key_bytes == b"\x00" * self._public_key_bytes:
             raise ServiceError(
-                "INVALID_PUBLIC_KEY",
+                "invalid_public_key",
                 "All-zero public key is not allowed",
                 400,
                 {},
@@ -318,7 +318,7 @@ class AgentRegistry:
             Ed25519PublicKey.from_public_bytes(key_bytes)
         except Exception as exc:
             raise ServiceError(
-                "INVALID_PUBLIC_KEY",
+                "invalid_public_key",
                 "Not a valid Ed25519 public key",
                 400,
                 {},

@@ -10,6 +10,6 @@ http_post "/agents/register" '{"name":"Orphan"}'
 
 step "Assert missing field error"
 assert_status "400"
-assert_json_eq ".error" "MISSING_FIELD"
+assert_json_eq ".error" "missing_field"
 
 test_end

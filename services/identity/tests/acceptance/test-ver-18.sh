@@ -14,6 +14,6 @@ http_post "/agents/verify" "$BODY"
 
 step "Assert agent not found"
 assert_status "404"
-assert_json_eq ".error" "AGENT_NOT_FOUND"
+assert_json_eq ".error" "agent_not_found"
 
 test_end

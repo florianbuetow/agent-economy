@@ -109,7 +109,7 @@ class TestVerifyJWSInvalid:
 
         response = await client.post("/agents/verify-jws", json={"token": token})
         assert response.status_code == 404
-        assert response.json()["error"] == "AGENT_NOT_FOUND"
+        assert response.json()["error"] == "agent_not_found"
 
     async def test_malformed_token_returns_400(self, client):
         """Garbage token string returns 400 INVALID_JWS."""
@@ -118,25 +118,25 @@ class TestVerifyJWSInvalid:
             json={"token": "not.a.valid.jws.token"},
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_missing_token_field_returns_400(self, client):
         """Missing token field returns 400 MISSING_FIELD."""
         response = await client.post("/agents/verify-jws", json={})
         assert response.status_code == 400
-        assert response.json()["error"] == "MISSING_FIELD"
+        assert response.json()["error"] == "missing_field"
 
     async def test_null_token_returns_400(self, client):
         """Null token field returns 400 MISSING_FIELD."""
         response = await client.post("/agents/verify-jws", json={"token": None})
         assert response.status_code == 400
-        assert response.json()["error"] == "MISSING_FIELD"
+        assert response.json()["error"] == "missing_field"
 
     async def test_non_string_token_returns_400(self, client):
         """Non-string token returns 400 INVALID_FIELD_TYPE."""
         response = await client.post("/agents/verify-jws", json={"token": 12345})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_FIELD_TYPE"
+        assert response.json()["error"] == "invalid_field_type"
 
     async def test_missing_kid_in_header_returns_400(self, client):
         """JWS without kid in header returns 400 INVALID_JWS."""
@@ -158,7 +158,7 @@ class TestVerifyJWSInvalid:
 
         response = await client.post("/agents/verify-jws", json={"token": token})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_wrong_algorithm_returns_400(self, client):
         """JWS with non-EdDSA algorithm in header returns 400 INVALID_JWS."""
@@ -167,7 +167,7 @@ class TestVerifyJWSInvalid:
             json={"token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImEtdGVzdCJ9.e30.invalid"},
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_non_json_payload_returns_400(self, client):
         """JWS whose decoded payload is not valid JSON returns 400 INVALID_JWS."""
@@ -188,7 +188,7 @@ class TestVerifyJWSInvalid:
 
         response = await client.post("/agents/verify-jws", json={"token": token})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
 
 @pytest.mark.unit
@@ -203,13 +203,13 @@ class TestVerifyJWSContentType:
             headers={"Content-Type": "text/plain"},
         )
         assert response.status_code == 415
-        assert response.json()["error"] == "UNSUPPORTED_MEDIA_TYPE"
+        assert response.json()["error"] == "unsupported_media_type"
 
     async def test_get_method_returns_405(self, client):
         """GET /agents/verify-jws returns 405."""
         response = await client.get("/agents/verify-jws")
         assert response.status_code == 405
-        assert response.json()["error"] == "METHOD_NOT_ALLOWED"
+        assert response.json()["error"] == "method_not_allowed"
 
     async def test_invalid_json_body_returns_400(self, client):
         """Malformed JSON body returns 400 INVALID_JSON."""
@@ -219,4 +219,4 @@ class TestVerifyJWSContentType:
             headers={"Content-Type": "application/json"},
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JSON"
+        assert response.json()["error"] == "invalid_json"

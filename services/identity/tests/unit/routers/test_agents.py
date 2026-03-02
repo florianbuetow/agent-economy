@@ -41,7 +41,7 @@ async def test_register_missing_name(client):
         json={"public_key": public_key},
     )
     assert response.status_code == 400
-    assert response.json()["error"] == "MISSING_FIELD"
+    assert response.json()["error"] == "missing_field"
 
 
 @pytest.mark.unit
@@ -59,7 +59,7 @@ async def test_register_duplicate_key(client):
         json={"name": "Eve", "public_key": public_key},
     )
     assert response2.status_code == 409
-    assert response2.json()["error"] == "PUBLIC_KEY_EXISTS"
+    assert response2.json()["error"] == "public_key_exists"
 
 
 @pytest.mark.unit
@@ -83,7 +83,7 @@ async def test_get_agent_not_found(client):
     """GET /agents/{agent_id} with unknown ID returns 404."""
     response = await client.get("/agents/a-00000000-0000-0000-0000-000000000000")
     assert response.status_code == 404
-    assert response.json()["error"] == "AGENT_NOT_FOUND"
+    assert response.json()["error"] == "agent_not_found"
 
 
 @pytest.mark.unit
@@ -177,7 +177,7 @@ async def test_register_invalid_json(client):
         headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 400
-    assert response.json()["error"] == "INVALID_JSON"
+    assert response.json()["error"] == "invalid_json"
 
 
 @pytest.mark.unit
@@ -189,7 +189,7 @@ async def test_register_wrong_content_type(client):
         headers={"Content-Type": "text/plain"},
     )
     assert response.status_code == 415
-    assert response.json()["error"] == "UNSUPPORTED_MEDIA_TYPE"
+    assert response.json()["error"] == "unsupported_media_type"
 
 
 @pytest.mark.unit
@@ -197,4 +197,4 @@ async def test_method_not_allowed_register(client):
     """GET /agents/register returns 405."""
     response = await client.get("/agents/register")
     assert response.status_code == 405
-    assert response.json()["error"] == "METHOD_NOT_ALLOWED"
+    assert response.json()["error"] == "method_not_allowed"

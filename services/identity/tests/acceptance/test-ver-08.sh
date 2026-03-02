@@ -17,6 +17,6 @@ http_post "/agents/verify" "$BODY"
 
 step "Assert invalid signature length error"
 assert_status "400"
-assert_json_eq ".error" "INVALID_SIGNATURE_LENGTH"
+assert_json_eq ".error" "invalid_signature_length"
 
 test_end
