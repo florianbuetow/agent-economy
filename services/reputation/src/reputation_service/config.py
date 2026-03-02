@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
@@ -55,15 +55,6 @@ class PlatformConfig(BaseModel):
     agent_config_path: str
 
 
-class LegacyIdentityConfig(BaseModel):
-    """Backward-compatible identity view for legacy tests."""
-
-    model_config = ConfigDict(extra="forbid")
-    base_url: str
-    verify_jws_path: str
-    timeout_seconds: int
-
-
 class RequestConfig(BaseModel):
     """Request validation configuration."""
 
@@ -98,33 +89,10 @@ class Settings(BaseModel):
     service: ServiceConfig
     server: ServerConfig
     logging: LoggingConfig
-    platform: PlatformConfig | None = None
-    identity: LegacyIdentityConfig | None = None
+    platform: PlatformConfig
     request: RequestConfig
     database: DatabaseConfig
     feedback: FeedbackConfig
-
-    @model_validator(mode="after")
-    def normalize_identity_platform(self) -> Settings:
-        """Support legacy identity config while using platform verification."""
-        if self.platform is None and self.identity is None:
-            msg = "Either platform or identity configuration must be provided"
-            raise ValueError(msg)
-
-        if self.identity is None:
-            if self.platform is None:
-                msg = "Platform configuration must be provided"
-                raise ValueError(msg)
-            self.identity = LegacyIdentityConfig(
-                base_url=self.platform.agent_config_path,
-                verify_jws_path="validate_certificate",
-                timeout_seconds=0,
-            )
-
-        if self.platform is None:
-            self.platform = PlatformConfig(agent_config_path="")
-
-        return self
 
 
 def get_config_path() -> Path:

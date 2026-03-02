@@ -36,16 +36,6 @@ class AppState:
     platform_agent: PlatformAgent | None = None
 
     @property
-    def identity_client(self) -> PlatformAgent | None:
-        """Backward-compatible alias for legacy tests."""
-        return self.platform_agent
-
-    @identity_client.setter
-    def identity_client(self, value: PlatformAgent | None) -> None:
-        """Backward-compatible alias for legacy tests."""
-        self.platform_agent = value
-
-    @property
     def uptime_seconds(self) -> float:
         """Calculate uptime in seconds."""
         return (datetime.now(UTC) - self.start_time).total_seconds()

@@ -34,10 +34,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.feedback_store = FeedbackStore(db_path=settings.database.path)
 
     # Initialize platform agent for local token verification
-    if settings.platform is None:
-        msg = "Platform configuration not initialized"
-        raise RuntimeError(msg)
-
     if settings.platform.agent_config_path:
         config_path = Path(settings.platform.agent_config_path)
         if not config_path.is_absolute():
