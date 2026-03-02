@@ -12,7 +12,6 @@ from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption,
 from service_commons.config import load_yaml_config
 
 from task_board_service.clients.central_bank_client import CentralBankClient
-from task_board_service.clients.identity_client import IdentityClient
 from task_board_service.clients.platform_signer import PlatformSigner
 from task_board_service.config import get_config_path, get_settings
 from task_board_service.core.state import init_app_state
@@ -112,14 +111,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     )
     state.platform_signer = platform_signer
 
-    # Initialize IdentityClient (HTTP client for JWS verification)
-    identity_client = IdentityClient(
-        base_url=settings.identity.base_url,
-        verify_jws_path=settings.identity.verify_jws_path,
-        timeout_seconds=settings.identity.timeout_seconds,
-    )
-    state.identity_client = identity_client
-
     # Initialize CentralBankClient (HTTP client for escrow operations)
     central_bank_client = CentralBankClient(
         base_url=settings.central_bank.base_url,
@@ -135,7 +126,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     store = TaskStore(db_path=db_path)
     escrow_coordinator = EscrowCoordinator(central_bank_client=central_bank_client, store=store)
     state.escrow_coordinator = escrow_coordinator
-    token_validator = TokenValidator(identity_client=identity_client)
+    token_validator = TokenValidator(platform_agent=state.platform_agent)
     state.token_validator = token_validator
     deadline_evaluator = DeadlineEvaluator(store=store, escrow_coordinator=escrow_coordinator)
     asset_manager = AssetManager(
@@ -149,7 +140,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.asset_manager = asset_manager
     task_manager = TaskManager(
         store=store,
-        identity_client=identity_client,
+        identity_client=state.identity_client,
         central_bank_client=central_bank_client,
         escrow_coordinator=escrow_coordinator,
         token_validator=token_validator,
@@ -168,7 +159,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             "port": settings.server.port,
             "db_path": db_path,
             "asset_storage_path": asset_storage_path,
-            "identity_base_url": settings.identity.base_url,
             "central_bank_base_url": settings.central_bank.base_url,
             "platform_agent_id": platform_agent_id,
         },
@@ -186,5 +176,4 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await state.platform_agent.close()
 
     # Close HTTP clients (closes httpx async clients)
-    await identity_client.close()
     await central_bank_client.close()

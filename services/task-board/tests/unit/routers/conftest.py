@@ -7,7 +7,7 @@ import json
 import os
 import uuid
 from typing import TYPE_CHECKING, Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -122,10 +122,6 @@ logging:
   directory: "data/logs"
 database:
   path: "{db_path}"
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -166,6 +162,13 @@ limits:
         mock_identity.close = AsyncMock()
         state.identity_client = mock_identity
 
+        # Mock PlatformAgent for local certificate validation
+        mock_platform = MagicMock()
+        mock_platform.agent_id = PLATFORM_AGENT_ID
+        mock_platform.validate_certificate = MagicMock(side_effect=_extract_payload)
+        mock_platform.close = AsyncMock()
+        state.platform_agent = mock_platform
+
         # Mock Central Bank client — default: escrow operations succeed
         mock_bank = AsyncMock()
         mock_bank.close = AsyncMock()
@@ -178,10 +181,9 @@ limits:
 
         # Propagate mocks to extracted services
         if state.task_manager is not None:
-            state.task_manager._identity_client = mock_identity
             state.task_manager._central_bank_client = mock_bank
         if state.token_validator is not None:
-            state.token_validator._identity_client = mock_identity
+            state.token_validator.set_legacy_identity_client(mock_identity)
         if state.escrow_coordinator is not None:
             state.escrow_coordinator._central_bank_client = mock_bank
 

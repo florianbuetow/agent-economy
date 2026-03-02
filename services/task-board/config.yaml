@@ -17,11 +17,6 @@ logging:
 database:
   path: "data/task-board.db"
 
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
-
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
