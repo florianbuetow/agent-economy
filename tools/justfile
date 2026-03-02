@@ -13,7 +13,7 @@ help:
     @printf "  \033[0;37mjust destroy          \033[0;34m Remove virtual environment\033[0m\n"
     @echo ""
     @printf "\033[1;33mSimulation\033[0m\n"
-    @printf "  \033[0;37mjust simulate         \033[0;34m Run the simulation injector\033[0m\n"
+    @printf "  \033[0;37mjust simulate <file>  \033[0;34m Run a demo scenario YAML file\033[0m\n"
     @echo ""
     @printf "\033[1;33mTask Generation\033[0m\n"
     @printf "  \033[0;37mjust generate-tasks  \033[0;34m Generate math tasks to data/math_tasks.jsonl\033[0m\n"
@@ -36,8 +36,11 @@ destroy:
     @printf "\033[0;32m✓ Virtual environment removed\033[0m\n"
     @echo ""
 
-# Run the simulation injector (placeholder)
-simulate:
+# Run a demo scenario (pass scenario file as argument)
+simulate scenario:
+    @echo ""
+    uv run python -m demo_replay {{scenario}}
+    @echo ""
 
 # Generate math tasks (appends 10,000 tasks to data/math_tasks.jsonl)
 generate-tasks:

@@ -11,7 +11,7 @@
 # stream is a complete, chronologically ordered history of the economy.
 #
 # Usage: ./tools/seed-economy.sh [db_path]
-#        Default db_path: data/economy.db
+#        Default db_path: services/db-gateway/data/economy.db
 #
 # Requires: bash 3.2+, python3
 # Works on: macOS (BSD), Linux (GNU)
@@ -20,7 +20,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-DB="${1:-${PROJECT_ROOT}/data/economy.db}"
+DB="${1:-${PROJECT_ROOT}/services/db-gateway/data/economy.db}"
 SCHEMA="${PROJECT_ROOT}/docs/specifications/schema.sql"
 SQL_FILE=$(mktemp /tmp/economy-seed-XXXXXX.sql)
 trap 'cp "$SQL_FILE" /tmp/last-seed.sql 2>/dev/null; rm -f "$SQL_FILE"' EXIT

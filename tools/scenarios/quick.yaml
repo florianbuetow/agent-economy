@@ -1,0 +1,149 @@
+# Quick demo: 3 agents, 1 happy-path task + 1 dispute (~25 seconds)
+
+name: "Quick Demo — Task Lifecycle"
+description: >
+  Demonstrates the full task lifecycle with three agents.
+  Act 1: Register agents and fund accounts.
+  Act 2: Happy path — post task, bid, accept, submit, approve.
+  Act 3: Dispute path — post task, bid, accept, submit, dispute.
+default_delay: 2.0
+
+agents:
+  - handle: alice
+    name: "Alice (Poster)"
+  - handle: bob
+    name: "Bob (Worker)"
+  - handle: carol
+    name: "Carol (Worker)"
+
+steps:
+  # ── Act 1: Setup ──────────────────────────────────────────
+  - action: register
+    agent: alice
+    delay: 1.0
+
+  - action: register
+    agent: bob
+    delay: 1.0
+
+  - action: register
+    agent: carol
+    delay: 1.0
+
+  - action: fund
+    agent: alice
+    amount: 5000
+    delay: 1.5
+
+  - action: fund
+    agent: bob
+    amount: 1000
+    delay: 1.0
+
+  - action: fund
+    agent: carol
+    amount: 1000
+    delay: 1.5
+
+  # ── Act 2: Happy path ────────────────────────────────────
+  - action: post_task
+    poster: alice
+    ref: login_task
+    title: "Implement login page"
+    spec: "Build a responsive login form with email and password fields, client-side validation, error states, and a forgot-password link. Must be accessible (WCAG 2.1 AA)."
+    reward: 200
+    delay: 3.0
+
+  - action: bid
+    bidder: bob
+    task_ref: login_task
+    amount: 180
+
+  - action: bid
+    bidder: carol
+    task_ref: login_task
+    amount: 190
+    delay: 2.5
+
+  - action: accept_bid
+    poster: alice
+    bidder: bob
+    task_ref: login_task
+    delay: 2.5
+
+  - action: upload_asset
+    worker: bob
+    task_ref: login_task
+    filename: "login-page.html"
+    content: |
+      <!DOCTYPE html>
+      <html lang="en">
+      <head><title>Login</title></head>
+      <body>
+        <form id="login" aria-label="Sign in">
+          <label for="email">Email</label>
+          <input id="email" type="email" required />
+          <label for="password">Password</label>
+          <input id="password" type="password" required />
+          <button type="submit">Sign In</button>
+          <a href="/forgot-password">Forgot password?</a>
+        </form>
+      </body>
+      </html>
+    delay: 2.0
+
+  - action: submit_deliverable
+    worker: bob
+    task_ref: login_task
+    delay: 3.0
+
+  - action: approve
+    poster: alice
+    task_ref: login_task
+    delay: 3.0
+
+  # ── Act 3: Dispute path ──────────────────────────────────
+  - action: post_task
+    poster: alice
+    ref: api_task
+    title: "Design REST API specification"
+    spec: "Design a complete RESTful API spec for a todo application. Must include all CRUD endpoints (GET, POST, PUT, PATCH, DELETE), pagination, error responses, and authentication headers."
+    reward: 150
+    delay: 3.0
+
+  - action: bid
+    bidder: carol
+    task_ref: api_task
+    amount: 140
+    delay: 2.5
+
+  - action: accept_bid
+    poster: alice
+    bidder: carol
+    task_ref: api_task
+    delay: 2.5
+
+  - action: upload_asset
+    worker: carol
+    task_ref: api_task
+    filename: "api-spec.md"
+    content: |
+      # Todo API Specification
+      ## Endpoints
+      - GET /todos - List all todos (paginated)
+      - POST /todos - Create a new todo
+      - GET /todos/:id - Get a single todo
+      - DELETE /todos/:id - Delete a todo
+      ## Authentication
+      - Bearer token in Authorization header
+    delay: 2.0
+
+  - action: submit_deliverable
+    worker: carol
+    task_ref: api_task
+    delay: 3.0
+
+  - action: dispute
+    poster: alice
+    task_ref: api_task
+    reason: "Specification is incomplete: missing PUT and PATCH endpoints for updating todos, no error response schemas defined, and no pagination parameters documented."

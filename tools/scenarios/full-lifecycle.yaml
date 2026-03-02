@@ -1,0 +1,151 @@
+# Full lifecycle demo: 3 agents, happy path + dispute + feedback (~40s)
+
+name: "Full Lifecycle — Task Economy Demo"
+description: >
+  Demonstrates the complete task lifecycle including feedback exchange.
+  Act 1: Register agents and fund accounts.
+  Act 2: Happy path — post task, bid, accept, submit, approve, feedback.
+  Act 3: Dispute path — post task, bid, accept, submit, dispute.
+default_delay: 2.0
+
+agents:
+  - handle: alice
+    name: "Alice (Poster)"
+  - handle: bob
+    name: "Bob (Worker)"
+  - handle: carol
+    name: "Carol (Worker)"
+
+steps:
+  # ── Act 1: Setup ──────────────────────────────────────────
+  - action: register
+    agent: alice
+    delay: 1.0
+
+  - action: register
+    agent: bob
+    delay: 1.0
+
+  - action: register
+    agent: carol
+    delay: 1.0
+
+  - action: fund
+    agent: alice
+    amount: 5000
+    delay: 1.5
+
+  - action: fund
+    agent: bob
+    amount: 1000
+    delay: 1.0
+
+  - action: fund
+    agent: carol
+    amount: 1000
+    delay: 1.5
+
+  # ── Act 2: Happy path with feedback ────────────────────────
+  - action: post_task
+    poster: alice
+    ref: login_task
+    title: "Implement login page"
+    spec: "Build a responsive login form with email and password fields."
+    reward: 200
+    delay: 3.0
+
+  - action: bid
+    bidder: bob
+    task_ref: login_task
+    amount: 180
+    delay: 2.0
+
+  - action: accept_bid
+    poster: alice
+    bidder: bob
+    task_ref: login_task
+    delay: 2.5
+
+  - action: upload_asset
+    worker: bob
+    task_ref: login_task
+    filename: "login-page.html"
+    content: |
+      <!DOCTYPE html><html><body><form>Login form</form></body></html>
+    delay: 2.0
+
+  - action: submit_deliverable
+    worker: bob
+    task_ref: login_task
+    delay: 3.0
+
+  - action: approve
+    poster: alice
+    task_ref: login_task
+    delay: 3.0
+
+  - action: feedback
+    agent: alice
+    task_ref: login_task
+    to_agent_id: bob
+    role: poster
+    category: delivery_quality
+    rating: satisfied
+    comment: "Solid implementation and on-time delivery."
+    delay: 1.5
+
+  - action: feedback
+    agent: bob
+    task_ref: login_task
+    to_agent_id: alice
+    role: worker
+    category: spec_quality
+    rating: satisfied
+    comment: "Clear task specification and quick review turnaround."
+    delay: 1.5
+
+  - action: reveal_feedback
+    agent: alice
+    task_ref: login_task
+    delay: 2.0
+
+  # ── Act 3: Dispute path ──────────────────────────────────
+  - action: post_task
+    poster: alice
+    ref: api_task
+    title: "Design REST API specification"
+    spec: "Design a complete RESTful API spec for a todo application."
+    reward: 150
+    delay: 3.0
+
+  - action: bid
+    bidder: carol
+    task_ref: api_task
+    amount: 140
+    delay: 2.5
+
+  - action: accept_bid
+    poster: alice
+    bidder: carol
+    task_ref: api_task
+    delay: 2.5
+
+  - action: upload_asset
+    worker: carol
+    task_ref: api_task
+    filename: "api-spec.md"
+    content: |
+      # Todo API
+      - GET /todos - List todos
+      - POST /todos - Create todo
+    delay: 2.0
+
+  - action: submit_deliverable
+    worker: carol
+    task_ref: api_task
+    delay: 3.0
+
+  - action: dispute
+    poster: alice
+    task_ref: api_task
+    reason: "Missing PUT/PATCH endpoints and error response schemas."

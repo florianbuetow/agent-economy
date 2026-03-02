@@ -1,0 +1,354 @@
+# Scaled demo: 10 agents, 5 task waves, multiple lifecycles (~60 seconds)
+
+name: "Scaled Economy Demo"
+description: >
+  Demonstrates a bustling micro-economy with 10 agents, multiple concurrent
+  tasks, competitive bidding, approvals, and disputes.
+default_delay: 1.5
+
+agents:
+  - handle: acme_corp
+    name: "ACME Corp (Poster)"
+  - handle: buildbot
+    name: "BuildBot Labs (Poster)"
+  - handle: nova
+    name: "Nova Systems (Poster)"
+  - handle: atlas
+    name: "Atlas (Developer)"
+  - handle: beacon
+    name: "Beacon (Developer)"
+  - handle: cipher
+    name: "Cipher (Developer)"
+  - handle: delta
+    name: "Delta (Developer)"
+  - handle: echo_dev
+    name: "Echo (Designer)"
+  - handle: flux
+    name: "Flux (DevOps)"
+  - handle: genesis
+    name: "Genesis (Full-Stack)"
+
+steps:
+  # ── Phase 1: Bootstrap agents ─────────────────────────
+  - action: register
+    agent: acme_corp
+    delay: 0.5
+
+  - action: register
+    agent: buildbot
+    delay: 0.5
+
+  - action: register
+    agent: nova
+    delay: 0.5
+
+  - action: register
+    agent: atlas
+    delay: 0.5
+
+  - action: register
+    agent: beacon
+    delay: 0.5
+
+  - action: register
+    agent: cipher
+    delay: 0.5
+
+  - action: register
+    agent: delta
+    delay: 0.5
+
+  - action: register
+    agent: echo_dev
+    delay: 0.5
+
+  - action: register
+    agent: flux
+    delay: 0.5
+
+  - action: register
+    agent: genesis
+    delay: 0.5
+
+  # ── Phase 2: Fund accounts ────────────────────────────
+  - action: fund
+    agent: acme_corp
+    amount: 10000
+    delay: 0.3
+
+  - action: fund
+    agent: buildbot
+    amount: 8000
+    delay: 0.3
+
+  - action: fund
+    agent: nova
+    amount: 6000
+    delay: 0.3
+
+  - action: fund
+    agent: atlas
+    amount: 500
+    delay: 0.3
+
+  - action: fund
+    agent: beacon
+    amount: 500
+    delay: 0.3
+
+  - action: fund
+    agent: cipher
+    amount: 500
+    delay: 0.3
+
+  - action: fund
+    agent: delta
+    amount: 500
+    delay: 0.3
+
+  - action: fund
+    agent: echo_dev
+    amount: 500
+    delay: 0.3
+
+  - action: fund
+    agent: flux
+    amount: 500
+    delay: 0.3
+
+  - action: fund
+    agent: genesis
+    amount: 500
+    delay: 1.0
+
+  # ── Phase 3: Wave 1 — ACME posts two tasks ───────────
+  - action: post_task
+    poster: acme_corp
+    ref: auth_system
+    title: "Build authentication system"
+    spec: "Implement JWT-based auth with login, register, and password reset. Include rate limiting and brute-force protection."
+    reward: 500
+    delay: 2.0
+
+  - action: post_task
+    poster: acme_corp
+    ref: dashboard_ui
+    title: "Design admin dashboard"
+    spec: "Create a responsive admin dashboard with user management table, activity charts, and system health indicators."
+    reward: 300
+    delay: 2.0
+
+  # Competitive bidding on auth_system
+  - action: bid
+    bidder: atlas
+    task_ref: auth_system
+    amount: 450
+    delay: 0.8
+
+  - action: bid
+    bidder: beacon
+    task_ref: auth_system
+    amount: 480
+    delay: 0.8
+
+  - action: bid
+    bidder: genesis
+    task_ref: auth_system
+    amount: 420
+    delay: 1.5
+
+  # Bidding on dashboard
+  - action: bid
+    bidder: echo_dev
+    task_ref: dashboard_ui
+    amount: 280
+    delay: 0.8
+
+  - action: bid
+    bidder: delta
+    task_ref: dashboard_ui
+    amount: 260
+    delay: 1.5
+
+  # ACME accepts bids
+  - action: accept_bid
+    poster: acme_corp
+    bidder: genesis
+    task_ref: auth_system
+    delay: 2.0
+
+  - action: accept_bid
+    poster: acme_corp
+    bidder: echo_dev
+    task_ref: dashboard_ui
+    delay: 2.0
+
+  # ── Phase 4: Wave 2 — BuildBot and Nova post ─────────
+  - action: post_task
+    poster: buildbot
+    ref: ci_pipeline
+    title: "Set up CI/CD pipeline"
+    spec: "Configure GitHub Actions with build, test, lint, and deploy stages. Include Docker image building and staging deployment."
+    reward: 400
+    delay: 1.5
+
+  - action: post_task
+    poster: nova
+    ref: api_gateway
+    title: "Implement API gateway"
+    spec: "Build a lightweight API gateway with rate limiting, request routing, API key validation, and request/response logging."
+    reward: 600
+    delay: 1.5
+
+  - action: bid
+    bidder: flux
+    task_ref: ci_pipeline
+    amount: 380
+    delay: 0.8
+
+  - action: bid
+    bidder: cipher
+    task_ref: ci_pipeline
+    amount: 350
+    delay: 0.8
+
+  - action: bid
+    bidder: atlas
+    task_ref: api_gateway
+    amount: 550
+    delay: 0.8
+
+  - action: bid
+    bidder: beacon
+    task_ref: api_gateway
+    amount: 520
+    delay: 1.5
+
+  - action: accept_bid
+    poster: buildbot
+    bidder: flux
+    task_ref: ci_pipeline
+    delay: 2.0
+
+  - action: accept_bid
+    poster: nova
+    bidder: atlas
+    task_ref: api_gateway
+    delay: 2.0
+
+  # ── Phase 5: Deliveries ──────────────────────────────
+  # Genesis delivers auth system
+  - action: upload_asset
+    worker: genesis
+    task_ref: auth_system
+    filename: "auth-system.py"
+    content: "# JWT auth implementation with bcrypt password hashing\n# Rate limiting via sliding window counter\n# Brute-force protection with exponential backoff"
+    delay: 1.5
+
+  - action: submit_deliverable
+    worker: genesis
+    task_ref: auth_system
+    delay: 2.0
+
+  - action: approve
+    poster: acme_corp
+    task_ref: auth_system
+    delay: 2.5
+
+  # Echo delivers dashboard
+  - action: upload_asset
+    worker: echo_dev
+    task_ref: dashboard_ui
+    filename: "dashboard-mockup.html"
+    content: "<html><body><h1>Admin Dashboard</h1><div class='grid'>User table, charts, health</div></body></html>"
+    delay: 1.5
+
+  - action: submit_deliverable
+    worker: echo_dev
+    task_ref: dashboard_ui
+    delay: 2.0
+
+  - action: approve
+    poster: acme_corp
+    task_ref: dashboard_ui
+    delay: 2.5
+
+  # Flux delivers CI pipeline
+  - action: upload_asset
+    worker: flux
+    task_ref: ci_pipeline
+    filename: "ci-pipeline.yml"
+    content: "name: CI\non: [push]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps: [checkout, test, lint, deploy]"
+    delay: 1.5
+
+  - action: submit_deliverable
+    worker: flux
+    task_ref: ci_pipeline
+    delay: 2.0
+
+  - action: approve
+    poster: buildbot
+    task_ref: ci_pipeline
+    delay: 2.5
+
+  # Atlas delivers API gateway — but Nova disputes!
+  - action: upload_asset
+    worker: atlas
+    task_ref: api_gateway
+    filename: "api-gateway.py"
+    content: "# Simple proxy with rate limiting\n# Missing: API key validation, request logging"
+    delay: 1.5
+
+  - action: submit_deliverable
+    worker: atlas
+    task_ref: api_gateway
+    delay: 2.0
+
+  - action: dispute
+    poster: nova
+    task_ref: api_gateway
+    reason: "Deliverable is missing two required features: API key validation and request/response logging. The spec explicitly required both."
+    delay: 2.0
+
+  # ── Phase 6: Wave 3 — More tasks ─────────────────────
+  - action: post_task
+    poster: buildbot
+    ref: monitoring
+    title: "Set up monitoring and alerting"
+    spec: "Configure Prometheus metrics, Grafana dashboards, and PagerDuty alerting for all production services."
+    reward: 350
+    delay: 1.5
+
+  - action: bid
+    bidder: flux
+    task_ref: monitoring
+    amount: 330
+    delay: 0.8
+
+  - action: bid
+    bidder: delta
+    task_ref: monitoring
+    amount: 300
+    delay: 1.0
+
+  - action: accept_bid
+    poster: buildbot
+    bidder: delta
+    task_ref: monitoring
+    delay: 2.0
+
+  - action: upload_asset
+    worker: delta
+    task_ref: monitoring
+    filename: "monitoring-config.yaml"
+    content: "# Prometheus scrape configs\n# Grafana dashboard definitions\n# PagerDuty integration"
+    delay: 1.5
+
+  - action: submit_deliverable
+    worker: delta
+    task_ref: monitoring
+    delay: 2.0
+
+  - action: approve
+    poster: buildbot
+    task_ref: monitoring
