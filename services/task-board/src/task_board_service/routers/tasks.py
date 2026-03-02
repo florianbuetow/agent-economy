@@ -31,8 +31,12 @@ async def create_task(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await state.task_manager.create_task(task_token, escrow_token)
     return JSONResponse(status_code=201, content=result)
@@ -73,8 +77,12 @@ async def list_tasks(request: Request) -> dict[str, Any]:
 
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     tasks = await state.task_manager.list_tasks(
         status=status,
@@ -100,8 +108,12 @@ async def cancel_task(task_id: str, request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await state.task_manager.cancel_task(task_id, token)
     return JSONResponse(status_code=200, content=result)
@@ -121,8 +133,12 @@ async def submit_deliverable(task_id: str, request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await state.task_manager.submit_deliverable(task_id, token)
     return JSONResponse(status_code=200, content=result)
@@ -142,8 +158,12 @@ async def approve_task(task_id: str, request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await state.task_manager.approve_task(task_id, token)
     return JSONResponse(status_code=200, content=result)
@@ -163,8 +183,12 @@ async def dispute_task(task_id: str, request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await state.task_manager.dispute_task(task_id, token)
     return JSONResponse(status_code=200, content=result)
@@ -184,8 +208,12 @@ async def record_ruling(task_id: str, request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await state.task_manager.record_ruling(task_id, token)
     return JSONResponse(status_code=200, content=result)
@@ -260,7 +288,11 @@ async def get_task(task_id: str) -> dict[str, Any]:
     """Get full task details."""
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     return await state.task_manager.get_task(task_id)

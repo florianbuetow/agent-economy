@@ -33,8 +33,12 @@ async def submit_bid(task_id: str, request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await state.task_manager.submit_bid(task_id, token)
     return JSONResponse(status_code=201, content=result)
@@ -54,8 +58,12 @@ async def list_bids(task_id: str, request: Request) -> dict[str, Any]:
 
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     return await state.task_manager.list_bids(task_id, token)
 
@@ -74,8 +82,12 @@ async def accept_bid(task_id: str, bid_id: str, request: Request) -> JSONRespons
 
     state = get_app_state()
     if state.task_manager is None:
-        msg = "TaskManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await state.task_manager.accept_bid(task_id, bid_id, token)
     return JSONResponse(status_code=200, content=result)
