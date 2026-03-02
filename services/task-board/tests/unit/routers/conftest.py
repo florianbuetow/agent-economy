@@ -18,6 +18,7 @@ from task_board_service.app import create_app
 from task_board_service.config import clear_settings_cache
 from task_board_service.core.lifespan import lifespan
 from task_board_service.core.state import get_app_state, reset_app_state
+from tests.fakes.in_memory_task_store import InMemoryTaskStore
 from tests.helpers import generate_keypair, make_jws_token
 
 if TYPE_CHECKING:
@@ -147,6 +148,9 @@ limits:
   max_reason_length: 2000
   max_file_size: 10485760
   max_assets_per_task: 20
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -161,6 +165,8 @@ limits:
     async with lifespan(test_app):
         # Replace external service clients with mocks
         state = get_app_state()
+        fake_store = InMemoryTaskStore(db_path=str(db_path))
+        state.store = fake_store
 
         # Mock PlatformAgent for local certificate validation
         mock_platform = MagicMock()
@@ -187,12 +193,21 @@ limits:
 
         # Propagate mocks to extracted services
         if state.task_manager is not None:
+            state.task_manager._store = fake_store
             state.task_manager._central_bank_client = mock_bank
+            state.task_manager._deadline_evaluator._store = fake_store
+            state.task_manager._asset_manager._store = fake_store
+            state.task_manager._asset_manager._deadline_evaluator._store = fake_store
+            state.task_manager._escrow_coordinator._store = fake_store
         if state.token_validator is not None:
             state.token_validator._platform_agent = mock_platform
             state.token_validator._identity_client = mock_identity
         if state.escrow_coordinator is not None:
+            state.escrow_coordinator._store = fake_store
             state.escrow_coordinator._central_bank_client = mock_bank
+        if state.asset_manager is not None:
+            state.asset_manager._store = fake_store
+            state.asset_manager._deadline_evaluator._store = fake_store
 
         yield test_app
 

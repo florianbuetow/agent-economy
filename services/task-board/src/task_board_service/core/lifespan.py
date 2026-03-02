@@ -20,8 +20,8 @@ from task_board_service.services.asset_manager import AssetManager
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
 from task_board_service.services.identity_client import IdentityClient
+from task_board_service.services.task_db_client import TaskDbClient
 from task_board_service.services.task_manager import TaskManager
-from task_board_service.services.task_store import TaskStore
 from task_board_service.services.token_validator import TokenValidator
 
 if TYPE_CHECKING:
@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
     from base_agent.platform import PlatformAgent
     from fastapi import FastAPI
+
+    from task_board_service.services.protocol import TaskStorageInterface
 
 
 @asynccontextmanager
@@ -134,7 +136,16 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.central_bank_client = central_bank_client
 
     # Initialize TaskManager (all business logic)
-    store = TaskStore(db_path=db_path)
+    store: TaskStorageInterface
+    if settings.db_gateway is None:
+        msg = "db_gateway configuration is required"
+        raise RuntimeError(msg)
+
+    store = TaskDbClient(
+        base_url=settings.db_gateway.url,
+        timeout_seconds=settings.db_gateway.timeout_seconds,
+    )
+    state.store = store
     escrow_coordinator = EscrowCoordinator(central_bank_client=central_bank_client, store=store)
     state.escrow_coordinator = escrow_coordinator
     token_validator = TokenValidator(

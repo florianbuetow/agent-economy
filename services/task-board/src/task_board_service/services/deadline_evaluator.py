@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from task_board_service.services.escrow_coordinator import EscrowCoordinator
-    from task_board_service.services.task_store import TaskStore
+    from task_board_service.services.protocol import TaskStorageInterface
 
 # Terminal statuses — no further transitions
 _TERMINAL_STATUSES = frozenset({"approved", "cancelled", "ruled", "expired"})
@@ -21,7 +21,7 @@ def _now_iso() -> str:
 class DeadlineEvaluator:
     """Evaluates and applies deadline-driven task transitions."""
 
-    def __init__(self, store: TaskStore, escrow_coordinator: EscrowCoordinator) -> None:
+    def __init__(self, store: TaskStorageInterface, escrow_coordinator: EscrowCoordinator) -> None:
         self._store = store
         self._escrow_coordinator = escrow_coordinator
 

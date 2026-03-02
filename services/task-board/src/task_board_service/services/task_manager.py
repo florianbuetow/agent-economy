@@ -11,7 +11,7 @@ from service_commons.exceptions import ServiceError
 
 from task_board_service.logging import get_logger
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
-from task_board_service.services.task_store import DuplicateBidError, DuplicateTaskError, TaskStore
+from task_board_service.services.errors import DuplicateBidError, DuplicateTaskError
 from task_board_service.services.token_validator import decode_base64url_json
 
 if TYPE_CHECKING:
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from task_board_service.clients.platform_signer import PlatformSigner
     from task_board_service.services.asset_manager import AssetManager
     from task_board_service.services.escrow_coordinator import EscrowCoordinator
+    from task_board_service.services.protocol import TaskStorageInterface
     from task_board_service.services.token_validator import TokenValidator
 
 # Regex for task_id format: t-<uuid4>
@@ -59,7 +60,7 @@ class TaskManager:
 
     def __init__(
         self,
-        store: TaskStore,
+        store: TaskStorageInterface,
         central_bank_client: CentralBankClient,
         escrow_coordinator: EscrowCoordinator,
         token_validator: TokenValidator,

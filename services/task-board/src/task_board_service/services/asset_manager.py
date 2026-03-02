@@ -12,7 +12,7 @@ from service_commons.exceptions import ServiceError
 
 if TYPE_CHECKING:
     from task_board_service.services.deadline_evaluator import DeadlineEvaluator
-    from task_board_service.services.task_store import TaskStore
+    from task_board_service.services.protocol import TaskStorageInterface
     from task_board_service.services.token_validator import TokenValidator
 
 
@@ -26,7 +26,7 @@ class AssetManager:
 
     def __init__(
         self,
-        store: TaskStore,
+        store: TaskStorageInterface,
         token_validator: TokenValidator,
         deadline_evaluator: DeadlineEvaluator,
         asset_storage_path: str,
@@ -236,3 +236,7 @@ class AssetManager:
     def count_assets(self, task_id: str) -> int:
         """Count assets for a specific task."""
         return self._store.count_assets(task_id)
+
+    def resolve_storage_path(self, task_id: str, asset_id: str, filename: str) -> str:
+        """Resolve the on-disk path for an uploaded asset."""
+        return str((Path(self._asset_storage_path) / task_id / asset_id / filename).resolve())

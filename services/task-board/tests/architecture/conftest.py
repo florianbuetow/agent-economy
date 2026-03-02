@@ -33,6 +33,8 @@ def layered_arch() -> LayeredArchitecture:
         .containing_modules(["task_board_service.core"])
         .layer("services")
         .containing_modules(["task_board_service.services"])
+        .layer("clients")
+        .containing_modules(["task_board_service.clients"])
     )
 
 

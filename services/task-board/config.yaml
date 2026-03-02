@@ -25,6 +25,7 @@ central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
   escrow_release_path: "/escrow/{escrow_id}/release"
+  escrow_split_path: "/escrow/{escrow_id}/split"
   timeout_seconds: 10
 
 platform:
@@ -39,3 +40,7 @@ assets:
 
 request:
   max_body_size: 10485760
+
+db_gateway:
+  url: "http://127.0.0.1:8007"
+  timeout_seconds: 10

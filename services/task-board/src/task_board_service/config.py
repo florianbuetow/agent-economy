@@ -119,6 +119,14 @@ class LimitsConfig(BaseModel):
     max_assets_per_task: int
 
 
+class DbGatewayConfig(BaseModel):
+    """Database gateway configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+    url: str
+    timeout_seconds: int
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -136,6 +144,7 @@ class Settings(BaseModel):
     central_bank: CentralBankConfig
     platform: PlatformConfig
     request: RequestConfig
+    db_gateway: DbGatewayConfig | None = None
     assets: AssetsConfig | None = None
     deadlines: DeadlinesConfig | None = None
     limits: LimitsConfig | None = None

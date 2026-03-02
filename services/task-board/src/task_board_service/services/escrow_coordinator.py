@@ -10,13 +10,17 @@ from task_board_service.logging import get_logger
 
 if TYPE_CHECKING:
     from task_board_service.clients.central_bank_client import CentralBankClient
-    from task_board_service.services.task_store import TaskStore
+    from task_board_service.services.protocol import TaskStorageInterface
 
 
 class EscrowCoordinator:
     """Coordinates escrow release/split and pending retry behavior."""
 
-    def __init__(self, central_bank_client: CentralBankClient, store: TaskStore) -> None:
+    def __init__(
+        self,
+        central_bank_client: CentralBankClient,
+        store: TaskStorageInterface,
+    ) -> None:
         self._central_bank_client = central_bank_client
         self._store = store
         self._logger = get_logger(__name__)

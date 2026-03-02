@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from task_board_service.services.asset_manager import AssetManager
     from task_board_service.services.escrow_coordinator import EscrowCoordinator
     from task_board_service.services.identity_client import IdentityClient
+    from task_board_service.services.protocol import TaskStorageInterface
     from task_board_service.services.task_manager import TaskManager
     from task_board_service.services.token_validator import TokenValidator
 
@@ -31,6 +32,7 @@ class AppState:
     escrow_coordinator: EscrowCoordinator | None = None
     token_validator: TokenValidator | None = None
     asset_manager: AssetManager | None = None
+    store: TaskStorageInterface | None = None
 
     @property
     def uptime_seconds(self) -> float:
