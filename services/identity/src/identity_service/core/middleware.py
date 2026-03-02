@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from fastapi.responses import JSONResponse
+from service_commons.exceptions import middleware_error_response
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
@@ -48,13 +48,10 @@ class RequestValidationMiddleware:
         content_type = headers.get(b"content-type", b"").decode().lower()
 
         if not content_type.startswith("application/json"):
-            response = JSONResponse(
+            response = middleware_error_response(
+                error="unsupported_media_type",
+                message="Content-Type must be application/json",
                 status_code=415,
-                content={
-                    "error": "unsupported_media_type",
-                    "message": "Content-Type must be application/json",
-                    "details": {},
-                },
             )
             await response(scope, receive, send)
             return
@@ -70,13 +67,10 @@ class RequestValidationMiddleware:
             body_size += len(chunk)
 
             if body_size > self.max_body_size:
-                response = JSONResponse(
+                response = middleware_error_response(
+                    error="payload_too_large",
+                    message="Request body exceeds maximum allowed size",
                     status_code=413,
-                    content={
-                        "error": "payload_too_large",
-                        "message": "Request body exceeds maximum allowed size",
-                        "details": {},
-                    },
                 )
                 await response(scope, receive, send)
                 return
