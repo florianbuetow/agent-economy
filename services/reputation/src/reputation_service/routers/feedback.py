@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import base64
 import json
 
-from cryptography.exceptions import InvalidSignature
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -63,37 +61,6 @@ def _extract_jws_token(data: dict[str, object]) -> str:
     return token
 
 
-def _extract_signer_agent_id(token: str) -> str:
-    """Extract signer agent_id from the JWS header kid field."""
-    header_b64 = token.split(".", maxsplit=1)[0]
-    padded = header_b64 + "=" * (-len(header_b64) % 4)
-    try:
-        header = json.loads(base64.urlsafe_b64decode(padded))
-    except (json.JSONDecodeError, ValueError, UnicodeDecodeError) as exc:
-        raise ServiceError(
-            error="invalid_jws",
-            message="JWS header is not valid base64url JSON",
-            status_code=400,
-            details={},
-        ) from exc
-    if not isinstance(header, dict):
-        raise ServiceError(
-            error="invalid_jws",
-            message="JWS header must be a JSON object",
-            status_code=400,
-            details={},
-        )
-    kid = header.get("kid")
-    if not isinstance(kid, str) or kid == "":
-        raise ServiceError(
-            error="invalid_jws",
-            message="Token header is missing kid",
-            status_code=400,
-            details={},
-        )
-    return kid
-
-
 def _record_to_dict(record: object) -> dict[str, object]:
     """Convert a FeedbackRecord dataclass to a dict for JSON serialization."""
     if not isinstance(record, FeedbackRecord):
@@ -141,12 +108,12 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
     # --- JWS Token Extraction ---
     token = _extract_jws_token(data)
 
-    # --- Local JWS verification via platform agent ---
+    # --- JWS verification via Identity service ---
     state = get_app_state()
-    if state.platform_agent is None:
+    if state.identity_client is None:
         raise ServiceError(
             error="service_not_ready",
-            message="Platform agent not initialized",
+            message="Identity client not initialized",
             status_code=503,
             details={},
         )
@@ -158,23 +125,18 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
             details={},
         )
 
-    try:
-        payload_raw = state.platform_agent.validate_certificate(token)
-    except (InvalidSignature, ValueError) as exc:
+    verify_result = await state.identity_client.verify_jws(token)
+
+    if not verify_result.get("valid"):
         raise ServiceError(
             error="forbidden",
             message="JWS signature verification failed",
             status_code=403,
             details={},
-        ) from exc
-    except Exception as exc:
-        raise ServiceError(
-            error="identity_service_unavailable",
-            message="Cannot reach Identity service",
-            status_code=502,
-            details={},
-        ) from exc
-    if not isinstance(payload_raw, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+        )
+
+    payload_from_identity = verify_result.get("payload")
+    if not isinstance(payload_from_identity, dict):
         raise ServiceError(
             error="invalid_payload",
             message="JWS payload must be a JSON object",
@@ -182,8 +144,15 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
             details={},
         )
 
-    payload: dict[str, object] = payload_raw
-    signer_agent_id: str = _extract_signer_agent_id(token)
+    payload: dict[str, object] = payload_from_identity
+    signer_agent_id: str = verify_result.get("agent_id", "")
+    if not signer_agent_id:
+        raise ServiceError(
+            error="invalid_jws",
+            message="Token header is missing kid",
+            status_code=400,
+            details={},
+        )
 
     # --- Payload Validation ---
     action = payload.get("action")

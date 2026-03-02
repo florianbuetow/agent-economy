@@ -10,7 +10,9 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from httpx import ASGITransport, AsyncClient
+from service_commons.exceptions import ServiceError
 
 from task_board_service.app import create_app
 from task_board_service.config import clear_settings_cache
@@ -122,6 +124,9 @@ logging:
   directory: "data/logs"
 database:
   path: "{db_path}"
+identity:
+  base_url: "http://localhost:8001"
+  verify_jws_path: "/agents/verify-jws"
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -174,11 +179,18 @@ limits:
         mock_bank.escrow_split = AsyncMock(return_value={"status": "split"})
         state.central_bank_client = mock_bank
 
+        # Mock IdentityClient for JWS verification
+        mock_identity = AsyncMock()
+        mock_identity.close = AsyncMock()
+        mock_identity.verify_jws = AsyncMock(side_effect=_make_delegating_verify_jws(state))
+        state.identity_client = mock_identity
+
         # Propagate mocks to extracted services
         if state.task_manager is not None:
             state.task_manager._central_bank_client = mock_bank
         if state.token_validator is not None:
             state.token_validator._platform_agent = mock_platform
+            state.token_validator._identity_client = mock_identity
         if state.escrow_coordinator is not None:
             state.escrow_coordinator._central_bank_client = mock_bank
 
@@ -205,36 +217,69 @@ async def client(app: Any) -> AsyncIterator[AsyncClient]:
 # ---------------------------------------------------------------------------
 @pytest.fixture
 def mock_identity_verify_success(_app: Any) -> None:
-    """Configure the platform agent mock to verify JWS successfully."""
+    """Configure the identity client mock to verify JWS successfully."""
     state = get_app_state()
     state.platform_agent.validate_certificate = MagicMock(side_effect=_extract_payload)
+    state.identity_client.verify_jws = AsyncMock(side_effect=_make_delegating_verify_jws(state))
+    if state.token_validator is not None:
+        state.token_validator._identity_client = state.identity_client
 
 
 @pytest.fixture
 def mock_identity_unavailable(_app: Any) -> None:
-    """Configure the platform agent mock to simulate service unavailability."""
+    """Configure the identity client mock to simulate service unavailability."""
     state = get_app_state()
     state.platform_agent.validate_certificate = MagicMock(
         side_effect=ConnectionError("Identity service unreachable")
     )
+    state.identity_client.verify_jws = AsyncMock(
+        side_effect=ServiceError(
+            "identity_service_unavailable",
+            "Cannot reach Identity service",
+            502,
+            {},
+        )
+    )
+    if state.token_validator is not None:
+        state.token_validator._identity_client = state.identity_client
 
 
 @pytest.fixture
 def mock_identity_timeout(_app: Any) -> None:
-    """Configure the platform agent mock to simulate a timeout."""
+    """Configure the identity client mock to simulate a timeout."""
     state = get_app_state()
     state.platform_agent.validate_certificate = MagicMock(
         side_effect=TimeoutError("Identity service timed out")
     )
+    state.identity_client.verify_jws = AsyncMock(
+        side_effect=ServiceError(
+            "identity_service_unavailable",
+            "Cannot reach Identity service",
+            502,
+            {},
+        )
+    )
+    if state.token_validator is not None:
+        state.token_validator._identity_client = state.identity_client
 
 
 @pytest.fixture
 def mock_identity_unexpected_response(_app: Any) -> None:
-    """Configure the platform agent mock to return an unexpected response."""
+    """Configure the identity client mock to return an unexpected response."""
     state = get_app_state()
     state.platform_agent.validate_certificate = MagicMock(
         side_effect=ValueError("Unexpected response from Identity service")
     )
+    state.identity_client.verify_jws = AsyncMock(
+        side_effect=ServiceError(
+            "identity_service_unavailable",
+            "Cannot reach Identity service",
+            502,
+            {},
+        )
+    )
+    if state.token_validator is not None:
+        state.token_validator._identity_client = state.identity_client
 
 
 @pytest.fixture
@@ -269,6 +314,41 @@ def _extract_payload(token: str) -> dict[str, Any]:
     payload_b64 = token.split(".")[1]
     padded = payload_b64 + "=" * (4 - len(payload_b64) % 4)
     return json.loads(base64.urlsafe_b64decode(padded))
+
+
+def _make_delegating_verify_jws(state_ref: Any) -> Any:
+    """Create a verify_jws mock that delegates to platform_agent.validate_certificate.
+
+    This ensures tests that override validate_certificate (e.g. with InvalidSignature)
+    will see the same behavior when verification goes through identity_client.verify_jws.
+
+    Signature-related errors (InvalidSignature, ValueError) are mapped to valid=False.
+    Connectivity errors (ConnectionError, TimeoutError, etc.) are raised as ServiceError(502)
+    to simulate what the real IdentityClient would do.
+    """
+
+    async def _delegating_verify_jws(token: str) -> dict[str, Any]:
+        parts = token.split(".")
+        header_b64 = parts[0]
+        padded_header = header_b64 + "=" * (-len(header_b64) % 4)
+        header = json.loads(base64.urlsafe_b64decode(padded_header))
+        agent_id = header.get("kid", "")
+
+        try:
+            payload = state_ref.platform_agent.validate_certificate(token)
+        except (_InvalidSignature, ValueError):
+            return {"valid": False, "reason": "signature mismatch"}
+        except Exception as exc:
+            raise ServiceError(
+                "identity_service_unavailable",
+                "Cannot reach Identity service",
+                502,
+                {},
+            ) from exc
+
+        return {"valid": True, "agent_id": agent_id, "payload": payload}
+
+    return _delegating_verify_jws
 
 
 # ---------------------------------------------------------------------------

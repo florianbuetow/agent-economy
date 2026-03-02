@@ -9,11 +9,13 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from httpx import ASGITransport, AsyncClient
 from joserfc import jws
 from joserfc.jwk import OKPKey
+from service_commons.exceptions import ServiceError
 
 from central_bank_service.app import create_app
 from central_bank_service.config import clear_settings_cache
@@ -55,6 +57,41 @@ def _decode_jws_payload(token: str) -> dict[str, Any]:
     return json.loads(base64.urlsafe_b64decode(padded))
 
 
+def _make_delegating_verify_jws(state_ref: Any) -> Any:
+    """Create a verify_jws mock that delegates to platform_agent.validate_certificate.
+
+    This ensures tests that override validate_certificate (e.g. with InvalidSignature)
+    will see the same behavior when verification goes through identity_client.verify_jws.
+
+    Signature-related errors (InvalidSignature, ValueError) are mapped to valid=False.
+    Connectivity errors (ConnectionError, TimeoutError, etc.) are raised as ServiceError(502)
+    to simulate what the real IdentityClient would do.
+    """
+
+    async def _delegating_verify_jws(token: str) -> dict[str, Any]:
+        parts = token.split(".")
+        header_b64 = parts[0]
+        padded_header = header_b64 + "=" * (-len(header_b64) % 4)
+        header = json.loads(base64.urlsafe_b64decode(padded_header))
+        agent_id = header.get("kid", "")
+
+        try:
+            payload = state_ref.platform_agent.validate_certificate(token)
+        except (InvalidSignature, ValueError):
+            return {"valid": False, "reason": "signature mismatch"}
+        except Exception as exc:
+            raise ServiceError(
+                "identity_service_unavailable",
+                "Cannot reach Identity service",
+                502,
+                {},
+            ) from exc
+
+        return {"valid": True, "agent_id": agent_id, "payload": payload}
+
+    return _delegating_verify_jws
+
+
 @pytest.fixture
 def platform_keypair():
     """Generate a platform keypair."""
@@ -87,6 +124,7 @@ database:
 identity:
   base_url: "http://localhost:8001"
   get_agent_path: "/agents"
+  verify_jws_path: "/agents/verify-jws"
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
 request:
@@ -114,6 +152,7 @@ request:
         mock_platform.validate_certificate = MagicMock(side_effect=_decode_jws_payload)
         mock_platform.close = AsyncMock()
         state.platform_agent = mock_platform
+        mock_identity.verify_jws = AsyncMock(side_effect=_make_delegating_verify_jws(state))
 
         yield test_app
 

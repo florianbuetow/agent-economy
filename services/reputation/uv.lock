@@ -2041,7 +2041,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "base-agent" },
-    { name = "cryptography" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "pydantic" },
@@ -2053,6 +2052,7 @@ dependencies = [
 dev = [
     { name = "bandit" },
     { name = "codespell" },
+    { name = "cryptography" },
     { name = "deptry" },
     { name = "httpx" },
     { name = "mypy" },
@@ -2073,7 +2073,7 @@ requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.0" },
     { name = "base-agent", editable = "../../agents" },
     { name = "codespell", marker = "extra == 'dev'", specifier = ">=2.3.0" },
-    { name = "cryptography", specifier = ">=44.0.0" },
+    { name = "cryptography", marker = "extra == 'dev'", specifier = ">=44.0.0" },
     { name = "deptry", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "httpx", specifier = ">=0.28.0" },

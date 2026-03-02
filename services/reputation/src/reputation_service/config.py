@@ -55,6 +55,14 @@ class PlatformConfig(BaseModel):
     agent_config_path: str
 
 
+class IdentityConfig(BaseModel):
+    """Identity service configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+    base_url: str
+    verify_jws_path: str
+
+
 class RequestConfig(BaseModel):
     """Request validation configuration."""
 
@@ -90,6 +98,7 @@ class Settings(BaseModel):
     server: ServerConfig
     logging: LoggingConfig
     platform: PlatformConfig
+    identity: IdentityConfig | None = None
     request: RequestConfig
     database: DatabaseConfig
     feedback: FeedbackConfig

@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from base_agent.platform import PlatformAgent
 
     from reputation_service.services.feedback_store import FeedbackStore
+    from reputation_service.services.identity_client import IdentityClient
 
 
 @dataclass
@@ -34,6 +35,7 @@ class AppState:
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     feedback_store: FeedbackStore | None = None
     platform_agent: PlatformAgent | None = None
+    identity_client: IdentityClient | None = None
 
     @property
     def uptime_seconds(self) -> float:

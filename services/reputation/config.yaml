@@ -17,6 +17,10 @@ logging:
 platform:
   agent_config_path: "../../agents/config.yaml"
 
+identity:
+  base_url: "http://localhost:8001"
+  verify_jws_path: "/agents/verify-jws"
+
 request:
   max_body_size: 1048576  # 1MB
 

@@ -55,6 +55,14 @@ class DatabaseConfig(BaseModel):
     path: str
 
 
+class IdentityConfig(BaseModel):
+    """Identity service connection configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+    base_url: str
+    verify_jws_path: str
+
+
 class CentralBankConfig(BaseModel):
     """Central Bank service connection configuration."""
 
@@ -124,6 +132,7 @@ class Settings(BaseModel):
     server: ServerConfig
     logging: LoggingConfig
     database: DatabaseConfig
+    identity: IdentityConfig | None = None
     central_bank: CentralBankConfig
     platform: PlatformConfig
     request: RequestConfig

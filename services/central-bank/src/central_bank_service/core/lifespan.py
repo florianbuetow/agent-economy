@@ -39,9 +39,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.ledger = Ledger(db_path=db_path)
 
     # Initialize identity client
+    verify_jws_path = settings.identity.verify_jws_path or "/agents/verify-jws"
     state.identity_client = IdentityClient(
         base_url=settings.identity.base_url,
         get_agent_path=settings.identity.get_agent_path,
+        verify_jws_path=verify_jws_path,
     )
 
     if settings.platform.agent_config_path:

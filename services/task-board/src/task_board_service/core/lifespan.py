@@ -19,6 +19,7 @@ from task_board_service.logging import get_logger, setup_logging
 from task_board_service.services.asset_manager import AssetManager
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
+from task_board_service.services.identity_client import IdentityClient
 from task_board_service.services.task_manager import TaskManager
 from task_board_service.services.task_store import TaskStore
 from task_board_service.services.token_validator import TokenValidator
@@ -105,6 +106,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             private_key_file.parent.mkdir(parents=True, exist_ok=True)
             private_key_file.write_bytes(pem)
 
+    # Initialize IdentityClient (HTTP client for JWS verification)
+    identity_client: IdentityClient | None = None
+    if settings.identity is not None:
+        identity_client = IdentityClient(
+            base_url=settings.identity.base_url,
+            verify_jws_path=settings.identity.verify_jws_path,
+        )
+        state.identity_client = identity_client
+
     # Initialize PlatformSigner (loads Ed25519 private key from disk)
     platform_signer = PlatformSigner(
         private_key_path=private_key_path,
@@ -127,7 +137,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     store = TaskStore(db_path=db_path)
     escrow_coordinator = EscrowCoordinator(central_bank_client=central_bank_client, store=store)
     state.escrow_coordinator = escrow_coordinator
-    token_validator = TokenValidator(platform_agent=cast("PlatformAgent", state.platform_agent))
+    token_validator = TokenValidator(
+        platform_agent=cast("PlatformAgent", state.platform_agent),
+        identity_client=identity_client,
+    )
     state.token_validator = token_validator
     deadline_evaluator = DeadlineEvaluator(store=store, escrow_coordinator=escrow_coordinator)
     asset_manager = AssetManager(
@@ -177,3 +190,5 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # Close HTTP clients (closes httpx async clients)
     await central_bank_client.close()
+    if identity_client is not None:
+        await identity_client.close()

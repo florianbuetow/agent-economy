@@ -61,6 +61,7 @@ class IdentityConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     base_url: str
     get_agent_path: str
+    verify_jws_path: str | None = None
 
 
 class PlatformConfig(BaseModel):

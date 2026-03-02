@@ -8,13 +8,13 @@ dependencies = [
     "uvicorn>=0.34.0",
     "pydantic>=2.10.0",
     "httpx>=0.28.0",
-    "cryptography>=44.0.0",
     "service-commons",
     "base-agent",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "cryptography>=44.0.0",
     "pytest>=8.0.0",
     "pytest-cov>=6.0.0",
     "pytest-asyncio>=0.24.0",
@@ -151,6 +151,7 @@ DEP002 = [
     "pydantic",
     "service-commons",
     "base-agent",
+    "cryptography",
     "pytest",
     "pytest-cov",
     "pytest-asyncio",

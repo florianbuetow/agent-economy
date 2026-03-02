@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import base64
+import json
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+from unittest.mock import AsyncMock
 
 import pytest
 from cryptography.exceptions import InvalidSignature
 from httpx import ASGITransport, AsyncClient
+from service_commons.exceptions import ServiceError
 
 from reputation_service.app import create_app
 from reputation_service.config import clear_settings_cache
@@ -42,6 +46,9 @@ logging:
   directory: "data/logs"
 platform:
   agent_config_path: ""
+identity:
+  base_url: "http://localhost:8001"
+  verify_jws_path: "/agents/verify-jws"
 request:
   max_body_size: 1048576
 database:
@@ -84,6 +91,7 @@ async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
             base_url="http://test",
         ) as c,
     ):
+        inject_mock_identity()
         yield c
 
 
@@ -120,6 +128,40 @@ def _mock_verify_ok(
     return {"valid": True, "agent_id": agent_id, "payload": payload}
 
 
+def _make_delegating_verify_jws(state_ref: object) -> Any:
+    """Create a verify_jws mock that delegates to platform_agent.validate_certificate.
+
+    This ensures tests that override validate_certificate (e.g. with InvalidSignature)
+    will see the same behavior when verification goes through identity_client.verify_jws.
+
+    Signature-related errors (InvalidSignature, ValueError) are mapped to valid=False.
+    Connectivity errors (ConnectionError, TimeoutError, etc.) are raised as ServiceError(502).
+    """
+
+    async def _delegating_verify_jws(token: str) -> dict[str, object]:
+        parts = token.split(".")
+        header_b64 = parts[0]
+        padded_header = header_b64 + "=" * (-len(header_b64) % 4)
+        header = json.loads(base64.urlsafe_b64decode(padded_header))
+        agent_id = header.get("kid", "")
+
+        try:
+            payload = state_ref.platform_agent.validate_certificate(token)
+        except (InvalidSignature, ValueError):
+            return {"valid": False, "reason": "signature mismatch"}
+        except Exception as exc:
+            raise ServiceError(
+                "identity_service_unavailable",
+                "Cannot reach Identity service",
+                502,
+                {},
+            ) from exc
+
+        return {"valid": True, "agent_id": agent_id, "payload": payload}
+
+    return _delegating_verify_jws
+
+
 def inject_mock_identity(
     verify_response: dict[str, object] | None = None,
 ) -> None:
@@ -139,3 +181,11 @@ def inject_mock_identity(
         verify_payload=payload if isinstance(payload, dict) else None,
         verify_side_effect=side_effect,
     )
+
+    # Set up mock identity_client with delegating verify_jws
+    mock_identity = AsyncMock()
+    mock_identity.close = AsyncMock()
+    mock_identity.verify_jws = AsyncMock(
+        side_effect=_make_delegating_verify_jws(state),
+    )
+    state.identity_client = mock_identity

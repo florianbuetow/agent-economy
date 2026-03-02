@@ -12,6 +12,7 @@ from reputation_service.config import get_config_path, get_settings
 from reputation_service.core.state import init_app_state
 from reputation_service.logging import get_logger, setup_logging
 from reputation_service.services.feedback_store import FeedbackStore
+from reputation_service.services.identity_client import IdentityClient, PlatformIdentityClient
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -44,6 +45,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await platform_agent.register()
         state.platform_agent = platform_agent
 
+    # Initialize identity client for JWS verification
+    if settings.identity is not None:
+        state.identity_client = IdentityClient(
+            base_url=settings.identity.base_url,
+            verify_jws_path=settings.identity.verify_jws_path,
+        )
+    else:
+        state.identity_client = PlatformIdentityClient(
+            platform_agent_provider=lambda: state.platform_agent,
+        )
+
     logger.info(
         "Service starting",
         extra={
@@ -57,6 +69,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # === SHUTDOWN ===
     logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
+    if state.identity_client is not None:  # pyright: ignore[reportUnnecessaryComparison]
+        await state.identity_client.close()
     if state.feedback_store is not None:  # pyright: ignore[reportUnnecessaryComparison]
         state.feedback_store.close()
     if state.platform_agent is not None:  # pyright: ignore[reportUnnecessaryComparison]
