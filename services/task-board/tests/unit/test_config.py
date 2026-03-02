@@ -25,10 +25,6 @@ logging:
   directory: "data/logs"
 database:
   path: "data/task-board.db"
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -61,7 +57,6 @@ limits:
     assert settings.service.name == "task-board"
     assert settings.server.port == 8003
     assert settings.database.path == "data/task-board.db"
-    assert settings.identity.base_url == "http://localhost:8001"
     assert settings.central_bank.base_url == "http://localhost:8002"
     assert settings.platform.agent_id == "a-platform-id"
     assert settings.deadlines.default_bidding_seconds == 3600
@@ -87,10 +82,6 @@ logging:
   directory: "data/logs"
 database:
   path: "data/task-board.db"
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -158,10 +149,6 @@ logging:
   directory: "data/logs"
 database:
   path: "data/task-board.db"
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -191,7 +178,6 @@ limits:
     settings = get_settings()
 
     assert settings.platform.agent_id == "a-platform-id"
-    assert settings.identity.base_url == "http://localhost:8001"
     assert settings.central_bank.base_url == "http://localhost:8002"
 
     os.environ.pop("CONFIG_PATH", None)
