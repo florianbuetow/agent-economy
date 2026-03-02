@@ -11,8 +11,6 @@ from service_commons.exceptions import ServiceError
 if TYPE_CHECKING:
     from base_agent.platform import PlatformAgent
 
-    from court_service.services.identity_client import IdentityClient
-
 
 def parse_json_body(raw_body: bytes) -> dict[str, Any]:
     """Parse request body as a JSON object."""
@@ -80,48 +78,6 @@ def verify_platform_token(token: str, platform_agent: PlatformAgent | None) -> d
         raise ServiceError("INVALID_PAYLOAD", "JWS payload must be a JSON object", 400, {})
 
     return payload
-
-
-async def verify_jws(token: str, identity_client: IdentityClient | None) -> dict[str, Any]:
-    """Verify JWS via Identity service and return agent_id/payload."""
-    if identity_client is None:
-        msg = "Identity client not initialized"
-        raise RuntimeError(msg)
-
-    try:
-        verified = await identity_client.verify_jws(token)
-    except ServiceError as exc:
-        if exc.error == "IDENTITY_SERVICE_UNAVAILABLE" or exc.status_code >= 500:
-            raise ServiceError(
-                "IDENTITY_SERVICE_UNAVAILABLE",
-                "Cannot reach Identity service",
-                502,
-                {},
-            ) from exc
-        raise
-    except Exception as exc:
-        raise ServiceError(
-            "IDENTITY_SERVICE_UNAVAILABLE",
-            "Cannot reach Identity service",
-            502,
-            {},
-        ) from exc
-
-    valid = verified.get("valid")
-    if isinstance(valid, bool) and not valid:
-        raise ServiceError("FORBIDDEN", "JWS signature verification failed", 403, {})
-
-    agent_id = verified.get("agent_id")
-    payload = verified.get("payload")
-    if not isinstance(agent_id, str) or not isinstance(payload, dict):
-        raise ServiceError(
-            "IDENTITY_SERVICE_UNAVAILABLE",
-            "Identity service returned malformed verification response",
-            502,
-            {},
-        )
-
-    return {"agent_id": agent_id, "payload": payload}
 
 
 def require_action(payload: dict[str, Any], expected_action: str) -> None:

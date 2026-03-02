@@ -15,7 +15,6 @@ from court_service.config import clear_settings_cache
 from court_service.core.state import get_app_state, reset_app_state
 from tests.helpers import (
     make_jws_token,
-    make_mock_identity_client,
     make_mock_judge,
     make_mock_platform_agent,
     make_task_data,
@@ -51,10 +50,6 @@ logging:
   directory: "data/logs"
 database:
   path: "{db_path}"
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
 request:
@@ -87,13 +82,6 @@ async def app(tmp_path: Any) -> AsyncIterator[FastAPI]:
     test_app = create_app()
     async with test_app.router.lifespan_context(test_app):
         state = get_app_state()
-        state.identity_client = make_mock_identity_client(
-            verify_response={
-                "valid": True,
-                "agent_id": PLATFORM_AGENT_ID,
-                "payload": {},
-            }
-        )
         state.platform_agent = make_mock_platform_agent(
             agent_id=PLATFORM_AGENT_ID,
             task_response=make_task_data(),
