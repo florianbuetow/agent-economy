@@ -55,13 +55,11 @@ class TestSettingsLoad:
         assert isinstance(settings.feedback.max_comment_length, int)
         assert settings.feedback.max_comment_length > 0
 
-    def test_identity_section_exists(self) -> None:
-        """Settings must have an identity section."""
+    def test_platform_section_exists(self) -> None:
+        """Settings must have a platform section with agent_config_path."""
         settings = get_settings()
-        assert settings.identity is not None
-        assert isinstance(settings.identity.base_url, str)
-        assert isinstance(settings.identity.verify_jws_path, str)
-        assert isinstance(settings.identity.timeout_seconds, int)
+        assert settings.platform is not None
+        assert isinstance(settings.platform.agent_config_path, str)
 
     def test_request_section_exists(self) -> None:
         """Settings must have a request section with max_body_size."""

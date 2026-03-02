@@ -20,7 +20,7 @@ from httpx import ASGITransport, AsyncClient
 from reputation_service.app import create_app
 from reputation_service.config import clear_settings_cache
 from reputation_service.core.state import get_app_state, reset_app_state
-from tests.helpers import make_jws_token, make_mock_identity_client
+from tests.helpers import make_jws_token, make_mock_platform_agent
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Mapping
@@ -52,10 +52,8 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
+platform:
+  agent_config_path: ""
 request:
   max_body_size: 1048576
 database:
@@ -90,10 +88,9 @@ def _restore_env(old_config: str | None) -> None:
 
 def _inject_mock_identity(payload: dict[str, object], kid: str) -> None:
     """Inject a mock IdentityClient that returns the given payload."""
+    _ = kid
     state = get_app_state()
-    state.identity_client = make_mock_identity_client(
-        verify_response={"valid": True, "agent_id": kid, "payload": payload},
-    )
+    state.platform_agent = make_mock_platform_agent(verify_payload=payload)
 
 
 async def _make_client(app: FastAPI) -> AsyncIterator[AsyncClient]:

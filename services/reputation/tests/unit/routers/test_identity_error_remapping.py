@@ -14,10 +14,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from service_commons.exceptions import ServiceError
+from cryptography.exceptions import InvalidSignature
 
 from reputation_service.core.state import get_app_state
-from tests.helpers import make_jws_token, make_mock_identity_client
+from tests.helpers import make_jws_token, make_mock_platform_agent
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -54,7 +54,7 @@ def _token_body(
 def _inject_mock_error(side_effect: Exception) -> None:
     """Inject a mock IdentityClient that raises an exception."""
     state = get_app_state()
-    state.identity_client = make_mock_identity_client(verify_side_effect=side_effect)
+    state.platform_agent = make_mock_platform_agent(verify_side_effect=side_effect)
 
 
 # =============================================================================
@@ -74,7 +74,7 @@ class TestVerificationFailuresSurface403:
     async def test_unregistered_agent_returns_403(self, client: AsyncClient) -> None:
         """Unregistered agent (Identity 404 agent_not_found) → 403 forbidden."""
         _inject_mock_error(
-            ServiceError("forbidden", "JWS signature verification failed", 403, {}),
+            InvalidSignature(),
         )
         token = make_jws_token(_feedback_payload(), kid="a-unregistered-uuid")
         response = await client.post("/feedback", json={"token": token})
@@ -84,7 +84,7 @@ class TestVerificationFailuresSurface403:
     async def test_invalid_jws_rejected_by_identity_returns_403(self, client: AsyncClient) -> None:
         """Cryptographically invalid JWS (Identity 400 invalid_jws) → 403 forbidden."""
         _inject_mock_error(
-            ServiceError("forbidden", "JWS signature verification failed", 403, {}),
+            InvalidSignature(),
         )
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
@@ -94,7 +94,7 @@ class TestVerificationFailuresSurface403:
     async def test_forbidden_message_is_generic(self, client: AsyncClient) -> None:
         """403 responses use a generic message, not upstream Identity details."""
         _inject_mock_error(
-            ServiceError("forbidden", "JWS signature verification failed", 403, {}),
+            InvalidSignature(),
         )
         token = make_jws_token(_feedback_payload(), kid="a-unregistered-uuid")
         response = await client.post("/feedback", json={"token": token})
@@ -119,12 +119,7 @@ class TestInfraFailuresSurface502:
     async def test_connection_failure_returns_502(self, client: AsyncClient) -> None:
         """Identity service unreachable → 502 identity_service_unavailable."""
         _inject_mock_error(
-            ServiceError(
-                "identity_service_unavailable",
-                "Cannot reach Identity service",
-                502,
-                {},
-            ),
+            Exception("Cannot reach Identity service"),
         )
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
@@ -134,12 +129,7 @@ class TestInfraFailuresSurface502:
     async def test_unexpected_response_format_returns_502(self, client: AsyncClient) -> None:
         """Non-JSON or non-dict Identity response → 502 identity_service_unavailable."""
         _inject_mock_error(
-            ServiceError(
-                "identity_service_unavailable",
-                "Identity service returned unexpected response (status 500)",
-                502,
-                {},
-            ),
+            Exception("Cannot reach Identity service"),
         )
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
@@ -165,12 +155,7 @@ class TestMalformed200ResponsesSurface502:
     async def test_valid_not_boolean_returns_502(self, client: AsyncClient) -> None:
         """200 with non-boolean 'valid' field → 502 identity_service_unavailable."""
         _inject_mock_error(
-            ServiceError(
-                "identity_service_unavailable",
-                "Identity service returned malformed verification response",
-                502,
-                {},
-            ),
+            Exception("Cannot reach Identity service"),
         )
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
@@ -180,12 +165,7 @@ class TestMalformed200ResponsesSurface502:
     async def test_missing_valid_field_returns_502(self, client: AsyncClient) -> None:
         """200 without 'valid' field → 502 identity_service_unavailable."""
         _inject_mock_error(
-            ServiceError(
-                "identity_service_unavailable",
-                "Identity service returned malformed verification response",
-                502,
-                {},
-            ),
+            Exception("Cannot reach Identity service"),
         )
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
@@ -195,7 +175,7 @@ class TestMalformed200ResponsesSurface502:
     async def test_valid_false_returns_403(self, client: AsyncClient) -> None:
         """200 with valid=false → 403 forbidden (genuine verification failure)."""
         _inject_mock_error(
-            ServiceError("forbidden", "JWS signature verification failed", 403, {}),
+            InvalidSignature(),
         )
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
@@ -205,12 +185,7 @@ class TestMalformed200ResponsesSurface502:
     async def test_missing_agent_id_returns_502(self, client: AsyncClient) -> None:
         """200 with valid=true but no agent_id → 502 identity_service_unavailable."""
         _inject_mock_error(
-            ServiceError(
-                "identity_service_unavailable",
-                "Identity service returned incomplete verification response",
-                502,
-                {},
-            ),
+            Exception("Cannot reach Identity service"),
         )
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
@@ -220,12 +195,7 @@ class TestMalformed200ResponsesSurface502:
     async def test_missing_payload_returns_502(self, client: AsyncClient) -> None:
         """200 with valid=true but no payload → 502 identity_service_unavailable."""
         _inject_mock_error(
-            ServiceError(
-                "identity_service_unavailable",
-                "Identity service returned incomplete verification response",
-                502,
-                {},
-            ),
+            Exception("Cannot reach Identity service"),
         )
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})

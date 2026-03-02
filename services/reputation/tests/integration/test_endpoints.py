@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from reputation_service.core.state import get_app_state
-from tests.helpers import make_jws_token, make_mock_identity_client
+from tests.helpers import make_jws_token, make_mock_platform_agent
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -46,22 +46,13 @@ def _token_body(
     return {"token": make_jws_token(payload, kid=kid)}
 
 
-def _mock_verify_ok(
-    agent_id: str,
-    payload: dict[str, object],
-) -> dict[str, object]:
-    """Return a successful verify_jws response."""
-    return {"valid": True, "agent_id": agent_id, "payload": payload}
-
-
 def _inject_mock(payload: dict[str, object] | None = None, agent_id: str = ALICE_ID) -> None:
     """Inject a mock IdentityClient returning success for the given payload."""
     if payload is None:
         payload = _feedback_payload()
+    _ = agent_id
     state = get_app_state()
-    state.identity_client = make_mock_identity_client(
-        verify_response=_mock_verify_ok(agent_id, payload),
-    )
+    state.platform_agent = make_mock_platform_agent(verify_payload=payload)
 
 
 @pytest.mark.integration

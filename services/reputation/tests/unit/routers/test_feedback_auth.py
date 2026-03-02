@@ -18,10 +18,10 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
-from service_commons.exceptions import ServiceError
+from cryptography.exceptions import InvalidSignature
 
 from reputation_service.core.state import get_app_state
-from tests.helpers import make_jws_token, make_mock_identity_client
+from tests.helpers import make_jws_token, make_mock_platform_agent
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -56,14 +56,6 @@ def _token_body(
     return {"token": make_jws_token(payload, kid=kid)}
 
 
-def _mock_verify_ok(
-    agent_id: str,
-    payload: dict[str, object],
-) -> dict[str, object]:
-    """Return a successful verify_jws response."""
-    return {"valid": True, "agent_id": agent_id, "payload": payload}
-
-
 def _inject_mock_ok(
     payload: dict[str, object] | None = None,
     agent_id: str = ALICE_ID,
@@ -71,24 +63,21 @@ def _inject_mock_ok(
     """Inject a mock IdentityClient returning success."""
     if payload is None:
         payload = _feedback_payload()
+    _ = agent_id
     state = get_app_state()
-    state.identity_client = make_mock_identity_client(
-        verify_response=_mock_verify_ok(agent_id, payload),
-    )
+    state.platform_agent = make_mock_platform_agent(verify_payload=payload)
 
 
 def _inject_mock_error(side_effect: Exception) -> None:
     """Inject a mock IdentityClient that raises an exception."""
     state = get_app_state()
-    state.identity_client = make_mock_identity_client(verify_side_effect=side_effect)
+    state.platform_agent = make_mock_platform_agent(verify_side_effect=side_effect)
 
 
 def _inject_mock_invalid_sig() -> None:
     """Inject a mock IdentityClient returning valid=false (tampered/unregistered)."""
     state = get_app_state()
-    state.identity_client = make_mock_identity_client(
-        verify_side_effect=ServiceError("forbidden", "Signature verification failed", 403, {}),
-    )
+    state.platform_agent = make_mock_platform_agent(verify_side_effect=InvalidSignature())
 
 
 # =============================================================================
@@ -260,11 +249,9 @@ class TestSignerMatching:
         """AUTH-13: Signer does NOT match from_agent_id — 403 forbidden."""
         # Alice signs but claims to be Carol
         payload = _feedback_payload(from_agent_id=CAROL_ID)
-        # Identity returns alice as the signer
+        # Mock agent returns payload signed by a different kid than from_agent_id.
         state = get_app_state()
-        state.identity_client = make_mock_identity_client(
-            verify_response=_mock_verify_ok(ALICE_ID, payload),
-        )
+        state.platform_agent = make_mock_platform_agent(verify_payload=payload)
         response = await client.post("/feedback", json=_token_body(payload, kid=ALICE_ID))
         assert response.status_code == 403
         assert response.json()["error"] == "forbidden"
@@ -273,9 +260,7 @@ class TestSignerMatching:
         """AUTH-14: Signer impersonates non-existent agent — 403 forbidden."""
         payload = _feedback_payload(from_agent_id="a-nonexistent-uuid")
         state = get_app_state()
-        state.identity_client = make_mock_identity_client(
-            verify_response=_mock_verify_ok(ALICE_ID, payload),
-        )
+        state.platform_agent = make_mock_platform_agent(verify_payload=payload)
         response = await client.post("/feedback", json=_token_body(payload, kid=ALICE_ID))
         assert response.status_code == 403
         assert response.json()["error"] == "forbidden"
@@ -292,9 +277,7 @@ class TestIdentityServiceUnavailability:
 
     async def test_auth_15_identity_down(self, client: AsyncClient) -> None:
         """AUTH-15: Identity service is down returns 502 identity_service_unavailable."""
-        _inject_mock_error(
-            ServiceError("identity_service_unavailable", "Cannot reach Identity service", 502, {})
-        )
+        _inject_mock_error(Exception("Cannot reach Identity service"))
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
         assert response.status_code == 502
@@ -302,14 +285,7 @@ class TestIdentityServiceUnavailability:
 
     async def test_auth_16_identity_unexpected_response(self, client: AsyncClient) -> None:
         """AUTH-16: Identity returns unexpected response — 502 identity_service_unavailable."""
-        _inject_mock_error(
-            ServiceError(
-                "identity_service_unavailable",
-                "Identity service returned unexpected response (status 500)",
-                502,
-                {},
-            )
-        )
+        _inject_mock_error(Exception("Cannot reach Identity service"))
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
         assert response.status_code == 502
@@ -444,9 +420,7 @@ class TestErrorPrecedence:
         # Wrong action AND signer mismatch
         payload = _feedback_payload(action="wrong_action", from_agent_id=BOB_ID)
         state = get_app_state()
-        state.identity_client = make_mock_identity_client(
-            verify_response=_mock_verify_ok(ALICE_ID, payload),
-        )
+        state.platform_agent = make_mock_platform_agent(verify_payload=payload)
         response = await client.post("/feedback", json=_token_body(payload, kid=ALICE_ID))
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
@@ -456,9 +430,7 @@ class TestErrorPrecedence:
         # Signer mismatch AND invalid rating
         payload = _feedback_payload(from_agent_id=CAROL_ID, rating="invalid_value")
         state = get_app_state()
-        state.identity_client = make_mock_identity_client(
-            verify_response=_mock_verify_ok(ALICE_ID, payload),
-        )
+        state.platform_agent = make_mock_platform_agent(verify_payload=payload)
         response = await client.post("/feedback", json=_token_body(payload, kid=ALICE_ID))
         assert response.status_code == 403
         assert response.json()["error"] == "forbidden"
@@ -466,9 +438,7 @@ class TestErrorPrecedence:
     async def test_prec_07_identity_unavailable_before_payload(self, client: AsyncClient) -> None:
         """PREC-07: Identity unavailability checked before payload validation."""
         # Identity down AND wrong action
-        _inject_mock_error(
-            ServiceError("identity_service_unavailable", "Cannot reach Identity service", 502, {})
-        )
+        _inject_mock_error(Exception("Cannot reach Identity service"))
         payload = _feedback_payload(action="wrong_action")
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 502
@@ -629,19 +599,10 @@ class TestCrossCuttingSecurity:
             elif special == "mismatch":
                 payload = _feedback_payload(from_agent_id=CAROL_ID)
                 state = get_app_state()
-                state.identity_client = make_mock_identity_client(
-                    verify_response=_mock_verify_ok(ALICE_ID, payload),
-                )
+                state.platform_agent = make_mock_platform_agent(verify_payload=payload)
                 response = await client.post("/feedback", json=_token_body(payload, kid=ALICE_ID))
             else:
-                _inject_mock_error(
-                    ServiceError(
-                        "identity_service_unavailable",
-                        "Cannot reach Identity service",
-                        502,
-                        {},
-                    )
-                )
+                _inject_mock_error(Exception("Cannot reach Identity service"))
                 token = make_jws_token(_feedback_payload())
                 response = await client.post("/feedback", json={"token": token})
 
@@ -681,9 +642,7 @@ class TestCrossCuttingSecurity:
             assert pattern not in msg2
 
         # Trigger identity_service_unavailable
-        _inject_mock_error(
-            ServiceError("identity_service_unavailable", "Cannot reach Identity service", 502, {})
-        )
+        _inject_mock_error(Exception("Cannot reach Identity service"))
         resp3 = await client.post("/feedback", json={"token": make_jws_token(_feedback_payload())})
         msg3 = resp3.json()["message"]
         for pattern in sensitive_patterns:

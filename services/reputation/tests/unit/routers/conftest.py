@@ -6,12 +6,13 @@ import os
 from typing import TYPE_CHECKING
 
 import pytest
+from cryptography.exceptions import InvalidSignature
 from httpx import ASGITransport, AsyncClient
 
 from reputation_service.app import create_app
 from reputation_service.config import clear_settings_cache
 from reputation_service.core.state import get_app_state, reset_app_state
-from tests.helpers import make_jws_token, make_mock_identity_client
+from tests.helpers import make_jws_token, make_mock_platform_agent
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
@@ -126,4 +127,15 @@ def inject_mock_identity(
     state = get_app_state()
     if verify_response is None:
         verify_response = _mock_verify_ok(ALICE_ID, _feedback_payload())
-    state.platform_agent = make_mock_identity_client(verify_response=verify_response)
+
+    payload = verify_response.get("payload")
+    side_effect: Exception | None = None
+    valid = verify_response.get("valid")
+    if isinstance(valid, bool) and not valid:
+        payload = None
+        side_effect = InvalidSignature()
+
+    state.platform_agent = make_mock_platform_agent(
+        verify_payload=payload if isinstance(payload, dict) else None,
+        verify_side_effect=side_effect,
+    )
