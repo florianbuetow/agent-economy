@@ -30,6 +30,17 @@ tmux send-keys -t codex Enter
 **NEVER** include Enter as part of the send-keys text argument.
 **ALWAYS** make Enter its own standalone Bash tool call.
 
+### Exact Session Targeting
+`-t codex` does **prefix matching** and will hit other sessions like `codex-e2e`. Always use the exact pane address to avoid ambiguity:
+```bash
+# WRONG — matches codex, codex-e2e, codex-anything
+tmux send-keys -t codex "..."
+
+# CORRECT — targets exactly the codex session, window 0, pane 0
+tmux send-keys -t 'codex:0.0' "..."
+```
+Use `codex:0.0` everywhere: `send-keys`, `capture-pane`, etc.
+
 ### Cancelling a Prompt First
 When the agent is waiting at a Yes/No prompt:
 ```bash
