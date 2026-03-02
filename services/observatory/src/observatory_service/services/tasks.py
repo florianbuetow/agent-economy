@@ -4,37 +4,22 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from observatory_service.services.database import (
+    execute_fetchall,
+    execute_fetchone,
+    execute_scalar,
+)
+
 if TYPE_CHECKING:
     from typing import Any
 
     import aiosqlite
 
 
-async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
-    """Execute query and return the first column of the first row."""
-    async with db.execute(sql, params) as cursor:
-        row = await cursor.fetchone()
-    if row is None:
-        return None
-    return row[0]
-
-
-async def _fetchone(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
-    """Execute query and return the first row."""
-    async with db.execute(sql, params) as cursor:
-        return await cursor.fetchone()
-
-
-async def _fetchall(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> list[Any]:
-    """Execute query and return all rows."""
-    async with db.execute(sql, params) as cursor:
-        return list(await cursor.fetchall())
-
-
 async def _delivery_quality(db: aiosqlite.Connection, agent_id: str) -> dict[str, Any]:
     """Compute delivery quality counts for a bidder from visible feedback."""
     es = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE to_agent_id = ? AND category = 'delivery_quality' "
@@ -44,7 +29,7 @@ async def _delivery_quality(db: aiosqlite.Connection, agent_id: str) -> dict[str
         or 0
     )
     sat = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE to_agent_id = ? AND category = 'delivery_quality' "
@@ -54,7 +39,7 @@ async def _delivery_quality(db: aiosqlite.Connection, agent_id: str) -> dict[str
         or 0
     )
     dis = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE to_agent_id = ? AND category = 'delivery_quality' "
@@ -73,7 +58,7 @@ async def _delivery_quality(db: aiosqlite.Connection, agent_id: str) -> dict[str
 async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str, Any] | None:
     """Get a full task drilldown with bids, assets, feedback, and dispute."""
     # 1. Query the task
-    task_row = await _fetchone(
+    task_row = await execute_fetchone(
         db,
         "SELECT bt.task_id, bt.poster_id, bt.worker_id, bt.title, bt.spec, "
         "bt.reward, bt.status, bt.accepted_bid_id, "
@@ -105,7 +90,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
     ) = task_row
 
     # 2. Resolve poster name
-    poster_name = await _scalar(
+    poster_name = await execute_scalar(
         db,
         "SELECT name FROM identity_agents WHERE agent_id = ?",
         (poster_id,),
@@ -114,7 +99,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
     # 3. Resolve worker name (if any)
     worker = None
     if worker_id is not None:
-        worker_name = await _scalar(
+        worker_name = await execute_scalar(
             db,
             "SELECT name FROM identity_agents WHERE agent_id = ?",
             (worker_id,),
@@ -122,7 +107,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
         worker = {"agent_id": worker_id, "name": worker_name}
 
     # 4. Bids
-    bid_rows = await _fetchall(
+    bid_rows = await execute_fetchall(
         db,
         "SELECT bb.bid_id, bb.bidder_id, ia.name, bb.proposal, bb.submitted_at "
         "FROM board_bids bb "
@@ -151,7 +136,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
         )
 
     # 5. Assets
-    asset_rows = await _fetchall(
+    asset_rows = await execute_fetchall(
         db,
         "SELECT asset_id, filename, content_type, size_bytes, uploaded_at "
         "FROM board_assets WHERE task_id = ? "
@@ -170,7 +155,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
     ]
 
     # 6. Visible feedback
-    fb_rows = await _fetchall(
+    fb_rows = await execute_fetchall(
         db,
         "SELECT rf.feedback_id, ia_from.name, ia_to.name, "
         "rf.category, rf.rating, rf.comment, rf.visible "
@@ -196,7 +181,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
 
     # 7. Dispute
     dispute = None
-    claim_row = await _fetchone(
+    claim_row = await execute_fetchone(
         db,
         "SELECT claim_id, reason, filed_at FROM court_claims WHERE task_id = ?",
         (task_id,),
@@ -206,7 +191,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
 
         # Rebuttal
         rebuttal = None
-        reb_row = await _fetchone(
+        reb_row = await execute_fetchone(
             db,
             "SELECT content, submitted_at FROM court_rebuttals WHERE claim_id = ?",
             (claim_id,),
@@ -219,7 +204,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
 
         # Ruling
         ruling = None
-        rul_row = await _fetchone(
+        rul_row = await execute_fetchone(
             db,
             "SELECT ruling_id, worker_pct, summary, ruled_at FROM court_rulings WHERE claim_id = ?",
             (claim_id,),
@@ -287,7 +272,7 @@ async def get_competitive_tasks(
             "ORDER BY bid_count DESC "
             "LIMIT ?"
         )
-        rows = await _fetchall(db, sql, (limit,))
+        rows = await execute_fetchall(db, sql, (limit,))
     else:
         sql = (
             "SELECT bt.task_id, bt.title, bt.reward, bt.status, "
@@ -302,7 +287,7 @@ async def get_competitive_tasks(
             "ORDER BY bid_count DESC "
             "LIMIT ?"
         )
-        rows = await _fetchall(db, sql, (limit,))
+        rows = await execute_fetchall(db, sql, (limit,))
 
     return [
         {
@@ -339,7 +324,7 @@ async def get_uncontested_tasks(
         "ORDER BY bt.created_at ASC "
         "LIMIT ?"
     )
-    rows = await _fetchall(db, sql, (min_age_minutes, limit))
+    rows = await execute_fetchall(db, sql, (min_age_minutes, limit))
 
     return [
         {
