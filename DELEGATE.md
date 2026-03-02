@@ -1,7 +1,19 @@
 # Delegating Work to Sub-Agents via tmux
 
+> **⚠️ STOP — READ THIS BEFORE YOU DO ANYTHING ⚠️**
+>
+> The #1 mistake agents make: **pasting a prompt into tmux and forgetting to send Enter**.
+> If you don't send Enter, **nothing happens**. The prompt sits there forever. Codex never sees it.
+>
+> **Every single prompt you send must end with a SEPARATE `tmux send-keys -t 'codex:0.0' Enter` call.**
+>
+> This is not optional. This is not implicit. You must explicitly send Enter as its own Bash tool call.
+> If you skip this step, you will waste the entire session waiting for a response that will never come.
+
 ## Session Setup
-- The sub-agent runs in a tmux session named `codex`
+- The sub-agent runs **OpenAI Codex** in a tmux session named `codex`
+- Do NOT launch Claude Code (`claude`) in the codex session — always use the existing Codex CLI tool
+- If the codex session shows a stale/old Codex session, quit it first (`/exit` + Enter) and relaunch with `codex` + Enter
 - It runs in the project working directory
 - The agent is highly capable and can handle complex, long-running tasks given precise instructions
 - Do NOT underestimate it — delegate aggressively, not conservatively
@@ -18,17 +30,42 @@
 
 ## Sending Messages
 
-### The Golden Rule: Always Send Enter Separately
+### ⚠️ MANDATORY: Every Prompt Requires a Separate Enter ⚠️
+
+Codex does NOT auto-submit. After you type or paste a prompt, **nothing happens until you press Enter**. If you forget Enter, the prompt sits there forever and you will wait indefinitely for a response that never comes.
+
+**For short prompts (single Bash call):**
 ```bash
-# Step 1: Send the text
-tmux send-keys -t codex "Your message here"
-# Step 2: ALWAYS send Enter as a SEPARATE Bash tool call
-tmux send-keys -t codex Enter
+# The trailing Enter submits the prompt
+tmux send-keys -t 'codex:0.0' 'Your message here' Enter
 ```
 
-**NEVER** chain Enter in the same command with `&&`. It gets lost.
-**NEVER** include Enter as part of the send-keys text argument.
-**ALWAYS** make Enter its own standalone Bash tool call.
+**For multi-line prompts (load-buffer + paste-buffer):**
+```bash
+# Bash call 1: Load multi-line prompt into buffer
+cat << 'EOF' | tmux load-buffer -
+Your multi-line prompt here
+EOF
+# Bash call 1 (continued): Paste it into the codex pane
+tmux paste-buffer -t 'codex:0.0'
+```
+```bash
+# Bash call 2 — THIS IS THE STEP YOU WILL FORGET — DO NOT SKIP IT:
+tmux send-keys -t 'codex:0.0' Enter
+```
+
+**Rules:**
+- **NEVER** chain Enter with `&&` in the same command — it gets lost
+- **ALWAYS** send Enter as a **separate Bash tool call** after pasting
+- **ALWAYS** verify the prompt was submitted: `sleep 5 && tmux capture-pane -t 'codex:0.0' -p | tail -10`
+- If the captured output still shows your prompt text sitting in the input area, **you forgot Enter**
+
+### Checklist — After Every Prompt Submission
+
+Before moving on, confirm ALL of these:
+1. ✅ Did I send the prompt text? (`send-keys` or `paste-buffer`)
+2. ✅ Did I send Enter as a **separate** Bash call? (`tmux send-keys -t 'codex:0.0' Enter`)
+3. ✅ Did I verify submission? (`sleep 5 && tmux capture-pane -t 'codex:0.0' -p | tail -10`)
 
 ### Exact Session Targeting
 `-t codex` does **prefix matching** and will hit other sessions like `codex-e2e`. Always use the exact pane address to avoid ambiguity:
@@ -201,7 +238,7 @@ If `just ci-quiet` fails, investigate the failure. Common causes:
 
 1. **Being too conservative** — The agent can handle complex work. Delegate the full feature, not just the foundation.
 2. **Guessing test outcomes** — Never claim a test will pass or fail without running it. Run `just ci-quiet` to verify.
-3. **Forgetting Enter** — Always send Enter as a separate Bash call.
+3. **Forgetting Enter** — The #1 failure mode. After `paste-buffer`, you MUST send `tmux send-keys -t 'codex:0.0' Enter` as a separate Bash call. Without it, the prompt sits in the input area forever and Codex never processes it. If you are waiting more than 30 seconds and Codex hasn't started working, **you forgot Enter**.
 4. **Not enforcing TDD** — Explicitly tell the agent to write tests first, verify they fail, then implement.
 5. **Not telling it about existing test files** — Tell it existing tests are acceptance tests that must not be modified.
 6. **Running `just test` instead of `just ci-quiet`** — `just test` only covers pytest. `just ci-quiet` is the full CI pipeline including format, lint, type checks, security, and tests. Always use `just ci-quiet` for final validation.

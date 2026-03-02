@@ -87,33 +87,6 @@ services:
       reputation:
         condition: service_healthy
 
-  observatory:
-    build:
-      context: .
-      dockerfile: services/observatory/Dockerfile
-    ports:
-      - "8006:8006"
-    environment:
-      - CONFIG_PATH=/repo/services/observatory/config.yaml
-    volumes:
-      - ./data:/repo/data:ro
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    depends_on:
-      identity:
-        condition: service_healthy
-      central-bank:
-        condition: service_healthy
-      task-board:
-        condition: service_healthy
-      reputation:
-        condition: service_healthy
-      court:
-        condition: service_healthy
-
   db-gateway:
     build:
       context: .

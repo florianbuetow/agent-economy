@@ -15,8 +15,8 @@ just start-all        # Start all services in background
 just stop-all         # Stop all locally running services
 just status           # Check health status of all services
 just test-all         # Run all tests
-just ci-all           # Run all CI checks (verbose)
-just ci-all-quiet     # Run all CI checks (quiet)
+just ci               # Run ALL CI checks (services, agents, integration, e2e)
+just ci-quiet         # Run ALL CI checks quietly
 just destroy-all      # Remove all virtual environments
 ```
 
@@ -59,7 +59,7 @@ just code-audit       # Vulnerability scan
 
 - After **every change** to the code, the tests must be executed
 - Always verify the program runs correctly with `just run` after modifications
-- Always run `just test-all` or `just ci-all-quiet` to verify changes before claiming they work
+- Always run `just test-all` or `just ci-quiet` to verify changes before claiming they work
 - **Tests are acceptance tests — do NOT modify existing test files.** Add new test files to cover new or additional requirements instead.
 - Tests must be marked with `@pytest.mark.unit`, `@pytest.mark.integration`, or `@pytest.mark.performance`
 

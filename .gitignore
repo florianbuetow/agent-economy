@@ -51,6 +51,7 @@ cover/
 
 # Logs
 *.log
+**/logs/
 
 # Environments
 .env
