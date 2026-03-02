@@ -17,8 +17,8 @@ FEEDBACK_ID=$(echo "$HTTP_BODY" | jq -r '.feedback_id')
 step "Lookup sealed feedback by ID"
 http_get "/feedback/$FEEDBACK_ID"
 
-step "Assert 404 with FEEDBACK_NOT_FOUND error"
+step "Assert 404 with feedback_not_found error"
 assert_status "404"
-assert_json_eq ".error" "FEEDBACK_NOT_FOUND"
+assert_json_eq ".error" "feedback_not_found"
 
 test_end

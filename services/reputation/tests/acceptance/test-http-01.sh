@@ -14,7 +14,7 @@ check_method() {
     local path="$2"
     http_method "$method" "$path"
     assert_status "405"
-    assert_json_eq ".error" "METHOD_NOT_ALLOWED"
+    assert_json_eq ".error" "method_not_allowed"
 }
 
 step "Check method misuse on POST-only /feedback route"

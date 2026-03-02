@@ -437,7 +437,7 @@ async def test_persist_04_sealed_returns_404_after_restart(tmp_path: Path) -> No
         async for client2 in _make_client(app2):
             resp = await client2.get(f"/feedback/{feedback_id}")
             assert resp.status_code == 404
-            assert resp.json()["error"] == "FEEDBACK_NOT_FOUND"
+            assert resp.json()["error"] == "feedback_not_found"
     finally:
         _restore_env(old)
 
@@ -625,7 +625,7 @@ async def test_persist_10_uniqueness_survives_restart(tmp_path: Path) -> None:
                 },
             )
             assert resp.status_code == 409
-            assert resp.json()["error"] == "FEEDBACK_EXISTS"
+            assert resp.json()["error"] == "feedback_exists"
     finally:
         _restore_env(old)
 
@@ -984,7 +984,7 @@ async def test_sec_db_01_no_sql_in_error_messages(tmp_path: Path) -> None:
     try:
         app = create_app()
         async for client in _make_client(app):
-            # Trigger FEEDBACK_EXISTS
+            # Trigger feedback_exists
             await _submit_feedback(
                 client, task_id="t-1", from_agent_id="a-alice", to_agent_id="a-bob"
             )
@@ -1003,7 +1003,7 @@ async def test_sec_db_01_no_sql_in_error_messages(tmp_path: Path) -> None:
             for keyword in sql_keywords:
                 assert keyword not in dup_text
 
-            # Trigger FEEDBACK_NOT_FOUND (sealed)
+            # Trigger feedback_not_found (sealed)
             not_found_resp = await client.get("/feedback/fb-nonexistent")
             assert not_found_resp.status_code == 404
             nf_text = str(not_found_resp.json())
@@ -1067,7 +1067,7 @@ async def test_sec_db_03_error_envelope_consistency(tmp_path: Path) -> None:
             )
             assert resp.status_code == 409
             data = resp.json()
-            assert data["error"] == "FEEDBACK_EXISTS"
+            assert data["error"] == "feedback_exists"
             assert isinstance(data["message"], str)
             assert isinstance(data["details"], dict)
     finally:

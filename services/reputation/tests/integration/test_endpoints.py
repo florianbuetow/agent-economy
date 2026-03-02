@@ -84,7 +84,7 @@ class TestSubmitAndRetrieveFeedbackWorkflow:
         # Step 2: GET /feedback/{id} for sealed feedback returns 404
         resp2 = await client.get(f"/feedback/{feedback_id_1}")
         assert resp2.status_code == 404
-        assert resp2.json()["error"] == "FEEDBACK_NOT_FOUND"
+        assert resp2.json()["error"] == "feedback_not_found"
 
         # Step 3: Submit reverse feedback B->A (mutual reveal)
         payload_ba = _feedback_payload(from_agent_id=BOB_ID, to_agent_id=ALICE_ID)
@@ -129,41 +129,41 @@ class TestErrorResponsesWorkflow:
     """Test error handling across multiple scenarios."""
 
     async def test_missing_field_returns_400(self, client: AsyncClient) -> None:
-        """POST /feedback with missing required field returns 400 MISSING_FIELD."""
+        """POST /feedback with missing required field returns 400 missing_field."""
         payload = _feedback_payload()
         del payload["task_id"]
         _inject_mock(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
         data = response.json()
-        assert data["error"] == "MISSING_FIELD"
+        assert data["error"] == "missing_field"
         assert "message" in data
         assert "details" in data
 
     async def test_invalid_category_returns_400(self, client: AsyncClient) -> None:
-        """POST /feedback with invalid category returns 400 INVALID_CATEGORY."""
+        """POST /feedback with invalid category returns 400 invalid_category."""
         payload = _feedback_payload(category="bogus_category")
         _inject_mock(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
         data = response.json()
-        assert data["error"] == "INVALID_CATEGORY"
+        assert data["error"] == "invalid_category"
         assert "message" in data
         assert "details" in data
 
     async def test_self_feedback_returns_400(self, client: AsyncClient) -> None:
-        """POST /feedback where from_agent == to_agent returns 400 SELF_FEEDBACK."""
+        """POST /feedback where from_agent == to_agent returns 400 self_feedback."""
         payload = _feedback_payload(from_agent_id=ALICE_ID, to_agent_id=ALICE_ID)
         _inject_mock(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
         data = response.json()
-        assert data["error"] == "SELF_FEEDBACK"
+        assert data["error"] == "self_feedback"
         assert "message" in data
         assert "details" in data
 
     async def test_duplicate_feedback_returns_409(self, client: AsyncClient) -> None:
-        """POST /feedback twice with same (task, from, to) returns 409 FEEDBACK_EXISTS."""
+        """POST /feedback twice with same (task, from, to) returns 409 feedback_exists."""
         payload = _feedback_payload()
         _inject_mock(payload)
         resp1 = await client.post("/feedback", json=_token_body(payload))
@@ -172,7 +172,7 @@ class TestErrorResponsesWorkflow:
         resp2 = await client.post("/feedback", json=_token_body(payload))
         assert resp2.status_code == 409
         data = resp2.json()
-        assert data["error"] == "FEEDBACK_EXISTS"
+        assert data["error"] == "feedback_exists"
         assert "message" in data
         assert "details" in data
 
@@ -185,12 +185,12 @@ class TestErrorResponsesWorkflow:
         )
         assert response.status_code == 415
         data = response.json()
-        assert data["error"] == "UNSUPPORTED_MEDIA_TYPE"
+        assert data["error"] == "unsupported_media_type"
         assert "message" in data
         assert "details" in data
 
     async def test_invalid_json_returns_400(self, client: AsyncClient) -> None:
-        """POST /feedback with invalid JSON body returns 400 INVALID_JSON."""
+        """POST /feedback with invalid JSON body returns 400 invalid_json."""
         response = await client.post(
             "/feedback",
             content=b"not valid json {{{",
@@ -198,7 +198,7 @@ class TestErrorResponsesWorkflow:
         )
         assert response.status_code == 400
         data = response.json()
-        assert data["error"] == "INVALID_JSON"
+        assert data["error"] == "invalid_json"
         assert "message" in data
         assert "details" in data
 
@@ -233,23 +233,23 @@ class TestHealthCheckWorkflow:
 
 @pytest.mark.integration
 class TestMethodNotAllowed:
-    """Test that wrong HTTP methods return 405 METHOD_NOT_ALLOWED."""
+    """Test that wrong HTTP methods return 405 method_not_allowed."""
 
     async def test_put_feedback_returns_405(self, client: AsyncClient) -> None:
-        """PUT /feedback returns 405 METHOD_NOT_ALLOWED."""
+        """PUT /feedback returns 405 method_not_allowed."""
         response = await client.put("/feedback", json=_token_body())
         assert response.status_code == 405
         data = response.json()
-        assert data["error"] == "METHOD_NOT_ALLOWED"
+        assert data["error"] == "method_not_allowed"
         assert "message" in data
         assert "details" in data
 
     async def test_delete_health_returns_405(self, client: AsyncClient) -> None:
-        """DELETE /health returns 405 METHOD_NOT_ALLOWED."""
+        """DELETE /health returns 405 method_not_allowed."""
         response = await client.delete("/health")
         assert response.status_code == 405
         data = response.json()
-        assert data["error"] == "METHOD_NOT_ALLOWED"
+        assert data["error"] == "method_not_allowed"
         assert "message" in data
         assert "details" in data
 

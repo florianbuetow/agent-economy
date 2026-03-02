@@ -50,7 +50,7 @@ class TestValidationOrder:
     """Test validation fires in priority order."""
 
     def test_invalid_field_type_before_missing_field(self) -> None:
-        """INVALID_FIELD_TYPE fires before MISSING_FIELD."""
+        """invalid_field_type fires before missing_field."""
         # task_id is an int (invalid type) AND from_agent_id is missing
         body: dict[str, object] = {
             "task_id": 123,
@@ -60,10 +60,10 @@ class TestValidationOrder:
         }
         result = validate_feedback(body, MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "INVALID_FIELD_TYPE"
+        assert result.error == "invalid_field_type"
 
     def test_missing_field_before_self_feedback(self) -> None:
-        """MISSING_FIELD fires before SELF_FEEDBACK."""
+        """missing_field fires before self_feedback."""
         body: dict[str, object] = {
             "task_id": "task-1",
             "from_agent_id": "agent-a",
@@ -73,10 +73,10 @@ class TestValidationOrder:
         }
         result = validate_feedback(body, MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "MISSING_FIELD"
+        assert result.error == "missing_field"
 
     def test_self_feedback_before_invalid_category(self) -> None:
-        """SELF_FEEDBACK fires before INVALID_CATEGORY."""
+        """self_feedback fires before invalid_category."""
         body = _valid_body(
             from_agent_id="agent-a",
             to_agent_id="agent-a",
@@ -84,21 +84,21 @@ class TestValidationOrder:
         )
         result = validate_feedback(body, MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "SELF_FEEDBACK"
+        assert result.error == "self_feedback"
 
     def test_invalid_category_before_invalid_rating(self) -> None:
-        """INVALID_CATEGORY fires before INVALID_RATING."""
+        """invalid_category fires before invalid_rating."""
         body = _valid_body(category="bogus", rating="bogus")
         result = validate_feedback(body, MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "INVALID_CATEGORY"
+        assert result.error == "invalid_category"
 
     def test_invalid_rating_before_comment_too_long(self) -> None:
-        """INVALID_RATING fires before COMMENT_TOO_LONG."""
+        """invalid_rating fires before comment_too_long."""
         body = _valid_body(rating="bogus", comment="x" * (MAX_COMMENT_LENGTH + 1))
         result = validate_feedback(body, MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "INVALID_RATING"
+        assert result.error == "invalid_rating"
 
 
 @pytest.mark.unit
@@ -122,38 +122,38 @@ class TestValidateFeedback:
         result = validate_feedback(_valid_body(comment=None), MAX_COMMENT_LENGTH)
         assert result is None
 
-    # INVALID_FIELD_TYPE
+    # invalid_field_type
     def test_task_id_integer_gives_invalid_field_type(self) -> None:
         result = validate_feedback(_valid_body(task_id=42), MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "INVALID_FIELD_TYPE"
+        assert result.error == "invalid_field_type"
         assert result.details["field"] == "task_id"
 
     def test_from_agent_id_list_gives_invalid_field_type(self) -> None:
         result = validate_feedback(_valid_body(from_agent_id=["a"]), MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "INVALID_FIELD_TYPE"
+        assert result.error == "invalid_field_type"
         assert result.details["field"] == "from_agent_id"
 
     def test_category_bool_gives_invalid_field_type(self) -> None:
         result = validate_feedback(_valid_body(category=True), MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "INVALID_FIELD_TYPE"
+        assert result.error == "invalid_field_type"
         assert result.details["field"] == "category"
 
     def test_rating_dict_gives_invalid_field_type(self) -> None:
         result = validate_feedback(_valid_body(rating={}), MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "INVALID_FIELD_TYPE"
+        assert result.error == "invalid_field_type"
         assert result.details["field"] == "rating"
 
-    # MISSING_FIELD
+    # missing_field
     def test_missing_task_id(self) -> None:
         body = _valid_body()
         del body["task_id"]
         result = validate_feedback(body, MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "MISSING_FIELD"
+        assert result.error == "missing_field"
         assert result.details["field"] == "task_id"
 
     def test_missing_from_agent_id(self) -> None:
@@ -161,7 +161,7 @@ class TestValidateFeedback:
         del body["from_agent_id"]
         result = validate_feedback(body, MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "MISSING_FIELD"
+        assert result.error == "missing_field"
         assert result.details["field"] == "from_agent_id"
 
     def test_missing_to_agent_id(self) -> None:
@@ -169,7 +169,7 @@ class TestValidateFeedback:
         del body["to_agent_id"]
         result = validate_feedback(body, MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "MISSING_FIELD"
+        assert result.error == "missing_field"
         assert result.details["field"] == "to_agent_id"
 
     def test_missing_category(self) -> None:
@@ -177,7 +177,7 @@ class TestValidateFeedback:
         del body["category"]
         result = validate_feedback(body, MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "MISSING_FIELD"
+        assert result.error == "missing_field"
         assert result.details["field"] == "category"
 
     def test_missing_rating(self) -> None:
@@ -185,36 +185,36 @@ class TestValidateFeedback:
         del body["rating"]
         result = validate_feedback(body, MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "MISSING_FIELD"
+        assert result.error == "missing_field"
         assert result.details["field"] == "rating"
 
     def test_empty_string_field_is_missing(self) -> None:
         result = validate_feedback(_valid_body(task_id=""), MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "MISSING_FIELD"
+        assert result.error == "missing_field"
         assert result.details["field"] == "task_id"
 
     def test_null_field_is_missing(self) -> None:
         result = validate_feedback(_valid_body(task_id=None), MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "MISSING_FIELD"
+        assert result.error == "missing_field"
         assert result.details["field"] == "task_id"
 
-    # SELF_FEEDBACK
+    # self_feedback
     def test_self_feedback(self) -> None:
         result = validate_feedback(
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
         )
         assert result is not None
-        assert result.error == "SELF_FEEDBACK"
+        assert result.error == "self_feedback"
         assert result.status_code == 400
 
-    # INVALID_CATEGORY
+    # invalid_category
     def test_invalid_category(self) -> None:
         result = validate_feedback(_valid_body(category="bogus"), MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "INVALID_CATEGORY"
+        assert result.error == "invalid_category"
 
     def test_valid_category_spec_quality(self) -> None:
         result = validate_feedback(_valid_body(category="spec_quality"), MAX_COMMENT_LENGTH)
@@ -224,11 +224,11 @@ class TestValidateFeedback:
         result = validate_feedback(_valid_body(category="delivery_quality"), MAX_COMMENT_LENGTH)
         assert result is None
 
-    # INVALID_RATING
+    # invalid_rating
     def test_invalid_rating(self) -> None:
         result = validate_feedback(_valid_body(rating="bogus"), MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "INVALID_RATING"
+        assert result.error == "invalid_rating"
 
     def test_valid_rating_dissatisfied(self) -> None:
         result = validate_feedback(_valid_body(rating="dissatisfied"), MAX_COMMENT_LENGTH)
@@ -242,12 +242,12 @@ class TestValidateFeedback:
         result = validate_feedback(_valid_body(rating="extremely_satisfied"), MAX_COMMENT_LENGTH)
         assert result is None
 
-    # COMMENT_TOO_LONG
+    # comment_too_long
     def test_comment_too_long(self) -> None:
         long_comment = "x" * (MAX_COMMENT_LENGTH + 1)
         result = validate_feedback(_valid_body(comment=long_comment), MAX_COMMENT_LENGTH)
         assert result is not None
-        assert result.error == "COMMENT_TOO_LONG"
+        assert result.error == "comment_too_long"
         assert result.details["max_length"] == MAX_COMMENT_LENGTH
         assert result.details["actual_length"] == MAX_COMMENT_LENGTH + 1
 
@@ -336,7 +336,7 @@ class TestSubmitFeedback:
         body = _valid_body(category="bogus")
         result = submit_feedback(store, body, MAX_COMMENT_LENGTH)
         assert isinstance(result, ValidationError)
-        assert result.error == "INVALID_CATEGORY"
+        assert result.error == "invalid_category"
 
 
 @pytest.mark.unit
@@ -350,7 +350,7 @@ class TestFeedbackExists:
 
         second = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
         assert isinstance(second, ValidationError)
-        assert second.error == "FEEDBACK_EXISTS"
+        assert second.error == "feedback_exists"
         assert second.status_code == 409
 
     def test_different_task_id_is_not_duplicate(self, tmp_path: Path) -> None:

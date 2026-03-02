@@ -16,8 +16,8 @@ LONG_COMMENT=$(python3 -c "print('A' * 257)")
 step "Submit feedback with oversized comment"
 submit_feedback "$TASK" "$ALICE" "$BOB" "delivery_quality" "satisfied" "$LONG_COMMENT"
 
-step "Assert 400 with COMMENT_TOO_LONG error"
+step "Assert 400 with comment_too_long error"
 assert_status "400"
-assert_json_eq ".error" "COMMENT_TOO_LONG"
+assert_json_eq ".error" "comment_too_long"
 
 test_end

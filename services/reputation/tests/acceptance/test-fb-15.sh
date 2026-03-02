@@ -9,8 +9,8 @@ step "Submit with all required fields set to null"
 BODY='{"task_id":null,"from_agent_id":null,"to_agent_id":null,"category":null,"rating":null}'
 http_post "/feedback" "$BODY"
 
-step "Assert 400 with MISSING_FIELD error"
+step "Assert 400 with missing_field error"
 assert_status "400"
-assert_json_eq ".error" "MISSING_FIELD"
+assert_json_eq ".error" "missing_field"
 
 test_end

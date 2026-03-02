@@ -89,14 +89,14 @@ class TestPostFeedback:
         assert "visible" in data
 
     async def test_submit_missing_field_returns_400(self, client: AsyncClient) -> None:
-        """POST /feedback with a missing required field returns 400 MISSING_FIELD."""
+        """POST /feedback with a missing required field returns 400 missing_field."""
         payload = _feedback_payload()
         del payload["task_id"]
         _inject_mock(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
         data = response.json()
-        assert data["error"] == "MISSING_FIELD"
+        assert data["error"] == "missing_field"
 
     async def test_submit_without_content_type_returns_415(self, client: AsyncClient) -> None:
         """POST /feedback without Content-Type: application/json returns 415."""
@@ -107,10 +107,10 @@ class TestPostFeedback:
         )
         assert response.status_code == 415
         data = response.json()
-        assert data["error"] == "UNSUPPORTED_MEDIA_TYPE"
+        assert data["error"] == "unsupported_media_type"
 
     async def test_submit_invalid_json_returns_400(self, client: AsyncClient) -> None:
-        """POST /feedback with invalid JSON returns 400 INVALID_JSON."""
+        """POST /feedback with invalid JSON returns 400 invalid_json."""
         response = await client.post(
             "/feedback",
             content=b"not valid json {{{",
@@ -118,7 +118,7 @@ class TestPostFeedback:
         )
         assert response.status_code == 400
         data = response.json()
-        assert data["error"] == "INVALID_JSON"
+        assert data["error"] == "invalid_json"
 
     async def test_submit_duplicate_returns_409(self, client: AsyncClient) -> None:
         """POST /feedback with a duplicate (task, from, to) returns 409."""
@@ -128,7 +128,7 @@ class TestPostFeedback:
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 409
         data = response.json()
-        assert data["error"] == "FEEDBACK_EXISTS"
+        assert data["error"] == "feedback_exists"
 
 
 @pytest.mark.unit
@@ -145,7 +145,7 @@ class TestGetFeedbackById:
         response = await client.get(f"/feedback/{feedback_id}")
         assert response.status_code == 404
         data = response.json()
-        assert data["error"] == "FEEDBACK_NOT_FOUND"
+        assert data["error"] == "feedback_not_found"
 
     async def test_get_visible_feedback_returns_200(self, client: AsyncClient) -> None:
         """GET /feedback/{id} for a visible record returns 200."""
@@ -238,7 +238,7 @@ class TestMethodNotAllowed:
         response = await client.put("/feedback", json=_token_body())
         assert response.status_code == 405
         data = response.json()
-        assert data["error"] == "METHOD_NOT_ALLOWED"
+        assert data["error"] == "method_not_allowed"
 
     async def test_delete_feedback_returns_405(self, client: AsyncClient) -> None:
         """DELETE /feedback/fb-123 returns 405."""
