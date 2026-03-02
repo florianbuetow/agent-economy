@@ -8,8 +8,8 @@ test_start "FB-18" "Wrong content type"
 step "Send request with text/plain content type"
 http_post_content_type "/feedback" "text/plain" "not json"
 
-step "Assert 415 with UNSUPPORTED_MEDIA_TYPE error"
+step "Assert 415 with unsupported_media_type error"
 assert_status "415"
-assert_json_eq ".error" "UNSUPPORTED_MEDIA_TYPE"
+assert_json_eq ".error" "unsupported_media_type"
 
 test_end

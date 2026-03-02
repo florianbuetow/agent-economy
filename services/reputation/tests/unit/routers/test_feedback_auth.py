@@ -87,7 +87,7 @@ def _inject_mock_invalid_sig() -> None:
     """Inject a mock IdentityClient returning valid=false (tampered/unregistered)."""
     state = get_app_state()
     state.identity_client = make_mock_identity_client(
-        verify_side_effect=ServiceError("FORBIDDEN", "Signature verification failed", 403, {}),
+        verify_side_effect=ServiceError("forbidden", "Signature verification failed", 403, {}),
     )
 
 
@@ -119,7 +119,7 @@ class TestJWSTokenValidation:
         assert "visible" in data
 
     async def test_auth_02_missing_token_field(self, client: AsyncClient) -> None:
-        """AUTH-02: Missing token field returns 400 INVALID_JWS."""
+        """AUTH-02: Missing token field returns 400 invalid_jws."""
         response = await client.post(
             "/feedback",
             json={
@@ -131,77 +131,77 @@ class TestJWSTokenValidation:
             },
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_03_token_is_null(self, client: AsyncClient) -> None:
-        """AUTH-03: token is null returns 400 INVALID_JWS."""
+        """AUTH-03: token is null returns 400 invalid_jws."""
         response = await client.post("/feedback", json={"token": None})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_04_token_is_integer(self, client: AsyncClient) -> None:
-        """AUTH-04: token is integer returns 400 INVALID_JWS."""
+        """AUTH-04: token is integer returns 400 invalid_jws."""
         response = await client.post("/feedback", json={"token": 12345})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_04_token_is_list(self, client: AsyncClient) -> None:
-        """AUTH-04: token is list returns 400 INVALID_JWS."""
+        """AUTH-04: token is list returns 400 invalid_jws."""
         response = await client.post("/feedback", json={"token": ["eyJ..."]})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_04_token_is_object(self, client: AsyncClient) -> None:
-        """AUTH-04: token is object returns 400 INVALID_JWS."""
+        """AUTH-04: token is object returns 400 invalid_jws."""
         response = await client.post("/feedback", json={"token": {"jws": "eyJ..."}})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_04_token_is_boolean(self, client: AsyncClient) -> None:
-        """AUTH-04: token is boolean returns 400 INVALID_JWS."""
+        """AUTH-04: token is boolean returns 400 invalid_jws."""
         response = await client.post("/feedback", json={"token": True})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_05_token_is_empty_string(self, client: AsyncClient) -> None:
-        """AUTH-05: token is empty string returns 400 INVALID_JWS."""
+        """AUTH-05: token is empty string returns 400 invalid_jws."""
         response = await client.post("/feedback", json={"token": ""})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_06_malformed_not_jws(self, client: AsyncClient) -> None:
-        """AUTH-06: Malformed JWS (no dots) returns 400 INVALID_JWS."""
+        """AUTH-06: Malformed JWS (no dots) returns 400 invalid_jws."""
         response = await client.post("/feedback", json={"token": "not-a-jws-at-all"})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_06_malformed_two_parts(self, client: AsyncClient) -> None:
-        """AUTH-06: Malformed JWS (two parts) returns 400 INVALID_JWS."""
+        """AUTH-06: Malformed JWS (two parts) returns 400 invalid_jws."""
         response = await client.post("/feedback", json={"token": "only.two-parts"})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_06_malformed_four_parts(self, client: AsyncClient) -> None:
-        """AUTH-06: Malformed JWS (four parts) returns 400 INVALID_JWS."""
+        """AUTH-06: Malformed JWS (four parts) returns 400 invalid_jws."""
         response = await client.post("/feedback", json={"token": "four.parts.is.wrong"})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_auth_07_tampered_payload(self, client: AsyncClient) -> None:
-        """AUTH-07: JWS with tampered payload returns 403 FORBIDDEN."""
+        """AUTH-07: JWS with tampered payload returns 403 forbidden."""
         _inject_mock_invalid_sig()
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_auth_08_unregistered_agent(self, client: AsyncClient) -> None:
-        """AUTH-08: JWS signed by unregistered agent returns 403 FORBIDDEN."""
+        """AUTH-08: JWS signed by unregistered agent returns 403 forbidden."""
         _inject_mock_invalid_sig()
         token = make_jws_token(_feedback_payload(), kid="a-unregistered-uuid")
         response = await client.post("/feedback", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
 
 # =============================================================================
@@ -214,29 +214,29 @@ class TestJWSPayloadValidation:
     """Category 2: JWS Payload Validation."""
 
     async def test_auth_09_missing_action(self, client: AsyncClient) -> None:
-        """AUTH-09: Missing action in payload returns 400 INVALID_PAYLOAD."""
+        """AUTH-09: Missing action in payload returns 400 invalid_payload."""
         payload = _feedback_payload()
         del payload["action"]
         _inject_mock_ok(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_auth_10_wrong_action(self, client: AsyncClient) -> None:
-        """AUTH-10: Wrong action value returns 400 INVALID_PAYLOAD."""
+        """AUTH-10: Wrong action value returns 400 invalid_payload."""
         payload = _feedback_payload(action="escrow_lock")
         _inject_mock_ok(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_auth_11_null_action(self, client: AsyncClient) -> None:
-        """AUTH-11: action is null returns 400 INVALID_PAYLOAD."""
+        """AUTH-11: action is null returns 400 invalid_payload."""
         payload = _feedback_payload(action=None)
         _inject_mock_ok(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
 
 # =============================================================================
@@ -257,7 +257,7 @@ class TestSignerMatching:
         assert response.json()["from_agent_id"] == ALICE_ID
 
     async def test_auth_13_impersonation_rejected(self, client: AsyncClient) -> None:
-        """AUTH-13: Signer does NOT match from_agent_id — 403 FORBIDDEN."""
+        """AUTH-13: Signer does NOT match from_agent_id — 403 forbidden."""
         # Alice signs but claims to be Carol
         payload = _feedback_payload(from_agent_id=CAROL_ID)
         # Identity returns alice as the signer
@@ -267,10 +267,10 @@ class TestSignerMatching:
         )
         response = await client.post("/feedback", json=_token_body(payload, kid=ALICE_ID))
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_auth_14_impersonate_nonexistent(self, client: AsyncClient) -> None:
-        """AUTH-14: Signer impersonates non-existent agent — 403 FORBIDDEN."""
+        """AUTH-14: Signer impersonates non-existent agent — 403 forbidden."""
         payload = _feedback_payload(from_agent_id="a-nonexistent-uuid")
         state = get_app_state()
         state.identity_client = make_mock_identity_client(
@@ -278,7 +278,7 @@ class TestSignerMatching:
         )
         response = await client.post("/feedback", json=_token_body(payload, kid=ALICE_ID))
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
 
 # =============================================================================
@@ -291,20 +291,20 @@ class TestIdentityServiceUnavailability:
     """Category 4: Identity Service Unavailability."""
 
     async def test_auth_15_identity_down(self, client: AsyncClient) -> None:
-        """AUTH-15: Identity service is down returns 502 IDENTITY_SERVICE_UNAVAILABLE."""
+        """AUTH-15: Identity service is down returns 502 identity_service_unavailable."""
         _inject_mock_error(
-            ServiceError("IDENTITY_SERVICE_UNAVAILABLE", "Cannot reach Identity service", 502, {})
+            ServiceError("identity_service_unavailable", "Cannot reach Identity service", 502, {})
         )
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
         assert response.status_code == 502
-        assert response.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert response.json()["error"] == "identity_service_unavailable"
 
     async def test_auth_16_identity_unexpected_response(self, client: AsyncClient) -> None:
-        """AUTH-16: Identity returns unexpected response — 502 IDENTITY_SERVICE_UNAVAILABLE."""
+        """AUTH-16: Identity returns unexpected response — 502 identity_service_unavailable."""
         _inject_mock_error(
             ServiceError(
-                "IDENTITY_SERVICE_UNAVAILABLE",
+                "identity_service_unavailable",
                 "Identity service returned unexpected response (status 500)",
                 502,
                 {},
@@ -313,7 +313,7 @@ class TestIdentityServiceUnavailability:
         token = make_jws_token(_feedback_payload())
         response = await client.post("/feedback", json={"token": token})
         assert response.status_code == 502
-        assert response.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert response.json()["error"] == "identity_service_unavailable"
 
 
 # =============================================================================
@@ -409,7 +409,7 @@ class TestErrorPrecedence:
             headers={"content-type": "text/plain"},
         )
         assert response.status_code == 415
-        assert response.json()["error"] == "UNSUPPORTED_MEDIA_TYPE"
+        assert response.json()["error"] == "unsupported_media_type"
 
     async def test_prec_02_body_size_before_token(self, client: AsyncClient) -> None:
         """PREC-02: Body size checked before token validation."""
@@ -421,7 +421,7 @@ class TestErrorPrecedence:
             headers={"content-type": "application/json"},
         )
         assert response.status_code == 413
-        assert response.json()["error"] == "PAYLOAD_TOO_LARGE"
+        assert response.json()["error"] == "payload_too_large"
 
     async def test_prec_03_json_before_token(self, client: AsyncClient) -> None:
         """PREC-03: JSON parsing checked before token validation."""
@@ -431,13 +431,13 @@ class TestErrorPrecedence:
             headers={"content-type": "application/json"},
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JSON"
+        assert response.json()["error"] == "invalid_json"
 
     async def test_prec_04_token_before_payload(self, client: AsyncClient) -> None:
         """PREC-04: Token validation checked before payload validation."""
         response = await client.post("/feedback", json={"token": 12345})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
     async def test_prec_05_action_before_signer(self, client: AsyncClient) -> None:
         """PREC-05: Payload action checked before signer matching."""
@@ -449,7 +449,7 @@ class TestErrorPrecedence:
         )
         response = await client.post("/feedback", json=_token_body(payload, kid=ALICE_ID))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     async def test_prec_06_signer_before_feedback_validation(self, client: AsyncClient) -> None:
         """PREC-06: Signer matching checked before feedback field validation."""
@@ -461,18 +461,18 @@ class TestErrorPrecedence:
         )
         response = await client.post("/feedback", json=_token_body(payload, kid=ALICE_ID))
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     async def test_prec_07_identity_unavailable_before_payload(self, client: AsyncClient) -> None:
         """PREC-07: Identity unavailability checked before payload validation."""
         # Identity down AND wrong action
         _inject_mock_error(
-            ServiceError("IDENTITY_SERVICE_UNAVAILABLE", "Cannot reach Identity service", 502, {})
+            ServiceError("identity_service_unavailable", "Cannot reach Identity service", 502, {})
         )
         payload = _feedback_payload(action="wrong_action")
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 502
-        assert response.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert response.json()["error"] == "identity_service_unavailable"
 
 
 # =============================================================================
@@ -485,7 +485,7 @@ class TestExistingValidationsThroughJWS:
     """Category 7: Existing Validations Through JWS."""
 
     async def test_vjws_01_missing_feedback_fields(self, client: AsyncClient) -> None:
-        """VJWS-01: Missing feedback fields in JWS payload returns 400 MISSING_FIELD."""
+        """VJWS-01: Missing feedback fields in JWS payload returns 400 missing_field."""
         payload: dict[str, object] = {
             "action": "submit_feedback",
             "from_agent_id": ALICE_ID,
@@ -493,42 +493,42 @@ class TestExistingValidationsThroughJWS:
         _inject_mock_ok(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "MISSING_FIELD"
+        assert response.json()["error"] == "missing_field"
 
     async def test_vjws_02_invalid_rating(self, client: AsyncClient) -> None:
-        """VJWS-02: Invalid rating in JWS payload returns 400 INVALID_RATING."""
+        """VJWS-02: Invalid rating in JWS payload returns 400 invalid_rating."""
         payload = _feedback_payload(rating="excellent")
         _inject_mock_ok(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_RATING"
+        assert response.json()["error"] == "invalid_rating"
 
     async def test_vjws_03_invalid_category(self, client: AsyncClient) -> None:
-        """VJWS-03: Invalid category in JWS payload returns 400 INVALID_CATEGORY."""
+        """VJWS-03: Invalid category in JWS payload returns 400 invalid_category."""
         payload = _feedback_payload(category="timeliness")
         _inject_mock_ok(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_CATEGORY"
+        assert response.json()["error"] == "invalid_category"
 
     async def test_vjws_04_self_feedback(self, client: AsyncClient) -> None:
-        """VJWS-04: Self-feedback in JWS payload returns 400 SELF_FEEDBACK."""
+        """VJWS-04: Self-feedback in JWS payload returns 400 self_feedback."""
         payload = _feedback_payload(from_agent_id=ALICE_ID, to_agent_id=ALICE_ID)
         _inject_mock_ok(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "SELF_FEEDBACK"
+        assert response.json()["error"] == "self_feedback"
 
     async def test_vjws_05_comment_too_long(self, client: AsyncClient) -> None:
-        """VJWS-05: Comment too long returns 400 COMMENT_TOO_LONG."""
+        """VJWS-05: Comment too long returns 400 comment_too_long."""
         payload = _feedback_payload(comment="x" * 257)
         _inject_mock_ok(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "COMMENT_TOO_LONG"
+        assert response.json()["error"] == "comment_too_long"
 
     async def test_vjws_06_duplicate_feedback(self, client: AsyncClient) -> None:
-        """VJWS-06: Duplicate feedback via JWS returns 409 FEEDBACK_EXISTS."""
+        """VJWS-06: Duplicate feedback via JWS returns 409 feedback_exists."""
         payload = _feedback_payload()
         _inject_mock_ok(payload)
         resp1 = await client.post("/feedback", json=_token_body(payload))
@@ -536,7 +536,7 @@ class TestExistingValidationsThroughJWS:
 
         resp2 = await client.post("/feedback", json=_token_body(payload))
         assert resp2.status_code == 409
-        assert resp2.json()["error"] == "FEEDBACK_EXISTS"
+        assert resp2.json()["error"] == "feedback_exists"
 
     async def test_vjws_07_mutual_reveal(self, client: AsyncClient) -> None:
         """VJWS-07: Mutual reveal works through JWS submission."""
@@ -609,13 +609,13 @@ class TestCrossCuttingSecurity:
     async def test_sec_auth_01_error_envelope_consistency(self, client: AsyncClient) -> None:
         """SEC-AUTH-01: All auth errors have standard error envelope."""
         error_triggers = [
-            # INVALID_JWS
+            # invalid_jws
             ({"token": ""}, None, None),
-            # INVALID_PAYLOAD (wrong action)
+            # invalid_payload (wrong action)
             (None, "wrong_action", None),
-            # FORBIDDEN (signer mismatch)
+            # forbidden (signer mismatch)
             (None, None, "mismatch"),
-            # IDENTITY_SERVICE_UNAVAILABLE
+            # identity_service_unavailable
             (None, None, "unavailable"),
         ]
 
@@ -636,7 +636,7 @@ class TestCrossCuttingSecurity:
             else:
                 _inject_mock_error(
                     ServiceError(
-                        "IDENTITY_SERVICE_UNAVAILABLE",
+                        "identity_service_unavailable",
                         "Cannot reach Identity service",
                         502,
                         {},
@@ -666,13 +666,13 @@ class TestCrossCuttingSecurity:
             "File ",
         ]
 
-        # Trigger INVALID_JWS
+        # Trigger invalid_jws
         resp1 = await client.post("/feedback", json={"token": ""})
         msg1 = resp1.json()["message"]
         for pattern in sensitive_patterns:
             assert pattern not in msg1
 
-        # Trigger FORBIDDEN
+        # Trigger forbidden
         _inject_mock_invalid_sig()
         token = make_jws_token(_feedback_payload())
         resp2 = await client.post("/feedback", json={"token": token})
@@ -680,9 +680,9 @@ class TestCrossCuttingSecurity:
         for pattern in sensitive_patterns:
             assert pattern not in msg2
 
-        # Trigger IDENTITY_SERVICE_UNAVAILABLE
+        # Trigger identity_service_unavailable
         _inject_mock_error(
-            ServiceError("IDENTITY_SERVICE_UNAVAILABLE", "Cannot reach Identity service", 502, {})
+            ServiceError("identity_service_unavailable", "Cannot reach Identity service", 502, {})
         )
         resp3 = await client.post("/feedback", json={"token": make_jws_token(_feedback_payload())})
         msg3 = resp3.json()["message"]
@@ -696,4 +696,4 @@ class TestCrossCuttingSecurity:
         _inject_mock_ok(payload)
         response = await client.post("/feedback", json=_token_body(payload))
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"

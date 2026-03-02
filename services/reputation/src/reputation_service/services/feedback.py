@@ -33,24 +33,24 @@ class ValidationError:
 
 def _validate_required_fields(body: dict[str, object]) -> ValidationError | None:
     """Validate that required fields are present, non-null, non-empty strings."""
-    # 1. INVALID_FIELD_TYPE — check that required fields are strings (not int, bool, list, dict)
+    # 1. invalid_field_type — check that required fields are strings (not int, bool, list, dict)
     for field_name in REQUIRED_FIELDS:
         if field_name in body:
             value = body[field_name]
             if value is not None and not isinstance(value, str):
                 return ValidationError(
-                    error="INVALID_FIELD_TYPE",
+                    error="invalid_field_type",
                     message=f"Field '{field_name}' must be a string",
                     status_code=400,
                     details={"field": field_name},
                 )
 
-    # 2. MISSING_FIELD — check required fields are present, non-null, non-empty
+    # 2. missing_field — check required fields are present, non-null, non-empty
     for field_name in REQUIRED_FIELDS:
         value = body.get(field_name)
         if value is None or (isinstance(value, str) and value == ""):
             return ValidationError(
-                error="MISSING_FIELD",
+                error="missing_field",
                 message=f"Field '{field_name}' is required and must be a non-empty string",
                 status_code=400,
                 details={"field": field_name},
@@ -64,10 +64,10 @@ def validate_feedback(body: dict[str, object], max_comment_length: int) -> Valid
     Validate feedback submission body.
 
     Validation order:
-    INVALID_FIELD_TYPE -> MISSING_FIELD -> SELF_FEEDBACK ->
-    INVALID_CATEGORY -> INVALID_RATING -> COMMENT_TOO_LONG -> FEEDBACK_EXISTS
+    invalid_field_type -> missing_field -> self_feedback ->
+    invalid_category -> invalid_rating -> comment_too_long -> feedback_exists
 
-    FEEDBACK_EXISTS is checked separately during insert.
+    feedback_exists is checked separately during insert.
 
     Returns ValidationError if invalid, None if valid.
     """
@@ -81,38 +81,38 @@ def validate_feedback(body: dict[str, object], max_comment_length: int) -> Valid
     category = str(body["category"])
     rating = str(body["rating"])
 
-    # 3. SELF_FEEDBACK
+    # 3. self_feedback
     if from_agent_id == to_agent_id:
         return ValidationError(
-            error="SELF_FEEDBACK",
+            error="self_feedback",
             message="An agent cannot rate itself",
             status_code=400,
             details={"from_agent_id": from_agent_id, "to_agent_id": to_agent_id},
         )
 
-    # 4. INVALID_CATEGORY
+    # 4. invalid_category
     if category not in VALID_CATEGORIES:
         return ValidationError(
-            error="INVALID_CATEGORY",
+            error="invalid_category",
             message=f"Category must be one of: {', '.join(sorted(VALID_CATEGORIES))}",
             status_code=400,
             details={"category": category, "valid_categories": sorted(VALID_CATEGORIES)},
         )
 
-    # 5. INVALID_RATING
+    # 5. invalid_rating
     if rating not in VALID_RATINGS:
         return ValidationError(
-            error="INVALID_RATING",
+            error="invalid_rating",
             message=f"Rating must be one of: {', '.join(sorted(VALID_RATINGS))}",
             status_code=400,
             details={"rating": rating, "valid_ratings": sorted(VALID_RATINGS)},
         )
 
-    # 6. COMMENT_TOO_LONG
+    # 6. comment_too_long
     comment = body.get("comment")
     if comment is not None and isinstance(comment, str) and len(comment) > max_comment_length:
         return ValidationError(
-            error="COMMENT_TOO_LONG",
+            error="comment_too_long",
             message=f"Comment exceeds maximum length of {max_comment_length} codepoints",
             status_code=400,
             details={"max_length": max_comment_length, "actual_length": len(comment)},
@@ -164,7 +164,7 @@ def submit_feedback(
         )
     except DuplicateFeedbackError:
         return ValidationError(
-            error="FEEDBACK_EXISTS",
+            error="feedback_exists",
             message="Feedback already submitted for this task, from_agent, to_agent combination",
             status_code=409,
             details={

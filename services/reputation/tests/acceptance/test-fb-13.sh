@@ -13,8 +13,8 @@ TASK=$(gen_task_id)
 step "Submit feedback with invalid category 'timeliness'"
 submit_feedback "$TASK" "$ALICE" "$BOB" "timeliness" "satisfied" "On time"
 
-step "Assert 400 with INVALID_CATEGORY error"
+step "Assert 400 with invalid_category error"
 assert_status "400"
-assert_json_eq ".error" "INVALID_CATEGORY"
+assert_json_eq ".error" "invalid_category"
 
 test_end

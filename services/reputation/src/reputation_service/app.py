@@ -38,7 +38,7 @@ async def _handle_starlette_http(
         return JSONResponse(
             status_code=405,
             content={
-                "error": "METHOD_NOT_ALLOWED",
+                "error": "method_not_allowed",
                 "message": "Method not allowed",
                 "details": {},
             },
@@ -61,7 +61,7 @@ async def _handle_validation(
     return JSONResponse(
         status_code=422,
         content={
-            "error": "VALIDATION_ERROR",
+            "error": "validation_error",
             "message": "Request validation failed",
             "details": {},
         },

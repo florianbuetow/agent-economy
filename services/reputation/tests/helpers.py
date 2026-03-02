@@ -60,7 +60,7 @@ def make_mock_identity_client(
 
     if verify_side_effect is not None:
         mock_client.verify_jws.side_effect = verify_side_effect
-        if isinstance(verify_side_effect, ServiceError) and verify_side_effect.error == "FORBIDDEN":
+        if isinstance(verify_side_effect, ServiceError) and verify_side_effect.error == "forbidden":
             mock_client.validate_certificate.side_effect = InvalidSignature()
         else:
             mock_client.validate_certificate.side_effect = verify_side_effect

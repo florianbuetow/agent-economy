@@ -18,7 +18,7 @@ BODY=$(jq -nc \
     '{task_id:$task_id, from_agent_id:$from_agent_id, to_agent_id:$to_agent_id, category:$category, rating:$rating}')
 http_post "/feedback" "$BODY"
 assert_status "400"
-assert_json_eq ".error" "MISSING_FIELD"
+assert_json_eq ".error" "missing_field"
 
 step "Submit with empty to_agent_id"
 BODY=$(jq -nc \
@@ -30,7 +30,7 @@ BODY=$(jq -nc \
     '{task_id:$task_id, from_agent_id:$from_agent_id, to_agent_id:$to_agent_id, category:$category, rating:$rating}')
 http_post "/feedback" "$BODY"
 assert_status "400"
-assert_json_eq ".error" "MISSING_FIELD"
+assert_json_eq ".error" "missing_field"
 
 step "Submit with empty task_id"
 BODY=$(jq -nc \
@@ -42,6 +42,6 @@ BODY=$(jq -nc \
     '{task_id:$task_id, from_agent_id:$from_agent_id, to_agent_id:$to_agent_id, category:$category, rating:$rating}')
 http_post "/feedback" "$BODY"
 assert_status "400"
-assert_json_eq ".error" "MISSING_FIELD"
+assert_json_eq ".error" "missing_field"
 
 test_end

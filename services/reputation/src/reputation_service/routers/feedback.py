@@ -27,7 +27,7 @@ def _extract_jws_token(data: dict[str, object]) -> str:
     """Extract and validate the JWS token from the request body."""
     if "token" not in data or data["token"] is None:
         raise ServiceError(
-            error="INVALID_JWS",
+            error="invalid_jws",
             message="Missing JWS token in request body",
             status_code=400,
             details={},
@@ -35,7 +35,7 @@ def _extract_jws_token(data: dict[str, object]) -> str:
 
     if not isinstance(data["token"], str):
         raise ServiceError(
-            error="INVALID_JWS",
+            error="invalid_jws",
             message="JWS token must be a string",
             status_code=400,
             details={},
@@ -45,7 +45,7 @@ def _extract_jws_token(data: dict[str, object]) -> str:
 
     if token == "":  # nosec B105
         raise ServiceError(
-            error="INVALID_JWS",
+            error="invalid_jws",
             message="JWS token must not be empty",
             status_code=400,
             details={},
@@ -54,7 +54,7 @@ def _extract_jws_token(data: dict[str, object]) -> str:
     parts = token.split(".")
     if len(parts) != 3:
         raise ServiceError(
-            error="INVALID_JWS",
+            error="invalid_jws",
             message="JWS token must be a three-part compact serialization",
             status_code=400,
             details={},
@@ -71,14 +71,14 @@ def _extract_signer_agent_id(token: str) -> str:
         header = json.loads(base64.urlsafe_b64decode(padded))
     except (json.JSONDecodeError, ValueError, UnicodeDecodeError) as exc:
         raise ServiceError(
-            error="INVALID_JWS",
+            error="invalid_jws",
             message="JWS header is not valid base64url JSON",
             status_code=400,
             details={},
         ) from exc
     if not isinstance(header, dict):
         raise ServiceError(
-            error="INVALID_JWS",
+            error="invalid_jws",
             message="JWS header must be a JSON object",
             status_code=400,
             details={},
@@ -86,7 +86,7 @@ def _extract_signer_agent_id(token: str) -> str:
     kid = header.get("kid")
     if not isinstance(kid, str) or kid == "":
         raise ServiceError(
-            error="INVALID_JWS",
+            error="invalid_jws",
             message="Token header is missing kid",
             status_code=400,
             details={},
@@ -122,7 +122,7 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
         parsed: object = json.loads(raw_body)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise ServiceError(
-            error="INVALID_JSON",
+            error="invalid_json",
             message="Request body is not valid JSON",
             status_code=400,
             details={},
@@ -130,7 +130,7 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
 
     if not isinstance(parsed, dict):
         raise ServiceError(
-            error="INVALID_JSON",
+            error="invalid_json",
             message="Request body must be a JSON object",
             status_code=400,
             details={},
@@ -154,21 +154,21 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
         payload_raw = state.platform_agent.validate_certificate(token)
     except (InvalidSignature, ValueError) as exc:
         raise ServiceError(
-            error="FORBIDDEN",
+            error="forbidden",
             message="JWS signature verification failed",
             status_code=403,
             details={},
         ) from exc
     except Exception as exc:
         raise ServiceError(
-            error="IDENTITY_SERVICE_UNAVAILABLE",
+            error="identity_service_unavailable",
             message="Cannot reach Identity service",
             status_code=502,
             details={},
         ) from exc
     if not isinstance(payload_raw, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
         raise ServiceError(
-            error="INVALID_PAYLOAD",
+            error="invalid_payload",
             message="JWS payload must be a JSON object",
             status_code=400,
             details={},
@@ -181,7 +181,7 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
     action = payload.get("action")
     if action != "submit_feedback":
         raise ServiceError(
-            error="INVALID_PAYLOAD",
+            error="invalid_payload",
             message='JWS payload action must be "submit_feedback"',
             status_code=400,
             details={},
@@ -190,7 +190,7 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
     from_agent_id_in_payload = payload.get("from_agent_id")
     if not from_agent_id_in_payload or not isinstance(from_agent_id_in_payload, str):
         raise ServiceError(
-            error="INVALID_PAYLOAD",
+            error="invalid_payload",
             message="JWS payload must contain from_agent_id",
             status_code=400,
             details={},
@@ -199,7 +199,7 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
     # --- Authorization: Signer Matching ---
     if signer_agent_id != from_agent_id_in_payload:
         raise ServiceError(
-            error="FORBIDDEN",
+            error="forbidden",
             message="Signer does not match from_agent_id in payload",
             status_code=403,
             details={},
@@ -290,7 +290,7 @@ async def get_feedback(feedback_id: str) -> JSONResponse:
     )
     if record is None:
         raise ServiceError(
-            error="FEEDBACK_NOT_FOUND",
+            error="feedback_not_found",
             message="Feedback not found",
             status_code=404,
             details={},
