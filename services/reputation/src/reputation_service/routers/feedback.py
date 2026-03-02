@@ -144,11 +144,19 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
     # --- Local JWS verification via platform agent ---
     state = get_app_state()
     if state.platform_agent is None:
-        msg = "Platform agent not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Platform agent not initialized",
+            status_code=503,
+            details={},
+        )
     if state.feedback_store is None:
-        msg = "Feedback store not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Feedback store not initialized",
+            status_code=503,
+            details={},
+        )
 
     try:
         payload_raw = state.platform_agent.validate_certificate(token)
@@ -234,8 +242,12 @@ async def get_task_feedback(task_id: str) -> JSONResponse:
     settings = get_settings()
     state = get_app_state()
     if state.feedback_store is None:
-        msg = "Feedback store not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Feedback store not initialized",
+            status_code=503,
+            details={},
+        )
 
     records = get_feedback_for_task(
         store=state.feedback_store,
@@ -257,8 +269,12 @@ async def get_agent_feedback(agent_id: str) -> JSONResponse:
     settings = get_settings()
     state = get_app_state()
     if state.feedback_store is None:
-        msg = "Feedback store not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Feedback store not initialized",
+            status_code=503,
+            details={},
+        )
 
     records = get_feedback_for_agent(
         store=state.feedback_store,
@@ -280,8 +296,12 @@ async def get_feedback(feedback_id: str) -> JSONResponse:
     settings = get_settings()
     state = get_app_state()
     if state.feedback_store is None:
-        msg = "Feedback store not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Feedback store not initialized",
+            status_code=503,
+            details={},
+        )
 
     record = get_feedback_by_id(
         store=state.feedback_store,
