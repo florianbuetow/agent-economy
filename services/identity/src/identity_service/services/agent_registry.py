@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+from typing import TYPE_CHECKING
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -12,19 +13,20 @@ from joserfc.errors import BadSignatureError
 from joserfc.jwk import OKPKey
 from service_commons.exceptions import ServiceError
 
-from identity_service.services.agent_store import AgentStore, DuplicateAgentError
+from identity_service.services.errors import DuplicateAgentError
+
+if TYPE_CHECKING:
+    from identity_service.services.protocol import IdentityStorageInterface
 
 
 class AgentRegistry:
     """
     Manages agent registration, lookup, and signature verification.
-
-    Uses SQLite for persistence with a UNIQUE constraint on public_key.
     """
 
     def __init__(
         self,
-        store: AgentStore,
+        store: IdentityStorageInterface,
         algorithm: str,
         public_key_prefix: str,
         public_key_bytes: int,
@@ -36,7 +38,7 @@ class AgentRegistry:
         self._public_key_bytes = public_key_bytes
         self._signature_bytes = signature_bytes
 
-    def register_agent(self, name: str, public_key: str) -> dict[str, str]:
+    async def register_agent(self, name: str, public_key: str) -> dict[str, str]:
         """
         Register a new agent.
 
@@ -50,7 +52,7 @@ class AgentRegistry:
         self._validate_public_key(public_key)
 
         try:
-            return self._store.insert(name, public_key)
+            return await self._store.insert(name, public_key)
         except DuplicateAgentError as exc:
             raise ServiceError(
                 "public_key_exists",
@@ -59,7 +61,7 @@ class AgentRegistry:
                 {},
             ) from exc
 
-    def verify_signature(
+    async def verify_signature(
         self,
         agent_id: str,
         payload_b64: str,
@@ -73,7 +75,7 @@ class AgentRegistry:
         Raises:
             ServiceError: AGENT_NOT_FOUND, INVALID_BASE64, INVALID_SIGNATURE_LENGTH
         """
-        agent = self.get_agent(agent_id)
+        agent = await self.get_agent(agent_id)
         if agent is None:
             raise ServiceError("agent_not_found", "Agent not found", 404, {})
 
@@ -121,7 +123,7 @@ class AgentRegistry:
         except InvalidSignature:
             return {"valid": False, "reason": "signature mismatch"}
 
-    def verify_jws(self, token: str) -> dict[str, object]:
+    async def verify_jws(self, token: str) -> dict[str, object]:
         """
         Verify a JWS compact token and return the payload.
 
@@ -185,7 +187,7 @@ class AgentRegistry:
             )
 
         # Look up agent
-        agent = self.get_agent(kid)
+        agent = await self.get_agent(kid)
         if agent is None:
             raise ServiceError("agent_not_found", "Agent not found", 404, {})
 
@@ -236,29 +238,29 @@ class AgentRegistry:
 
         return {"valid": True, "agent_id": kid, "payload": payload}
 
-    def get_agent(self, agent_id: str) -> dict[str, str] | None:
+    async def get_agent(self, agent_id: str) -> dict[str, str] | None:
         """
         Look up a single agent by ID.
 
         Returns the full agent record or None if not found.
         """
-        return self._store.get_by_id(agent_id)
+        return await self._store.get_by_id(agent_id)
 
-    def list_agents(self) -> list[dict[str, str]]:
+    async def list_agents(self) -> list[dict[str, str]]:
         """
         List all agents. Public keys are omitted for brevity.
 
         Returns list of agent summaries sorted by registration time.
         """
-        return self._store.list_all()
+        return await self._store.list_all()
 
-    def count_agents(self) -> int:
+    async def count_agents(self) -> int:
         """Count total registered agents."""
-        return self._store.count()
+        return await self._store.count()
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Close the database connection."""
-        self._store.close()
+        await self._store.close()
 
     def _validate_name(self, name: str) -> None:
         """Validate agent display name."""

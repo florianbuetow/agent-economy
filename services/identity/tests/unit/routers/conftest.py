@@ -6,9 +6,11 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from identity_service.app import create_app
-from identity_service.config import clear_settings_cache
+from identity_service.config import clear_settings_cache, get_settings
 from identity_service.core.lifespan import lifespan
-from identity_service.core.state import reset_app_state
+from identity_service.core.state import get_app_state, reset_app_state
+from identity_service.services.agent_registry import AgentRegistry
+from tests.fakes.in_memory_agent_store import InMemoryAgentStore
 
 
 @pytest.fixture
@@ -35,6 +37,9 @@ crypto:
   signature_bytes: 64
 request:
   max_body_size: 1572864
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -45,6 +50,16 @@ request:
 
     test_app = create_app()
     async with lifespan(test_app):
+        settings = get_settings()
+        state = get_app_state()
+        fake_store = InMemoryAgentStore(db_path=str(db_path))
+        state.registry = AgentRegistry(
+            store=fake_store,
+            algorithm=settings.crypto.algorithm,
+            public_key_prefix=settings.crypto.public_key_prefix,
+            public_key_bytes=settings.crypto.public_key_bytes,
+            signature_bytes=settings.crypto.signature_bytes,
+        )
         yield test_app
 
     reset_app_state()

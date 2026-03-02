@@ -72,6 +72,14 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
+class DbGatewayConfig(BaseModel):
+    """DB Gateway service configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+    url: str
+    timeout_seconds: int
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -87,6 +95,7 @@ class Settings(BaseModel):
     database: DatabaseConfig
     crypto: CryptoConfig
     request: RequestConfig
+    db_gateway: DbGatewayConfig | None = None
 
 
 def get_config_path() -> Path:

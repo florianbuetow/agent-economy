@@ -16,7 +16,7 @@ async def health_check() -> HealthResponse:
     state = get_app_state()
     registered_agents = 0
     if state.registry is not None:
-        registered_agents = state.registry.count_agents()
+        registered_agents = await state.registry.count_agents()
     return HealthResponse(
         status="ok",
         uptime_seconds=state.uptime_seconds,

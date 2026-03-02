@@ -1,122 +1,120 @@
-"""SQLite-backed agent storage."""
+"""Compatibility agent storage used by legacy unit tests."""
 
 from __future__ import annotations
 
-import contextlib
-import sqlite3
+import asyncio
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
 from threading import RLock
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+    from typing import Any
+
+from identity_service.services.errors import DuplicateAgentError
 
 
-class DuplicateAgentError(Exception):
-    """Raised when a duplicate public key is inserted."""
-
-
-class AgentStore:
-    """SQLite-backed agent storage with thread-safe transactions."""
+class InMemoryAgentStore:
+    """Thread-safe in-memory agent storage with async methods."""
 
     def __init__(self, db_path: str) -> None:
+        # Keep db_path argument for backward compatibility with existing tests.
+        self._db_path = db_path
         self._lock = RLock()
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(db_path, check_same_thread=False)
-        self._db.row_factory = sqlite3.Row
-        self._db.execute("PRAGMA journal_mode=WAL")
-        self._db.execute("PRAGMA foreign_keys=ON")
-        self._db.execute("PRAGMA busy_timeout=5000")
-        self._init_schema()
+        self._agents_by_id: dict[str, dict[str, str]] = {}
+        self._agent_id_by_public_key: dict[str, str] = {}
 
-    def _init_schema(self) -> None:
+    async def insert(self, name: str, public_key: str) -> dict[str, str]:
+        """Insert a new agent. Returns the stored agent record."""
         with self._lock:
-            self._db.executescript(
-                """
-                CREATE TABLE IF NOT EXISTS agents (
-                    agent_id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    public_key TEXT NOT NULL UNIQUE,
-                    registered_at TEXT NOT NULL
-                );
-                """
-            )
-            self._db.commit()
+            if public_key in self._agent_id_by_public_key:
+                raise DuplicateAgentError(f"Public key already registered: {public_key}")
+
+            agent_id = f"a-{uuid.uuid4()}"
+            registered_at = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+            record = {
+                "agent_id": agent_id,
+                "name": name,
+                "public_key": public_key,
+                "registered_at": registered_at,
+            }
+            self._agents_by_id[agent_id] = record
+            self._agent_id_by_public_key[public_key] = agent_id
+            return record
+
+    async def get_by_id(self, agent_id: str) -> dict[str, str] | None:
+        """Look up a single agent by ID. Returns None if not found."""
+        with self._lock:
+            record = self._agents_by_id.get(agent_id)
+            if record is None:
+                return None
+            return {
+                "agent_id": record["agent_id"],
+                "name": record["name"],
+                "public_key": record["public_key"],
+                "registered_at": record["registered_at"],
+            }
+
+    async def list_all(self) -> list[dict[str, str]]:
+        """List all agents (without public keys), sorted by registration time."""
+        with self._lock:
+            records = sorted(self._agents_by_id.values(), key=lambda row: row["registered_at"])
+            return [
+                {
+                    "agent_id": record["agent_id"],
+                    "name": record["name"],
+                    "registered_at": record["registered_at"],
+                }
+                for record in records
+            ]
+
+    async def count(self) -> int:
+        """Count total registered agents."""
+        with self._lock:
+            return len(self._agents_by_id)
+
+    async def close(self) -> None:
+        """No-op close for API compatibility."""
+
+
+def _run_sync[T](awaitable: Coroutine[Any, Any, T]) -> T:
+    """Run async store operations from sync compatibility wrapper."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(awaitable)
+
+    msg = "AgentStore compatibility wrapper cannot run inside an active event loop"
+    raise RuntimeError(msg)
+
+
+class _SyncAgentStoreCompat:
+    """Backward-compatible synchronous wrapper for existing tests/imports."""
+
+    def __init__(self, db_path: str) -> None:
+        self._store = InMemoryAgentStore(db_path=db_path)
 
     def insert(self, name: str, public_key: str) -> dict[str, str]:
         """Insert a new agent. Returns the agent record dict."""
-        agent_id = f"a-{uuid.uuid4()}"
-        registered_at = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
-
-        with self._lock:
-            try:
-                self._db.execute("BEGIN IMMEDIATE")
-                self._db.execute(
-                    "INSERT INTO agents (agent_id, name, public_key, registered_at) "
-                    "VALUES (?, ?, ?, ?)",
-                    (agent_id, name, public_key, registered_at),
-                )
-                self._db.commit()
-            except sqlite3.IntegrityError as exc:
-                with contextlib.suppress(sqlite3.Error):
-                    self._db.execute("ROLLBACK")
-                error_msg = str(exc).lower()
-                if "unique" in error_msg:
-                    raise DuplicateAgentError(
-                        f"Public key already registered: {public_key}"
-                    ) from exc
-                raise
-            except Exception:
-                with contextlib.suppress(sqlite3.Error):
-                    self._db.execute("ROLLBACK")
-                raise
-
-        return {
-            "agent_id": agent_id,
-            "name": name,
-            "public_key": public_key,
-            "registered_at": registered_at,
-        }
+        return _run_sync(self._store.insert(name=name, public_key=public_key))
 
     def get_by_id(self, agent_id: str) -> dict[str, str] | None:
         """Look up a single agent by ID. Returns None if not found."""
-        with self._lock:
-            cursor = self._db.execute(
-                "SELECT agent_id, name, public_key, registered_at FROM agents WHERE agent_id = ?",
-                (agent_id,),
-            )
-            row = cursor.fetchone()
-        if row is None:
-            return None
-        return {
-            "agent_id": str(row["agent_id"]),
-            "name": str(row["name"]),
-            "public_key": str(row["public_key"]),
-            "registered_at": str(row["registered_at"]),
-        }
+        return _run_sync(self._store.get_by_id(agent_id=agent_id))
 
     def list_all(self) -> list[dict[str, str]]:
-        """List all agents (without public keys). Sorted by registered_at."""
-        with self._lock:
-            cursor = self._db.execute(
-                "SELECT agent_id, name, registered_at FROM agents ORDER BY registered_at"
-            )
-            rows = cursor.fetchall()
-        return [
-            {
-                "agent_id": str(row["agent_id"]),
-                "name": str(row["name"]),
-                "registered_at": str(row["registered_at"]),
-            }
-            for row in rows
-        ]
+        """List all agents (without public keys), sorted by registration time."""
+        return _run_sync(self._store.list_all())
 
     def count(self) -> int:
         """Count total registered agents."""
-        with self._lock:
-            cursor = self._db.execute("SELECT COUNT(*) FROM agents")
-            row = cursor.fetchone()
-        return int(row[0]) if row else 0
+        return _run_sync(self._store.count())
 
     def close(self) -> None:
-        """Close the database connection."""
-        with self._lock:
-            self._db.close()
+        """No-op close to preserve previous API."""
+        _run_sync(self._store.close())
+
+
+# Backward compatibility alias for existing imports/tests.
+AgentStore = _SyncAgentStoreCompat

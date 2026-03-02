@@ -25,3 +25,7 @@ crypto:
 
 request:
   max_body_size: 1572864
+
+db_gateway:
+  url: "http://127.0.0.1:8007"
+  timeout_seconds: 10
