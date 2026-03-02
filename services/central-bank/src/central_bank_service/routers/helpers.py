@@ -43,20 +43,6 @@ def verify_jws_token(token: str) -> dict[str, Any]:
         msg = "Platform agent not initialized"
         raise RuntimeError(msg)
 
-    legacy_verify = None
-    if state.identity_client is not None:
-        legacy_verify = getattr(state.identity_client, "verify_jws", None)
-    legacy_return = getattr(legacy_verify, "return_value", None)
-    if isinstance(legacy_return, dict):
-        valid = legacy_return.get("valid")
-        if isinstance(valid, bool) and not valid:
-            raise ServiceError(
-                "forbidden",
-                "JWS signature verification failed",
-                403,
-                {},
-            )
-
     try:
         payload = state.platform_agent.validate_certificate(token)
     except (InvalidSignature, ValueError) as exc:

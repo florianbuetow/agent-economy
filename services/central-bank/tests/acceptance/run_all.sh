@@ -119,7 +119,6 @@ database:
   path: "$bank_db_path"
 identity:
   base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
   get_agent_path: "/agents"
 platform:
   agent_id: "$PLATFORM_AGENT_ID"

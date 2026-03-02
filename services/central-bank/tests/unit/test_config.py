@@ -27,7 +27,6 @@ database:
   path: "data/central-bank.db"
 identity:
   base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
   get_agent_path: "/agents"
 platform:
   agent_id: "a-platform"
@@ -71,7 +70,6 @@ database:
   path: "data/central-bank.db"
 identity:
   base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
   get_agent_path: "/agents"
 platform:
   agent_id: "a-platform"
