@@ -136,3 +136,25 @@ def register_exception_handlers(
         cast("ExceptionHandler", service_error_handler),
     )
     app.add_exception_handler(Exception, unhandled_exception_handler)
+
+
+def middleware_error_response(
+    error: str,
+    message: str,
+    status_code: int,
+    details: dict[str, object] | None = None,
+) -> JSONResponse:
+    """Build a standard error JSONResponse for use in ASGI middleware.
+
+    Middleware runs before FastAPI exception handlers, so it cannot raise
+    ``ServiceError``.  This helper ensures middleware error responses use
+    the same three-field structure as all other error responses.
+    """
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "error": error,
+            "message": message,
+            "details": details if details is not None else {},
+        },
+    )
