@@ -1,0 +1,25 @@
+# Database Gateway Service Configuration
+# Environment variable overrides use prefix: DB_GATEWAY__
+
+service:
+  name: "db-gateway"
+  version: "0.1.0"
+
+server:
+  host: "127.0.0.1"
+  port: 8007
+  log_level: "info"
+
+logging:
+  level: "INFO"
+  directory: "data/logs"
+  format: "json"
+
+database:
+  path: "data/economy.db"
+  schema_path: "../../docs/specifications/schema.sql"
+  busy_timeout_ms: 5000
+  journal_mode: "wal"
+
+request:
+  max_body_size: 1048576
