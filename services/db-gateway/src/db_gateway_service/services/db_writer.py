@@ -135,20 +135,20 @@ class DbWriter:
                 if existing is not None and self._agent_matches(existing, data):
                     return {"agent_id": existing["agent_id"], "event_id": 0}
                 raise ServiceError(
-                    "PUBLIC_KEY_EXISTS",
+                    "public_key_exists",
                     "This public key is already registered",
                     409,
                     {},
                 ) from exc
             if "foreign" in error_msg:
                 raise ServiceError(
-                    "FOREIGN_KEY_VIOLATION",
+                    "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
                 ) from exc
             raise ServiceError(
-                "PUBLIC_KEY_EXISTS",
+                "public_key_exists",
                 "This public key is already registered",
                 409,
                 {},
@@ -222,7 +222,7 @@ class DbWriter:
             error_msg = str(exc).lower()
             if "foreign" in error_msg:
                 raise ServiceError(
-                    "FOREIGN_KEY_VIOLATION",
+                    "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
@@ -232,7 +232,7 @@ class DbWriter:
             if existing is not None and existing["balance"] == data["balance"]:
                 return {"account_id": data["account_id"], "event_id": 0}
             raise ServiceError(
-                "ACCOUNT_EXISTS",
+                "account_exists",
                 "Account already exists for this agent",
                 409,
                 {},
@@ -272,7 +272,7 @@ class DbWriter:
             )
             if cursor.rowcount == 0:
                 self._db.rollback()
-                raise ServiceError("ACCOUNT_NOT_FOUND", "No account with this account_id", 404, {})
+                raise ServiceError("account_not_found", "No account with this account_id", 404, {})
             cursor.execute(
                 "INSERT INTO bank_transactions "
                 "(tx_id, account_id, type, amount, balance_after, reference, timestamp) "
@@ -315,13 +315,13 @@ class DbWriter:
                         "event_id": 0,
                     }
                 raise ServiceError(
-                    "REFERENCE_CONFLICT",
+                    "reference_conflict",
                     "Same (account_id, reference) exists with different amount",
                     409,
                     {},
                 ) from exc
             raise ServiceError(
-                "REFERENCE_CONFLICT",
+                "reference_conflict",
                 "Transaction constraint violation",
                 409,
                 {},
@@ -368,10 +368,10 @@ class DbWriter:
                 self._db.rollback()
                 if acct is None:
                     raise ServiceError(
-                        "ACCOUNT_NOT_FOUND", "No account for payer_account_id", 404, {}
+                        "account_not_found", "No account for payer_account_id", 404, {}
                     )
                 raise ServiceError(
-                    "INSUFFICIENT_FUNDS",
+                    "insufficient_funds",
                     "Account balance is less than the escrow amount",
                     402,
                     {},
@@ -425,7 +425,7 @@ class DbWriter:
             error_msg = str(exc).lower()
             if "foreign" in error_msg:
                 raise ServiceError(
-                    "FOREIGN_KEY_VIOLATION",
+                    "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
@@ -440,13 +440,13 @@ class DbWriter:
                         "event_id": 0,
                     }
                 raise ServiceError(
-                    "ESCROW_ALREADY_LOCKED",
+                    "escrow_already_locked",
                     "Escrow already locked for this (payer, task) pair",
                     409,
                     {},
                 ) from exc
             raise ServiceError(
-                "ESCROW_ALREADY_LOCKED",
+                "escrow_already_locked",
                 "Escrow constraint violation",
                 409,
                 {},
@@ -490,7 +490,7 @@ class DbWriter:
             )
             if cursor.rowcount == 0:
                 self._db.rollback()
-                raise ServiceError("ACCOUNT_NOT_FOUND", "Recipient account not found", 404, {})
+                raise ServiceError("account_not_found", "Recipient account not found", 404, {})
             # Log escrow_release transaction
             cursor.execute(
                 "INSERT INTO bank_transactions "
@@ -535,11 +535,11 @@ class DbWriter:
         row = cursor.fetchone()
         if row is None:
             self._db.rollback()
-            raise ServiceError("ESCROW_NOT_FOUND", "No escrow with this ID", 404, {})
+            raise ServiceError("escrow_not_found", "No escrow with this ID", 404, {})
         if row[2] != "locked":
             self._db.rollback()
             raise ServiceError(
-                "ESCROW_ALREADY_RESOLVED",
+                "escrow_already_resolved",
                 "Escrow has already been released or split",
                 409,
                 {},
@@ -568,7 +568,7 @@ class DbWriter:
             if worker_amount + poster_amount != escrow["amount"]:
                 self._db.rollback()
                 raise ServiceError(
-                    "AMOUNT_MISMATCH",
+                    "amount_mismatch",
                     "worker_amount + poster_amount does not equal escrow amount",
                     400,
                     {},
@@ -581,7 +581,7 @@ class DbWriter:
                 )
                 if cursor.rowcount == 0:
                     self._db.rollback()
-                    raise ServiceError("ACCOUNT_NOT_FOUND", "Worker account not found", 404, {})
+                    raise ServiceError("account_not_found", "Worker account not found", 404, {})
                 cursor.execute(
                     "INSERT INTO bank_transactions "
                     "(tx_id, account_id, type, amount, balance_after, reference, timestamp) "
@@ -604,7 +604,7 @@ class DbWriter:
                 )
                 if cursor.rowcount == 0:
                     self._db.rollback()
-                    raise ServiceError("ACCOUNT_NOT_FOUND", "Poster account not found", 404, {})
+                    raise ServiceError("account_not_found", "Poster account not found", 404, {})
                 cursor.execute(
                     "INSERT INTO bank_transactions "
                     "(tx_id, account_id, type, amount, balance_after, reference, timestamp) "
@@ -682,13 +682,13 @@ class DbWriter:
             error_msg = str(exc).lower()
             if "foreign" in error_msg:
                 raise ServiceError(
-                    "FOREIGN_KEY_VIOLATION",
+                    "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
                 ) from exc
             raise ServiceError(
-                "TASK_EXISTS",
+                "task_exists",
                 "Task with this task_id already exists",
                 409,
                 {},
@@ -730,13 +730,13 @@ class DbWriter:
             error_msg = str(exc).lower()
             if "foreign" in error_msg:
                 raise ServiceError(
-                    "FOREIGN_KEY_VIOLATION",
+                    "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
                 ) from exc
             raise ServiceError(
-                "BID_EXISTS",
+                "bid_exists",
                 "This agent already bid on this task",
                 409,
                 {},
@@ -767,7 +767,7 @@ class DbWriter:
                 if col not in TASK_UPDATE_COLUMNS:
                     self._db.rollback()
                     raise ServiceError(
-                        "INVALID_FIELD",
+                        "invalid_field",
                         f"Unknown column: {col}",
                         400,
                         {"field": col},
@@ -783,7 +783,7 @@ class DbWriter:
             )
             if cursor.rowcount == 0:
                 self._db.rollback()
-                raise ServiceError("TASK_NOT_FOUND", "No task with this task_id", 404, {})
+                raise ServiceError("task_not_found", "No task with this task_id", 404, {})
             event_id = self._insert_event(cursor, data["event"])
             self._db.commit()
             new_status = updates.get("status", "")
@@ -836,13 +836,13 @@ class DbWriter:
             error_msg = str(exc).lower()
             if "foreign" in error_msg:
                 raise ServiceError(
-                    "FOREIGN_KEY_VIOLATION",
+                    "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
                 ) from exc
             raise ServiceError(
-                "ASSET_EXISTS",
+                "asset_exists",
                 "Asset with this asset_id already exists",
                 409,
                 {},
@@ -905,13 +905,13 @@ class DbWriter:
             error_msg = str(exc).lower()
             if "foreign" in error_msg:
                 raise ServiceError(
-                    "FOREIGN_KEY_VIOLATION",
+                    "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
                 ) from exc
             raise ServiceError(
-                "FEEDBACK_EXISTS",
+                "feedback_exists",
                 "Feedback already submitted for this (task, from, to) triple",
                 409,
                 {},
@@ -956,13 +956,13 @@ class DbWriter:
             error_msg = str(exc).lower()
             if "foreign" in error_msg:
                 raise ServiceError(
-                    "FOREIGN_KEY_VIOLATION",
+                    "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
                 ) from exc
             raise ServiceError(
-                "CLAIM_EXISTS",
+                "claim_exists",
                 "Claim with this claim_id already exists",
                 409,
                 {},
@@ -1011,13 +1011,13 @@ class DbWriter:
             error_msg = str(exc).lower()
             if "foreign" in error_msg:
                 raise ServiceError(
-                    "FOREIGN_KEY_VIOLATION",
+                    "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
                 ) from exc
             raise ServiceError(
-                "REBUTTAL_EXISTS",
+                "rebuttal_exists",
                 "Rebuttal with this rebuttal_id already exists",
                 409,
                 {},
@@ -1068,13 +1068,13 @@ class DbWriter:
             error_msg = str(exc).lower()
             if "foreign" in error_msg:
                 raise ServiceError(
-                    "FOREIGN_KEY_VIOLATION",
+                    "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
                 ) from exc
             raise ServiceError(
-                "RULING_EXISTS",
+                "ruling_exists",
                 "Ruling with this ruling_id already exists",
                 409,
                 {},

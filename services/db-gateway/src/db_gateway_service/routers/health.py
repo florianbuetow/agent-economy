@@ -37,7 +37,7 @@ async def health_check() -> HealthResponse | JSONResponse:
         return JSONResponse(
             status_code=503,
             content={
-                "error": "DATABASE_UNAVAILABLE",
+                "error": "database_unavailable",
                 "message": f"Database file unavailable: {exc}",
                 "details": {},
             },
