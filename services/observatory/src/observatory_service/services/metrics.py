@@ -2,42 +2,30 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any
+
+from observatory_service.services.database import (
+    execute_scalar,
+    now_iso,
+    to_iso,
+    utc_now,
+)
 
 if TYPE_CHECKING:
-    from typing import Any
-
     import aiosqlite
 
-
-def now_iso() -> str:
-    """Return current UTC time as ISO 8601 string."""
-    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
-
-
-def _now() -> datetime:
-    """Return current UTC datetime."""
-    return datetime.now(UTC)
-
-
-async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
-    """Execute query and return the first column of the first row."""
-    async with db.execute(sql, params) as cursor:
-        row = await cursor.fetchone()
-    if row is None:
-        return None
-    return row[0]
+__all__ = ["now_iso"]
 
 
 async def compute_gdp_total(db: aiosqlite.Connection) -> int:
     """Compute total GDP from approved + ruled tasks."""
-    approved = await _scalar(
+    approved = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward), 0) FROM board_tasks WHERE status = 'approved'",
         (),
     )
-    ruled = await _scalar(
+    ruled = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward * worker_pct / 100), 0) "
         "FROM board_tasks WHERE status = 'ruled' AND worker_pct IS NOT NULL",
@@ -48,13 +36,13 @@ async def compute_gdp_total(db: aiosqlite.Connection) -> int:
 
 async def compute_gdp_window(db: aiosqlite.Connection, since_iso: str) -> int:
     """Compute GDP for tasks approved/ruled since a given timestamp."""
-    approved = await _scalar(
+    approved = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward), 0) FROM board_tasks "
         "WHERE status = 'approved' AND approved_at >= ?",
         (since_iso,),
     )
-    ruled = await _scalar(
+    ruled = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward * worker_pct / 100), 0) "
         "FROM board_tasks WHERE status = 'ruled' AND worker_pct IS NOT NULL "
@@ -66,11 +54,11 @@ async def compute_gdp_window(db: aiosqlite.Connection, since_iso: str) -> int:
 
 async def compute_gdp(db: aiosqlite.Connection, active_agents: int) -> dict[str, Any]:
     """Compute all GDP metrics."""
-    now = _now()
+    now = utc_now()
     total = await compute_gdp_total(db)
 
-    since_24h = (now - timedelta(hours=24)).isoformat(timespec="seconds").replace("+00:00", "Z")
-    since_7d = (now - timedelta(days=7)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    since_24h = to_iso(now - timedelta(hours=24))
+    since_7d = to_iso(now - timedelta(days=7))
 
     last_24h = await compute_gdp_window(db, since_24h)
     last_7d = await compute_gdp_window(db, since_7d)
@@ -89,16 +77,16 @@ async def compute_gdp(db: aiosqlite.Connection, active_agents: int) -> dict[str,
 
 async def compute_agents(db: aiosqlite.Connection) -> dict[str, Any]:
     """Compute agent metrics."""
-    now = _now()
-    since_30d = (now - timedelta(days=30)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    now = utc_now()
+    since_30d = to_iso(now - timedelta(days=30))
 
-    total_registered = await _scalar(
+    total_registered = await execute_scalar(
         db,
         "SELECT COUNT(*) FROM identity_agents",
         (),
     )
 
-    active = await _scalar(
+    active = await execute_scalar(
         db,
         "SELECT COUNT(DISTINCT agent_id) FROM ("
         "  SELECT poster_id AS agent_id FROM board_tasks "
@@ -111,7 +99,7 @@ async def compute_agents(db: aiosqlite.Connection) -> dict[str, Any]:
         (since_30d, since_30d, since_30d, since_30d, since_30d, since_30d, since_30d, since_30d),
     )
 
-    with_completed = await _scalar(
+    with_completed = await execute_scalar(
         db,
         "SELECT COUNT(DISTINCT worker_id) FROM board_tasks WHERE status = 'approved'",
         (),
@@ -126,12 +114,12 @@ async def compute_agents(db: aiosqlite.Connection) -> dict[str, Any]:
 
 async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
     """Compute task metrics."""
-    now = _now()
-    since_24h = (now - timedelta(hours=24)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    now = utc_now()
+    since_24h = to_iso(now - timedelta(hours=24))
 
-    total_created = int(await _scalar(db, "SELECT COUNT(*) FROM board_tasks", ()) or 0)
+    total_created = int(await execute_scalar(db, "SELECT COUNT(*) FROM board_tasks", ()) or 0)
     completed_all_time = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE status = 'approved'",
             (),
@@ -139,7 +127,7 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
         or 0
     )
     completed_24h = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE status = 'approved' AND approved_at >= ?",
             (since_24h,),
@@ -147,7 +135,7 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
         or 0
     )
     open_count = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE status = 'open'",
             (),
@@ -155,7 +143,7 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
         or 0
     )
     in_execution = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE status IN ('accepted', 'submitted')",
             (),
@@ -163,7 +151,7 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
         or 0
     )
     disputed = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE status IN ('disputed', 'ruled')",
             (),
@@ -172,7 +160,7 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
     )
 
     ruled_count = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE status = 'ruled'",
             (),
@@ -180,7 +168,7 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
         or 0
     )
     disputed_only = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE status = 'disputed'",
             (),
@@ -203,7 +191,7 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
 
 async def compute_escrow(db: aiosqlite.Connection) -> dict[str, Any]:
     """Compute escrow metrics."""
-    total_locked = await _scalar(
+    total_locked = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(amount), 0) FROM bank_escrow WHERE status = 'locked'",
         (),
@@ -213,11 +201,11 @@ async def compute_escrow(db: aiosqlite.Connection) -> dict[str, Any]:
 
 async def compute_spec_quality(db: aiosqlite.Connection) -> dict[str, Any]:
     """Compute spec quality metrics from visible feedback only."""
-    now = _now()
+    now = utc_now()
 
     # Total visible spec_quality feedback
     total = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE category = 'spec_quality' AND visible = 1",
@@ -237,7 +225,7 @@ async def compute_spec_quality(db: aiosqlite.Connection) -> dict[str, Any]:
         }
 
     es_count = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE category = 'spec_quality' AND visible = 1 AND rating = 'extremely_satisfied'",
@@ -246,7 +234,7 @@ async def compute_spec_quality(db: aiosqlite.Connection) -> dict[str, Any]:
         or 0
     )
     sat_count = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE category = 'spec_quality' AND visible = 1 AND rating = 'satisfied'",
@@ -255,7 +243,7 @@ async def compute_spec_quality(db: aiosqlite.Connection) -> dict[str, Any]:
         or 0
     )
     dis_count = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE category = 'spec_quality' AND visible = 1 AND rating = 'dissatisfied'",
@@ -272,15 +260,11 @@ async def compute_spec_quality(db: aiosqlite.Connection) -> dict[str, Any]:
     # Trend: compare current quarter vs previous quarter
     # Current quarter: last 90 days, previous quarter: 90-180 days ago
     q_now = now
-    q_current_start = (
-        (q_now - timedelta(days=90)).isoformat(timespec="seconds").replace("+00:00", "Z")
-    )
-    q_prev_start = (
-        (q_now - timedelta(days=180)).isoformat(timespec="seconds").replace("+00:00", "Z")
-    )
+    q_current_start = to_iso(q_now - timedelta(days=90))
+    q_prev_start = to_iso(q_now - timedelta(days=180))
 
     current_total = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE category = 'spec_quality' AND visible = 1 AND submitted_at >= ?",
@@ -289,7 +273,7 @@ async def compute_spec_quality(db: aiosqlite.Connection) -> dict[str, Any]:
         or 0
     )
     current_es = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE category = 'spec_quality' AND visible = 1 "
@@ -300,7 +284,7 @@ async def compute_spec_quality(db: aiosqlite.Connection) -> dict[str, Any]:
     )
 
     prev_total = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE category = 'spec_quality' AND visible = 1 "
@@ -310,7 +294,7 @@ async def compute_spec_quality(db: aiosqlite.Connection) -> dict[str, Any]:
         or 0
     )
     prev_es = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE category = 'spec_quality' AND visible = 1 "
@@ -347,10 +331,10 @@ async def compute_spec_quality(db: aiosqlite.Connection) -> dict[str, Any]:
 
 async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> dict[str, Any]:
     """Compute labor market metrics."""
-    now = _now()
+    now = utc_now()
 
     # avg_bids_per_task: average bid count across tasks that have bids
-    avg_bids = await _scalar(
+    avg_bids = await execute_scalar(
         db,
         "SELECT AVG(bid_count) FROM ("
         "  SELECT COUNT(*) AS bid_count FROM board_bids GROUP BY task_id"
@@ -360,13 +344,13 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
     avg_bids_per_task = float(avg_bids) if avg_bids is not None else 0.0
 
     # avg_reward
-    avg_reward_val = await _scalar(db, "SELECT AVG(reward) FROM board_tasks", ())
+    avg_reward_val = await execute_scalar(db, "SELECT AVG(reward) FROM board_tasks", ())
     avg_reward = float(avg_reward_val) if avg_reward_val is not None else 0
 
     # task_posting_rate: tasks created in last 1 hour
-    since_1h = (now - timedelta(hours=1)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    since_1h = to_iso(now - timedelta(hours=1))
     task_posting_rate = float(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE created_at >= ?",
             (since_1h,),
@@ -375,8 +359,8 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
     )
 
     # acceptance_latency_minutes: avg of (accepted_at - created_at) in minutes, for last 7 days
-    since_7d = (now - timedelta(days=7)).isoformat(timespec="seconds").replace("+00:00", "Z")
-    latency = await _scalar(
+    since_7d = to_iso(now - timedelta(days=7))
+    latency = await execute_scalar(
         db,
         "SELECT AVG((julianday(accepted_at) - julianday(created_at)) * 1440) "
         "FROM board_tasks "
@@ -386,7 +370,7 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
     acceptance_latency_minutes = float(latency) if latency is not None else 0.0
 
     busy_agents = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(DISTINCT worker_id) FROM board_tasks "
             "WHERE status IN ('accepted', 'submitted') AND worker_id IS NOT NULL",
@@ -398,7 +382,7 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
 
     # reward_distribution
     r_0_10 = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE reward BETWEEN 0 AND 10",
             (),
@@ -406,7 +390,7 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
         or 0
     )
     r_11_50 = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE reward BETWEEN 11 AND 50",
             (),
@@ -414,7 +398,7 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
         or 0
     )
     r_51_100 = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE reward BETWEEN 51 AND 99",
             (),
@@ -422,7 +406,7 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
         or 0
     )
     r_over_100 = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE reward >= 100",
             (),
@@ -447,14 +431,14 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
 
 async def compute_economy_phase(db: aiosqlite.Connection, total_tasks: int) -> dict[str, Any]:
     """Compute economy phase metrics."""
-    now = _now()
+    now = utc_now()
 
     # task_creation_trend: compare last 3.5 days vs previous 3.5 days
-    since_3_5d = (now - timedelta(days=3.5)).isoformat(timespec="seconds").replace("+00:00", "Z")
-    since_7d = (now - timedelta(days=7)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    since_3_5d = to_iso(now - timedelta(days=3.5))
+    since_7d = to_iso(now - timedelta(days=7))
 
     current_period = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE created_at >= ?",
             (since_3_5d,),
@@ -462,7 +446,7 @@ async def compute_economy_phase(db: aiosqlite.Connection, total_tasks: int) -> d
         or 0
     )
     previous_period = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE created_at >= ? AND created_at < ?",
             (since_7d, since_3_5d),
@@ -486,7 +470,7 @@ async def compute_economy_phase(db: aiosqlite.Connection, total_tasks: int) -> d
 
     # dispute_rate
     disputed_count = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE status IN ('disputed', 'ruled')",
             (),
@@ -496,9 +480,9 @@ async def compute_economy_phase(db: aiosqlite.Connection, total_tasks: int) -> d
     dispute_rate = disputed_count / total_tasks if total_tasks > 0 else 0.0
 
     # phase determination
-    since_60m = (now - timedelta(minutes=60)).isoformat(timespec="seconds").replace("+00:00", "Z")
+    since_60m = to_iso(now - timedelta(minutes=60))
     recent_tasks = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE created_at >= ?",
             (since_60m,),
@@ -524,13 +508,13 @@ async def compute_economy_phase(db: aiosqlite.Connection, total_tasks: int) -> d
 
 async def compute_gdp_at_timestamp(db: aiosqlite.Connection, ts_iso: str) -> int:
     """Compute cumulative GDP up to a given timestamp."""
-    approved = await _scalar(
+    approved = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward), 0) FROM board_tasks "
         "WHERE status = 'approved' AND approved_at <= ?",
         (ts_iso,),
     )
-    ruled = await _scalar(
+    ruled = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward * worker_pct / 100), 0) "
         "FROM board_tasks WHERE status = 'ruled' AND worker_pct IS NOT NULL "
@@ -546,7 +530,7 @@ async def compute_gdp_history(
     resolution: str,
 ) -> list[dict[str, Any]]:
     """Compute GDP time series for the given window and resolution."""
-    now = _now()
+    now = datetime.fromisoformat(now_iso().replace("Z", "+00:00"))
 
     window_map = {"1h": timedelta(hours=1), "24h": timedelta(hours=24), "7d": timedelta(days=7)}
     resolution_map = {
@@ -563,7 +547,7 @@ async def compute_gdp_history(
 
     current = start
     while current < now:
-        ts_iso = current.isoformat(timespec="seconds").replace("+00:00", "Z")
+        ts_iso = to_iso(current)
         gdp = await compute_gdp_at_timestamp(db, ts_iso)
         data_points.append({"timestamp": ts_iso, "gdp": gdp})
         current += resolution_delta

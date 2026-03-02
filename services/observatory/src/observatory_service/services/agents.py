@@ -5,37 +5,22 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from observatory_service.services.database import (
+    execute_fetchall,
+    execute_fetchone,
+    execute_scalar,
+)
+
 if TYPE_CHECKING:
     from typing import Any
 
     import aiosqlite
 
 
-async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
-    """Execute query and return the first column of the first row."""
-    async with db.execute(sql, params) as cursor:
-        row = await cursor.fetchone()
-    if row is None:
-        return None
-    return row[0]
-
-
-async def _fetchone(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> Any:
-    """Execute query and return the first row."""
-    async with db.execute(sql, params) as cursor:
-        return await cursor.fetchone()
-
-
-async def _fetchall(db: aiosqlite.Connection, sql: str, params: tuple[Any, ...]) -> list[Any]:
-    """Execute query and return all rows."""
-    async with db.execute(sql, params) as cursor:
-        return list(await cursor.fetchall())
-
-
 async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[str, Any]:
     """Compute stats for a single agent."""
     tasks_posted = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE poster_id = ?",
             (agent_id,),
@@ -44,7 +29,7 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
     )
 
     tasks_completed_as_worker = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = 'approved'",
             (agent_id,),
@@ -53,7 +38,7 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
     )
 
     total_earned = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COALESCE(SUM(amount), 0) FROM bank_transactions "
             "WHERE account_id = ? AND type = 'escrow_release'",
@@ -63,7 +48,7 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
     )
 
     total_spent = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COALESCE(SUM(amount), 0) FROM bank_transactions "
             "WHERE account_id = ? AND type = 'escrow_lock'",
@@ -74,7 +59,7 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
 
     # Spec quality from visible feedback
     spec_es = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE to_agent_id = ? AND category = 'spec_quality' "
@@ -84,7 +69,7 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
         or 0
     )
     spec_sat = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE to_agent_id = ? AND category = 'spec_quality' "
@@ -94,7 +79,7 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
         or 0
     )
     spec_dis = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE to_agent_id = ? AND category = 'spec_quality' "
@@ -106,7 +91,7 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
 
     # Delivery quality from visible feedback
     del_es = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE to_agent_id = ? AND category = 'delivery_quality' "
@@ -116,7 +101,7 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
         or 0
     )
     del_sat = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE to_agent_id = ? AND category = 'delivery_quality' "
@@ -126,7 +111,7 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
         or 0
     )
     del_dis = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM reputation_feedback "
             "WHERE to_agent_id = ? AND category = 'delivery_quality' "
@@ -186,7 +171,7 @@ async def list_agents(
 ) -> dict[str, Any]:
     """List agents with computed stats, sorted and paginated."""
     # Get all agents
-    rows = await _fetchall(
+    rows = await execute_fetchall(
         db,
         "SELECT agent_id, name, registered_at FROM identity_agents",
         (),
@@ -226,7 +211,7 @@ async def list_agents(
 async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str, Any] | None:
     """Get a single agent's full profile."""
     # Check agent exists
-    agent_row = await _fetchone(
+    agent_row = await execute_fetchone(
         db,
         "SELECT agent_id, name, registered_at FROM identity_agents WHERE agent_id = ?",
         (agent_id,),
@@ -238,7 +223,7 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str
 
     # Balance
     balance = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COALESCE(balance, 0) FROM bank_accounts WHERE account_id = ?",
             (agent_id,),
@@ -251,7 +236,7 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str
 
     # Recent tasks (up to 10, most recent first)
     # Tasks where the agent is poster or worker
-    task_rows = await _fetchall(
+    task_rows = await execute_fetchall(
         db,
         "SELECT task_id, title, poster_id, worker_id, status, reward, "
         "approved_at, ruled_at, created_at "
@@ -289,7 +274,7 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str
         )
 
     # Recent feedback (up to 10, most recent, visible only)
-    feedback_rows = await _fetchall(
+    feedback_rows = await execute_fetchall(
         db,
         "SELECT rf.feedback_id, rf.task_id, rf.from_agent_id, "
         "ia.name, rf.category, rf.rating, rf.comment, rf.submitted_at "
@@ -451,7 +436,7 @@ async def get_agent_feed(
     )
     params.append(limit + 1)
 
-    rows = await _fetchall(db, sql, tuple(params))
+    rows = await execute_fetchall(db, sql, tuple(params))
 
     has_more = len(rows) > limit
     rows = rows[:limit]
@@ -523,7 +508,7 @@ async def get_agent_earnings(
 
     Queries bank_transactions for escrow_release events only.
     """
-    rows = await _fetchall(
+    rows = await execute_fetchall(
         db,
         "SELECT timestamp, amount FROM bank_transactions "
         "WHERE account_id = ? AND type = 'escrow_release' "
@@ -545,7 +530,7 @@ async def get_agent_earnings(
 
     # Last 7 days earnings
     last_7d_earned = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COALESCE(SUM(amount), 0) FROM bank_transactions "
             "WHERE account_id = ? AND type = 'escrow_release' "
@@ -557,7 +542,7 @@ async def get_agent_earnings(
 
     # Count of approved tasks as worker (for avg per task)
     tasks_approved = int(
-        await _scalar(
+        await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = 'approved'",
             (agent_id,),
