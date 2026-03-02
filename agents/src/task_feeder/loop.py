@@ -32,6 +32,7 @@ class TaskFeederLoop:
         self._config = config
         self._running = True
         self._tasks_posted = 0
+        self._task_map: dict[str, RawTask] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -65,6 +66,11 @@ class TaskFeederLoop:
     def stop(self) -> None:
         """Signal the loop to stop after the current cycle."""
         self._running = False
+
+    @property
+    def task_map(self) -> dict[str, RawTask]:
+        """Read-only map of task_id -> RawTask for posted tasks."""
+        return self._task_map
 
     # ------------------------------------------------------------------
     # Internal
@@ -105,6 +111,7 @@ class TaskFeederLoop:
         )
 
         task_id = result.get("task_id", "unknown")
+        self._task_map[task_id] = raw_task
         self._tasks_posted += 1
         logger.info(
             "Posted task %s (#%d): level=%d reward=%d",

@@ -19,6 +19,7 @@ from base_agent.agent import BaseAgent
 from base_agent.config import load_agent_config
 from task_feeder.config import load_task_feeder_settings
 from task_feeder.loop import TaskFeederLoop
+from task_feeder.review import ReviewLoop
 
 
 def _setup_logging() -> None:
@@ -55,19 +56,24 @@ async def _main() -> None:
         else:
             raise
 
-    # Create and run the feeder loop
+    # Create and run the feeder/review loops
     loop = TaskFeederLoop(agent=agent, config=feeder_config)
+    review = ReviewLoop(agent=agent, task_map=loop.task_map)
 
     # Graceful shutdown
     def _handle_signal() -> None:
         logger.info("Received shutdown signal")
         loop.stop()
+        review.stop()
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         asyncio.get_running_loop().add_signal_handler(sig, _handle_signal)
 
+    feed_task = asyncio.create_task(loop.run())
+    review_task = asyncio.create_task(review.run(feeder_config.review_interval_seconds))
+
     try:
-        await loop.run()
+        await asyncio.gather(feed_task, review_task)
     finally:
         await agent.close()
         logger.info("Task Feeder shut down cleanly")

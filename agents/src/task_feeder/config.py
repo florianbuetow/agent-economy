@@ -24,6 +24,8 @@ class TaskFeederConfig(BaseModel):
     bidding_deadline_seconds: int
     execution_deadline_seconds: int
     review_deadline_seconds: int
+    review_interval_seconds: int = 30
+    auto_approve_on_error: bool = False
     base_reward: int
     reward_per_level: int
     shuffle: bool

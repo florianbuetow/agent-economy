@@ -39,6 +39,8 @@ task_feeder:
   bidding_deadline_seconds: 120
   execution_deadline_seconds: 300
   review_deadline_seconds: 120
+  review_interval_seconds: 30
+  auto_approve_on_error: false
   base_reward: 10
   reward_per_level: 10
   shuffle: true
