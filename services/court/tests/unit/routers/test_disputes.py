@@ -1261,12 +1261,16 @@ class TestErrorPrecedence:
         assert response.json()["error"] == "INVALID_JWS"
 
     async def test_prec_05_action_checked_before_signer(self, client: AsyncClient) -> None:
-        """PREC-05: Wrong action checked before signer identity."""
+        """PREC-05: Signature verification rejects rogue signer before action check.
+
+        With local crypto verification, signature check IS the signer check
+        and happens before action validation.
+        """
         payload = file_dispute_payload(action="wrong_action")
         inject_identity_verify(ROGUE_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload, kid=ROGUE_AGENT_ID))
-        assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.status_code == 403
+        assert response.json()["error"] == "FORBIDDEN"
 
     async def test_prec_06_identity_checked_before_payload(self, client: AsyncClient) -> None:
         """PREC-06: Identity error takes precedence over wrong action."""

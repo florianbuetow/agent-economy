@@ -6,7 +6,9 @@ import base64
 import json
 import uuid
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
+
+from cryptography.exceptions import InvalidSignature
 
 
 def make_jws_token(payload: dict[str, Any], kid: str = "a-platform-test") -> str:
@@ -92,6 +94,51 @@ def make_mock_reputation_client(
     else:
         mock_client.record_feedback.return_value = {"status": "ok"}
     return mock_client
+
+
+def make_mock_platform_agent(
+    agent_id: str = "a-platform-test-id",
+    task_response: dict[str, Any] | None = None,
+) -> MagicMock:
+    """Create a mock PlatformAgent with all required methods.
+
+    validate_certificate is sync (MagicMock). By default it decodes
+    the base64 body of a JWS compact token. Override via side_effect
+    or return_value for specific test scenarios.
+
+    get_task, split_escrow, record_ruling, submit_platform_feedback
+    are async (AsyncMock).
+    """
+    mock = MagicMock()
+    mock.agent_id = agent_id
+
+    def _decode_jws_body(token: str) -> dict[str, Any]:
+        """Decode and verify a fake JWS token.
+
+        Checks that the signature matches the known fake-signature constant
+        used by make_jws_token. Tokens from make_tampered_jws have a different
+        signature and will be rejected with InvalidSignature.
+        """
+        parts = token.split(".")
+        sig_part = parts[2]
+        sig_part += "=" * (4 - len(sig_part) % 4)
+        sig_bytes = base64.urlsafe_b64decode(sig_part)
+        if sig_bytes != b"fake-signature":
+            raise InvalidSignature()
+        body = parts[1]
+        body += "=" * (4 - len(body) % 4)
+        return json.loads(base64.urlsafe_b64decode(body))  # type: ignore[no-any-return]
+
+    mock.validate_certificate = MagicMock(side_effect=_decode_jws_body)
+    mock.close = AsyncMock()
+
+    mock.get_task = AsyncMock(return_value=task_response or {})
+    mock.split_escrow = AsyncMock(return_value={"status": "ok"})
+    mock.record_ruling = AsyncMock(return_value={"status": "ok"})
+    mock.submit_platform_feedback = AsyncMock(return_value={"status": "ok"})
+    mock.record_feedback = mock.submit_platform_feedback
+
+    return mock
 
 
 def make_mock_judge(

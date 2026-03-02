@@ -19,7 +19,7 @@ from base_agent.mixins import (
     ReputationMixin,
     TaskBoardMixin,
 )
-from base_agent.signing import create_jws, public_key_to_b64
+from base_agent.signing import create_jws, public_key_to_b64, verify_jws
 
 if TYPE_CHECKING:
     from base_agent.config import AgentConfig
@@ -123,6 +123,24 @@ class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, Court
             if callable(attr) and hasattr(attr, "tool_definition"):
                 tools.append(attr)
         return tools
+
+    def validate_certificate(self, token: str) -> dict[str, object]:
+        """Validate that a JWS token (certificate) was signed with this agent's private key.
+
+        Decrypts the certificate using the agent's public key and returns the
+        decoded payload. If the signature is invalid, an exception is raised.
+
+        Args:
+            token: Compact JWS string (header.payload.signature).
+
+        Returns:
+            Decoded payload as a dictionary.
+
+        Raises:
+            ValueError: If the token format is invalid.
+            cryptography.exceptions.InvalidSignature: If the signature is invalid.
+        """
+        return verify_jws(token, self._public_key)
 
     async def close(self) -> None:
         """Close the HTTP client. Call this when done using the agent."""

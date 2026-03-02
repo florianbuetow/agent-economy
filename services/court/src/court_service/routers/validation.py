@@ -5,9 +5,12 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
+from cryptography.exceptions import InvalidSignature
 from service_commons.exceptions import ServiceError
 
 if TYPE_CHECKING:
+    from base_agent.platform import PlatformAgent
+
     from court_service.services.identity_client import IdentityClient
 
 
@@ -39,6 +42,44 @@ def extract_jws_token(data: dict[str, Any], field: str) -> str:
             {},
         )
     return token
+
+
+def verify_platform_token(token: str, platform_agent: PlatformAgent | None) -> dict[str, Any]:
+    """Verify a JWS token was signed by the platform agent.
+
+    Uses local cryptographic verification — no Identity service round-trip needed.
+    If verification succeeds, the token was signed with the platform's private key.
+
+    Args:
+        token: Compact JWS string.
+        platform_agent: The platform agent with the verification key.
+
+    Returns:
+        Decoded payload as a dictionary.
+
+    Raises:
+        ServiceError: If verification fails or platform agent is not available.
+    """
+    if platform_agent is None:
+        msg = "Platform agent not initialized"
+        raise RuntimeError(msg)
+
+    try:
+        payload = platform_agent.validate_certificate(token)
+    except (InvalidSignature, ValueError) as exc:
+        raise ServiceError("FORBIDDEN", "JWS signature verification failed", 403, {}) from exc
+    except Exception as exc:
+        raise ServiceError(
+            "IDENTITY_SERVICE_UNAVAILABLE",
+            "Cannot reach Identity service",
+            502,
+            {},
+        ) from exc
+
+    if not isinstance(payload, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ServiceError("INVALID_PAYLOAD", "JWS payload must be a JSON object", 400, {})
+
+    return payload
 
 
 async def verify_jws(token: str, identity_client: IdentityClient | None) -> dict[str, Any]:

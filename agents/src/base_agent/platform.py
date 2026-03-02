@@ -1,11 +1,10 @@
-"""PlatformAgent — privileged agent for platform banking operations."""
+"""PlatformAgent — privileged agent for platform operations."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from base_agent.agent import BaseAgent
-from base_agent.signing import verify_jws
 
 
 class PlatformAgent(BaseAgent):
@@ -107,23 +106,51 @@ class PlatformAgent(BaseAgent):
         )
         return await self._request("POST", url, json={"token": token})
 
+    async def get_task(self, task_id: str) -> dict[str, Any]:
+        """Fetch task details from the Task Board.
+
+        Args:
+            task_id: The task to fetch.
+
+        Returns:
+            Task data dictionary from Task Board.
+        """
+        url = f"{self.config.task_board_url}/tasks/{task_id}"
+        return await self._request("GET", url)
+
+    async def record_ruling(self, task_id: str, ruling_payload: dict[str, Any]) -> dict[str, Any]:
+        """Record a dispute ruling on the Task Board.
+
+        Args:
+            task_id: The task the ruling applies to.
+            ruling_payload: Ruling data to sign and send.
+
+        Returns:
+            Response from Task Board.
+        """
+        url = f"{self.config.task_board_url}/tasks/{task_id}/ruling"
+        token = self._sign_jws(ruling_payload)
+        return await self._request("POST", url, json={"token": token})
+
+    async def submit_platform_feedback(self, feedback_payload: dict[str, Any]) -> dict[str, Any]:
+        """Submit reputation feedback as the platform agent.
+
+        Args:
+            feedback_payload: Feedback data to sign and send.
+
+        Returns:
+            Response from Reputation service.
+        """
+        url = f"{self.config.reputation_url}/feedback"
+        token = self._sign_jws(feedback_payload)
+        return await self._request("POST", url, json={"token": token})
+
     def verify_platform_jws(self, token: str) -> dict[str, object]:
         """Verify a JWS token was signed by this platform agent.
 
-        Uses local cryptographic verification against this agent's public key.
-        No Identity service round-trip needed.
-
-        Args:
-            token: Compact JWS string to verify.
-
-        Returns:
-            Decoded payload as a dictionary.
-
-        Raises:
-            cryptography.exceptions.InvalidSignature: If the signature is invalid.
-            ValueError: If the token format is invalid.
+        Alias for validate_certificate(). Prefer validate_certificate() for new code.
         """
-        return verify_jws(token, self._public_key)
+        return self.validate_certificate(token)
 
     def __repr__(self) -> str:
         registered = f", agent_id={self.agent_id!r}" if self.agent_id else ""

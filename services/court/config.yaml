@@ -6,7 +6,7 @@ service:
   version: "0.1.0"
 
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8005
   log_level: "info"
 
@@ -22,18 +22,8 @@ identity:
   verify_jws_path: "/agents/verify-jws"
   timeout_seconds: 10
 
-task_board:
-  base_url: "http://localhost:8003"
-
-central_bank:
-  base_url: "http://localhost:8002"
-
-reputation:
-  base_url: "http://localhost:8004"
-
 platform:
-  agent_id: "a-platform-local"
-  private_key_path: "data/platform.key"
+  agent_config_path: "../../agents/config.yaml"
 
 disputes:
   rebuttal_deadline_seconds: 86400
