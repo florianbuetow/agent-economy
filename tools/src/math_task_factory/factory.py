@@ -3,60 +3,30 @@
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
-from typing import Callable, Literal
+from typing import Callable
 
-
-@dataclass
-class MathTask:
-    """A mathematical problem task with title, spec, and solution(s)."""
-
-    title: str
-    spec: str
-    solutions: list[str]
-    level: int
-    problem_type: str
-    solution_note: str | None = field(default=None)
-
-
-ProblemType = Literal[
-    "addition_positive",
-    "addition_positive_text",
-    "addition_signed",
-    "addition_small",
-    "addition_small_text",
-    "addition_large",
-    "addition_large_text",
-    "addition_float",
-    "subtraction",
-    "multiplication",
-    "multiplication_text",
-    "multiplication_small",
-    "multiplication_large",
-    "multiplication_float",
-    "division",
-    "division_float",
-    "order_of_operations",
-    "modulo",
-    "modulo_text",
-    "modulo_large",
-    "single_variable_add_sub",
-    "single_variable_add_sub_text",
-    "single_variable_mul_div",
-    "single_variable_combined",
-    "system_solvable",
-    "system_unsolvable",
-    "system_infinite",
-    "exponential",
-    "exponential_equation",
-    "square_root",
-    "logarithm",
-    "prime_check",
-    "cube_check",
-    "power_of_two_check",
-    "perfect_square_check",
-    "division_by_zero",
-]
+from math_task_factory.types import MathTask, ProblemType
+from math_task_factory.generators import (
+    gen_allocation_constraints,
+    gen_bank_transactions,
+    gen_chain_arithmetic,
+    gen_chain_percentage,
+    gen_chain_remainder,
+    gen_combined_chain_constraint,
+    gen_combined_conditional_chain,
+    gen_combined_state_large,
+    gen_conditional_word,
+    gen_digit_manipulation,
+    gen_distractor_word,
+    gen_large_factorial_mod,
+    gen_large_multiplication,
+    gen_large_sum_series,
+    gen_multi_step_word,
+    gen_number_constraints,
+    gen_production_pipeline,
+    gen_scheduling_constraints,
+    gen_warehouse_inventory,
+)
 
 
 class MathTaskFactory:
@@ -166,6 +136,37 @@ _PROBLEM_TYPES_BY_LEVEL: dict[int, tuple[ProblemType, ...]] = {
         "power_of_two_check",
         "perfect_square_check",
         "division_by_zero",
+    ),
+    10: (
+        "chain_arithmetic",
+        "chain_percentage",
+        "chain_remainder",
+    ),
+    11: (
+        "warehouse_inventory",
+        "bank_transactions",
+        "production_pipeline",
+    ),
+    12: (
+        "number_constraints",
+        "scheduling_constraints",
+        "allocation_constraints",
+    ),
+    13: (
+        "multi_step_word",
+        "distractor_word",
+        "conditional_word",
+    ),
+    14: (
+        "large_multiplication",
+        "large_factorial_mod",
+        "large_sum_series",
+        "digit_manipulation",
+    ),
+    15: (
+        "combined_chain_constraint",
+        "combined_state_large",
+        "combined_conditional_chain",
     ),
 }
 
@@ -976,4 +977,29 @@ _GENERATORS: dict[ProblemType, Callable[[random.Random], MathTask]] = {
     "power_of_two_check": _gen_power_of_two_check,
     "perfect_square_check": _gen_perfect_square_check,
     "division_by_zero": _gen_division_by_zero,
+    # Level 10: Chain arithmetic
+    "chain_arithmetic": gen_chain_arithmetic,
+    "chain_percentage": gen_chain_percentage,
+    "chain_remainder": gen_chain_remainder,
+    # Level 11: Multi-variable state tracking
+    "warehouse_inventory": gen_warehouse_inventory,
+    "bank_transactions": gen_bank_transactions,
+    "production_pipeline": gen_production_pipeline,
+    # Level 12: Constraint satisfaction
+    "number_constraints": gen_number_constraints,
+    "scheduling_constraints": gen_scheduling_constraints,
+    "allocation_constraints": gen_allocation_constraints,
+    # Level 13: Compound word problems
+    "multi_step_word": gen_multi_step_word,
+    "distractor_word": gen_distractor_word,
+    "conditional_word": gen_conditional_word,
+    # Level 14: Large exact arithmetic
+    "large_multiplication": gen_large_multiplication,
+    "large_factorial_mod": gen_large_factorial_mod,
+    "large_sum_series": gen_large_sum_series,
+    "digit_manipulation": gen_digit_manipulation,
+    # Level 15: Combined difficulty
+    "combined_chain_constraint": gen_combined_chain_constraint,
+    "combined_state_large": gen_combined_state_large,
+    "combined_conditional_chain": gen_combined_conditional_chain,
 }

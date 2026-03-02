@@ -5,6 +5,7 @@ description = "Simulation tools and CLI utilities for the agent economy"
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.0",
+    "openai>=1.0.0",
     "pydantic>=2.10.0",
     "pyyaml>=6.0.0",
     "rich>=13.0.0",
@@ -13,6 +14,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
     "ruff>=0.8.0",
     "mypy>=1.13.0",
 ]
@@ -23,3 +25,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/math_task_factory"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: Fast isolated unit tests",
+    "integration: Require running service",
+    "performance: Latency/throughput benchmarks",
+]

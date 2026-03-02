@@ -43,19 +43,19 @@ def main() -> int:
         "--level",
         type=int,
         metavar="N",
-        help="Generate tasks at level N (1-9).",
+        help="Generate tasks at level N (1-15).",
     )
     parser.add_argument(
         "--levels",
         type=str,
         metavar="N-M",
-        help="Generate tasks at levels N through M (e.g. 1-6).",
+        help="Generate tasks at levels N through M (e.g. 1-15).",
     )
     parser.add_argument(
         "--total",
         type=int,
         metavar="N",
-        help="Generate exactly N tasks total, distributed across all levels (1-9).",
+        help="Generate exactly N tasks total, distributed across all levels (1-15).",
     )
     parser.add_argument(
         "--count",
@@ -88,7 +88,44 @@ def main() -> int:
         default="json",
         help="Output format (default: json).",
     )
+    parser.add_argument(
+        "--dress-up",
+        action="store_true",
+        help="Rewrite tasks as rich narrative word problems via LLM.",
+    )
+    parser.add_argument(
+        "--llm-base-url",
+        type=str,
+        metavar="URL",
+        help="LLM API base URL (e.g. http://127.0.0.1:1234/v1). Required with --dress-up.",
+    )
+    parser.add_argument(
+        "--llm-api-key",
+        type=str,
+        default="not-needed",
+        metavar="KEY",
+        help="LLM API key (default: 'not-needed' for local models).",
+    )
+    parser.add_argument(
+        "--llm-model",
+        type=str,
+        metavar="MODEL",
+        help="LLM model ID (e.g. gemma-3-1b-it). Required with --dress-up.",
+    )
+    parser.add_argument(
+        "--llm-temperature",
+        type=float,
+        default=0.9,
+        metavar="T",
+        help="LLM temperature for dress-up creativity (default: 0.9).",
+    )
     args = parser.parse_args()
+
+    if args.dress_up:
+        if not args.llm_base_url:
+            parser.error("--llm-base-url is required when using --dress-up")
+        if not args.llm_model:
+            parser.error("--llm-model is required when using --dress-up")
 
     if args.total is not None:
         if args.total < 1:
@@ -102,12 +139,14 @@ def main() -> int:
             parser.error("Provide --level or --levels, not both")
 
     from math_task_factory import MathTaskFactory
+    from math_task_factory.factory import _PROBLEM_TYPES_BY_LEVEL
 
+    max_level = max(_PROBLEM_TYPES_BY_LEVEL)
     factory = MathTaskFactory(seed=args.seed)
     problem_type = args.problem_type if args.problem_type else None
 
     if args.total is not None:
-        levels_tuple = tuple(range(1, 10))
+        levels_tuple = tuple(range(1, max_level + 1))
         tasks = []
         for _ in range(args.total):
             level = factory._rng.choice(levels_tuple)
@@ -136,6 +175,30 @@ def main() -> int:
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
+
+    if args.dress_up:
+        import asyncio
+
+        from math_task_factory.llm_dressup import LLMDressUp, LLMDressUpConfig
+
+        dress_config = LLMDressUpConfig(
+            base_url=args.llm_base_url,
+            api_key=args.llm_api_key,
+            model_id=args.llm_model,
+            temperature=args.llm_temperature,
+            max_tokens=2048,
+            max_retries=3,
+        )
+        dresser = LLMDressUp(config=dress_config)
+
+        async def _run_dressup() -> list:
+            try:
+                return await dresser.dress_up_batch(tasks)
+            finally:
+                await dresser.close()
+
+        print(f"Dressing up {len(tasks)} task(s) via LLM...", file=sys.stderr)
+        tasks = asyncio.run(_run_dressup())
 
     task_dicts = [_task_to_dict(t) for t in tasks]
 
