@@ -28,7 +28,7 @@ from service_commons.exceptions import ServiceError
 
 from court_service.core.state import get_app_state
 from tests.helpers import (
-    make_mock_identity_client,
+    make_mock_platform_agent,
     make_tampered_jws,
     new_escrow_id,
     new_task_id,
@@ -212,9 +212,7 @@ class TestFileDispute:
         """FILE-15: Tampered JWS is rejected."""
         payload = file_dispute_payload()
         state = get_app_state()
-        state.identity_client = make_mock_identity_client(
-            verify_response={"valid": False, "agent_id": None, "payload": None}
-        )
+        state.platform_agent = make_mock_platform_agent(agent_id=PLATFORM_AGENT_ID)
         token = make_tampered_jws(payload, kid=PLATFORM_AGENT_ID)
         response = await client.post("/disputes/file", json={"token": token})
         assert response.status_code == 403
@@ -425,8 +423,8 @@ class TestTriggerRuling:
         payload = file_dispute_payload(escrow_id=escrow_id)
         await file_rebut_and_rule(client, file_payload=payload, worker_pct=70)
         state = get_app_state()
-        assert state.central_bank_client.split_escrow.call_count == 1
-        call_args = state.central_bank_client.split_escrow.call_args
+        assert state.platform_agent.split_escrow.call_count == 1
+        call_args = state.platform_agent.split_escrow.call_args
         assert escrow_id in str(call_args)
         assert 70 in call_args.args or any(v == 70 for v in call_args.kwargs.values())
 
@@ -434,14 +432,14 @@ class TestTriggerRuling:
         """RULE-07: Reputation service record_feedback called at least twice."""
         await file_rebut_and_rule(client)
         state = get_app_state()
-        assert state.reputation_client.record_feedback.call_count >= 2
+        assert state.platform_agent.record_feedback.call_count >= 2
 
     async def test_rule_08_worker_pct_zero(self, client: AsyncClient) -> None:
         """RULE-08: worker_pct=0 means poster full refund."""
         ruling = await file_rebut_and_rule(client, worker_pct=0)
         assert ruling["worker_pct"] == 0
         state = get_app_state()
-        call_args = state.central_bank_client.split_escrow.call_args
+        call_args = state.platform_agent.split_escrow.call_args
         assert 0 in call_args.args or any(v == 0 for v in call_args.kwargs.values())
 
     async def test_rule_09_worker_pct_hundred(self, client: AsyncClient) -> None:
@@ -449,7 +447,7 @@ class TestTriggerRuling:
         ruling = await file_rebut_and_rule(client, worker_pct=100)
         assert ruling["worker_pct"] == 100
         state = get_app_state()
-        call_args = state.central_bank_client.split_escrow.call_args
+        call_args = state.platform_agent.split_escrow.call_args
         assert 100 in call_args.args or any(v == 100 for v in call_args.kwargs.values())
 
     async def test_rule_10_worker_pct_fifty(self, client: AsyncClient) -> None:
@@ -457,7 +455,7 @@ class TestTriggerRuling:
         ruling = await file_rebut_and_rule(client, worker_pct=50)
         assert ruling["worker_pct"] == 50
         state = get_app_state()
-        call_args = state.central_bank_client.split_escrow.call_args
+        call_args = state.platform_agent.split_escrow.call_args
         assert 50 in call_args.args or any(v == 50 for v in call_args.kwargs.values())
 
     async def test_rule_11_worker_pct_arbitrary(self, client: AsyncClient) -> None:
@@ -465,7 +463,7 @@ class TestTriggerRuling:
         ruling = await file_rebut_and_rule(client, worker_pct=73)
         assert ruling["worker_pct"] == 73
         state = get_app_state()
-        call_args = state.central_bank_client.split_escrow.call_args
+        call_args = state.platform_agent.split_escrow.call_args
         assert 73 in call_args.args or any(v == 73 for v in call_args.kwargs.values())
 
     async def test_rule_12_dispute_not_found(self, client: AsyncClient) -> None:
@@ -1058,9 +1056,7 @@ class TestPlatformJWS:
         """AUTH-09: Tampered JWS returns 403."""
         payload = file_dispute_payload()
         state = get_app_state()
-        state.identity_client = make_mock_identity_client(
-            verify_response={"valid": False, "agent_id": None, "payload": None}
-        )
+        state.platform_agent = make_mock_platform_agent(agent_id=PLATFORM_AGENT_ID)
         token = make_tampered_jws(payload, kid=PLATFORM_AGENT_ID)
         response = await client.post("/disputes/file", json={"token": token})
         assert response.status_code == 403

@@ -23,21 +23,6 @@ class AppState:
     judges: list[Judge] | None = None
 
     @property
-    def central_bank_client(self) -> PlatformAgent | None:
-        """Backward-compat alias — delegates to platform_agent."""
-        return self.platform_agent
-
-    @property
-    def reputation_client(self) -> PlatformAgent | None:
-        """Backward-compat alias — delegates to platform_agent."""
-        return self.platform_agent
-
-    @property
-    def task_board_client(self) -> PlatformAgent | None:
-        """Backward-compat alias — delegates to platform_agent."""
-        return self.platform_agent
-
-    @property
     def uptime_seconds(self) -> float:
         """Calculate uptime in seconds."""
         return (datetime.now(UTC) - self.start_time).total_seconds()

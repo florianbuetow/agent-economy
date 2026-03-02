@@ -37,20 +37,6 @@ def make_tampered_jws(payload: dict[str, Any], kid: str = "a-platform-test") -> 
     return f"{header}.{body}.{signature}"
 
 
-def make_mock_identity_client(
-    verify_response: dict[str, Any] | None = None,
-    verify_side_effect: Exception | None = None,
-) -> AsyncMock:
-    """Create a mock IdentityClient returning predictable responses."""
-    mock_client = AsyncMock()
-    mock_client.close = AsyncMock()
-    if verify_side_effect is not None:
-        mock_client.verify_jws.side_effect = verify_side_effect
-    elif verify_response is not None:
-        mock_client.verify_jws.return_value = verify_response
-    return mock_client
-
-
 def make_mock_task_board_client(
     task_response: dict[str, Any] | None = None,
     task_side_effect: Exception | None = None,
