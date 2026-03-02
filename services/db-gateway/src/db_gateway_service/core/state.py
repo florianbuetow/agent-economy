@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from db_gateway_service.services.db_reader import DbReader
     from db_gateway_service.services.db_writer import DbWriter
 
 
@@ -16,6 +17,7 @@ class AppState:
 
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     db_writer: DbWriter | None = None
+    db_reader: DbReader | None = None
 
     @property
     def uptime_seconds(self) -> float:

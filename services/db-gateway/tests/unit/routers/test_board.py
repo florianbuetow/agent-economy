@@ -569,7 +569,7 @@ class TestTaskStatusUpdate:
                     "worker_id": worker,
                     "accepted_bid_id": bid_id,
                     "accepted_at": "2026-02-28T12:00:00Z",
-                    "execution_deadline": "2026-03-02T12:00:00Z",
+                    "execution_deadline": "2026-03-02T06:36:00Z",
                 },
                 "event": make_event(source="board", event_type="task.accepted", task_id=tid),
             },
@@ -595,7 +595,7 @@ class TestTaskStatusUpdate:
                     "worker_id": worker,
                     "accepted_bid_id": f"bid-{uuid4()}",
                     "accepted_at": "2026-02-28T12:00:00Z",
-                    "execution_deadline": "2026-03-02T12:00:00Z",
+                    "execution_deadline": "2026-03-02T06:36:00Z",
                 },
                 "event": make_event(source="board", event_type="task.accepted", task_id=tid),
             },
@@ -629,7 +629,7 @@ class TestTaskStatusUpdate:
                     "worker_id": worker,
                     "accepted_bid_id": f"bid-{uuid4()}",
                     "accepted_at": "2026-02-28T12:00:00Z",
-                    "execution_deadline": "2026-03-02T12:00:00Z",
+                    "execution_deadline": "2026-03-02T06:36:00Z",
                 },
                 "event": make_event(source="board", event_type="task.accepted", task_id=tid),
             },
@@ -690,7 +690,7 @@ class TestTaskStatusUpdate:
                     "worker_id": worker,
                     "accepted_bid_id": f"bid-{uuid4()}",
                     "accepted_at": "2026-02-28T12:00:00Z",
-                    "execution_deadline": "2026-03-02T12:00:00Z",
+                    "execution_deadline": "2026-03-02T06:36:00Z",
                 },
                 "event": make_event(source="board", event_type="task.accepted", task_id=tid),
             },
@@ -858,7 +858,7 @@ class TestTaskStatusUpdate:
                     "worker_id": worker,
                     "accepted_bid_id": bid_id,
                     "accepted_at": "2026-02-28T12:00:00Z",
-                    "execution_deadline": "2026-03-02T12:00:00Z",
+                    "execution_deadline": "2026-03-02T06:36:00Z",
                 },
                 "event": make_event(source="board", event_type="task.accepted", task_id=tid),
             },
@@ -878,7 +878,7 @@ class TestTaskStatusUpdate:
         assert row[1] == worker
         assert row[2] == bid_id
         assert row[3] == "2026-02-28T12:00:00Z"
-        assert row[4] == "2026-03-02T12:00:00Z"
+        assert row[4] == "2026-03-02T06:36:00Z"
 
     def test_gateway_does_not_validate_transitions(self, app_with_writer: TestClient) -> None:
         """TSTAT-14: Gateway does not validate status transitions (skip accepted/submitted)."""

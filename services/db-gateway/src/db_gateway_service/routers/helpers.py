@@ -102,3 +102,20 @@ def validate_non_negative_integer(data: dict[str, Any], field_name: str) -> None
             400,
             {"field": field_name},
         )
+
+
+def validate_constraints(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Validate and return optional constraints object."""
+    constraints = data.get("constraints")
+    if constraints is None:
+        return None
+    if not isinstance(constraints, dict):
+        raise ServiceError(
+            error="invalid_constraints",
+            message="constraints must be a JSON object",
+            status_code=400,
+            details={},
+        )
+    if len(constraints) == 0:
+        return None
+    return constraints

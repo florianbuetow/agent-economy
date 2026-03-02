@@ -28,6 +28,7 @@ TASK_UPDATE_COLUMNS: frozenset[str] = frozenset(
         "ruling_summary",
         "ruled_at",
         "expired_at",
+        "escrow_pending",
     }
 )
 
@@ -54,6 +55,7 @@ class DbWriter:
     ) -> None:
         self._db_path = db_path
         self._db = sqlite3.connect(db_path, check_same_thread=False)
+        self._db.row_factory = sqlite3.Row
         self._db.execute(f"PRAGMA journal_mode={journal_mode}")
         self._db.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
         self._db.execute("PRAGMA foreign_keys=ON")
@@ -87,6 +89,105 @@ class DbWriter:
             ),
         )
         return cursor.lastrowid or 0
+
+    def _compile_constraints(
+        self,
+        table: str,
+        pk_column: str,
+        pk_value: str,
+        constraints: dict[str, Any],
+    ) -> tuple[str, list[Any]]:
+        """Compile constraints into a WHERE clause for UPDATE statements."""
+        where_parts = [f"{pk_column} = ?"]
+        params: list[Any] = [pk_value]
+        for column, expected in constraints.items():
+            if not column.isidentifier():
+                raise ServiceError(
+                    "invalid_constraints",
+                    "Constraint column names must be valid identifiers",
+                    400,
+                    {"table": table, "column": column},
+                )
+            where_parts.append(f"{column} = ?")
+            params.append(expected)
+        return " AND ".join(where_parts), params
+
+    def _check_constraint_violation(
+        self,
+        cursor: sqlite3.Cursor,
+        table: str,
+        pk_column: str,
+        pk_value: str,
+        constraints: dict[str, Any],
+    ) -> None:
+        """Query actual values after a 0-rowcount update and raise a descriptive error."""
+        row = cursor.execute(
+            f"SELECT * FROM {table} WHERE {pk_column} = ?",  # nosec B608
+            (pk_value,),
+        ).fetchone()
+        if row is None:
+            raise ServiceError(
+                error="not_found",
+                message=f"No {table} row with {pk_column}={pk_value}",
+                status_code=404,
+                details={"table": table, pk_column: pk_value},
+            )
+
+        row_dict = dict(row)
+        for column, expected in constraints.items():
+            actual = row_dict.get(column)
+            if str(actual) != str(expected):
+                raise ServiceError(
+                    error="constraint_violation",
+                    message=f"Expected {column}='{expected}' but found {column}='{actual}'",
+                    status_code=409,
+                    details={
+                        "table": table,
+                        "constraint": column,
+                        "expected": str(expected),
+                        "actual": str(actual),
+                    },
+                )
+
+    def _verify_cross_table_constraint(
+        self,
+        cursor: sqlite3.Cursor,
+        table: str,
+        conditions: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Verify cross-table preconditions with a SELECT lookup."""
+        if len(conditions) == 0:
+            raise ServiceError(
+                "invalid_constraints",
+                "Cross-table constraints cannot be empty",
+                400,
+                {"table": table},
+            )
+        where_parts: list[str] = []
+        params: list[Any] = []
+        for column, expected in conditions.items():
+            if not column.isidentifier():
+                raise ServiceError(
+                    "invalid_constraints",
+                    "Constraint column names must be valid identifiers",
+                    400,
+                    {"table": table, "column": column},
+                )
+            where_parts.append(f"{column} = ?")
+            params.append(expected)
+        where_clause = " AND ".join(where_parts)
+        row = cursor.execute(
+            f"SELECT * FROM {table} WHERE {where_clause}",  # nosec B608
+            params,
+        ).fetchone()
+        if row is None:
+            raise ServiceError(
+                error="constraint_violation",
+                message=f"Cross-table constraint failed on {table}",
+                status_code=409,
+                details={"table": table, "conditions": conditions},
+            )
+        return dict(row)
 
     def get_database_size_bytes(self) -> int:
         """Get the size of the database file in bytes."""
@@ -227,10 +328,6 @@ class DbWriter:
                     409,
                     {},
                 ) from exc
-            # PK violation — check idempotency
-            existing = self._lookup_account(data["account_id"])
-            if existing is not None and existing["balance"] == data["balance"]:
-                return {"account_id": data["account_id"], "event_id": 0}
             raise ServiceError(
                 "account_exists",
                 "Account already exists for this agent",
@@ -471,7 +568,11 @@ class DbWriter:
     # Bank — Escrow Release
     # ------------------------------------------------------------------
 
-    def escrow_release(self, data: dict[str, Any]) -> dict[str, Any]:
+    def escrow_release(
+        self,
+        data: dict[str, Any],
+        constraints: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Release escrowed funds to a recipient.
 
@@ -507,10 +608,38 @@ class DbWriter:
                 ),
             )
             # Resolve escrow
-            cursor.execute(
-                "UPDATE bank_escrow SET status = 'released', resolved_at = ? WHERE escrow_id = ?",
-                (data["resolved_at"], data["escrow_id"]),
-            )
+            if constraints is not None:
+                where_clause, where_params = self._compile_constraints(
+                    "bank_escrow",
+                    "escrow_id",
+                    data["escrow_id"],
+                    constraints,
+                )
+                cursor.execute(
+                    f"UPDATE bank_escrow SET status = 'released', resolved_at = ? "
+                    f"WHERE {where_clause}",  # nosec B608
+                    [data["resolved_at"], *where_params],
+                )
+                if cursor.rowcount == 0:
+                    try:
+                        self._check_constraint_violation(
+                            cursor,
+                            "bank_escrow",
+                            "escrow_id",
+                            data["escrow_id"],
+                            constraints,
+                        )
+                    except ServiceError:
+                        self._db.rollback()
+                        raise
+                    self._db.rollback()
+                    raise ServiceError("escrow_not_found", "No escrow with this ID", 404, {})
+            else:
+                cursor.execute(
+                    "UPDATE bank_escrow SET status = 'released', resolved_at = ? "
+                    "WHERE escrow_id = ?",
+                    (data["resolved_at"], data["escrow_id"]),
+                )
             event_id = self._insert_event(cursor, data["event"])
             self._db.commit()
             return {
@@ -550,7 +679,11 @@ class DbWriter:
     # Bank — Escrow Split
     # ------------------------------------------------------------------
 
-    def escrow_split(self, data: dict[str, Any]) -> dict[str, Any]:
+    def escrow_split(
+        self,
+        data: dict[str, Any],
+        constraints: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Split escrowed funds between worker and poster.
 
@@ -620,10 +753,37 @@ class DbWriter:
                     ),
                 )
             # Resolve escrow
-            cursor.execute(
-                "UPDATE bank_escrow SET status = 'split', resolved_at = ? WHERE escrow_id = ?",
-                (data["resolved_at"], data["escrow_id"]),
-            )
+            if constraints is not None:
+                where_clause, where_params = self._compile_constraints(
+                    "bank_escrow",
+                    "escrow_id",
+                    data["escrow_id"],
+                    constraints,
+                )
+                cursor.execute(
+                    f"UPDATE bank_escrow SET status = 'split', resolved_at = ? "
+                    f"WHERE {where_clause}",  # nosec B608
+                    [data["resolved_at"], *where_params],
+                )
+                if cursor.rowcount == 0:
+                    try:
+                        self._check_constraint_violation(
+                            cursor,
+                            "bank_escrow",
+                            "escrow_id",
+                            data["escrow_id"],
+                            constraints,
+                        )
+                    except ServiceError:
+                        self._db.rollback()
+                        raise
+                    self._db.rollback()
+                    raise ServiceError("escrow_not_found", "No escrow with this ID", 404, {})
+            else:
+                cursor.execute(
+                    "UPDATE bank_escrow SET status = 'split', resolved_at = ? WHERE escrow_id = ?",
+                    (data["resolved_at"], data["escrow_id"]),
+                )
             event_id = self._insert_event(cursor, data["event"])
             self._db.commit()
             return {
@@ -657,8 +817,8 @@ class DbWriter:
                 "INSERT INTO board_tasks "
                 "(task_id, poster_id, title, spec, reward, status, "
                 "bidding_deadline_seconds, deadline_seconds, review_deadline_seconds, "
-                "bidding_deadline, escrow_id, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "bidding_deadline, bid_count, escrow_pending, escrow_id, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     data["task_id"],
                     data["poster_id"],
@@ -670,6 +830,8 @@ class DbWriter:
                     data["deadline_seconds"],
                     data["review_deadline_seconds"],
                     data["bidding_deadline"],
+                    data.get("bid_count", 0),
+                    data.get("escrow_pending", 0),
                     data["escrow_id"],
                     data["created_at"],
                 ),
@@ -701,7 +863,11 @@ class DbWriter:
     # Board — Bids
     # ------------------------------------------------------------------
 
-    def submit_bid(self, data: dict[str, Any]) -> dict[str, Any]:
+    def submit_bid(
+        self,
+        data: dict[str, Any],
+        constraints: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Submit a bid on a task.
 
@@ -711,14 +877,22 @@ class DbWriter:
         cursor = self._db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
+            if constraints is not None:
+                self._verify_cross_table_constraint(
+                    cursor,
+                    "board_tasks",
+                    {"task_id": data["task_id"], **constraints},
+                )
             cursor.execute(
-                "INSERT INTO board_bids (bid_id, task_id, bidder_id, proposal, submitted_at) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO board_bids "
+                "(bid_id, task_id, bidder_id, proposal, amount, submitted_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     data["bid_id"],
                     data["task_id"],
                     data["bidder_id"],
                     data["proposal"],
+                    data.get("amount", 0),
                     data["submitted_at"],
                 ),
             )
@@ -749,7 +923,12 @@ class DbWriter:
     # Board — Task Status Update
     # ------------------------------------------------------------------
 
-    def update_task_status(self, task_id: str, data: dict[str, Any]) -> dict[str, Any]:
+    def update_task_status(
+        self,
+        task_id: str,
+        data: dict[str, Any],
+        constraints: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Update task status and associated fields.
 
@@ -776,12 +955,36 @@ class DbWriter:
                 values.append(val)
 
             set_clause = ", ".join(set_parts)
-            values.append(task_id)
-            cursor.execute(
-                f"UPDATE board_tasks SET {set_clause} WHERE task_id = ?",  # nosec B608
-                values,
-            )
+            if constraints is not None:
+                where_clause, where_params = self._compile_constraints(
+                    "board_tasks",
+                    "task_id",
+                    task_id,
+                    constraints,
+                )
+                cursor.execute(
+                    f"UPDATE board_tasks SET {set_clause} WHERE {where_clause}",  # nosec B608
+                    [*values, *where_params],
+                )
+            else:
+                values.append(task_id)
+                cursor.execute(
+                    f"UPDATE board_tasks SET {set_clause} WHERE task_id = ?",  # nosec B608
+                    values,
+                )
             if cursor.rowcount == 0:
+                if constraints is not None:
+                    try:
+                        self._check_constraint_violation(
+                            cursor,
+                            "board_tasks",
+                            "task_id",
+                            task_id,
+                            constraints,
+                        )
+                    except ServiceError:
+                        self._db.rollback()
+                        raise
                 self._db.rollback()
                 raise ServiceError("task_not_found", "No task with this task_id", 404, {})
             event_id = self._insert_event(cursor, data["event"])
@@ -802,7 +1005,11 @@ class DbWriter:
     # Board — Assets
     # ------------------------------------------------------------------
 
-    def record_asset(self, data: dict[str, Any]) -> dict[str, Any]:
+    def record_asset(
+        self,
+        data: dict[str, Any],
+        constraints: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Record an asset upload (metadata only).
 
@@ -812,11 +1019,17 @@ class DbWriter:
         cursor = self._db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
+            if constraints is not None:
+                self._verify_cross_table_constraint(
+                    cursor,
+                    "board_tasks",
+                    {"task_id": data["task_id"], **constraints},
+                )
             cursor.execute(
                 "INSERT INTO board_assets "
                 "(asset_id, task_id, uploader_id, filename, content_type, "
-                "size_bytes, storage_path, uploaded_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "size_bytes, storage_path, content_hash, uploaded_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     data["asset_id"],
                     data["task_id"],
@@ -825,6 +1038,7 @@ class DbWriter:
                     data["content_type"],
                     data["size_bytes"],
                     data["storage_path"],
+                    data.get("content_hash"),
                     data["uploaded_at"],
                 ),
             )
@@ -936,8 +1150,9 @@ class DbWriter:
             cursor.execute("BEGIN IMMEDIATE")
             cursor.execute(
                 "INSERT INTO court_claims "
-                "(claim_id, task_id, claimant_id, respondent_id, reason, status, filed_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "(claim_id, task_id, claimant_id, respondent_id, reason, status, "
+                "rebuttal_deadline, filed_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     data["claim_id"],
                     data["task_id"],
@@ -945,6 +1160,7 @@ class DbWriter:
                     data["respondent_id"],
                     data["reason"],
                     data["status"],
+                    data.get("rebuttal_deadline"),
                     data["filed_at"],
                 ),
             )
@@ -971,11 +1187,79 @@ class DbWriter:
             self._db.rollback()
             raise
 
+    def update_claim_status(
+        self,
+        claim_id: str,
+        data: dict[str, Any],
+        constraints: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Update a claim status with optional constraints.
+
+        UPDATE court_claims + optional INSERT INTO events.
+        """
+        cursor = self._db.cursor()
+        try:
+            cursor.execute("BEGIN IMMEDIATE")
+            if constraints is not None:
+                where_clause, where_params = self._compile_constraints(
+                    "court_claims",
+                    "claim_id",
+                    claim_id,
+                    constraints,
+                )
+                cursor.execute(
+                    f"UPDATE court_claims SET status = ? WHERE {where_clause}",  # nosec B608
+                    [data["status"], *where_params],
+                )
+            else:
+                cursor.execute(
+                    "UPDATE court_claims SET status = ? WHERE claim_id = ?",
+                    (data["status"], claim_id),
+                )
+
+            if cursor.rowcount == 0:
+                if constraints is not None:
+                    try:
+                        self._check_constraint_violation(
+                            cursor,
+                            "court_claims",
+                            "claim_id",
+                            claim_id,
+                            constraints,
+                        )
+                    except ServiceError:
+                        self._db.rollback()
+                        raise
+                self._db.rollback()
+                raise ServiceError("claim_not_found", "No claim with this claim_id", 404, {})
+
+            event_id = 0
+            event = data.get("event")
+            if event is not None:
+                event_id = self._insert_event(cursor, event)
+
+            self._db.commit()
+            return {
+                "claim_id": claim_id,
+                "status": data["status"],
+                "event_id": event_id,
+            }
+        except ServiceError:
+            raise
+        except Exception:
+            self._db.rollback()
+            raise
+
     # ------------------------------------------------------------------
     # Court — Rebuttals
     # ------------------------------------------------------------------
 
-    def submit_rebuttal(self, data: dict[str, Any]) -> dict[str, Any]:
+    def submit_rebuttal(
+        self,
+        data: dict[str, Any],
+        constraints: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Submit a rebuttal with optional claim status update.
 
@@ -999,9 +1283,46 @@ class DbWriter:
             # Optional claim status update
             claim_status = data.get("claim_status_update")
             if claim_status is not None:
-                cursor.execute(
-                    "UPDATE court_claims SET status = ? WHERE claim_id = ?",
-                    (claim_status, data["claim_id"]),
+                if constraints is not None:
+                    where_clause, where_params = self._compile_constraints(
+                        "court_claims",
+                        "claim_id",
+                        data["claim_id"],
+                        constraints,
+                    )
+                    cursor.execute(
+                        f"UPDATE court_claims SET status = ? WHERE {where_clause}",  # nosec B608
+                        [claim_status, *where_params],
+                    )
+                    if cursor.rowcount == 0:
+                        try:
+                            self._check_constraint_violation(
+                                cursor,
+                                "court_claims",
+                                "claim_id",
+                                data["claim_id"],
+                                constraints,
+                            )
+                        except ServiceError:
+                            self._db.rollback()
+                            raise
+                        self._db.rollback()
+                        raise ServiceError(
+                            "claim_not_found",
+                            "No claim with this claim_id",
+                            404,
+                            {},
+                        )
+                else:
+                    cursor.execute(
+                        "UPDATE court_claims SET status = ? WHERE claim_id = ?",
+                        (claim_status, data["claim_id"]),
+                    )
+            elif constraints is not None:
+                self._verify_cross_table_constraint(
+                    cursor,
+                    "court_claims",
+                    {"claim_id": data["claim_id"], **constraints},
                 )
             event_id = self._insert_event(cursor, data["event"])
             self._db.commit()
@@ -1082,3 +1403,12 @@ class DbWriter:
         except Exception:
             self._db.rollback()
             raise
+
+    def delete_ruling(self, claim_id: str) -> dict[str, object]:
+        """Delete a ruling record by claim_id."""
+        cursor = self._db.execute(
+            "DELETE FROM court_rulings WHERE claim_id = ?",
+            (claim_id,),
+        )
+        self._db.commit()
+        return {"deleted": cursor.rowcount > 0, "claim_id": claim_id}

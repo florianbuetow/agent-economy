@@ -9,6 +9,7 @@ from service_commons.exceptions import ServiceError
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.routers.helpers import (
     parse_json_body,
+    validate_constraints,
     validate_event,
     validate_non_negative_integer,
     validate_positive_integer,
@@ -111,6 +112,7 @@ async def escrow_release(request: Request) -> JSONResponse:
         data,
         ["escrow_id", "recipient_account_id", "tx_id", "resolved_at"],
     )
+    constraints = validate_constraints(data)
     validate_event(data)
 
     state = get_app_state()
@@ -122,7 +124,7 @@ async def escrow_release(request: Request) -> JSONResponse:
             details={},
         )
 
-    result = state.db_writer.escrow_release(data)
+    result = state.db_writer.escrow_release(data, constraints)
     return JSONResponse(status_code=200, content=result)
 
 
@@ -142,6 +144,7 @@ async def escrow_split(request: Request) -> JSONResponse:
             "resolved_at",
         ],
     )
+    constraints = validate_constraints(data)
     validate_event(data)
     validate_non_negative_integer(data, "worker_amount")
     validate_non_negative_integer(data, "poster_amount")
@@ -155,5 +158,107 @@ async def escrow_split(request: Request) -> JSONResponse:
             details={},
         )
 
-    result = state.db_writer.escrow_split(data)
+    result = state.db_writer.escrow_split(data, constraints)
     return JSONResponse(status_code=200, content=result)
+
+
+@router.get("/accounts/count")
+async def count_accounts() -> JSONResponse:
+    """Count total bank accounts."""
+    state = get_app_state()
+    if state.db_reader is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbReader not initialized",
+            status_code=503,
+            details={},
+        )
+
+    count = state.db_reader.count_accounts()
+    return JSONResponse(status_code=200, content={"count": count})
+
+
+@router.get("/accounts/{account_id}")
+async def get_account(account_id: str) -> JSONResponse:
+    """Get a bank account by ID."""
+    state = get_app_state()
+    if state.db_reader is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbReader not initialized",
+            status_code=503,
+            details={},
+        )
+
+    account = state.db_reader.get_account(account_id)
+    if account is None:
+        raise ServiceError(
+            error="account_not_found",
+            message="Account not found",
+            status_code=404,
+            details={},
+        )
+    return JSONResponse(status_code=200, content=account)
+
+
+@router.get("/accounts/{account_id}/transactions")
+async def get_transactions(account_id: str) -> JSONResponse:
+    """Get transaction history for an account."""
+    state = get_app_state()
+    if state.db_reader is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbReader not initialized",
+            status_code=503,
+            details={},
+        )
+
+    transactions = state.db_reader.get_transactions(account_id)
+    return JSONResponse(status_code=200, content={"transactions": transactions})
+
+
+@router.get("/escrow/total-locked")
+async def total_escrowed() -> JSONResponse:
+    """Get total locked escrow amount."""
+    state = get_app_state()
+    if state.db_reader is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbReader not initialized",
+            status_code=503,
+            details={},
+        )
+
+    total = state.db_reader.total_escrowed()
+    return JSONResponse(status_code=200, content={"total": total})
+
+
+@router.get("/escrow/{escrow_id}")
+async def get_escrow(escrow_id: str) -> JSONResponse:
+    """Get an escrow record by ID."""
+    if escrow_id in {"lock", "release", "split"}:
+        raise ServiceError(
+            error="method_not_allowed",
+            message="Method not allowed",
+            status_code=405,
+            details={},
+        )
+
+    state = get_app_state()
+    if state.db_reader is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbReader not initialized",
+            status_code=503,
+            details={},
+        )
+
+    escrow = state.db_reader.get_escrow(escrow_id)
+    if escrow is None:
+        raise ServiceError(
+            error="escrow_not_found",
+            message="Escrow not found",
+            status_code=404,
+            details={},
+        )
+    return JSONResponse(status_code=200, content=escrow)

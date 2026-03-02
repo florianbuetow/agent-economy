@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from db_gateway_service.config import get_settings
 from db_gateway_service.core.state import init_app_state
 from db_gateway_service.logging import get_logger, setup_logging
+from db_gateway_service.services.db_reader import DbReader
 from db_gateway_service.services.db_writer import DbWriter
 
 if TYPE_CHECKING:
@@ -45,6 +46,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         journal_mode=settings.database.journal_mode,
         schema_sql=schema_sql,
     )
+    state.db_reader = DbReader(db=state.db_writer._db)
 
     logger.info(
         "Service starting",

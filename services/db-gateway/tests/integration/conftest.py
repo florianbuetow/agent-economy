@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture
 def gateway_url() -> str:
     """Base URL for the running Database Gateway service."""
-    return "http://localhost:8006"
+    return "http://localhost:8007"
 
 
 @pytest.fixture

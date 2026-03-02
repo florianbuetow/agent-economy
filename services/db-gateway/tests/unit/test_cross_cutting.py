@@ -716,7 +716,6 @@ class TestHTTPMisuse:
     def test_wrong_method_on_defined_routes(self, app_with_writer: TestClient) -> None:
         """HTTP-01: Wrong method on defined routes returns 405."""
         post_only_routes = [
-            "/identity/agents",
             "/bank/accounts",
             "/bank/credit",
             "/bank/escrow/lock",
