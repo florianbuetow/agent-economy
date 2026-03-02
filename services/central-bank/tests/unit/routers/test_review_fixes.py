@@ -5,9 +5,10 @@ from __future__ import annotations
 import base64
 import json
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from cryptography.exceptions import InvalidSignature
 
 from central_bank_service.core.state import get_app_state
 
@@ -44,9 +45,7 @@ class TestJWSVerificationFailure:
     async def test_create_account_invalid_jws_returns_403(self, client, platform_keypair):
         """Invalid JWS signature returns 403 FORBIDDEN."""
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
-            return_value={"valid": False, "reason": "signature mismatch"}
-        )
+        state.platform_agent.validate_certificate = MagicMock(side_effect=InvalidSignature())
 
         private_key, _ = platform_keypair
         token = make_jws_token(
@@ -61,9 +60,7 @@ class TestJWSVerificationFailure:
     async def test_escrow_lock_invalid_jws_returns_403(self, client, agent_keypair):
         """Invalid JWS on escrow lock returns 403."""
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
-            return_value={"valid": False, "reason": "signature mismatch"}
-        )
+        state.platform_agent.validate_certificate = MagicMock(side_effect=InvalidSignature())
 
         agent_key, _ = agent_keypair
         token = make_jws_token(
@@ -78,9 +75,7 @@ class TestJWSVerificationFailure:
     async def test_credit_invalid_jws_returns_403(self, client, platform_keypair):
         """Invalid JWS on credit returns 403."""
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
-            return_value={"valid": False, "reason": "signature mismatch"}
-        )
+        state.platform_agent.validate_certificate = MagicMock(side_effect=InvalidSignature())
 
         private_key, _ = platform_keypair
         token = make_jws_token(
@@ -94,9 +89,7 @@ class TestJWSVerificationFailure:
     async def test_get_balance_invalid_jws_returns_403(self, client, agent_keypair):
         """Invalid JWS on balance check returns 403."""
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
-            return_value={"valid": False, "reason": "signature mismatch"}
-        )
+        state.platform_agent.validate_certificate = MagicMock(side_effect=InvalidSignature())
 
         agent_key, _ = agent_keypair
         token = make_jws_token(agent_key, "a-agent", {"action": "get_balance"})
