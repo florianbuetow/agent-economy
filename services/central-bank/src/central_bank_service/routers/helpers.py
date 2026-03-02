@@ -40,8 +40,12 @@ def verify_jws_token(token: str) -> dict[str, Any]:
     """Verify a JWS token locally and return legacy-shaped verification data."""
     state = get_app_state()
     if state.platform_agent is None:
-        msg = "Platform agent not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Platform agent not initialized",
+            status_code=503,
+            details={},
+        )
 
     try:
         payload = state.platform_agent.validate_certificate(token)

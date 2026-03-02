@@ -63,8 +63,12 @@ async def escrow_lock(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.ledger is None:
-        msg = "Ledger not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Ledger not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await run_in_threadpool(state.ledger.escrow_lock, agent_id, amount, task_id)
     get_logger(__name__).info(
@@ -121,8 +125,12 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
 
     state = get_app_state()
     if state.ledger is None:
-        msg = "Ledger not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Ledger not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await run_in_threadpool(state.ledger.escrow_release, escrow_id, recipient_account_id)
     get_logger(__name__).info(
@@ -191,8 +199,12 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
 
     state = get_app_state()
     if state.ledger is None:
-        msg = "Ledger not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Ledger not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await run_in_threadpool(
         state.ledger.escrow_split,

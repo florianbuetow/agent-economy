@@ -36,8 +36,12 @@ async def create_account(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.ledger is None:
-        msg = "Ledger not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Ledger not initialized",
+            status_code=503,
+            details={},
+        )
 
     verified = verify_jws_token(data["token"])
     caller_agent_id = verified["agent_id"]
@@ -88,8 +92,12 @@ async def create_account(request: Request) -> JSONResponse:
 
     # Verify agent exists in Identity service
     if state.identity_client is None:
-        msg = "Identity client not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Identity client not initialized",
+            status_code=503,
+            details={},
+        )
     agent = await state.identity_client.get_agent(agent_id)
     if agent is None:
         raise ServiceError(
@@ -123,8 +131,12 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
 
     state = get_app_state()
     if state.ledger is None:
-        msg = "Ledger not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Ledger not initialized",
+            status_code=503,
+            details={},
+        )
 
     verified = verify_jws_token(data["token"])
     require_platform(verified["agent_id"], get_platform_agent_id())
@@ -207,8 +219,12 @@ async def get_balance(request: Request, account_id: str) -> dict[str, object]:
 
     state = get_app_state()
     if state.ledger is None:
-        msg = "Ledger not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Ledger not initialized",
+            status_code=503,
+            details={},
+        )
 
     account = await run_in_threadpool(state.ledger.get_account, account_id)
     if account is None:
@@ -253,8 +269,12 @@ async def get_transactions(request: Request, account_id: str) -> dict[str, list[
 
     state = get_app_state()
     if state.ledger is None:
-        msg = "Ledger not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Ledger not initialized",
+            status_code=503,
+            details={},
+        )
 
     transactions = await run_in_threadpool(state.ledger.get_transactions, account_id)
     return {"transactions": transactions}
