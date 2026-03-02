@@ -80,7 +80,7 @@ def main() -> int:
         "--output",
         type=str,
         metavar="FILE",
-        help="Write JSONL output to FILE. Default: data/math_tasks.jsonl in project root.",
+        help="Write JSONL output to FILE. Default: data/math_tasks.jsonl (or data/math_tasks_dressup.jsonl with --dress-up).",
     )
     parser.add_argument(
         "--format",
@@ -206,13 +206,19 @@ def main() -> int:
         out_path = Path(args.output)
     else:
         project_root = _find_project_root()
-        out_path = project_root / "data" / "math_tasks.jsonl"
+        if args.dress_up:
+            out_path = project_root / "data" / "math_tasks_dressup.jsonl"
+        else:
+            out_path = project_root / "data" / "math_tasks.jsonl"
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w", encoding="utf-8") as f:
+    write_mode = "a" if args.dress_up else "w"
+    with open(out_path, write_mode, encoding="utf-8") as f:
         for d in task_dicts:
             f.write(json.dumps(d, ensure_ascii=False) + "\n")
-    print(f"Wrote {len(task_dicts)} task(s) to {out_path}", file=sys.stderr)
+
+    verb = "Appended" if args.dress_up else "Wrote"
+    print(f"{verb} {len(task_dicts)} task(s) to {out_path}", file=sys.stderr)
 
     if args.format == "pretty":
         text = json.dumps({"tasks": task_dicts}, indent=2, ensure_ascii=False)

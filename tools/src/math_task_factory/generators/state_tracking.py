@@ -36,7 +36,16 @@ def gen_warehouse_inventory(rng: random.Random) -> MathTask:
             )
         else:
             src, dst = rng.sample(floors, 2)
-            amount = rng.randint(20, min(200, stock[src]))
+            max_transfer = min(200, stock[src])
+            if max_transfer < 20:
+                # Not enough to transfer; receive instead
+                amount = rng.randint(50, 300)
+                stock[dst] += amount
+                ops_text.append(
+                    f"Receive a shipment of {amount} units on {dst}."
+                )
+                continue
+            amount = rng.randint(20, max_transfer)
             stock[src] -= amount
             stock[dst] += amount
             ops_text.append(f"Transfer {amount} units from {src} to {dst}.")
@@ -92,7 +101,14 @@ def gen_bank_transactions(rng: random.Random) -> MathTask:
             ops_text.append(f"Deposit ${amount} into {acct}.")
         elif op == "withdraw":
             acct = rng.choice(accounts)
-            amount = rng.randint(50, min(1000, balance[acct]))
+            max_withdraw = min(1000, balance[acct])
+            if max_withdraw < 50:
+                # Not enough to withdraw; deposit instead
+                amount = rng.randint(100, 2000)
+                balance[acct] += amount
+                ops_text.append(f"Deposit ${amount} into {acct}.")
+                continue
+            amount = rng.randint(50, max_withdraw)
             balance[acct] -= amount
             ops_text.append(f"Withdraw ${amount} from {acct}.")
         elif op == "interest":
@@ -106,7 +122,14 @@ def gen_bank_transactions(rng: random.Random) -> MathTask:
             )
         else:
             src, dst = rng.sample(accounts, 2)
-            amount = rng.randint(100, min(1500, balance[src]))
+            max_transfer = min(1500, balance[src])
+            if max_transfer < 100:
+                # Not enough to transfer; deposit instead
+                amount = rng.randint(100, 2000)
+                balance[dst] += amount
+                ops_text.append(f"Deposit ${amount} into {dst}.")
+                continue
+            amount = rng.randint(100, max_transfer)
             balance[src] -= amount
             balance[dst] += amount
             ops_text.append(f"Transfer ${amount} from {src} to {dst}.")
