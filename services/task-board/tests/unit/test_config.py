@@ -17,7 +17,7 @@ service:
   name: "task-board"
   version: "0.1.0"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8003
   log_level: "info"
 logging:
@@ -79,7 +79,7 @@ service:
   version: "0.1.0"
   unknown_field: true
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8003
   log_level: "info"
 logging:
@@ -150,7 +150,7 @@ service:
   name: "task-board"
   version: "0.1.0"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8003
   log_level: "info"
 logging:

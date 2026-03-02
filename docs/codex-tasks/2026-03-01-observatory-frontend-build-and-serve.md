@@ -364,7 +364,7 @@ COPY --from=frontend-build /frontend/dist frontend/dist/
 
 EXPOSE 8006
 
-CMD ["uv", "run", "uvicorn", "observatory_service.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8006"]
+CMD ["uv", "run", "uvicorn", "observatory_service.app:create_app", "--factory", "--host", "127.0.0.1", "--port", "8006"]
 ```
 
 This uses a multi-stage build: stage 1 builds the frontend with Node, stage 2 copies the built `dist/` into the Python image.

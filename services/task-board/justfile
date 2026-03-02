@@ -123,7 +123,7 @@ destroy:
 run:
     @echo ""
     @printf "\033[0;34m=== Running Task Board Service Locally on port 8003 ===\033[0m\n"
-    @uv run uvicorn task_board_service.app:create_app --factory --reload --host 0.0.0.0 --port 8003
+    @uv run uvicorn task_board_service.app:create_app --factory --reload --host 127.0.0.1 --port 8003
 
 # Stop the locally running service
 kill:

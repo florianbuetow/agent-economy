@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document specifies how the Court service authenticates operations using JWS tokens verified by the Identity service. The Court has the simplest authentication model in the system: all write operations are platform-signed, and all read operations are public.
+This document specifies how the Court service authenticates operations using JWS tokens verified locally via `PlatformAgent.validate_certificate()`. The Court has the simplest authentication model in the system: all write operations are platform-signed, and all read operations are public.
 
 ## Motivation
 
@@ -103,56 +103,49 @@ This is the simplest token delivery model of all services — no mixed body/head
 ### Standard Flow (All POST Endpoints)
 
 ```
-Task Board                     Court Service                    Identity Service
-  |                                  |                                  |
-  |  1. Construct JWS payload:       |                                  |
-  |     { action: "file_dispute",    |                                  |
-  |       task_id, claimant_id,      |                                  |
-  |       respondent_id, claim,      |                                  |
-  |       escrow_id }                |                                  |
-  |                                  |                                  |
-  |  2. Sign with platform           |                                  |
-  |     Ed25519 private key          |                                  |
-  |     Header: { alg: "EdDSA",      |                                  |
-  |       kid: "<platform_agent_id>" }                                  |
-  |                                  |                                  |
-  |  3. POST /disputes/file          |                                  |
-  |     { "token": "eyJ..." }        |                                  |
-  |  ===============================>|                                  |
-  |                                  |  4. POST /agents/verify-jws      |
-  |                                  |     { "token": "eyJ..." }        |
-  |                                  |  ================================>|
-  |                                  |                                  |
-  |                                  |                 5. Decode JWS    |
-  |                                  |                 6. Look up kid's |
-  |                                  |                    public key    |
-  |                                  |                 7. Verify Ed25519|
-  |                                  |                    signature     |
-  |                                  |                                  |
-  |                                  |  8. { valid: true,               |
-  |                                  |       agent_id: "<platform_id>", |
-  |                                  |       payload: {...} }           |
-  |                                  |  <================================|
-  |                                  |                                  |
-  |                                  |  9. Check: agent_id ==           |
-  |                                  |     settings.platform.agent_id   |
-  |                                  | 10. Validate action field        |
-  |                                  | 11. Validate payload fields      |
-  |                                  | 12. Execute operation            |
-  |                                  |                                  |
-  | 13. Response                     |                                  |
-  |  <===============================|                                  |
+Task Board                     Court Service
+  |                                  |
+  |  1. Construct JWS payload:       |
+  |     { action: "file_dispute",    |
+  |       task_id, claimant_id,      |
+  |       respondent_id, claim,      |
+  |       escrow_id }                |
+  |                                  |
+  |  2. Sign with platform           |
+  |     Ed25519 private key          |
+  |     Header: { alg: "EdDSA",      |
+  |       kid: "<platform_agent_id>" }
+  |                                  |
+  |  3. POST /disputes/file          |
+  |     { "token": "eyJ..." }        |
+  |  ===============================>|
+  |                                  |
+  |                                  |  4. Decode JWS header + payload
+  |                                  |  5. Call PlatformAgent
+  |                                  |     .validate_certificate(
+  |                                  |       payload, signature)
+  |                                  |  6. Verify decrypted certificate
+  |                                  |     matches payload
+  |                                  |
+  |                                  |  7. Check: kid ==
+  |                                  |     settings.platform.agent_id
+  |                                  |  8. Validate action field
+  |                                  |  9. Validate payload fields
+  |                                  | 10. Execute operation
+  |                                  |
+  | 11. Response                     |
+  |  <===============================|
 ```
 
-The Court never touches crypto directly. All signature verification is delegated to the Identity service.
+The Court performs cryptographic verification locally using the `PlatformAgent` instance. No external service call is required for authentication.
 
 ---
 
 ## Authorization Rules
 
-After the Identity service confirms the JWS is valid and returns the signer's `agent_id`:
+After the local `PlatformAgent.validate_certificate()` confirms the JWS is valid:
 
-1. **Signer must be the platform agent** — the verified `agent_id` must match `settings.platform.agent_id`. If it does not, return `403 FORBIDDEN`. No agent-signed tokens are accepted by the Court.
+1. **Signer must be the platform agent** — the `kid` from the JWS header must match `settings.platform.agent_id`, and the certificate must be verified by the platform agent's public key. If either check fails, return `403 FORBIDDEN`. No agent-signed tokens are accepted by the Court.
 
 2. **No agent-level authorization checks** — unlike the Task Board (which checks poster/worker roles) and the Reputation service (which checks `from_agent_id` matching), the Court only verifies platform identity. The Task Board is responsible for ensuring the correct agent authorized the operation before calling the Court.
 
@@ -220,8 +213,7 @@ The `dispute_id` in the payload must match the `{dispute_id}` URL path parameter
 |--------|-------------------------------|------|
 | 400    | `INVALID_JWS`                | JWS token is malformed, missing, empty, or not a string |
 | 400    | `INVALID_PAYLOAD`            | JWS payload is missing `action`, `action` does not match the expected value for this endpoint, or required payload fields are missing |
-| 403    | `FORBIDDEN`                  | JWS signature verification failed (Identity says `valid: false`), or signer is not the platform agent |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE` | Cannot reach the Identity service for JWS verification, or Identity service returned an unexpected response (non-200 with non-JSON body, unexpected status code) |
+| 403    | `FORBIDDEN`                  | JWS certificate verification failed (local `validate_certificate()` returns false), or signer is not the platform agent |
 
 ### Error Precedence
 
@@ -231,30 +223,20 @@ Errors are checked in this order (first match wins):
 2. `413 PAYLOAD_TOO_LARGE` — body exceeds `request.max_body_size`
 3. `400 INVALID_JSON` — malformed JSON body
 4. `400 INVALID_JWS` — missing or malformed `token` field
-5. `502 IDENTITY_SERVICE_UNAVAILABLE` — Identity service unreachable or returned an unexpected response
-6. `403 FORBIDDEN` — Identity service says signature is invalid (`valid: false`)
-7. `400 INVALID_PAYLOAD` — wrong `action`, missing required payload fields, or `dispute_id` in payload does not match URL path parameter
-8. `403 FORBIDDEN` — signer is not the platform agent (`agent_id != settings.platform.agent_id`)
-9. Domain-specific errors (`DISPUTE_NOT_FOUND`, `DISPUTE_ALREADY_EXISTS`, `INVALID_DISPUTE_STATUS`, `REBUTTAL_ALREADY_SUBMITTED`, `DISPUTE_ALREADY_RULED`, `TASK_NOT_FOUND`, etc.)
-10. `502` errors from downstream services (`TASK_BOARD_UNAVAILABLE`, `CENTRAL_BANK_UNAVAILABLE`, `REPUTATION_SERVICE_UNAVAILABLE`, `JUDGE_UNAVAILABLE`)
+5. `403 FORBIDDEN` — local `validate_certificate()` says signature is invalid
+6. `400 INVALID_PAYLOAD` — wrong `action`, missing required payload fields, or `dispute_id` in payload does not match URL path parameter
+7. `403 FORBIDDEN` — signer is not the platform agent (`kid != settings.platform.agent_id`)
+8. Domain-specific errors (`DISPUTE_NOT_FOUND`, `DISPUTE_ALREADY_EXISTS`, `INVALID_DISPUTE_STATUS`, `REBUTTAL_ALREADY_SUBMITTED`, `DISPUTE_ALREADY_RULED`, `TASK_NOT_FOUND`, etc.)
+9. `502` errors from downstream services (`TASK_BOARD_UNAVAILABLE`, `CENTRAL_BANK_UNAVAILABLE`, `REPUTATION_SERVICE_UNAVAILABLE`, `JUDGE_UNAVAILABLE`)
 
 ### Notes on Error Mapping
 
-- **Invalid signature** returns `403 FORBIDDEN`. The Identity service confirmed the token's signature does not match the claimed signer's public key — this is an authentication failure. This matches the Central Bank and Task Board behavior.
-- **Non-platform signer** also returns `403 FORBIDDEN` with a different message. The token is cryptographically valid, but the signer is not the platform agent. Both cases use the same status code but carry different `message` text for debugging.
-- **Identity service down or misbehaving** returns `502 IDENTITY_SERVICE_UNAVAILABLE`. This covers connection failures, timeouts, and unexpected responses (e.g., Identity returns `500` with a non-JSON body). The Court collapses all Identity service failures into this single error code for simplicity. The service does not fall back to unauthenticated mode.
+- **Invalid signature** returns `403 FORBIDDEN`. The local `validate_certificate()` call determined that the certificate does not match the request payload when decrypted with the platform agent's public key — this is an authentication failure. This matches the Central Bank and Task Board behavior.
+- **Non-platform signer** also returns `403 FORBIDDEN` with a different message. The `kid` in the JWS header does not match `settings.platform.agent_id`. Both cases use the same status code but carry different `message` text for debugging.
 
 ---
 
 ## Configuration
-
-### Identity Integration
-
-```yaml
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-```
 
 ### Platform Agent
 
@@ -262,10 +244,12 @@ identity:
 platform:
   agent_id: ""
   private_key_path: ""
+  public_key_path: ""
 ```
 
-- `platform.agent_id`: The agent ID of the platform, registered with the Identity service. Used to verify that the signer of incoming JWS tokens is the platform agent. Also used as the `kid` for outgoing platform-signed tokens (escrow split, feedback submission, ruling recording).
-- `platform.private_key_path`: Absolute path to the Ed25519 private key file (PEM format). Used to sign outgoing requests to the Central Bank, Reputation service, and Task Board. The corresponding public key must be registered with the Identity service under `platform.agent_id`.
+- `platform.agent_id`: The agent ID of the platform. Used to verify that the `kid` in incoming JWS tokens matches the platform agent. Also used as the `kid` for outgoing platform-signed tokens (escrow split, feedback submission, ruling recording).
+- `platform.private_key_path`: Absolute path to the Ed25519 private key file (PEM format). Used to sign outgoing requests to the Central Bank, Reputation service, and Task Board.
+- `platform.public_key_path`: Absolute path to the Ed25519 public key file (PEM format). Used by the `PlatformAgent` to verify incoming JWS certificates via `validate_certificate()`.
 
 All fields are required. Missing fields cause startup failure. No default values.
 
@@ -273,26 +257,19 @@ All fields are required. Missing fields cause startup failure. No default values
 
 ## Infrastructure
 
-### IdentityClient
+### PlatformAgent
 
-Initialized during startup (in `lifespan.py`), stored in `AppState`, closed on shutdown.
-
-Provides:
-- `verify_jws(token: str) -> dict[str, Any]` — calls `POST /agents/verify-jws` on the Identity service. On success (`200` with `valid: true`), returns the full response body: `{"valid": true, "agent_id": "...", "payload": {...}}`. Raises `ServiceError("IDENTITY_SERVICE_UNAVAILABLE", ..., 502)` on connection failure, timeout, or unexpected response. Propagates Identity service error codes (e.g., `INVALID_JWS`) for non-200 responses with a valid JSON error envelope.
-- `close()` — closes the underlying `httpx.AsyncClient`. Called during lifespan shutdown.
-
-### PlatformSigner
-
-Initialized during startup by loading the Ed25519 private key from `platform.private_key_path`.
+Initialized during startup (in `lifespan.py`) by loading the Ed25519 public and private keys from `platform.public_key_path` and `platform.private_key_path`. Stored in `AppState`.
 
 Provides:
+- `validate_certificate(payload, certificate) -> bool` — decrypts the certificate using the platform agent's public key and compares the result to the original request payload. Returns `True` if they match (the request was signed by the platform's private key), `False` otherwise. This is a local cryptographic operation — no external service call is required.
 - `sign(payload: dict) -> str` — creates a JWS compact token with `{"alg": "EdDSA", "kid": "<platform_agent_id>"}` header and the provided payload, signed with the platform's Ed25519 private key. Used for outgoing calls to the Central Bank (`POST /escrow/{id}/split`), Reputation service (`POST /feedback`), and Task Board (`POST /tasks/{id}/ruling`).
 
 ### Dependencies
 
 Required in `pyproject.toml`:
-- `httpx>=0.28.0` — async HTTP client for Identity service calls and outgoing calls to Central Bank, Reputation, and Task Board
-- `cryptography>=44.0.0` — Ed25519 key loading
+- `httpx>=0.28.0` — async HTTP client for outgoing calls to Central Bank, Reputation, and Task Board
+- `cryptography>=44.0.0` — Ed25519 key loading and certificate verification
 - `joserfc>=1.0.0` — JWS token creation for platform operations
 
 ---
@@ -302,78 +279,74 @@ Required in `pyproject.toml`:
 ### Platform Files Dispute
 
 ```
-Task Board                     Court Service                    Identity Service
-  |                                  |                                  |
-  |  1. Sign JWS as platform:       |                                  |
-  |     { action: file_dispute,      |                                  |
-  |       task_id, claimant_id,      |                                  |
-  |       respondent_id, claim,      |                                  |
-  |       escrow_id }                |                                  |
-  |                                  |                                  |
-  |  2. POST /disputes/file          |                                  |
-  |     { "token": "eyJ..." }        |                                  |
-  |  ===============================>|                                  |
-  |                                  |  3. Verify JWS                   |
-  |                                  |  POST /agents/verify-jws         |
-  |                                  |  { "token": "eyJ..." }           |
-  |                                  |  ================================>|
-  |                                  |                                  | 4. Verify signature
-  |                                  |  5. { valid: true,               |
-  |                                  |       agent_id: platform_id,     |
-  |                                  |       payload: {...} }           |
-  |                                  |  <================================|
-  |                                  |                                  |
-  |                                  |  6. Assert agent_id ==           |
-  |                                  |     settings.platform.agent_id   |
-  |                                  |  7. Validate action ==           |
-  |                                  |     "file_dispute"               |
-  |                                  |  8. Validate payload fields      |
-  |                                  |  9. Create dispute record        |
-  |                                  |                                  |
-  | 10. 201 { dispute }              |                                  |
-  |  <===============================|                                  |
+Task Board                     Court Service
+  |                                  |
+  |  1. Sign JWS as platform:       |
+  |     { action: file_dispute,      |
+  |       task_id, claimant_id,      |
+  |       respondent_id, claim,      |
+  |       escrow_id }                |
+  |                                  |
+  |  2. POST /disputes/file          |
+  |     { "token": "eyJ..." }        |
+  |  ===============================>|
+  |                                  |
+  |                                  |  3. Decode JWS token
+  |                                  |  4. PlatformAgent
+  |                                  |     .validate_certificate(
+  |                                  |       payload, signature)
+  |                                  |  5. Assert kid ==
+  |                                  |     settings.platform.agent_id
+  |                                  |  6. Validate action ==
+  |                                  |     "file_dispute"
+  |                                  |  7. Validate payload fields
+  |                                  |  8. Create dispute record
+  |                                  |
+  |  9. 201 { dispute }              |
+  |  <===============================|
 ```
 
-### Identity Service Down
+### Certificate Verification Failure
 
 ```
-Task Board                     Court Service                    Identity Service
-  |                                  |                                  |
-  |  POST /disputes/file             |                                  |
-  |  { "token": "eyJ..." }           |                                  |
-  |  ===============================>|                                  |
-  |                                  |  POST /agents/verify-jws         |
-  |                                  |  ================================>| (connection refused
-  |                                  |                                  |  or timeout)
-  |                                  |                                  |
-  |  502 { error:                    |                                  |
-  |    IDENTITY_SERVICE_UNAVAILABLE }|                                  |
-  |  <===============================|                                  |
+Task Board                     Court Service
+  |                                  |
+  |  POST /disputes/file             |
+  |  { "token": "eyJ..." }           |
+  |  ===============================>|
+  |                                  |
+  |                                  |  1. Decode JWS token
+  |                                  |  2. PlatformAgent
+  |                                  |     .validate_certificate(
+  |                                  |       payload, signature)
+  |                                  |     -> False (mismatch)
+  |                                  |
+  |  403 { error: FORBIDDEN }        |
+  |  <===============================|
 ```
 
 ### Non-Platform Agent Attempt
 
 ```
-Rogue Agent                    Court Service                    Identity Service
-  |                                  |                                  |
-  |  Signs JWS with own key         |                                  |
-  |  (not the platform key)         |                                  |
-  |                                  |                                  |
-  |  POST /disputes/file             |                                  |
-  |  { "token": "eyJ..." }           |                                  |
-  |  ===============================>|                                  |
-  |                                  |  POST /agents/verify-jws         |
-  |                                  |  ================================>|
-  |                                  |  { valid: true,                  |
-  |                                  |    agent_id: "a-rogue" }         |
-  |                                  |  <================================|
-  |                                  |                                  |
-  |                                  |  "a-rogue" !=                    |
-  |                                  |  settings.platform.agent_id      |
-  |                                  |  -> 403                          |
-  |                                  |                                  |
-  |  403 { error: FORBIDDEN }        |                                  |
-  |  <===============================|                                  |
+Rogue Agent                    Court Service
+  |                                  |
+  |  Signs JWS with own key         |
+  |  (not the platform key)         |
+  |                                  |
+  |  POST /disputes/file             |
+  |  { "token": "eyJ..." }           |
+  |  ===============================>|
+  |                                  |
+  |                                  |  1. Decode JWS token
+  |                                  |  2. PlatformAgent
+  |                                  |     .validate_certificate(
+  |                                  |       payload, signature)
+  |                                  |     -> False (signed with
+  |                                  |        wrong private key)
+  |                                  |  -> 403
+  |                                  |
+  |  403 { error: FORBIDDEN }        |
+  |  <===============================|
 ```
 
 ---
@@ -388,7 +361,7 @@ Same-operation replay is mitigated by domain constraints:
 - **Submit rebuttal replay:** The rebuttal can only be submitted once per dispute. A replayed `"submit_rebuttal"` token gets `409 REBUTTAL_ALREADY_SUBMITTED`.
 - **Trigger ruling replay:** A dispute can only be ruled once. A replayed `"trigger_ruling"` token gets `409 DISPUTE_ALREADY_RULED`.
 
-Full replay protection (timestamps, nonces) is out of scope, consistent with the Identity service design.
+Full replay protection (timestamps, nonces) is out of scope.
 
 ---
 
@@ -396,6 +369,6 @@ Full replay protection (timestamps, nonces) is out of scope, consistent with the
 
 - **Agent-level authentication** — the Court does not verify agent identity. The Task Board handles agent authentication before calling the Court.
 - **Rate limiting** — no throttling on authenticated or unauthenticated endpoints.
-- **Token expiry** — JWS tokens have no expiry. Replay protection is out of scope, consistent with the Identity service's design ("replay protection is the caller's responsibility").
+- **Token expiry** — JWS tokens have no expiry. Replay protection is out of scope ("replay protection is the caller's responsibility").
 - **Outgoing token signing details** — the Court signs outgoing requests to Central Bank, Reputation, and Task Board using the platform key. The specific payload formats for those outgoing tokens are defined in the respective service auth specs, not here.
 - **SQLite persistence** — the database schema and migration strategy are separate from authentication concerns.

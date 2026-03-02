@@ -601,7 +601,7 @@ app.sse("/api/events/stream", client -> {
 ```yaml
 server:
   port: 8006
-  host: "0.0.0.0"
+  host: "127.0.0.1"
 
 database:
   path: "data/economy.db"

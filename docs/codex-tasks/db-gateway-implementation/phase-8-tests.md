@@ -206,7 +206,7 @@ class TestConfig:
         """Settings can be constructed with valid data."""
         settings = Settings(
             service={"name": "db-gateway", "version": "0.1.0"},
-            server={"host": "0.0.0.0", "port": 8006, "log_level": "info"},
+            server={"host": "127.0.0.1", "port": 8006, "log_level": "info"},
             logging={"level": "INFO", "format": "json"},
             database={
                 "path": "data/economy.db",
@@ -225,7 +225,7 @@ class TestConfig:
         with pytest.raises(Exception):
             Settings(
                 service={"name": "db-gateway", "version": "0.1.0", "extra": True},
-                server={"host": "0.0.0.0", "port": 8006, "log_level": "info"},
+                server={"host": "127.0.0.1", "port": 8006, "log_level": "info"},
                 logging={"level": "INFO", "format": "json"},
                 database={
                     "path": "data/economy.db",
@@ -241,7 +241,7 @@ class TestConfig:
         with pytest.raises(Exception):
             Settings(
                 service={"name": "db-gateway", "version": "0.1.0"},
-                server={"host": "0.0.0.0", "port": 8006, "log_level": "info"},
+                server={"host": "127.0.0.1", "port": 8006, "log_level": "info"},
                 logging={"level": "INFO", "format": "json"},
                 # database section missing
                 request={"max_body_size": 1048576},

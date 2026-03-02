@@ -109,7 +109,7 @@ service:
   version: "0.1.0"
 
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8006
   log_level: "info"
 
@@ -947,7 +947,7 @@ service:
   name: "observatory"
   version: "0.1.0"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8006
   log_level: "info"
 logging:
@@ -1034,7 +1034,7 @@ service:
   name: "observatory"
   version: "0.1.0"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8006
   log_level: "info"
 logging:
@@ -1076,7 +1076,7 @@ service:
   version: "0.1.0"
   unknown_field: "should fail"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8006
   log_level: "info"
 logging:
@@ -1209,7 +1209,7 @@ COPY services/observatory/src/ src/
 
 EXPOSE 8006
 
-CMD ["uv", "run", "uvicorn", "observatory_service.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8006"]
+CMD ["uv", "run", "uvicorn", "observatory_service.app:create_app", "--factory", "--host", "127.0.0.1", "--port", "8006"]
 ```
 
 **Step 2: Create docker-compose.yml**
@@ -1273,7 +1273,7 @@ Expected: All checks pass:
 
 ```bash
 cd services/observatory
-uv run uvicorn observatory_service.app:create_app --factory --host 0.0.0.0 --port 8006 &
+uv run uvicorn observatory_service.app:create_app --factory --host 127.0.0.1 --port 8006 &
 sleep 2
 curl -s http://localhost:8006/health | python3 -m json.tool
 kill %1

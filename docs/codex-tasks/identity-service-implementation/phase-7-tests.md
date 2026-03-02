@@ -63,7 +63,7 @@ service:
   name: "identity"
   version: "0.1.0"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8001
   log_level: "info"
 logging:
@@ -104,7 +104,7 @@ service:
   version: "0.1.0"
   extra_field: "should fail"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8001
   log_level: "info"
 logging:
@@ -164,7 +164,7 @@ service:
   name: "identity"
   version: "0.1.0"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8001
   log_level: "info"
 logging:

@@ -18,9 +18,9 @@ This document covers only authentication and authorization concerns. Business lo
 
 These tests require:
 
-1. A running Identity service (port 8001) — or a mock that implements `POST /agents/verify-jws`
-2. Pre-registered agents with known Ed25519 keypairs (public + private keys)
-3. The Reputation service configured with the `identity` section pointing to the Identity service
+1. A `PlatformAgent` instantiated with valid Ed25519 keys for certificate verification
+2. Agents with known Ed25519 keypairs (public + private keys)
+3. The Reputation service configured with the PlatformAgent's public key for local certificate validation
 
 ---
 
@@ -32,8 +32,7 @@ These error codes are added by the authentication feature. Existing error codes 
 |--------|----------------------------------|--------------------------------------------------------------|
 | 400    | `INVALID_JWS`                   | `token` field is missing, null, non-string, empty, or malformed (not a three-part compact serialization) |
 | 400    | `INVALID_PAYLOAD`               | JWS payload is missing `action`, `action` is not `"submit_feedback"`, or `from_agent_id` is missing from the payload (required for signer matching) |
-| 403    | `FORBIDDEN`                     | JWS signature verification failed (tampered, unregistered agent), or signer does not match `from_agent_id` in payload |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Identity service is unreachable, times out, or returns an unexpected response (non-200 with non-JSON body, unexpected status code) |
+| 403    | `FORBIDDEN`                     | JWS signature verification failed (tampered, unknown agent), or signer does not match `from_agent_id` in payload |
 
 All failing responses must use the standard error envelope:
 
@@ -49,7 +48,7 @@ All failing responses must use the standard error envelope:
 
 ## Test Data Conventions
 
-- `agent_alice`, `agent_bob`, `agent_carol` are agents pre-registered in the Identity service with known Ed25519 keypairs.
+- `agent_alice`, `agent_bob`, `agent_carol` are agents with known Ed25519 public/private keypairs.
 - `jws(signer, payload)` denotes a JWS compact serialization (RFC 7515, EdDSA/Ed25519) with header `{"alg":"EdDSA","kid":"<signer.agent_id>"}`, the given JSON payload, and a valid Ed25519 signature.
 - `tampered_jws(signer, payload)` denotes a JWS where the payload has been altered after signing (signature mismatch).
 - Agent IDs use the format `a-<uuid4>`.
@@ -63,7 +62,7 @@ All failing responses must use the standard error envelope:
 
 ### AUTH-01 Valid JWS submits feedback successfully
 
-**Setup:** Register `agent_alice` and `agent_bob` in Identity service.
+**Setup:** Create `agent_alice` and `agent_bob` with known Ed25519 keypairs. Configure PlatformAgent with valid keys.
 **Action:** `POST /feedback` with body:
 ```json
 {"token": "<jws(alice, {action: 'submit_feedback', task_id: 't-xxx', from_agent_id: alice.id, to_agent_id: bob.id, category: 'delivery_quality', rating: 'satisfied', comment: 'Good work'})>"}
@@ -115,16 +114,16 @@ All failing responses must use the standard error envelope:
 
 ### AUTH-07 JWS with tampered payload (signature mismatch)
 
-**Setup:** Register `agent_alice`. Construct a valid JWS, then modify the payload portion after signing.
+**Setup:** Create `agent_alice` with a known keypair. Construct a valid JWS, then modify the payload portion after signing.
 **Action:** `POST /feedback` with `{"token": "<tampered_jws>"}`.
 **Expected:**
 - `403 Forbidden`
 - `error = FORBIDDEN`
 
-### AUTH-08 JWS signed by unregistered agent
+### AUTH-08 JWS signed by unknown agent (no valid certificate)
 
-**Setup:** Generate a fresh Ed25519 keypair that is NOT registered in the Identity service.
-**Action:** `POST /feedback` with a JWS signed by the unregistered keypair.
+**Setup:** Generate a fresh Ed25519 keypair whose public key is NOT known to the PlatformAgent (no valid certificate).
+**Action:** `POST /feedback` with a JWS signed by the unknown keypair.
 **Expected:**
 - `403 Forbidden`
 - `error = FORBIDDEN`
@@ -135,7 +134,7 @@ All failing responses must use the standard error envelope:
 
 ### AUTH-09 Missing `action` in payload
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** `POST /feedback` with `jws(alice, {task_id: "t-xxx", from_agent_id: alice.id, to_agent_id: bob.id, category: "delivery_quality", rating: "satisfied"})` — payload has no `action` field.
 **Expected:**
 - `400 Bad Request`
@@ -143,7 +142,7 @@ All failing responses must use the standard error envelope:
 
 ### AUTH-10 Wrong `action` value
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** `POST /feedback` with `jws(alice, {action: "escrow_lock", task_id: "t-xxx", from_agent_id: alice.id, to_agent_id: bob.id, category: "delivery_quality", rating: "satisfied"})`.
 **Expected:**
 - `400 Bad Request`
@@ -151,7 +150,7 @@ All failing responses must use the standard error envelope:
 
 ### AUTH-11 `action` is null
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** `POST /feedback` with `jws(alice, {action: null, task_id: "t-xxx", from_agent_id: alice.id, to_agent_id: bob.id, ...})`.
 **Expected:**
 - `400 Bad Request`
@@ -163,7 +162,7 @@ All failing responses must use the standard error envelope:
 
 ### AUTH-12 Signer matches `from_agent_id` — success
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** `POST /feedback` with `jws(alice, {action: "submit_feedback", from_agent_id: alice.id, to_agent_id: bob.id, ...})`.
 **Expected:**
 - `201 Created`
@@ -171,7 +170,7 @@ All failing responses must use the standard error envelope:
 
 ### AUTH-13 Signer does NOT match `from_agent_id` — impersonation rejected
 
-**Setup:** Register `agent_alice`, `agent_bob`, and `agent_carol`.
+**Setup:** Create `agent_alice`, `agent_bob`, and `agent_carol` with known keypairs.
 **Action:** Alice signs a JWS with `from_agent_id: carol.id` (Alice tries to submit feedback as Carol).
 `POST /feedback` with `jws(alice, {action: "submit_feedback", from_agent_id: carol.id, to_agent_id: bob.id, ...})`.
 **Expected:**
@@ -180,7 +179,7 @@ All failing responses must use the standard error envelope:
 
 ### AUTH-14 Signer impersonates non-existent agent
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** Alice signs a JWS with `from_agent_id: "a-nonexistent-uuid"`.
 `POST /feedback` with `jws(alice, {action: "submit_feedback", from_agent_id: "a-nonexistent-uuid", to_agent_id: bob.id, ...})`.
 **Expected:**
@@ -189,27 +188,7 @@ All failing responses must use the standard error envelope:
 
 ---
 
-## Category 4: Identity Service Unavailability
-
-### AUTH-15 Identity service is down
-
-**Setup:** Configure Reputation service to point to an Identity service URL that is not running (e.g., `http://localhost:19999`).
-**Action:** `POST /feedback` with a valid-looking JWS token.
-**Expected:**
-- `502 Bad Gateway`
-- `error = IDENTITY_SERVICE_UNAVAILABLE`
-
-### AUTH-16 Identity service returns unexpected response
-
-**Setup:** Start a mock HTTP server on the Identity service port that returns `HTTP 500` with body `"Internal Server Error"` (non-JSON) for `POST /agents/verify-jws`. Configure Reputation service to point to this mock.
-**Action:** `POST /feedback` with a valid JWS token.
-**Expected:**
-- `502 Bad Gateway`
-- `error = IDENTITY_SERVICE_UNAVAILABLE`
-
----
-
-## Category 5: GET Endpoints Remain Public
+## Category 4: GET Endpoints Remain Public
 
 ### PUB-01 GET /feedback/{feedback_id} requires no authentication
 
@@ -244,7 +223,7 @@ All failing responses must use the standard error envelope:
 
 ---
 
-## Category 6: Error Precedence
+## Category 5: Error Precedence
 
 These tests verify that errors are returned in the correct order when multiple error conditions are present simultaneously.
 
@@ -282,7 +261,7 @@ These tests verify that errors are returned in the correct order when multiple e
 
 ### PREC-05 Payload `action` checked before signer matching
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** Alice signs a JWS with `{action: "wrong_action", from_agent_id: bob.id, ...}` (wrong action AND signer mismatch).
 **Expected:**
 - `400 Bad Request`
@@ -291,31 +270,22 @@ These tests verify that errors are returned in the correct order when multiple e
 
 ### PREC-06 Signer matching checked before feedback field validation
 
-**Setup:** Register `agent_alice`, `agent_bob`, and `agent_carol`.
+**Setup:** Create `agent_alice`, `agent_bob`, and `agent_carol` with known keypairs.
 **Action:** Alice signs a JWS with `{action: "submit_feedback", from_agent_id: carol.id, rating: "invalid_value", ...}` (signer mismatch AND invalid rating).
 **Expected:**
 - `403 Forbidden`
 - `error = FORBIDDEN`
 - (NOT `400 INVALID_RATING`)
 
-### PREC-07 Identity service unavailability checked before payload validation
-
-**Setup:** Configure Reputation service to point to an Identity service URL that is not running (e.g., `http://localhost:19999`). Generate keypair for alice locally (no registration needed — Identity service is unreachable).
-**Action:** `POST /feedback` with `jws(alice, {action: "wrong_action", from_agent_id: alice.id, to_agent_id: bob.id, ...})` — the JWS has a wrong `action` AND the Identity service is down.
-**Expected:**
-- `502 Bad Gateway`
-- `error = IDENTITY_SERVICE_UNAVAILABLE`
-- (NOT `400 INVALID_PAYLOAD` — the service cannot decode the payload without verifying the JWS first)
-
 ---
 
-## Category 7: Existing Validations Through JWS
+## Category 6: Existing Validations Through JWS
 
 These tests verify that existing feedback validation rules still apply when the feedback data is delivered inside a JWS payload instead of a plain JSON body.
 
 ### VJWS-01 Missing feedback fields in JWS payload
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** Alice signs a JWS with `{action: "submit_feedback", from_agent_id: alice.id}` — missing `to_agent_id`, `task_id`, `category`, `rating`.
 **Expected:**
 - `400 Bad Request`
@@ -323,7 +293,7 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ### VJWS-02 Invalid rating in JWS payload
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** Alice signs a JWS with `{action: "submit_feedback", ..., rating: "excellent"}`.
 **Expected:**
 - `400 Bad Request`
@@ -331,7 +301,7 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ### VJWS-03 Invalid category in JWS payload
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** Alice signs a JWS with `{action: "submit_feedback", ..., category: "timeliness"}`.
 **Expected:**
 - `400 Bad Request`
@@ -339,7 +309,7 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ### VJWS-04 Self-feedback in JWS payload
 
-**Setup:** Register `agent_alice`.
+**Setup:** Create `agent_alice` with a known keypair.
 **Action:** Alice signs a JWS with `{action: "submit_feedback", from_agent_id: alice.id, to_agent_id: alice.id, ...}`.
 **Expected:**
 - `400 Bad Request`
@@ -347,7 +317,7 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ### VJWS-05 Comment too long in JWS payload
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** Alice signs a JWS with a comment of 257 characters (one over the configured limit).
 **Expected:**
 - `400 Bad Request`
@@ -355,7 +325,7 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ### VJWS-06 Duplicate feedback via JWS
 
-**Setup:** Register `agent_alice` and `agent_bob`. Submit feedback via JWS for (task_1, alice→bob).
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs. Submit feedback via JWS for (task_1, alice→bob).
 **Action:** Submit identical feedback via JWS again for (task_1, alice→bob).
 **Expected:**
 - `409 Conflict`
@@ -363,7 +333,7 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ### VJWS-07 Mutual reveal works through JWS submission
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:**
 1. Alice submits feedback for (task_1, alice→bob) via JWS — returns `visible: false`
 2. Bob submits feedback for (task_1, bob→alice) via JWS — returns `visible: true`
@@ -375,7 +345,7 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ### VJWS-08 Extra fields in JWS payload are ignored
 
-**Setup:** Register `agent_alice` and `agent_bob`.
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** Alice signs a JWS with valid feedback fields plus `feedback_id`, `submitted_at`, `visible`, `is_admin`.
 **Expected:**
 - `201 Created`
@@ -384,7 +354,7 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ### VJWS-09 Concurrent duplicate feedback race via JWS is safe
 
-**Setup:** Register `agent_alice` and `agent_bob`. Prepare two identical JWS-wrapped feedback requests for (task_1, alice→bob).
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs. Prepare two identical JWS-wrapped feedback requests for (task_1, alice→bob).
 **Action:** Send both requests simultaneously (parallel).
 **Expected:**
 - Exactly one `201 Created`
@@ -392,11 +362,11 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ---
 
-## Category 8: Cross-Cutting Security Assertions
+## Category 7: Cross-Cutting Security Assertions
 
 ### SEC-AUTH-01 Error envelope consistency for auth errors
 
-**Action:** Trigger each auth error code at least once (`INVALID_JWS`, `INVALID_PAYLOAD`, `FORBIDDEN`, `IDENTITY_SERVICE_UNAVAILABLE`).
+**Action:** Trigger each auth error code at least once (`INVALID_JWS`, `INVALID_PAYLOAD`, `FORBIDDEN`).
 **Expected:** All responses have exactly:
 - top-level `error` (string)
 - top-level `message` (string)
@@ -404,12 +374,12 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ### SEC-AUTH-02 No internal error leakage in auth failures
 
-**Action:** Trigger `INVALID_JWS`, `FORBIDDEN`, and `IDENTITY_SERVICE_UNAVAILABLE` errors.
-**Expected:** `message` never includes stack traces, Identity service URLs, cryptographic details, private key material, or internal diagnostics.
+**Action:** Trigger `INVALID_JWS`, `FORBIDDEN` errors.
+**Expected:** `message` never includes stack traces, cryptographic details, private key material, or internal diagnostics.
 
 ### SEC-AUTH-03 JWS token reuse across actions is rejected
 
-**Setup:** Register `agent_alice` and `agent_bob`. Construct a valid JWS with `action: "escrow_lock"` (central-bank action).
+**Setup:** Create `agent_alice` and `agent_bob` with known keypairs. Construct a valid JWS with `action: "escrow_lock"` (central-bank action).
 **Action:** `POST /feedback` with the escrow lock JWS.
 **Expected:**
 - `400 Bad Request`
@@ -426,7 +396,7 @@ Authentication is release-ready only if:
 2. All tests in `reputation-service-tests.md` pass when executed with JWS-wrapped requests.
 3. No endpoint returns `500` in any test scenario.
 4. All failing responses conform to the required error envelope.
-5. The Identity service being unavailable never causes the Reputation service to crash — it returns `502` gracefully.
+5. Local certificate verification via PlatformAgent never causes the Reputation service to crash — invalid certificates return `403` gracefully.
 
 ---
 
@@ -437,16 +407,15 @@ Authentication is release-ready only if:
 | JWS Token Validation | AUTH-01 to AUTH-08 | 8 |
 | JWS Payload Validation | AUTH-09 to AUTH-11 | 3 |
 | Authorization (Signer Matching) | AUTH-12 to AUTH-14 | 3 |
-| Identity Service Unavailability | AUTH-15 to AUTH-16 | 2 |
 | GET Endpoints Remain Public | PUB-01 to PUB-04 | 4 |
-| Error Precedence | PREC-01 to PREC-07 | 7 |
+| Error Precedence | PREC-01 to PREC-06 | 6 |
 | Existing Validations Through JWS | VJWS-01 to VJWS-09 | 9 |
 | Cross-Cutting Security | SEC-AUTH-01 to SEC-AUTH-03 | 3 |
-| **Total** | | **39** |
+| **Total** | | **36** |
 
 | Endpoint | Covered By |
 |----------|------------|
-| `POST /feedback` | AUTH-01 to AUTH-16, PREC-01 to PREC-07, VJWS-01 to VJWS-09, SEC-AUTH-01 to SEC-AUTH-03 |
+| `POST /feedback` | AUTH-01 to AUTH-14, PREC-01 to PREC-06, VJWS-01 to VJWS-09, SEC-AUTH-01 to SEC-AUTH-03 |
 | `GET /feedback/{feedback_id}` | PUB-01 |
 | `GET /feedback/task/{task_id}` | PUB-02, VJWS-07 |
 | `GET /feedback/agent/{agent_id}` | PUB-03 |

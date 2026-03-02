@@ -16,7 +16,7 @@ service:
   name: "observatory"
   version: "0.1.0"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8006
   log_level: "info"
 logging:
@@ -58,7 +58,7 @@ service:
   version: "0.1.0"
   unknown_field: "should fail"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8006
   log_level: "info"
 logging:

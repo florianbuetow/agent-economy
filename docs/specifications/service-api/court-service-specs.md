@@ -804,7 +804,7 @@ service:
   version: "0.1.0"
 
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8005
   log_level: "info"
 
@@ -852,7 +852,7 @@ All fields are required. The service must fail to start if any is missing. No de
 |-----------------------|-------------------------------|-------------|
 | `service.name`        | `"court"`                     | Service identifier |
 | `service.version`     | `"0.1.0"`                     | Service version string |
-| `server.host`         | `"0.0.0.0"`                   | Bind address |
+| `server.host`         | `"127.0.0.1"`                   | Bind address |
 | `server.port`         | `8005`                        | Listen port |
 | `server.log_level`    | `"info"`                      | Uvicorn log level |
 | `logging.level`       | `"INFO"`                      | Application log level |

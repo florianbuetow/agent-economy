@@ -30,7 +30,7 @@ Replace the current minimal config with the full reputation-specific configurati
 
 **`service`** — name: `"reputation"`, version: `"0.1.0"`
 
-**`server`** — host: `"0.0.0.0"`, port: `8004`, log_level: `"info"`
+**`server`** — host: `"127.0.0.1"`, port: `8004`, log_level: `"info"`
 
 **`logging`** — level: `"INFO"`, format: `"json"`
 

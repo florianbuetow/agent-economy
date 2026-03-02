@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document specifies how the Central Bank service authenticates operations using JWS tokens verified by the Identity service. It follows the same JWS authentication model established across all services in the Agent Task Economy.
+This document specifies how the Central Bank service authenticates operations using JWS tokens verified locally via a `PlatformAgent` instance. It follows the certificate-based authentication model established across all services in the Agent Task Economy, where each service performs its own cryptographic verification without depending on the Identity service.
 
 ## Motivation
 
@@ -108,52 +108,46 @@ GET endpoints have no request body. The JWS payload carries the `action` field a
 ## Authentication Flow
 
 ```
-Client                         Central Bank                    Identity Service
-  |                                  |                                |
-  |  1. Construct JWS payload        |                                |
-  |     { action, ... }              |                                |
-  |                                  |                                |
-  |  2. Sign with Ed25519            |                                |
-  |     private key                  |                                |
-  |                                  |                                |
-  |  3. Send request                 |                                |
-  |     (body token or Bearer)       |                                |
-  |  -------------------------------->                                |
-  |                                  |  4. POST /agents/verify-jws    |
-  |                                  |     { "token": "eyJ..." }      |
-  |                                  |  ------------------------------>|
-  |                                  |                                |
-  |                                  |                5. Decode JWS   |
-  |                                  |                6. Look up kid's |
-  |                                  |                   public key   |
-  |                                  |                7. Verify Ed25519|
-  |                                  |                   signature    |
-  |                                  |                                |
-  |                                  |  8. { valid: true,             |
-  |                                  |       agent_id: "a-xxx",       |
-  |                                  |       payload: {...} }         |
-  |                                  |  <------------------------------|
-  |                                  |                                |
-  |                                  |  9. Validate action field      |
-  |                                  | 10. Check authorization:       |
-  |                                  |     Platform ops → signer must |
-  |                                  |       match platform_agent_id  |
-  |                                  |     Agent ops → signer must    |
-  |                                  |       match account owner      |
-  |                                  | 11. Validate payload fields    |
-  |                                  | 12. Execute operation          |
-  |                                  |                                |
-  | 13. Response                     |                                |
-  |  <--------------------------------                                |
+Client                         Central Bank (with PlatformAgent)
+  |                                  |
+  |  1. Construct JWS payload        |
+  |     { action, ... }              |
+  |                                  |
+  |  2. Sign with Ed25519            |
+  |     private key (certificate)    |
+  |                                  |
+  |  3. Send request                 |
+  |     (body token or Bearer)       |
+  |  -------------------------------->
+  |                                  |
+  |                                  |  4. Decode JWS header (extract kid)
+  |                                  |  5. Call PlatformAgent.validate_certificate(
+  |                                  |       request_payload, certificate)
+  |                                  |  6. Decrypt certificate using agent's
+  |                                  |       public key (from kid)
+  |                                  |  7. Compare decrypted certificate
+  |                                  |       to request payload
+  |                                  |
+  |                                  |  8. Validate action field
+  |                                  |  9. Check authorization:
+  |                                  |     Platform ops → signer must
+  |                                  |       match platform_agent_id
+  |                                  |     Agent ops → signer must
+  |                                  |       match account owner
+  |                                  | 10. Validate payload fields
+  |                                  | 11. Execute operation
+  |                                  |
+  | 12. Response                     |
+  |  <--------------------------------
 ```
 
-The Central Bank never touches crypto directly. All signature verification is delegated to the Identity service.
+The Central Bank performs cryptographic verification locally using its `PlatformAgent` instance. No external service call is needed for authentication.
 
 ---
 
 ## Payload Validation Rules
 
-After the Identity service confirms the JWS is valid, the Central Bank validates the payload:
+After local certificate verification confirms the JWS is valid, the Central Bank validates the payload:
 
 1. **Action must match the endpoint.** Each endpoint expects a specific `action` value (see Action Values table). A mismatched action returns `INVALID_PAYLOAD`.
 
@@ -175,7 +169,7 @@ After the Identity service confirms the JWS is valid, the Central Bank validates
 
 ## Authorization Rules
 
-After the Identity service confirms the JWS is valid and returns the signer's `agent_id`:
+After local certificate verification confirms the JWS is valid and extracts the signer's `agent_id` (from the `kid` header):
 
 ### Platform Operations
 
@@ -202,8 +196,8 @@ Authentication-related errors used by the Central Bank service:
 | 400 | `INVALID_JWS` | JWS token is malformed, missing, empty, or not a string |
 | 400 | `INVALID_PAYLOAD` | JWS payload is missing `action`, `action` does not match the expected value for this endpoint, or required payload fields are missing |
 | 400 | `PAYLOAD_MISMATCH` | JWS payload field does not match URL parameter (e.g., `account_id` or `escrow_id` mismatch), or duplicate credit reference with a different amount |
-| 403 | `FORBIDDEN` | JWS signature verification failed (Identity says `valid: false`), signer does not match the required agent, or non-platform agent attempting a platform operation |
-| 502 | `IDENTITY_SERVICE_UNAVAILABLE` | Cannot reach the Identity service for JWS verification, or Identity service returned an unexpected response (connection failure, timeout, non-200 with non-JSON body) |
+| 403 | `FORBIDDEN` | JWS certificate verification failed (decrypted certificate does not match request payload), signer does not match the required agent, or non-platform agent attempting a platform operation |
+| 502 | `IDENTITY_SERVICE_UNAVAILABLE` | Cannot reach the Identity service for agent existence checks during account creation (connection failure, timeout, non-200 with non-JSON body). Not used for authentication — authentication is performed locally. |
 
 All errors follow the standard error envelope:
 
@@ -223,44 +217,48 @@ Errors are checked in this order (first match wins):
 2. `413 PAYLOAD_TOO_LARGE` — body exceeds `request.max_body_size`
 3. `400 INVALID_JSON` — malformed JSON body
 4. `400 INVALID_JWS` — missing or malformed `token` field (POST), or missing/malformed Bearer token (GET)
-5. `502 IDENTITY_SERVICE_UNAVAILABLE` — Identity service unreachable or returned an unexpected response
-6. `403 FORBIDDEN` — Identity service says signature is invalid (`valid: false`)
-7. `400 INVALID_PAYLOAD` — wrong `action`, missing required payload fields
-8. `400 PAYLOAD_MISMATCH` — payload field does not match URL parameter
-9. `403 FORBIDDEN` — signer does not match the expected agent (non-platform agent doing platform ops, or agent accessing another's account)
+5. `403 FORBIDDEN` — local certificate verification failed (decrypted certificate does not match request payload)
+6. `400 INVALID_PAYLOAD` — wrong `action`, missing required payload fields
+7. `400 PAYLOAD_MISMATCH` — payload field does not match URL parameter
+8. `403 FORBIDDEN` — signer does not match the expected agent (non-platform agent doing platform ops, or agent accessing another's account)
+9. `502 IDENTITY_SERVICE_UNAVAILABLE` — Identity service unreachable during agent existence check (account creation only)
 10. Domain-specific errors (`ACCOUNT_NOT_FOUND`, `ACCOUNT_EXISTS`, `INSUFFICIENT_FUNDS`, `ESCROW_NOT_FOUND`, `ESCROW_ALREADY_RESOLVED`, `ESCROW_ALREADY_LOCKED`, `AGENT_NOT_FOUND`, `INVALID_AMOUNT`)
 
 ### Notes on Error Mapping
 
-- **Invalid signature** returns `403 FORBIDDEN`. The Identity service confirmed the token's signature does not match the claimed signer's public key — this is an authentication failure. There is no `401` in this system because there is no challenge-response mechanism (no `WWW-Authenticate` header).
+- **Invalid signature** returns `403 FORBIDDEN`. Local certificate verification determined that the decrypted certificate does not match the request payload — this is an authentication failure. There is no `401` in this system because there is no challenge-response mechanism (no `WWW-Authenticate` header).
 - **Signer mismatch** also returns `403 FORBIDDEN` with a different message. The token is cryptographically valid, but the signer is not authorized for the operation. Both cases use the same status code but carry different `message` text for debugging.
-- **Identity service down or misbehaving** returns `502 IDENTITY_SERVICE_UNAVAILABLE`. This covers connection failures, timeouts, and unexpected responses (e.g., Identity returns `500` with a non-JSON body). The service does not fall back to unauthenticated mode.
+- **Identity service down or misbehaving** returns `502 IDENTITY_SERVICE_UNAVAILABLE`. This only applies to agent existence checks during account creation (e.g., `GET /agents/{agent_id}`). Authentication itself does not depend on the Identity service — it is performed locally via `PlatformAgent.validate_certificate()`.
 
 ---
 
 ## Configuration
 
-### Identity Integration
+### Identity Integration (Agent Existence Checks Only)
 
 ```yaml
 identity:
   base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
   get_agent_path: "/agents"
 ```
 
 - `base_url`: Base URL of the Identity service.
-- `verify_jws_path`: Path to the JWS verification endpoint. Used for all authenticated requests.
 - `get_agent_path`: Path prefix for agent lookup. Used during account creation to verify the target agent exists (`GET /agents/{agent_id}`).
+
+The Identity service is no longer used for authentication. JWS verification is performed locally by the `PlatformAgent`.
 
 ### Platform Agent
 
 ```yaml
 platform:
   agent_id: ""
+  public_key_path: ""
+  private_key_path: ""
 ```
 
-- `platform.agent_id`: The agent ID of the platform, registered with the Identity service. Used to verify incoming platform-signed tokens — the signer's `agent_id` returned by the Identity service must match this value for platform operations.
+- `platform.agent_id`: The agent ID of the platform. Used to verify incoming platform-signed tokens — the signer's `kid` (from the JWS header) must match this value for platform operations.
+- `platform.public_key_path`: Path to the platform agent's Ed25519 public key file. Used by `PlatformAgent` to verify incoming JWS certificates.
+- `platform.private_key_path`: Path to the platform agent's Ed25519 private key file. Used by `PlatformAgent` for signing outgoing requests.
 
 All fields are required. Missing fields cause startup failure.
 

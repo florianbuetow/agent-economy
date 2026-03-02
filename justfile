@@ -56,6 +56,8 @@ help:
     @printf "  \033[0;37mjust start-reputation \033[0;34m Start reputation service locally\033[0m\n"
     @printf "  \033[0;37mjust start-court      \033[0;34m Start court service locally\033[0m\n"
     @printf "  \033[0;37mjust start-observatory\033[0;34m Start observatory service locally\033[0m\n"
+    @printf "  \033[0;37mjust start-db-gateway \033[0;34m Start db-gateway service locally\033[0m\n"
+    @printf "  \033[0;37mjust start-ui         \033[0;34m Start UI service locally\033[0m\n"
     @printf "  \033[0;37mjust stop-all         \033[0;34m Stop all locally running services\033[0m\n"
     @printf "  \033[0;37mjust stop-identity    \033[0;34m Stop identity service\033[0m\n"
     @printf "  \033[0;37mjust stop-bank        \033[0;34m Stop central bank service\033[0m\n"
@@ -63,6 +65,8 @@ help:
     @printf "  \033[0;37mjust stop-reputation  \033[0;34m Stop reputation service\033[0m\n"
     @printf "  \033[0;37mjust stop-court       \033[0;34m Stop court service\033[0m\n"
     @printf "  \033[0;37mjust stop-observatory \033[0;34m Stop observatory service\033[0m\n"
+    @printf "  \033[0;37mjust stop-db-gateway  \033[0;34m Stop db-gateway service\033[0m\n"
+    @printf "  \033[0;37mjust stop-ui          \033[0;34m Stop UI service\033[0m\n"
     @printf "  \033[0;37mjust start-feeder     \033[0;34m Start task feeder (posts math tasks)\033[0m\n"
     @printf "  \033[0;37mjust stop-feeder      \033[0;34m Stop task feeder\033[0m\n"
     @printf "  \033[0;37mjust start-mathbot    \033[0;34m Start math worker agent (requires services + LM Studio)\033[0m\n"
@@ -156,6 +160,8 @@ init-all:
     cd services/reputation && just init
     cd services/court && just init
     cd services/observatory && just init
+    cd services/db-gateway && just init
+    cd services/ui && just init
     cd agents && just init
     cd tools && just init
     @printf "\033[0;32m✓ All services initialized\033[0m\n"
@@ -197,6 +203,18 @@ start-observatory:
     cd services/observatory && just run
     @echo ""
 
+# Start db-gateway service locally
+start-db-gateway:
+    @echo ""
+    cd services/db-gateway && just run
+    @echo ""
+
+# Start UI service locally
+start-ui:
+    @echo ""
+    cd services/ui && just run
+    @echo ""
+
 # Start all services in background (respects dependency order)
 start-all:
     #!/usr/bin/env bash
@@ -222,31 +240,37 @@ start-all:
     }
 
     # Tier 1: No dependencies
-    printf "Starting tier 1 (Identity, Reputation)...\n"
-    cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host 0.0.0.0 --port 8001 &
-    cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 0.0.0.0 --port 8004 &
+    printf "Starting tier 1 (Identity, Reputation, DB Gateway, UI)...\n"
+    cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host 127.0.0.1 --port 8001 &
+    cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 127.0.0.1 --port 8004 &
+    cd services/db-gateway && uv run uvicorn db_gateway_service.app:create_app --factory --host 127.0.0.1 --port 8007 &
+    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host 127.0.0.1 --port 8008 &
     wait_for_health "Identity" 8001
     wait_for_health "Reputation" 8004
+    wait_for_health "DB Gateway" 8007
+    wait_for_health "UI" 8008
 
     # Tier 2: Depends on Identity
     printf "Starting tier 2 (Central Bank)...\n"
-    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 0.0.0.0 --port 8002 &
+    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 127.0.0.1 --port 8002 &
     wait_for_health "Central Bank" 8002
 
     # Tier 3: Depends on Identity + Central Bank
     printf "Starting tier 3 (Task Board, Observatory)...\n"
-    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 0.0.0.0 --port 8003 &
-    cd services/observatory && uv run uvicorn observatory_service.app:create_app --factory --host 0.0.0.0 --port 8006 &
+    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 127.0.0.1 --port 8003 &
+    cd services/observatory && uv run uvicorn observatory_service.app:create_app --factory --host 127.0.0.1 --port 8006 &
     wait_for_health "Task Board" 8003
     wait_for_health "Observatory" 8006
 
     # Tier 4: Depends on everything
     printf "Starting tier 4 (Court)...\n"
-    cd services/court && uv run uvicorn court_service.app:create_app --factory --host 0.0.0.0 --port 8005 &
+    cd services/court && uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port 8005 &
     wait_for_health "Court" 8005
 
     printf "\n"
     printf "\033[0;32m✓ All services started\033[0m\n"
+    printf "\033[0;32m  Observatory UI: http://localhost:8006\033[0m\n"
+    printf "\033[0;32m  UI Service:     http://localhost:8008\033[0m\n"
     printf "\n"
 
 # Stop identity service
@@ -285,6 +309,18 @@ stop-observatory:
     cd services/observatory && just kill
     @echo ""
 
+# Stop db-gateway service
+stop-db-gateway:
+    @echo ""
+    cd services/db-gateway && just kill
+    @echo ""
+
+# Stop UI service
+stop-ui:
+    @echo ""
+    cd services/ui && just kill
+    @echo ""
+
 # Stop all locally running services
 stop-all:
     #!/usr/bin/env bash
@@ -293,7 +329,7 @@ stop-all:
     printf "\n"
 
     failed=0
-    for svc in identity central-bank task-board reputation court observatory; do
+    for svc in identity central-bank task-board reputation court observatory db-gateway ui; do
         cd "services/$svc" && just kill || failed=$((failed + 1))
         cd - > /dev/null
     done
@@ -401,6 +437,8 @@ status:
     check_service "Reputation"   8004
     check_service "Court"        8005
     check_service "Observatory"  8006
+    check_service "DB Gateway"   8007
+    check_service "UI"           8008
 
     printf "\n"
 
@@ -414,6 +452,8 @@ destroy-all:
     cd services/reputation && just destroy
     cd services/court && just destroy
     cd services/observatory && just destroy
+    cd services/db-gateway && just destroy
+    cd services/ui && just destroy
     cd agents && just destroy
     cd tools && just destroy
     @printf "\033[0;32m✓ All virtual environments removed\033[0m\n"
@@ -472,6 +512,8 @@ test-all:
     cd services/reputation && just test
     cd services/court && just test
     cd services/observatory && just test
+    cd services/db-gateway && just test
+    cd services/ui && just test
     @printf "\033[0;32m✓ All tests passed\033[0m\n"
     @echo ""
 
@@ -502,7 +544,7 @@ ci-all:
     printf "\033[0;34m=== Running CI for All Services ===\033[0m\n"
     printf "\n"
 
-    services=(identity central-bank task-board reputation court observatory)
+    services=(identity central-bank task-board reputation court observatory db-gateway ui)
     for svc in "${services[@]}"; do
         cd "$root/services/$svc" && just ci
     done
@@ -519,7 +561,7 @@ ci-all-quiet:
     printf "\n"
     printf "\033[0;34m=== Running CI for All Services (Quiet Mode) ===\033[0m\n"
 
-    services=(identity central-bank task-board reputation court observatory)
+    services=(identity central-bank task-board reputation court observatory db-gateway ui)
     for svc in "${services[@]}"; do
         printf "Checking %s...\n" "$svc"
         cd "$root/services/$svc" && just ci-quiet

@@ -626,7 +626,7 @@ service:
   version: "0.1.0"
 
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: {port}
   log_level: "info"
 

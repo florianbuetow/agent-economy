@@ -32,7 +32,7 @@ All checks must pass:
 cd services/identity && just run
 ```
 
-Wait for `Uvicorn running on http://0.0.0.0:8001` in the output.
+Wait for `Uvicorn running on http://127.0.0.1:8001` in the output.
 
 ---
 

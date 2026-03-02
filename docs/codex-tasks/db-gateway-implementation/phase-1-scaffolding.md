@@ -217,7 +217,7 @@ service:
   version: "0.1.0"
 
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8006
   log_level: "info"
 
@@ -395,7 +395,7 @@ destroy:
 run:
     @echo ""
     @printf "\033[0;34m=== Running Database Gateway Service Locally on port 8006 ===\033[0m\n"
-    @uv run uvicorn db_gateway_service.app:create_app --factory --reload --host 0.0.0.0 --port 8006
+    @uv run uvicorn db_gateway_service.app:create_app --factory --reload --host 127.0.0.1 --port 8006
 
 # Stop the locally running service
 kill:
@@ -748,7 +748,7 @@ COPY config.yaml ./
 
 EXPOSE 8006
 
-CMD ["uv", "run", "uvicorn", "db_gateway_service.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8006"]
+CMD ["uv", "run", "uvicorn", "db_gateway_service.app:create_app", "--factory", "--host", "127.0.0.1", "--port", "8006"]
 ```
 
 ---
