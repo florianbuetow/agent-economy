@@ -28,3 +28,7 @@ platform:
 
 request:
   max_body_size: 1048576
+
+db_gateway:
+  url: "http://127.0.0.1:8007"
+  timeout_seconds: 10

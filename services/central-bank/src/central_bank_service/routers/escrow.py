@@ -71,6 +71,7 @@ async def escrow_lock(request: Request) -> JSONResponse:
         )
 
     result = await run_in_threadpool(state.ledger.escrow_lock, agent_id, amount, task_id)
+
     get_logger(__name__).info(
         "Escrow locked",
         extra={
@@ -133,6 +134,7 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
         )
 
     result = await run_in_threadpool(state.ledger.escrow_release, escrow_id, recipient_account_id)
+
     get_logger(__name__).info(
         "Escrow released",
         extra={
@@ -213,6 +215,7 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
         worker_pct,
         poster_account_id,
     )
+
     get_logger(__name__).info(
         "Escrow split",
         extra={

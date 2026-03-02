@@ -108,6 +108,7 @@ async def create_account(request: Request) -> JSONResponse:
         )
 
     result = await run_in_threadpool(state.ledger.create_account, agent_id, initial_balance)
+
     get_logger(__name__).info(
         "Account created",
         extra={"account_id": agent_id, "initial_balance": initial_balance},
@@ -171,6 +172,7 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
         raise ServiceError("invalid_payload", "reference must be a string", 400, {})
 
     result = await run_in_threadpool(state.ledger.credit, account_id, amount, reference)
+
     get_logger(__name__).info(
         "Account credited",
         extra={

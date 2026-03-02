@@ -12,7 +12,7 @@ from central_bank_service.config import get_config_path, get_settings
 from central_bank_service.core.state import init_app_state
 from central_bank_service.logging import get_logger, setup_logging
 from central_bank_service.services.identity_client import IdentityClient
-from central_bank_service.services.ledger import Ledger
+from central_bank_service.services.ledger_db_client import LedgerDbClient
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -30,13 +30,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     logger = get_logger(__name__)
 
     state = init_app_state()
-
-    # Ensure database directory exists
-    db_path = settings.database.path
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    state.platform_agent_id = settings.platform.agent_id
 
     # Initialize ledger
-    state.ledger = Ledger(db_path=db_path)
+    if settings.db_gateway is None:
+        msg = "db_gateway configuration is required"
+        raise RuntimeError(msg)
+
+    state.ledger = LedgerDbClient(
+        base_url=settings.db_gateway.url,
+        timeout_seconds=settings.db_gateway.timeout_seconds,
+    )
 
     # Initialize identity client
     verify_jws_path = settings.identity.verify_jws_path or "/agents/verify-jws"
@@ -45,7 +49,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         get_agent_path=settings.identity.get_agent_path,
         verify_jws_path=verify_jws_path,
     )
-
     if settings.platform.agent_config_path:
         config_path = Path(settings.platform.agent_config_path)
         if not config_path.is_absolute():
@@ -53,6 +56,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         factory = AgentFactory(config_path=config_path)
         state.platform_agent = factory.platform_agent()
         await state.platform_agent.register()
+        if state.platform_agent.agent_id is not None:
+            state.platform_agent_id = str(state.platform_agent.agent_id)
         logger.info("Platform agent registered", extra={"agent_id": state.platform_agent.agent_id})
 
     logger.info(

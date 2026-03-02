@@ -21,6 +21,7 @@ from central_bank_service.app import create_app
 from central_bank_service.config import clear_settings_cache
 from central_bank_service.core.lifespan import lifespan
 from central_bank_service.core.state import get_app_state, reset_app_state
+from tests.fakes.in_memory_ledger_store import InMemoryLedgerStore
 
 PLATFORM_AGENT_ID = "a-platform-test-id"
 
@@ -129,6 +130,9 @@ platform:
   agent_id: "{PLATFORM_AGENT_ID}"
 request:
   max_body_size: 1048576
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -141,6 +145,7 @@ request:
     async with lifespan(test_app):
         # Replace runtime clients with mocks
         state = get_app_state()
+        state.ledger = InMemoryLedgerStore(db_path=str(db_path))
         mock_identity = AsyncMock()
         mock_identity.close = AsyncMock()
         mock_identity.get_agent = AsyncMock(
