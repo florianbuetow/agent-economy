@@ -7,8 +7,9 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from base_agent.platform import PlatformAgent
+
     from reputation_service.services.feedback_store import FeedbackStore
-    from reputation_service.services.identity_client import IdentityClient
 
 
 @dataclass
@@ -32,7 +33,17 @@ class AppState:
 
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     feedback_store: FeedbackStore | None = None
-    identity_client: IdentityClient | None = None
+    platform_agent: PlatformAgent | None = None
+
+    @property
+    def identity_client(self) -> PlatformAgent | None:
+        """Backward-compatible alias for legacy tests."""
+        return self.platform_agent
+
+    @identity_client.setter
+    def identity_client(self, value: PlatformAgent | None) -> None:
+        """Backward-compatible alias for legacy tests."""
+        self.platform_agent = value
 
     @property
     def uptime_seconds(self) -> float:
