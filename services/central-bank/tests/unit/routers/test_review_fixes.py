@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -17,22 +15,6 @@ from .conftest import PLATFORM_AGENT_ID, make_jws_token
 
 def _setup_identity_mock(state: Any) -> None:
     """Configure mock identity client that decodes tokens."""
-
-    async def mock_verify_jws(token: str) -> dict[str, Any]:
-        parts = token.split(".")
-        header_b64 = parts[0]
-        padding = 4 - len(header_b64) % 4
-        if padding != 4:
-            header_b64 += "=" * padding
-        header = json.loads(base64.urlsafe_b64decode(header_b64))
-        payload_b64 = parts[1]
-        padding = 4 - len(payload_b64) % 4
-        if padding != 4:
-            payload_b64 += "=" * padding
-        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
-        return {"valid": True, "agent_id": header["kid"], "payload": payload}
-
-    state.identity_client.verify_jws = AsyncMock(side_effect=mock_verify_jws)
     state.identity_client.get_agent = AsyncMock(
         return_value={"agent_id": "a-test-agent", "name": "Test"}
     )

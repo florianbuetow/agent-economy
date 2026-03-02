@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import json
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -20,25 +18,6 @@ def _setup_identity_mock_for_platform(
     agent_id: str = "a-test-agent",
 ) -> None:
     """Configure the mock identity client for platform operations."""
-
-    async def mock_verify_jws(token: str) -> dict[str, Any]:
-        # Decode the token to extract payload (trust it for testing)
-        parts = token.split(".")
-        header_b64 = parts[0]
-        padding = 4 - len(header_b64) % 4
-        if padding != 4:
-            header_b64 += "=" * padding
-        header = json.loads(base64.urlsafe_b64decode(header_b64))
-
-        payload_b64 = parts[1]
-        padding = 4 - len(payload_b64) % 4
-        if padding != 4:
-            payload_b64 += "=" * padding
-        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
-
-        return {"valid": True, "agent_id": header["kid"], "payload": payload}
-
-    app_state.identity_client.verify_jws = AsyncMock(side_effect=mock_verify_jws)
 
     if agent_exists:
         app_state.identity_client.get_agent = AsyncMock(
@@ -134,18 +113,8 @@ class TestCreateAccount:
 
     async def test_create_account_non_platform_forbidden(self, client, agent_keypair):
         """Non-platform agent cannot create accounts."""
-        state = get_app_state()
         private_key, _ = agent_keypair
         agent_id = "a-regular-agent"
-
-        async def mock_verify_jws(_token: str) -> dict[str, Any]:
-            return {
-                "valid": True,
-                "agent_id": agent_id,
-                "payload": {"action": "create_account", "agent_id": "a-victim"},
-            }
-
-        state.identity_client.verify_jws = AsyncMock(side_effect=mock_verify_jws)
 
         token = make_jws_token(
             private_key,
@@ -247,16 +216,6 @@ class TestGetBalance:
         )
         await client.post("/accounts", json={"token": create_token})
 
-        # Agent reads own balance
-        async def mock_verify_agent(_token: str) -> dict[str, Any]:
-            return {
-                "valid": True,
-                "agent_id": agent_id,
-                "payload": {"action": "get_balance"},
-            }
-
-        state.identity_client.verify_jws = AsyncMock(side_effect=mock_verify_agent)
-
         balance_token = make_jws_token(
             agent_key, agent_id, {"action": "get_balance", "account_id": agent_id}
         )
@@ -269,16 +228,6 @@ class TestGetBalance:
 
     async def test_get_balance_forbidden_other_account(self, client, agent_keypair):
         """Agent cannot read another agent's balance."""
-        state = get_app_state()
-
-        async def mock_verify(_token: str) -> dict[str, Any]:
-            return {
-                "valid": True,
-                "agent_id": "a-eve",
-                "payload": {"action": "get_balance"},
-            }
-
-        state.identity_client.verify_jws = AsyncMock(side_effect=mock_verify)
 
         agent_key, _ = agent_keypair
         token = make_jws_token(agent_key, "a-eve", {"action": "get_balance"})
@@ -316,16 +265,6 @@ class TestGetTransactions:
             {"action": "create_account", "agent_id": agent_id, "initial_balance": 50},
         )
         await client.post("/accounts", json={"token": create_token})
-
-        # Agent reads own transactions
-        async def mock_verify_agent(_token: str) -> dict[str, Any]:
-            return {
-                "valid": True,
-                "agent_id": agent_id,
-                "payload": {"action": "get_transactions"},
-            }
-
-        state.identity_client.verify_jws = AsyncMock(side_effect=mock_verify_agent)
 
         tx_token = make_jws_token(
             agent_key, agent_id, {"action": "get_transactions", "account_id": agent_id}

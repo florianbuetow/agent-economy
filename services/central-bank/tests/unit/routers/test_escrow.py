@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import json
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -16,24 +14,6 @@ from .conftest import PLATFORM_AGENT_ID, make_jws_token
 
 def _setup_identity_mock(state: Any) -> None:
     """Configure mock identity client that decodes tokens."""
-
-    async def mock_verify_jws(token: str) -> dict[str, Any]:
-        parts = token.split(".")
-        header_b64 = parts[0]
-        padding = 4 - len(header_b64) % 4
-        if padding != 4:
-            header_b64 += "=" * padding
-        header = json.loads(base64.urlsafe_b64decode(header_b64))
-
-        payload_b64 = parts[1]
-        padding = 4 - len(payload_b64) % 4
-        if padding != 4:
-            payload_b64 += "=" * padding
-        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
-
-        return {"valid": True, "agent_id": header["kid"], "payload": payload}
-
-    state.identity_client.verify_jws = AsyncMock(side_effect=mock_verify_jws)
     state.identity_client.get_agent = AsyncMock(
         return_value={"agent_id": "a-test-agent", "name": "Test"}
     )
@@ -116,21 +96,6 @@ class TestEscrowLock:
         await _create_funded_account(client, platform_keypair, "a-victim", 100)
 
         agent_key, _ = agent_keypair
-
-        # Eve tries to lock victim's funds but signs as a-eve
-        async def mock_verify_eve(_token: str) -> dict[str, Any]:
-            return {
-                "valid": True,
-                "agent_id": "a-eve",
-                "payload": {
-                    "action": "escrow_lock",
-                    "agent_id": "a-victim",
-                    "amount": 50,
-                    "task_id": "T-001",
-                },
-            }
-
-        state.identity_client.verify_jws = AsyncMock(side_effect=mock_verify_eve)
 
         token = make_jws_token(
             agent_key,

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import json
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -14,36 +12,12 @@ from central_bank_service.core.state import get_app_state
 from .conftest import PLATFORM_AGENT_ID, make_jws_token
 
 
-def _decode_jws_token(token: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    parts = token.split(".")
-
-    header_b64 = parts[0]
-    header_padding = 4 - len(header_b64) % 4
-    if header_padding != 4:
-        header_b64 += "=" * header_padding
-    header = json.loads(base64.urlsafe_b64decode(header_b64))
-
-    payload_b64 = parts[1]
-    payload_padding = 4 - len(payload_b64) % 4
-    if payload_padding != 4:
-        payload_b64 += "=" * payload_padding
-    payload = json.loads(base64.urlsafe_b64decode(payload_b64))
-
-    return header, payload
-
-
 def _setup_identity_mock_for_agent(
     app_state: Any,
     agent_exists: bool = True,
     agent_id: str = "a-self-service-agent",
 ) -> None:
     """Configure the mock identity client for self-service account operations."""
-
-    async def mock_verify_jws(token: str) -> dict[str, Any]:
-        header, payload = _decode_jws_token(token)
-        return {"valid": True, "agent_id": header["kid"], "payload": payload}
-
-    app_state.identity_client.verify_jws = AsyncMock(side_effect=mock_verify_jws)
 
     if agent_exists:
         app_state.identity_client.get_agent = AsyncMock(
