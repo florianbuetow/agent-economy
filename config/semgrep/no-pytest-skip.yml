@@ -1,0 +1,26 @@
+rules:
+  - id: agent-economy.no-pytest-skip
+    languages: [python]
+    message: >
+      Do not use pytest.skip() to skip tests. Tests must either pass or fail.
+      If a test requires infrastructure, use a pytest marker and filter at collection time.
+      If a test is not yet implemented, write it as a failing test.
+    severity: ERROR
+    pattern-either:
+      - pattern: pytest.skip(...)
+      - pattern: |
+          @pytest.mark.skip
+          def $FUNC(...):
+              ...
+      - pattern: |
+          @pytest.mark.skip(...)
+          def $FUNC(...):
+              ...
+      - pattern: |
+          @pytest.mark.skipif(...)
+          def $FUNC(...):
+              ...
+    paths:
+      include:
+        - src/
+        - tests/

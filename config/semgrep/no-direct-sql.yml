@@ -1,0 +1,60 @@
+rules:
+  - id: no-direct-sql-import
+    patterns:
+      - pattern: import sqlite3
+    message: >
+      Direct sqlite3 import is prohibited. All database access must go through
+      the DB Gateway service. Use Gateway*Store implementations instead.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - src/
+      exclude:
+        - tests/
+        - src/db_gateway_service/
+
+  - id: no-direct-sql-from-import
+    patterns:
+      - pattern-regex: "^from\\s+sqlite3\\s+import\\s+.+$"
+    message: >
+      Direct sqlite3 import is prohibited. All database access must go through
+      the DB Gateway service. Use Gateway*Store implementations instead.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - src/
+      exclude:
+        - tests/
+        - src/db_gateway_service/
+
+  - id: no-aiosqlite-import
+    patterns:
+      - pattern: import aiosqlite
+    message: >
+      Direct aiosqlite import is prohibited. All database access must go through
+      the DB Gateway service.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - src/
+      exclude:
+        - tests/
+        - src/db_gateway_service/
+
+  - id: no-aiosqlite-from-import
+    patterns:
+      - pattern-regex: "^from\\s+aiosqlite\\s+import\\s+.+$"
+    message: >
+      Direct aiosqlite import is prohibited. All database access must go through
+      the DB Gateway service.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - src/
+      exclude:
+        - tests/
+        - src/db_gateway_service/
