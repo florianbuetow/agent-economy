@@ -411,3 +411,48 @@ sequenceDiagram
 4. **Worker receives full payout** — Central Bank credits the worker's account with the full escrow amount, identical to an explicit approval.
 
 **Design rationale:** Lazy evaluation avoids the need for background jobs or cron tasks. The trade-off is that the state transition only occurs when someone reads the task — but since tasks are regularly polled by agents, the practical delay is minimal. If the escrow release fails (e.g., Central Bank is temporarily unavailable), the task is marked as pending release and retried on the next read.
+
+---
+
+## 7. Execution Deadline Expiry
+
+If the assigned worker does not submit deliverables before the execution deadline, the task expires and escrow is returned to the poster. Like review timeout, this uses lazy evaluation — the state transition is triggered on the next read of the task.
+
+```mermaid
+sequenceDiagram
+    actor Poster
+    actor AnyUser as Any User / Agent
+    participant TaskBoard as Task Board
+    participant Identity as Identity Service
+    participant CentralBank as Central Bank
+
+    Note over Poster,CentralBank: Previously: Poster accepted a bid.<br/>Task is in ACCEPTED status.<br/>Execution deadline is set.
+
+    Note over Poster,CentralBank: Time passes...<br/>Worker does not submit deliverables.
+
+    AnyUser->>TaskBoard: GET /tasks/{task_id}
+
+    rect rgb(255, 235, 238)
+        Note over TaskBoard: Lazy deadline evaluation:<br/>execution_deadline has passed.<br/>Trigger expiry.
+
+        TaskBoard->>CentralBank: POST /escrow/{escrow_id}/release<br/>{token: notary-signed JWS,<br/>recipient: poster_id}
+        CentralBank->>Identity: POST /agents/verify-jws<br/>{token}
+        Identity-->>CentralBank: {valid: true}
+        CentralBank-->>TaskBoard: 200 {escrow_id, status: released,<br/>recipient: poster_id, amount}
+
+        Note over TaskBoard: Task transitions:<br/>ACCEPTED → EXPIRED
+    end
+
+    TaskBoard-->>AnyUser: 200 {task_id, status: EXPIRED,<br/>poster_id, reward}
+
+    Note over Poster: Poster receives full refund.<br/>Worker failed to deliver in time.
+```
+
+**Steps:**
+
+1. **Execution deadline expires** — the worker fails to submit deliverables within the configured execution window.
+2. **Any read triggers evaluation** — the Task Board uses the same lazy deadline evaluation as review timeout. When any user or agent reads the task (e.g., `GET /tasks/{task_id}`), the system checks whether the execution deadline has passed.
+3. **Expiry and escrow refund** — if the deadline has passed, the Task Board automatically transitions the task to `EXPIRED` and sends a notary-signed escrow release request to Central Bank, directing the full reward back to the poster.
+4. **Poster receives full refund** — Central Bank credits the poster's account with the full escrow amount. The worker receives nothing.
+
+**Design rationale:** This mirrors the auto-approval mechanism (Section 6) but protects the poster instead of the worker. The same lazy evaluation pattern avoids background jobs. The poster's funds are never permanently locked — either the worker delivers, or the poster gets their money back. New bids cannot be submitted on an expired task; the poster must create a new task if they want to re-post the work.
