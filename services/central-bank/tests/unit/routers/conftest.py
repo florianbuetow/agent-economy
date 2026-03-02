@@ -6,7 +6,7 @@ import base64
 import json
 import os
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -47,6 +47,14 @@ def make_jws_token(private_key: Ed25519PrivateKey, agent_id: str, payload: dict[
     return jws.serialize_compact(protected, payload_bytes, key, algorithms=["EdDSA"])
 
 
+def _decode_jws_payload(token: str) -> dict[str, Any]:
+    """Decode the base64url payload from a compact JWS token."""
+    parts = token.split(".")
+    payload_b64 = parts[1]
+    padded = payload_b64 + "=" * (-len(payload_b64) % 4)
+    return json.loads(base64.urlsafe_b64decode(padded))
+
+
 @pytest.fixture
 def platform_keypair():
     """Generate a platform keypair."""
@@ -78,7 +86,6 @@ database:
   path: "{db_path}"
 identity:
   base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
   get_agent_path: "/agents"
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
@@ -94,14 +101,19 @@ request:
 
     test_app = create_app()
     async with lifespan(test_app):
-        # Replace the real Identity client with a mock
+        # Replace runtime clients with mocks
         state = get_app_state()
         mock_identity = AsyncMock()
         mock_identity.close = AsyncMock()
-
-        # Default: verify_jws succeeds by actually checking the token structure
-        # Tests will configure specific behaviors
+        mock_identity.get_agent = AsyncMock(
+            return_value={"agent_id": "a-test-agent", "name": "Test Agent"},
+        )
         state.identity_client = mock_identity
+        mock_platform = MagicMock()
+        mock_platform.agent_id = PLATFORM_AGENT_ID
+        mock_platform.validate_certificate = MagicMock(side_effect=_decode_jws_payload)
+        mock_platform.close = AsyncMock()
+        state.platform_agent = mock_platform
 
         yield test_app
 

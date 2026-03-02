@@ -39,7 +39,7 @@ async def create_account(request: Request) -> JSONResponse:
         msg = "Ledger not initialized"
         raise RuntimeError(msg)
 
-    verified = await verify_jws_token(data["token"])
+    verified = verify_jws_token(data["token"])
     caller_agent_id = verified["agent_id"]
     is_platform = caller_agent_id == get_platform_agent_id()
 
@@ -126,7 +126,7 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
         msg = "Ledger not initialized"
         raise RuntimeError(msg)
 
-    verified = await verify_jws_token(data["token"])
+    verified = verify_jws_token(data["token"])
     require_platform(verified["agent_id"], get_platform_agent_id())
 
     payload = verified["payload"]
@@ -188,7 +188,7 @@ async def get_balance(request: Request, account_id: str) -> dict[str, object]:
 
     token = auth_header[7:]  # Strip "Bearer "
 
-    verified = await verify_jws_token(token)
+    verified = verify_jws_token(token)
     require_account_owner(verified["agent_id"], account_id)
     payload = verified["payload"]
 
@@ -234,7 +234,7 @@ async def get_transactions(request: Request, account_id: str) -> dict[str, list[
 
     token = auth_header[7:]
 
-    verified = await verify_jws_token(token)
+    verified = verify_jws_token(token)
     require_account_owner(verified["agent_id"], account_id)
     payload = verified["payload"]
 
