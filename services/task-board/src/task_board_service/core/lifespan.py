@@ -140,7 +140,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.asset_manager = asset_manager
     task_manager = TaskManager(
         store=store,
-        identity_client=state.identity_client,
         central_bank_client=central_bank_client,
         escrow_coordinator=escrow_coordinator,
         token_validator=token_validator,

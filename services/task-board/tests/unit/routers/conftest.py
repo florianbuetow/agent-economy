@@ -1,4 +1,4 @@
-"""Router test fixtures with mocked Identity and Central Bank services."""
+"""Router test fixtures with mocked PlatformAgent and Central Bank services."""
 
 from __future__ import annotations
 
@@ -157,11 +157,6 @@ limits:
         # Replace external service clients with mocks
         state = get_app_state()
 
-        # Mock Identity client — default: verification succeeds
-        mock_identity = AsyncMock()
-        mock_identity.close = AsyncMock()
-        state.identity_client = mock_identity
-
         # Mock PlatformAgent for local certificate validation
         mock_platform = MagicMock()
         mock_platform.agent_id = PLATFORM_AGENT_ID
@@ -182,8 +177,6 @@ limits:
         # Propagate mocks to extracted services
         if state.task_manager is not None:
             state.task_manager._central_bank_client = mock_bank
-        if state.token_validator is not None:
-            state.token_validator.set_legacy_identity_client(mock_identity)
         if state.escrow_coordinator is not None:
             state.escrow_coordinator._central_bank_client = mock_bank
 
@@ -210,44 +203,34 @@ async def client(app: Any) -> AsyncIterator[AsyncClient]:
 # ---------------------------------------------------------------------------
 @pytest.fixture
 def mock_identity_verify_success(_app: Any) -> None:
-    """Configure the Identity mock to verify JWS successfully.
-
-    The default mock already returns a truthy AsyncMock response.
-    This fixture makes the behaviour explicit when tests depend on it.
-    """
+    """Configure the platform agent mock to verify JWS successfully."""
     state = get_app_state()
-    state.identity_client.verify_jws = AsyncMock(
-        side_effect=lambda token: {
-            "valid": True,
-            "agent_id": _extract_kid(token),
-            "payload": _extract_payload(token),
-        }
-    )
+    state.platform_agent.validate_certificate = MagicMock(side_effect=_extract_payload)
 
 
 @pytest.fixture
 def mock_identity_unavailable(_app: Any) -> None:
-    """Configure the Identity mock to simulate service unavailability."""
+    """Configure the platform agent mock to simulate service unavailability."""
     state = get_app_state()
-    state.identity_client.verify_jws = AsyncMock(
+    state.platform_agent.validate_certificate = MagicMock(
         side_effect=ConnectionError("Identity service unreachable")
     )
 
 
 @pytest.fixture
 def mock_identity_timeout(_app: Any) -> None:
-    """Configure the Identity mock to simulate a timeout."""
+    """Configure the platform agent mock to simulate a timeout."""
     state = get_app_state()
-    state.identity_client.verify_jws = AsyncMock(
+    state.platform_agent.validate_certificate = MagicMock(
         side_effect=TimeoutError("Identity service timed out")
     )
 
 
 @pytest.fixture
 def mock_identity_unexpected_response(_app: Any) -> None:
-    """Configure the Identity mock to return an unexpected response."""
+    """Configure the platform agent mock to return an unexpected response."""
     state = get_app_state()
-    state.identity_client.verify_jws = AsyncMock(
+    state.platform_agent.validate_certificate = MagicMock(
         side_effect=ValueError("Unexpected response from Identity service")
     )
 
@@ -275,17 +258,8 @@ def mock_central_bank_unavailable(_app: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
-# JWS helper utilities (used by mock_identity_verify_success)
+# JWS helper utilities (used by token validation mocks)
 # ---------------------------------------------------------------------------
-
-
-def _extract_kid(token: str) -> str:
-    """Extract the kid (agent_id) from a JWS compact token header."""
-    header_b64 = token.split(".", maxsplit=1)[0]
-    # Add padding
-    padded = header_b64 + "=" * (4 - len(header_b64) % 4)
-    header = json.loads(base64.urlsafe_b64decode(padded))
-    return header.get("kid", "unknown")
 
 
 def _extract_payload(token: str) -> dict[str, Any]:

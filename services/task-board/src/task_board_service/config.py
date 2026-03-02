@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
@@ -53,15 +53,6 @@ class DatabaseConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     path: str
-
-
-class LegacyIdentityConfig(BaseModel):
-    """Legacy identity configuration kept for test compatibility."""
-
-    model_config = ConfigDict(extra="forbid")
-    base_url: str
-    verify_jws_path: str
-    timeout_seconds: int
 
 
 class CentralBankConfig(BaseModel):
@@ -135,22 +126,10 @@ class Settings(BaseModel):
     database: DatabaseConfig
     central_bank: CentralBankConfig
     platform: PlatformConfig
-    identity: LegacyIdentityConfig | None = None
     request: RequestConfig
     assets: AssetsConfig | None = None
     deadlines: DeadlinesConfig | None = None
     limits: LimitsConfig | None = None
-
-    @model_validator(mode="after")
-    def normalize_legacy_identity(self) -> Settings:
-        """Provide a legacy identity view when identity is omitted."""
-        if self.identity is None:
-            self.identity = LegacyIdentityConfig(
-                base_url=self.platform.agent_config_path or "",
-                verify_jws_path="validate_certificate",
-                timeout_seconds=0,
-            )
-        return self
 
 
 def get_config_path() -> Path:

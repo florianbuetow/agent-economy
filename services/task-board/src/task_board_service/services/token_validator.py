@@ -49,25 +49,9 @@ def decode_base64url_json(part: str, section_name: str) -> dict[str, Any]:
 class TokenValidator:
     """Validates task-board JWS tokens and decodes escrow payloads."""
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Initialize validator with optional platform and legacy identity verifiers."""
-        platform_agent = kwargs.get("platform_agent")
-        identity_client = kwargs.get("identity_client")
-
-        if len(args) > 2:
-            msg = "TokenValidator accepts at most 2 positional arguments"
-            raise TypeError(msg)
-        if len(args) >= 1:
-            platform_agent = cast("PlatformAgent | None", args[0])
-        if len(args) == 2:
-            identity_client = args[1]
-
+    def __init__(self, platform_agent: PlatformAgent) -> None:
+        """Initialize validator with the platform agent verifier."""
         self._platform_agent = platform_agent
-        self._legacy_identity_client = identity_client
-
-    def set_legacy_identity_client(self, identity_client: Any | None) -> None:
-        """Set legacy IdentityClient compatibility hook for tests."""
-        self._legacy_identity_client = identity_client
 
     async def validate_jws_token(
         self,
@@ -102,68 +86,35 @@ class TokenValidator:
                 {},
             )
 
-        if self._legacy_identity_client is not None:
-            result: Any
-            try:
-                result = await self._legacy_identity_client.verify_jws(token)
-            except ServiceError:
-                raise
-            except Exception as exc:
-                raise ServiceError(
-                    "identity_service_unavailable",
-                    "Cannot connect to Identity service",
-                    502,
-                    {},
-                ) from exc
-
-            if isinstance(result, dict) and isinstance(result.get("payload"), dict):
-                agent_id_value = result.get("agent_id")
-                if not isinstance(agent_id_value, str) or len(agent_id_value) < 1:
-                    raise ServiceError("invalid_jws", "Token signer is missing", 400, {})
-                agent_id = agent_id_value
-                payload = cast("dict[str, Any]", result["payload"])
-            else:
-                # Unit tests replace the Identity client with an AsyncMock that may not
-                # return a structured dict. Fall back to decoding JWS header/payload.
-                header = decode_base64url_json(parts[0], "header")
-                payload = decode_base64url_json(parts[1], "payload")
-                kid = header.get("kid")
-                if not isinstance(kid, str) or len(kid) < 1:
-                    raise ServiceError("invalid_jws", "Token header is missing kid", 400, {})
-                agent_id = kid
-        elif self._platform_agent is not None:
-            try:
-                payload_raw = self._platform_agent.validate_certificate(token)
-            except (InvalidSignature, ValueError) as exc:
-                raise ServiceError(
-                    "forbidden",
-                    "JWS signature verification failed",
-                    403,
-                    {},
-                ) from exc
-            except Exception as exc:
-                raise ServiceError(
-                    "identity_service_unavailable",
-                    "Cannot connect to Identity service",
-                    502,
-                    {},
-                ) from exc
-            if not isinstance(payload_raw, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-                raise ServiceError(
-                    "invalid_jws",
-                    "Token payload is not a valid JSON object",
-                    400,
-                    {},
-                )
-            payload = cast("dict[str, Any]", payload_raw)
-            header = decode_base64url_json(parts[0], "header")
-            kid = header.get("kid")
-            if not isinstance(kid, str) or len(kid) < 1:
-                raise ServiceError("invalid_jws", "Token header is missing kid", 400, {})
-            agent_id = kid
-        else:
-            msg = "No token verifier configured"
-            raise RuntimeError(msg)
+        try:
+            payload_raw = self._platform_agent.validate_certificate(token)
+        except (InvalidSignature, ValueError) as exc:
+            raise ServiceError(
+                "forbidden",
+                "JWS signature verification failed",
+                403,
+                {},
+            ) from exc
+        except Exception as exc:
+            raise ServiceError(
+                "identity_service_unavailable",
+                "Cannot connect to Identity service",
+                502,
+                {},
+            ) from exc
+        if not isinstance(payload_raw, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+            raise ServiceError(
+                "invalid_jws",
+                "Token payload is not a valid JSON object",
+                400,
+                {},
+            )
+        payload = cast("dict[str, Any]", payload_raw)
+        header = decode_base64url_json(parts[0], "header")
+        kid = header.get("kid")
+        if not isinstance(kid, str) or len(kid) < 1:
+            raise ServiceError("invalid_jws", "Token header is missing kid", 400, {})
+        agent_id = kid
 
         # Tamper marker inserted by test helper simulates signature failure.
         if payload.get("_tampered") is True:

@@ -60,7 +60,6 @@ class TaskManager:
     def __init__(
         self,
         store: TaskStore,
-        identity_client: Any,
         central_bank_client: CentralBankClient,
         escrow_coordinator: EscrowCoordinator,
         token_validator: TokenValidator,
@@ -70,7 +69,6 @@ class TaskManager:
         platform_agent_id: str,
     ) -> None:
         self._store = store
-        self._identity_client = identity_client
         self._central_bank_client = central_bank_client
         self._escrow_coordinator = escrow_coordinator
         self._token_validator = token_validator

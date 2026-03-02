@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import TYPE_CHECKING, Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -743,7 +743,7 @@ class TestTaskCreation:
     ) -> None:
         """TC-22: Identity service unavailable returns 502."""
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
+        state.platform_agent.validate_certificate = MagicMock(
             side_effect=ConnectionError("Identity service unreachable")
         )
 

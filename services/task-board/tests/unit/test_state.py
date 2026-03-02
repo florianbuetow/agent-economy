@@ -14,7 +14,6 @@ def test_app_state_init() -> None:
     """AppState initializes with default dependency fields."""
     state = AppState()
     assert state.task_manager is None
-    assert state.identity_client is None
     assert state.central_bank_client is None
     assert state.platform_signer is None
     assert state.escrow_coordinator is None

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -625,7 +625,7 @@ class TestIdentityDependency:
         """IDEP-01: Identity service timeout returns 502 identity_service_unavailable."""
         # Configure identity mock to simulate timeout
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
+        state.platform_agent.validate_certificate = MagicMock(
             side_effect=TimeoutError("Identity service timed out")
         )
 
@@ -655,8 +655,8 @@ class TestIdentityDependency:
         """IDEP-02: Identity service non-JSON 500 returns 502 identity_service_unavailable."""
         # Configure identity mock to simulate unexpected response
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
-            side_effect=ValueError("Unexpected response from Identity service")
+        state.platform_agent.validate_certificate = MagicMock(
+            side_effect=ConnectionError("Unexpected response from Identity service")
         )
 
         task_id = make_task_id()
@@ -690,8 +690,8 @@ class TestIdentityDependency:
 
         # Now break the identity mock
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
-            side_effect=ValueError("Unexpected response from Identity service")
+        state.platform_agent.validate_certificate = MagicMock(
+            side_effect=ConnectionError("Unexpected response from Identity service")
         )
 
         private_key = alice_keypair[0]
@@ -959,7 +959,7 @@ class TestAuthSecurity:
 
         # Trigger identity_service_unavailable
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
+        state.platform_agent.validate_certificate = MagicMock(
             side_effect=TimeoutError("Identity service timed out")
         )
         cancel_token = make_jws_token(
@@ -1022,7 +1022,7 @@ class TestAuthSecurity:
 
         # identity_service_unavailable
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
+        state.platform_agent.validate_certificate = MagicMock(
             side_effect=TimeoutError("Identity service timed out")
         )
         cancel_token = make_jws_token(

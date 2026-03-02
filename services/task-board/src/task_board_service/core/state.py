@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from base_agent.platform import PlatformAgent
@@ -23,25 +23,12 @@ class AppState:
 
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     task_manager: TaskManager | None = None
-    _identity_client_compat: Any | None = None
     central_bank_client: CentralBankClient | None = None
     platform_signer: PlatformSigner | None = None
     platform_agent: PlatformAgent | None = None
     escrow_coordinator: EscrowCoordinator | None = None
     token_validator: TokenValidator | None = None
     asset_manager: AssetManager | None = None
-
-    @property
-    def identity_client(self) -> Any | None:
-        """Backward-compatible Identity client hook for legacy tests."""
-        return self._identity_client_compat
-
-    @identity_client.setter
-    def identity_client(self, value: Any | None) -> None:
-        """Backward-compatible Identity client hook for legacy tests."""
-        self._identity_client_compat = value
-        if self.token_validator is not None:
-            self.token_validator.set_legacy_identity_client(value)
 
     @property
     def uptime_seconds(self) -> float:
