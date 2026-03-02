@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from service_commons.exceptions import ServiceError
 
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.routers.helpers import (
@@ -36,8 +37,12 @@ async def file_claim(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.file_claim(data)
     return JSONResponse(status_code=201, content=result)
@@ -56,8 +61,12 @@ async def submit_rebuttal(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.submit_rebuttal(data)
     return JSONResponse(status_code=201, content=result)
@@ -84,8 +93,12 @@ async def record_ruling(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.record_ruling(data)
     return JSONResponse(status_code=201, content=result)

@@ -44,8 +44,12 @@ async def create_task(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.create_task(data)
     return JSONResponse(status_code=201, content=result)
@@ -64,8 +68,12 @@ async def submit_bid(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.submit_bid(data)
     return JSONResponse(status_code=201, content=result)
@@ -104,8 +112,12 @@ async def update_task_status(task_id: str, request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.update_task_status(task_id, data)
     return JSONResponse(status_code=200, content=result)
@@ -133,8 +145,12 @@ async def record_asset(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.record_asset(data)
     return JSONResponse(status_code=201, content=result)
