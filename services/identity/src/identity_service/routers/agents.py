@@ -81,8 +81,12 @@ async def register_agent(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.registry is None:
-        msg = "Registry not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Registry not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.registry.register_agent(data["name"], data["public_key"])
     return JSONResponse(status_code=201, content=result)
@@ -103,8 +107,12 @@ async def verify_signature(request: Request) -> dict[str, object]:
 
     state = get_app_state()
     if state.registry is None:
-        msg = "Registry not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Registry not initialized",
+            status_code=503,
+            details={},
+        )
 
     return state.registry.verify_signature(
         data["agent_id"],
@@ -123,8 +131,12 @@ async def verify_jws(request: Request) -> dict[str, object]:
 
     state = get_app_state()
     if state.registry is None:
-        msg = "Registry not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Registry not initialized",
+            status_code=503,
+            details={},
+        )
 
     return state.registry.verify_jws(data["token"])
 
@@ -174,8 +186,12 @@ async def list_agents() -> dict[str, list[dict[str, str]]]:
     """List all registered agents (public keys omitted)."""
     state = get_app_state()
     if state.registry is None:
-        msg = "Registry not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Registry not initialized",
+            status_code=503,
+            details={},
+        )
 
     agents = state.registry.list_agents()
     return {"agents": agents}
@@ -191,8 +207,12 @@ async def get_agent(agent_id: str) -> dict[str, str]:
     """Look up an agent's public identity."""
     state = get_app_state()
     if state.registry is None:
-        msg = "Registry not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Registry not initialized",
+            status_code=503,
+            details={},
+        )
 
     agent = state.registry.get_agent(agent_id)
     if agent is None:
