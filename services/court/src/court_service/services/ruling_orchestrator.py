@@ -253,6 +253,7 @@ class RulingOrchestrator:
                 str(dispute["task_id"]),
                 {
                     "action": "record_ruling",
+                    "task_id": str(dispute["task_id"]),
                     "ruling_id": dispute_id,
                     "worker_pct": median_worker_pct,
                     "ruling_summary": ruling_summary,
