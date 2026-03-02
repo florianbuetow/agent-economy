@@ -9,8 +9,9 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from reputation_service.app import create_app
-from reputation_service.config import clear_settings_cache
-from reputation_service.core.state import reset_app_state
+from reputation_service.config import clear_settings_cache, get_settings
+from reputation_service.core.state import get_app_state, reset_app_state
+from tests.fakes.sqlite_feedback_store import SqliteFeedbackStore
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
@@ -43,6 +44,9 @@ database:
 feedback:
   reveal_timeout_seconds: 86400
   max_comment_length: 256
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -72,6 +76,8 @@ def app() -> FastAPI:
 async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
     """Create an async HTTP test client with lifespan management."""
     async with app.router.lifespan_context(app):
+        state = get_app_state()
+        state.feedback_store = SqliteFeedbackStore(db_path=get_settings().database.path)
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
             yield c

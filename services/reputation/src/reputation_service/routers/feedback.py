@@ -7,9 +7,8 @@ import json
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from reputation_service.config import get_settings
 from reputation_service.core.exceptions import ServiceError
-from reputation_service.core.state import FeedbackRecord, get_app_state
+from reputation_service.core.state import get_app_state
 from reputation_service.services.feedback import (
     ValidationError,
     get_feedback_by_id,
@@ -17,6 +16,7 @@ from reputation_service.services.feedback import (
     get_feedback_for_task,
     submit_feedback,
 )
+from reputation_service.types import FeedbackRecord
 
 router = APIRouter()
 
@@ -81,8 +81,6 @@ def _record_to_dict(record: object) -> dict[str, object]:
 @router.post("/feedback")
 async def submit_feedback_endpoint(request: Request) -> JSONResponse:
     """Submit feedback for a completed task."""
-    settings = get_settings()
-
     # Parse JSON (Content-Type and body size already validated by middleware)
     raw_body = await request.body()
     try:
@@ -185,10 +183,16 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
     # --- Extract feedback fields from JWS payload ---
     feedback_body: dict[str, object] = {k: v for k, v in payload.items() if k != "action"}
 
+    # Platform-submitted feedback (e.g. Court rulings) bypasses sealed rules
+    is_platform = (
+        state.platform_agent is not None and signer_agent_id == state.platform_agent.agent_id
+    )
+
     result = submit_feedback(
         store=state.feedback_store,
         body=feedback_body,
-        max_comment_length=settings.feedback.max_comment_length,
+        max_comment_length=state.feedback_max_comment_length,
+        force_visible=is_platform,
     )
 
     if isinstance(result, ValidationError):
@@ -208,7 +212,6 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
 @router.get("/feedback/task/{task_id}")
 async def get_task_feedback(task_id: str) -> JSONResponse:
     """Get all visible feedback for a task."""
-    settings = get_settings()
     state = get_app_state()
     if state.feedback_store is None:
         raise ServiceError(
@@ -221,7 +224,7 @@ async def get_task_feedback(task_id: str) -> JSONResponse:
     records = get_feedback_for_task(
         store=state.feedback_store,
         task_id=task_id,
-        reveal_timeout_seconds=settings.feedback.reveal_timeout_seconds,
+        reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
     )
     return JSONResponse(
         status_code=200,
@@ -235,7 +238,6 @@ async def get_task_feedback(task_id: str) -> JSONResponse:
 @router.get("/feedback/agent/{agent_id}")
 async def get_agent_feedback(agent_id: str) -> JSONResponse:
     """Get all visible feedback about an agent."""
-    settings = get_settings()
     state = get_app_state()
     if state.feedback_store is None:
         raise ServiceError(
@@ -248,7 +250,7 @@ async def get_agent_feedback(agent_id: str) -> JSONResponse:
     records = get_feedback_for_agent(
         store=state.feedback_store,
         agent_id=agent_id,
-        reveal_timeout_seconds=settings.feedback.reveal_timeout_seconds,
+        reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
     )
     return JSONResponse(
         status_code=200,
@@ -262,7 +264,6 @@ async def get_agent_feedback(agent_id: str) -> JSONResponse:
 @router.get("/feedback/{feedback_id}")
 async def get_feedback(feedback_id: str) -> JSONResponse:
     """Look up a single feedback record."""
-    settings = get_settings()
     state = get_app_state()
     if state.feedback_store is None:
         raise ServiceError(
@@ -275,7 +276,7 @@ async def get_feedback(feedback_id: str) -> JSONResponse:
     record = get_feedback_by_id(
         store=state.feedback_store,
         feedback_id=feedback_id,
-        reveal_timeout_seconds=settings.feedback.reveal_timeout_seconds,
+        reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
     )
     if record is None:
         raise ServiceError(

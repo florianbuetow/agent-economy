@@ -30,3 +30,7 @@ database:
 feedback:
   reveal_timeout_seconds: 86400  # 24 hours
   max_comment_length: 256
+
+db_gateway:
+  url: "http://127.0.0.1:8007"
+  timeout_seconds: 10

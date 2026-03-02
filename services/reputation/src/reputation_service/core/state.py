@@ -6,26 +6,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from reputation_service.types import FeedbackRecord
+
 if TYPE_CHECKING:
     from base_agent.platform import PlatformAgent
 
-    from reputation_service.services.feedback_store import FeedbackStore
     from reputation_service.services.identity_client import IdentityClient
-
-
-@dataclass
-class FeedbackRecord:
-    """A single feedback record."""
-
-    feedback_id: str
-    task_id: str
-    from_agent_id: str
-    to_agent_id: str
-    category: str
-    rating: str
-    comment: str | None
-    submitted_at: str
-    visible: bool
+    from reputation_service.services.protocol import FeedbackStorageInterface
 
 
 @dataclass
@@ -33,9 +20,11 @@ class AppState:
     """Runtime application state."""
 
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
-    feedback_store: FeedbackStore | None = None
+    feedback_store: FeedbackStorageInterface | None = None
     platform_agent: PlatformAgent | None = None
     identity_client: IdentityClient | None = None
+    feedback_reveal_timeout_seconds: int = 0
+    feedback_max_comment_length: int = 0
 
     @property
     def uptime_seconds(self) -> float:
@@ -50,6 +39,8 @@ class AppState:
 
 # Module-level mutable container to avoid `global` statement
 _state_holder: dict[str, AppState] = {}
+
+__all__ = ["AppState", "FeedbackRecord", "get_app_state", "init_app_state", "reset_app_state"]
 
 
 def get_app_state() -> AppState:
