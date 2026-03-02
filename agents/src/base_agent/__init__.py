@@ -3,7 +3,8 @@
 from base_agent.agent import BaseAgent
 from base_agent.factory import AgentFactory
 from base_agent.platform import PlatformAgent
+from base_agent.worker_factory import WorkerFactory
 
 __version__ = "0.1.0"
 
-__all__ = ["AgentFactory", "BaseAgent", "PlatformAgent"]
+__all__ = ["AgentFactory", "BaseAgent", "PlatformAgent", "WorkerFactory"]
