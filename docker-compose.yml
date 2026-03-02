@@ -113,3 +113,31 @@ services:
         condition: service_healthy
       court:
         condition: service_healthy
+
+  db-gateway:
+    build:
+      context: .
+      dockerfile: services/db-gateway/Dockerfile
+    ports:
+      - "8007:8007"
+    environment:
+      - CONFIG_PATH=/app/config.yaml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ui:
+    build:
+      context: .
+      dockerfile: services/ui/Dockerfile
+    ports:
+      - "8008:8008"
+    environment:
+      - CONFIG_PATH=/repo/services/ui/config.yaml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
