@@ -52,7 +52,7 @@ workers:
     type: "math_worker"
     llm:
       base_url: "http://127.0.0.1:1234/v1"
-      api_key: "lm-studio"
+      api_key: "${LMSTUDIO_API_KEY}"
       model_id: "gemma-3-1b-it"
       temperature: 0.7
       max_tokens: 2048
@@ -72,6 +72,23 @@ workers:
       api_key: "${OPENAI_API_KEY}"
       model_id: "o4-mini"
       temperature: 0.5
+      max_tokens: 4096
+    behavior:
+      scan_interval_seconds: 10
+      poll_interval_seconds: 3
+      max_poll_attempts: 100
+      error_backoff_seconds: 5
+      min_reward: 50
+      max_reward: 10000
+
+  mathbot_mistral:
+    handle: "mathbot_mistral"
+    type: "math_worker"
+    llm:
+      base_url: "https://api.mistral.ai/v1"
+      api_key: "${MISTRAL_API_KEY}"
+      model_id: "mistral-small-latest"
+      temperature: 0.7
       max_tokens: 4096
     behavior:
       scan_interval_seconds: 10
