@@ -11,7 +11,7 @@ from base_agent.factory import AgentFactory
 from reputation_service.config import get_config_path, get_settings
 from reputation_service.core.state import init_app_state
 from reputation_service.logging import get_logger, setup_logging
-from reputation_service.services.feedback_store import FeedbackStore
+from reputation_service.services.feedback_db_client import FeedbackDbClient
 from reputation_service.services.identity_client import IdentityClient, PlatformIdentityClient
 
 if TYPE_CHECKING:
@@ -30,9 +30,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     logger = get_logger(__name__)
 
     state = init_app_state()
+    state.feedback_reveal_timeout_seconds = settings.feedback.reveal_timeout_seconds
+    state.feedback_max_comment_length = settings.feedback.max_comment_length
 
-    # Initialize SQLite-backed feedback store
-    state.feedback_store = FeedbackStore(db_path=settings.database.path)
+    if settings.db_gateway is None:
+        msg = "db_gateway configuration is required"
+        raise RuntimeError(msg)
+
+    store = FeedbackDbClient(
+        base_url=settings.db_gateway.url,
+        timeout_seconds=settings.db_gateway.timeout_seconds,
+    )
+    state.feedback_store = store
 
     # Initialize platform agent for local token verification
     if settings.platform.agent_config_path:

@@ -32,6 +32,7 @@ def _insert_once(store: FeedbackStore) -> None:
         category="delivery_quality",
         rating="satisfied",
         comment=None,
+        force_visible=False,
     )
 
 

@@ -264,20 +264,20 @@ class TestSubmitFeedback:
     def test_submit_returns_record(self, tmp_path: Path) -> None:
         """Successful submission returns a FeedbackRecord."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
 
     def test_feedback_id_starts_with_fb(self, tmp_path: Path) -> None:
         """Generated feedback_id must start with 'fb-'."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
         assert result.feedback_id.startswith("fb-")
 
     def test_submitted_at_is_iso_timestamp(self, tmp_path: Path) -> None:
         """submitted_at must be a valid ISO format timestamp."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
         # Should not raise
         datetime.fromisoformat(result.submitted_at)
@@ -285,7 +285,7 @@ class TestSubmitFeedback:
     def test_record_stored_in_store(self, tmp_path: Path) -> None:
         """Record is retrievable from the store."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
         fetched = store.get_by_id(result.feedback_id)
         assert fetched is not None
@@ -294,7 +294,7 @@ class TestSubmitFeedback:
     def test_record_indexed_by_task(self, tmp_path: Path) -> None:
         """Record is retrievable by task_id."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
         records = store.get_by_task("task-1")
         assert any(r.feedback_id == result.feedback_id for r in records)
@@ -302,7 +302,7 @@ class TestSubmitFeedback:
     def test_record_indexed_by_target_agent(self, tmp_path: Path) -> None:
         """Record is retrievable by to_agent_id."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
         records = store.get_by_agent("agent-b")
         assert any(r.feedback_id == result.feedback_id for r in records)
@@ -310,14 +310,19 @@ class TestSubmitFeedback:
     def test_uniqueness_constraint_enforced(self, tmp_path: Path) -> None:
         """Duplicate (task_id, from_agent_id, to_agent_id) is rejected."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
         assert store.count() == 1
 
     def test_comment_stored_correctly(self, tmp_path: Path) -> None:
         """Comment is stored as given."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(comment="Nice!"), MAX_COMMENT_LENGTH)
+        result = submit_feedback(
+            store,
+            _valid_body(comment="Nice!"),
+            MAX_COMMENT_LENGTH,
+            force_visible=False,
+        )
         assert isinstance(result, FeedbackRecord)
         assert result.comment == "Nice!"
 
@@ -326,7 +331,7 @@ class TestSubmitFeedback:
         store = _make_store(tmp_path)
         body = _valid_body()
         del body["comment"]
-        result = submit_feedback(store, body, MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, body, MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
         assert result.comment is None
 
@@ -334,7 +339,7 @@ class TestSubmitFeedback:
         """Invalid body returns ValidationError, not FeedbackRecord."""
         store = _make_store(tmp_path)
         body = _valid_body(category="bogus")
-        result = submit_feedback(store, body, MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, body, MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, ValidationError)
         assert result.error == "invalid_category"
 
@@ -345,24 +350,44 @@ class TestFeedbackExists:
 
     def test_duplicate_submission_returns_feedback_exists(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        first = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        first = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(first, FeedbackRecord)
 
-        second = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        second = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(second, ValidationError)
         assert second.error == "feedback_exists"
         assert second.status_code == 409
 
     def test_different_task_id_is_not_duplicate(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        submit_feedback(store, _valid_body(task_id="task-1"), MAX_COMMENT_LENGTH)
-        result = submit_feedback(store, _valid_body(task_id="task-2"), MAX_COMMENT_LENGTH)
+        submit_feedback(
+            store,
+            _valid_body(task_id="task-1"),
+            MAX_COMMENT_LENGTH,
+            force_visible=False,
+        )
+        result = submit_feedback(
+            store,
+            _valid_body(task_id="task-2"),
+            MAX_COMMENT_LENGTH,
+            force_visible=False,
+        )
         assert isinstance(result, FeedbackRecord)
 
     def test_different_from_agent_is_not_duplicate(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        submit_feedback(store, _valid_body(from_agent_id="agent-a"), MAX_COMMENT_LENGTH)
-        result = submit_feedback(store, _valid_body(from_agent_id="agent-c"), MAX_COMMENT_LENGTH)
+        submit_feedback(
+            store,
+            _valid_body(from_agent_id="agent-a"),
+            MAX_COMMENT_LENGTH,
+            force_visible=False,
+        )
+        result = submit_feedback(
+            store,
+            _valid_body(from_agent_id="agent-c"),
+            MAX_COMMENT_LENGTH,
+            force_visible=False,
+        )
         assert isinstance(result, FeedbackRecord)
 
 
@@ -373,7 +398,7 @@ class TestVisibility:
     def test_first_feedback_is_sealed(self, tmp_path: Path) -> None:
         """First feedback in a pair has visible=False."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
         assert result.visible is False
 
@@ -384,6 +409,7 @@ class TestVisibility:
             store,
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         assert isinstance(first, FeedbackRecord)
         assert first.visible is False
@@ -392,6 +418,7 @@ class TestVisibility:
             store,
             _valid_body(from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         assert isinstance(second, FeedbackRecord)
         assert second.visible is True
@@ -407,6 +434,7 @@ class TestVisibility:
             store,
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         assert isinstance(first, FeedbackRecord)
 
@@ -414,6 +442,7 @@ class TestVisibility:
             store,
             _valid_body(from_agent_id="agent-c", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         # Re-fetch first from store to check visibility
         first_refetched = store.get_by_id(first.feedback_id)
@@ -511,7 +540,7 @@ class TestGetFeedbackById:
 
     def test_returns_none_for_sealed_feedback(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
         assert result.visible is False
         # Sealed record should not be returned
@@ -524,11 +553,13 @@ class TestGetFeedbackById:
             store,
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         second = submit_feedback(
             store,
             _valid_body(from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         assert isinstance(second, FeedbackRecord)
         assert second.visible is True
@@ -538,7 +569,7 @@ class TestGetFeedbackById:
 
     def test_returns_record_for_timed_out_feedback(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         assert isinstance(result, FeedbackRecord)
         # Use a timeout of 0 to simulate timeout behavior
         fetched = get_feedback_by_id(store, result.feedback_id, 0)
@@ -556,13 +587,18 @@ class TestGetFeedbackForTask:
 
     def test_unknown_task_returns_empty_list(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        submit_feedback(store, _valid_body(task_id="task-1"), MAX_COMMENT_LENGTH)
+        submit_feedback(
+            store,
+            _valid_body(task_id="task-1"),
+            MAX_COMMENT_LENGTH,
+            force_visible=False,
+        )
         result = get_feedback_for_task(store, "task-999", REVEAL_TIMEOUT)
         assert result == []
 
     def test_sealed_feedback_not_returned(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         result = get_feedback_for_task(store, "task-1", REVEAL_TIMEOUT)
         assert result == []
 
@@ -572,11 +608,13 @@ class TestGetFeedbackForTask:
             store,
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         submit_feedback(
             store,
             _valid_body(from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         result = get_feedback_for_task(store, "task-1", REVEAL_TIMEOUT)
         assert len(result) == 2
@@ -587,11 +625,13 @@ class TestGetFeedbackForTask:
             store,
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         submit_feedback(
             store,
             _valid_body(from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         records = get_feedback_for_task(store, "task-1", REVEAL_TIMEOUT)
         timestamps = [r.submitted_at for r in records]
@@ -609,13 +649,13 @@ class TestGetFeedbackForAgent:
 
     def test_unknown_agent_returns_empty_list(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         result = get_feedback_for_agent(store, "agent-zzz", REVEAL_TIMEOUT)
         assert result == []
 
     def test_sealed_feedback_not_returned(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH)
+        submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
         result = get_feedback_for_agent(store, "agent-b", REVEAL_TIMEOUT)
         assert result == []
 
@@ -625,11 +665,13 @@ class TestGetFeedbackForAgent:
             store,
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         submit_feedback(
             store,
             _valid_body(from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         # agent-b has one visible feedback record (from agent-a)
         result = get_feedback_for_agent(store, "agent-b", REVEAL_TIMEOUT)
@@ -643,21 +685,25 @@ class TestGetFeedbackForAgent:
             store,
             _valid_body(task_id="task-1", from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         submit_feedback(
             store,
             _valid_body(task_id="task-1", from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         submit_feedback(
             store,
             _valid_body(task_id="task-2", from_agent_id="agent-c", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         submit_feedback(
             store,
             _valid_body(task_id="task-2", from_agent_id="agent-b", to_agent_id="agent-c"),
             MAX_COMMENT_LENGTH,
+            force_visible=False,
         )
         records = get_feedback_for_agent(store, "agent-b", REVEAL_TIMEOUT)
         timestamps = [r.submitted_at for r in records]

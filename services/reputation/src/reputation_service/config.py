@@ -85,6 +85,14 @@ class FeedbackConfig(BaseModel):
     max_comment_length: int
 
 
+class DbGatewayConfig(BaseModel):
+    """DB Gateway service configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+    url: str
+    timeout_seconds: int
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -102,6 +110,7 @@ class Settings(BaseModel):
     request: RequestConfig
     database: DatabaseConfig
     feedback: FeedbackConfig
+    db_gateway: DbGatewayConfig | None = None
 
 
 def get_config_path() -> Path:

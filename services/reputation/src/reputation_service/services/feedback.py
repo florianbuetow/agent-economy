@@ -10,11 +10,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from reputation_service.services.feedback_store import DuplicateFeedbackError
+from reputation_service.services.exceptions import DuplicateFeedbackError
 
 if TYPE_CHECKING:
-    from reputation_service.core.state import FeedbackRecord
-    from reputation_service.services.feedback_store import FeedbackStore
+    from reputation_service.services.protocol import FeedbackStorageInterface
+    from reputation_service.types import FeedbackRecord
 
 VALID_CATEGORIES: frozenset[str] = frozenset({"spec_quality", "delivery_quality"})
 VALID_RATINGS: frozenset[str] = frozenset({"dissatisfied", "satisfied", "extremely_satisfied"})
@@ -122,12 +122,18 @@ def validate_feedback(body: dict[str, object], max_comment_length: int) -> Valid
 
 
 def submit_feedback(
-    store: FeedbackStore,
+    store: FeedbackStorageInterface,
     body: dict[str, object],
     max_comment_length: int,
+    *,
+    force_visible: bool,
 ) -> FeedbackRecord | ValidationError:
     """
     Validate and store a feedback submission.
+
+    Args:
+        force_visible: If True, the record is immediately visible (bypasses
+            sealed feedback rules). Used for platform-submitted ruling feedback.
 
     Returns FeedbackRecord on success, ValidationError on failure.
     """
@@ -161,6 +167,7 @@ def submit_feedback(
             category=category,
             rating=rating,
             comment=comment,
+            force_visible=force_visible,
         )
     except DuplicateFeedbackError:
         return ValidationError(
@@ -189,7 +196,7 @@ def is_visible(record: FeedbackRecord, reveal_timeout_seconds: int) -> bool:
 
 
 def get_feedback_by_id(
-    store: FeedbackStore,
+    store: FeedbackStorageInterface,
     feedback_id: str,
     reveal_timeout_seconds: int,
 ) -> FeedbackRecord | None:
@@ -203,7 +210,7 @@ def get_feedback_by_id(
 
 
 def get_feedback_for_task(
-    store: FeedbackStore,
+    store: FeedbackStorageInterface,
     task_id: str,
     reveal_timeout_seconds: int,
 ) -> list[FeedbackRecord]:
@@ -213,7 +220,7 @@ def get_feedback_for_task(
 
 
 def get_feedback_for_agent(
-    store: FeedbackStore,
+    store: FeedbackStorageInterface,
     agent_id: str,
     reveal_timeout_seconds: int,
 ) -> list[FeedbackRecord]:
