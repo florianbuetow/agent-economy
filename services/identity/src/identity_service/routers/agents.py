@@ -88,7 +88,8 @@ async def register_agent(request: Request) -> JSONResponse:
             details={},
         )
 
-    result = state.registry.register_agent(data["name"], data["public_key"])
+    result = await state.registry.register_agent(data["name"], data["public_key"])
+
     return JSONResponse(status_code=201, content=result)
 
 
@@ -114,7 +115,7 @@ async def verify_signature(request: Request) -> dict[str, object]:
             details={},
         )
 
-    return state.registry.verify_signature(
+    return await state.registry.verify_signature(
         data["agent_id"],
         data["payload"],
         data["signature"],
@@ -138,7 +139,7 @@ async def verify_jws(request: Request) -> dict[str, object]:
             details={},
         )
 
-    return state.registry.verify_jws(data["token"])
+    return await state.registry.verify_jws(data["token"])
 
 
 # ---------------------------------------------------------------------------
@@ -193,7 +194,7 @@ async def list_agents() -> dict[str, list[dict[str, str]]]:
             details={},
         )
 
-    agents = state.registry.list_agents()
+    agents = await state.registry.list_agents()
     return {"agents": agents}
 
 
@@ -214,7 +215,7 @@ async def get_agent(agent_id: str) -> dict[str, str]:
             details={},
         )
 
-    agent = state.registry.get_agent(agent_id)
+    agent = await state.registry.get_agent(agent_id)
     if agent is None:
         raise ServiceError("agent_not_found", "Agent not found", 404, {})
     return agent

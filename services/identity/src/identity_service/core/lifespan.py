@@ -8,13 +8,15 @@ from typing import TYPE_CHECKING
 from identity_service.config import get_settings
 from identity_service.core.state import init_app_state
 from identity_service.logging import get_logger, setup_logging
+from identity_service.services.agent_db_client import AgentDbClient
 from identity_service.services.agent_registry import AgentRegistry
-from identity_service.services.agent_store import AgentStore
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from fastapi import FastAPI
+
+    from identity_service.services.protocol import IdentityStorageInterface
 
 
 @asynccontextmanager
@@ -28,11 +30,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     state = init_app_state()
 
-    db_path = settings.database.path
+    store: IdentityStorageInterface
+    if settings.db_gateway is None:
+        msg = "db_gateway configuration is required"
+        raise RuntimeError(msg)
 
-    store = AgentStore(db_path=db_path)
+    store = AgentDbClient(
+        base_url=settings.db_gateway.url,
+        timeout_seconds=settings.db_gateway.timeout_seconds,
+    )
 
-    # Initialize agent registry with database-backed store
+    # Initialize agent registry with gateway-backed store.
     state.registry = AgentRegistry(
         store=store,
         algorithm=settings.crypto.algorithm,
@@ -54,4 +62,4 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # === SHUTDOWN ===
     logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
-    state.registry.close()
+    await state.registry.close()
