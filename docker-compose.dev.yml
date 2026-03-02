@@ -5,7 +5,7 @@ services:
       dockerfile: services/identity/Dockerfile
     volumes:
       - ./services/identity/src:/repo/services/identity/src
-    command: uv run uvicorn identity_service.app:app --reload --host 0.0.0.0
+    command: uv run uvicorn identity_service.app:create_app --factory --reload --host 0.0.0.0 --port 8001
 
   central-bank:
     build:
@@ -13,7 +13,7 @@ services:
       dockerfile: services/central-bank/Dockerfile
     volumes:
       - ./services/central-bank/src:/repo/services/central-bank/src
-    command: uv run uvicorn central_bank_service.app:app --reload --host 0.0.0.0
+    command: uv run uvicorn central_bank_service.app:create_app --factory --reload --host 0.0.0.0 --port 8002
 
   task-board:
     build:
@@ -21,7 +21,7 @@ services:
       dockerfile: services/task-board/Dockerfile
     volumes:
       - ./services/task-board/src:/repo/services/task-board/src
-    command: uv run uvicorn task_board_service.app:app --reload --host 0.0.0.0
+    command: uv run uvicorn task_board_service.app:create_app --factory --reload --host 0.0.0.0 --port 8003
 
   reputation:
     build:
@@ -29,7 +29,7 @@ services:
       dockerfile: services/reputation/Dockerfile
     volumes:
       - ./services/reputation/src:/repo/services/reputation/src
-    command: uv run uvicorn reputation_service.app:app --reload --host 0.0.0.0
+    command: uv run uvicorn reputation_service.app:create_app --factory --reload --host 0.0.0.0 --port 8004
 
   court:
     build:
@@ -37,7 +37,7 @@ services:
       dockerfile: services/court/Dockerfile
     volumes:
       - ./services/court/src:/repo/services/court/src
-    command: uv run uvicorn court_service.app:app --reload --host 0.0.0.0
+    command: uv run uvicorn court_service.app:create_app --factory --reload --host 0.0.0.0 --port 8005
 
   observatory:
     build:
@@ -45,4 +45,20 @@ services:
       dockerfile: services/observatory/Dockerfile
     volumes:
       - ./services/observatory/src:/repo/services/observatory/src
-    command: uv run uvicorn observatory_service.app:app --reload --host 0.0.0.0
+    command: uv run uvicorn observatory_service.app:create_app --factory --reload --host 0.0.0.0 --port 8006
+
+  db-gateway:
+    build:
+      context: .
+      dockerfile: services/db-gateway/Dockerfile
+    volumes:
+      - ./services/db-gateway/src:/app/src
+    command: uv run uvicorn db_gateway_service.app:create_app --factory --reload --host 0.0.0.0 --port 8007
+
+  ui:
+    build:
+      context: .
+      dockerfile: services/ui/Dockerfile
+    volumes:
+      - ./services/ui/src:/repo/services/ui/src
+    command: uv run uvicorn ui_service.app:create_app --factory --reload --host 0.0.0.0 --port 8008
