@@ -59,8 +59,12 @@ def verify_platform_token(token: str, platform_agent: PlatformAgent | None) -> d
         ServiceError: If verification fails or platform agent is not available.
     """
     if platform_agent is None:
-        msg = "Platform agent not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Platform agent not initialized",
+            status_code=503,
+            details={},
+        )
 
     try:
         payload = platform_agent.validate_certificate(token)

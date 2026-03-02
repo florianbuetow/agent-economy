@@ -27,8 +27,12 @@ async def _fetch_task(task_id: str) -> dict[str, Any]:
     """Fetch task data from Task Board via the platform agent."""
     state = get_app_state()
     if state.platform_agent is None:
-        msg = "Platform agent not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Platform agent not initialized",
+            status_code=503,
+            details={},
+        )
     try:
         result: dict[str, Any] = await state.platform_agent.get_task(task_id)
         return result
@@ -58,11 +62,19 @@ async def file_dispute(request: Request) -> JSONResponse:
     settings = get_settings()
     state = get_app_state()
     if state.dispute_service is None:
-        msg = "Dispute service not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Dispute service not initialized",
+            status_code=503,
+            details={},
+        )
     if state.platform_agent is None:
-        msg = "Platform agent not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Platform agent not initialized",
+            status_code=503,
+            details={},
+        )
 
     data = parse_json_body(await request.body())
     token = extract_jws_token(data, field="token")
@@ -104,11 +116,19 @@ async def submit_rebuttal(dispute_id: str, request: Request) -> JSONResponse:
     settings = get_settings()
     state = get_app_state()
     if state.dispute_service is None:
-        msg = "Dispute service not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Dispute service not initialized",
+            status_code=503,
+            details={},
+        )
     if state.platform_agent is None:
-        msg = "Platform agent not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Platform agent not initialized",
+            status_code=503,
+            details={},
+        )
 
     data = parse_json_body(await request.body())
     token = extract_jws_token(data, field="token")
@@ -143,11 +163,19 @@ async def trigger_ruling(dispute_id: str, request: Request) -> JSONResponse:
     """Trigger dispute ruling (platform-signed)."""
     state = get_app_state()
     if state.dispute_service is None:
-        msg = "Dispute service not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Dispute service not initialized",
+            status_code=503,
+            details={},
+        )
     if state.platform_agent is None:
-        msg = "Platform agent not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Platform agent not initialized",
+            status_code=503,
+            details={},
+        )
 
     data = parse_json_body(await request.body())
     token = extract_jws_token(data, field="token")
@@ -192,8 +220,12 @@ async def get_dispute(dispute_id: str) -> JSONResponse:
     """Fetch full dispute details."""
     state = get_app_state()
     if state.dispute_service is None:
-        msg = "Dispute service not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Dispute service not initialized",
+            status_code=503,
+            details={},
+        )
 
     dispute = await run_in_threadpool(state.dispute_service.get_dispute, dispute_id)
     if dispute is None:
@@ -206,8 +238,12 @@ async def list_disputes(request: Request) -> JSONResponse:
     """List dispute summaries with optional filters."""
     state = get_app_state()
     if state.dispute_service is None:
-        msg = "Dispute service not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="Dispute service not initialized",
+            status_code=503,
+            details={},
+        )
 
     task_id = request.query_params.get("task_id")
     status = request.query_params.get("status")
