@@ -54,11 +54,11 @@ class LLMDressUp:
             base_url=config.base_url,
         )
 
-    async def dress_up(self, task: MathTask) -> MathTask:
+    async def dress_up(self, task: MathTask) -> MathTask | None:
         """Rewrite a deterministic task's spec as a rich word problem.
 
         Returns a new MathTask with the LLM-rewritten spec but identical solutions.
-        On failure after retries, returns the original task unchanged.
+        On failure after retries, returns None (task is skipped).
         """
         original_numbers = _extract_numbers(task.spec)
 
@@ -111,15 +111,16 @@ class LLMDressUp:
                 logger.exception("LLM dress-up attempt %d failed", attempt)
 
         logger.warning(
-            "All %d dress-up attempts failed for '%s', returning original",
+            "All %d dress-up attempts failed for '%s', skipping",
             self._config.max_retries,
             task.title,
         )
-        return task
+        return None
 
     async def dress_up_batch(self, tasks: list[MathTask]) -> list[MathTask]:
-        """Dress up multiple tasks concurrently."""
-        return list(await asyncio.gather(*(self.dress_up(t) for t in tasks)))
+        """Dress up multiple tasks concurrently. Failed tasks are skipped."""
+        results = await asyncio.gather(*(self.dress_up(t) for t in tasks))
+        return [t for t in results if t is not None]
 
     async def close(self) -> None:
         """Close the underlying HTTP client."""
@@ -127,10 +128,15 @@ class LLMDressUp:
 
 
 def _extract_numbers(text: str) -> list[str]:
-    """Extract all number-like substrings from text for validation."""
+    """Extract number-like substrings (2+ digits) from text for validation.
+
+    Single-digit numbers are skipped because they cause false validation
+    failures — the LLM might spell them out ("five") or they appear as
+    incidental parts of other numbers.
+    """
     import re
 
-    return re.findall(r"\d+(?:\.\d+)?", text)
+    return [n for n in re.findall(r"\d+(?:\.\d+)?", text) if len(n) >= 2]
 
 
 def _check_numbers_preserved(

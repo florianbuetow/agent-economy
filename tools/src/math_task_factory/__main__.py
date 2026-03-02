@@ -197,8 +197,12 @@ def main() -> int:
             finally:
                 await dresser.close()
 
-        print(f"Dressing up {len(tasks)} task(s) via LLM...", file=sys.stderr)
+        original_count = len(tasks)
+        print(f"Dressing up {original_count} task(s) via LLM...", file=sys.stderr)
         tasks = asyncio.run(_run_dressup())
+        skipped = original_count - len(tasks)
+        if skipped:
+            print(f"Skipped {skipped} task(s) that failed dress-up.", file=sys.stderr)
 
     task_dicts = [_task_to_dict(t) for t in tasks]
 

@@ -88,8 +88,8 @@ def test_dress_up_returns_same_solutions():
 
 
 @pytest.mark.unit
-def test_dress_up_falls_back_on_failure():
-    """If all retries fail, returns the original task unchanged."""
+def test_dress_up_returns_none_on_failure():
+    """If all retries fail, returns None (task is skipped)."""
     task = _sample_task()
 
     with patch("math_task_factory.llm_dressup.AsyncOpenAI") as mock_cls:
@@ -103,8 +103,7 @@ def test_dress_up_falls_back_on_failure():
         dresser = LLMDressUp(config=_CONFIG)
         result = asyncio.run(dresser.dress_up(task))
 
-    assert result.spec == task.spec
-    assert result.solutions == task.solutions
+    assert result is None
 
 
 @pytest.mark.unit
@@ -127,8 +126,8 @@ def test_dress_up_retries_on_missing_numbers():
         dresser = LLMDressUp(config=_CONFIG)
         result = asyncio.run(dresser.dress_up(task))
 
-    # Falls back to original since 158 is missing from every attempt
-    assert result.spec == task.spec
+    # Returns None since 158 is missing from every attempt
+    assert result is None
     # Should have tried max_retries times
     assert mock_client.chat.completions.create.call_count == _CONFIG.max_retries
 

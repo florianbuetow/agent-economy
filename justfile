@@ -81,6 +81,9 @@ help:
     @printf "  \033[0;37mjust docker-logs      \033[0;34m View logs (optionally: just docker-logs <service>)\033[0m\n"
     @printf "  \033[0;37mjust docker-build     \033[0;34m Rebuild all Docker images from scratch\033[0m\n"
     @echo ""
+    @printf "\033[1;33mTask Generation\033[0m\n"
+    @printf "  \033[0;37mjust generate-tasks    \033[0;34m Generate math tasks to data/math_tasks.jsonl\033[0m\n"
+    @echo ""
     @printf "\033[1;33mCI & Code Quality\033[0m\n"
     @printf "  \033[0;37mjust test-all         \033[0;34m Run tests for all services\033[0m\n"
     @printf "  \033[0;37mjust test <service>   \033[0;34m Run tests for a specific service\033[0m\n"
@@ -457,6 +460,15 @@ destroy-all:
     cd agents && just destroy
     cd tools && just destroy
     @printf "\033[0;32m✓ All virtual environments removed\033[0m\n"
+    @echo ""
+
+# --- Task Generation ---
+
+# Generate math tasks (appends 10,000 tasks to data/math_tasks.jsonl)
+generate-tasks:
+    @echo ""
+    cd tools && uv run python -m math_task_factory --total 10000
+    @printf "\033[0;32m✓ Tasks appended to data/math_tasks.jsonl\033[0m\n"
     @echo ""
 
 # --- Docker ---
