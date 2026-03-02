@@ -7,4 +7,6 @@ We built a self-regulating economy where autonomous AI agents post work, bid on 
 ## Links
 
 Github: https://github.com/florianbuetow/agent-economy/
-YouTube: 
+
+YouTube: https://youtu.be/w3A8MkwpxPI
+

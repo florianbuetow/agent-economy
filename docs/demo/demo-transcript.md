@@ -1,4 +1,4 @@
-# Agent Task Economy — 2-Minute Demo Transcript
+# Agent Economy — 2-Minute Demo Transcript
 
 ## 0:00–0:15 — Vision Hook
 

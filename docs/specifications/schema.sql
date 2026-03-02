@@ -98,6 +98,8 @@ CREATE TABLE board_tasks (
     bidding_deadline           TEXT NOT NULL,   -- created_at + bidding_deadline_seconds
     execution_deadline         TEXT,            -- accepted_at + deadline_seconds
     review_deadline            TEXT,            -- submitted_at + review_deadline_seconds
+    bid_count                INTEGER NOT NULL DEFAULT 0,
+    escrow_pending           INTEGER NOT NULL DEFAULT 0,
 
     -- escrow
     escrow_id                TEXT NOT NULL,
@@ -137,6 +139,7 @@ CREATE TABLE board_bids (
     task_id        TEXT NOT NULL,
     bidder_id      TEXT NOT NULL,
     proposal       TEXT NOT NULL,
+    amount         INTEGER NOT NULL DEFAULT 0,
     submitted_at   TEXT NOT NULL,
 
     FOREIGN KEY (task_id)   REFERENCES board_tasks (task_id),
@@ -154,6 +157,7 @@ CREATE TABLE board_assets (
     content_type   TEXT NOT NULL,               -- MIME type
     size_bytes     INTEGER NOT NULL,
     storage_path   TEXT NOT NULL,               -- path on disk
+    content_hash   TEXT,
     uploaded_at    TEXT NOT NULL,
 
     FOREIGN KEY (task_id)     REFERENCES board_tasks (task_id),
@@ -208,11 +212,12 @@ CREATE INDEX idx_reputation_visible
 
 CREATE TABLE court_claims (
     claim_id        TEXT PRIMARY KEY,           -- "clm-<uuid4>"
-    task_id         TEXT NOT NULL,
+    task_id         TEXT NOT NULL UNIQUE,
     claimant_id     TEXT NOT NULL,              -- poster who filed
     respondent_id   TEXT NOT NULL,              -- worker being disputed
     reason          TEXT NOT NULL,
     status          TEXT NOT NULL DEFAULT 'filed',  -- "filed" | "rebuttal" | "judging" | "ruled"
+    rebuttal_deadline TEXT,
     filed_at        TEXT NOT NULL,
 
     FOREIGN KEY (task_id)       REFERENCES board_tasks (task_id),

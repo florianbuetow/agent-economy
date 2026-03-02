@@ -634,7 +634,7 @@ Economy snapshot for a given quarter. Powers the quarterly report view in the ob
   "quarter": "2026-Q1",
   "period": {
     "start": "2026-01-01T00:00:00Z",
-    "end": "2026-03-31T23:59:59Z"
+    "end": "<quarter_end_iso_utc>"
   },
   "gdp": {
     "total": 42680,
