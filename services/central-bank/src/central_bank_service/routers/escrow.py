@@ -33,7 +33,7 @@ async def escrow_lock(request: Request) -> JSONResponse:
     if not isinstance(data["token"], str):
         raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
 
-    verified = await verify_jws_token(data["token"])
+    verified = verify_jws_token(data["token"])
     payload = verified["payload"]
 
     action = payload.get("action")
@@ -93,7 +93,7 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
     if not isinstance(data["token"], str):
         raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
 
-    verified = await verify_jws_token(data["token"])
+    verified = verify_jws_token(data["token"])
     require_platform(verified["agent_id"], get_platform_agent_id())
 
     payload = verified["payload"]
@@ -150,7 +150,7 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
     if not isinstance(data["token"], str):
         raise ServiceError("INVALID_JWS", "JWS token must be a string", 400, {})
 
-    verified = await verify_jws_token(data["token"])
+    verified = verify_jws_token(data["token"])
     require_platform(verified["agent_id"], get_platform_agent_id())
 
     payload = verified["payload"]

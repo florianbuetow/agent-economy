@@ -19,7 +19,6 @@ database:
 
 identity:
   base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
   get_agent_path: "/agents"
 
 platform:

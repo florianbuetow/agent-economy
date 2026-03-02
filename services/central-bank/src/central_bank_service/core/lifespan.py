@@ -41,7 +41,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # Initialize identity client
     state.identity_client = IdentityClient(
         base_url=settings.identity.base_url,
-        verify_jws_path=settings.identity.verify_jws_path,
         get_agent_path=settings.identity.get_agent_path,
     )
 
