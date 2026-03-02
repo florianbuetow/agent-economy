@@ -44,8 +44,12 @@ async def create_account(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.create_account(data)
     return JSONResponse(status_code=201, content=result)
@@ -62,8 +66,12 @@ async def credit_account(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.credit_account(data)
     return JSONResponse(status_code=200, content=result)
@@ -83,8 +91,12 @@ async def escrow_lock(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.escrow_lock(data)
     return JSONResponse(status_code=201, content=result)
@@ -103,8 +115,12 @@ async def escrow_release(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.escrow_release(data)
     return JSONResponse(status_code=200, content=result)
@@ -132,8 +148,12 @@ async def escrow_split(request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.db_writer is None:
-        msg = "DbWriter not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = state.db_writer.escrow_split(data)
     return JSONResponse(status_code=200, content=result)
