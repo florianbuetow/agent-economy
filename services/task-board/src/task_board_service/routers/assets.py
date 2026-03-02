@@ -28,8 +28,12 @@ async def upload_asset(task_id: str, request: Request) -> JSONResponse:
     authorization = request.headers.get("authorization")
     token = extract_bearer_token(authorization, required=True)
     if token is None:
-        msg = "Authorization token must be present"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="unauthorized",
+            message="Authorization token must be present",
+            status_code=401,
+            details={},
+        )
 
     # Parse multipart form data
     form = await request.form()
@@ -58,8 +62,12 @@ async def upload_asset(task_id: str, request: Request) -> JSONResponse:
 
     state = get_app_state()
     if state.asset_manager is None:
-        msg = "AssetManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="AssetManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     result = await state.asset_manager.upload_asset(
         task_id,
@@ -81,8 +89,12 @@ async def list_assets(task_id: str) -> dict[str, Any]:
     """List all assets for a task."""
     state = get_app_state()
     if state.asset_manager is None:
-        msg = "AssetManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="AssetManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     return await state.asset_manager.list_assets(task_id)
 
@@ -97,8 +109,12 @@ async def download_asset(task_id: str, asset_id: str) -> Response:
     """Download an asset file."""
     state = get_app_state()
     if state.asset_manager is None:
-        msg = "AssetManager not initialized"
-        raise RuntimeError(msg)
+        raise ServiceError(
+            error="service_not_ready",
+            message="AssetManager not initialized",
+            status_code=503,
+            details={},
+        )
 
     content, content_type, filename = await state.asset_manager.download_asset(
         task_id,
