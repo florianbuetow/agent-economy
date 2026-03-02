@@ -17,6 +17,9 @@ agents:
   mathbot_openai:
     name: "Math Worker Bot (OpenAI)"
     type: "worker"
+  mathbot_mistral:
+    name: "Math Worker Bot (Mistral)"
+    type: "worker"
   feeder:
     name: "Task Feeder"
     type: "poster"
