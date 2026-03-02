@@ -1,0 +1,21 @@
+# UI Service Configuration
+# Environment variable overrides use prefix: UI__
+
+service:
+  name: "ui"
+  version: "0.1.0"
+
+server:
+  host: "127.0.0.1"
+  port: 8008
+  log_level: "info"
+
+logging:
+  level: "INFO"
+  directory: "data/logs"
+
+frontend:
+  web_root: "data/web"
+
+request:
+  max_body_size: 1572864
