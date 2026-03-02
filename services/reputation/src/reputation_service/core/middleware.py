@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from fastapi.responses import JSONResponse
+from service_commons.exceptions import middleware_error_response
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
@@ -49,26 +49,20 @@ class RequestValidationMiddleware:
         raw_headers = cast("list[tuple[bytes, bytes]]", scope.get("headers", []))
         ct_values = [v for k, v in raw_headers if k == b"content-type"]
         if len(ct_values) > 1:
-            response = JSONResponse(
+            response = middleware_error_response(
+                error="bad_request",
+                message="Duplicate Content-Type header",
                 status_code=400,
-                content={
-                    "error": "bad_request",
-                    "message": "Duplicate Content-Type header",
-                    "details": {},
-                },
             )
             await response(scope, receive, send)
             return
         content_type = ct_values[0].decode().lower() if ct_values else ""
 
         if not content_type.startswith("application/json"):
-            response = JSONResponse(
+            response = middleware_error_response(
+                error="unsupported_media_type",
+                message="Content-Type must be application/json",
                 status_code=415,
-                content={
-                    "error": "unsupported_media_type",
-                    "message": "Content-Type must be application/json",
-                    "details": {},
-                },
             )
             await response(scope, receive, send)
             return
@@ -84,13 +78,10 @@ class RequestValidationMiddleware:
             body_size += len(chunk)
 
             if body_size > self.max_body_size:
-                response = JSONResponse(
+                response = middleware_error_response(
+                    error="payload_too_large",
+                    message="Request body exceeds maximum allowed size",
                     status_code=413,
-                    content={
-                        "error": "payload_too_large",
-                        "message": "Request body exceeds maximum allowed size",
-                        "details": {},
-                    },
                 )
                 await response(scope, receive, send)
                 return
