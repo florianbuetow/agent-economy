@@ -42,7 +42,7 @@ async def _resolve_dispute_id(
     platform_agent: PlatformAgent,
     disputed_task: dict[str, Any],
     dispute_reason: str,
-) -> str | None:
+) -> str:
     task_id = str(disputed_task["task_id"])
     listed_disputes = await poster._request(
         "GET",
@@ -81,7 +81,9 @@ async def _resolve_dispute_id(
         if len(refreshed_disputes) > 0:
             return str(refreshed_disputes[0]["dispute_id"])
 
-    return None
+    pytest.fail(
+        f"Court dispute filing failed with status {file_response.status_code}: {file_response.text}"
+    )
 
 
 async def _submit_rebuttal(platform_agent: PlatformAgent, dispute_id: str) -> int:
@@ -141,9 +143,6 @@ async def test_full_dispute_with_court_ruling(
             disputed_task,
             dispute_reason,
         )
-
-        if dispute_id is None:
-            pytest.skip("Court dispute filing is not available in the current environment")
 
         rebuttal_status = await _submit_rebuttal(platform_agent, dispute_id)
         assert rebuttal_status in {200, 409}

@@ -47,7 +47,7 @@ async def test_self_bid_rejected(make_funded_agent) -> None:
         )
 
         assert response.status_code == 400
-        assert response.json()["error"] == "SELF_BID"
+        assert response.json()["error"] == "self_bid"
     finally:
         await _close_agents(agents_to_close)
 
@@ -87,7 +87,7 @@ async def test_duplicate_bid_rejected(make_funded_agent) -> None:
         )
 
         assert response.status_code == 409
-        assert response.json()["error"] == "BID_ALREADY_EXISTS"
+        assert response.json()["error"] == "bid_already_exists"
     finally:
         await _close_agents(agents_to_close)
 
@@ -125,7 +125,7 @@ async def test_non_poster_cannot_cancel_task(make_funded_agent) -> None:
         )
 
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
     finally:
         await _close_agents(agents_to_close)
 
@@ -166,7 +166,7 @@ async def test_non_poster_cannot_accept_bid(make_funded_agent) -> None:
         )
 
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
     finally:
         await _close_agents(agents_to_close)
 
@@ -208,7 +208,7 @@ async def test_non_poster_cannot_approve_task(make_funded_agent) -> None:
         )
 
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
     finally:
         await _close_agents(agents_to_close)
 
@@ -251,7 +251,7 @@ async def test_non_poster_cannot_dispute_task(make_funded_agent) -> None:
         )
 
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
     finally:
         await _close_agents(agents_to_close)
 
@@ -289,7 +289,7 @@ async def test_non_worker_cannot_upload_asset(make_funded_agent) -> None:
         )
 
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
     finally:
         await _close_agents(agents_to_close)
 
@@ -330,7 +330,7 @@ async def test_non_worker_cannot_submit_deliverable(make_funded_agent) -> None:
         )
 
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
     finally:
         await _close_agents(agents_to_close)
 
@@ -370,7 +370,7 @@ async def test_approve_non_submitted_task_rejected(make_funded_agent) -> None:
         )
 
         assert response.status_code == 409
-        assert response.json()["error"] == "INVALID_STATUS"
+        assert response.json()["error"] == "invalid_status"
     finally:
         await _close_agents(agents_to_close)
 
@@ -414,6 +414,6 @@ async def test_bidding_deadline_expiry_rejects_bid(make_funded_agent) -> None:
         )
 
         assert response.status_code == 409
-        assert response.json()["error"] == "INVALID_STATUS"
+        assert response.json()["error"] == "invalid_status"
     finally:
         await _close_agents(agents_to_close)

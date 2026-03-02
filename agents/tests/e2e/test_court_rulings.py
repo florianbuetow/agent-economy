@@ -45,10 +45,10 @@ async def _file_dispute_with_court(
     platform_agent: PlatformAgent,
     disputed_task: dict[str, Any],
     dispute_reason: str,
-) -> str | None:
+) -> str:
     """File the dispute with the Court service via the platform agent.
 
-    Returns the dispute_id, or None if filing is unavailable.
+    Returns the dispute_id. Fails the test if filing cannot be completed.
     """
     task_id = str(disputed_task["task_id"])
 
@@ -92,7 +92,9 @@ async def _file_dispute_with_court(
         if len(refreshed_disputes) > 0:
             return str(refreshed_disputes[0]["dispute_id"])
 
-    return None
+    pytest.fail(
+        f"Court dispute filing failed with status {file_response.status_code}: {file_response.text}"
+    )
 
 
 async def _submit_rebuttal(platform_agent: PlatformAgent, dispute_id: str) -> int:
@@ -149,15 +151,12 @@ async def _drive_to_ruling(
     dispute_id = await _file_dispute_with_court(
         poster, worker, platform_agent, disputed_task, dispute_reason
     )
-    if dispute_id is None:
-        pytest.skip("Court dispute filing is not available in the current environment")
 
     rebuttal_status = await _submit_rebuttal(platform_agent, dispute_id)
     assert rebuttal_status in {200, 409}, f"Unexpected rebuttal status: {rebuttal_status}"
 
     ruling_status, ruling_payload = await _trigger_ruling(platform_agent, dispute_id)
-    if ruling_status != 200:
-        pytest.skip(f"Court ruling unavailable (status {ruling_status})")
+    assert ruling_status == 200, f"Court ruling failed with status {ruling_status}"
 
     assert ruling_payload["status"] == "ruled"
     return disputed_task, dispute_id, ruling_payload
@@ -302,28 +301,15 @@ async def test_dispute_proceeds_without_rebuttal(
         dispute_id = await _file_dispute_with_court(
             poster, worker, platform_agent, disputed_task, dispute_reason
         )
-        if dispute_id is None:
-            pytest.skip("Court dispute filing is not available")
 
         # Skip rebuttal entirely — go straight to ruling
         ruling_status, ruling_payload = await _trigger_ruling(platform_agent, dispute_id)
 
-        if ruling_status == 200:
-            # Ruling succeeded without rebuttal
-            assert ruling_payload["status"] == "ruled"
-            assert isinstance(ruling_payload.get("worker_pct"), int)
-        else:
-            # Court may require rebuttal or have specific error handling
-            # Check the dispute is still in a valid state
-            dispute_snapshot = await poster._request(
-                "GET",
-                f"{poster.config.court_url}/disputes/{dispute_id}",
-            )
-            assert dispute_snapshot["status"] in {
-                "rebuttal_pending",
-                "judging",
-                "ruled",
-            }, f"Unexpected dispute status: {dispute_snapshot['status']}"
+        assert ruling_status == 200, (
+            f"Court ruling without rebuttal failed with status {ruling_status}"
+        )
+        assert ruling_payload["status"] == "ruled"
+        assert isinstance(ruling_payload.get("worker_pct"), int)
     finally:
         await _close_agents(agents_to_close)
 
@@ -344,11 +330,9 @@ async def test_duplicate_dispute_rejected(
         disputed_task, dispute_reason = await _create_disputed_task(poster, worker, reward=1000)
 
         # First filing should succeed (or already exist)
-        dispute_id = await _file_dispute_with_court(
+        _dispute_id = await _file_dispute_with_court(
             poster, worker, platform_agent, disputed_task, dispute_reason
         )
-        if dispute_id is None:
-            pytest.skip("Court dispute filing is not available")
 
         # Second filing should be rejected
         duplicate_token = platform_agent._sign_jws(
@@ -368,6 +352,6 @@ async def test_duplicate_dispute_rejected(
         )
 
         assert duplicate_response.status_code == 409
-        assert duplicate_response.json()["error"] == "DISPUTE_ALREADY_EXISTS"
+        assert duplicate_response.json()["error"] == "dispute_already_exists"
     finally:
         await _close_agents(agents_to_close)

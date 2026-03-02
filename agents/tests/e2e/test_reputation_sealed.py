@@ -132,7 +132,7 @@ async def test_self_feedback_rejected(make_funded_agent) -> None:
         )
 
         assert response.status_code == 400
-        assert response.json()["error"] == "SELF_FEEDBACK"
+        assert response.json()["error"] == "self_feedback"
     finally:
         await _close_agents(agents_to_close)
 
@@ -190,6 +190,6 @@ async def test_duplicate_feedback_rejected(make_funded_agent) -> None:
         )
 
         assert response.status_code == 409
-        assert response.json()["error"] == "FEEDBACK_EXISTS"
+        assert response.json()["error"] == "feedback_exists"
     finally:
         await _close_agents(agents_to_close)

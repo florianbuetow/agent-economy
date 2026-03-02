@@ -19,8 +19,8 @@ async def _drive_dispute_to_ruling(
     worker: BaseAgent,
     platform_agent: PlatformAgent,
     reward: int,
-) -> dict[str, Any] | None:
-    """Drive a task through dispute to ruling. Returns ruling payload or None."""
+) -> dict[str, Any]:
+    """Drive a task through dispute to ruling. Returns ruling payload."""
     task = await poster.post_task(
         title="Economic dispute task",
         spec="Implement the feature",
@@ -65,8 +65,9 @@ async def _drive_dispute_to_ruling(
             f"{platform_agent.config.court_url}/disputes/file",
             json={"token": file_token},
         )
-        if file_resp.status_code != 201:
-            return None
+        assert file_resp.status_code == 201, (
+            f"Court dispute filing failed with status {file_resp.status_code}: {file_resp.text}"
+        )
         dispute_id = str(file_resp.json()["dispute_id"])
 
     # Rebuttal
@@ -90,8 +91,9 @@ async def _drive_dispute_to_ruling(
         f"{platform_agent.config.court_url}/disputes/{dispute_id}/rule",
         json={"token": ruling_token},
     )
-    if ruling_resp.status_code != 200:
-        return None
+    assert ruling_resp.status_code == 200, (
+        f"Court ruling failed with status {ruling_resp.status_code}: {ruling_resp.text}"
+    )
 
     payload: dict[str, Any] = ruling_resp.json()
     return payload
@@ -118,9 +120,6 @@ async def test_economic_cycle_with_dispute_partial_payout(
             platform_agent=platform_agent,
             reward=reward_1,
         )
-        if ruling is None:
-            pytest.skip("Court ruling unavailable in this environment")
-
         worker_pct = ruling["worker_pct"]
         worker_earned = (reward_1 * worker_pct) // 100
         poster_refund = reward_1 - worker_earned
@@ -133,9 +132,10 @@ async def test_economic_cycle_with_dispute_partial_payout(
         # Conservation check after round 1
         assert balance_a_after_r1["balance"] + balance_b_after_r1["balance"] == 5000
 
-        # Round 2: B posts task using partial earnings (if B has enough)
-        if worker_earned < 200:
-            pytest.skip(f"Worker earned only {worker_earned}, not enough to post a task")
+        # Round 2: B posts task using partial earnings
+        assert worker_earned >= 200, (
+            f"Worker earned only {worker_earned}, expected at least 200 to post a task"
+        )
 
         reward_2 = min(200, worker_earned)
         task_2 = await agent_b.post_task(

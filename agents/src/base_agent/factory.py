@@ -11,6 +11,7 @@ from base_agent.agent import BaseAgent
 from base_agent.config import AgentConfig
 from base_agent.platform import PlatformAgent
 from base_agent.signing import generate_keypair, load_private_key, load_public_key
+from base_agent.user_agent import UserAgent
 
 
 class AgentFactory:
@@ -123,3 +124,17 @@ class AgentFactory:
         """
         config = self._load_config("platform")
         return PlatformAgent(config)
+
+    def user_agent(self) -> UserAgent:
+        """Create the user agent for UI-driven operations.
+
+        The user agent shares the platform agent's keys and identity.
+
+        Returns:
+            A UserAgent initialized with the platform keypair.
+
+        Raises:
+            KeyError: If "platform" is not in the roster.
+        """
+        config = self._load_config("platform")
+        return UserAgent(config)
