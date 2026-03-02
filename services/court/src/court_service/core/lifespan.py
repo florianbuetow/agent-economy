@@ -14,7 +14,6 @@ from court_service.judges import LLMJudge, MockJudge
 from court_service.logging import get_logger, setup_logging
 from court_service.services.dispute_service import DisputeService
 from court_service.services.dispute_store import DisputeStore
-from court_service.services.identity_client import IdentityClient
 from court_service.services.ruling_orchestrator import RulingOrchestrator
 
 if TYPE_CHECKING:
@@ -73,12 +72,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     orchestrator = RulingOrchestrator(store=store)
     state.dispute_service = DisputeService(store=store, orchestrator=orchestrator)
 
-    state.identity_client = IdentityClient(
-        base_url=settings.identity.base_url,
-        verify_jws_path=settings.identity.verify_jws_path,
-        timeout_seconds=settings.identity.timeout_seconds,
-    )
-
     # Instantiate the platform agent from the agent config.
     # This loads the platform's Ed25519 keypair and registers with Identity.
     if settings.platform.agent_config_path:
@@ -116,7 +109,5 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     if state.platform_agent is not None:
         await state.platform_agent.close()
-    if state.identity_client is not None:  # pyright: ignore[reportUnnecessaryComparison]
-        await state.identity_client.close()
     if state.dispute_service is not None:  # pyright: ignore[reportUnnecessaryComparison]
         state.dispute_service.close()

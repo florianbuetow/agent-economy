@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
     from court_service.judges import Judge
     from court_service.services.dispute_service import DisputeService
-    from court_service.services.identity_client import IdentityClient
 
 
 @dataclass
@@ -20,7 +19,6 @@ class AppState:
 
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     dispute_service: DisputeService | None = None
-    identity_client: IdentityClient | None = None
     platform_agent: PlatformAgent | None = None
     judges: list[Judge] | None = None
 

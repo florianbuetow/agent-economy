@@ -23,7 +23,7 @@ service:
   name: "court"
   version: "0.1.0"
 server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8005
   log_level: "info"
 logging:
@@ -31,10 +31,6 @@ logging:
   directory: "data/logs"
 database:
   path: "{tmp_path / "test.db"}"
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
 platform:
   agent_id: "a-platform"
 request:

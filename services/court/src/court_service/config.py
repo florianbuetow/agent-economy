@@ -48,15 +48,6 @@ class DatabaseConfig(BaseModel):
     path: str
 
 
-class IdentityConfig(BaseModel):
-    """Identity service connection configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    base_url: str
-    verify_jws_path: str
-    timeout_seconds: int
-
-
 class PlatformConfig(BaseModel):
     """Platform agent configuration."""
 
@@ -140,7 +131,6 @@ class Settings(BaseModel):
     server: ServerConfig
     logging: LoggingConfig
     database: DatabaseConfig
-    identity: IdentityConfig
     platform: PlatformConfig
     disputes: DisputesConfig
     judges: JudgesConfig
