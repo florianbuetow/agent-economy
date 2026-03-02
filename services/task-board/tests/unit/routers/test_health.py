@@ -80,7 +80,7 @@ async def test_health_task_counts_reflect_actual_data(client, alice_keypair, ali
 
 @pytest.mark.unit
 async def test_health_post_not_allowed(client):
-    """HEALTH-04: POST /health returns 405 METHOD_NOT_ALLOWED."""
+    """HEALTH-04: POST /health returns 405 method_not_allowed."""
     response = await client.post("/health")
     assert response.status_code == 405
-    assert response.json()["error"] == "METHOD_NOT_ALLOWED"
+    assert response.json()["error"] == "method_not_allowed"

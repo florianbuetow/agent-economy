@@ -51,11 +51,11 @@ class TestBidding:
         bob_keypair,
         bob_agent_id,
     ):
-        """BID-02: Bid on a nonexistent task returns 404 TASK_NOT_FOUND."""
+        """BID-02: Bid on a nonexistent task returns 404 task_not_found."""
         fake_task_id = make_task_id()
         response = await submit_bid(client, bob_keypair, bob_agent_id, fake_task_id)
         assert response.status_code == 404
-        assert response.json()["error"] == "TASK_NOT_FOUND"
+        assert response.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
     async def test_bid_03_bid_on_cancelled_task(
@@ -66,7 +66,7 @@ class TestBidding:
         bob_keypair,
         bob_agent_id,
     ):
-        """BID-03: Bid on a cancelled task returns 409 INVALID_STATUS."""
+        """BID-03: Bid on a cancelled task returns 409 invalid_status."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -84,7 +84,7 @@ class TestBidding:
 
         response = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert response.status_code == 409
-        assert response.json()["error"] == "INVALID_STATUS"
+        assert response.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_bid_04_bid_on_accepted_task(
@@ -97,7 +97,7 @@ class TestBidding:
         carol_keypair,
         carol_agent_id,
     ):
-        """BID-04: Bid on an accepted task returns 409 INVALID_STATUS."""
+        """BID-04: Bid on an accepted task returns 409 invalid_status."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -111,7 +111,7 @@ class TestBidding:
 
         response = await submit_bid(client, carol_keypair, carol_agent_id, task_id)
         assert response.status_code == 409
-        assert response.json()["error"] == "INVALID_STATUS"
+        assert response.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_bid_05_duplicate_bid_rejected(
@@ -122,7 +122,7 @@ class TestBidding:
         bob_keypair,
         bob_agent_id,
     ):
-        """BID-05: Duplicate bid from same agent returns 409 BID_ALREADY_EXISTS."""
+        """BID-05: Duplicate bid from same agent returns 409 bid_already_exists."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -132,7 +132,7 @@ class TestBidding:
 
         second = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert second.status_code == 409
-        assert second.json()["error"] == "BID_ALREADY_EXISTS"
+        assert second.json()["error"] == "bid_already_exists"
 
     @pytest.mark.unit
     async def test_bid_06_multiple_different_bidders(
@@ -168,7 +168,7 @@ class TestBidding:
         bob_agent_id,
         carol_agent_id,
     ):
-        """BID-07: Signer does not match bidder_id returns 403 FORBIDDEN."""
+        """BID-07: Signer does not match bidder_id returns 403 forbidden."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -184,7 +184,7 @@ class TestBidding:
         token = make_jws_token(private_key, bob_agent_id, payload)
         response = await client.post(f"/tasks/{task_id}/bids", json={"token": token})
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_bid_08_wrong_action(
@@ -195,7 +195,7 @@ class TestBidding:
         bob_keypair,
         bob_agent_id,
     ):
-        """BID-08: Wrong action in bid token returns 400 INVALID_PAYLOAD."""
+        """BID-08: Wrong action in bid token returns 400 invalid_payload."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -210,7 +210,7 @@ class TestBidding:
         token = make_jws_token(private_key, bob_agent_id, payload)
         response = await client.post(f"/tasks/{task_id}/bids", json={"token": token})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_bid_09_missing_payload_fields(
@@ -221,7 +221,7 @@ class TestBidding:
         bob_keypair,
         bob_agent_id,
     ):
-        """BID-09: Missing required payload fields returns 400 INVALID_PAYLOAD."""
+        """BID-09: Missing required payload fields returns 400 invalid_payload."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -235,7 +235,7 @@ class TestBidding:
         token = make_jws_token(private_key, bob_agent_id, payload)
         response = await client.post(f"/tasks/{task_id}/bids", json={"token": token})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
@@ -252,7 +252,7 @@ class TestBidding:
         bob_agent_id,
         invalid_amount,
     ):
-        """BID-10: Invalid bid amount returns 400 INVALID_REWARD."""
+        """BID-10: Invalid bid amount returns 400 invalid_reward."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -267,7 +267,7 @@ class TestBidding:
         token = make_jws_token(private_key, bob_agent_id, payload)
         response = await client.post(f"/tasks/{task_id}/bids", json={"token": token})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_REWARD"
+        assert response.json()["error"] == "invalid_reward"
 
     @pytest.mark.unit
     async def test_bid_11_self_bid_rejected(
@@ -276,14 +276,14 @@ class TestBidding:
         alice_keypair,
         alice_agent_id,
     ):
-        """BID-11: Poster bidding on own task returns 400 SELF_BID."""
+        """BID-11: Poster bidding on own task returns 400 self_bid."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
 
         response = await submit_bid(client, alice_keypair, alice_agent_id, task_id)
         assert response.status_code == 400
-        assert response.json()["error"] == "SELF_BID"
+        assert response.json()["error"] == "self_bid"
 
     @pytest.mark.unit
     async def test_bid_12_bid_after_bidding_deadline(
@@ -294,7 +294,7 @@ class TestBidding:
         bob_keypair,
         bob_agent_id,
     ):
-        """BID-12: Bid after bidding deadline expired returns 409 INVALID_STATUS."""
+        """BID-12: Bid after bidding deadline expired returns 409 invalid_status."""
         task_resp = await create_task(
             client,
             alice_keypair,
@@ -309,7 +309,7 @@ class TestBidding:
 
         response = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert response.status_code == 409
-        assert response.json()["error"] == "INVALID_STATUS"
+        assert response.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_bid_13_concurrent_duplicate_bid_race(
@@ -334,7 +334,7 @@ class TestBidding:
         assert status_codes == [201, 409]
 
         error_responses = [r for r in results if r.status_code == 409]
-        assert error_responses[0].json()["error"] == "BID_ALREADY_EXISTS"
+        assert error_responses[0].json()["error"] == "bid_already_exists"
 
     @pytest.mark.unit
     async def test_bid_14_bid_increments_bid_count(
@@ -364,14 +364,14 @@ class TestBidding:
         alice_keypair,
         alice_agent_id,
     ):
-        """BID-15: Malformed bid token returns 400 INVALID_JWS."""
+        """BID-15: Malformed bid token returns 400 invalid_jws."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
 
         response = await client.post(f"/tasks/{task_id}/bids", json={"token": "not-a-valid-jws"})
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_JWS"
+        assert response.json()["error"] == "invalid_jws"
 
 
 class TestBidListing:
@@ -443,7 +443,7 @@ class TestBidListing:
         fake_task_id = make_task_id()
         response = await client.get(f"/tasks/{fake_task_id}/bids")
         assert response.status_code == 404
-        assert response.json()["error"] == "TASK_NOT_FOUND"
+        assert response.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
     async def test_bl_04_sealed_bids_poster_sees_with_bearer(
@@ -595,7 +595,7 @@ class TestBidListing:
         headers = {"Authorization": f"Bearer {token}"}
         response = await client.get(f"/tasks/{task_id}/bids", headers=headers)
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
 
 class TestBidAcceptance:
@@ -634,7 +634,7 @@ class TestBidAcceptance:
         alice_keypair,
         alice_agent_id,
     ):
-        """BA-02: Accept a nonexistent bid returns 404 BID_NOT_FOUND."""
+        """BA-02: Accept a nonexistent bid returns 404 bid_not_found."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -642,7 +642,7 @@ class TestBidAcceptance:
         fake_bid_id = "bid-00000000-0000-0000-0000-000000000000"
         response = await accept_bid(client, alice_keypair, alice_agent_id, task_id, fake_bid_id)
         assert response.status_code == 404
-        assert response.json()["error"] == "BID_NOT_FOUND"
+        assert response.json()["error"] == "bid_not_found"
 
     @pytest.mark.unit
     async def test_ba_03_accept_on_nonexistent_task(
@@ -651,14 +651,14 @@ class TestBidAcceptance:
         alice_keypair,
         alice_agent_id,
     ):
-        """BA-03: Accept bid on nonexistent task returns 404 TASK_NOT_FOUND."""
+        """BA-03: Accept bid on nonexistent task returns 404 task_not_found."""
         fake_task_id = make_task_id()
         fake_bid_id = "bid-00000000-0000-0000-0000-000000000000"
         response = await accept_bid(
             client, alice_keypair, alice_agent_id, fake_task_id, fake_bid_id
         )
         assert response.status_code == 404
-        assert response.json()["error"] == "TASK_NOT_FOUND"
+        assert response.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
     async def test_ba_04_accept_wrong_status(
@@ -671,7 +671,7 @@ class TestBidAcceptance:
         carol_keypair,
         carol_agent_id,
     ):
-        """BA-04: Accept bid on non-OPEN task returns 409 INVALID_STATUS."""
+        """BA-04: Accept bid on non-OPEN task returns 409 invalid_status."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -691,7 +691,7 @@ class TestBidAcceptance:
         # Now try to accept Carol's bid — task is already accepted
         response = await accept_bid(client, alice_keypair, alice_agent_id, task_id, carol_bid_id)
         assert response.status_code == 409
-        assert response.json()["error"] == "INVALID_STATUS"
+        assert response.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_ba_05_non_poster_forbidden(
@@ -704,7 +704,7 @@ class TestBidAcceptance:
         carol_keypair,
         carol_agent_id,
     ):
-        """BA-05: Non-poster cannot accept a bid — returns 403 FORBIDDEN."""
+        """BA-05: Non-poster cannot accept a bid — returns 403 forbidden."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -716,7 +716,7 @@ class TestBidAcceptance:
         # Carol (not the poster) tries to accept
         response = await accept_bid(client, carol_keypair, carol_agent_id, task_id, bid_id)
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_ba_06_wrong_action(
@@ -727,7 +727,7 @@ class TestBidAcceptance:
         bob_keypair,
         bob_agent_id,
     ):
-        """BA-06: Wrong action in accept token returns 400 INVALID_PAYLOAD."""
+        """BA-06: Wrong action in accept token returns 400 invalid_payload."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -748,7 +748,7 @@ class TestBidAcceptance:
             f"/tasks/{task_id}/bids/{bid_id}/accept", json={"token": token}
         )
         assert response.status_code == 400
-        assert response.json()["error"] == "INVALID_PAYLOAD"
+        assert response.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_ba_07_signer_mismatch(
@@ -761,7 +761,7 @@ class TestBidAcceptance:
         carol_keypair,
         carol_agent_id,
     ):
-        """BA-07: Signer does not match poster_id returns 403 FORBIDDEN."""
+        """BA-07: Signer does not match poster_id returns 403 forbidden."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
@@ -783,7 +783,7 @@ class TestBidAcceptance:
             f"/tasks/{task_id}/bids/{bid_id}/accept", json={"token": token}
         )
         assert response.status_code == 403
-        assert response.json()["error"] == "FORBIDDEN"
+        assert response.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_ba_08_accept_sets_execution_deadline(

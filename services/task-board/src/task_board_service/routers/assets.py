@@ -37,14 +37,14 @@ async def upload_asset(task_id: str, request: Request) -> JSONResponse:
 
     if upload_file is None:
         raise ServiceError(
-            "NO_FILE",
+            "no_file",
             "No file part in the multipart request",
             400,
             {},
         )
     if not isinstance(upload_file, StarletteUploadFile):
         raise ServiceError(
-            "NO_FILE",
+            "no_file",
             "File field must be an uploaded file",
             400,
             {},

@@ -14,7 +14,7 @@ def parse_json_body(raw_body: bytes) -> dict[str, Any]:
         data = json.loads(raw_body)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise ServiceError(
-            "INVALID_JSON",
+            "invalid_json",
             "Request body is not valid JSON",
             400,
             {},
@@ -22,7 +22,7 @@ def parse_json_body(raw_body: bytes) -> dict[str, Any]:
 
     if not isinstance(data, dict):
         raise ServiceError(
-            "INVALID_JSON",
+            "invalid_json",
             "Request body must be a JSON object",
             400,
             {},
@@ -35,7 +35,7 @@ def extract_token(data: dict[str, Any], field_name: str) -> str:
     """Extract and validate a token field from parsed JSON body."""
     if field_name not in data:
         raise ServiceError(
-            "INVALID_JWS",
+            "invalid_jws",
             f"Missing required field: {field_name}",
             400,
             {},
@@ -45,7 +45,7 @@ def extract_token(data: dict[str, Any], field_name: str) -> str:
 
     if value is None:
         raise ServiceError(
-            "INVALID_JWS",
+            "invalid_jws",
             f"Field '{field_name}' must not be null",
             400,
             {},
@@ -53,7 +53,7 @@ def extract_token(data: dict[str, Any], field_name: str) -> str:
 
     if not isinstance(value, str):
         raise ServiceError(
-            "INVALID_JWS",
+            "invalid_jws",
             f"Field '{field_name}' must be a string",
             400,
             {},
@@ -61,7 +61,7 @@ def extract_token(data: dict[str, Any], field_name: str) -> str:
 
     if not value:
         raise ServiceError(
-            "INVALID_JWS",
+            "invalid_jws",
             f"Field '{field_name}' must not be empty",
             400,
             {},
@@ -75,7 +75,7 @@ def extract_bearer_token(authorization: str | None, *, required: bool) -> str | 
     if authorization is None:
         if required:
             raise ServiceError(
-                "INVALID_JWS",
+                "invalid_jws",
                 "Missing Authorization header",
                 400,
                 {},
@@ -84,7 +84,7 @@ def extract_bearer_token(authorization: str | None, *, required: bool) -> str | 
 
     if not authorization.startswith("Bearer "):
         raise ServiceError(
-            "INVALID_JWS",
+            "invalid_jws",
             "Authorization header must use Bearer scheme",
             400,
             {},
@@ -93,7 +93,7 @@ def extract_bearer_token(authorization: str | None, *, required: bool) -> str | 
     token = authorization[len("Bearer ") :]
     if not token:
         raise ServiceError(
-            "INVALID_JWS",
+            "invalid_jws",
             "Bearer token must not be empty",
             400,
             {},

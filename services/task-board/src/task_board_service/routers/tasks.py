@@ -59,17 +59,17 @@ async def list_tasks(request: Request) -> dict[str, Any]:
         try:
             offset = int(offset_raw)
         except ValueError as exc:
-            raise ServiceError("INVALID_PAYLOAD", "offset must be an integer", 400, {}) from exc
+            raise ServiceError("invalid_payload", "offset must be an integer", 400, {}) from exc
         if offset < 0:
-            raise ServiceError("INVALID_PAYLOAD", "offset must be >= 0", 400, {})
+            raise ServiceError("invalid_payload", "offset must be >= 0", 400, {})
 
     if limit_raw is not None:
         try:
             limit = int(limit_raw)
         except ValueError as exc:
-            raise ServiceError("INVALID_PAYLOAD", "limit must be an integer", 400, {}) from exc
+            raise ServiceError("invalid_payload", "limit must be an integer", 400, {}) from exc
         if limit <= 0:
-            raise ServiceError("INVALID_PAYLOAD", "limit must be >= 1", 400, {})
+            raise ServiceError("invalid_payload", "limit must be >= 1", 400, {})
 
     state = get_app_state()
     if state.task_manager is None:
@@ -196,7 +196,7 @@ async def record_ruling(task_id: str, request: Request) -> JSONResponse:
 #
 # Without these, requests like GET /tasks/{task_id}/cancel would match
 # GET /tasks/{task_id} with task_id="xxx/cancel" — which may return
-# TASK_NOT_FOUND instead of the required 405.
+# task_not_found instead of the required 405.
 # ---------------------------------------------------------------------------
 
 
@@ -207,7 +207,7 @@ async def record_ruling(task_id: str, request: Request) -> JSONResponse:
 async def cancel_method_not_allowed(task_id: str, request: Request) -> None:
     """Reject wrong methods on /tasks/{task_id}/cancel."""
     _ = (task_id, request)
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
 
 
 @router.api_route(
@@ -217,7 +217,7 @@ async def cancel_method_not_allowed(task_id: str, request: Request) -> None:
 async def submit_method_not_allowed(task_id: str, request: Request) -> None:
     """Reject wrong methods on /tasks/{task_id}/submit."""
     _ = (task_id, request)
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
 
 
 @router.api_route(
@@ -227,7 +227,7 @@ async def submit_method_not_allowed(task_id: str, request: Request) -> None:
 async def approve_method_not_allowed(task_id: str, request: Request) -> None:
     """Reject wrong methods on /tasks/{task_id}/approve."""
     _ = (task_id, request)
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
 
 
 @router.api_route(
@@ -237,7 +237,7 @@ async def approve_method_not_allowed(task_id: str, request: Request) -> None:
 async def dispute_method_not_allowed(task_id: str, request: Request) -> None:
     """Reject wrong methods on /tasks/{task_id}/dispute."""
     _ = (task_id, request)
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
 
 
 @router.api_route(
@@ -247,7 +247,7 @@ async def dispute_method_not_allowed(task_id: str, request: Request) -> None:
 async def ruling_method_not_allowed(task_id: str, request: Request) -> None:
     """Reject wrong methods on /tasks/{task_id}/ruling."""
     _ = (task_id, request)
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
 
 
 # ---------------------------------------------------------------------------

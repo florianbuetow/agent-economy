@@ -90,7 +90,7 @@ class TestTaskCreation:
 
         resp2 = await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
         assert resp2.status_code == 409
-        assert resp2.json()["error"] == "TASK_ALREADY_EXISTS"
+        assert resp2.json()["error"] == "task_already_exists"
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
@@ -105,10 +105,10 @@ class TestTaskCreation:
         alice_agent_id: str,
         bad_id: str,
     ) -> None:
-        """TC-03: Invalid task_id format returns 400 INVALID_TASK_ID."""
+        """TC-03: Invalid task_id format returns 400 invalid_task_id."""
         resp = await create_task(client, alice_keypair, alice_agent_id, task_id=bad_id)
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_TASK_ID"
+        assert resp.json()["error"] == "invalid_task_id"
 
     @pytest.mark.unit
     async def test_tc04_missing_task_token(
@@ -117,7 +117,7 @@ class TestTaskCreation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-04: Missing task_token returns 400 INVALID_JWS."""
+        """TC-04: Missing task_token returns 400 invalid_jws."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
         escrow_payload = {
@@ -130,7 +130,7 @@ class TestTaskCreation:
 
         resp = await client.post("/tasks", json={"escrow_token": escrow_token})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_tc05_missing_escrow_token(
@@ -139,7 +139,7 @@ class TestTaskCreation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-05: Missing escrow_token returns 400 INVALID_JWS."""
+        """TC-05: Missing escrow_token returns 400 invalid_jws."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
         task_payload = {
@@ -157,14 +157,14 @@ class TestTaskCreation:
 
         resp = await client.post("/tasks", json={"task_token": task_token})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_tc06_both_tokens_missing(self, client: AsyncClient) -> None:
-        """TC-06: Missing both tokens returns 400 INVALID_JWS."""
+        """TC-06: Missing both tokens returns 400 invalid_jws."""
         resp = await client.post("/tasks", json={})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
@@ -179,7 +179,7 @@ class TestTaskCreation:
         alice_agent_id: str,
         bad_token: Any,
     ) -> None:
-        """TC-07: Malformed task_token returns 400 INVALID_JWS."""
+        """TC-07: Malformed task_token returns 400 invalid_jws."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
         escrow_payload = {
@@ -195,7 +195,7 @@ class TestTaskCreation:
             json={"task_token": bad_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_tc08_wrong_action_in_task_token(
@@ -204,7 +204,7 @@ class TestTaskCreation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-08: Wrong action in task_token returns 400 INVALID_PAYLOAD."""
+        """TC-08: Wrong action in task_token returns 400 invalid_payload."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
 
@@ -234,7 +234,7 @@ class TestTaskCreation:
             json={"task_token": task_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
@@ -249,7 +249,7 @@ class TestTaskCreation:
         alice_agent_id: str,
         missing_field: str,
     ) -> None:
-        """TC-09: Missing required field in task_token returns 400 INVALID_PAYLOAD."""
+        """TC-09: Missing required field in task_token returns 400 invalid_payload."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
 
@@ -281,7 +281,7 @@ class TestTaskCreation:
             json={"task_token": task_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_tc10_signer_does_not_match_poster_id(
@@ -290,7 +290,7 @@ class TestTaskCreation:
         alice_keypair: Any,
         bob_agent_id: str,
     ) -> None:
-        """TC-10: Signer != poster_id returns 403 FORBIDDEN."""
+        """TC-10: Signer != poster_id returns 403 forbidden."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
 
@@ -320,7 +320,7 @@ class TestTaskCreation:
             json={"task_token": task_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_tc11_task_id_mismatch_between_tokens(
@@ -329,7 +329,7 @@ class TestTaskCreation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-11: task_id mismatch between tokens returns 400 TOKEN_MISMATCH."""
+        """TC-11: task_id mismatch between tokens returns 400 token_mismatch."""
         private_key = alice_keypair[0]
         task_id_a = make_task_id()
         task_id_b = make_task_id()
@@ -360,7 +360,7 @@ class TestTaskCreation:
             json={"task_token": task_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "TOKEN_MISMATCH"
+        assert resp.json()["error"] == "token_mismatch"
 
     @pytest.mark.unit
     async def test_tc12_reward_amount_mismatch_between_tokens(
@@ -369,7 +369,7 @@ class TestTaskCreation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-12: reward/amount mismatch between tokens returns 400 TOKEN_MISMATCH."""
+        """TC-12: reward/amount mismatch between tokens returns 400 token_mismatch."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
 
@@ -399,7 +399,7 @@ class TestTaskCreation:
             json={"task_token": task_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "TOKEN_MISMATCH"
+        assert resp.json()["error"] == "token_mismatch"
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
@@ -414,7 +414,7 @@ class TestTaskCreation:
         alice_agent_id: str,
         bad_reward: Any,
     ) -> None:
-        """TC-13: Invalid reward values return 400 INVALID_REWARD."""
+        """TC-13: Invalid reward values return 400 invalid_reward."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
 
@@ -444,7 +444,7 @@ class TestTaskCreation:
             json={"task_token": task_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_REWARD"
+        assert resp.json()["error"] == "invalid_reward"
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
@@ -459,7 +459,7 @@ class TestTaskCreation:
         alice_agent_id: str,
         bad_deadline: Any,
     ) -> None:
-        """TC-14a: Invalid bidding_deadline_seconds returns 400 INVALID_DEADLINE."""
+        """TC-14a: Invalid bidding_deadline_seconds returns 400 invalid_deadline."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
 
@@ -489,7 +489,7 @@ class TestTaskCreation:
             json={"task_token": task_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_DEADLINE"
+        assert resp.json()["error"] == "invalid_deadline"
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
@@ -504,7 +504,7 @@ class TestTaskCreation:
         alice_agent_id: str,
         bad_deadline: Any,
     ) -> None:
-        """TC-14b: Invalid execution_deadline_seconds returns 400 INVALID_DEADLINE."""
+        """TC-14b: Invalid execution_deadline_seconds returns 400 invalid_deadline."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
 
@@ -534,7 +534,7 @@ class TestTaskCreation:
             json={"task_token": task_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_DEADLINE"
+        assert resp.json()["error"] == "invalid_deadline"
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
@@ -549,7 +549,7 @@ class TestTaskCreation:
         alice_agent_id: str,
         bad_deadline: Any,
     ) -> None:
-        """TC-14c: Invalid review_deadline_seconds returns 400 INVALID_DEADLINE."""
+        """TC-14c: Invalid review_deadline_seconds returns 400 invalid_deadline."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
 
@@ -579,7 +579,7 @@ class TestTaskCreation:
             json={"task_token": task_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_DEADLINE"
+        assert resp.json()["error"] == "invalid_deadline"
 
     @pytest.mark.unit
     async def test_tc15_escrow_insufficient_funds(
@@ -588,15 +588,15 @@ class TestTaskCreation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-15: Insufficient funds returns 402 INSUFFICIENT_FUNDS."""
+        """TC-15: Insufficient funds returns 402 insufficient_funds."""
         state = get_app_state()
         state.central_bank_client.escrow_lock = AsyncMock(
-            side_effect=Exception("INSUFFICIENT_FUNDS")
+            side_effect=Exception("insufficient_funds")
         )
 
         resp = await create_task(client, alice_keypair, alice_agent_id, reward=10000)
         assert resp.status_code == 402
-        assert resp.json()["error"] == "INSUFFICIENT_FUNDS"
+        assert resp.json()["error"] == "insufficient_funds"
 
     @pytest.mark.unit
     async def test_tc16_central_bank_unavailable(
@@ -605,7 +605,7 @@ class TestTaskCreation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-16: Central Bank unavailable returns 502 CENTRAL_BANK_UNAVAILABLE."""
+        """TC-16: Central Bank unavailable returns 502 central_bank_unavailable."""
         state = get_app_state()
         state.central_bank_client.escrow_lock = AsyncMock(
             side_effect=ConnectionError("Central Bank unreachable")
@@ -613,7 +613,7 @@ class TestTaskCreation:
 
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 502
-        assert resp.json()["error"] == "CENTRAL_BANK_UNAVAILABLE"
+        assert resp.json()["error"] == "central_bank_unavailable"
 
     @pytest.mark.unit
     async def test_tc17_title_at_max_length_accepted(
@@ -635,11 +635,11 @@ class TestTaskCreation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-18: Title exceeding max length returns 400 TITLE_TOO_LONG."""
+        """TC-18: Title exceeding max length returns 400 title_too_long."""
         long_title = "A" * 201
         resp = await create_task(client, alice_keypair, alice_agent_id, title=long_title)
         assert resp.status_code == 400
-        assert resp.json()["error"] == "TITLE_TOO_LONG"
+        assert resp.json()["error"] == "title_too_long"
 
     @pytest.mark.unit
     async def test_tc19_spec_at_max_length_accepted(
@@ -660,7 +660,7 @@ class TestTaskCreation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-20: Tampered task_token returns 403 FORBIDDEN."""
+        """TC-20: Tampered task_token returns 403 forbidden."""
         private_key = alice_keypair[0]
         task_id = make_task_id()
 
@@ -691,7 +691,7 @@ class TestTaskCreation:
             json={"task_token": tampered_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_tc21_escrow_signer_differs_from_task_signer(
@@ -701,7 +701,7 @@ class TestTaskCreation:
         bob_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-21: Escrow signer != task signer returns 400 TOKEN_MISMATCH."""
+        """TC-21: Escrow signer != task signer returns 400 token_mismatch."""
         alice_key = alice_keypair[0]
         bob_key = bob_keypair[0]
         task_id = make_task_id()
@@ -732,7 +732,7 @@ class TestTaskCreation:
             json={"task_token": task_token, "escrow_token": escrow_token},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "TOKEN_MISMATCH"
+        assert resp.json()["error"] == "token_mismatch"
 
     @pytest.mark.unit
     async def test_tc22_identity_service_unavailable(
@@ -749,33 +749,33 @@ class TestTaskCreation:
 
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 502
-        assert resp.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert resp.json()["error"] == "identity_service_unavailable"
 
     @pytest.mark.unit
     async def test_tc23_malformed_json_body(self, client: AsyncClient) -> None:
-        """TC-23: Malformed JSON body returns 400 INVALID_JSON."""
+        """TC-23: Malformed JSON body returns 400 invalid_json."""
         resp = await client.post(
             "/tasks",
             content=b"{invalid json",
             headers={"Content-Type": "application/json"},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JSON"
+        assert resp.json()["error"] == "invalid_json"
 
     @pytest.mark.unit
     async def test_tc24_wrong_content_type(self, client: AsyncClient) -> None:
-        """TC-24: Wrong content type returns 415 UNSUPPORTED_MEDIA_TYPE."""
+        """TC-24: Wrong content type returns 415 unsupported_media_type."""
         resp = await client.post(
             "/tasks",
             content=b'{"task_token": "x", "escrow_token": "y"}',
             headers={"Content-Type": "text/plain"},
         )
         assert resp.status_code == 415
-        assert resp.json()["error"] == "UNSUPPORTED_MEDIA_TYPE"
+        assert resp.json()["error"] == "unsupported_media_type"
 
     @pytest.mark.unit
     async def test_tc25_oversized_body(self, client: AsyncClient) -> None:
-        """TC-25: Oversized body returns 413 PAYLOAD_TOO_LARGE."""
+        """TC-25: Oversized body returns 413 payload_too_large."""
         huge_body = b"x" * (1048576 + 1)
         resp = await client.post(
             "/tasks",
@@ -783,7 +783,7 @@ class TestTaskCreation:
             headers={"Content-Type": "application/json"},
         )
         assert resp.status_code == 413
-        assert resp.json()["error"] == "PAYLOAD_TOO_LARGE"
+        assert resp.json()["error"] == "payload_too_large"
 
     @pytest.mark.unit
     async def test_tc26_extra_fields_in_payload_ignored(
@@ -851,14 +851,14 @@ class TestTaskCreation:
 
     @pytest.mark.unit
     async def test_tc28_empty_body(self, client: AsyncClient) -> None:
-        """TC-28: Empty body returns 400 INVALID_JWS."""
+        """TC-28: Empty body returns 400 invalid_jws."""
         resp = await client.post(
             "/tasks",
             content=b"",
             headers={"Content-Type": "application/json"},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
 
 # ---------------------------------------------------------------------------
@@ -894,10 +894,10 @@ class TestTaskQueries:
 
     @pytest.mark.unit
     async def test_tq02_get_nonexistent_task(self, client: AsyncClient) -> None:
-        """TQ-02: GET /tasks/{nonexistent} returns 404 TASK_NOT_FOUND."""
+        """TQ-02: GET /tasks/{nonexistent} returns 404 task_not_found."""
         resp = await client.get("/tasks/t-00000000-0000-0000-0000-000000000000")
         assert resp.status_code == 404
-        assert resp.json()["error"] == "TASK_NOT_FOUND"
+        assert resp.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
     async def test_tq03_get_malformed_task_id(self, client: AsyncClient) -> None:
@@ -1151,7 +1151,7 @@ class TestTaskCancellation:
         bob_keypair: Any,
         bob_agent_id: str,
     ) -> None:
-        """CAN-03: Non-poster cannot cancel -- 403 FORBIDDEN."""
+        """CAN-03: Non-poster cannot cancel -- 403 forbidden."""
         task_id = make_task_id()
         create_resp = await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
         assert create_resp.status_code == 201
@@ -1166,7 +1166,7 @@ class TestTaskCancellation:
 
         resp = await client.post(f"/tasks/{task_id}/cancel", json={"token": cancel_token})
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_can04_cancel_nonexistent_task(
@@ -1175,7 +1175,7 @@ class TestTaskCancellation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """CAN-04: Cancel nonexistent task returns 404 TASK_NOT_FOUND."""
+        """CAN-04: Cancel nonexistent task returns 404 task_not_found."""
         private_key = alice_keypair[0]
         fake_task_id = "t-00000000-0000-0000-0000-000000000000"
         cancel_payload = {
@@ -1187,7 +1187,7 @@ class TestTaskCancellation:
 
         resp = await client.post(f"/tasks/{fake_task_id}/cancel", json={"token": cancel_token})
         assert resp.status_code == 404
-        assert resp.json()["error"] == "TASK_NOT_FOUND"
+        assert resp.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
     async def test_can05_cancel_already_cancelled(
@@ -1196,7 +1196,7 @@ class TestTaskCancellation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """CAN-05: Cancel already-cancelled task returns 409 INVALID_STATUS."""
+        """CAN-05: Cancel already-cancelled task returns 409 invalid_status."""
         task_id = make_task_id()
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
 
@@ -1214,7 +1214,7 @@ class TestTaskCancellation:
         cancel_token_2 = make_jws_token(private_key, alice_agent_id, cancel_payload)
         resp2 = await client.post(f"/tasks/{task_id}/cancel", json={"token": cancel_token_2})
         assert resp2.status_code == 409
-        assert resp2.json()["error"] == "INVALID_STATUS"
+        assert resp2.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_can06_wrong_action_in_cancel_token(
@@ -1223,7 +1223,7 @@ class TestTaskCancellation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """CAN-06: Wrong action in cancel token returns 400 INVALID_PAYLOAD."""
+        """CAN-06: Wrong action in cancel token returns 400 invalid_payload."""
         task_id = make_task_id()
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
 
@@ -1237,7 +1237,7 @@ class TestTaskCancellation:
 
         resp = await client.post(f"/tasks/{task_id}/cancel", json={"token": bad_token})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_can07_cancel_wrong_status_accepted(
@@ -1248,7 +1248,7 @@ class TestTaskCancellation:
         bob_keypair: Any,
         bob_agent_id: str,
     ) -> None:
-        """CAN-07: Cancel task in accepted status returns 409 INVALID_STATUS."""
+        """CAN-07: Cancel task in accepted status returns 409 invalid_status."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -1263,7 +1263,7 @@ class TestTaskCancellation:
 
         resp = await client.post(f"/tasks/{task_id}/cancel", json={"token": cancel_token})
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_can08_malformed_token_on_cancel(
@@ -1272,13 +1272,13 @@ class TestTaskCancellation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """CAN-08: Malformed token on cancel returns 400 INVALID_JWS."""
+        """CAN-08: Malformed token on cancel returns 400 invalid_jws."""
         task_id = make_task_id()
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
 
         resp = await client.post(f"/tasks/{task_id}/cancel", json={"token": "not-a-jws"})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_can09_cancel_with_expired_bidding_deadline(

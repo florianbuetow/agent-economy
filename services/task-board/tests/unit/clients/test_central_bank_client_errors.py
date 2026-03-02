@@ -43,7 +43,7 @@ def _mock_response(status_code: int, json_body: dict[str, Any]) -> httpx.Respons
 async def test_lock_escrow_404_raises_account_not_found() -> None:
     response = _mock_response(
         404,
-        {"error": "ACCOUNT_NOT_FOUND", "message": "Account not found", "details": {}},
+        {"error": "account_not_found", "message": "Account not found", "details": {}},
     )
     client = _make_client(response)
 
@@ -51,14 +51,14 @@ async def test_lock_escrow_404_raises_account_not_found() -> None:
         await client.lock_escrow("fake-token")
 
     assert exc_info.value.status_code == 404
-    assert exc_info.value.error == "ACCOUNT_NOT_FOUND"
+    assert exc_info.value.error == "account_not_found"
 
 
 @pytest.mark.unit
 async def test_lock_escrow_403_raises_forbidden() -> None:
     response = _mock_response(
         403,
-        {"error": "FORBIDDEN", "message": "Not authorized", "details": {}},
+        {"error": "forbidden", "message": "Not authorized", "details": {}},
     )
     client = _make_client(response)
 
@@ -66,14 +66,14 @@ async def test_lock_escrow_403_raises_forbidden() -> None:
         await client.lock_escrow("fake-token")
 
     assert exc_info.value.status_code == 403
-    assert exc_info.value.error == "FORBIDDEN"
+    assert exc_info.value.error == "forbidden"
 
 
 @pytest.mark.unit
 async def test_lock_escrow_409_raises_conflict() -> None:
     response = _mock_response(
         409,
-        {"error": "ESCROW_ALREADY_EXISTS", "message": "Escrow exists", "details": {}},
+        {"error": "escrow_already_exists", "message": "Escrow exists", "details": {}},
     )
     client = _make_client(response)
 
@@ -81,14 +81,14 @@ async def test_lock_escrow_409_raises_conflict() -> None:
         await client.lock_escrow("fake-token")
 
     assert exc_info.value.status_code == 409
-    assert exc_info.value.error == "ESCROW_ALREADY_EXISTS"
+    assert exc_info.value.error == "escrow_already_exists"
 
 
 @pytest.mark.unit
 async def test_lock_escrow_500_still_raises_502() -> None:
     response = _mock_response(
         500,
-        {"error": "INTERNAL_ERROR", "message": "Unexpected error", "details": {}},
+        {"error": "internal_error", "message": "Unexpected error", "details": {}},
     )
     client = _make_client(response)
 
@@ -96,14 +96,14 @@ async def test_lock_escrow_500_still_raises_502() -> None:
         await client.lock_escrow("fake-token")
 
     assert exc_info.value.status_code == 502
-    assert exc_info.value.error == "CENTRAL_BANK_UNAVAILABLE"
+    assert exc_info.value.error == "central_bank_unavailable"
 
 
 @pytest.mark.unit
 async def test_release_escrow_404_raises_not_found() -> None:
     response = _mock_response(
         404,
-        {"error": "ESCROW_NOT_FOUND", "message": "Escrow not found", "details": {}},
+        {"error": "escrow_not_found", "message": "Escrow not found", "details": {}},
     )
     client = _make_client(response)
 
@@ -111,14 +111,14 @@ async def test_release_escrow_404_raises_not_found() -> None:
         await client.release_escrow("esc-fake", "a-recipient")
 
     assert exc_info.value.status_code == 404
-    assert exc_info.value.error == "ESCROW_NOT_FOUND"
+    assert exc_info.value.error == "escrow_not_found"
 
 
 @pytest.mark.unit
 async def test_release_escrow_403_raises_forbidden() -> None:
     response = _mock_response(
         403,
-        {"error": "FORBIDDEN", "message": "Not authorized", "details": {}},
+        {"error": "forbidden", "message": "Not authorized", "details": {}},
     )
     client = _make_client(response)
 
@@ -126,14 +126,14 @@ async def test_release_escrow_403_raises_forbidden() -> None:
         await client.release_escrow("esc-fake", "a-recipient")
 
     assert exc_info.value.status_code == 403
-    assert exc_info.value.error == "FORBIDDEN"
+    assert exc_info.value.error == "forbidden"
 
 
 @pytest.mark.unit
 async def test_split_escrow_404_raises_not_found() -> None:
     response = _mock_response(
         404,
-        {"error": "ACCOUNT_NOT_FOUND", "message": "Account not found", "details": {}},
+        {"error": "account_not_found", "message": "Account not found", "details": {}},
     )
     client = _make_client(response)
 
@@ -141,14 +141,14 @@ async def test_split_escrow_404_raises_not_found() -> None:
         await client.split_escrow("esc-fake", "a-worker", "a-poster", 70)
 
     assert exc_info.value.status_code == 404
-    assert exc_info.value.error == "ACCOUNT_NOT_FOUND"
+    assert exc_info.value.error == "account_not_found"
 
 
 @pytest.mark.unit
 async def test_split_escrow_403_raises_forbidden() -> None:
     response = _mock_response(
         403,
-        {"error": "FORBIDDEN", "message": "Not authorized", "details": {}},
+        {"error": "forbidden", "message": "Not authorized", "details": {}},
     )
     client = _make_client(response)
 
@@ -156,4 +156,4 @@ async def test_split_escrow_403_raises_forbidden() -> None:
         await client.split_escrow("esc-fake", "a-worker", "a-poster", 70)
 
     assert exc_info.value.status_code == 403
-    assert exc_info.value.error == "FORBIDDEN"
+    assert exc_info.value.error == "forbidden"

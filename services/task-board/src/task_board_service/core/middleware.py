@@ -77,12 +77,12 @@ class RequestValidationMiddleware:
 
         # Asset upload endpoint expects multipart/form-data
         if expects_multipart:
-            # If Content-Type is omitted, let the router return NO_FILE/INVALID payload.
+            # If Content-Type is omitted, let the router return no_file/INVALID payload.
             if content_type != "" and not content_type.startswith("multipart/form-data"):
                 response = JSONResponse(
                     status_code=415,
                     content={
-                        "error": "UNSUPPORTED_MEDIA_TYPE",
+                        "error": "unsupported_media_type",
                         "message": "Content-Type must be multipart/form-data",
                         "details": {},
                     },
@@ -100,7 +100,7 @@ class RequestValidationMiddleware:
             response = JSONResponse(
                 status_code=415,
                 content={
-                    "error": "UNSUPPORTED_MEDIA_TYPE",
+                    "error": "unsupported_media_type",
                     "message": "Content-Type must be application/json",
                     "details": {},
                 },
@@ -122,7 +122,7 @@ class RequestValidationMiddleware:
                 response = JSONResponse(
                     status_code=413,
                     content={
-                        "error": "PAYLOAD_TOO_LARGE",
+                        "error": "payload_too_large",
                         "message": "Request body exceeds maximum allowed size",
                         "details": {},
                     },

@@ -97,4 +97,4 @@ async def accept_method_not_allowed(
 ) -> None:
     """Reject wrong methods on /tasks/{task_id}/bids/{bid_id}/accept."""
     _ = (task_id, bid_id, request)
-    raise ServiceError("METHOD_NOT_ALLOWED", "Method not allowed", 405, {})
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})

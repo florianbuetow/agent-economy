@@ -73,7 +73,7 @@ class TestErrorPrecedence:
             headers={"Content-Type": "text/plain"},
         )
         assert resp.status_code == 415
-        assert resp.json()["error"] == "UNSUPPORTED_MEDIA_TYPE"
+        assert resp.json()["error"] == "unsupported_media_type"
 
     @pytest.mark.unit
     async def test_body_size_before_token(
@@ -89,7 +89,7 @@ class TestErrorPrecedence:
             headers={"Content-Type": "application/json"},
         )
         assert resp.status_code == 413
-        assert resp.json()["error"] == "PAYLOAD_TOO_LARGE"
+        assert resp.json()["error"] == "payload_too_large"
 
     @pytest.mark.unit
     async def test_json_parsing_before_token(
@@ -103,7 +103,7 @@ class TestErrorPrecedence:
             headers={"Content-Type": "application/json"},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JSON"
+        assert resp.json()["error"] == "invalid_json"
 
     @pytest.mark.unit
     async def test_token_format_before_payload(
@@ -117,7 +117,7 @@ class TestErrorPrecedence:
             json={"token": 12345},
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     @pytest.mark.usefixtures("mock_identity_unavailable")
@@ -137,7 +137,7 @@ class TestErrorPrecedence:
             json={"token": token},
         )
         assert resp.status_code == 502
-        assert resp.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert resp.json()["error"] == "identity_service_unavailable"
 
     @pytest.mark.unit
     async def test_signature_validity_before_payload_content(
@@ -163,7 +163,7 @@ class TestErrorPrecedence:
             json={"token": tampered_token},
         )
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_action_validation_before_signer_matching(
@@ -193,7 +193,7 @@ class TestErrorPrecedence:
             json={"token": token},
         )
         assert cancel_resp.status_code == 400
-        assert cancel_resp.json()["error"] == "INVALID_PAYLOAD"
+        assert cancel_resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_task_existence_before_signer_matching(
@@ -218,7 +218,7 @@ class TestErrorPrecedence:
             json={"token": token},
         )
         assert resp.status_code == 404
-        assert resp.json()["error"] == "TASK_NOT_FOUND"
+        assert resp.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
     async def test_status_validation_before_domain_validation(
@@ -263,7 +263,7 @@ class TestErrorPrecedence:
             json={"token": dispute_token},
         )
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     @pytest.mark.usefixtures("mock_central_bank_unavailable")
@@ -306,7 +306,7 @@ class TestErrorPrecedence:
             },
         )
         assert resp.status_code == 400
-        assert resp.json()["error"] == "TOKEN_MISMATCH"
+        assert resp.json()["error"] == "token_mismatch"
 
 
 class TestCrossCuttingSecurity:
@@ -320,7 +320,7 @@ class TestCrossCuttingSecurity:
         """SEC-01: All error responses have consistent envelope."""
         error_responses = []
 
-        # Trigger INVALID_JSON
+        # Trigger invalid_json
         resp = await client.post(
             "/tasks",
             content=b"{not json",
@@ -328,7 +328,7 @@ class TestCrossCuttingSecurity:
         )
         error_responses.append(resp)
 
-        # Trigger INVALID_JWS
+        # Trigger invalid_jws
         resp = await client.post(
             "/tasks",
             json={
@@ -338,16 +338,16 @@ class TestCrossCuttingSecurity:
         )
         error_responses.append(resp)
 
-        # Trigger TASK_NOT_FOUND
+        # Trigger task_not_found
         nonexistent = "t-00000000-0000-0000-0000-000000000000"
         resp = await client.get(f"/tasks/{nonexistent}")
         error_responses.append(resp)
 
-        # Trigger METHOD_NOT_ALLOWED
+        # Trigger method_not_allowed
         resp = await client.delete("/tasks")
         error_responses.append(resp)
 
-        # Trigger UNSUPPORTED_MEDIA_TYPE
+        # Trigger unsupported_media_type
         resp = await client.post(
             "/tasks",
             content=b"plain text",
@@ -394,7 +394,7 @@ class TestCrossCuttingSecurity:
 
         error_responses = []
 
-        # Trigger INVALID_JSON
+        # Trigger invalid_json
         resp = await client.post(
             "/tasks",
             content=b"{bad json",
@@ -402,12 +402,12 @@ class TestCrossCuttingSecurity:
         )
         error_responses.append(resp)
 
-        # Trigger TASK_NOT_FOUND
+        # Trigger task_not_found
         nonexistent = "t-00000000-0000-0000-0000-000000000000"
         resp = await client.get(f"/tasks/{nonexistent}")
         error_responses.append(resp)
 
-        # Trigger FORBIDDEN via tampered JWS
+        # Trigger forbidden via tampered JWS
         task_id = make_task_id()
         valid_token = make_jws_token(
             alice_keypair[0],
@@ -543,7 +543,7 @@ class TestCrossCuttingSecurity:
     ) -> None:
         """SEC-07: Cross-action token replay rejected.
 
-        Bid token replayed on submit endpoint returns 400 INVALID_PAYLOAD.
+        Bid token replayed on submit endpoint returns 400 invalid_payload.
         """
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
@@ -572,7 +572,7 @@ class TestCrossCuttingSecurity:
             json={"token": bid_token},
         )
         assert replay_resp.status_code == 400
-        assert replay_resp.json()["error"] == "INVALID_PAYLOAD"
+        assert replay_resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     @pytest.mark.parametrize(

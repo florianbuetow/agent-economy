@@ -60,10 +60,10 @@ class CentralBankClient:
             dict with keys: escrow_id, amount, task_id, status
 
         Raises:
-            ServiceError: INSUFFICIENT_FUNDS (402) if the poster cannot cover the reward
-            ServiceError: ACCOUNT_NOT_FOUND (404) if the poster has no bank account
-            ServiceError: FORBIDDEN (403) if authorization failed
-            ServiceError: CENTRAL_BANK_UNAVAILABLE (502) on connection/timeout/unexpected errors
+            ServiceError: insufficient_funds (402) if the poster cannot cover the reward
+            ServiceError: account_not_found (404) if the poster has no bank account
+            ServiceError: forbidden (403) if authorization failed
+            ServiceError: central_bank_unavailable (502) on connection/timeout/unexpected errors
         """
         logger = get_logger(__name__)
 
@@ -78,7 +78,7 @@ class CentralBankClient:
                 extra={"error": str(exc), "base_url": self._base_url},
             )
             raise ServiceError(
-                error="CENTRAL_BANK_UNAVAILABLE",
+                error="central_bank_unavailable",
                 message="Cannot connect to Central Bank",
                 status_code=502,
                 details={},
@@ -89,7 +89,7 @@ class CentralBankClient:
                 extra={"error": str(exc), "base_url": self._base_url},
             )
             raise ServiceError(
-                error="CENTRAL_BANK_UNAVAILABLE",
+                error="central_bank_unavailable",
                 message="Central Bank request failed",
                 status_code=502,
                 details={},
@@ -102,7 +102,7 @@ class CentralBankClient:
         if response.status_code == 402:
             error_body: dict[str, Any] = response.json()
             raise ServiceError(
-                error="INSUFFICIENT_FUNDS",
+                error="insufficient_funds",
                 message="Poster has insufficient funds to cover the task reward",
                 status_code=402,
                 details=error_body,
@@ -111,7 +111,7 @@ class CentralBankClient:
         if response.status_code == 404:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "ACCOUNT_NOT_FOUND"),
+                error=error_body.get("error", "account_not_found"),
                 message=error_body.get("message", "Account not found in Central Bank"),
                 status_code=404,
                 details=error_body.get("details", {}),
@@ -120,7 +120,7 @@ class CentralBankClient:
         if response.status_code == 403:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "FORBIDDEN"),
+                error=error_body.get("error", "forbidden"),
                 message=error_body.get("message", "Central Bank authorization failed"),
                 status_code=403,
                 details=error_body.get("details", {}),
@@ -129,7 +129,7 @@ class CentralBankClient:
         if response.status_code == 409:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "CONFLICT"),
+                error=error_body.get("error", "conflict"),
                 message=error_body.get("message", "Central Bank conflict"),
                 status_code=409,
                 details=error_body.get("details", {}),
@@ -143,7 +143,7 @@ class CentralBankClient:
             },
         )
         raise ServiceError(
-            error="CENTRAL_BANK_UNAVAILABLE",
+            error="central_bank_unavailable",
             message="Central Bank returned unexpected status",
             status_code=502,
             details={},
@@ -174,9 +174,9 @@ class CentralBankClient:
             dict with escrow release confirmation
 
         Raises:
-            ServiceError: NOT_FOUND (404) if escrow/account does not exist in Central Bank
-            ServiceError: FORBIDDEN (403) if authorization failed
-            ServiceError: CENTRAL_BANK_UNAVAILABLE (502) on connection/timeout/unexpected errors
+            ServiceError: not_found (404) if escrow/account does not exist in Central Bank
+            ServiceError: forbidden (403) if authorization failed
+            ServiceError: central_bank_unavailable (502) on connection/timeout/unexpected errors
         """
         logger = get_logger(__name__)
 
@@ -207,7 +207,7 @@ class CentralBankClient:
                 },
             )
             raise ServiceError(
-                error="CENTRAL_BANK_UNAVAILABLE",
+                error="central_bank_unavailable",
                 message="Cannot connect to Central Bank for escrow release",
                 status_code=502,
                 details={},
@@ -222,7 +222,7 @@ class CentralBankClient:
                 },
             )
             raise ServiceError(
-                error="CENTRAL_BANK_UNAVAILABLE",
+                error="central_bank_unavailable",
                 message="Central Bank escrow release request failed",
                 status_code=502,
                 details={},
@@ -235,7 +235,7 @@ class CentralBankClient:
         if response.status_code == 404:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "NOT_FOUND"),
+                error=error_body.get("error", "not_found"),
                 message=error_body.get("message", "Resource not found in Central Bank"),
                 status_code=404,
                 details=error_body.get("details", {}),
@@ -244,7 +244,7 @@ class CentralBankClient:
         if response.status_code == 403:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "FORBIDDEN"),
+                error=error_body.get("error", "forbidden"),
                 message=error_body.get("message", "Central Bank authorization failed"),
                 status_code=403,
                 details=error_body.get("details", {}),
@@ -253,7 +253,7 @@ class CentralBankClient:
         if response.status_code == 409:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "CONFLICT"),
+                error=error_body.get("error", "conflict"),
                 message=error_body.get("message", "Central Bank conflict"),
                 status_code=409,
                 details=error_body.get("details", {}),
@@ -262,7 +262,7 @@ class CentralBankClient:
         if response.status_code == 400:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "BAD_REQUEST"),
+                error=error_body.get("error", "bad_request"),
                 message=error_body.get("message", "Central Bank rejected the request"),
                 status_code=400,
                 details=error_body.get("details", {}),
@@ -277,7 +277,7 @@ class CentralBankClient:
             },
         )
         raise ServiceError(
-            error="CENTRAL_BANK_UNAVAILABLE",
+            error="central_bank_unavailable",
             message="Central Bank returned unexpected status on escrow release",
             status_code=502,
             details={},
@@ -302,15 +302,15 @@ class CentralBankClient:
         Split escrow funds between worker and poster via a platform-signed token.
 
         Raises:
-            ServiceError: NOT_FOUND (404) if escrow/account does not exist in Central Bank
-            ServiceError: FORBIDDEN (403) if authorization failed
-            ServiceError: CENTRAL_BANK_UNAVAILABLE (502) on connection/timeout/unexpected errors
+            ServiceError: not_found (404) if escrow/account does not exist in Central Bank
+            ServiceError: forbidden (403) if authorization failed
+            ServiceError: central_bank_unavailable (502) on connection/timeout/unexpected errors
         """
         logger = get_logger(__name__)
 
         if self._escrow_split_path is None:
             raise ServiceError(
-                error="CENTRAL_BANK_UNAVAILABLE",
+                error="central_bank_unavailable",
                 message="Escrow split endpoint is not configured",
                 status_code=502,
                 details={},
@@ -343,7 +343,7 @@ class CentralBankClient:
                 },
             )
             raise ServiceError(
-                error="CENTRAL_BANK_UNAVAILABLE",
+                error="central_bank_unavailable",
                 message="Cannot connect to Central Bank for escrow split",
                 status_code=502,
                 details={},
@@ -358,7 +358,7 @@ class CentralBankClient:
                 },
             )
             raise ServiceError(
-                error="CENTRAL_BANK_UNAVAILABLE",
+                error="central_bank_unavailable",
                 message="Central Bank escrow split request failed",
                 status_code=502,
                 details={},
@@ -371,7 +371,7 @@ class CentralBankClient:
         if response.status_code == 404:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "NOT_FOUND"),
+                error=error_body.get("error", "not_found"),
                 message=error_body.get("message", "Resource not found in Central Bank"),
                 status_code=404,
                 details=error_body.get("details", {}),
@@ -380,7 +380,7 @@ class CentralBankClient:
         if response.status_code == 403:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "FORBIDDEN"),
+                error=error_body.get("error", "forbidden"),
                 message=error_body.get("message", "Central Bank authorization failed"),
                 status_code=403,
                 details=error_body.get("details", {}),
@@ -389,7 +389,7 @@ class CentralBankClient:
         if response.status_code == 409:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "CONFLICT"),
+                error=error_body.get("error", "conflict"),
                 message=error_body.get("message", "Central Bank conflict"),
                 status_code=409,
                 details=error_body.get("details", {}),
@@ -398,7 +398,7 @@ class CentralBankClient:
         if response.status_code == 400:
             error_body = response.json()
             raise ServiceError(
-                error=error_body.get("error", "BAD_REQUEST"),
+                error=error_body.get("error", "bad_request"),
                 message=error_body.get("message", "Central Bank rejected the request"),
                 status_code=400,
                 details=error_body.get("details", {}),
@@ -413,7 +413,7 @@ class CentralBankClient:
             },
         )
         raise ServiceError(
-            error="CENTRAL_BANK_UNAVAILABLE",
+            error="central_bank_unavailable",
             message="Central Bank returned unexpected status on escrow split",
             status_code=502,
             details={},

@@ -123,7 +123,7 @@ async def test_upload_asset_file_too_large(tmp_path) -> None:
             "application/octet-stream",
         )
 
-    assert exc_info.value.error == "FILE_TOO_LARGE"
+    assert exc_info.value.error == "file_too_large"
     assert exc_info.value.status_code == 413
     store.close()
 
@@ -145,14 +145,14 @@ async def test_upload_asset_too_many_files(tmp_path) -> None:
     with pytest.raises(ServiceError) as exc_info:
         await manager.upload_asset("t-1", "token", b"c", "three.txt", "text/plain")
 
-    assert exc_info.value.error == "TOO_MANY_ASSETS"
+    assert exc_info.value.error == "too_many_assets"
     assert exc_info.value.status_code == 409
     store.close()
 
 
 @pytest.mark.unit
 async def test_upload_asset_task_not_found(tmp_path) -> None:
-    """upload_asset returns TASK_NOT_FOUND for unknown task."""
+    """upload_asset returns task_not_found for unknown task."""
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
     manager, _token_validator, _deadline_evaluator = _make_manager(
         store,
@@ -163,14 +163,14 @@ async def test_upload_asset_task_not_found(tmp_path) -> None:
     with pytest.raises(ServiceError) as exc_info:
         await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
 
-    assert exc_info.value.error == "TASK_NOT_FOUND"
+    assert exc_info.value.error == "task_not_found"
     assert exc_info.value.status_code == 404
     store.close()
 
 
 @pytest.mark.unit
 async def test_upload_asset_wrong_status(tmp_path) -> None:
-    """upload_asset returns INVALID_STATUS when task is not accepted."""
+    """upload_asset returns invalid_status when task is not accepted."""
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
     store.insert_task(_task_data("t-1", "open", "a-worker"))
     manager, _token_validator, _deadline_evaluator = _make_manager(
@@ -182,13 +182,13 @@ async def test_upload_asset_wrong_status(tmp_path) -> None:
     with pytest.raises(ServiceError) as exc_info:
         await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
 
-    assert exc_info.value.error == "INVALID_STATUS"
+    assert exc_info.value.error == "invalid_status"
     store.close()
 
 
 @pytest.mark.unit
 async def test_upload_asset_wrong_worker(tmp_path) -> None:
-    """upload_asset returns FORBIDDEN when signer is not assigned worker."""
+    """upload_asset returns forbidden when signer is not assigned worker."""
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
     store.insert_task(_task_data("t-1", "accepted", "a-worker"))
     manager, _token_validator, _deadline_evaluator = _make_manager(
@@ -200,7 +200,7 @@ async def test_upload_asset_wrong_worker(tmp_path) -> None:
     with pytest.raises(ServiceError) as exc_info:
         await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
 
-    assert exc_info.value.error == "FORBIDDEN"
+    assert exc_info.value.error == "forbidden"
     assert exc_info.value.status_code == 403
     store.close()
 
@@ -238,7 +238,7 @@ async def test_list_assets_success(tmp_path) -> None:
 
 @pytest.mark.unit
 async def test_list_assets_task_not_found(tmp_path) -> None:
-    """list_assets returns TASK_NOT_FOUND for unknown task."""
+    """list_assets returns task_not_found for unknown task."""
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
     manager, _token_validator, _deadline_evaluator = _make_manager(
         store,
@@ -249,7 +249,7 @@ async def test_list_assets_task_not_found(tmp_path) -> None:
     with pytest.raises(ServiceError) as exc_info:
         await manager.list_assets("t-1")
 
-    assert exc_info.value.error == "TASK_NOT_FOUND"
+    assert exc_info.value.error == "task_not_found"
     assert exc_info.value.status_code == 404
     store.close()
 
@@ -276,7 +276,7 @@ async def test_download_asset_success(tmp_path) -> None:
 
 @pytest.mark.unit
 async def test_download_asset_task_not_found(tmp_path) -> None:
-    """download_asset returns TASK_NOT_FOUND for unknown task."""
+    """download_asset returns task_not_found for unknown task."""
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
     manager, _token_validator, _deadline_evaluator = _make_manager(
         store,
@@ -287,14 +287,14 @@ async def test_download_asset_task_not_found(tmp_path) -> None:
     with pytest.raises(ServiceError) as exc_info:
         await manager.download_asset("t-1", "asset-1")
 
-    assert exc_info.value.error == "TASK_NOT_FOUND"
+    assert exc_info.value.error == "task_not_found"
     assert exc_info.value.status_code == 404
     store.close()
 
 
 @pytest.mark.unit
 async def test_download_asset_not_found(tmp_path) -> None:
-    """download_asset returns ASSET_NOT_FOUND for unknown asset."""
+    """download_asset returns asset_not_found for unknown asset."""
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
     store.insert_task(_task_data("t-1", "accepted", "a-worker"))
     manager, _token_validator, _deadline_evaluator = _make_manager(
@@ -306,7 +306,7 @@ async def test_download_asset_not_found(tmp_path) -> None:
     with pytest.raises(ServiceError) as exc_info:
         await manager.download_asset("t-1", "asset-1")
 
-    assert exc_info.value.error == "ASSET_NOT_FOUND"
+    assert exc_info.value.error == "asset_not_found"
     assert exc_info.value.status_code == 404
     store.close()
 
@@ -337,7 +337,7 @@ async def test_download_asset_path_traversal(tmp_path) -> None:
     with pytest.raises(ServiceError) as exc_info:
         await manager.download_asset("t-1", "asset-1")
 
-    assert exc_info.value.error == "ASSET_NOT_FOUND"
+    assert exc_info.value.error == "asset_not_found"
     assert exc_info.value.status_code == 404
     store.close()
 

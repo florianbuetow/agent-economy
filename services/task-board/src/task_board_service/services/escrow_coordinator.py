@@ -25,7 +25,7 @@ class EscrowCoordinator:
         """
         Release escrow to the given recipient via the Central Bank.
 
-        Raises ServiceError("CENTRAL_BANK_UNAVAILABLE", ..., 502) on failure.
+        Raises ServiceError("central_bank_unavailable", ..., 502) on failure.
         """
         try:
             await self._central_bank_client.escrow_release(
@@ -36,7 +36,7 @@ class EscrowCoordinator:
             raise
         except Exception as exc:
             raise ServiceError(
-                "CENTRAL_BANK_UNAVAILABLE",
+                "central_bank_unavailable",
                 "Central Bank escrow release failed",
                 502,
                 {},
@@ -52,7 +52,7 @@ class EscrowCoordinator:
         """
         Split escrow between worker and poster.
 
-        Raises ServiceError("CENTRAL_BANK_UNAVAILABLE", ..., 502) on failure.
+        Raises ServiceError("central_bank_unavailable", ..., 502) on failure.
         """
         try:
             await self._central_bank_client.escrow_split(
@@ -65,7 +65,7 @@ class EscrowCoordinator:
             raise
         except Exception as exc:
             raise ServiceError(
-                "CENTRAL_BANK_UNAVAILABLE",
+                "central_bank_unavailable",
                 "Central Bank escrow split failed",
                 502,
                 {},

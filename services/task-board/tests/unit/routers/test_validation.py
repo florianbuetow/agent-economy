@@ -21,28 +21,28 @@ def test_parse_json_body_valid_object() -> None:
 
 @pytest.mark.unit
 def test_parse_json_body_invalid_json() -> None:
-    """Raises INVALID_JSON when body is malformed JSON."""
+    """Raises invalid_json when body is malformed JSON."""
     with pytest.raises(ServiceError) as exc_info:
         parse_json_body(b"{")
-    assert exc_info.value.error == "INVALID_JSON"
+    assert exc_info.value.error == "invalid_json"
     assert exc_info.value.status_code == 400
 
 
 @pytest.mark.unit
 def test_parse_json_body_non_object() -> None:
-    """Raises INVALID_JSON when JSON is not an object."""
+    """Raises invalid_json when JSON is not an object."""
     with pytest.raises(ServiceError) as exc_info:
         parse_json_body(b'["not", "object"]')
-    assert exc_info.value.error == "INVALID_JSON"
+    assert exc_info.value.error == "invalid_json"
     assert exc_info.value.status_code == 400
 
 
 @pytest.mark.unit
 def test_parse_json_body_empty() -> None:
-    """Raises INVALID_JSON for empty request body."""
+    """Raises invalid_json for empty request body."""
     with pytest.raises(ServiceError) as exc_info:
         parse_json_body(b"")
-    assert exc_info.value.error == "INVALID_JSON"
+    assert exc_info.value.error == "invalid_json"
     assert exc_info.value.status_code == 400
 
 
@@ -55,37 +55,37 @@ def test_extract_token_valid() -> None:
 
 @pytest.mark.unit
 def test_extract_token_missing_field() -> None:
-    """Raises INVALID_JWS when required field is missing."""
+    """Raises invalid_jws when required field is missing."""
     with pytest.raises(ServiceError) as exc_info:
         extract_token({}, "token")
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
     assert exc_info.value.status_code == 400
 
 
 @pytest.mark.unit
 def test_extract_token_null_value() -> None:
-    """Raises INVALID_JWS when field is null."""
+    """Raises invalid_jws when field is null."""
     with pytest.raises(ServiceError) as exc_info:
         extract_token({"token": None}, "token")
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
     assert exc_info.value.status_code == 400
 
 
 @pytest.mark.unit
 def test_extract_token_not_string() -> None:
-    """Raises INVALID_JWS when field value is not a string."""
+    """Raises invalid_jws when field value is not a string."""
     with pytest.raises(ServiceError) as exc_info:
         extract_token({"token": 123}, "token")
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
     assert exc_info.value.status_code == 400
 
 
 @pytest.mark.unit
 def test_extract_token_empty_string() -> None:
-    """Raises INVALID_JWS when field value is empty."""
+    """Raises invalid_jws when field value is empty."""
     with pytest.raises(ServiceError) as exc_info:
         extract_token({"token": ""}, "token")
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
     assert exc_info.value.status_code == 400
 
 
@@ -98,28 +98,28 @@ def test_extract_bearer_token_required_valid() -> None:
 
 @pytest.mark.unit
 def test_extract_bearer_token_required_missing() -> None:
-    """Raises INVALID_JWS when Authorization header is missing and required."""
+    """Raises invalid_jws when Authorization header is missing and required."""
     with pytest.raises(ServiceError) as exc_info:
         extract_bearer_token(None, required=True)
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
     assert exc_info.value.status_code == 400
 
 
 @pytest.mark.unit
 def test_extract_bearer_token_required_wrong_scheme() -> None:
-    """Raises INVALID_JWS for non-Bearer scheme when required."""
+    """Raises invalid_jws for non-Bearer scheme when required."""
     with pytest.raises(ServiceError) as exc_info:
         extract_bearer_token("Basic abc", required=True)
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
     assert exc_info.value.status_code == 400
 
 
 @pytest.mark.unit
 def test_extract_bearer_token_required_empty_token() -> None:
-    """Raises INVALID_JWS for empty Bearer token when required."""
+    """Raises invalid_jws for empty Bearer token when required."""
     with pytest.raises(ServiceError) as exc_info:
         extract_bearer_token("Bearer ", required=True)
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
     assert exc_info.value.status_code == 400
 
 
@@ -139,8 +139,8 @@ def test_extract_bearer_token_optional_missing() -> None:
 
 @pytest.mark.unit
 def test_extract_bearer_token_optional_wrong_scheme() -> None:
-    """Raises INVALID_JWS for wrong scheme even when optional."""
+    """Raises invalid_jws for wrong scheme even when optional."""
     with pytest.raises(ServiceError) as exc_info:
         extract_bearer_token("Basic abc", required=False)
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
     assert exc_info.value.status_code == 400

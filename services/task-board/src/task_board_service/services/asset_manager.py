@@ -56,13 +56,13 @@ class AssetManager:
 
         Error precedence:
         1-6. JWS verification
-        7.   INVALID_PAYLOAD — wrong action, task_id mismatch
-        9a.  FORBIDDEN — signer != worker_id in payload
-        10.  TASK_NOT_FOUND
-        11.  INVALID_STATUS — not ACCEPTED
-        9b.  FORBIDDEN — signer != task's worker_id
-        12a. FILE_TOO_LARGE
-        12b. TOO_MANY_ASSETS
+        7.   invalid_payload — wrong action, task_id mismatch
+        9a.  forbidden — signer != worker_id in payload
+        10.  task_not_found
+        11.  invalid_status — not ACCEPTED
+        9b.  forbidden — signer != task's worker_id
+        12a. file_too_large
+        12b. too_many_assets
         """
         # Steps 4-7a: Verify JWS, validate action
         payload = await self._token_validator.validate_jws_token(token, "upload_asset")
@@ -70,12 +70,12 @@ class AssetManager:
 
         # Step 7b: Validate required fields
         if "task_id" not in payload:
-            raise ServiceError("INVALID_PAYLOAD", "Missing required field: task_id", 400, {})
+            raise ServiceError("invalid_payload", "Missing required field: task_id", 400, {})
 
         # Step 7c: task_id in payload must match URL path
         if payload["task_id"] != task_id:
             raise ServiceError(
-                "INVALID_PAYLOAD",
+                "invalid_payload",
                 "task_id in payload does not match URL path",
                 400,
                 {},
@@ -83,12 +83,12 @@ class AssetManager:
 
         # Step 9a: If present, signer must match worker_id in payload
         if "worker_id" in payload and signer_id != payload["worker_id"]:
-            raise ServiceError("FORBIDDEN", "Signer does not match worker_id", 403, {})
+            raise ServiceError("forbidden", "Signer does not match worker_id", 403, {})
 
         # Step 10: Load task
         task = self._store.get_task(task_id)
         if task is None:
-            raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
+            raise ServiceError("task_not_found", "Task not found", 404, {})
 
         # Evaluate deadline
         task = await self._deadline_evaluator.evaluate_deadline(task)
@@ -96,7 +96,7 @@ class AssetManager:
         # Step 11: Check status (MUST come before role check — see error precedence notes)
         if task["status"] != "accepted":
             raise ServiceError(
-                "INVALID_STATUS",
+                "invalid_status",
                 f"Cannot upload assets to task in '{task['status']}' status, must be 'accepted'",
                 409,
                 {},
@@ -105,7 +105,7 @@ class AssetManager:
         # Step 9b: Signer must be the task's assigned worker
         if signer_id != task["worker_id"]:
             raise ServiceError(
-                "FORBIDDEN",
+                "forbidden",
                 "Only the assigned worker can upload assets",
                 403,
                 {},
@@ -114,7 +114,7 @@ class AssetManager:
         # Step 12a: Check file size
         if len(file_content) > self._max_file_size:
             raise ServiceError(
-                "FILE_TOO_LARGE",
+                "file_too_large",
                 f"File exceeds maximum size of {self._max_file_size} bytes",
                 413,
                 {},
@@ -124,7 +124,7 @@ class AssetManager:
         asset_count = self.count_assets(task_id)
         if asset_count >= self._max_files_per_task:
             raise ServiceError(
-                "TOO_MANY_ASSETS",
+                "too_many_assets",
                 f"Maximum of {self._max_files_per_task} assets per task reached",
                 409,
                 {},
@@ -173,11 +173,11 @@ class AssetManager:
         List all assets for a task. Public — no authentication.
 
         Raises:
-            ServiceError: TASK_NOT_FOUND
+            ServiceError: task_not_found
         """
         task = self._store.get_task(task_id)
         if task is None:
-            raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
+            raise ServiceError("task_not_found", "Task not found", 404, {})
 
         assets = [
             {
@@ -201,15 +201,15 @@ class AssetManager:
         Returns (file_content, content_type, filename).
 
         Raises:
-            ServiceError: TASK_NOT_FOUND, ASSET_NOT_FOUND
+            ServiceError: task_not_found, asset_not_found
         """
         task = self._store.get_task(task_id)
         if task is None:
-            raise ServiceError("TASK_NOT_FOUND", "Task not found", 404, {})
+            raise ServiceError("task_not_found", "Task not found", 404, {})
 
         asset = self._store.get_asset(asset_id, task_id)
         if asset is None:
-            raise ServiceError("ASSET_NOT_FOUND", "Asset not found", 404, {})
+            raise ServiceError("asset_not_found", "Asset not found", 404, {})
 
         filename = str(asset["filename"])
         content_type = str(asset["content_type"])
@@ -221,10 +221,10 @@ class AssetManager:
         # Ensure the resolved path is within the asset storage directory
         storage_root = Path(self._asset_storage_path).resolve()
         if not str(file_path).startswith(str(storage_root)):
-            raise ServiceError("ASSET_NOT_FOUND", "Asset not found", 404, {})
+            raise ServiceError("asset_not_found", "Asset not found", 404, {})
 
         if not file_path.exists():
-            raise ServiceError("ASSET_NOT_FOUND", "Asset file not found on disk", 404, {})
+            raise ServiceError("asset_not_found", "Asset file not found on disk", 404, {})
 
         file_content = file_path.read_bytes()
         return (file_content, content_type, filename)

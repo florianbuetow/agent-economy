@@ -63,7 +63,7 @@ class TestDeliverableSubmission:
         carol_keypair,
         carol_agent_id,
     ):
-        """SUB-02: Non-worker cannot submit -- 403 FORBIDDEN."""
+        """SUB-02: Non-worker cannot submit -- 403 forbidden."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -71,7 +71,7 @@ class TestDeliverableSubmission:
 
         resp = await submit_deliverable(client, carol_keypair, carol_agent_id, task_id)
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_sub_03_wrong_status_cannot_submit(
@@ -82,14 +82,14 @@ class TestDeliverableSubmission:
         bob_keypair,
         bob_agent_id,
     ):
-        """SUB-03: Cannot submit from non-execution status -- 409 INVALID_STATUS."""
+        """SUB-03: Cannot submit from non-execution status -- 409 invalid_status."""
         # Task is in OPEN status (no bid accepted)
         task_id = make_task_id()
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
 
         resp = await submit_deliverable(client, bob_keypair, bob_agent_id, task_id)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_sub_04_no_assets_uploaded(
@@ -100,14 +100,14 @@ class TestDeliverableSubmission:
         bob_keypair,
         bob_agent_id,
     ):
-        """SUB-04: Cannot submit without assets uploaded -- 400 NO_ASSETS."""
+        """SUB-04: Cannot submit without assets uploaded -- 400 no_assets."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
         # No assets uploaded
         resp = await submit_deliverable(client, bob_keypair, bob_agent_id, task_id)
         assert resp.status_code == 400
-        assert resp.json()["error"] == "NO_ASSETS"
+        assert resp.json()["error"] == "no_assets"
 
     @pytest.mark.unit
     async def test_sub_05_sets_review_deadline(
@@ -148,7 +148,7 @@ class TestDeliverableSubmission:
         bob_keypair,
         bob_agent_id,
     ):
-        """SUB-06: Already submitted -- 409 INVALID_STATUS (double submit)."""
+        """SUB-06: Already submitted -- 409 invalid_status (double submit)."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -156,7 +156,7 @@ class TestDeliverableSubmission:
         # Submit again
         resp = await submit_deliverable(client, bob_keypair, bob_agent_id, task_id)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_sub_07_wrong_action(
@@ -167,7 +167,7 @@ class TestDeliverableSubmission:
         bob_keypair,
         bob_agent_id,
     ):
-        """SUB-07: Wrong action in submit token -- 400 INVALID_PAYLOAD."""
+        """SUB-07: Wrong action in submit token -- 400 invalid_payload."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -183,7 +183,7 @@ class TestDeliverableSubmission:
         token = make_jws_token(private_key, bob_agent_id, payload)
         resp = await client.post(f"/tasks/{task_id}/submit", json={"token": token})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_sub_08_after_execution_deadline_expired(
@@ -194,7 +194,7 @@ class TestDeliverableSubmission:
         bob_keypair,
         bob_agent_id,
     ):
-        """SUB-08: Submit after execution deadline expired -- 409 INVALID_STATUS."""
+        """SUB-08: Submit after execution deadline expired -- 409 invalid_status."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -206,7 +206,7 @@ class TestDeliverableSubmission:
             resp = await submit_deliverable(client, bob_keypair, bob_agent_id, task_id)
 
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_sub_09_missing_payload_fields(
@@ -217,7 +217,7 @@ class TestDeliverableSubmission:
         bob_keypair,
         bob_agent_id,
     ):
-        """SUB-09: Missing payload fields -- 400 INVALID_PAYLOAD."""
+        """SUB-09: Missing payload fields -- 400 invalid_payload."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -233,7 +233,7 @@ class TestDeliverableSubmission:
         token = make_jws_token(private_key, bob_agent_id, payload)
         resp = await client.post(f"/tasks/{task_id}/submit", json={"token": token})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
 
 class TestApproval:
@@ -274,14 +274,14 @@ class TestApproval:
         carol_keypair,
         carol_agent_id,
     ):
-        """APP-02: Non-poster cannot approve -- 403 FORBIDDEN."""
+        """APP-02: Non-poster cannot approve -- 403 forbidden."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
 
         resp = await approve_task(client, carol_keypair, carol_agent_id, task_id)
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_app_03_wrong_status_cannot_approve(
@@ -290,14 +290,14 @@ class TestApproval:
         alice_keypair,
         alice_agent_id,
     ):
-        """APP-03: Cannot approve from non-review status -- 409 INVALID_STATUS."""
+        """APP-03: Cannot approve from non-review status -- 409 invalid_status."""
         # Task is in OPEN status
         task_id = make_task_id()
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
 
         resp = await approve_task(client, alice_keypair, alice_agent_id, task_id)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_app_04_approve_releases_escrow_to_worker(
@@ -355,7 +355,7 @@ class TestApproval:
         bob_keypair,
         bob_agent_id,
     ):
-        """APP-06: Wrong action in approve token -- 400 INVALID_PAYLOAD."""
+        """APP-06: Wrong action in approve token -- 400 invalid_payload."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -370,7 +370,7 @@ class TestApproval:
         token = make_jws_token(private_key, alice_agent_id, payload)
         resp = await client.post(f"/tasks/{task_id}/approve", json={"token": token})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_app_07_signer_not_poster(
@@ -381,7 +381,7 @@ class TestApproval:
         bob_keypair,
         bob_agent_id,
     ):
-        """APP-07: Signer is not the poster -- 403 FORBIDDEN."""
+        """APP-07: Signer is not the poster -- 403 forbidden."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -389,7 +389,7 @@ class TestApproval:
         # Bob (the worker) tries to approve claiming to be poster
         resp = await approve_task(client, bob_keypair, bob_agent_id, task_id)
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_app_08_review_deadline_auto_approval(
@@ -424,7 +424,7 @@ class TestApproval:
         bob_keypair,
         bob_agent_id,
     ):
-        """APP-09: Missing payload fields -- 400 INVALID_PAYLOAD."""
+        """APP-09: Missing payload fields -- 400 invalid_payload."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -439,4 +439,4 @@ class TestApproval:
         token = make_jws_token(private_key, alice_agent_id, payload)
         resp = await client.post(f"/tasks/{task_id}/approve", json={"token": token})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"

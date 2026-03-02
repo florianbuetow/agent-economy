@@ -69,7 +69,7 @@ async def test_release_escrow_success(tmp_path) -> None:
 async def test_release_escrow_service_error_propagates(tmp_path) -> None:
     """release_escrow re-raises ServiceError unchanged."""
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    expected = ServiceError("CENTRAL_BANK_UNAVAILABLE", "fail", 502, {})
+    expected = ServiceError("central_bank_unavailable", "fail", 502, {})
     mock_bank = AsyncMock()
     mock_bank.escrow_release = AsyncMock(side_effect=expected)
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
@@ -83,7 +83,7 @@ async def test_release_escrow_service_error_propagates(tmp_path) -> None:
 
 @pytest.mark.unit
 async def test_release_escrow_generic_error_wraps(tmp_path) -> None:
-    """release_escrow wraps generic exceptions as CENTRAL_BANK_UNAVAILABLE."""
+    """release_escrow wraps generic exceptions as central_bank_unavailable."""
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
     mock_bank = AsyncMock()
     mock_bank.escrow_release = AsyncMock(side_effect=RuntimeError("boom"))
@@ -92,7 +92,7 @@ async def test_release_escrow_generic_error_wraps(tmp_path) -> None:
     with pytest.raises(ServiceError) as exc_info:
         await coordinator.release_escrow("esc-1", "a-recipient")
 
-    assert exc_info.value.error == "CENTRAL_BANK_UNAVAILABLE"
+    assert exc_info.value.error == "central_bank_unavailable"
     assert exc_info.value.status_code == 502
     store.close()
 
@@ -119,7 +119,7 @@ async def test_split_escrow_success(tmp_path) -> None:
 async def test_split_escrow_service_error_propagates(tmp_path) -> None:
     """split_escrow re-raises ServiceError unchanged."""
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    expected = ServiceError("CENTRAL_BANK_UNAVAILABLE", "fail", 502, {})
+    expected = ServiceError("central_bank_unavailable", "fail", 502, {})
     mock_bank = AsyncMock()
     mock_bank.escrow_split = AsyncMock(side_effect=expected)
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
@@ -133,7 +133,7 @@ async def test_split_escrow_service_error_propagates(tmp_path) -> None:
 
 @pytest.mark.unit
 async def test_split_escrow_generic_error_wraps(tmp_path) -> None:
-    """split_escrow wraps generic exceptions as CENTRAL_BANK_UNAVAILABLE."""
+    """split_escrow wraps generic exceptions as central_bank_unavailable."""
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
     mock_bank = AsyncMock()
     mock_bank.escrow_split = AsyncMock(side_effect=RuntimeError("boom"))
@@ -142,7 +142,7 @@ async def test_split_escrow_generic_error_wraps(tmp_path) -> None:
     with pytest.raises(ServiceError) as exc_info:
         await coordinator.split_escrow("esc-1", "a-worker", "a-poster", 65)
 
-    assert exc_info.value.error == "CENTRAL_BANK_UNAVAILABLE"
+    assert exc_info.value.error == "central_bank_unavailable"
     assert exc_info.value.status_code == 502
     store.close()
 
@@ -170,7 +170,7 @@ async def test_try_release_escrow_failure(tmp_path) -> None:
     store.insert_task(_task_data("t-1", "expired", 0, "a-worker"))
     mock_bank = AsyncMock()
     mock_bank.escrow_release = AsyncMock(
-        side_effect=ServiceError("CENTRAL_BANK_UNAVAILABLE", "fail", 502, {})
+        side_effect=ServiceError("central_bank_unavailable", "fail", 502, {})
     )
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
 
@@ -250,7 +250,7 @@ async def test_retry_pending_escrow_failure_remains_pending(tmp_path) -> None:
     store.insert_task(_task_data("t-1", "approved", 1, "a-worker"))
     mock_bank = AsyncMock()
     mock_bank.escrow_release = AsyncMock(
-        side_effect=ServiceError("CENTRAL_BANK_UNAVAILABLE", "fail", 502, {})
+        side_effect=ServiceError("central_bank_unavailable", "fail", 502, {})
     )
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
     task = store.get_task("t-1")

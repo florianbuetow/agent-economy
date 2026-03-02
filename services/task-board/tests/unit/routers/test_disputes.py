@@ -60,7 +60,7 @@ class TestDispute:
         carol_keypair,
         carol_agent_id,
     ):
-        """DIS-02: Non-poster agent cannot dispute - returns 403 FORBIDDEN."""
+        """DIS-02: Non-poster agent cannot dispute - returns 403 forbidden."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -70,7 +70,7 @@ class TestDispute:
         )
 
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_worker_cannot_dispute(
@@ -81,7 +81,7 @@ class TestDispute:
         bob_keypair,
         bob_agent_id,
     ):
-        """DIS-03: Worker cannot dispute their own task - returns 403 FORBIDDEN."""
+        """DIS-03: Worker cannot dispute their own task - returns 403 forbidden."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -89,7 +89,7 @@ class TestDispute:
         resp = await file_dispute(client, bob_keypair, bob_agent_id, task_id, reason="Self dispute")
 
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_cannot_dispute_non_submitted_task(
@@ -107,7 +107,7 @@ class TestDispute:
         )
 
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_empty_dispute_reason(
@@ -118,7 +118,7 @@ class TestDispute:
         bob_keypair,
         bob_agent_id,
     ):
-        """DIS-05: Empty dispute reason - returns 400 INVALID_REASON."""
+        """DIS-05: Empty dispute reason - returns 400 invalid_reason."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -126,7 +126,7 @@ class TestDispute:
         resp = await file_dispute(client, alice_keypair, alice_agent_id, task_id, reason="")
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_REASON"
+        assert resp.json()["error"] == "invalid_reason"
 
     @pytest.mark.unit
     async def test_dispute_reason_exceeding_max_length(
@@ -137,7 +137,7 @@ class TestDispute:
         bob_keypair,
         bob_agent_id,
     ):
-        """DIS-06: Dispute reason exceeding max length - returns 400 INVALID_REASON."""
+        """DIS-06: Dispute reason exceeding max length - returns 400 invalid_reason."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -148,7 +148,7 @@ class TestDispute:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_REASON"
+        assert resp.json()["error"] == "invalid_reason"
 
     @pytest.mark.unit
     async def test_dispute_reason_at_max_length(
@@ -178,7 +178,7 @@ class TestDispute:
         bob_keypair,
         bob_agent_id,
     ):
-        """DIS-08: Wrong action in dispute token - returns 400 INVALID_PAYLOAD."""
+        """DIS-08: Wrong action in dispute token - returns 400 invalid_payload."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -194,7 +194,7 @@ class TestDispute:
         resp = await client.post(f"/tasks/{task_id}/dispute", json={"token": token})
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_dispute_on_nonexistent_task(
@@ -203,14 +203,14 @@ class TestDispute:
         alice_keypair,
         alice_agent_id,
     ):
-        """DIS-09: Dispute on non-existent task - returns 404 TASK_NOT_FOUND."""
+        """DIS-09: Dispute on non-existent task - returns 404 task_not_found."""
         fake_task_id = "t-00000000-0000-0000-0000-000000000000"
         resp = await file_dispute(
             client, alice_keypair, alice_agent_id, fake_task_id, reason="Ghost task"
         )
 
         assert resp.status_code == 404
-        assert resp.json()["error"] == "TASK_NOT_FOUND"
+        assert resp.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
     async def test_task_id_in_payload_must_match_url(
@@ -240,7 +240,7 @@ class TestDispute:
         resp = await client.post(f"/tasks/{task_id_1}/dispute", json={"token": token})
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
 
 class TestRuling:
@@ -291,7 +291,7 @@ class TestRuling:
         bob_keypair,
         bob_agent_id,
     ):
-        """RUL-02: Non-platform agent cannot record ruling - returns 403 FORBIDDEN."""
+        """RUL-02: Non-platform agent cannot record ruling - returns 403 forbidden."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -309,7 +309,7 @@ class TestRuling:
         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
 
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_cannot_rule_on_non_disputed_task(
@@ -322,7 +322,7 @@ class TestRuling:
         platform_keypair,
         platform_agent_id,
     ):
-        """RUL-03: Cannot rule on non-DISPUTED task - returns 409 INVALID_STATUS."""
+        """RUL-03: Cannot rule on non-DISPUTED task - returns 409 invalid_status."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -337,7 +337,7 @@ class TestRuling:
         )
 
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_worker_pct_zero_full_poster_win(
@@ -452,7 +452,7 @@ class TestRuling:
         platform_agent_id,
         invalid_pct,
     ):
-        """RUL-07: Invalid worker_pct values - returns 400 INVALID_WORKER_PCT."""
+        """RUL-07: Invalid worker_pct values - returns 400 invalid_worker_pct."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -470,7 +470,7 @@ class TestRuling:
         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_WORKER_PCT"
+        assert resp.json()["error"] == "invalid_worker_pct"
 
     @pytest.mark.unit
     async def test_ruling_summary_stored_in_response(
@@ -544,7 +544,7 @@ class TestRuling:
         platform_keypair,
         platform_agent_id,
     ):
-        """RUL-10: Wrong action in ruling token - returns 400 INVALID_PAYLOAD."""
+        """RUL-10: Wrong action in ruling token - returns 400 invalid_payload."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -562,7 +562,7 @@ class TestRuling:
         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_ruling_on_nonexistent_task(
@@ -571,7 +571,7 @@ class TestRuling:
         platform_keypair,
         platform_agent_id,
     ):
-        """RUL-11: Ruling on non-existent task - returns 404 TASK_NOT_FOUND."""
+        """RUL-11: Ruling on non-existent task - returns 404 task_not_found."""
         fake_task_id = "t-00000000-0000-0000-0000-000000000000"
         resp = await submit_ruling(
             client,
@@ -583,7 +583,7 @@ class TestRuling:
         )
 
         assert resp.status_code == 404
-        assert resp.json()["error"] == "TASK_NOT_FOUND"
+        assert resp.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
     async def test_missing_payload_fields_in_ruling(
@@ -596,7 +596,7 @@ class TestRuling:
         platform_keypair,
         platform_agent_id,
     ):
-        """RUL-12: Missing required payload fields - returns 400 INVALID_PAYLOAD."""
+        """RUL-12: Missing required payload fields - returns 400 invalid_payload."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -613,7 +613,7 @@ class TestRuling:
         token = make_jws_token(private_key, platform_agent_id, payload_no_ruling_id)
         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
         # Missing worker_pct
         payload_no_pct = {
@@ -625,7 +625,7 @@ class TestRuling:
         token = make_jws_token(private_key, platform_agent_id, payload_no_pct)
         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
         # Missing ruling_summary
         payload_no_summary = {
@@ -637,7 +637,7 @@ class TestRuling:
         token = make_jws_token(private_key, platform_agent_id, payload_no_summary)
         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_central_bank_unavailable_during_ruling(

@@ -41,21 +41,21 @@ class TestBodyTokenEdgeCases:
         self,
         client: AsyncClient,
     ) -> None:
-        """AUTH-01: Null task_token and escrow_token on POST /tasks returns 400 INVALID_JWS."""
+        """AUTH-01: Null task_token and escrow_token on POST /tasks returns 400 invalid_jws."""
         resp = await client.post(
             "/tasks",
             json={"task_token": None, "escrow_token": None},
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_null_token_on_single_token_endpoint(
         self,
         client: AsyncClient,
     ) -> None:
-        """AUTH-02: POST /tasks/{task_id}/bids with null token returns 400 INVALID_JWS."""
+        """AUTH-02: POST /tasks/{task_id}/bids with null token returns 400 invalid_jws."""
         task_id = make_task_id()
         resp = await client.post(
             f"/tasks/{task_id}/bids",
@@ -63,14 +63,14 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_integer_token_in_body(
         self,
         client: AsyncClient,
     ) -> None:
-        """AUTH-03: POST /tasks/{task_id}/cancel with integer token returns 400 INVALID_JWS."""
+        """AUTH-03: POST /tasks/{task_id}/cancel with integer token returns 400 invalid_jws."""
         task_id = make_task_id()
         resp = await client.post(
             f"/tasks/{task_id}/cancel",
@@ -78,14 +78,14 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_array_token_in_body(
         self,
         client: AsyncClient,
     ) -> None:
-        """AUTH-04: POST /tasks/{task_id}/bids with array token returns 400 INVALID_JWS."""
+        """AUTH-04: POST /tasks/{task_id}/bids with array token returns 400 invalid_jws."""
         task_id = make_task_id()
         resp = await client.post(
             f"/tasks/{task_id}/bids",
@@ -93,14 +93,14 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_object_token_in_body(
         self,
         client: AsyncClient,
     ) -> None:
-        """AUTH-05: POST /tasks/{task_id}/submit with object token returns 400 INVALID_JWS."""
+        """AUTH-05: POST /tasks/{task_id}/submit with object token returns 400 invalid_jws."""
         task_id = make_task_id()
         resp = await client.post(
             f"/tasks/{task_id}/submit",
@@ -108,14 +108,14 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_boolean_token_in_body(
         self,
         client: AsyncClient,
     ) -> None:
-        """AUTH-06: POST /tasks/{task_id}/approve with boolean token returns 400 INVALID_JWS."""
+        """AUTH-06: POST /tasks/{task_id}/approve with boolean token returns 400 invalid_jws."""
         task_id = make_task_id()
         resp = await client.post(
             f"/tasks/{task_id}/approve",
@@ -123,7 +123,7 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_missing_action_field_in_jws_cancel(
@@ -132,7 +132,7 @@ class TestBodyTokenEdgeCases:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """AUTH-07: JWS payload missing action field on cancel returns 400 INVALID_PAYLOAD."""
+        """AUTH-07: JWS payload missing action field on cancel returns 400 invalid_payload."""
         task_id = make_task_id()
         private_key = alice_keypair[0]
         # Payload has no "action" field
@@ -148,7 +148,7 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_missing_action_field_in_jws_ruling(
@@ -157,7 +157,7 @@ class TestBodyTokenEdgeCases:
         platform_keypair: tuple[Ed25519PrivateKey, str],
         platform_agent_id: str,
     ) -> None:
-        """AUTH-08: JWS payload missing action field on ruling returns 400 INVALID_PAYLOAD."""
+        """AUTH-08: JWS payload missing action field on ruling returns 400 invalid_payload."""
         task_id = make_task_id()
         private_key = platform_keypair[0]
         # Payload has no "action" field
@@ -173,14 +173,14 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_array_body_on_single_token_endpoint(
         self,
         client: AsyncClient,
     ) -> None:
-        """AUTH-09: Array JSON body on cancel endpoint returns 400 INVALID_JSON."""
+        """AUTH-09: Array JSON body on cancel endpoint returns 400 invalid_json."""
         task_id = make_task_id()
         resp = await client.post(
             f"/tasks/{task_id}/cancel",
@@ -189,14 +189,14 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JSON"
+        assert resp.json()["error"] == "invalid_json"
 
     @pytest.mark.unit
     async def test_string_body_on_single_token_endpoint(
         self,
         client: AsyncClient,
     ) -> None:
-        """AUTH-10: String JSON body on bids endpoint returns 400 INVALID_JSON."""
+        """AUTH-10: String JSON body on bids endpoint returns 400 invalid_json."""
         task_id = make_task_id()
         resp = await client.post(
             f"/tasks/{task_id}/bids",
@@ -205,14 +205,14 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JSON"
+        assert resp.json()["error"] == "invalid_json"
 
     @pytest.mark.unit
     async def test_array_body_on_dual_token_endpoint(
         self,
         client: AsyncClient,
     ) -> None:
-        """AUTH-11: Array JSON body on task creation returns 400 INVALID_JSON."""
+        """AUTH-11: Array JSON body on task creation returns 400 invalid_json."""
         resp = await client.post(
             "/tasks",
             content=b'[{"task_token": "eyJ...", "escrow_token": "eyJ..."}]',
@@ -220,7 +220,7 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JSON"
+        assert resp.json()["error"] == "invalid_json"
 
     @pytest.mark.unit
     async def test_null_task_token_with_valid_escrow_token(
@@ -229,7 +229,7 @@ class TestBodyTokenEdgeCases:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """AUTH-12: Null task_token with valid escrow_token returns 400 INVALID_JWS."""
+        """AUTH-12: Null task_token with valid escrow_token returns 400 invalid_jws."""
         task_id = make_task_id()
         private_key = alice_keypair[0]
 
@@ -247,7 +247,7 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_valid_task_token_with_null_escrow_token(
@@ -256,7 +256,7 @@ class TestBodyTokenEdgeCases:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """AUTH-13: Valid task_token with null escrow_token returns 400 INVALID_JWS."""
+        """AUTH-13: Valid task_token with null escrow_token returns 400 invalid_jws."""
         task_id = make_task_id()
         private_key = alice_keypair[0]
 
@@ -279,7 +279,7 @@ class TestBodyTokenEdgeCases:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
 
 class TestBearerTokenValidation:
@@ -340,7 +340,7 @@ class TestBearerTokenValidation:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """BEARER-03: Missing Authorization header on sealed bids returns 400 INVALID_JWS."""
+        """BEARER-03: Missing Authorization header on sealed bids returns 400 invalid_jws."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
         task_id = resp.json()["task_id"]
@@ -349,7 +349,7 @@ class TestBearerTokenValidation:
         resp = await client.get(f"/tasks/{task_id}/bids")
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_authorization_without_bearer_prefix(
@@ -358,7 +358,7 @@ class TestBearerTokenValidation:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """BEARER-04: Authorization without 'Bearer ' prefix returns 400 INVALID_JWS."""
+        """BEARER-04: Authorization without 'Bearer ' prefix returns 400 invalid_jws."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
         task_id = resp.json()["task_id"]
@@ -374,7 +374,7 @@ class TestBearerTokenValidation:
         resp = await client.get(f"/tasks/{task_id}/bids", headers=headers)
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_empty_bearer_token(
@@ -383,7 +383,7 @@ class TestBearerTokenValidation:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """BEARER-05: Empty Bearer token returns 400 INVALID_JWS."""
+        """BEARER-05: Empty Bearer token returns 400 invalid_jws."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
         task_id = resp.json()["task_id"]
@@ -393,7 +393,7 @@ class TestBearerTokenValidation:
         resp = await client.get(f"/tasks/{task_id}/bids", headers=headers)
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_malformed_bearer_token(
@@ -402,7 +402,7 @@ class TestBearerTokenValidation:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """BEARER-06: Malformed Bearer token (not three-part JWS) returns 400 INVALID_JWS."""
+        """BEARER-06: Malformed Bearer token (not three-part JWS) returns 400 invalid_jws."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
         task_id = resp.json()["task_id"]
@@ -412,7 +412,7 @@ class TestBearerTokenValidation:
         resp = await client.get(f"/tasks/{task_id}/bids", headers=headers)
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_JWS"
+        assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
     async def test_tampered_bearer_token(
@@ -421,7 +421,7 @@ class TestBearerTokenValidation:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """BEARER-07: Tampered Bearer token returns 403 FORBIDDEN."""
+        """BEARER-07: Tampered Bearer token returns 403 forbidden."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
         task_id = resp.json()["task_id"]
@@ -438,7 +438,7 @@ class TestBearerTokenValidation:
         resp = await client.get(f"/tasks/{task_id}/bids", headers=headers)
 
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_wrong_action_in_bearer_sealed_bids(
@@ -447,7 +447,7 @@ class TestBearerTokenValidation:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """BEARER-08: Wrong action in Bearer for sealed bids returns 400 INVALID_PAYLOAD."""
+        """BEARER-08: Wrong action in Bearer for sealed bids returns 400 invalid_payload."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
         task_id = resp.json()["task_id"]
@@ -463,7 +463,7 @@ class TestBearerTokenValidation:
         resp = await client.get(f"/tasks/{task_id}/bids", headers=headers)
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_wrong_action_in_bearer_asset_upload(
@@ -474,7 +474,7 @@ class TestBearerTokenValidation:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """BEARER-09: Wrong action in Bearer for asset upload returns 400 INVALID_PAYLOAD."""
+        """BEARER-09: Wrong action in Bearer for asset upload returns 400 invalid_payload."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -493,7 +493,7 @@ class TestBearerTokenValidation:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_task_id_mismatch_in_bearer_sealed_bids(
@@ -502,7 +502,7 @@ class TestBearerTokenValidation:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """BEARER-10: Payload task_id mismatch for sealed bids returns 400 INVALID_PAYLOAD."""
+        """BEARER-10: Payload task_id mismatch for sealed bids returns 400 invalid_payload."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
         task_id = resp.json()["task_id"]
@@ -518,7 +518,7 @@ class TestBearerTokenValidation:
         resp = await client.get(f"/tasks/{task_id}/bids", headers=headers)
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_task_id_mismatch_in_bearer_asset_upload(
@@ -529,7 +529,7 @@ class TestBearerTokenValidation:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """BEARER-11: Payload task_id mismatch for asset upload returns 400 INVALID_PAYLOAD."""
+        """BEARER-11: Payload task_id mismatch for asset upload returns 400 invalid_payload."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -548,7 +548,7 @@ class TestBearerTokenValidation:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_non_poster_accessing_sealed_bids(
@@ -559,7 +559,7 @@ class TestBearerTokenValidation:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """BEARER-12: Non-poster accessing sealed bids returns 403 FORBIDDEN."""
+        """BEARER-12: Non-poster accessing sealed bids returns 403 forbidden."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
         task_id = resp.json()["task_id"]
@@ -576,7 +576,7 @@ class TestBearerTokenValidation:
         resp = await client.get(f"/tasks/{task_id}/bids", headers=headers)
 
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_non_worker_uploading_asset(
@@ -589,7 +589,7 @@ class TestBearerTokenValidation:
         carol_keypair: tuple[Ed25519PrivateKey, str],
         carol_agent_id: str,
     ) -> None:
-        """BEARER-13: Non-worker uploading asset returns 403 FORBIDDEN."""
+        """BEARER-13: Non-worker uploading asset returns 403 forbidden."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -609,7 +609,7 @@ class TestBearerTokenValidation:
         )
 
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
 
 class TestIdentityDependency:
@@ -622,7 +622,7 @@ class TestIdentityDependency:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """IDEP-01: Identity service timeout returns 502 IDENTITY_SERVICE_UNAVAILABLE."""
+        """IDEP-01: Identity service timeout returns 502 identity_service_unavailable."""
         # Configure identity mock to simulate timeout
         state = get_app_state()
         state.identity_client.verify_jws = AsyncMock(
@@ -643,7 +643,7 @@ class TestIdentityDependency:
         )
 
         assert resp.status_code == 502
-        assert resp.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert resp.json()["error"] == "identity_service_unavailable"
 
     @pytest.mark.unit
     async def test_identity_unexpected_response_returns_502(
@@ -652,7 +652,7 @@ class TestIdentityDependency:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """IDEP-02: Identity service non-JSON 500 returns 502 IDENTITY_SERVICE_UNAVAILABLE."""
+        """IDEP-02: Identity service non-JSON 500 returns 502 identity_service_unavailable."""
         # Configure identity mock to simulate unexpected response
         state = get_app_state()
         state.identity_client.verify_jws = AsyncMock(
@@ -673,7 +673,7 @@ class TestIdentityDependency:
         )
 
         assert resp.status_code == 502
-        assert resp.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert resp.json()["error"] == "identity_service_unavailable"
 
     @pytest.mark.unit
     async def test_identity_unexpected_response_on_bearer_endpoint(
@@ -705,7 +705,7 @@ class TestIdentityDependency:
         resp = await client.get(f"/tasks/{task_id}/bids", headers=headers)
 
         assert resp.status_code == 502
-        assert resp.json()["error"] == "IDENTITY_SERVICE_UNAVAILABLE"
+        assert resp.json()["error"] == "identity_service_unavailable"
 
 
 class TestPublicEndpoints:
@@ -843,7 +843,7 @@ class TestTokenReplay:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_court_token_rejected(
@@ -875,7 +875,7 @@ class TestTokenReplay:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_reputation_token_rejected(
@@ -907,7 +907,7 @@ class TestTokenReplay:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"
 
 
 class TestAuthSecurity:
@@ -924,13 +924,13 @@ class TestAuthSecurity:
         task_id = make_task_id()
         private_key = alice_keypair[0]
 
-        # Trigger INVALID_JWS
+        # Trigger invalid_jws
         resp_invalid_jws = await client.post(
             f"/tasks/{task_id}/cancel",
             json={"token": None},
         )
 
-        # Trigger INVALID_PAYLOAD (missing action)
+        # Trigger invalid_payload (missing action)
         token_no_action = make_jws_token(
             private_key,
             alice_agent_id,
@@ -941,7 +941,7 @@ class TestAuthSecurity:
             json={"token": token_no_action},
         )
 
-        # Trigger FORBIDDEN (tampered JWS) -- need a task first
+        # Trigger forbidden (tampered JWS) -- need a task first
         create_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert create_resp.status_code == 201
         real_task_id = create_resp.json()["task_id"]
@@ -957,7 +957,7 @@ class TestAuthSecurity:
             headers={"Authorization": f"Bearer {tampered}"},
         )
 
-        # Trigger IDENTITY_SERVICE_UNAVAILABLE
+        # Trigger identity_service_unavailable
         state = get_app_state()
         state.identity_client.verify_jws = AsyncMock(
             side_effect=TimeoutError("Identity service timed out")
@@ -996,14 +996,14 @@ class TestAuthSecurity:
         # Collect error responses from multiple auth failure scenarios
         error_responses = []
 
-        # INVALID_JWS
+        # invalid_jws
         resp = await client.post(
             f"/tasks/{task_id}/cancel",
             json={"token": None},
         )
         error_responses.append(resp)
 
-        # FORBIDDEN (tampered JWS on Bearer endpoint) -- need a task first
+        # forbidden (tampered JWS on Bearer endpoint) -- need a task first
         create_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert create_resp.status_code == 201
         real_task_id = create_resp.json()["task_id"]
@@ -1020,7 +1020,7 @@ class TestAuthSecurity:
         )
         error_responses.append(resp)
 
-        # IDENTITY_SERVICE_UNAVAILABLE
+        # identity_service_unavailable
         state = get_app_state()
         state.identity_client.verify_jws = AsyncMock(
             side_effect=TimeoutError("Identity service timed out")
@@ -1074,4 +1074,4 @@ class TestAuthSecurity:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "INVALID_PAYLOAD"
+        assert resp.json()["error"] == "invalid_payload"

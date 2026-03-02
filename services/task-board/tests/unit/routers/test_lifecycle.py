@@ -367,10 +367,10 @@ class TestLifecycle:
             # Advance past deadline
             frozen.tick(delta=datetime.timedelta(seconds=2))
 
-            # Bob tries to bid - should fail with 409 INVALID_STATUS
+            # Bob tries to bid - should fail with 409 invalid_status
             resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
             assert resp.status_code == 409
-            assert resp.json()["error"] == "INVALID_STATUS"
+            assert resp.json()["error"] == "invalid_status"
 
     # -----------------------------------------------------------------------
     # LIFE-08  Cannot submit on expired execution deadline
@@ -417,7 +417,7 @@ class TestLifecycle:
             # Bob tries to submit - should fail
             resp = await submit_deliverable(client, bob_keypair, bob_agent_id, task_id)
             assert resp.status_code == 409
-            assert resp.json()["error"] == "INVALID_STATUS"
+            assert resp.json()["error"] == "invalid_status"
 
     # -----------------------------------------------------------------------
     # LIFE-09  Terminal status permanence
@@ -446,32 +446,32 @@ class TestLifecycle:
         # 1. Cancel
         resp = await cancel_task(client, alice_keypair, alice_agent_id, task_id)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
         # 2. Bid
         resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
         # 3. Submit deliverable
         resp = await submit_deliverable(client, bob_keypair, bob_agent_id, task_id)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
         # 4. Approve
         resp = await approve_task(client, alice_keypair, alice_agent_id, task_id)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
         # 5. Dispute
         resp = await file_dispute(client, alice_keypair, alice_agent_id, task_id)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
         # 6. Ruling
         resp = await submit_ruling(client, platform_keypair, platform_agent_id, task_id)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"
 
     # -----------------------------------------------------------------------
     # LIFE-10  Deadline evaluation does not affect terminal states
@@ -591,4 +591,4 @@ class TestLifecycle:
         # Alice tries to dispute after approval -- should fail with 409
         resp = await file_dispute(client, alice_keypair, alice_agent_id, task_id)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "INVALID_STATUS"
+        assert resp.json()["error"] == "invalid_status"

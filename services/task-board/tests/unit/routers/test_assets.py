@@ -71,7 +71,7 @@ class TestAssetUpload:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """AU-02: Upload to a nonexistent task returns 404 TASK_NOT_FOUND."""
+        """AU-02: Upload to a nonexistent task returns 404 task_not_found."""
         resp = await upload_asset(
             client,
             bob_keypair,
@@ -80,7 +80,7 @@ class TestAssetUpload:
         )
 
         assert resp.status_code == 404
-        assert resp.json()["error"] == "TASK_NOT_FOUND"
+        assert resp.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
     async def test_upload_wrong_status_task(
@@ -91,7 +91,7 @@ class TestAssetUpload:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """AU-03: Upload to a task not in ACCEPTED/EXECUTION status returns 409 INVALID_STATUS."""
+        """AU-03: Upload to a task not in ACCEPTED/EXECUTION status returns 409 invalid_status."""
         # Create a task but do NOT accept any bid — task stays in OPEN status
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
@@ -105,7 +105,7 @@ class TestAssetUpload:
         )
 
         assert upload_resp.status_code == 409
-        assert upload_resp.json()["error"] == "INVALID_STATUS"
+        assert upload_resp.json()["error"] == "invalid_status"
 
     @pytest.mark.unit
     async def test_non_worker_cannot_upload(
@@ -118,7 +118,7 @@ class TestAssetUpload:
         carol_keypair: tuple[Ed25519PrivateKey, str],
         carol_agent_id: str,
     ) -> None:
-        """AU-04: Non-worker (Carol) attempting to upload returns 403 FORBIDDEN."""
+        """AU-04: Non-worker (Carol) attempting to upload returns 403 forbidden."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -132,7 +132,7 @@ class TestAssetUpload:
         )
 
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
     async def test_no_file_in_multipart(
@@ -143,7 +143,7 @@ class TestAssetUpload:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """AU-05: POST with Authorization header but no file part returns 400 NO_FILE."""
+        """AU-05: POST with Authorization header but no file part returns 400 no_file."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -162,7 +162,7 @@ class TestAssetUpload:
         )
 
         assert resp.status_code == 400
-        assert resp.json()["error"] == "NO_FILE"
+        assert resp.json()["error"] == "no_file"
 
     @pytest.mark.unit
     async def test_file_exceeds_max_size(
@@ -173,7 +173,7 @@ class TestAssetUpload:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """AU-06: Uploading a file exceeding max_file_size returns 413 FILE_TOO_LARGE."""
+        """AU-06: Uploading a file exceeding max_file_size returns 413 file_too_large."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -190,7 +190,7 @@ class TestAssetUpload:
         )
 
         assert resp.status_code == 413
-        assert resp.json()["error"] == "FILE_TOO_LARGE"
+        assert resp.json()["error"] == "file_too_large"
 
     @pytest.mark.unit
     async def test_multiple_uploads_succeed(
@@ -239,7 +239,7 @@ class TestAssetUpload:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """AU-08: Uploading more than max_assets_per_task (20) returns 409 TOO_MANY_ASSETS."""
+        """AU-08: Uploading more than max_assets_per_task (20) returns 409 too_many_assets."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -267,7 +267,7 @@ class TestAssetUpload:
         )
 
         assert resp.status_code == 409
-        assert resp.json()["error"] == "TOO_MANY_ASSETS"
+        assert resp.json()["error"] == "too_many_assets"
 
     @pytest.mark.unit
     async def test_content_hash_is_sha256(
@@ -343,7 +343,7 @@ class TestAssetUpload:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """AU-11: Poster (Alice) attempting to upload returns 403 FORBIDDEN."""
+        """AU-11: Poster (Alice) attempting to upload returns 403 forbidden."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -357,7 +357,7 @@ class TestAssetUpload:
         )
 
         assert resp.status_code == 403
-        assert resp.json()["error"] == "FORBIDDEN"
+        assert resp.json()["error"] == "forbidden"
 
 
 class TestAssetRetrieval:
@@ -478,18 +478,18 @@ class TestAssetRetrieval:
         resp = await client.get(f"/tasks/{task_id}/assets/{NONEXISTENT_ASSET_ID}")
 
         assert resp.status_code == 404
-        assert resp.json()["error"] == "ASSET_NOT_FOUND"
+        assert resp.json()["error"] == "asset_not_found"
 
     @pytest.mark.unit
     async def test_list_assets_nonexistent_task(
         self,
         client: AsyncClient,
     ) -> None:
-        """AR-05: GET /tasks/{task_id}/assets for nonexistent task returns 404 TASK_NOT_FOUND."""
+        """AR-05: GET /tasks/{task_id}/assets for nonexistent task returns 404 task_not_found."""
         resp = await client.get(f"/tasks/{NONEXISTENT_TASK_ID}/assets")
 
         assert resp.status_code == 404
-        assert resp.json()["error"] == "TASK_NOT_FOUND"
+        assert resp.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
     async def test_assets_are_public_no_auth(

@@ -15,31 +15,31 @@ from tests.helpers import generate_keypair, make_jws_token
 
 @pytest.mark.unit
 async def test_validate_jws_token_empty_token() -> None:
-    """Empty token raises INVALID_JWS."""
+    """Empty token raises invalid_jws."""
     mock_identity = AsyncMock()
     validator = TokenValidator(identity_client=mock_identity)
 
     with pytest.raises(ServiceError) as exc_info:
         await validator.validate_jws_token("", "create_task")
 
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
 
 
 @pytest.mark.unit
 async def test_validate_jws_token_wrong_format() -> None:
-    """Non-three-part token raises INVALID_JWS."""
+    """Non-three-part token raises invalid_jws."""
     mock_identity = AsyncMock()
     validator = TokenValidator(identity_client=mock_identity)
 
     with pytest.raises(ServiceError) as exc_info:
         await validator.validate_jws_token("only.two", "create_task")
 
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
 
 
 @pytest.mark.unit
 async def test_validate_jws_token_identity_unavailable() -> None:
-    """Connection errors from Identity are wrapped as IDENTITY_SERVICE_UNAVAILABLE."""
+    """Connection errors from Identity are wrapped as identity_service_unavailable."""
     mock_identity = AsyncMock()
     mock_identity.verify_jws = AsyncMock(side_effect=ConnectionError("unavailable"))
     validator = TokenValidator(identity_client=mock_identity)
@@ -49,14 +49,14 @@ async def test_validate_jws_token_identity_unavailable() -> None:
     with pytest.raises(ServiceError) as exc_info:
         await validator.validate_jws_token(token, "create_task")
 
-    assert exc_info.value.error == "IDENTITY_SERVICE_UNAVAILABLE"
+    assert exc_info.value.error == "identity_service_unavailable"
     assert exc_info.value.status_code == 502
 
 
 @pytest.mark.unit
 async def test_validate_jws_token_identity_service_error() -> None:
     """ServiceError from Identity is propagated unchanged."""
-    expected = ServiceError("IDENTITY_SERVICE_UNAVAILABLE", "fail", 502, {})
+    expected = ServiceError("identity_service_unavailable", "fail", 502, {})
     mock_identity = AsyncMock()
     mock_identity.verify_jws = AsyncMock(side_effect=expected)
     validator = TokenValidator(identity_client=mock_identity)
@@ -71,7 +71,7 @@ async def test_validate_jws_token_identity_service_error() -> None:
 
 @pytest.mark.unit
 async def test_validate_jws_token_forbidden_tampered() -> None:
-    """Payload tamper marker raises FORBIDDEN."""
+    """Payload tamper marker raises forbidden."""
     mock_identity = AsyncMock()
     mock_identity.verify_jws = AsyncMock(
         return_value={
@@ -86,13 +86,13 @@ async def test_validate_jws_token_forbidden_tampered() -> None:
     with pytest.raises(ServiceError) as exc_info:
         await validator.validate_jws_token(token, "create_task")
 
-    assert exc_info.value.error == "FORBIDDEN"
+    assert exc_info.value.error == "forbidden"
     assert exc_info.value.status_code == 403
 
 
 @pytest.mark.unit
 async def test_validate_jws_token_missing_action() -> None:
-    """Missing action in payload raises INVALID_PAYLOAD."""
+    """Missing action in payload raises invalid_payload."""
     mock_identity = AsyncMock()
     mock_identity.verify_jws = AsyncMock(return_value={"agent_id": "a-agent", "payload": {}})
     validator = TokenValidator(identity_client=mock_identity)
@@ -102,12 +102,12 @@ async def test_validate_jws_token_missing_action() -> None:
     with pytest.raises(ServiceError) as exc_info:
         await validator.validate_jws_token(token, "create_task")
 
-    assert exc_info.value.error == "INVALID_PAYLOAD"
+    assert exc_info.value.error == "invalid_payload"
 
 
 @pytest.mark.unit
 async def test_validate_jws_token_wrong_action() -> None:
-    """Unexpected action raises INVALID_PAYLOAD."""
+    """Unexpected action raises invalid_payload."""
     mock_identity = AsyncMock()
     mock_identity.verify_jws = AsyncMock(
         return_value={"agent_id": "a-agent", "payload": {"action": "submit_bid"}}
@@ -119,7 +119,7 @@ async def test_validate_jws_token_wrong_action() -> None:
     with pytest.raises(ServiceError) as exc_info:
         await validator.validate_jws_token(token, "create_task")
 
-    assert exc_info.value.error == "INVALID_PAYLOAD"
+    assert exc_info.value.error == "invalid_payload"
 
 
 @pytest.mark.unit
@@ -171,31 +171,31 @@ def test_decode_escrow_token_payload_valid() -> None:
 
 @pytest.mark.unit
 def test_decode_escrow_token_payload_wrong_format() -> None:
-    """Token without three parts raises INVALID_JWS."""
+    """Token without three parts raises invalid_jws."""
     mock_identity = AsyncMock()
     validator = TokenValidator(identity_client=mock_identity)
 
     with pytest.raises(ServiceError) as exc_info:
         validator.decode_escrow_token_payload("only.two")
 
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
 
 
 @pytest.mark.unit
 def test_decode_escrow_token_payload_invalid_base64() -> None:
-    """Invalid payload base64 raises INVALID_JWS."""
+    """Invalid payload base64 raises invalid_jws."""
     mock_identity = AsyncMock()
     validator = TokenValidator(identity_client=mock_identity)
 
     with pytest.raises(ServiceError) as exc_info:
         validator.decode_escrow_token_payload("a.%%%%.c")
 
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
 
 
 @pytest.mark.unit
 def test_decode_escrow_token_payload_invalid_json() -> None:
-    """Non-JSON payload bytes raise INVALID_JWS."""
+    """Non-JSON payload bytes raise invalid_jws."""
     mock_identity = AsyncMock()
     validator = TokenValidator(identity_client=mock_identity)
     payload = base64.urlsafe_b64encode(b"not-json").rstrip(b"=").decode()
@@ -203,12 +203,12 @@ def test_decode_escrow_token_payload_invalid_json() -> None:
     with pytest.raises(ServiceError) as exc_info:
         validator.decode_escrow_token_payload(f"a.{payload}.c")
 
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
 
 
 @pytest.mark.unit
 def test_decode_escrow_token_payload_not_object() -> None:
-    """JSON payload that is not an object raises INVALID_JWS."""
+    """JSON payload that is not an object raises invalid_jws."""
     mock_identity = AsyncMock()
     validator = TokenValidator(identity_client=mock_identity)
     payload = base64.urlsafe_b64encode(json.dumps([1, 2, 3]).encode()).rstrip(b"=").decode()
@@ -216,4 +216,4 @@ def test_decode_escrow_token_payload_not_object() -> None:
     with pytest.raises(ServiceError) as exc_info:
         validator.decode_escrow_token_payload(f"a.{payload}.c")
 
-    assert exc_info.value.error == "INVALID_JWS"
+    assert exc_info.value.error == "invalid_jws"
