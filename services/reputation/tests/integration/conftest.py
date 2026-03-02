@@ -34,10 +34,8 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
+platform:
+  agent_config_path: ""
 request:
   max_body_size: 1048576
 database:

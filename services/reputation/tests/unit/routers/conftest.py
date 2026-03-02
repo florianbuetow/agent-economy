@@ -39,10 +39,8 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
+platform:
+  agent_config_path: ""
 request:
   max_body_size: 1048576
 database:
@@ -128,4 +126,4 @@ def inject_mock_identity(
     state = get_app_state()
     if verify_response is None:
         verify_response = _mock_verify_ok(ALICE_ID, _feedback_payload())
-    state.identity_client = make_mock_identity_client(verify_response=verify_response)
+    state.platform_agent = make_mock_identity_client(verify_response=verify_response)

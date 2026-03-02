@@ -14,10 +14,8 @@ logging:
   level: "INFO"
   format: "json"
 
-identity:
-  base_url: "http://identity:8001"
-  verify_jws_path: "/agents/verify-jws"
-  timeout_seconds: 10
+platform:
+  agent_config_path: "../../agents/config.yaml"
 
 request:
   max_body_size: 1048576  # 1MB
