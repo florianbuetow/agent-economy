@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
     from court_service.judges import Judge
     from court_service.services.dispute_service import DisputeService
+    from court_service.services.protocol import DisputeStorageInterface
 
 
 @dataclass
@@ -21,6 +22,10 @@ class AppState:
     dispute_service: DisputeService | None = None
     platform_agent: PlatformAgent | None = None
     judges: list[Judge] | None = None
+    rebuttal_deadline_seconds: int = 0
+    max_claim_length: int = 0
+    max_rebuttal_length: int = 0
+    store: DisputeStorageInterface | None = None
 
     @property
     def uptime_seconds(self) -> float:

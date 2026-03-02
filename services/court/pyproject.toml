@@ -10,7 +10,7 @@ dependencies = [
     "pydantic>=2.10.0",
     "httpx>=0.28.0",
     "cryptography>=44.0.0",
-    "joserfc>=1.0.0",
+    "joserfc>=1.6.3",
     "litellm>=1.0.0",
     "service-commons",
     "base-agent",

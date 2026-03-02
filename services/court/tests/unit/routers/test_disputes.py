@@ -418,15 +418,14 @@ class TestTriggerRuling:
             assert ISO8601_PATTERN.match(vote["voted_at"])
 
     async def test_rule_06_central_bank_called(self, client: AsyncClient) -> None:
-        """RULE-06: Central bank split_escrow called with correct args."""
+        """RULE-06: record_ruling called with correct worker_pct (escrow handled by Task Board)."""
         escrow_id = new_escrow_id()
         payload = file_dispute_payload(escrow_id=escrow_id)
         await file_rebut_and_rule(client, file_payload=payload, worker_pct=70)
         state = get_app_state()
-        assert state.platform_agent.split_escrow.call_count == 1
-        call_args = state.platform_agent.split_escrow.call_args
-        assert escrow_id in str(call_args)
-        assert 70 in call_args.args or any(v == 70 for v in call_args.kwargs.values())
+        assert state.platform_agent.record_ruling.call_count == 1
+        call_args = state.platform_agent.record_ruling.call_args
+        assert 70 in call_args.args[1].values() or any(v == 70 for v in call_args.args[1].values())
 
     async def test_rule_07_reputation_called(self, client: AsyncClient) -> None:
         """RULE-07: Reputation service record_feedback called at least twice."""
@@ -439,32 +438,32 @@ class TestTriggerRuling:
         ruling = await file_rebut_and_rule(client, worker_pct=0)
         assert ruling["worker_pct"] == 0
         state = get_app_state()
-        call_args = state.platform_agent.split_escrow.call_args
-        assert 0 in call_args.args or any(v == 0 for v in call_args.kwargs.values())
+        call_args = state.platform_agent.record_ruling.call_args
+        assert call_args.args[1]["worker_pct"] == 0
 
     async def test_rule_09_worker_pct_hundred(self, client: AsyncClient) -> None:
         """RULE-09: worker_pct=100 means worker full payout."""
         ruling = await file_rebut_and_rule(client, worker_pct=100)
         assert ruling["worker_pct"] == 100
         state = get_app_state()
-        call_args = state.platform_agent.split_escrow.call_args
-        assert 100 in call_args.args or any(v == 100 for v in call_args.kwargs.values())
+        call_args = state.platform_agent.record_ruling.call_args
+        assert call_args.args[1]["worker_pct"] == 100
 
     async def test_rule_10_worker_pct_fifty(self, client: AsyncClient) -> None:
         """RULE-10: worker_pct=50 even split."""
         ruling = await file_rebut_and_rule(client, worker_pct=50)
         assert ruling["worker_pct"] == 50
         state = get_app_state()
-        call_args = state.platform_agent.split_escrow.call_args
-        assert 50 in call_args.args or any(v == 50 for v in call_args.kwargs.values())
+        call_args = state.platform_agent.record_ruling.call_args
+        assert call_args.args[1]["worker_pct"] == 50
 
     async def test_rule_11_worker_pct_arbitrary(self, client: AsyncClient) -> None:
         """RULE-11: worker_pct=73 arbitrary split."""
         ruling = await file_rebut_and_rule(client, worker_pct=73)
         assert ruling["worker_pct"] == 73
         state = get_app_state()
-        call_args = state.platform_agent.split_escrow.call_args
-        assert 73 in call_args.args or any(v == 73 for v in call_args.kwargs.values())
+        call_args = state.platform_agent.record_ruling.call_args
+        assert call_args.args[1]["worker_pct"] == 73
 
     async def test_rule_12_dispute_not_found(self, client: AsyncClient) -> None:
         """RULE-12: Ruling on non-existent dispute returns 404."""
@@ -531,7 +530,7 @@ class TestTriggerRuling:
         assert get_response.json()["status"] == "rebuttal_pending"
 
     async def test_rule_16_central_bank_unavailable(self, client: AsyncClient) -> None:
-        """RULE-16: Central bank failure returns 502, status remains rebuttal_pending."""
+        """RULE-16: Task Board failure returns 502, status remains rebuttal_pending."""
         dispute = await file_and_rebut(client)
         dispute_id = dispute["dispute_id"]
         inject_judge(worker_pct=70)
@@ -543,7 +542,7 @@ class TestTriggerRuling:
             json=token_body(rule_pay),
         )
         assert response.status_code == 502
-        assert response.json()["error"] == "central_bank_unavailable"
+        assert response.json()["error"] == "task_board_unavailable"
 
         get_response = await client.get(f"/disputes/{dispute_id}")
         assert get_response.json()["status"] == "rebuttal_pending"

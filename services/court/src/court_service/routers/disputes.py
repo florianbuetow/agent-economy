@@ -10,7 +10,6 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
-from court_service.config import get_settings
 from court_service.core.state import get_app_state
 from court_service.routers.validation import (
     extract_jws_token,
@@ -59,7 +58,6 @@ async def _fetch_task(task_id: str) -> dict[str, Any]:
 @router.post("/disputes/file", status_code=201)
 async def file_dispute(request: Request) -> JSONResponse:
     """File a new dispute (platform-signed)."""
-    settings = get_settings()
     state = get_app_state()
     if state.dispute_service is None:
         raise ServiceError(
@@ -88,7 +86,7 @@ async def file_dispute(request: Request) -> JSONResponse:
     claim = require_non_empty_string(payload, "claim")
     escrow_id = require_non_empty_string(payload, "escrow_id")
 
-    if len(claim) > settings.disputes.max_claim_length:
+    if len(claim) > state.max_claim_length:
         raise ServiceError(
             "invalid_payload",
             "Claim exceeds maximum length",
@@ -105,7 +103,7 @@ async def file_dispute(request: Request) -> JSONResponse:
         respondent_id,
         claim,
         escrow_id,
-        settings.disputes.rebuttal_deadline_seconds,
+        state.rebuttal_deadline_seconds,
     )
     return JSONResponse(status_code=201, content=created)
 
@@ -113,7 +111,6 @@ async def file_dispute(request: Request) -> JSONResponse:
 @router.post("/disputes/{dispute_id}/rebuttal")
 async def submit_rebuttal(dispute_id: str, request: Request) -> JSONResponse:
     """Submit rebuttal for a dispute (platform-signed)."""
-    settings = get_settings()
     state = get_app_state()
     if state.dispute_service is None:
         raise ServiceError(
@@ -146,7 +143,7 @@ async def submit_rebuttal(dispute_id: str, request: Request) -> JSONResponse:
         )
 
     rebuttal = require_non_empty_string(payload, "rebuttal")
-    if len(rebuttal) > settings.disputes.max_rebuttal_length:
+    if len(rebuttal) > state.max_rebuttal_length:
         raise ServiceError(
             "invalid_payload",
             "Rebuttal exceeds maximum length",

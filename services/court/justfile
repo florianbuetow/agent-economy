@@ -1,16 +1,20 @@
+set dotenv-load
+
 # Default recipe: show available commands
 _default:
     @just help
 
-# === Service Configuration ===
-SERVICE_NAME := "court_service"
-PORT := "8005"
+# === Service Configuration (derived from directory and config.yaml) ===
+DIR_NAME := `basename "$(pwd)"`
+SERVICE_NAME := `basename "$(pwd)" | tr '-' '_'` + "_service"
+PORT := `grep -A3 '^server:' config.yaml | grep 'port:' | awk '{print $2}'`
+DISPLAY_NAME := `basename "$(pwd)" | tr '-' ' ' | awk '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1)) substr($i,2)}}1'`
 
 # Show help information
 help:
     @clear
     @echo ""
-    @printf "\033[0;34m=== Court Service (port 8005) ===\033[0m\n"
+    @printf "\033[0;34m=== {{DISPLAY_NAME}} Service (port {{PORT}}) ===\033[0m\n"
     @echo ""
     @printf "\033[1;33mSetup\033[0m\n"
     @printf "  \033[0;37mjust check            \033[0;34m Check if all required tools are installed\033[0m\n"
@@ -32,6 +36,7 @@ help:
     @printf "\033[1;33mTesting\033[0m\n"
     @printf "  \033[0;37mjust test             \033[0;34m Run all tests (unit + integration)\033[0m\n"
     @printf "  \033[0;37mjust test-unit        \033[0;34m Run unit tests only\033[0m\n"
+    @printf "  \033[0;37mjust test-architecture\033[0;34m Run architecture tests only\033[0m\n"
     @printf "  \033[0;37mjust test-integration \033[0;34m Run integration tests only\033[0m\n"
     @printf "  \033[0;37mjust test-coverage    \033[0;34m Run tests with coverage report\033[0m\n"
     @printf "  \033[0;37mjust test-performance \033[0;34m Run performance tests\033[0m\n"
@@ -122,30 +127,30 @@ destroy:
 # Run the service locally (no Docker) with hot reload
 run:
     @echo ""
-    @printf "\033[0;34m=== Running Court Service Locally on port 8005 ===\033[0m\n"
-    @uv run uvicorn court_service.app:create_app --factory --reload --host 127.0.0.1 --port 8005
+    @printf "\033[0;34m=== Running {{DISPLAY_NAME}} Service Locally on port {{PORT}} ===\033[0m\n"
+    @uv run uvicorn {{SERVICE_NAME}}.app:create_app --factory --reload --host 127.0.0.1 --port {{PORT}}
 
 # Stop the locally running service
 kill:
     #!/usr/bin/env bash
     printf "\n"
-    printf "\033[0;34m=== Stopping Court Service (Local) ===\033[0m\n"
+    printf "\033[0;34m=== Stopping {{DISPLAY_NAME}} Service (Local) ===\033[0m\n"
     printf "\n"
 
-    pid=$(lsof -ti :8005 -sTCP:LISTEN 2>/dev/null)
+    pid=$(lsof -ti :{{PORT}} -sTCP:LISTEN 2>/dev/null)
 
     if [ -n "$pid" ]; then
         printf "Service is running (PID: %s). Stopping...\n" "$pid"
         kill $pid 2>/dev/null
         sleep 1
 
-        if lsof -ti :8005 -sTCP:LISTEN > /dev/null 2>&1; then
+        if lsof -ti :{{PORT}} -sTCP:LISTEN > /dev/null 2>&1; then
             printf "\033[0;31m✗ Service still running. Forcing kill...\033[0m\n"
-            kill -9 $(lsof -ti :8005 -sTCP:LISTEN) 2>/dev/null
+            kill -9 $(lsof -ti :{{PORT}} -sTCP:LISTEN) 2>/dev/null
             sleep 1
         fi
 
-        if lsof -ti :8005 -sTCP:LISTEN > /dev/null 2>&1; then
+        if lsof -ti :{{PORT}} -sTCP:LISTEN > /dev/null 2>&1; then
             printf "\033[0;31m✗ Failed to stop service\033[0m\n"
             exit 1
         else
@@ -161,36 +166,36 @@ kill:
 # Run service in Docker (production mode, detached)
 docker-up:
     @echo ""
-    @printf "\033[0;34m=== Starting Court Service in Docker ===\033[0m\n"
-    @cd ../.. && docker compose up -d court
+    @printf "\033[0;34m=== Starting {{DISPLAY_NAME}} Service in Docker ===\033[0m\n"
+    @cd ../.. && docker compose up -d {{DIR_NAME}}
     @echo ""
-    @printf "\033[0;32m✓ Service running at http://localhost:8005\033[0m\n"
+    @printf "\033[0;32m✓ Service running at http://localhost:{{PORT}}\033[0m\n"
     @echo "  View logs: just docker-logs"
     @echo ""
 
 # Run service in Docker (development mode with hot reload)
 docker-up-dev:
     @echo ""
-    @printf "\033[0;34m=== Starting Court Service in Docker (Dev Mode) ===\033[0m\n"
-    @cd ../.. && docker compose -f docker-compose.yml -f docker-compose.dev.yml up court
+    @printf "\033[0;34m=== Starting {{DISPLAY_NAME}} Service in Docker (Dev Mode) ===\033[0m\n"
+    @cd ../.. && docker compose -f docker-compose.yml -f docker-compose.dev.yml up {{DIR_NAME}}
 
 # Stop service in Docker
 docker-down:
     @echo ""
-    @printf "\033[0;34m=== Stopping Court Service ===\033[0m\n"
-    @cd ../.. && docker compose stop court
+    @printf "\033[0;34m=== Stopping {{DISPLAY_NAME}} Service ===\033[0m\n"
+    @cd ../.. && docker compose stop {{DIR_NAME}}
     @printf "\033[0;32m✓ Service stopped\033[0m\n"
     @echo ""
 
 # View Docker logs for this service
 docker-logs:
-    @cd ../.. && docker compose logs -f court
+    @cd ../.. && docker compose logs -f {{DIR_NAME}}
 
 # Build Docker image for this service
 docker-build:
     @echo ""
-    @printf "\033[0;34m=== Building Court Docker Image ===\033[0m\n"
-    @cd ../.. && docker compose build court
+    @printf "\033[0;34m=== Building {{DISPLAY_NAME}} Docker Image ===\033[0m\n"
+    @cd ../.. && docker compose build {{DIR_NAME}}
     @printf "\033[0;32m✓ Image built\033[0m\n"
     @echo ""
 
@@ -198,20 +203,20 @@ docker-build:
 status:
     #!/usr/bin/env bash
     printf "\n"
-    printf "\033[0;34m=== Court Service Status ===\033[0m\n"
+    printf "\033[0;34m=== {{DISPLAY_NAME}} Service Status ===\033[0m\n"
     printf "\n"
-    if health_response=$(curl -s --connect-timeout 2 "http://localhost:8005/health" 2>/dev/null); then
+    if health_response=$(curl -s --connect-timeout 2 "http://localhost:{{PORT}}/health" 2>/dev/null); then
         status=$(echo "$health_response" | jq -r '.status // empty' 2>/dev/null)
         if [ "$status" = "ok" ]; then
             uptime=$(echo "$health_response" | jq -r '.uptime_seconds // empty' 2>/dev/null)
-            printf "\033[0;32m✓ Court\033[0m (port 8005) - ok"
+            printf "\033[0;32m✓ {{DISPLAY_NAME}}\033[0m (port {{PORT}}) - ok"
             [ -n "$uptime" ] && printf " (uptime: %ss)" "$uptime"
             printf "\n"
         else
-            printf "\033[0;33m⚠ Court\033[0m (port 8005) - %s\n" "${status:-unknown}"
+            printf "\033[0;33m⚠ {{DISPLAY_NAME}}\033[0m (port {{PORT}}) - %s\n" "${status:-unknown}"
         fi
     else
-        printf "\033[0;31m✗ Court\033[0m (port 8005) - not responding\n"
+        printf "\033[0;31m✗ {{DISPLAY_NAME}}\033[0m (port {{PORT}}) - not responding\n"
     fi
     printf "\n"
 
@@ -314,7 +319,7 @@ code-audit:
 code-semgrep:
     @echo ""
     @printf "\033[0;34m=== Running Semgrep Static Analysis ===\033[0m\n"
-    @uv run semgrep --config ../../config/semgrep/ --error src
+    @uv run semgrep --config ../../config/semgrep/ --error src tests
     @echo ""
     @printf "\033[0;32m✓ Semgrep checks passed\033[0m\n"
     @echo ""
@@ -326,6 +331,7 @@ test:
     @echo ""
     @printf "\033[0;34m=== Running All Tests ===\033[0m\n"
     @just test-unit
+    @just test-architecture
     @just test-integration
     @printf "\033[0;32m✓ All tests passed\033[0m\n"
     @echo ""
@@ -337,12 +343,23 @@ test-unit:
     @uv run pytest tests/unit -m unit -v
     @echo ""
 
+# Run architecture tests only
+test-architecture:
+    #!/usr/bin/env bash
+    echo ""
+    printf "\033[0;34m=== Running Architecture Tests ===\033[0m\n"
+    uv run pytest tests/architecture -m architecture -v; rc=$?
+    if [ $rc -eq 5 ]; then printf "\033[0;33m⚠ No architecture tests collected (skipped)\033[0m\n"; exit 0; fi
+    exit $rc
+
 # Run integration tests only
 test-integration:
-    @echo ""
-    @printf "\033[0;34m=== Running Integration Tests ===\033[0m\n"
-    @uv run pytest tests/integration -m integration -v
-    @echo ""
+    #!/usr/bin/env bash
+    echo ""
+    printf "\033[0;34m=== Running Integration Tests ===\033[0m\n"
+    uv run pytest tests/integration -m integration -v; rc=$?
+    if [ $rc -eq 5 ]; then printf "\033[0;33m⚠ No integration tests collected (skipped)\033[0m\n"; exit 0; fi
+    exit $rc
 
 # Run unit tests with coverage report and threshold check
 test-coverage: init
@@ -373,7 +390,7 @@ ci:
     #!/usr/bin/env bash
     set -e
     printf "\n"
-    printf "\033[0;34m=== Running CI Checks for Court Service ===\033[0m\n"
+    printf "\033[0;34m=== Running CI Checks for {{DISPLAY_NAME}} Service ===\033[0m\n"
     printf "\n"
     just init
     just code-format
@@ -385,6 +402,7 @@ ci:
     just code-semgrep
     just code-audit
     just test-unit
+    just test-architecture
     just code-lspchecks
     printf "\n"
     printf "\033[0;32m✓ All CI checks passed\033[0m\n"
@@ -440,6 +458,9 @@ ci-quiet:
 
     just test-unit > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Unit tests failed\033[0m\n"; cat $TMPFILE; exit 1; }
     printf "\033[0;32m✓ Unit tests passed\033[0m\n"
+
+    just test-architecture > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Architecture tests failed\033[0m\n"; cat $TMPFILE; exit 1; }
+    printf "\033[0;32m✓ Architecture tests passed\033[0m\n"
 
     just code-lspchecks > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Code-lspchecks failed\033[0m\n"; cat $TMPFILE; exit 1; }
     printf "\033[0;32m✓ Code-lspchecks passed\033[0m\n"

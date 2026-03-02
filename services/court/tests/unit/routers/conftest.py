@@ -13,6 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from court_service.app import create_app
 from court_service.config import clear_settings_cache
 from court_service.core.state import get_app_state, reset_app_state
+from tests.fakes.in_memory_dispute_store import InMemoryDisputeStore
 from tests.helpers import (
     make_jws_token,
     make_mock_judge,
@@ -64,6 +65,9 @@ judges:
     - id: "judge-0"
       provider: "mock"
       model: "test-model"
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -82,6 +86,11 @@ async def app(tmp_path: Any) -> AsyncIterator[FastAPI]:
     test_app = create_app()
     async with test_app.router.lifespan_context(test_app):
         state = get_app_state()
+        fake_store = InMemoryDisputeStore(db_path=str(tmp_path / "test.db"))
+        state.store = fake_store
+        if state.dispute_service is not None:
+            state.dispute_service._store = fake_store
+            state.dispute_service._orchestrator._store = fake_store
         state.platform_agent = make_mock_platform_agent(
             agent_id=PLATFORM_AGENT_ID,
             task_response=make_task_data(),
@@ -205,9 +214,12 @@ def inject_judge(
 
 
 def inject_central_bank_error(error: Exception) -> None:
-    """Update the mock platform agent's split_escrow to raise an error."""
+    """Update the mock platform agent's record_ruling to raise an error.
+
+    The Court delegates escrow handling to the Task Board via record_ruling.
+    """
     state = get_app_state()
-    state.platform_agent.split_escrow.side_effect = error
+    state.platform_agent.record_ruling.side_effect = error
 
 
 def inject_reputation_error(error: Exception) -> None:

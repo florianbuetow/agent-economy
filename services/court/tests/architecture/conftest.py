@@ -33,6 +33,8 @@ def layered_arch() -> LayeredArchitecture:
         .containing_modules(["court_service.core"])
         .layer("services")
         .containing_modules(["court_service.services"])
+        .layer("judges")
+        .containing_modules(["court_service.judges"])
     )
 
 

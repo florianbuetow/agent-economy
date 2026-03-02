@@ -45,13 +45,41 @@ def _extract_content(response: Any) -> str:
     return content
 
 
+def _extract_json(text: str) -> dict[str, Any]:
+    """Extract a JSON object from LLM output that may contain markdown fences or preamble."""
+    stripped = text.strip()
+    # Strip markdown code fences if present
+    if stripped.startswith("```"):
+        lines = stripped.split("\n")
+        lines = lines[1:]  # drop opening fence line
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        stripped = "\n".join(lines).strip()
+    # Find the first { and last } to extract the JSON object
+    start = stripped.find("{")
+    end = stripped.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        msg = f"No JSON object found in LLM response: {text[:200]}"
+        raise ValueError(msg)
+    return cast("dict[str, Any]", json.loads(stripped[start : end + 1]))
+
+
 class LLMJudge(Judge):
     """Judge implementation backed by LiteLLM."""
 
-    def __init__(self, judge_id: str, model: str, temperature: float) -> None:
+    def __init__(
+        self,
+        judge_id: str,
+        model: str,
+        temperature: float,
+        api_base: str | None,
+        api_key: str | None,
+    ) -> None:
         self._judge_id = judge_id
         self._model = model
         self._temperature = temperature
+        self._api_base = api_base
+        self._api_key = api_key
 
     async def evaluate(self, context: DisputeContext) -> JudgeVote:
         """Evaluate dispute context and return a vote."""
@@ -75,10 +103,11 @@ class LLMJudge(Judge):
                     {"role": "user", "content": prompt},
                 ],
                 temperature=self._temperature,
-                response_format={"type": "json_object"},
+                api_base=self._api_base,
+                api_key=self._api_key,
             )
             content = _extract_content(response)
-            parsed = cast("dict[str, Any]", json.loads(content))
+            parsed = _extract_json(content)
             worker_pct = parsed.get("worker_pct")
             reasoning = parsed.get("reasoning")
             if not isinstance(worker_pct, int) or not 0 <= worker_pct <= 100:
@@ -87,8 +116,8 @@ class LLMJudge(Judge):
                 raise ValueError("reasoning must be a non-empty string")
         except Exception as exc:
             raise ServiceError(
-                "JUDGE_UNAVAILABLE",
-                f"Judge {self._judge_id} unavailable",
+                "judge_unavailable",
+                f"Judge {self._judge_id} failed: {exc}",
                 502,
                 {},
             ) from exc

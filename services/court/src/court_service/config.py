@@ -84,6 +84,8 @@ class JudgeConfig(BaseModel):
     id: str
     model: str
     provider: str | None = None
+    api_base: str | None = None
+    api_key_env: str | None = None
     temperature: float | None = None
 
 
@@ -123,6 +125,14 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
+class DbGatewayConfig(BaseModel):
+    """DB Gateway service configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+    url: str
+    timeout_seconds: int
+
+
 class Settings(BaseModel):
     """Root configuration container."""
 
@@ -135,6 +145,7 @@ class Settings(BaseModel):
     disputes: DisputesConfig
     judges: JudgesConfig
     request: RequestConfig
+    db_gateway: DbGatewayConfig | None = None
 
 
 def get_config_path() -> Path:

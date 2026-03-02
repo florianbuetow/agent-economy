@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -12,8 +13,8 @@ from court_service.config import get_config_path, get_settings
 from court_service.core.state import init_app_state
 from court_service.judges import LLMJudge, MockJudge
 from court_service.logging import get_logger, setup_logging
+from court_service.services.dispute_db_client import DisputeDbClient
 from court_service.services.dispute_service import DisputeService
-from court_service.services.dispute_store import DisputeStore
 from court_service.services.ruling_orchestrator import RulingOrchestrator
 
 if TYPE_CHECKING:
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 
     from court_service.config import Settings
     from court_service.judges import Judge
+    from court_service.services.protocol import DisputeStorageInterface
 
 
 def _build_judges(settings: Settings) -> list[Judge]:
@@ -42,11 +44,23 @@ def _build_judges(settings: Settings) -> list[Judge]:
         if judge_cfg.temperature is None:
             msg = f"Judge {judge_cfg.id} is missing required temperature"
             raise ValueError(msg)
+        api_key: str | None = None
+        if judge_cfg.api_key_env is not None:
+            api_key = os.environ.get(judge_cfg.api_key_env)
+            if not api_key:
+                msg = (
+                    f"Judge {judge_cfg.id} requires env var"
+                    f" {judge_cfg.api_key_env} but it is not set"
+                )
+                raise ValueError(msg)
+
         judges.append(
             LLMJudge(
                 judge_id=judge_cfg.id,
                 model=judge_cfg.model,
                 temperature=judge_cfg.temperature,
+                api_base=judge_cfg.api_base,
+                api_key=api_key,
             )
         )
 
@@ -66,9 +80,20 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     logger = get_logger(__name__)
 
     state = init_app_state()
+    state.rebuttal_deadline_seconds = settings.disputes.rebuttal_deadline_seconds
+    state.max_claim_length = settings.disputes.max_claim_length
+    state.max_rebuttal_length = settings.disputes.max_rebuttal_length
 
-    db_path = settings.database.path
-    store = DisputeStore(db_path=db_path)
+    store: DisputeStorageInterface
+    if settings.db_gateway is None:
+        msg = "db_gateway configuration is required"
+        raise RuntimeError(msg)
+
+    store = DisputeDbClient(
+        base_url=settings.db_gateway.url,
+        timeout_seconds=settings.db_gateway.timeout_seconds,
+    )
+    state.store = store
     orchestrator = RulingOrchestrator(store=store)
     state.dispute_service = DisputeService(store=store, orchestrator=orchestrator)
 

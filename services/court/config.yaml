@@ -29,9 +29,14 @@ judges:
   panel_size: 1
   judges:
     - id: "judge-0"
-      provider: "mock"
-      model: "gpt-4o-mini"
+      model: "openai/google/gemma-3-1b"
+      api_base: "http://localhost:1234/v1"
+      api_key_env: "LMSTUDIO_API_KEY"
       temperature: 0.3
 
 request:
   max_body_size: 1048576
+
+db_gateway:
+  url: "http://127.0.0.1:8007"
+  timeout_seconds: 10

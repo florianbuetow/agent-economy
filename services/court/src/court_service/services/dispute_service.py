@@ -7,13 +7,14 @@ from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
-from court_service.services.dispute_store import DisputeStore, DuplicateDisputeError
+from court_service.services.errors import DuplicateDisputeError
 from court_service.services.ruling_orchestrator import RulingOrchestrator
 
 if TYPE_CHECKING:
     from base_agent.platform import PlatformAgent
 
     from court_service.judges.base import Judge
+    from court_service.services.protocol import DisputeStorageInterface
 
 
 class DisputeService:
@@ -21,7 +22,7 @@ class DisputeService:
 
     def __init__(
         self,
-        store: DisputeStore,
+        store: DisputeStorageInterface,
         *args: object,
         **kwargs: object,
     ) -> None:

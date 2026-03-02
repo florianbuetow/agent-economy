@@ -14,13 +14,13 @@ if TYPE_CHECKING:
     from base_agent.platform import PlatformAgent
 
     from court_service.judges.base import Judge
-    from court_service.services.dispute_store import DisputeStore
+    from court_service.services.protocol import DisputeStorageInterface
 
 
 class RulingOrchestrator:
     """Orchestrates judge evaluation and ruling side effects."""
 
-    def __init__(self, store: DisputeStore) -> None:
+    def __init__(self, store: DisputeStorageInterface) -> None:
         self._store = store
 
     @staticmethod
@@ -134,10 +134,12 @@ class RulingOrchestrator:
         for index, judge in enumerate(judges):
             try:
                 raw_vote = await judge.evaluate(context)
+            except ServiceError:
+                raise
             except Exception as exc:
                 raise ServiceError(
                     "judge_unavailable",
-                    f"Judge {index} failed to evaluate dispute",
+                    f"Judge {index} failed: {exc}",
                     502,
                     {},
                 ) from exc
@@ -152,35 +154,7 @@ class RulingOrchestrator:
         ruling_summary = "\n\n".join(v.reasoning for v in votes)
         return median_worker_pct, ruling_summary
 
-    async def _split_escrow(
-        self,
-        platform_agent: PlatformAgent,
-        dispute: dict[str, Any],
-        median_worker_pct: int,
-    ) -> None:
-        try:
-            await platform_agent.split_escrow(
-                str(dispute["escrow_id"]),
-                str(dispute["respondent_id"]),
-                str(dispute["claimant_id"]),
-                median_worker_pct,
-            )
-        except httpx.HTTPStatusError as exc:
-            raise ServiceError(
-                "central_bank_unavailable",
-                "Cannot reach Central Bank service",
-                502,
-                {},
-            ) from exc
-        except ServiceError:
-            raise
-        except Exception as exc:
-            raise ServiceError(
-                "central_bank_unavailable",
-                "Cannot reach Central Bank service",
-                502,
-                {},
-            ) from exc
+    _MAX_FEEDBACK_COMMENT_LENGTH = 256
 
     async def _record_feedback(
         self,
@@ -190,6 +164,7 @@ class RulingOrchestrator:
         ruling_summary: str,
     ) -> None:
         platform_agent_id = platform_agent.agent_id or ""
+        comment = ruling_summary[: self._MAX_FEEDBACK_COMMENT_LENGTH]
 
         spec_feedback_payload: dict[str, object] = {
             "action": "submit_feedback",
@@ -198,7 +173,7 @@ class RulingOrchestrator:
             "to_agent_id": str(dispute["claimant_id"]),
             "category": "spec_quality",
             "rating": self._spec_rating(median_worker_pct),
-            "comment": ruling_summary,
+            "comment": comment,
         }
         delivery_feedback_payload: dict[str, object] = {
             "action": "submit_feedback",
@@ -207,7 +182,7 @@ class RulingOrchestrator:
             "to_agent_id": str(dispute["respondent_id"]),
             "category": "delivery_quality",
             "rating": self._delivery_rating(median_worker_pct),
-            "comment": ruling_summary,
+            "comment": comment,
         }
 
         try:
@@ -283,17 +258,16 @@ class RulingOrchestrator:
             normalized_votes = await self._evaluate_judges(judges, context)
             median_worker_pct, ruling_summary = self._compute_ruling(normalized_votes)
 
-            await self._split_escrow(platform_agent, dispute, median_worker_pct)
-            await self._record_feedback(
-                platform_agent,
-                dispute,
-                median_worker_pct,
-                ruling_summary,
-            )
             await self._record_task_ruling(
                 platform_agent,
                 dispute,
                 dispute_id,
+                median_worker_pct,
+                ruling_summary,
+            )
+            await self._record_feedback(
+                platform_agent,
+                dispute,
                 median_worker_pct,
                 ruling_summary,
             )
