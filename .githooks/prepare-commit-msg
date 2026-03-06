@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Composite hook: chains beads hook + any custom logic
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+BEADS_HOOK="${REPO_ROOT}/.beads/hooks/prepare-commit-msg"
+
+if [ -x "${BEADS_HOOK}" ]; then
+    "${BEADS_HOOK}" "$@" || exit $?
+fi
