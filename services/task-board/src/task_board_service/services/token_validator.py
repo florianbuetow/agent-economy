@@ -51,10 +51,10 @@ def decode_base64url_json(part: str, section_name: str) -> dict[str, Any]:
 class TokenValidator:
     """Validates task-board JWS tokens and decodes escrow payloads."""
 
-    def __init__(  # nosemgrep: agent-economy.no-default-parameter-values
+    def __init__(
         self,
         platform_agent: PlatformAgent,
-        identity_client: IdentityClient | None = None,
+        identity_client: IdentityClient | None,
     ) -> None:
         """Initialize validator with platform agent and optional identity client."""
         self._platform_agent = platform_agent

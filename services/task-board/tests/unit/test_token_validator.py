@@ -34,7 +34,7 @@ def _platform_mock(
 async def test_validate_jws_token_empty_token() -> None:
     """Empty token raises invalid_jws."""
     mock_platform = _platform_mock()
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
 
     with pytest.raises(ServiceError) as exc_info:
         await validator.validate_jws_token("", "create_task")
@@ -46,7 +46,7 @@ async def test_validate_jws_token_empty_token() -> None:
 async def test_validate_jws_token_wrong_format() -> None:
     """Non-three-part token raises invalid_jws."""
     mock_platform = _platform_mock()
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
 
     with pytest.raises(ServiceError) as exc_info:
         await validator.validate_jws_token("only.two", "create_task")
@@ -58,7 +58,7 @@ async def test_validate_jws_token_wrong_format() -> None:
 async def test_validate_jws_token_identity_unavailable() -> None:
     """Connection errors from Identity are wrapped as identity_service_unavailable."""
     mock_platform = _platform_mock(side_effect=ConnectionError("unavailable"))
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     private_key, _public_key = generate_keypair()
     token = make_jws_token(private_key, "a-agent", {"action": "create_task"})
 
@@ -74,7 +74,7 @@ async def test_validate_jws_token_identity_service_error() -> None:
     """ServiceError from platform verification is wrapped as unavailable."""
     expected = ServiceError("identity_service_unavailable", "fail", 502, {})
     mock_platform = _platform_mock(side_effect=expected)
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     private_key, _public_key = generate_keypair()
     token = make_jws_token(private_key, "a-agent", {"action": "create_task"})
 
@@ -89,7 +89,7 @@ async def test_validate_jws_token_identity_service_error() -> None:
 async def test_validate_jws_token_forbidden_tampered() -> None:
     """Payload tamper marker raises forbidden."""
     mock_platform = _platform_mock(return_value={"action": "create_task", "_tampered": True})
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     private_key, _public_key = generate_keypair()
     token = make_jws_token(private_key, "a-agent", {"action": "create_task"})
 
@@ -104,7 +104,7 @@ async def test_validate_jws_token_forbidden_tampered() -> None:
 async def test_validate_jws_token_missing_action() -> None:
     """Missing action in payload raises invalid_payload."""
     mock_platform = _platform_mock(return_value={})
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     private_key, _public_key = generate_keypair()
     token = make_jws_token(private_key, "a-agent", {"action": "create_task"})
 
@@ -118,7 +118,7 @@ async def test_validate_jws_token_missing_action() -> None:
 async def test_validate_jws_token_wrong_action() -> None:
     """Unexpected action raises invalid_payload."""
     mock_platform = _platform_mock(return_value={"action": "submit_bid"})
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     private_key, _public_key = generate_keypair()
     token = make_jws_token(private_key, "a-agent", {"action": "submit_bid"})
 
@@ -132,7 +132,7 @@ async def test_validate_jws_token_wrong_action() -> None:
 async def test_validate_jws_token_valid_single_action() -> None:
     """Matching single action returns payload with signer id."""
     mock_platform = _platform_mock(return_value={"action": "create_task", "x": 1})
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     private_key, _public_key = generate_keypair()
     token = make_jws_token(private_key, "a-agent", {"action": "create_task"})
 
@@ -146,7 +146,7 @@ async def test_validate_jws_token_valid_single_action() -> None:
 async def test_validate_jws_token_valid_tuple_action() -> None:
     """Matching one action in tuple succeeds."""
     mock_platform = _platform_mock(return_value={"action": "file_dispute"})
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     private_key, _public_key = generate_keypair()
     token = make_jws_token(private_key, "a-agent", {"action": "file_dispute"})
 
@@ -160,7 +160,7 @@ async def test_validate_jws_token_valid_tuple_action() -> None:
 def test_decode_escrow_token_payload_valid() -> None:
     """Valid escrow token payload is decoded."""
     mock_platform = _platform_mock()
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     private_key, _public_key = generate_keypair()
     token = make_jws_token(private_key, "a-agent", {"task_id": "t-1", "amount": 100})
 
@@ -173,7 +173,7 @@ def test_decode_escrow_token_payload_valid() -> None:
 def test_decode_escrow_token_payload_wrong_format() -> None:
     """Token without three parts raises invalid_jws."""
     mock_platform = _platform_mock()
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
 
     with pytest.raises(ServiceError) as exc_info:
         validator.decode_escrow_token_payload("only.two")
@@ -185,7 +185,7 @@ def test_decode_escrow_token_payload_wrong_format() -> None:
 def test_decode_escrow_token_payload_invalid_base64() -> None:
     """Invalid payload base64 raises invalid_jws."""
     mock_platform = _platform_mock()
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
 
     with pytest.raises(ServiceError) as exc_info:
         validator.decode_escrow_token_payload("a.%%%%.c")
@@ -197,7 +197,7 @@ def test_decode_escrow_token_payload_invalid_base64() -> None:
 def test_decode_escrow_token_payload_invalid_json() -> None:
     """Non-JSON payload bytes raise invalid_jws."""
     mock_platform = _platform_mock()
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     payload = base64.urlsafe_b64encode(b"not-json").rstrip(b"=").decode()
 
     with pytest.raises(ServiceError) as exc_info:
@@ -210,7 +210,7 @@ def test_decode_escrow_token_payload_invalid_json() -> None:
 def test_decode_escrow_token_payload_not_object() -> None:
     """JSON payload that is not an object raises invalid_jws."""
     mock_platform = _platform_mock()
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     payload = base64.urlsafe_b64encode(json.dumps([1, 2, 3]).encode()).rstrip(b"=").decode()
 
     with pytest.raises(ServiceError) as exc_info:
@@ -223,7 +223,7 @@ def test_decode_escrow_token_payload_not_object() -> None:
 async def test_validate_jws_token_invalid_signature() -> None:
     """Invalid signatures from platform verification raise forbidden."""
     mock_platform = _platform_mock(side_effect=InvalidSignature())
-    validator = TokenValidator(platform_agent=mock_platform)
+    validator = TokenValidator(platform_agent=mock_platform, identity_client=None)
     private_key, _public_key = generate_keypair()
     token = make_jws_token(private_key, "a-agent", {"action": "create_task"})
 
