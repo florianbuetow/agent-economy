@@ -467,7 +467,8 @@ class TestAtomicity:
                     "tx_id": f"tx-{uuid4()}",
                     "resolved_at": "2026-02-28T12:00:00Z",
                     "event": make_event(source="bank", event_type="escrow.released"),
-                }
+                },
+                None,
             )
         assert exc_info.value.error == "account_not_found"
 
@@ -509,7 +510,8 @@ class TestAtomicity:
                     "poster_tx_id": f"tx-{uuid4()}",
                     "resolved_at": "2026-02-28T12:00:00Z",
                     "event": make_event(source="bank", event_type="escrow.split"),
-                }
+                },
+                None,
             )
         assert exc_info.value.error == "amount_mismatch"
 
@@ -547,7 +549,8 @@ class TestAtomicity:
                     "submitted_at": "2026-02-28T13:00:00Z",
                     "claim_status_update": "rebuttal",
                     "event": make_event(source="court", event_type="rebuttal.submitted"),
-                }
+                },
+                None,
             )
         assert exc_info.value.error == "foreign_key_violation"
 

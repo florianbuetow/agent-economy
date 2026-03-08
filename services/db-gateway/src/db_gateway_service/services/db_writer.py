@@ -571,7 +571,7 @@ class DbWriter:
     def escrow_release(
         self,
         data: dict[str, Any],
-        constraints: dict[str, Any] | None = None,
+        constraints: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """
         Release escrowed funds to a recipient.
@@ -682,7 +682,7 @@ class DbWriter:
     def escrow_split(
         self,
         data: dict[str, Any],
-        constraints: dict[str, Any] | None = None,
+        constraints: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """
         Split escrowed funds between worker and poster.
@@ -866,7 +866,7 @@ class DbWriter:
     def submit_bid(
         self,
         data: dict[str, Any],
-        constraints: dict[str, Any] | None = None,
+        constraints: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """
         Submit a bid on a task.
@@ -927,7 +927,7 @@ class DbWriter:
         self,
         task_id: str,
         data: dict[str, Any],
-        constraints: dict[str, Any] | None = None,
+        constraints: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """
         Update task status and associated fields.
@@ -1008,7 +1008,7 @@ class DbWriter:
     def record_asset(
         self,
         data: dict[str, Any],
-        constraints: dict[str, Any] | None = None,
+        constraints: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """
         Record an asset upload (metadata only).
@@ -1191,7 +1191,7 @@ class DbWriter:
         self,
         claim_id: str,
         data: dict[str, Any],
-        constraints: dict[str, Any] | None = None,
+        constraints: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """
         Update a claim status with optional constraints.
@@ -1258,7 +1258,7 @@ class DbWriter:
     def submit_rebuttal(
         self,
         data: dict[str, Any],
-        constraints: dict[str, Any] | None = None,
+        constraints: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """
         Submit a rebuttal with optional claim status update.

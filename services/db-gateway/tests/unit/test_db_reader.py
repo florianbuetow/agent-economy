@@ -65,7 +65,7 @@ class TestDbReaderIdentity:
         conn = sqlite3.connect(initialized_db)
         reader = DbReader(db=conn)
 
-        result = reader.list_agents()
+        result = reader.list_agents(public_key=None)
 
         assert result == []
         conn.close()
@@ -96,7 +96,7 @@ class TestDbReaderIdentity:
         )
         reader = DbReader(db=conn)
 
-        result = reader.list_agents()
+        result = reader.list_agents(public_key=None)
 
         assert len(result) == 3
         assert [agent["agent_id"] for agent in result] == ["a-1", "a-2", "a-3"]

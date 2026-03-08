@@ -40,7 +40,7 @@ class DbReader:
             "registered_at": row[3],
         }
 
-    def list_agents(self, public_key: str | None = None) -> list[dict[str, Any]]:
+    def list_agents(self, public_key: str | None) -> list[dict[str, Any]]:
         """
         List all agents, optionally filtered by public_key.
 
