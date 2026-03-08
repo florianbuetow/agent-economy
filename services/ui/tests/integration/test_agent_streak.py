@@ -32,8 +32,7 @@ class TestAgentStreak:
         """Agent profile must include current_streak in stats."""
         list_resp = await client.get("/api/agents?limit=1")
         agents = list_resp.json()["agents"]
-        if not agents:
-            pytest.skip("No agents in test database")
+        assert agents, "Seed data must include at least one agent"
         agent_id = agents[0]["agent_id"]
         resp = await client.get(f"/api/agents/{agent_id}")
         assert resp.status_code == 200

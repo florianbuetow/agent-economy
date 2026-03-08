@@ -74,8 +74,7 @@ class TestTaskListEndpoint:
         """Offset parameter should skip tasks for pagination."""
         resp_all = await client.get("/api/tasks", params={"limit": 100})
         all_tasks = resp_all.json()["tasks"]
-        if len(all_tasks) < 2:
-            pytest.skip("Not enough tasks to test offset")
+        assert len(all_tasks) >= 2, "Seed data must include at least 2 tasks"
 
         resp_offset = await client.get("/api/tasks", params={"limit": 100, "offset": 1})
         offset_tasks = resp_offset.json()["tasks"]
@@ -87,8 +86,7 @@ class TestTaskListEndpoint:
         resp = await client.get("/api/tasks")
         assert resp.status_code == 200
         tasks = resp.json()["tasks"]
-        if len(tasks) < 2:
-            pytest.skip("Not enough tasks to verify sort order")
+        assert len(tasks) >= 2, "Seed data must include at least 2 tasks"
         # Verify descending order
         for i in range(len(tasks) - 1):
             assert tasks[i]["created_at"] >= tasks[i + 1]["created_at"], (
