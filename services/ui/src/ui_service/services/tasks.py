@@ -279,8 +279,8 @@ async def get_competitive_tasks(
             "JOIN identity_agents ia ON bt.poster_id = ia.agent_id "
             "WHERE bt.status IN ('open', 'accepted') "
             "GROUP BY bt.task_id "
-            "HAVING bid_count > 0 "
-            "ORDER BY bid_count DESC "
+            "HAVING COUNT(bb.bid_id) > 0 "
+            "ORDER BY COUNT(bb.bid_id) DESC "
             "LIMIT ?"
         )
         rows = await execute_fetchall(db, sql, (limit,))
@@ -294,8 +294,8 @@ async def get_competitive_tasks(
             "LEFT JOIN board_bids bb ON bt.task_id = bb.task_id "
             "JOIN identity_agents ia ON bt.poster_id = ia.agent_id "
             "GROUP BY bt.task_id "
-            "HAVING bid_count > 0 "
-            "ORDER BY bid_count DESC "
+            "HAVING COUNT(bb.bid_id) > 0 "
+            "ORDER BY COUNT(bb.bid_id) DESC "
             "LIMIT ?"
         )
         rows = await execute_fetchall(db, sql, (limit,))
