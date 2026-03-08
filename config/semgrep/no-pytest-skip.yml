@@ -2,25 +2,26 @@ rules:
   - id: agent-economy.no-pytest-skip
     languages: [python]
     message: >
-      Do not use pytest.skip() to skip tests. Tests must either pass or fail.
-      If a test requires infrastructure, use a pytest marker and filter at collection time.
-      If a test is not yet implemented, write it as a failing test.
+      Skipping tests is not allowed. Tests must either pass or fail.
+      Do not use pytest.skip(), @pytest.mark.skip, or @pytest.mark.skipif.
     severity: ERROR
     pattern-either:
       - pattern: pytest.skip(...)
-      - pattern: |
-          @pytest.mark.skip
-          def $FUNC(...):
-              ...
-      - pattern: |
-          @pytest.mark.skip(...)
-          def $FUNC(...):
-              ...
-      - pattern: |
-          @pytest.mark.skipif(...)
-          def $FUNC(...):
-              ...
+      - pattern-regex: '@pytest\.mark\.skip'
     paths:
       include:
         - src/
+        - tests/
+
+  - id: no-pytest-skip.no-nosemgrep
+    languages: [python]
+    severity: ERROR
+    message: |
+      Do not use '# nosemgrep' to suppress semgrep findings.
+      Fix the underlying issue instead.
+    pattern-regex: '(?m)#\s*nosemgrep(?::\s*.*)?'
+    paths:
+      include:
+        - src/
+      exclude:
         - tests/

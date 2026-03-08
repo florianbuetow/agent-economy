@@ -13,6 +13,7 @@ rules:
       exclude:
         - tests/
         - src/db_gateway_service/
+        - src/ui_service/
 
   - id: no-direct-sql-from-import
     patterns:
@@ -28,6 +29,7 @@ rules:
       exclude:
         - tests/
         - src/db_gateway_service/
+        - src/ui_service/
 
   - id: no-aiosqlite-import
     patterns:
@@ -43,6 +45,7 @@ rules:
       exclude:
         - tests/
         - src/db_gateway_service/
+        - src/ui_service/
 
   - id: no-aiosqlite-from-import
     patterns:
@@ -58,3 +61,17 @@ rules:
       exclude:
         - tests/
         - src/db_gateway_service/
+        - src/ui_service/
+
+  - id: no-direct-sql.no-nosemgrep
+    languages: [python]
+    severity: ERROR
+    message: |
+      Do not use '# nosemgrep' to suppress semgrep findings.
+      Fix the underlying issue instead.
+    pattern-regex: '(?m)#\s*nosemgrep(?::\s*.*)?'
+    paths:
+      include:
+        - src/
+      exclude:
+        - tests/

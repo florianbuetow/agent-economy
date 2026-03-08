@@ -11,3 +11,16 @@ rules:
         - src/
       exclude:
         - tests/
+
+  - id: python.no-nosemgrep
+    languages: [python]
+    severity: ERROR
+    message: |
+      Do not use '# nosemgrep' to suppress semgrep findings.
+      Fix the underlying issue instead.
+    pattern-regex: '(?m)#\s*nosemgrep(?::\s*.*)?'
+    paths:
+      include:
+        - src/
+      exclude:
+        - tests/
