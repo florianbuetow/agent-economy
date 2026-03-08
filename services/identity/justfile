@@ -102,16 +102,21 @@ check:
 
 # Initialize the development environment
 init:
-    @echo ""
-    @printf "\033[0;34m=== Initializing Development Environment ===\033[0m\n"
-    @mkdir -p reports/coverage
-    @mkdir -p reports/security
-    @mkdir -p reports/pyright
-    @mkdir -p reports/deptry
-    @echo "Installing Python dependencies..."
-    @uv sync --all-extras
-    @printf "\033[0;32m✓ Development environment ready\033[0m\n"
-    @echo ""
+    #!/usr/bin/env bash
+    echo ""
+    printf "\033[0;34m=== Initializing Development Environment ===\033[0m\n"
+    mkdir -p reports/coverage
+    mkdir -p reports/security
+    mkdir -p reports/pyright
+    mkdir -p reports/deptry
+    if [ -f .env.template ] && [ ! -f .env ]; then
+        cp .env.template .env
+        printf "\033[0;33m→ Created .env from .env.template\033[0m\n"
+    fi
+    echo "Installing Python dependencies..."
+    uv sync --all-extras
+    printf "\033[0;32m✓ Development environment ready\033[0m\n"
+    echo ""
 
 # Destroy the virtual environment
 destroy:
@@ -352,11 +357,14 @@ test-architecture:
     if [ $rc -eq 5 ]; then printf "\033[0;33m⚠ No architecture tests collected (skipped)\033[0m\n"; exit 0; fi
     exit $rc
 
-# Run integration tests only
+# Run integration tests only (starts service if not already running)
 test-integration:
     #!/usr/bin/env bash
     echo ""
     printf "\033[0;34m=== Running Integration Tests ===\033[0m\n"
+    source ../../scripts/service-helpers.sh
+    ensure_service_running {{SERVICE_NAME}} {{PORT}}
+    trap stop_service_if_started EXIT
     uv run pytest tests/integration -m integration -v; rc=$?
     if [ $rc -eq 5 ]; then printf "\033[0;33m⚠ No integration tests collected (skipped)\033[0m\n"; exit 0; fi
     exit $rc

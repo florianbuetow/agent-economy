@@ -71,6 +71,7 @@ help:
     @printf "  \033[0;37mjust stop-mathbot     \033[0;34m Stop math worker agent\033[0m\n"
     @printf "  \033[0;37mjust fund-feeder <amount>\033[0;34m Fund the feeder agent with initial coins\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
+    @printf "  \033[0;37mjust watch            \033[0;34m Continuously watch service status (refreshes every 5s)\033[0m\n"
     @printf "  \033[0;37mjust logs             \033[0;34m Tail all service logs (color-coded)\033[0m\n"
     @echo ""
     @printf "\033[1;33mDocker\033[0m\n"
@@ -428,7 +429,34 @@ status:
     check_service "DB Gateway"   8007
     check_service "UI"           8008
 
+    # Check LM Studio if any court judge is configured to use it
+    court_config="services/court/config.yaml"
+    if [ -f "$court_config" ]; then
+        api_base=$(grep -A5 'api_key_env:.*LMSTUDIO' "$court_config" | grep -B5 'api_base:' | grep 'api_base:' | head -1 | awk '{print $2}' | tr -d '"')
+        if [ -z "$api_base" ]; then
+            # Try the other order: api_base before api_key_env
+            api_base=$(grep -B5 'api_key_env:.*LMSTUDIO' "$court_config" | grep 'api_base:' | head -1 | awk '{print $2}' | tr -d '"')
+        fi
+        if [ -n "$api_base" ]; then
+            printf "\n"
+            if curl -s --connect-timeout 2 "${api_base}/models" >/dev/null 2>&1; then
+                printf "\033[0;32m✓ LM Studio\033[0m (%s) - online\n" "$api_base"
+            else
+                printf "\033[0;31m✗ LM Studio\033[0m (%s) - not responding\n" "$api_base"
+            fi
+        fi
+    fi
+
     printf "\n"
+
+# Continuously watch service status (refreshes every 5s)
+watch:
+    #!/usr/bin/env bash
+    while true; do
+        clear
+        just status
+        sleep 5
+    done
 
 # Tail all service logs (color-coded, today by default)
 logs date="":
@@ -441,7 +469,7 @@ logs date="":
     fi
 
 # Destroy all virtual environments
-destroy-all:
+destroy-all: stop-all
     @echo ""
     @printf "\033[0;34m=== Destroying All Virtual Environments ===\033[0m\n"
     cd services/identity && just destroy
