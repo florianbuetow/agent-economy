@@ -15,6 +15,8 @@ from task_board_service.services.errors import DuplicateBidError, DuplicateTaskE
 from task_board_service.services.token_validator import decode_base64url_json
 
 if TYPE_CHECKING:
+    from base_agent.platform import PlatformAgent
+
     from task_board_service.clients.central_bank_client import CentralBankClient
     from task_board_service.clients.platform_signer import PlatformSigner
     from task_board_service.services.asset_manager import AssetManager
@@ -983,7 +985,12 @@ class TaskManager:
             raise RuntimeError(msg)
         return self._task_to_response(updated)
 
-    async def dispute_task(self, task_id: str, token: str) -> dict[str, Any]:
+    async def dispute_task(
+        self,
+        task_id: str,
+        token: str,
+        platform_agent: PlatformAgent,
+    ) -> dict[str, Any]:
         """
         Dispute deliverables — sends task to the Court for resolution.
 
@@ -1062,6 +1069,14 @@ class TaskManager:
                 {},
             )
 
+        court_dispute = await platform_agent.file_claim(
+            task_id=task_id,
+            claimant_id=str(task["poster_id"]),
+            respondent_id=str(task["worker_id"]),
+            claim=reason,
+            escrow_id=str(task["escrow_id"]),
+        )
+
         # Update task
         disputed_at = _now_iso()
         self._store.update_task(
@@ -1074,7 +1089,91 @@ class TaskManager:
         if updated is None:
             msg = f"Task {task_id} not found after update"
             raise RuntimeError(msg)
-        return self._task_to_response(updated)
+        response = self._task_to_response(updated)
+        dispute_id = court_dispute.get("dispute_id")
+        if dispute_id is not None:
+            response["dispute_id"] = dispute_id
+        return response
+
+    async def submit_rebuttal(
+        self,
+        task_id: str,
+        token: str,
+        platform_agent: PlatformAgent,
+    ) -> dict[str, Any]:
+        """
+        Submit a worker rebuttal via the platform-signed Court path.
+
+        Error precedence:
+        1-6. JWS verification
+        7.   invalid_payload — wrong action, task_id mismatch, missing fields
+        9a.  forbidden — signer != worker_id in payload
+        10.  task_not_found
+        11.  invalid_status — not DISPUTED
+        9b.  forbidden — signer != task's worker
+        12.  invalid_rebuttal — empty or too long
+        """
+        payload = await self._token_validator.validate_jws_token(token, "submit_rebuttal")
+        signer_id: str = payload["_signer_id"]
+
+        for field in ("task_id", "dispute_id", "worker_id", "rebuttal"):
+            if field not in payload:
+                raise ServiceError(
+                    "invalid_payload",
+                    f"Missing required field: {field}",
+                    400,
+                    {},
+                )
+
+        if payload["task_id"] != task_id:
+            raise ServiceError(
+                "invalid_payload",
+                "task_id in payload does not match URL path",
+                400,
+                {},
+            )
+
+        if signer_id != payload["worker_id"]:
+            raise ServiceError("forbidden", "Signer does not match worker_id", 403, {})
+
+        task = self._store.get_task(task_id)
+        if task is None:
+            raise ServiceError("task_not_found", "Task not found", 404, {})
+
+        if task["status"] != "disputed":
+            raise ServiceError(
+                "invalid_status",
+                f"Cannot rebut task in '{task['status']}' status, must be 'disputed'",
+                409,
+                {},
+            )
+
+        if signer_id != task["worker_id"]:
+            raise ServiceError("forbidden", "Only the worker can submit a rebuttal", 403, {})
+
+        dispute_id = payload["dispute_id"]
+        if not isinstance(dispute_id, str) or len(dispute_id) < 1:
+            raise ServiceError("invalid_payload", "dispute_id must be non-empty", 400, {})
+
+        rebuttal = payload["rebuttal"]
+        if not isinstance(rebuttal, str) or len(rebuttal) < 1:
+            raise ServiceError(
+                "invalid_rebuttal",
+                "Rebuttal must be a non-empty string",
+                400,
+                {},
+            )
+
+        if len(rebuttal) > 10000:
+            raise ServiceError(
+                "invalid_rebuttal",
+                "Rebuttal must not exceed 10,000 characters",
+                400,
+                {},
+            )
+
+        response: dict[str, Any] = await platform_agent.submit_rebuttal(dispute_id, rebuttal)
+        return response
 
     async def record_ruling(self, task_id: str, token: str) -> dict[str, Any]:
         """

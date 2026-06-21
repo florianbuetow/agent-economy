@@ -172,6 +172,12 @@ db_gateway:
         mock_platform = MagicMock()
         mock_platform.agent_id = PLATFORM_AGENT_ID
         mock_platform.validate_certificate = MagicMock(side_effect=_extract_payload)
+        mock_platform.file_claim = AsyncMock(
+            return_value={"dispute_id": f"disp-{uuid.uuid4()}", "status": "rebuttal_pending"}
+        )
+        mock_platform.submit_rebuttal = AsyncMock(
+            return_value={"dispute_id": f"disp-{uuid.uuid4()}", "status": "rebuttal_pending"}
+        )
         mock_platform.close = AsyncMock()
         state.platform_agent = mock_platform
 

@@ -79,7 +79,7 @@ class TaskFeederLoop:
     async def _feed_one(self, task_iter: Any) -> None:
         """Post one task if the board isn't full, otherwise wait."""
 
-        # Check how many of our open tasks are still in bidding
+        # Check how many of our posted tasks are still open for bids.
         open_count = await self._count_open_tasks()
         if open_count >= self._config.max_open_tasks:
             logger.debug(
@@ -124,10 +124,10 @@ class TaskFeederLoop:
         await asyncio.sleep(self._config.feed_interval_seconds)
 
     async def _count_open_tasks(self) -> int:
-        """Count tasks posted by this agent that are still in bidding."""
+        """Count tasks posted by this agent that are still open for bids."""
         try:
             tasks = await self._agent.list_tasks(
-                status="BIDDING",
+                status="open",
                 poster_id=self._agent.agent_id,
             )
             return len(tasks)

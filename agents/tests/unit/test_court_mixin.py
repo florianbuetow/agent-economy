@@ -28,15 +28,23 @@ class TestFileClaim:
         agent._sign_jws = Mock(return_value="claim-jws")
         agent._request = AsyncMock(return_value=claim_response)
 
-        result = await agent.file_claim("t-1", reason="Incomplete delivery")
+        result = await agent.file_claim(
+            task_id="t-1",
+            claimant_id="a-poster",
+            respondent_id="a-worker",
+            claim="Incomplete delivery",
+            escrow_id="esc-1",
+        )
 
         assert result == claim_response
         agent._sign_jws.assert_called_once_with(
             {
                 "action": "file_dispute",
                 "task_id": "t-1",
-                "claimant_id": "a-claimant",
+                "claimant_id": "a-poster",
+                "respondent_id": "a-worker",
                 "claim": "Incomplete delivery",
+                "escrow_id": "esc-1",
             }
         )
         agent._request.assert_awaited_once_with(

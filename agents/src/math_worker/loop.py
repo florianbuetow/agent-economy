@@ -146,7 +146,7 @@ class MathWorkerLoop:
         # --- WAITING FOR REVIEW ---
         review_outcome = await self._phase_waiting_for_review(task_id)
 
-        if review_outcome == "APPROVED":
+        if review_outcome == "approved":
             self._history.record(
                 task_id=task_id,
                 title=task.get("title", ""),
@@ -156,8 +156,9 @@ class MathWorkerLoop:
                 solution=solution,
                 payout=task.get("reward", 0),
             )
-        elif review_outcome == "DISPUTED":
-            await self._phase_disputed(task, solution)
+        elif review_outcome == "disputed":
+            disputed_task = await self._agent.get_task(task_id)
+            await self._phase_disputed(disputed_task, solution)
         else:
             self._history.record(
                 task_id=task_id,
@@ -180,7 +181,7 @@ class MathWorkerLoop:
             The chosen task_id, or None if no suitable task found.
         """
         logger.info("[SCANNING] Listing open tasks")
-        tasks = await self._agent.list_tasks(status="BIDDING")
+        tasks = await self._agent.list_tasks(status="open")
 
         if not tasks:
             return None
@@ -251,9 +252,9 @@ class MathWorkerLoop:
 
         for attempt in range(self._config.max_poll_attempts):
             task = await self._agent.get_task(task_id)
-            status = task.get("status", "")
+            status = str(task.get("status", "")).lower()
 
-            if status in ("IN_PROGRESS", "EXECUTION"):
+            if status == "accepted":
                 # Our bid was accepted (task moved to execution)
                 worker_id = task.get("worker_id")
                 if worker_id == self._agent.agent_id:
@@ -263,7 +264,7 @@ class MathWorkerLoop:
                 logger.info("[WAITING] Another agent's bid accepted for task %s", task_id)
                 return False
 
-            if status in ("CANCELLED", "COMPLETED", "APPROVED", "FAILED"):
+            if status in ("cancelled", "approved", "disputed", "ruled", "expired"):
                 logger.info("[WAITING] Task %s moved to terminal state: %s", task_id, status)
                 return False
 
@@ -308,27 +309,27 @@ class MathWorkerLoop:
         """Poll until the poster approves, disputes, or the review times out.
 
         Returns:
-            One of: "APPROVED", "DISPUTED", "TIMEOUT".
+            One of: "approved", "disputed", "timeout".
         """
         logger.info("[REVIEW] Waiting for review of task %s", task_id)
 
         for attempt in range(self._config.max_poll_attempts):
             task = await self._agent.get_task(task_id)
-            status = task.get("status", "")
+            status = str(task.get("status", "")).lower()
 
-            if status in ("APPROVED", "COMPLETED"):
+            if status == "approved":
                 logger.info("[REVIEW] Task %s approved", task_id)
-                return "APPROVED"
+                return "approved"
 
-            if status in ("DISPUTED", "IN_DISPUTE"):
+            if status == "disputed":
                 logger.info("[REVIEW] Task %s disputed", task_id)
-                return "DISPUTED"
+                return "disputed"
 
             if attempt < self._config.max_poll_attempts - 1:
                 await asyncio.sleep(self._config.poll_interval_seconds)
 
         logger.info("[REVIEW] Review timed out for task %s, assuming auto-approve", task_id)
-        return "TIMEOUT"
+        return "timeout"
 
     async def _phase_disputed(
         self,
@@ -346,13 +347,15 @@ class MathWorkerLoop:
         response = await self._llm.complete(DISPUTE_REBUTTAL_SYSTEM, prompt)
         rebuttal = response.content
 
-        logger.info("[DISPUTED] Filing rebuttal for task %s", task_id)
-        # The court filing mechanism depends on the court service API.
-        # For now, we log the rebuttal; the file_claim method will submit it.
+        logger.info("[DISPUTED] Submitting rebuttal for task %s", task_id)
         try:
-            await self._agent.file_claim(task_id, rebuttal)
+            dispute_id = await self._resolve_dispute_id(task_id, task)
+            if dispute_id is None:
+                logger.warning("No Court dispute found for task %s; skipping rebuttal", task_id)
+            else:
+                await self._agent.submit_worker_rebuttal(task_id, dispute_id, rebuttal)
         except Exception:
-            logger.exception("Failed to file claim for task %s", task_id)
+            logger.exception("Failed to submit rebuttal for task %s", task_id)
 
         # Wait for ruling
         ruling_outcome = await self._phase_waiting_for_ruling(task_id)
@@ -379,9 +382,9 @@ class MathWorkerLoop:
 
         for attempt in range(self._config.max_poll_attempts):
             task = await self._agent.get_task(task_id)
-            status = task.get("status", "")
+            status = str(task.get("status", "")).lower()
 
-            if status in ("RULED", "COMPLETED", "APPROVED", "RESOLVED"):
+            if status == "ruled":
                 payout = task.get("worker_payout", task.get("reward", 0))
                 logger.info("[RULING] Ruling received for %s: payout=%s", task_id, payout)
                 return {"payout": payout, "status": status}
@@ -395,6 +398,20 @@ class MathWorkerLoop:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    async def _resolve_dispute_id(self, task_id: str, task: dict[str, Any]) -> str | None:
+        """Resolve the Court dispute id for a disputed task."""
+        task_dispute_id = task.get("dispute_id")
+        if isinstance(task_dispute_id, str) and task_dispute_id:
+            return task_dispute_id
+
+        disputes = await self._agent.list_disputes(task_id=task_id)
+        if not disputes:
+            return None
+        dispute_id = disputes[0].get("dispute_id")
+        if isinstance(dispute_id, str) and dispute_id:
+            return dispute_id
+        return None
 
     async def _get_balance(self) -> int:
         """Fetch the agent's current balance, defaulting to 0 on error."""
