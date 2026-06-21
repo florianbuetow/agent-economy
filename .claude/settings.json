@@ -6,11 +6,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash scripts/ci-all-quiet-hook.sh",
+            "command": "bash scripts/ci-quiet-hook.sh",
             "timeout": 300
           }
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "ponytail@ponytail": true
+  },
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    }
   }
 }
