@@ -121,6 +121,9 @@ data/*
 # Scratch (example project, not part of the repo)
 scratch/
 
+# OpenSpec specifications
+openspec/
+
 # Guard (file integrity tracking, machine-specific)
 .guardfile
 .worktrees/
@@ -129,5 +132,24 @@ scratch/
 .appsec/*
 !.appsec/config.yaml
 
-# Claude Code
-.claude/worktrees/
+# Claude Code per-user state
+.claude/
+
+# Claude plugin runtime state (omx hooks)
+.omx/
+
+# Codex working directory
+.codex/
+
+# Beads metadata backups
+.beads/*.bak-*
+
+# Local demo sandbox
+demo/
+
+# Documentation (tracked separately, not in git)
+docs/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db
