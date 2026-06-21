@@ -10,6 +10,10 @@ from typing import Any, ClassVar
 
 from service_commons.exceptions import ServiceError
 
+from central_bank_service.logging import get_logger
+
+_logger = get_logger(__name__)
+
 
 @dataclass
 class _DatabaseState:
@@ -71,6 +75,7 @@ class InMemoryLedgerStore:
                 "created_at": created_at,
             }
             self._state.transactions.setdefault(account_id, [])
+            tx_id: str | None = None
 
             if initial_balance > 0:
                 tx = {
@@ -82,12 +87,23 @@ class InMemoryLedgerStore:
                     "timestamp": created_at,
                 }
                 self._append_tx(account_id, tx)
+                tx_id = str(tx["tx_id"])
 
-            return {
+            result: dict[str, object] = {
                 "account_id": account_id,
                 "balance": initial_balance,
                 "created_at": created_at,
             }
+            audit_extra: dict[str, object] = {
+                "operation": "create_account",
+                "account_id": account_id,
+                "initial_balance": initial_balance,
+                "reference": "initial_balance",
+            }
+            if tx_id is not None:
+                audit_extra["tx_id"] = tx_id
+            _logger.info("audit", extra=audit_extra)
+            return result
 
     def get_account(self, account_id: str) -> dict[str, object] | None:
         with self._state.lock:
@@ -136,7 +152,18 @@ class InMemoryLedgerStore:
             }
             self._append_tx(account_id, tx)
             self._state.credit_refs[key] = tx
-            return {"tx_id": str(tx["tx_id"]), "balance_after": new_balance}
+            result: dict[str, object] = {"tx_id": str(tx["tx_id"]), "balance_after": new_balance}
+            _logger.info(
+                "audit",
+                extra={
+                    "operation": "credit",
+                    "account_id": account_id,
+                    "amount": amount,
+                    "reference": reference,
+                    "tx_id": str(tx["tx_id"]),
+                },
+            )
+            return result
 
     def get_transactions(self, account_id: str) -> list[dict[str, object]]:
         with self._state.lock:
@@ -200,12 +227,25 @@ class InMemoryLedgerStore:
             }
             self._append_tx(payer_account_id, debit_tx)
 
-            return {
+            result: dict[str, object] = {
                 "escrow_id": escrow_id,
                 "amount": amount,
                 "task_id": task_id,
                 "status": "locked",
             }
+            _logger.info(
+                "audit",
+                extra={
+                    "operation": "escrow_lock",
+                    "payer_account_id": payer_account_id,
+                    "amount": amount,
+                    "task_id": task_id,
+                    "escrow_id": escrow_id,
+                    "reference": task_id,
+                    "tx_id": str(debit_tx["tx_id"]),
+                },
+            )
+            return result
 
     def escrow_release(self, escrow_id: str, recipient_account_id: str) -> dict[str, object]:
         with self._state.lock:
@@ -246,12 +286,24 @@ class InMemoryLedgerStore:
                 None,
             )
 
-            return {
+            result: dict[str, object] = {
                 "escrow_id": escrow_id,
                 "status": "released",
                 "amount": amount,
                 "recipient": recipient_account_id,
             }
+            _logger.info(
+                "audit",
+                extra={
+                    "operation": "escrow_release",
+                    "escrow_id": escrow_id,
+                    "recipient": recipient_account_id,
+                    "amount": amount,
+                    "reference": escrow_id,
+                    "tx_id": str(tx["tx_id"]),
+                },
+            )
+            return result
 
     def escrow_split(
         self,
@@ -316,13 +368,28 @@ class InMemoryLedgerStore:
                 None,
             )
 
-            return {
+            result: dict[str, object] = {
                 "escrow_id": escrow_id,
                 "status": "split",
                 "worker_amount": worker_amount,
                 "poster_amount": poster_amount,
                 "worker_pct": worker_pct,
             }
+            _logger.info(
+                "audit",
+                extra={
+                    "operation": "escrow_split",
+                    "escrow_id": escrow_id,
+                    "worker_account_id": worker_account_id,
+                    "poster_account_id": poster_account_id,
+                    "worker_amount": worker_amount,
+                    "poster_amount": poster_amount,
+                    "reference": escrow_id,
+                    "worker_tx_id": str(worker_tx["tx_id"]),
+                    "poster_tx_id": str(poster_tx["tx_id"]),
+                },
+            )
+            return result
 
     def count_accounts(self) -> int:
         with self._state.lock:

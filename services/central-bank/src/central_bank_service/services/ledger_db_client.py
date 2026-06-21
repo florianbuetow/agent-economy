@@ -10,6 +10,10 @@ from typing import Any
 import httpx
 from service_commons.exceptions import ServiceError
 
+from central_bank_service.logging import get_logger
+
+_logger = get_logger(__name__)
+
 
 class LedgerDbClient:
     """Ledger storage backed by the DB Gateway HTTP API."""
@@ -43,6 +47,7 @@ class LedgerDbClient:
             raise ServiceError("invalid_amount", "Initial balance must be non-negative", 400, {})
 
         now = self._now()
+        tx_id: str | None = None
         payload: dict[str, Any] = {
             "account_id": account_id,
             "balance": initial_balance,
@@ -57,8 +62,9 @@ class LedgerDbClient:
             },
         }
         if initial_balance > 0:
+            tx_id = self._new_tx_id()
             payload["initial_credit"] = {
-                "tx_id": self._new_tx_id(),
+                "tx_id": tx_id,
                 "amount": initial_balance,
                 "reference": "initial_balance",
                 "timestamp": now,
@@ -71,11 +77,21 @@ class LedgerDbClient:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
 
-        return {
+        result: dict[str, object] = {
             "account_id": account_id,
             "balance": initial_balance,
             "created_at": now,
         }
+        audit_extra: dict[str, object] = {
+            "operation": "create_account",
+            "account_id": account_id,
+            "initial_balance": initial_balance,
+            "reference": "initial_balance",
+        }
+        if tx_id is not None:
+            audit_extra["tx_id"] = tx_id
+        _logger.info("audit", extra=audit_extra)
+        return result
 
     def get_account(self, account_id: str) -> dict[str, object] | None:
         response = self._client.get(f"/bank/accounts/{account_id}")
@@ -131,10 +147,21 @@ class LedgerDbClient:
             raise RuntimeError(msg)
 
         data = self._json(response)
-        return {
+        result: dict[str, object] = {
             "tx_id": str(data.get("tx_id", tx_id)),
             "balance_after": int(data.get("balance_after", 0)),
         }
+        _logger.info(
+            "audit",
+            extra={
+                "operation": "credit",
+                "account_id": account_id,
+                "amount": amount,
+                "reference": reference,
+                "tx_id": str(result["tx_id"]),
+            },
+        )
+        return result
 
     def get_transactions(self, account_id: str) -> list[dict[str, object]]:
         account = self.get_account(account_id)
@@ -206,12 +233,25 @@ class LedgerDbClient:
             raise RuntimeError(msg)
 
         data = self._json(response)
-        return {
+        result: dict[str, object] = {
             "escrow_id": str(data.get("escrow_id", escrow_id)),
             "amount": amount,
             "task_id": task_id,
             "status": "locked",
         }
+        _logger.info(
+            "audit",
+            extra={
+                "operation": "escrow_lock",
+                "payer_account_id": payer_account_id,
+                "amount": amount,
+                "task_id": task_id,
+                "escrow_id": str(result["escrow_id"]),
+                "reference": task_id,
+                "tx_id": str(payload["tx_id"]),
+            },
+        )
+        return result
 
     def escrow_release(self, escrow_id: str, recipient_account_id: str) -> dict[str, object]:
         now = self._now()
@@ -253,12 +293,25 @@ class LedgerDbClient:
             raise RuntimeError(msg)
 
         data = self._json(response)
-        return {
+        amount = int(data.get("amount", 0))
+        result: dict[str, object] = {
             "escrow_id": escrow_id,
             "status": "released",
             "recipient": recipient_account_id,
-            "amount": int(data.get("amount", 0)),
+            "amount": amount,
         }
+        _logger.info(
+            "audit",
+            extra={
+                "operation": "escrow_release",
+                "escrow_id": escrow_id,
+                "recipient": recipient_account_id,
+                "amount": amount,
+                "reference": escrow_id,
+                "tx_id": str(payload["tx_id"]),
+            },
+        )
+        return result
 
     def escrow_split(
         self,
@@ -343,12 +396,27 @@ class LedgerDbClient:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
 
-        return {
+        result: dict[str, object] = {
             "escrow_id": escrow_id,
             "status": "split",
             "worker_amount": worker_amount,
             "poster_amount": poster_amount,
         }
+        _logger.info(
+            "audit",
+            extra={
+                "operation": "escrow_split",
+                "escrow_id": escrow_id,
+                "worker_account_id": worker_account_id,
+                "poster_account_id": poster_account_id,
+                "worker_amount": worker_amount,
+                "poster_amount": poster_amount,
+                "reference": escrow_id,
+                "worker_tx_id": str(payload["worker_tx_id"]),
+                "poster_tx_id": str(payload["poster_tx_id"]),
+            },
+        )
+        return result
 
     def count_accounts(self) -> int:
         response = self._client.get("/bank/accounts/count")
