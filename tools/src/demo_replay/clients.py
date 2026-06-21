@@ -18,6 +18,7 @@ from demo_replay.wallet import DemoAgent
 IDENTITY_URL = "http://localhost:8001"
 BANK_URL = "http://localhost:8002"
 TASK_BOARD_URL = "http://localhost:8003"
+COURT_URL = "http://localhost:8005"
 
 
 async def register_agent(
@@ -208,6 +209,18 @@ async def accept_bid(
     return resp.json()  # type: ignore[no-any-return]
 
 
+async def get_task(
+    client: httpx.AsyncClient,
+    task_id: str,
+    task_board_url: str = TASK_BOARD_URL,
+) -> dict[str, Any]:
+    """Fetch task details from the Task Board."""
+    url = f"{task_board_url}/tasks/{task_id}"
+    resp = await client.get(url)
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
 async def upload_asset(
     client: httpx.AsyncClient,
     worker: DemoAgent,
@@ -283,6 +296,87 @@ async def dispute_task(
             "reason": reason,
         }
     )
+    resp = await client.post(url, json={"token": token})
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
+async def list_disputes(
+    client: httpx.AsyncClient,
+    task_id: str | None = None,
+    court_url: str = COURT_URL,
+) -> list[dict[str, Any]]:
+    """List Court disputes, optionally filtered by task_id."""
+    params: dict[str, str] = {}
+    if task_id is not None:
+        params["task_id"] = task_id
+    resp = await client.get(f"{court_url}/disputes", params=params)
+    resp.raise_for_status()
+    data: dict[str, Any] = resp.json()
+    disputes: list[dict[str, Any]] = data["disputes"]
+    return disputes
+
+
+async def file_claim(
+    client: httpx.AsyncClient,
+    platform: DemoAgent,
+    task_id: str,
+    claimant_id: str,
+    respondent_id: str,
+    claim: str,
+    escrow_id: str,
+    court_url: str = COURT_URL,
+) -> dict[str, Any]:
+    """File a Court claim directly with a platform-signed token."""
+    url = f"{court_url}/disputes/file"
+    token = platform.sign_jws(
+        {
+            "action": "file_dispute",
+            "task_id": task_id,
+            "claimant_id": claimant_id,
+            "respondent_id": respondent_id,
+            "claim": claim,
+            "escrow_id": escrow_id,
+        }
+    )
+    resp = await client.post(url, json={"token": token})
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
+async def submit_rebuttal(
+    client: httpx.AsyncClient,
+    worker: DemoAgent,
+    task_id: str,
+    dispute_id: str,
+    rebuttal: str,
+    task_board_url: str = TASK_BOARD_URL,
+) -> dict[str, Any]:
+    """Submit a worker rebuttal through Task Board mediation."""
+    url = f"{task_board_url}/tasks/{task_id}/rebuttal"
+    token = worker.sign_jws(
+        {
+            "action": "submit_rebuttal",
+            "task_id": task_id,
+            "dispute_id": dispute_id,
+            "worker_id": worker.agent_id,
+            "rebuttal": rebuttal,
+        }
+    )
+    resp = await client.post(url, json={"token": token})
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
+async def trigger_ruling(
+    client: httpx.AsyncClient,
+    platform: DemoAgent,
+    dispute_id: str,
+    court_url: str = COURT_URL,
+) -> dict[str, Any]:
+    """Trigger a Court ruling with a platform-signed token."""
+    url = f"{court_url}/disputes/{dispute_id}/rule"
+    token = platform.sign_jws({"action": "trigger_ruling", "dispute_id": dispute_id})
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
     return resp.json()  # type: ignore[no-any-return]

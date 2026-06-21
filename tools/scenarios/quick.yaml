@@ -5,7 +5,7 @@ description: >
   Demonstrates the full task lifecycle with three agents.
   Act 1: Register agents and fund accounts.
   Act 2: Happy path — post task, bid, accept, submit, approve.
-  Act 3: Dispute path — post task, bid, accept, submit, dispute.
+  Act 3: Dispute path — post task, bid, accept, submit, dispute, rebuttal, ruling.
 default_delay: 2.0
 
 agents:
@@ -147,3 +147,14 @@ steps:
     poster: alice
     task_ref: api_task
     reason: "Specification is incomplete: missing PUT and PATCH endpoints for updating todos, no error response schemas defined, and no pagination parameters documented."
+
+  - action: submit_rebuttal
+    worker: carol
+    task_ref: api_task
+    rebuttal: "The submitted API specification covers the core workflow; omitted update/error details were not fully constrained by the task."
+    delay: 2.0
+
+  - action: trigger_ruling
+    agent: alice
+    task_ref: api_task
+    delay: 2.0
