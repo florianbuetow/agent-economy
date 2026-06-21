@@ -7,12 +7,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from base_agent.factory import AgentFactory
+from service_clients.identity import IdentityClient
 
 from reputation_service.config import get_config_path, get_settings
 from reputation_service.core.state import init_app_state
 from reputation_service.logging import get_logger, setup_logging
 from reputation_service.services.feedback_db_client import FeedbackDbClient
-from reputation_service.services.identity_client import IdentityClient, PlatformIdentityClient
+from reputation_service.services.platform_identity_client import PlatformIdentityClient
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -56,9 +57,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # Initialize identity client for JWS verification
     if settings.identity is not None:
+        identity_config = settings.identity
         state.identity_client = IdentityClient(
-            base_url=settings.identity.base_url,
-            verify_jws_path=settings.identity.verify_jws_path,
+            base_url=identity_config.base_url,
+            get_agent_path=identity_config.get_agent_path or "",
+            verify_jws_path=identity_config.verify_jws_path,
+            timeout_seconds=identity_config.timeout_seconds or 10,
         )
     else:
         state.identity_client = PlatformIdentityClient(

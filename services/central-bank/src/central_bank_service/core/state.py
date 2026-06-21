@@ -10,8 +10,8 @@ from central_bank_service.config import get_settings
 
 if TYPE_CHECKING:
     from base_agent.platform import PlatformAgent
+    from service_clients.identity import IdentityClient
 
-    from central_bank_service.services.identity_client import IdentityClient
     from central_bank_service.services.protocol import LedgerStorageInterface
 
 

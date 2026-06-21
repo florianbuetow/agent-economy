@@ -62,6 +62,7 @@ class IdentityConfig(BaseModel):
     base_url: str
     get_agent_path: str
     verify_jws_path: str | None = None
+    timeout_seconds: int | None = None
 
 
 class PlatformConfig(BaseModel):
