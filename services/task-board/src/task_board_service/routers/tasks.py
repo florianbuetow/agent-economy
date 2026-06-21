@@ -190,7 +190,47 @@ async def dispute_task(task_id: str, request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await state.task_manager.dispute_task(task_id, token)
+    if state.platform_agent is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="Platform agent not initialized",
+            status_code=503,
+            details={},
+        )
+
+    result = await state.task_manager.dispute_task(task_id, token, state.platform_agent)
+    return JSONResponse(status_code=200, content=result)
+
+
+# ---------------------------------------------------------------------------
+# Rebuttal endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.post("/tasks/{task_id}/rebuttal")
+async def submit_rebuttal(task_id: str, request: Request) -> JSONResponse:
+    """Submit a worker rebuttal through the platform mediation layer."""
+    body = await request.body()
+    data = parse_json_body(body)
+    token = extract_token(data, "token")
+
+    state = get_app_state()
+    if state.task_manager is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
+    if state.platform_agent is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="Platform agent not initialized",
+            status_code=503,
+            details={},
+        )
+
+    result = await state.task_manager.submit_rebuttal(task_id, token, state.platform_agent)
     return JSONResponse(status_code=200, content=result)
 
 
@@ -264,6 +304,16 @@ async def approve_method_not_allowed(task_id: str, request: Request) -> None:
 )
 async def dispute_method_not_allowed(task_id: str, request: Request) -> None:
     """Reject wrong methods on /tasks/{task_id}/dispute."""
+    _ = (task_id, request)
+    raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
+
+
+@router.api_route(
+    "/tasks/{task_id}/rebuttal",
+    methods=["GET", "PUT", "PATCH", "DELETE"],
+)
+async def rebuttal_method_not_allowed(task_id: str, request: Request) -> None:
+    """Reject wrong methods on /tasks/{task_id}/rebuttal."""
     _ = (task_id, request)
     raise ServiceError("method_not_allowed", "Method not allowed", 405, {})
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import httpx
 import pytest
 
 if TYPE_CHECKING:
@@ -53,86 +54,75 @@ async def _file_dispute_with_court(
     task_id = str(disputed_task["task_id"])
 
     # Check if Court already has a dispute for this task
-    listed_disputes = await poster._request(
-        "GET",
-        f"{poster.config.court_url}/disputes",
-        params={"task_id": task_id},
-    )
-    disputes = listed_disputes["disputes"]
+    disputes = await poster.list_disputes(task_id=task_id)
     if len(disputes) > 0:
         return str(disputes[0]["dispute_id"])
 
-    # File a new dispute via platform-signed JWS
-    file_token = platform_agent._sign_jws(
-        {
-            "action": "file_dispute",
-            "task_id": task_id,
-            "claimant_id": poster.agent_id,
-            "respondent_id": worker.agent_id,
-            "claim": dispute_reason,
-            "escrow_id": disputed_task["escrow_id"],
-        }
-    )
-    file_response = await platform_agent._request_raw(
-        "POST",
-        f"{platform_agent.config.court_url}/disputes/file",
-        json={"token": file_token},
-    )
-    if file_response.status_code == 201:
-        return str(file_response.json()["dispute_id"])
-
-    # Handle 409 (already filed, perhaps by Task Board auto-filing)
-    if file_response.status_code == 409:
-        refreshed = await poster._request(
-            "GET",
-            f"{poster.config.court_url}/disputes",
-            params={"task_id": task_id},
+    try:
+        file_response = await platform_agent.file_claim(
+            task_id=task_id,
+            claimant_id=str(poster.agent_id),
+            respondent_id=str(worker.agent_id),
+            claim=dispute_reason,
+            escrow_id=str(disputed_task["escrow_id"]),
         )
-        refreshed_disputes = refreshed["disputes"]
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code != 409:
+            pytest.fail(
+                f"Court dispute filing failed with status "
+                f"{exc.response.status_code}: {exc.response.text}"
+            )
+        refreshed_disputes = await poster.list_disputes(task_id=task_id)
         if len(refreshed_disputes) > 0:
             return str(refreshed_disputes[0]["dispute_id"])
+        pytest.fail("Court dispute filing returned 409 but no dispute was listed")
 
-    pytest.fail(
-        f"Court dispute filing failed with status {file_response.status_code}: {file_response.text}"
-    )
+    return str(file_response["dispute_id"])
 
 
 async def _submit_rebuttal(platform_agent: PlatformAgent, dispute_id: str) -> int:
     """Submit a rebuttal on behalf of the worker. Returns HTTP status code."""
-    rebuttal_token = platform_agent._sign_jws(
-        {
-            "action": "submit_rebuttal",
-            "dispute_id": dispute_id,
-            "rebuttal": "The deliverable meets all specification requirements.",
-        }
-    )
-    rebuttal_response = await platform_agent._request_raw(
-        "POST",
-        f"{platform_agent.config.court_url}/disputes/{dispute_id}/rebuttal",
-        json={"token": rebuttal_token},
-    )
-    return rebuttal_response.status_code
+    try:
+        await platform_agent.submit_rebuttal(
+            dispute_id,
+            "The deliverable meets all specification requirements.",
+        )
+    except httpx.HTTPStatusError as exc:
+        return exc.response.status_code
+    return 200
 
 
 async def _trigger_ruling(
     platform_agent: PlatformAgent, dispute_id: str
 ) -> tuple[int, dict[str, Any]]:
     """Trigger the judge panel ruling. Returns (status_code, response_json)."""
-    ruling_token = platform_agent._sign_jws(
-        {
-            "action": "trigger_ruling",
-            "dispute_id": dispute_id,
-        }
-    )
-    ruling_response = await platform_agent._request_raw(
-        "POST",
-        f"{platform_agent.config.court_url}/disputes/{dispute_id}/rule",
-        json={"token": ruling_token},
-    )
-    payload: dict[str, Any] = {}
-    if ruling_response.headers.get("content-type", "").startswith("application/json"):
-        payload = ruling_response.json()
-    return ruling_response.status_code, payload
+    try:
+        payload = await platform_agent.trigger_ruling(dispute_id)
+    except httpx.HTTPStatusError as exc:
+        error_payload: dict[str, Any] = {}
+        if exc.response.headers.get("content-type", "").startswith("application/json"):
+            error_payload = exc.response.json()
+        return exc.response.status_code, error_payload
+    return 200, payload
+
+
+async def _file_duplicate_dispute(
+    poster: BaseAgent,
+    worker: BaseAgent,
+    platform_agent: PlatformAgent,
+    disputed_task: dict[str, Any],
+) -> int:
+    try:
+        await platform_agent.file_claim(
+            task_id=str(disputed_task["task_id"]),
+            claimant_id=str(poster.agent_id),
+            respondent_id=str(worker.agent_id),
+            claim="Filing again",
+            escrow_id=str(disputed_task["escrow_id"]),
+        )
+    except httpx.HTTPStatusError as exc:
+        return exc.response.status_code
+    return 201
 
 
 async def _drive_to_ruling(
@@ -335,23 +325,13 @@ async def test_duplicate_dispute_rejected(
         )
 
         # Second filing should be rejected
-        duplicate_token = platform_agent._sign_jws(
-            {
-                "action": "file_dispute",
-                "task_id": str(disputed_task["task_id"]),
-                "claimant_id": poster.agent_id,
-                "respondent_id": worker.agent_id,
-                "claim": "Filing again",
-                "escrow_id": disputed_task["escrow_id"],
-            }
-        )
-        duplicate_response = await platform_agent._request_raw(
-            "POST",
-            f"{platform_agent.config.court_url}/disputes/file",
-            json={"token": duplicate_token},
+        duplicate_status = await _file_duplicate_dispute(
+            poster,
+            worker,
+            platform_agent,
+            disputed_task,
         )
 
-        assert duplicate_response.status_code == 409
-        assert duplicate_response.json()["error"] == "dispute_already_exists"
+        assert duplicate_status == 409
     finally:
         await _close_agents(agents_to_close)

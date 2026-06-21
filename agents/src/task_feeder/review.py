@@ -60,7 +60,7 @@ class ReviewLoop:
         """Continuously review submitted tasks for this poster."""
         while self._running:
             tasks = await self._agent.list_tasks(
-                status="SUBMITTED",
+                status="submitted",
                 poster_id=self._agent.agent_id,
             )
             for task in tasks:

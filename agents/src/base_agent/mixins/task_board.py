@@ -190,3 +190,22 @@ class TaskBoardMixin:
             }
         )
         return await self._request("POST", url, json={"token": token})
+
+    async def submit_worker_rebuttal(
+        self: _TaskBoardClient,
+        task_id: str,
+        dispute_id: str,
+        rebuttal: str,
+    ) -> dict[str, Any]:
+        """Submit a worker rebuttal through the Task Board mediation layer."""
+        url = f"{self.config.task_board_url}/tasks/{task_id}/rebuttal"
+        token = self._sign_jws(
+            {
+                "action": "submit_rebuttal",
+                "task_id": task_id,
+                "dispute_id": dispute_id,
+                "worker_id": self.agent_id,
+                "rebuttal": rebuttal,
+            }
+        )
+        return await self._request("POST", url, json={"token": token})
