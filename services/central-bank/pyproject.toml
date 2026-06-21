@@ -6,19 +6,21 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn>=0.34.0",
-    "starlette>=0.47.2",
+    "starlette>=1.0.0",
     "pydantic>=2.10.0",
     "service-commons",
+    "service-clients",
     "httpx>=0.28.0",
     "base-agent",
+    "pyjwt>=2.13.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
+    "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
     "pytest-asyncio>=0.24.0",
-    "cryptography>=44.0.0",
+    "cryptography>=48.0.1",
     "pytestarch[visualization]>=2.0.0",
     "httpx>=0.28.0",
     "joserfc>=1.6.3",
@@ -38,8 +40,22 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv]
+constraint-dependencies = [
+    "gitpython>=3.1.50",
+    "idna>=3.15",
+    "msgpack>=1.2.1",
+    "pillow>=12.2.0",
+    "pip>=26.1.2",
+    "pydantic-settings>=2.14.2",
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.31",
+    "urllib3>=2.7.0",
+]
+
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
+service-clients = { path = "../../libs/service-clients", editable = true }
 base-agent = { path = "../../agents", editable = true }
 
 [tool.hatch.build.targets.wheel]
@@ -149,6 +165,7 @@ extend_exclude = [".venv", "tests"]
 [tool.deptry.per_rule_ignores]
 DEP002 = [
     "fastapi",
+    "pyjwt",
     "uvicorn",
     "pydantic",
     "service-commons",
