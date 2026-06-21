@@ -46,6 +46,8 @@ class ReplayEngine:
         self._bids: dict[str, list[dict[str, Any]]] = {}
         # worker_handle -> task_id (set when bid is accepted)
         self._worker_task: dict[str, str] = {}
+        # task_id -> Court dispute_id
+        self._disputes: dict[str, str] = {}
 
     def _resolve_task_id(self, step: dict[str, Any], agent_handle: str) -> str:
         """Resolve task_id from explicit task_ref, poster's latest, or worker assignment."""
@@ -123,6 +125,12 @@ class ReplayEngine:
                 await self._do_approve(http, step)
             case "dispute":
                 await self._do_dispute(http, step)
+            case "file_claim":
+                await self._do_file_claim(http, step)
+            case "submit_rebuttal":
+                await self._do_submit_rebuttal(http, step)
+            case "trigger_ruling":
+                await self._do_trigger_ruling(http, step)
             case "feedback":
                 await self._do_feedback(http, step)
             case "reveal_feedback":
@@ -274,9 +282,81 @@ class ReplayEngine:
         poster = self.agents[poster_handle]
         task_id = self._resolve_task_id(step, poster_handle)
         reason = step.get("reason", "Deliverable does not meet specification")
-        await clients.dispute_task(http, poster, task_id, reason)
+        result = await clients.dispute_task(http, poster, task_id, reason)
+        dispute_id = result.get("dispute_id")
+        if isinstance(dispute_id, str) and dispute_id:
+            self._disputes[task_id] = dispute_id
         console.print(
             f"  [green]{poster.name} disputed task:[/green] \"{reason}\""
+        )
+
+    async def _resolve_dispute_id(self, http: httpx.AsyncClient, task_id: str) -> str:
+        if task_id in self._disputes:
+            return self._disputes[task_id]
+        disputes = await clients.list_disputes(http, task_id=task_id)
+        if not disputes:
+            msg = f"No Court dispute found for task {task_id}"
+            raise ValueError(msg)
+        dispute_id = str(disputes[0]["dispute_id"])
+        self._disputes[task_id] = dispute_id
+        return dispute_id
+
+    async def _do_file_claim(
+        self, http: httpx.AsyncClient, step: dict[str, Any]
+    ) -> None:
+        assert self.platform is not None
+        poster_handle = step["poster"]
+        poster = self.agents[poster_handle]
+        task_id = self._resolve_task_id(step, poster_handle)
+        task = await clients.get_task(http, task_id)
+        respondent_id = task.get("worker_id")
+        if not isinstance(respondent_id, str) or respondent_id == "":
+            worker_handle = step.get("worker")
+            if not isinstance(worker_handle, str):
+                msg = "file_claim requires an accepted task or explicit worker"
+                raise ValueError(msg)
+            worker = self.agents[worker_handle]
+            respondent_id = str(worker.agent_id)
+
+        claim = step.get("claim", step.get("reason", "Deliverable does not meet specification"))
+        result = await clients.file_claim(
+            http,
+            self.platform,
+            task_id=task_id,
+            claimant_id=str(poster.agent_id),
+            respondent_id=respondent_id,
+            claim=str(claim),
+            escrow_id=str(task["escrow_id"]),
+        )
+        dispute_id = str(result["dispute_id"])
+        self._disputes[task_id] = dispute_id
+        console.print(f"  [green]Court claim filed:[/green] {dispute_id}")
+
+    async def _do_submit_rebuttal(
+        self, http: httpx.AsyncClient, step: dict[str, Any]
+    ) -> None:
+        worker_handle = step["worker"]
+        worker = self.agents[worker_handle]
+        task_id = self._resolve_task_id(step, worker_handle)
+        dispute_id = await self._resolve_dispute_id(http, task_id)
+        rebuttal = step.get("rebuttal", "The deliverable meets the specification.")
+        await clients.submit_rebuttal(http, worker, task_id, dispute_id, str(rebuttal))
+        console.print(f"  [green]{worker.name} submitted rebuttal[/green] -> {dispute_id}")
+
+    async def _do_trigger_ruling(
+        self, http: httpx.AsyncClient, step: dict[str, Any]
+    ) -> None:
+        assert self.platform is not None
+        agent_handle = step.get("agent") or step.get("poster") or step.get("worker")
+        if not isinstance(agent_handle, str):
+            msg = "trigger_ruling requires agent, poster, worker, or task_ref context"
+            raise ValueError(msg)
+        task_id = self._resolve_task_id(step, agent_handle)
+        dispute_id = await self._resolve_dispute_id(http, task_id)
+        result = await clients.trigger_ruling(http, self.platform, dispute_id)
+        console.print(
+            f"  [green]Court ruled[/green] dispute={dispute_id}"
+            f" worker_pct={result.get('worker_pct', '?')}"
         )
 
     async def _do_feedback(

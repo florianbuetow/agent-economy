@@ -5,7 +5,7 @@ description: >
   Demonstrates the complete task lifecycle including feedback exchange.
   Act 1: Register agents and fund accounts.
   Act 2: Happy path — post task, bid, accept, submit, approve, feedback.
-  Act 3: Dispute path — post task, bid, accept, submit, dispute.
+  Act 3: Dispute path — post task, bid, accept, submit, dispute, rebuttal, ruling.
 default_delay: 2.0
 
 agents:
@@ -149,3 +149,14 @@ steps:
     poster: alice
     task_ref: api_task
     reason: "Missing PUT/PATCH endpoints and error response schemas."
+
+  - action: submit_rebuttal
+    worker: carol
+    task_ref: api_task
+    rebuttal: "The API spec includes the requested core endpoints; the update and error sections can be inferred from the provided REST structure."
+    delay: 2.0
+
+  - action: trigger_ruling
+    agent: alice
+    task_ref: api_task
+    delay: 2.0
