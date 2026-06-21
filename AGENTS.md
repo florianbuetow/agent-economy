@@ -62,6 +62,28 @@ just code-audit       # Vulnerability scan
 - Always run `just test-all` or `just ci-quiet` to verify changes before claiming they work
 - **Tests are acceptance tests — do NOT modify existing test files.** Add new test files to cover new or additional requirements instead.
 - Tests must be marked with `@pytest.mark.unit`, `@pytest.mark.integration`, or `@pytest.mark.performance`
+- **Never claim a task is complete without showing verification output.** Run `just ci-quiet` and include the result in your response before saying "done."
+- Never close a beads ticket in the same turn as the last code change -- always verify first.
+- After codex completes, always run `just ci-quiet` independently before reporting success. Never trust codex's self-reported completion.
+- "I believe this works" is not verification. Show the passing output.
+
+### Debugging
+
+- After any test or CI failure, STOP before attempting a fix:
+  1. State the root cause hypothesis in one sentence
+  2. Identify what changed that caused this failure
+  3. Only then propose and implement a fix
+- If the fix fails, form a NEW hypothesis -- do not retry the same approach with minor variations
+- If you've attempted 3 fixes for the same failure without success, step back and re-read the surrounding code for architectural context you may have missed
+- Never suppress errors, skip tests, or add try/except as a "fix" -- these are symptoms, not solutions
+
+### Iterative Development
+
+- During fix-test-fix cycles, use targeted test runs first:
+  - `just test-unit` for the specific service
+  - `uv run pytest tests/unit/test_<module>.py -x` for specific files
+- Run `just ci-quiet` only at checkpoints: after completing a logical unit, before committing, before declaring done
+- If you've run full CI more than 5 times in a session without it passing, stop and diagnose the root cause
 
 ## Architecture
 
@@ -185,6 +207,27 @@ See [DELEGATE.md](DELEGATE.md) for instructions on delegating work to sub-agents
 
 - **Never use `git -C <path>`** to operate on other worktrees. Always use the full `git` command from the current working directory.
 
+## Operating Mode
+
+### Autonomy
+- When the user gives a clear directive ("fix the tests", "update the README", "clean this up"), inspect the current state, determine what needs changing, execute, and report. Do NOT ask "what specifically?" or "shall I proceed?" -- figure it out.
+- Only ask clarifying questions when choices have genuinely different tradeoffs the user must decide between.
+- If a task is ambiguous but has an obvious default, do the obvious thing and mention your assumption.
+
+### Investigation First
+- When encountering unexpected behavior, investigate the codebase before asking the user. Read configs, check code, look at tests. The user hired you to investigate, not to be quizzed.
+- When the user says "why does X happen?", look at the code and answer. Do not ask them to explain their own codebase.
+
+### User's Words Are Law
+- When the user specifies a name for a class, variable, file, or concept, use that exact name. Do not substitute your own preferred name.
+- When the user provides a specification or references a document, restate the specific deliverable in one sentence before starting. If they say "create X", create exactly X -- not Y that seems related.
+
+### Conciseness
+- Lead with the answer or action, not the reasoning. Use bullet points, not paragraphs.
+- Do not over-explain. If the user wants more detail, they will ask.
+- After 2 corrections on the same task, STOP and restate your understanding: "To confirm, you need X because Y. Here is my revised approach: ..." Only proceed after the user confirms.
+- After 3 corrections, ask: "Should I try a completely different approach?"
+
 ## Code Style
 
 ### General
@@ -202,6 +245,12 @@ See [DELEGATE.md](DELEGATE.md) for instructions on delegating work to sub-agents
 - Each service has its **own** virtual environment in `services/<name>/.venv/`
 - **Never** use: `pip install`, `python -m pip`, or `uv pip`
 - All dependencies declared in service's `pyproject.toml`
+
+### Shell Script Execution
+
+- **Always** run shell scripts directly: `./scriptname.sh` or `/tmp/scriptname.sh`
+- **Never** prefix with `bash`: ~~`bash scriptname.sh`~~ — use `./scriptname.sh` instead
+- Ensure scripts have the execute bit set: `chmod +x scriptname.sh` before first run
 
 ### Configuration
 
@@ -398,3 +447,123 @@ Start a new session. Delegate to a sub-agent to implement the service features.
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
+
+## Session Management
+
+- At 150 turns: proactively suggest checkpointing: "This session has 150+ turns. I recommend we commit, push, and start fresh to avoid context degradation."
+- At 200 turns: strongly recommend wrapping up.
+- Marathon sessions (>200 turns) correlate with 3x higher frustration and 2x higher correction rates.
+- When delegating to codex for long tasks, commit intermediate progress every 30-45 minutes.
+
+<!-- BEGIN BEADS INTEGRATION v:1 profile:full hash:d4f96305 -->
+## Issue Tracking with bd (beads)
+
+**IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.
+
+### Why bd?
+
+- Dependency-aware: Track blockers and relationships between issues
+- Git-friendly: Dolt-powered version control with native sync
+- Agent-optimized: JSON output, ready work detection, discovered-from links
+- Prevents duplicate tracking systems and confusion
+
+### Quick Start
+
+**Check for ready work:**
+
+```bash
+bd ready --json
+```
+
+**Create new issues:**
+
+```bash
+bd create "Issue title" --description="Detailed context" -t bug|feature|task -p 0-4 --json
+bd create "Issue title" --description="What this issue is about" -p 1 --deps discovered-from:bd-123 --json
+```
+
+**Claim and update:**
+
+```bash
+bd update <id> --claim --json
+bd update bd-42 --priority 1 --json
+```
+
+**Complete work:**
+
+```bash
+bd close bd-42 --reason "Completed" --json
+```
+
+### Issue Types
+
+- `bug` - Something broken
+- `feature` - New functionality
+- `task` - Work item (tests, docs, refactoring)
+- `epic` - Large feature with subtasks
+- `chore` - Maintenance (dependencies, tooling)
+
+### Priorities
+
+- `0` - Critical (security, data loss, broken builds)
+- `1` - High (major features, important bugs)
+- `2` - Medium (default, nice-to-have)
+- `3` - Low (polish, optimization)
+- `4` - Backlog (future ideas)
+
+### Workflow for AI Agents
+
+1. **Check ready work**: `bd ready` shows unblocked issues
+2. **Claim your task atomically**: `bd update <id> --claim`
+3. **Work on it**: Implement, test, document
+4. **Discover new work?** Create linked issue:
+   - `bd create "Found bug" --description="Details about what was found" -p 1 --deps discovered-from:<parent-id>`
+5. **Complete**: `bd close <id> --reason "Done"`
+
+### Auto-Sync
+
+bd automatically syncs via Dolt:
+
+- Each write auto-commits to Dolt history
+- Use `bd dolt push`/`bd dolt pull` for remote sync
+- No manual export/import needed!
+
+### Important Rules
+
+- ✅ Use bd for ALL task tracking
+- ✅ Always use `--json` flag for programmatic use
+- ✅ Link discovered work with `discovered-from` dependencies
+- ✅ Check `bd ready` before asking "what should I work on?"
+- ❌ Do NOT create markdown TODO lists
+- ❌ Do NOT use external issue trackers
+- ❌ Do NOT duplicate tracking systems
+
+For more details, see README.md and docs/QUICKSTART.md.
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd dolt push
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
+
+<!-- END BEADS INTEGRATION -->
