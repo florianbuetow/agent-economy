@@ -1,0 +1,3 @@
+{"timestamp": "2026-06-01 09:04", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent closed"}
+{"timestamp": "2026-06-01 09:04", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection closed"}
+{"timestamp": "2026-06-01 09:04", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service shutting down", "extra": {"uptime_seconds": 257981.201785}}

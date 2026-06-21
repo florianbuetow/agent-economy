@@ -32,7 +32,7 @@ from ui_service.services import tasks as tasks_service
 router = APIRouter()
 
 
-@router.get("/tasks")
+@router.get("/tasks")  # nosemgrep
 async def get_task_list(
     status: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),

@@ -90,7 +90,6 @@ async def test_list_agent_stats_structure(client):
         "total_spent",
         "spec_quality",
         "delivery_quality",
-        "current_streak",
     }
     assert set(stats["spec_quality"].keys()) == {
         "extremely_satisfied",

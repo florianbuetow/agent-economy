@@ -189,7 +189,6 @@ class AgentStats(BaseModel):
     total_spent: int
     spec_quality: SpecQualityStats
     delivery_quality: DeliveryQualityStats
-    current_streak: int
 
 
 class AgentListItem(BaseModel):

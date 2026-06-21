@@ -121,22 +121,6 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
         or 0
     )
 
-    # Count consecutive approved tasks as worker from most recent backwards.
-    streak_rows = await execute_fetchall(
-        db,
-        "SELECT status FROM board_tasks "
-        "WHERE worker_id = ? "
-        "AND status IN ('approved', 'disputed', 'ruled', 'cancelled') "
-        "ORDER BY COALESCE(approved_at, submitted_at, created_at) DESC",
-        (agent_id,),
-    )
-    current_streak = 0
-    for row in streak_rows:
-        if row[0] == "approved":
-            current_streak += 1
-        else:
-            break
-
     return {
         "tasks_posted": tasks_posted,
         "tasks_completed_as_worker": tasks_completed_as_worker,
@@ -152,7 +136,6 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
             "satisfied": del_sat,
             "dissatisfied": del_dis,
         },
-        "current_streak": current_streak,
     }
 
 

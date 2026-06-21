@@ -50,7 +50,7 @@ class TestSparklineDataFromHistory:
         )
         assert resp.status_code == 200
         points = resp.json()["data_points"]
-        assert len(points) > 0, "Seed data must produce at least one data point"
+        assert len(points) > 0, "Seed data must provide at least one GDP data point"
         for point in points:
             assert "gdp" in point or "value" in point, (
                 f"Data point must have 'gdp' or 'value' field, got keys: {list(point.keys())}"
@@ -68,7 +68,7 @@ class TestSparklineDataFromHistory:
         )
         assert resp.status_code == 200
         points = resp.json()["data_points"]
-        assert len(points) > 0, "Seed data must produce at least one data point"
+        assert len(points) > 0, "Seed data must provide at least one GDP data point"
         for point in points:
             assert "timestamp" in point, "Each data point must have a timestamp"
 
