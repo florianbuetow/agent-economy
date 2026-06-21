@@ -60,7 +60,9 @@ class IdentityConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     base_url: str
+    get_agent_path: str | None = None
     verify_jws_path: str
+    timeout_seconds: int | None = None
 
 
 class CentralBankConfig(BaseModel):

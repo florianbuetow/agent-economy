@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from base_agent.factory import AgentFactory
+from service_clients.identity import IdentityClient
 
 from central_bank_service.config import get_config_path, get_settings
 from central_bank_service.core.state import init_app_state
 from central_bank_service.logging import get_logger, setup_logging
-from central_bank_service.services.identity_client import IdentityClient
 from central_bank_service.services.ledger_db_client import LedgerDbClient
 
 if TYPE_CHECKING:
@@ -43,11 +43,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     )
 
     # Initialize identity client
-    verify_jws_path = settings.identity.verify_jws_path or "/agents/verify-jws"
+    identity_config = settings.identity
     state.identity_client = IdentityClient(
-        base_url=settings.identity.base_url,
-        get_agent_path=settings.identity.get_agent_path,
-        verify_jws_path=verify_jws_path,
+        base_url=identity_config.base_url,
+        get_agent_path=identity_config.get_agent_path,
+        verify_jws_path=identity_config.verify_jws_path or "",
+        timeout_seconds=identity_config.timeout_seconds or 10,
     )
     if settings.platform.agent_config_path:
         config_path = Path(settings.platform.agent_config_path)

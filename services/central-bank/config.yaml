@@ -21,6 +21,7 @@ identity:
   base_url: "http://localhost:8001"
   get_agent_path: "/agents"
   verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 
 platform:
   agent_id: "a-platform-placeholder"

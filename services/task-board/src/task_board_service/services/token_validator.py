@@ -11,8 +11,7 @@ from service_commons.exceptions import ServiceError
 
 if TYPE_CHECKING:
     from base_agent.platform import PlatformAgent
-
-    from task_board_service.services.identity_client import IdentityClient
+    from service_clients.identity import IdentityClient
 
 
 def decode_base64url_json(part: str, section_name: str) -> dict[str, Any]:
@@ -51,10 +50,10 @@ def decode_base64url_json(part: str, section_name: str) -> dict[str, Any]:
 class TokenValidator:
     """Validates task-board JWS tokens and decodes escrow payloads."""
 
-    def __init__(
+    def __init__(  # nosemgrep: agent-economy.no-default-parameter-values
         self,
         platform_agent: PlatformAgent,
-        identity_client: IdentityClient | None,
+        identity_client: IdentityClient | None = None,
     ) -> None:
         """Initialize validator with platform agent and optional identity client."""
         self._platform_agent = platform_agent

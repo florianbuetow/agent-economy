@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, cast
 from base_agent.factory import AgentFactory
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+from service_clients.identity import IdentityClient
 from service_commons.config import load_yaml_config
 
 from task_board_service.clients.central_bank_client import CentralBankClient
@@ -19,7 +20,6 @@ from task_board_service.logging import get_logger, setup_logging
 from task_board_service.services.asset_manager import AssetManager
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
-from task_board_service.services.identity_client import IdentityClient
 from task_board_service.services.task_db_client import TaskDbClient
 from task_board_service.services.task_manager import TaskManager
 from task_board_service.services.token_validator import TokenValidator
@@ -113,7 +113,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if settings.identity is not None:
         identity_client = IdentityClient(
             base_url=settings.identity.base_url,
+            get_agent_path=settings.identity.get_agent_path or "",
             verify_jws_path=settings.identity.verify_jws_path,
+            timeout_seconds=settings.identity.timeout_seconds or 10,
         )
         state.identity_client = identity_client
 
