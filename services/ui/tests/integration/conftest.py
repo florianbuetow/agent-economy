@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import aiosqlite
@@ -15,6 +16,7 @@ from ui_service.app import create_app
 from ui_service.config import clear_settings_cache
 from ui_service.core.lifespan import lifespan
 from ui_service.core.state import reset_app_state
+from ui_service.services import quarterly as quarterly_service
 
 SCHEMA_PATH = Path(__file__).resolve().parents[4] / "docs" / "specifications" / "schema.sql"
 INTEGRATION_TESTS_DIR = Path(__file__).resolve().parent
@@ -38,7 +40,7 @@ def db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def app(db_path: Path, tmp_path: Path):
+async def app(db_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """Create test app pointing at the seeded database."""
     web_dir = tmp_path / "web"
     web_dir.mkdir(exist_ok=True)
@@ -72,6 +74,7 @@ request:
 
     clear_settings_cache()
     reset_app_state()
+    monkeypatch.setattr(quarterly_service, "utc_now", lambda: datetime(2026, 3, 2, tzinfo=UTC))
 
     test_app = create_app()
     async with lifespan(test_app):

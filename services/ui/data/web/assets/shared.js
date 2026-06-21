@@ -182,8 +182,7 @@
             es: a.stats.spec_quality.extremely_satisfied,
             s: a.stats.spec_quality.satisfied,
             d: a.stats.spec_quality.dissatisfied
-          },
-          streak: a.stats.current_streak || 0
+          }
         });
       });
 

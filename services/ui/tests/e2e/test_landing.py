@@ -28,7 +28,6 @@ class LeaderboardAgent:
     name: str
     amount: int
     tasks_count: int
-    streak: int
 
 
 @dataclass(frozen=True)
@@ -325,27 +324,12 @@ def _snapshot_from_db(db_path: Path) -> LandingSnapshot:
                 ).fetchone()[0],
             )
 
-            streak_rows = conn.execute(
-                "SELECT status FROM board_tasks "
-                "WHERE worker_id = ? "
-                "AND status IN ('approved', 'disputed', 'ruled', 'cancelled') "
-                "ORDER BY COALESCE(approved_at, submitted_at, created_at) DESC",
-                (agent_id,),
-            ).fetchall()
-            streak = 0
-            for row in streak_rows:
-                if row[0] == "approved":
-                    streak += 1
-                else:
-                    break
-
             if earned >= spent:
                 workers.append(
                     LeaderboardAgent(
                         name=name,
                         amount=earned,
                         tasks_count=tasks_completed,
-                        streak=streak,
                     ),
                 )
             else:
@@ -354,7 +338,6 @@ def _snapshot_from_db(db_path: Path) -> LandingSnapshot:
                         name=name,
                         amount=spent,
                         tasks_count=tasks_posted,
-                        streak=streak,
                     ),
                 )
 

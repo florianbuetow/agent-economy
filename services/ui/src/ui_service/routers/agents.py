@@ -76,7 +76,6 @@ async def list_agents(
                 total_spent=a["stats"]["total_spent"],
                 spec_quality=SpecQualityStats(**a["stats"]["spec_quality"]),
                 delivery_quality=DeliveryQualityStats(**a["stats"]["delivery_quality"]),
-                current_streak=a["stats"]["current_streak"],
             ),
         )
         for a in data["agents"]
@@ -152,7 +151,6 @@ async def get_agent_profile(agent_id: str) -> JSONResponse:
             total_spent=data["stats"]["total_spent"],
             spec_quality=SpecQualityStats(**data["stats"]["spec_quality"]),
             delivery_quality=DeliveryQualityStats(**data["stats"]["delivery_quality"]),
-            current_streak=data["stats"]["current_streak"],
         ),
         recent_tasks=recent_tasks,
         recent_feedback=recent_feedback,
