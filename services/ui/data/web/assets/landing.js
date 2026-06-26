@@ -16,7 +16,7 @@
       { label: 'Active Agents', value: S.agents.active, suffix: '', note: 'of ' + S.agents.total + ' registered', noteUp: null },
       { label: 'Tasks Completed', value: S.tasks.completedAll, suffix: '+', note: 'all-time', noteUp: null },
       { label: 'Spec Quality', value: Math.round(S.specQ.avg), suffix: '%', note: (S.specQ.delta >= 0 ? '\u2191 ' : '\u2193 ') + Math.abs(S.specQ.delta).toFixed(1) + '% this week', noteUp: S.specQ.delta > 0 ? true : S.specQ.delta < 0 ? false : null },
-      { label: 'Economy Phase', value: null, text: S.phase.toUpperCase(), suffix: '', note: 'tasks ' + (S.taskCreationTrend === 'increasing' ? '\u2191' : S.taskCreationTrend === 'decreasing' ? '\u2193' : '\u2192'), noteUp: S.taskCreationTrend === 'increasing' ? true : S.taskCreationTrend === 'decreasing' ? false : null }
+      { label: 'Economy Phase', value: null, text: S.phase.toUpperCase(), suffix: '', note: 'tasks ' + ATE.trendVisual(S.taskCreationTrend).arrow, noteUp: ATE.trendVisual(S.taskCreationTrend).up }
     ];
 
     var strip = document.getElementById('kpi-strip');
@@ -170,14 +170,14 @@
       'of ' + S.agents.total + ' registered',
       'all-time',
       (S.specQ.delta >= 0 ? '\u2191 ' : '\u2193 ') + Math.abs(S.specQ.delta).toFixed(1) + '% this week',
-      'tasks ' + (S.taskCreationTrend === 'increasing' ? '\u2191' : S.taskCreationTrend === 'decreasing' ? '\u2193' : '\u2192')
+      'tasks ' + ATE.trendVisual(S.taskCreationTrend).arrow
     ];
     var noteUps = [
       true,
       null,
       null,
       S.specQ.delta > 0 ? true : S.specQ.delta < 0 ? false : null,
-      S.taskCreationTrend === 'increasing' ? true : S.taskCreationTrend === 'decreasing' ? false : null
+      ATE.trendVisual(S.taskCreationTrend).up
     ];
     var noteEls = document.querySelectorAll('.kpi-note');
     noteEls.forEach(function(el, index) {

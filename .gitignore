@@ -141,6 +141,9 @@ openspec/
 # Codex working directory
 .codex/
 
+.codebasescout/
+services/ui/data/logs/
+
 # Beads metadata backups
 .beads/*.bak-*
 

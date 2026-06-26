@@ -39,9 +39,9 @@
     var phaseBorder = S.phase === 'growing' ? 'var(--green)' : S.phase === 'contracting' ? 'var(--red)' : 'var(--text-dim)';
     var distTotal = Object.values(S.rewardDist).reduce(function(acc, val) { return acc + val; }, 0) || 1;
 
-    var trendArrow = S.taskCreationTrend === 'growing' ? '\u2191' : S.taskCreationTrend === 'declining' ? '\u2193' : '\u2192';
+    var trendArrow = ATE.trendVisual(S.taskCreationTrend).arrow;
     var trendLabel = S.taskCreationTrend;
-    var trendClr = S.taskCreationTrend === 'growing' ? 'var(--green)' : S.taskCreationTrend === 'declining' ? 'var(--red)' : 'var(--amber)';
+    var trendClr = ATE.trendVisual(S.taskCreationTrend).color;
     var disputeRate = (S.tasks.disputed / Math.max(S.tasks.completedAll, 1)) * 100;
     var disputeColor = disputeRate > 15 ? 'var(--red)' : disputeRate > 5 ? 'var(--amber)' : 'var(--green)';
 

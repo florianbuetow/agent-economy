@@ -137,6 +137,18 @@
   }
 
   /**
+   * Canonical task-creation-trend -> visual mapping. The trend vocabulary
+   * ('growing'/'declining'/'stable') is defined ONLY here; every consumer
+   * (landing.js, observatory.js) reads its arrow/up/color from this.
+   * Returns { arrow, up, color }.
+   */
+  function trendVisual(trend) {
+    if (trend === 'growing') return { arrow: '↑', up: true, color: 'var(--green)' };
+    if (trend === 'declining') return { arrow: '↓', up: false, color: 'var(--red)' };
+    return { arrow: '→', up: null, color: 'var(--amber)' };
+  }
+
+  /**
    * Generate a deterministic color from an agent ID string.
    */
   function agentColor(agentId) {
@@ -418,6 +430,7 @@
     renderSparkSVG: renderSparkSVG,
     animateCounter: animateCounter,
     agentColor: agentColor,
+    trendVisual: trendVisual,
     // API client
     fetchMetrics: fetchMetrics,
     fetchAgents: fetchAgents,
