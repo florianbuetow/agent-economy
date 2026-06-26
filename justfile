@@ -698,17 +698,36 @@ test-project-structure:
 
 # Run tests for all services
 test-all:
-    @echo ""
-    @printf "\033[0;34m=== Running All Tests ===\033[0m\n"
-    cd services/identity && just test
-    cd services/central-bank && just test
-    cd services/task-board && just test
-    cd services/reputation && just test
-    cd services/court && just test
-    cd services/db-gateway && just test
-    cd services/ui && just test
-    @printf "\033[0;32m✓ All tests passed\033[0m\n"
-    @echo ""
+    #!/usr/bin/env bash
+    set -uo pipefail
+    root="$(pwd)"
+    printf "\n"
+    printf "\033[0;34m=== Running All Tests ===\033[0m\n"
+    printf "\n"
+
+    # Some per-service integration tests (db-gateway) hit a live service over
+    # HTTP, so bring the full stack up first and guarantee teardown.
+    cleanup() {
+        printf "\033[0;34m--- Stopping all services ---\033[0m\n"
+        cd "$root" && just stop-all
+    }
+    trap cleanup EXIT
+    cd "$root" && just start-all
+
+    fail=0
+    for svc in identity central-bank task-board reputation court db-gateway ui; do
+        printf "\033[0;34m--- %s ---\033[0m\n" "$svc"
+        cd "$root/services/$svc" && just test || fail=1
+        cd "$root"
+    done
+
+    printf "\n"
+    if [ "$fail" -ne 0 ]; then
+        printf "\033[0;31m✗ Some service test suites failed\033[0m\n"
+        exit 1
+    fi
+    printf "\033[0;32m✓ All tests passed\033[0m\n"
+    printf "\n"
 
 # Run tests for a specific service
 test service:
