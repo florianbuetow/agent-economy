@@ -37,3 +37,13 @@
 {"timestamp": "2026-06-21 01:55", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent closed"}
 {"timestamp": "2026-06-21 01:55", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection closed"}
 {"timestamp": "2026-06-21 01:55", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service shutting down", "extra": {"uptime_seconds": 31.8501}}
+{"timestamp": "2026-06-21 02:29", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-21 02:29", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": "All connection attempts failed"}}
+{"timestamp": "2026-06-21 02:29", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-21 02:29", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": "All connection attempts failed"}}
+{"timestamp": "2026-06-21 02:29", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection opened", "extra": {"path": "../db-gateway/data/economy.db"}}
+{"timestamp": "2026-06-21 02:29", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": "\"Attempt to overwrite 'name' in LogRecord\""}}
+{"timestamp": "2026-06-21 02:29", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service starting", "extra": {"service": "ui", "version": "0.1.0", "port": 8008, "web_root": "data/web"}}
+{"timestamp": "2026-06-21 02:30", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent closed"}
+{"timestamp": "2026-06-21 02:30", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection closed"}
+{"timestamp": "2026-06-21 02:30", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service shutting down", "extra": {"uptime_seconds": 30.117888}}

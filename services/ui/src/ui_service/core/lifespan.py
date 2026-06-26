@@ -54,7 +54,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         state.user_agent = user_agent
         logger.info(
             "UserAgent initialized",
-            extra={"agent_id": user_agent.agent_id, "name": user_agent.name},
+            extra={"agent_id": user_agent.agent_id, "agent_name": user_agent.name},
         )
     except Exception as exc:
         logger.error(
