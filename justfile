@@ -246,17 +246,37 @@ start-all:
     cd services/db-gateway && uv run uvicorn db_gateway_service.app:create_app --factory --host 127.0.0.1 --port 8007 &
     wait_for_health "DB Gateway" 8007
 
-    # Tier 2: All remaining services in parallel (DB Gateway is ready)
-    printf "Starting tier 2 (all remaining services)...\n"
+    # Tier 2: Identity first. It is the leaf service that central-bank,
+    # task-board, reputation, and court each register their platform agent
+    # against during startup. Launching it concurrently with those dependents
+    # caused a race: a dependent could POST /agents/register before Identity
+    # had bound its socket, raising httpx.ConnectError and aborting that
+    # service's lifespan ("Application startup failed. Exiting.").
+    printf "Starting tier 2 (Identity)...\n"
     cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host 127.0.0.1 --port 8001 &
+    if ! wait_for_health "Identity" 8001; then
+        printf "\033[0;31m✗ Identity did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
+    # Fully-online gate: confirm the registry actually serves reads, not just
+    # that the port is bound. Dependents will POST /agents/register, so assert
+    # GET /agents answers before launching them.
+    if ! curl -s --connect-timeout 1 "http://localhost:8001/agents" | grep -q '"agents"'; then
+        printf "\033[0;31m✗ Identity health OK but /agents not serving; aborting startup\033[0m\n"
+        exit 1
+    fi
+    printf "\033[0;32m✓ Identity registry fully online (port 8001)\033[0m\n"
+
+    # Tier 3: remaining services in parallel. Identity is healthy, so
+    # platform-agent registration can no longer race.
+    printf "Starting tier 3 (remaining services)...\n"
     cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 127.0.0.1 --port 8004 &
     cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 127.0.0.1 --port 8002 &
     cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 127.0.0.1 --port 8003 &
     cd services/court && set -a && [ -f .env ] && . .env && set +a && uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port 8005 &
     cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host 127.0.0.1 --port 8008 &
 
-    # Wait in dependency order
-    wait_for_health "Identity" 8001
+    # Wait for the rest in dependency order
     wait_for_health "Central Bank" 8002
     wait_for_health "Task Board" 8003
     wait_for_health "Reputation" 8004
