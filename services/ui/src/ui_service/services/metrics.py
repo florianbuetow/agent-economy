@@ -713,6 +713,246 @@ async def compute_gdp_history(
     return data_points
 
 
+class _SparklineHistory:
+    """Builds hourly-bucket sparkline series for the exchange board.
+
+    Encapsulates the window state (db, since_iso, buckets) that is threaded
+    through every metric section, so each section becomes a small method.
+    Uses efficient GROUP BY queries on the events table instead of the
+    per-step loop pattern used by compute_gdp_history.
+    """
+
+    def __init__(self, db: aiosqlite.Connection, window: str) -> None:
+        self._db = db
+        self._window = window
+        now = utc_now()
+        window_delta = {"24h": timedelta(hours=24)}[window]
+        start = now - window_delta
+        self._since_iso = to_iso(start)
+
+        # Build 24 hourly bucket keys: "2026-03-02T09", "2026-03-02T10", ...
+        buckets: list[str] = []
+        current = start
+        while current < now:
+            buckets.append(to_iso(current)[:13])
+            current += timedelta(hours=1)
+        self._buckets = buckets
+
+    async def _fetch_buckets(self, sql: str, params: tuple[Any, ...]) -> dict[str, float]:
+        """Run a GROUP BY bucket query, return {bucket_str: value}."""
+        rows = await execute_fetchall(self._db, sql, params)
+        return {str(row[0]): float(row[1]) for row in rows}
+
+    def _to_series(self, bucket_dict: dict[str, float]) -> list[float]:
+        """Convert bucket dict to ordered list aligned with bucket keys."""
+        return [bucket_dict.get(b, 0.0) for b in self._buckets]
+
+    async def _created(self) -> dict[str, float]:
+        # 1. Tasks created per hour
+        return await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
+            "FROM events WHERE timestamp >= ? AND event_type = ? "
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, EventType.TASK_CREATED),
+        )
+
+    async def _accepted(self) -> dict[str, float]:
+        # 2. Tasks accepted per hour (proxy for in-execution activity)
+        return await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
+            "FROM events WHERE timestamp >= ? AND event_type = ? "
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, EventType.TASK_ACCEPTED),
+        )
+
+    async def _approved(self) -> dict[str, float]:
+        # 3a. Approvals per hour
+        return await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
+            "FROM events WHERE timestamp >= ? "
+            f"AND event_type IN ({sql_placeholders(APPROVAL_EVENT_TYPES)}) "  # nosec B608
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, *APPROVAL_EVENT_TYPES),
+        )
+
+    async def _terminal(self) -> dict[str, float]:
+        # 3b. All terminal events per hour (for completion rate denominator)
+        return await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
+            "FROM events WHERE timestamp >= ? "
+            f"AND event_type IN ({sql_placeholders(TERMINAL_EVENT_TYPES)}) "  # nosec B608
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, *TERMINAL_EVENT_TYPES),
+        )
+
+    async def _disputed(self) -> dict[str, float]:
+        # 4. Disputes filed per hour
+        return await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
+            "FROM events WHERE timestamp >= ? AND event_type = ? "
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, EventType.TASK_DISPUTED),
+        )
+
+    async def _escrow(self) -> dict[str, float]:
+        # 5. Escrow locked amount per hour
+        return await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, "
+            "COALESCE(SUM(CAST(json_extract(payload, '$.amount') AS REAL)), 0) "
+            "FROM events WHERE timestamp >= ? AND event_type = ? "
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, EventType.ESCROW_LOCKED),
+        )
+
+    async def _bids(self) -> dict[str, float]:
+        # 6. Bids submitted per hour
+        return await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
+            "FROM events WHERE timestamp >= ? AND event_type = ? "
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, EventType.BID_SUBMITTED),
+        )
+
+    async def _avg_reward(self) -> dict[str, float]:
+        # 7. Average reward of tasks created per hour
+        return await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, "
+            "COALESCE(AVG(CAST(json_extract(payload, '$.reward') AS REAL)), 0) "
+            "FROM events WHERE timestamp >= ? AND event_type = ? "
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, EventType.TASK_CREATED),
+        )
+
+    async def _spec_quality(self) -> dict[str, float]:
+        # 8. Spec quality feedback events per hour
+        return await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
+            "FROM events WHERE timestamp >= ? "
+            "AND event_type = ? "
+            "AND json_extract(payload, '$.category') = 'spec_quality' "
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, EventType.FEEDBACK_REVEALED),
+        )
+
+    async def _registered_cumulative(self) -> list[float]:
+        # 9. Agent registrations — cumulative (need baseline before window)
+        reg_per_bucket = await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
+            "FROM events WHERE timestamp >= ? AND event_type = ? "
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, EventType.AGENT_REGISTERED),
+        )
+
+        baseline = int(
+            await execute_scalar(
+                self._db,
+                "SELECT COUNT(*) FROM events WHERE timestamp < ? AND event_type = ?",
+                (self._since_iso, EventType.AGENT_REGISTERED),
+            )
+            or 0
+        )
+
+        reg_series = self._to_series(reg_per_bucket)
+        running = float(baseline)
+        registered_cumulative: list[float] = []
+        for val in reg_series:
+            running += val
+            registered_cumulative.append(running)
+        return registered_cumulative
+
+    async def _unemployment_rate(self, registered_cumulative: list[float]) -> list[float]:
+        # 10. Unemployment rate — cumulative point-in-time state
+        # +1 when an agent starts working (task.accepted has worker_id in payload)
+        # -1 when an agent stops working (task.approved/auto_approved/disputed has worker_id)
+        work_start_per_bucket = await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
+            "FROM events WHERE timestamp >= ? AND event_type = ? "
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, EventType.TASK_ACCEPTED),
+        )
+
+        work_stop_per_bucket = await self._fetch_buckets(
+            "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
+            "FROM events WHERE timestamp >= ? "
+            f"AND event_type IN ({sql_placeholders(WORK_STOP_EVENT_TYPES)}) "  # nosec B608
+            "GROUP BY bucket ORDER BY bucket",
+            (self._since_iso, *WORK_STOP_EVENT_TYPES),
+        )
+
+        # Baseline: agents working before the window starts
+        working_baseline = int(
+            await execute_scalar(
+                self._db,
+                "SELECT ("
+                "  (SELECT COUNT(*) FROM events WHERE timestamp < ? "
+                "   AND event_type = ?) - "
+                "  (SELECT COUNT(*) FROM events WHERE timestamp < ? "
+                f"   AND event_type IN ({sql_placeholders(WORK_STOP_EVENT_TYPES)}))"  # nosec B608
+                ")",
+                (self._since_iso, EventType.TASK_ACCEPTED, self._since_iso, *WORK_STOP_EVENT_TYPES),
+            )
+            or 0
+        )
+        # Clamp baseline to non-negative (data may be inconsistent)
+        working_baseline = max(working_baseline, 0)
+
+        work_start_series = self._to_series(work_start_per_bucket)
+        work_stop_series = self._to_series(work_stop_per_bucket)
+
+        unemployment_rate: list[float] = []
+        working_running = float(working_baseline)
+        for i in range(len(self._buckets)):
+            working_running += work_start_series[i] - work_stop_series[i]
+            working_running = max(working_running, 0.0)  # Clamp
+            reg = registered_cumulative[i]
+            rate = max(0.0, min(1.0, (reg - working_running) / reg)) if reg > 0 else 0.0
+            unemployment_rate.append(round(rate, 3))
+        return unemployment_rate
+
+    def _completion_rate(
+        self, approved: dict[str, float], terminal: dict[str, float]
+    ) -> list[float]:
+        # Completion rate per bucket: approved / terminal (or 0 if no terminal)
+        completion_rate: list[float] = []
+        for bucket in self._buckets:
+            t = terminal.get(bucket, 0.0)
+            a = approved.get(bucket, 0.0)
+            completion_rate.append(round(a / t, 3) if t > 0 else 0.0)
+        return completion_rate
+
+    async def build(self) -> dict[str, Any]:
+        """Compute every sparkline series and assemble the response payload."""
+        created = await self._created()
+        accepted = await self._accepted()
+        approved = await self._approved()
+        terminal = await self._terminal()
+        disputed = await self._disputed()
+        escrow = await self._escrow()
+        bids = await self._bids()
+        avg_reward = await self._avg_reward()
+        spec_quality = await self._spec_quality()
+        registered_cumulative = await self._registered_cumulative()
+        unemployment_rate = await self._unemployment_rate(registered_cumulative)
+        completion_rate = self._completion_rate(approved, terminal)
+
+        return {
+            "window": self._window,
+            "buckets": self._buckets,
+            "metrics": {
+                "open_tasks": self._to_series(created),
+                "in_execution": self._to_series(accepted),
+                "completion_rate": completion_rate,
+                "disputes_active": self._to_series(disputed),
+                "escrow_locked": self._to_series(escrow),
+                "avg_bids_per_task": self._to_series(bids),
+                "avg_reward": self._to_series(avg_reward),
+                "spec_quality": self._to_series(spec_quality),
+                "registered_agents": registered_cumulative,
+                "unemployment_rate": unemployment_rate,
+            },
+        }
+
+
 async def compute_sparkline_history(
     db: aiosqlite.Connection,
     window: str,
@@ -722,199 +962,4 @@ async def compute_sparkline_history(
     Uses efficient GROUP BY queries on the events table instead of
     the per-step loop pattern used by compute_gdp_history.
     """
-    now = utc_now()
-    window_delta = {"24h": timedelta(hours=24)}[window]
-    start = now - window_delta
-    since_iso = to_iso(start)
-
-    # Build 24 hourly bucket keys: "2026-03-02T09", "2026-03-02T10", ...
-    buckets: list[str] = []
-    current = start
-    while current < now:
-        buckets.append(to_iso(current)[:13])
-        current += timedelta(hours=1)
-
-    async def _fetch_buckets(
-        sql: str,
-        params: tuple[Any, ...],
-    ) -> dict[str, float]:
-        """Run a GROUP BY bucket query, return {bucket_str: value}."""
-        rows = await execute_fetchall(db, sql, params)
-        return {str(row[0]): float(row[1]) for row in rows}
-
-    def _to_series(bucket_dict: dict[str, float]) -> list[float]:
-        """Convert bucket dict to ordered list aligned with bucket keys."""
-        return [bucket_dict.get(b, 0.0) for b in buckets]
-
-    # 1. Tasks created per hour
-    created = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = ? "
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, EventType.TASK_CREATED),
-    )
-
-    # 2. Tasks accepted per hour (proxy for in-execution activity)
-    accepted = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = ? "
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, EventType.TASK_ACCEPTED),
-    )
-
-    # 3a. Approvals per hour
-    approved = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? "
-        f"AND event_type IN ({sql_placeholders(APPROVAL_EVENT_TYPES)}) "  # nosec B608
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, *APPROVAL_EVENT_TYPES),
-    )
-
-    # 3b. All terminal events per hour (for completion rate denominator)
-    terminal = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? "
-        f"AND event_type IN ({sql_placeholders(TERMINAL_EVENT_TYPES)}) "  # nosec B608
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, *TERMINAL_EVENT_TYPES),
-    )
-
-    # 4. Disputes filed per hour
-    disputed = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = ? "
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, EventType.TASK_DISPUTED),
-    )
-
-    # 5. Escrow locked amount per hour
-    escrow = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, "
-        "COALESCE(SUM(CAST(json_extract(payload, '$.amount') AS REAL)), 0) "
-        "FROM events WHERE timestamp >= ? AND event_type = ? "
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, EventType.ESCROW_LOCKED),
-    )
-
-    # 6. Bids submitted per hour
-    bids = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = ? "
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, EventType.BID_SUBMITTED),
-    )
-
-    # 7. Average reward of tasks created per hour
-    avg_reward = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, "
-        "COALESCE(AVG(CAST(json_extract(payload, '$.reward') AS REAL)), 0) "
-        "FROM events WHERE timestamp >= ? AND event_type = ? "
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, EventType.TASK_CREATED),
-    )
-
-    # 8. Spec quality feedback events per hour
-    spec_quality = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? "
-        "AND event_type = ? "
-        "AND json_extract(payload, '$.category') = 'spec_quality' "
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, EventType.FEEDBACK_REVEALED),
-    )
-
-    # 9. Agent registrations — cumulative (need baseline before window)
-    reg_per_bucket = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = ? "
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, EventType.AGENT_REGISTERED),
-    )
-
-    baseline = int(
-        await execute_scalar(
-            db,
-            "SELECT COUNT(*) FROM events WHERE timestamp < ? AND event_type = ?",
-            (since_iso, EventType.AGENT_REGISTERED),
-        )
-        or 0
-    )
-
-    reg_series = _to_series(reg_per_bucket)
-    running = float(baseline)
-    registered_cumulative: list[float] = []
-    for val in reg_series:
-        running += val
-        registered_cumulative.append(running)
-
-    # 10. Unemployment rate — cumulative point-in-time state
-    # +1 when an agent starts working (task.accepted has worker_id in payload)
-    # -1 when an agent stops working (task.approved/auto_approved/disputed has worker_id)
-    work_start_per_bucket = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = ? "
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, EventType.TASK_ACCEPTED),
-    )
-
-    work_stop_per_bucket = await _fetch_buckets(
-        "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? "
-        f"AND event_type IN ({sql_placeholders(WORK_STOP_EVENT_TYPES)}) "  # nosec B608
-        "GROUP BY bucket ORDER BY bucket",
-        (since_iso, *WORK_STOP_EVENT_TYPES),
-    )
-
-    # Baseline: agents working before the window starts
-    working_baseline = int(
-        await execute_scalar(
-            db,
-            "SELECT ("
-            "  (SELECT COUNT(*) FROM events WHERE timestamp < ? "
-            "   AND event_type = ?) - "
-            "  (SELECT COUNT(*) FROM events WHERE timestamp < ? "
-            f"   AND event_type IN ({sql_placeholders(WORK_STOP_EVENT_TYPES)}))"  # nosec B608
-            ")",
-            (since_iso, EventType.TASK_ACCEPTED, since_iso, *WORK_STOP_EVENT_TYPES),
-        )
-        or 0
-    )
-    # Clamp baseline to non-negative (data may be inconsistent)
-    working_baseline = max(working_baseline, 0)
-
-    work_start_series = _to_series(work_start_per_bucket)
-    work_stop_series = _to_series(work_stop_per_bucket)
-
-    unemployment_rate: list[float] = []
-    working_running = float(working_baseline)
-    for i in range(len(buckets)):
-        working_running += work_start_series[i] - work_stop_series[i]
-        working_running = max(working_running, 0.0)  # Clamp
-        reg = registered_cumulative[i]
-        rate = max(0.0, min(1.0, (reg - working_running) / reg)) if reg > 0 else 0.0
-        unemployment_rate.append(round(rate, 3))
-
-    # Completion rate per bucket: approved / terminal (or 0 if no terminal)
-    completion_rate: list[float] = []
-    for bucket in buckets:
-        t = terminal.get(bucket, 0.0)
-        a = approved.get(bucket, 0.0)
-        completion_rate.append(round(a / t, 3) if t > 0 else 0.0)
-
-    return {
-        "window": window,
-        "buckets": buckets,
-        "metrics": {
-            "open_tasks": _to_series(created),
-            "in_execution": _to_series(accepted),
-            "completion_rate": completion_rate,
-            "disputes_active": _to_series(disputed),
-            "escrow_locked": _to_series(escrow),
-            "avg_bids_per_task": _to_series(bids),
-            "avg_reward": _to_series(avg_reward),
-            "spec_quality": _to_series(spec_quality),
-            "registered_agents": registered_cumulative,
-            "unemployment_rate": unemployment_rate,
-        },
-    }
+    return await _SparklineHistory(db, window).build()
