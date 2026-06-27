@@ -1,12 +1,10 @@
 """Quarterly report route handlers."""
 
-from __future__ import annotations
-
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
-from ui_service.core.state import get_app_state
+from ui_service.core.deps import DbConn
 from ui_service.schemas import (
     NotableAgent,
     NotableTask,
@@ -26,6 +24,7 @@ router = APIRouter()
 
 @router.get("/quarterly-report")  # nosemgrep
 async def get_quarterly_report(
+    db: DbConn,
     quarter: str | None = Query(None),
 ) -> JSONResponse:
     """Return quarterly report for the specified or current quarter."""
@@ -42,16 +41,6 @@ async def get_quarterly_report(
             status_code=400,
             details={"quarter": quarter},
         ) from None
-
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
 
     result = await quarterly_service.get_quarterly_report(db, quarter)
 

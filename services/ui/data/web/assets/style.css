@@ -67,14 +67,6 @@
   ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
 
   /* ── Animations ──────────────────────────────────────── */
-  @keyframes pulse-glow {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .55; }
-  }
-  @keyframes ticker-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
   @keyframes fade-in-up {
     from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -167,25 +159,8 @@
 
 /* Additional shared animations and nav/ticker variants */
   /* ── Animations ──────────────────────────── */
-  @keyframes pulse-glow {
-    0%,100% { opacity: 1; } 50% { opacity: .45; }
-  }
-  @keyframes flash-green {
-    0% { background: var(--green-dim); } 100% { background: transparent; }
-  }
-  @keyframes flash-red {
-    0% { background: var(--red-dim); } 100% { background: transparent; }
-  }
-  @keyframes slide-in {
-    from { opacity: 0; transform: translateY(-6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
   @keyframes bar-grow {
     from { width: 0; } to { width: var(--target-w); }
-  }
-  @keyframes ticker-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
   }
 
   /* ── Animations ──────────────────────────── */
@@ -345,11 +320,6 @@
   .feed-time { font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
 
   /* ── Bottom Ticker ───────────────────────── */
-  .bottom-ticker {
-    height: 28px; flex-shrink: 0; background: var(--bg-row);
-    border-top: 1px solid var(--border-hi);
-    overflow: hidden; display: flex; align-items: center; position: relative;
-  }
   .ticker-track {
     display: inline-flex; gap: 24px; white-space: nowrap; padding-left: 100%;
     animation: ticker-scroll 40s linear infinite;
@@ -369,11 +339,6 @@
 
 
   /* ── Bottom Ticker ──────────────────────── */
-  .bottom-ticker {
-    height: 30px; flex-shrink: 0; background: var(--bg-row);
-    border-top: 1px solid var(--border-hi);
-    overflow: hidden; display: flex; align-items: center; position: relative;
-  }
   .bottom-ticker-track {
     display: inline-flex; gap: 24px; white-space: nowrap; padding-left: 100%;
     animation: ticker-scroll 60s linear infinite;
@@ -398,7 +363,7 @@
 
   /* ── Bottom Ticker ───────────────────────────────────── */
   .bottom-ticker {
-    height: 30px; background: #070a0f; border-top: 1px solid var(--border);
+    height: 30px; flex-shrink: 0; background: #070a0f; border-top: 1px solid var(--border);
     overflow: hidden; display: flex; align-items: center; position: relative;
     zoom: var(--scale);
   }
