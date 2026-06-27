@@ -10,7 +10,7 @@ dependencies = [
     "pydantic>=2.10.0",
     "service-commons",
     "cryptography>=48.0.1",
-    "joserfc>=1.6.3",
+    "joserfc>=1.6.7",
     "pyjwt>=2.13.0",
 ]
 

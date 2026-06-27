@@ -30,3 +30,7 @@ request:
 
 user_agent:
   agent_config_path: "../../agents/config.yaml"
+  # Treasury balance minted for the shared platform/user-agent account on
+  # startup so UI-driven task posting can lock escrow. The user agent shares
+  # the platform identity, which is authorized to mint its own balance.
+  treasury_balance: 1000000

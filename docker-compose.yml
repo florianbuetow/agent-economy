@@ -114,3 +114,10 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    depends_on:
+      db-gateway:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+      central-bank:
+        condition: service_healthy
