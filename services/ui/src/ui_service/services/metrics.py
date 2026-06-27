@@ -12,6 +12,16 @@ from ui_service.services.database import (
     to_iso,
     utc_now,
 )
+from ui_service.taxonomy import (
+    APPROVAL_EVENT_TYPES,
+    DISPUTED_STATUSES,
+    IN_EXECUTION_STATUSES,
+    TERMINAL_EVENT_TYPES,
+    WORK_STOP_EVENT_TYPES,
+    EventType,
+    TaskStatus,
+    sql_placeholders,
+)
 
 if TYPE_CHECKING:
     import aiosqlite
@@ -30,14 +40,14 @@ async def compute_gdp_total(db: aiosqlite.Connection) -> int:
     """Compute total GDP from approved + ruled tasks."""
     approved = await execute_scalar(
         db,
-        "SELECT COALESCE(SUM(reward), 0) FROM board_tasks WHERE status = 'approved'",
-        (),
+        "SELECT COALESCE(SUM(reward), 0) FROM board_tasks WHERE status = ?",
+        (TaskStatus.APPROVED,),
     )
     ruled = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward * worker_pct / 100), 0) "
-        "FROM board_tasks WHERE status = 'ruled' AND worker_pct IS NOT NULL",
-        (),
+        "FROM board_tasks WHERE status = ? AND worker_pct IS NOT NULL",
+        (TaskStatus.RULED,),
     )
     return int(approved) + int(ruled)
 
@@ -46,16 +56,15 @@ async def compute_gdp_window(db: aiosqlite.Connection, since_iso: str) -> int:
     """Compute GDP for tasks approved/ruled since a given timestamp."""
     approved = await execute_scalar(
         db,
-        "SELECT COALESCE(SUM(reward), 0) FROM board_tasks "
-        "WHERE status = 'approved' AND approved_at >= ?",
-        (since_iso,),
+        "SELECT COALESCE(SUM(reward), 0) FROM board_tasks WHERE status = ? AND approved_at >= ?",
+        (TaskStatus.APPROVED, since_iso),
     )
     ruled = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward * worker_pct / 100), 0) "
-        "FROM board_tasks WHERE status = 'ruled' AND worker_pct IS NOT NULL "
+        "FROM board_tasks WHERE status = ? AND worker_pct IS NOT NULL "
         "AND ruled_at >= ?",
-        (since_iso,),
+        (TaskStatus.RULED, since_iso),
     )
     return int(approved) + int(ruled)
 
@@ -67,15 +76,15 @@ async def _compute_gdp_window_between(
     approved = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward), 0) FROM board_tasks "
-        "WHERE status = 'approved' AND approved_at >= ? AND approved_at < ?",
-        (since_iso, until_iso),
+        "WHERE status = ? AND approved_at >= ? AND approved_at < ?",
+        (TaskStatus.APPROVED, since_iso, until_iso),
     )
     ruled = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward * worker_pct / 100), 0) "
-        "FROM board_tasks WHERE status = 'ruled' AND worker_pct IS NOT NULL "
+        "FROM board_tasks WHERE status = ? AND worker_pct IS NOT NULL "
         "AND ruled_at >= ? AND ruled_at < ?",
-        (since_iso, until_iso),
+        (TaskStatus.RULED, since_iso, until_iso),
     )
     return int(approved) + int(ruled)
 
@@ -170,8 +179,8 @@ async def compute_agents(db: aiosqlite.Connection) -> dict[str, Any]:
 
     with_completed = await execute_scalar(
         db,
-        "SELECT COUNT(DISTINCT worker_id) FROM board_tasks WHERE status = 'approved'",
-        (),
+        "SELECT COUNT(DISTINCT worker_id) FROM board_tasks WHERE status = ?",
+        (TaskStatus.APPROVED,),
     )
 
     active_val = int(active or 0)
@@ -194,40 +203,42 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
     completed_all_time = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE status = 'approved'",
-            (),
+            "SELECT COUNT(*) FROM board_tasks WHERE status = ?",
+            (TaskStatus.APPROVED,),
         )
         or 0
     )
     completed_24h = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE status = 'approved' AND approved_at >= ?",
-            (since_24h,),
+            "SELECT COUNT(*) FROM board_tasks WHERE status = ? AND approved_at >= ?",
+            (TaskStatus.APPROVED, since_24h),
         )
         or 0
     )
     open_count = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE status = 'open'",
-            (),
+            "SELECT COUNT(*) FROM board_tasks WHERE status = ?",
+            (TaskStatus.OPEN,),
         )
         or 0
     )
     in_execution = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE status IN ('accepted', 'submitted')",
-            (),
+            "SELECT COUNT(*) FROM board_tasks "
+            f"WHERE status IN ({sql_placeholders(IN_EXECUTION_STATUSES)})",  # nosec B608
+            (*IN_EXECUTION_STATUSES,),
         )
         or 0
     )
     disputed = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE status IN ('disputed', 'ruled')",
-            (),
+            "SELECT COUNT(*) FROM board_tasks "
+            f"WHERE status IN ({sql_placeholders(DISPUTED_STATUSES)})",  # nosec B608
+            (*DISPUTED_STATUSES,),
         )
         or 0
     )
@@ -235,16 +246,16 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
     ruled_count = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE status = 'ruled'",
-            (),
+            "SELECT COUNT(*) FROM board_tasks WHERE status = ?",
+            (TaskStatus.RULED,),
         )
         or 0
     )
     disputed_only = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE status = 'disputed'",
-            (),
+            "SELECT COUNT(*) FROM board_tasks WHERE status = ?",
+            (TaskStatus.DISPUTED,),
         )
         or 0
     )
@@ -254,8 +265,8 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
     new_open = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE status = 'open' AND created_at >= ?",
-            (since_24h,),
+            "SELECT COUNT(*) FROM board_tasks WHERE status = ? AND created_at >= ?",
+            (TaskStatus.OPEN, since_24h),
         )
         or 0
     )
@@ -265,9 +276,9 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
     prev_completed_24h = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE status = 'approved' "
+            "SELECT COUNT(*) FROM board_tasks WHERE status = ? "
             "AND approved_at >= ? AND approved_at < ?",
-            (since_48h, since_24h),
+            (TaskStatus.APPROVED, since_48h, since_24h),
         )
         or 0
     )
@@ -496,8 +507,9 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
         await execute_scalar(
             db,
             "SELECT COUNT(DISTINCT worker_id) FROM board_tasks "
-            "WHERE status IN ('accepted', 'submitted') AND worker_id IS NOT NULL",
-            (),
+            f"WHERE status IN ({sql_placeholders(IN_EXECUTION_STATUSES)}) "  # nosec B608
+            "AND worker_id IS NOT NULL",
+            (*IN_EXECUTION_STATUSES,),
         )
         or 0
     )
@@ -618,8 +630,9 @@ async def compute_economy_phase(db: aiosqlite.Connection, total_tasks: int) -> d
     disputed_count = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE status IN ('disputed', 'ruled')",
-            (),
+            "SELECT COUNT(*) FROM board_tasks "
+            f"WHERE status IN ({sql_placeholders(DISPUTED_STATUSES)})",  # nosec B608
+            (*DISPUTED_STATUSES,),
         )
         or 0
     )
@@ -656,16 +669,15 @@ async def compute_gdp_at_timestamp(db: aiosqlite.Connection, ts_iso: str) -> int
     """Compute cumulative GDP up to a given timestamp."""
     approved = await execute_scalar(
         db,
-        "SELECT COALESCE(SUM(reward), 0) FROM board_tasks "
-        "WHERE status = 'approved' AND approved_at <= ?",
-        (ts_iso,),
+        "SELECT COALESCE(SUM(reward), 0) FROM board_tasks WHERE status = ? AND approved_at <= ?",
+        (TaskStatus.APPROVED, ts_iso),
     )
     ruled = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward * worker_pct / 100), 0) "
-        "FROM board_tasks WHERE status = 'ruled' AND worker_pct IS NOT NULL "
+        "FROM board_tasks WHERE status = ? AND worker_pct IS NOT NULL "
         "AND ruled_at <= ?",
-        (ts_iso,),
+        (TaskStatus.RULED, ts_iso),
     )
     return int(approved) + int(ruled)
 
@@ -737,95 +749,94 @@ async def compute_sparkline_history(
     # 1. Tasks created per hour
     created = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = 'task.created' "
+        "FROM events WHERE timestamp >= ? AND event_type = ? "
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, EventType.TASK_CREATED),
     )
 
     # 2. Tasks accepted per hour (proxy for in-execution activity)
     accepted = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = 'task.accepted' "
+        "FROM events WHERE timestamp >= ? AND event_type = ? "
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, EventType.TASK_ACCEPTED),
     )
 
     # 3a. Approvals per hour
     approved = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
         "FROM events WHERE timestamp >= ? "
-        "AND event_type IN ('task.approved', 'task.auto_approved') "
+        f"AND event_type IN ({sql_placeholders(APPROVAL_EVENT_TYPES)}) "  # nosec B608
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, *APPROVAL_EVENT_TYPES),
     )
 
     # 3b. All terminal events per hour (for completion rate denominator)
     terminal = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
         "FROM events WHERE timestamp >= ? "
-        "AND event_type IN ('task.approved', 'task.auto_approved', "
-        "'task.disputed', 'task.cancelled', 'task.expired') "
+        f"AND event_type IN ({sql_placeholders(TERMINAL_EVENT_TYPES)}) "  # nosec B608
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, *TERMINAL_EVENT_TYPES),
     )
 
     # 4. Disputes filed per hour
     disputed = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = 'task.disputed' "
+        "FROM events WHERE timestamp >= ? AND event_type = ? "
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, EventType.TASK_DISPUTED),
     )
 
     # 5. Escrow locked amount per hour
     escrow = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, "
         "COALESCE(SUM(CAST(json_extract(payload, '$.amount') AS REAL)), 0) "
-        "FROM events WHERE timestamp >= ? AND event_type = 'escrow.locked' "
+        "FROM events WHERE timestamp >= ? AND event_type = ? "
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, EventType.ESCROW_LOCKED),
     )
 
     # 6. Bids submitted per hour
     bids = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = 'bid.submitted' "
+        "FROM events WHERE timestamp >= ? AND event_type = ? "
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, EventType.BID_SUBMITTED),
     )
 
     # 7. Average reward of tasks created per hour
     avg_reward = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, "
         "COALESCE(AVG(CAST(json_extract(payload, '$.reward') AS REAL)), 0) "
-        "FROM events WHERE timestamp >= ? AND event_type = 'task.created' "
+        "FROM events WHERE timestamp >= ? AND event_type = ? "
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, EventType.TASK_CREATED),
     )
 
     # 8. Spec quality feedback events per hour
     spec_quality = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
         "FROM events WHERE timestamp >= ? "
-        "AND event_type = 'feedback.revealed' "
+        "AND event_type = ? "
         "AND json_extract(payload, '$.category') = 'spec_quality' "
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, EventType.FEEDBACK_REVEALED),
     )
 
     # 9. Agent registrations — cumulative (need baseline before window)
     reg_per_bucket = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = 'agent.registered' "
+        "FROM events WHERE timestamp >= ? AND event_type = ? "
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, EventType.AGENT_REGISTERED),
     )
 
     baseline = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM events WHERE timestamp < ? AND event_type = 'agent.registered'",
-            (since_iso,),
+            "SELECT COUNT(*) FROM events WHERE timestamp < ? AND event_type = ?",
+            (since_iso, EventType.AGENT_REGISTERED),
         )
         or 0
     )
@@ -842,17 +853,17 @@ async def compute_sparkline_history(
     # -1 when an agent stops working (task.approved/auto_approved/disputed has worker_id)
     work_start_per_bucket = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
-        "FROM events WHERE timestamp >= ? AND event_type = 'task.accepted' "
+        "FROM events WHERE timestamp >= ? AND event_type = ? "
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, EventType.TASK_ACCEPTED),
     )
 
     work_stop_per_bucket = await _fetch_buckets(
         "SELECT substr(timestamp, 1, 13) AS bucket, COUNT(*) "
         "FROM events WHERE timestamp >= ? "
-        "AND event_type IN ('task.approved', 'task.auto_approved', 'task.disputed') "
+        f"AND event_type IN ({sql_placeholders(WORK_STOP_EVENT_TYPES)}) "  # nosec B608
         "GROUP BY bucket ORDER BY bucket",
-        (since_iso,),
+        (since_iso, *WORK_STOP_EVENT_TYPES),
     )
 
     # Baseline: agents working before the window starts
@@ -861,11 +872,11 @@ async def compute_sparkline_history(
             db,
             "SELECT ("
             "  (SELECT COUNT(*) FROM events WHERE timestamp < ? "
-            "   AND event_type = 'task.accepted') - "
+            "   AND event_type = ?) - "
             "  (SELECT COUNT(*) FROM events WHERE timestamp < ? "
-            "   AND event_type IN ('task.approved', 'task.auto_approved', 'task.disputed'))"
+            f"   AND event_type IN ({sql_placeholders(WORK_STOP_EVENT_TYPES)}))"  # nosec B608
             ")",
-            (since_iso, since_iso),
+            (since_iso, EventType.TASK_ACCEPTED, since_iso, *WORK_STOP_EVENT_TYPES),
         )
         or 0
     )
