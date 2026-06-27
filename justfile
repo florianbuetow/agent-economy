@@ -267,20 +267,24 @@ start-all:
     fi
     printf "\033[0;32m✓ Identity registry fully online (port 8001)\033[0m\n"
 
-    # Tier 3: remaining services in parallel. Identity is healthy, so
+    # Tier 3: economy services in parallel. Identity is healthy, so
     # platform-agent registration can no longer race.
-    printf "Starting tier 3 (remaining services)...\n"
+    printf "Starting tier 3 (economy services)...\n"
     cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 127.0.0.1 --port 8004 &
     cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 127.0.0.1 --port 8002 &
     cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 127.0.0.1 --port 8003 &
     cd services/court && set -a && [ -f .env ] && . .env && set +a && uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port 8005 &
-    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host 127.0.0.1 --port 8008 &
 
     # Wait for the rest in dependency order
     wait_for_health "Central Bank" 8002
     wait_for_health "Task Board" 8003
     wait_for_health "Reputation" 8004
     wait_for_health "Court" 8005
+
+    # Tier 4: UI last. Its UserAgent mints the platform treasury against the
+    # Central Bank during startup, so the bank must be healthy first.
+    printf "Starting tier 4 (UI)...\n"
+    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host 127.0.0.1 --port 8008 &
     wait_for_health "UI" 8008
 
     printf "\n"

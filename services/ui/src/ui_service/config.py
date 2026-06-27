@@ -83,6 +83,7 @@ class UserAgentConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     agent_config_path: str
+    treasury_balance: int
 
 
 class Settings(BaseModel):
@@ -129,8 +130,15 @@ def get_settings() -> Settings:
     """Load and validate settings from YAML config."""
     config_path = get_config_path()
     yaml_config = load_yaml_config(config_path)
-    if "user_agent" not in yaml_config:
-        yaml_config["user_agent"] = _load_default_user_agent_config()
+    default_user_agent = _load_default_user_agent_config()
+    user_agent_config = yaml_config.get("user_agent")
+    if isinstance(user_agent_config, dict):
+        # Backfill keys missing from a partial user_agent block with the
+        # canonical values from the service config.yaml.
+        for key, value in default_user_agent.items():
+            user_agent_config.setdefault(key, value)
+    else:
+        yaml_config["user_agent"] = default_user_agent
     return load_settings(Settings, yaml_config)
 
 
