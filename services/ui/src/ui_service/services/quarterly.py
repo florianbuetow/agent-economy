@@ -12,6 +12,7 @@ from ui_service.services.database import (
     execute_scalar,
     utc_now,
 )
+from ui_service.taxonomy import DISPUTED_STATUSES, TaskStatus, sql_placeholders
 
 if TYPE_CHECKING:
     from typing import Any
@@ -76,15 +77,15 @@ async def _compute_gdp_for_period(db: aiosqlite.Connection, start: str, end: str
     approved = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward), 0) FROM board_tasks "
-        "WHERE status = 'approved' AND approved_at >= ? AND approved_at <= ?",
-        (start, end),
+        "WHERE status = ? AND approved_at >= ? AND approved_at <= ?",
+        (TaskStatus.APPROVED, start, end),
     )
     ruled = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward * worker_pct / 100), 0) "
-        "FROM board_tasks WHERE status = 'ruled' AND worker_pct IS NOT NULL "
+        "FROM board_tasks WHERE status = ? AND worker_pct IS NOT NULL "
         "AND ruled_at >= ? AND ruled_at <= ?",
-        (start, end),
+        (TaskStatus.RULED, start, end),
     )
     return int(approved) + int(ruled)
 
@@ -200,21 +201,34 @@ async def _compute_notable(
         db,
         "SELECT a.agent_id, a.name, "
         "  COALESCE(SUM(CASE "
-        "    WHEN t.status = 'approved' AND t.approved_at >= ? AND t.approved_at <= ? "
+        "    WHEN t.status = ? AND t.approved_at >= ? AND t.approved_at <= ? "
         "      THEN t.reward "
-        "    WHEN t.status = 'ruled' AND t.ruled_at >= ? AND t.ruled_at <= ? "
+        "    WHEN t.status = ? AND t.ruled_at >= ? AND t.ruled_at <= ? "
         "      THEN t.reward * t.worker_pct / 100 "
         "    ELSE 0 "
         "  END), 0) AS earned "
         "FROM identity_agents a "
         "JOIN board_tasks t ON a.agent_id = t.worker_id "
-        "WHERE (t.status = 'approved' AND t.approved_at >= ? AND t.approved_at <= ?) "
-        "   OR (t.status = 'ruled' AND t.ruled_at >= ? AND t.ruled_at <= ?) "
+        "WHERE (t.status = ? AND t.approved_at >= ? AND t.approved_at <= ?) "
+        "   OR (t.status = ? AND t.ruled_at >= ? AND t.ruled_at <= ?) "
         "GROUP BY a.agent_id "
         "HAVING earned > 0 "
         "ORDER BY earned DESC "
         "LIMIT 3",
-        (start, end, start, end, start, end, start, end),
+        (
+            TaskStatus.APPROVED,
+            start,
+            end,
+            TaskStatus.RULED,
+            start,
+            end,
+            TaskStatus.APPROVED,
+            start,
+            end,
+            TaskStatus.RULED,
+            start,
+            end,
+        ),
     )
     top_workers = [{"agent_id": r[0], "name": r[1], "earned": int(r[2])} for r in top_workers_rows]
 
@@ -273,9 +287,9 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
         await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks "
-            "WHERE (status = 'approved' AND approved_at >= ? AND approved_at <= ?) "
-            "OR (status = 'ruled' AND ruled_at >= ? AND ruled_at <= ?)",
-            (start, end, start, end),
+            "WHERE (status = ? AND approved_at >= ? AND approved_at <= ?) "
+            "OR (status = ? AND ruled_at >= ? AND ruled_at <= ?)",
+            (TaskStatus.APPROVED, start, end, TaskStatus.RULED, start, end),
         )
         or 0
     )
@@ -324,8 +338,8 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
         await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks "
-            "WHERE status = 'approved' AND approved_at >= ? AND approved_at <= ?",
-            (start, end),
+            "WHERE status = ? AND approved_at >= ? AND approved_at <= ?",
+            (TaskStatus.APPROVED, start, end),
         )
         or 0
     )
@@ -334,9 +348,9 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
         await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks "
-            "WHERE status IN ('disputed', 'ruled') "
+            f"WHERE status IN ({sql_placeholders(DISPUTED_STATUSES)}) "  # nosec B608
             "AND created_at >= ? AND created_at <= ?",
-            (start, end),
+            (*DISPUTED_STATUSES, start, end),
         )
         or 0
     )

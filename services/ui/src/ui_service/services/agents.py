@@ -10,6 +10,13 @@ from ui_service.services.database import (
     execute_fetchone,
     execute_scalar,
 )
+from ui_service.taxonomy import (
+    AGENT_FEED_EVENT_TYPES,
+    DEFAULT_EVENT_BADGE,
+    EVENT_TYPE_TO_BADGE,
+    TaskStatus,
+    sql_placeholders,
+)
 
 if TYPE_CHECKING:
     from typing import Any
@@ -31,8 +38,8 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
     tasks_completed_as_worker = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = 'approved'",
-            (agent_id,),
+            "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = ?",
+            (agent_id, TaskStatus.APPROVED),
         )
         or 0
     )
@@ -321,51 +328,6 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str
     }
 
 
-# ---------------------------------------------------------------------------
-# Event types included in the agent activity feed (per spec §3)
-# ---------------------------------------------------------------------------
-_INCLUDED_EVENT_TYPES = {
-    "agent.registered",
-    "salary.paid",
-    "task.created",
-    "bid.submitted",
-    "task.accepted",
-    "asset.uploaded",
-    "task.submitted",
-    "task.approved",
-    "task.auto_approved",
-    "task.disputed",
-    "task.ruled",
-    "task.cancelled",
-    "task.expired",
-    "escrow.locked",
-    "escrow.released",
-    "escrow.split",
-    "feedback.revealed",
-}
-
-# Map event_type -> badge category (same taxonomy as macro feed)
-_EVENT_TYPE_TO_BADGE: dict[str, str] = {
-    "agent.registered": "SYSTEM",
-    "salary.paid": "SYSTEM",
-    "task.created": "TASK",
-    "bid.submitted": "BID",
-    "task.accepted": "TASK",
-    "asset.uploaded": "TASK",
-    "task.submitted": "TASK",
-    "task.approved": "PAYOUT",
-    "task.auto_approved": "PAYOUT",
-    "task.disputed": "TASK",
-    "task.ruled": "TASK",
-    "task.cancelled": "TASK",
-    "task.expired": "TASK",
-    "escrow.locked": "ESCROW",
-    "escrow.released": "PAYOUT",
-    "escrow.split": "ESCROW",
-    "feedback.revealed": "REP",
-}
-
-
 def _derive_agent_role(
     agent_id: str,
     event_agent_id: str | None,
@@ -401,9 +363,9 @@ async def get_agent_feed(
     """
     # Build the base query per spec §2: join events with board_tasks
     # to find events where agent is actor, poster, or worker.
-    placeholders = ", ".join("?" for _ in _INCLUDED_EVENT_TYPES)
+    placeholders = sql_placeholders(AGENT_FEED_EVENT_TYPES)
     conditions = [f"e.event_type IN ({placeholders})"]
-    params: list[Any] = list(_INCLUDED_EVENT_TYPES)
+    params: list[Any] = list(AGENT_FEED_EVENT_TYPES)
 
     # Agent involvement condition
     conditions.append("(e.agent_id = ? OR t.poster_id = ? OR t.worker_id = ?)")
@@ -468,7 +430,7 @@ async def get_agent_feed(
         if role_filter == "AS_WORKER" and role != "WORKER":
             continue
 
-        badge = _EVENT_TYPE_TO_BADGE.get(event_type, "SYSTEM")
+        badge = EVENT_TYPE_TO_BADGE.get(event_type, DEFAULT_EVENT_BADGE)
 
         # Apply type filter
         if type_filter is not None and badge != type_filter:
@@ -544,8 +506,8 @@ async def get_agent_earnings(
     tasks_approved = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = 'approved'",
-            (agent_id,),
+            "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = ?",
+            (agent_id, TaskStatus.APPROVED),
         )
         or 0
     )

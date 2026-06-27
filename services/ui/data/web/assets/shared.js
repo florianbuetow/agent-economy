@@ -291,50 +291,77 @@
     return source;
   }
 
+  // ── Event / badge / status taxonomies (single source of truth) ──
+  // These vocabularies are declared exactly once here and consumed by every
+  // page script (observatory.js, task.js) via the ATE namespace. The frontend
+  // badge taxonomy is intentionally finer than the backend one; do not unify.
+
+  // Canonical event_type -> feed type.
+  var EVENT_TYPE_TO_FEED_TYPE = {
+    'task.created': 'TASK',
+    'bid.submitted': 'BID',
+    'task.accepted': 'CONTRACT',
+    'asset.uploaded': 'SUBMIT',
+    'task.submitted': 'SUBMIT',
+    'task.approved': 'PAYOUT',
+    'task.auto_approved': 'PAYOUT',
+    'task.disputed': 'DISPUTE',
+    'task.ruled': 'RULING',
+    'task.cancelled': 'CANCEL',
+    'task.expired': 'CANCEL',
+    'escrow.locked': 'ESCROW',
+    'escrow.released': 'PAYOUT',
+    'escrow.split': 'PAYOUT',
+    'feedback.revealed': 'REP',
+    'salary.paid': 'SALARY',
+    'agent.registered': 'AGENT'
+  };
+
+  // Canonical feed type -> badge CSS class. The key order defines the
+  // observatory filter order; SALARY is not user-filterable so it is listed
+  // last and excluded from EVENT_FILTER_TYPES below.
+  var FEED_TYPE_TO_BADGE_CLASS = {
+    'TASK': 'badge-task',
+    'BID': 'badge-bid',
+    'PAYOUT': 'badge-payout',
+    'CONTRACT': 'badge-contract',
+    'ESCROW': 'badge-escrow',
+    'SUBMIT': 'badge-submit',
+    'REP': 'badge-rep',
+    'DISPUTE': 'badge-dispute',
+    'RULING': 'badge-ruling',
+    'CANCEL': 'badge-cancel',
+    'AGENT': 'badge-agent',
+    'SALARY': 'badge-salary'
+  };
+
+  // Observatory feed filters: 'ALL' plus every filterable feed type (all badge
+  // types except SALARY). Derived so adding a feed type updates the filters too.
+  var EVENT_FILTER_TYPES = ['ALL'].concat(
+    Object.keys(FEED_TYPE_TO_BADGE_CLASS).filter(function(t) { return t !== 'SALARY'; })
+  );
+
+  // Canonical task status -> { text, cls } badge mapping (frontend).
+  var TASK_STATUS_BADGE = {
+    'open': { text: 'OPEN', cls: 'status-open' },
+    'accepted': { text: 'ACTIVE', cls: 'status-active' },
+    'submitted': { text: 'SUBMITTED', cls: 'status-submitted' },
+    'disputed': { text: 'DISPUTED', cls: 'status-disputed' },
+    'ruled': { text: 'RULED', cls: 'status-ruled' },
+    'approved': { text: 'APPROVED', cls: 'status-approved' },
+    'cancelled': { text: 'CANCELLED', cls: 'status-open' },
+    'expired': { text: 'EXPIRED', cls: 'status-open' }
+  };
+
   /**
    * Map an API event object to a feed display object.
    * Returns { type, badge, text, time }.
    */
   function mapEventToFeed(event) {
-    var typeMap = {
-      'task.created': 'TASK',
-      'bid.submitted': 'BID',
-      'task.accepted': 'CONTRACT',
-      'asset.uploaded': 'SUBMIT',
-      'task.submitted': 'SUBMIT',
-      'task.approved': 'PAYOUT',
-      'task.auto_approved': 'PAYOUT',
-      'task.disputed': 'DISPUTE',
-      'task.ruled': 'RULING',
-      'task.cancelled': 'CANCEL',
-      'task.expired': 'CANCEL',
-      'escrow.locked': 'ESCROW',
-      'escrow.released': 'PAYOUT',
-      'escrow.split': 'PAYOUT',
-      'feedback.revealed': 'REP',
-      'salary.paid': 'SALARY',
-      'agent.registered': 'AGENT'
-    };
-
-    var badgeMap = {
-      'TASK': 'badge-task',
-      'BID': 'badge-bid',
-      'CONTRACT': 'badge-contract',
-      'SUBMIT': 'badge-submit',
-      'PAYOUT': 'badge-payout',
-      'DISPUTE': 'badge-dispute',
-      'RULING': 'badge-ruling',
-      'CANCEL': 'badge-cancel',
-      'ESCROW': 'badge-escrow',
-      'REP': 'badge-rep',
-      'SALARY': 'badge-salary',
-      'AGENT': 'badge-agent'
-    };
-
-    var feedType = typeMap[event.event_type] || 'TASK';
+    var feedType = EVENT_TYPE_TO_FEED_TYPE[event.event_type] || 'TASK';
     return {
       type: feedType,
-      badge: badgeMap[feedType] || 'badge-task',
+      badge: FEED_TYPE_TO_BADGE_CLASS[feedType] || 'badge-task',
       text: event.summary || event.event_type,
       time: new Date(event.timestamp).getTime(),
       eventId: event.event_id
@@ -425,6 +452,11 @@
   window.ATE = {
     AGENTS: AGENTS,
     S: S,
+    // Taxonomies (single source of truth)
+    EVENT_TYPE_TO_FEED_TYPE: EVENT_TYPE_TO_FEED_TYPE,
+    FEED_TYPE_TO_BADGE_CLASS: FEED_TYPE_TO_BADGE_CLASS,
+    EVENT_FILTER_TYPES: EVENT_FILTER_TYPES,
+    TASK_STATUS_BADGE: TASK_STATUS_BADGE,
     // Utilities
     timeAgo: timeAgo,
     renderSparkSVG: renderSparkSVG,
