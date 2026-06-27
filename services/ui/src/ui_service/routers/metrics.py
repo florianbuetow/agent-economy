@@ -1,12 +1,10 @@
 """Metrics route handlers."""
 
-from __future__ import annotations
-
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
-from ui_service.core.state import get_app_state
+from ui_service.core.deps import DbConn
 from ui_service.schemas import (
     AgentMetrics,
     EconomyPhaseMetrics,
@@ -32,18 +30,10 @@ VALID_SPARKLINE_WINDOWS = {"24h"}
 
 
 @router.get("/metrics")
-async def get_metrics() -> JSONResponse:
+async def get_metrics(
+    db: DbConn,
+) -> JSONResponse:
     """Return aggregated economy metrics."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     agents_data = await metrics_service.compute_agents(db)
     active_agents = agents_data["active"]
 
@@ -86,6 +76,7 @@ async def get_metrics() -> JSONResponse:
 
 @router.get("/metrics/gdp/history")  # nosemgrep
 async def get_gdp_history(
+    db: DbConn,
     window: str = Query("1h"),
     resolution: str = Query("1m"),
 ) -> JSONResponse:
@@ -109,16 +100,6 @@ async def get_gdp_history(
             details={"parameter": "resolution", "value": resolution},
         )
 
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     data_points_raw = await metrics_service.compute_gdp_history(db, window, resolution)
 
     data_points = [GDPDataPoint(**dp) for dp in data_points_raw]
@@ -134,6 +115,7 @@ async def get_gdp_history(
 
 @router.get("/metrics/sparklines")  # nosemgrep
 async def get_sparklines(
+    db: DbConn,
     window: str = Query("24h"),
 ) -> JSONResponse:
     """Return all metric sparkline time series for the exchange board."""
@@ -146,16 +128,6 @@ async def get_sparklines(
             ),
             status_code=400,
             details={"parameter": "window", "value": window},
-        )
-
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
         )
 
     raw = await metrics_service.compute_sparkline_history(db, window)
