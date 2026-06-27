@@ -4,7 +4,7 @@
   var ATE = window.ATE;
   var S = ATE.S;
 
-  var EVENT_TYPES = ['ALL', 'TASK', 'BID', 'PAYOUT', 'CONTRACT', 'ESCROW', 'SUBMIT', 'REP', 'DISPUTE', 'RULING', 'CANCEL', 'AGENT'];
+  var EVENT_TYPES = ATE.EVENT_FILTER_TYPES;
 
   var activeFilter = 'ALL';
   var paused = false;

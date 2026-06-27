@@ -9,22 +9,21 @@ from ui_service.services.database import (
     execute_fetchone,
     execute_scalar,
 )
+from ui_service.taxonomy import (
+    COMPETITIVE_OPEN_STATUSES,
+    VALID_TASK_STATUSES,
+    TaskStatus,
+    sql_placeholders,
+)
 
 if TYPE_CHECKING:
     from typing import Any
 
     import aiosqlite
 
-VALID_TASK_STATUSES = {
-    "open",
-    "accepted",
-    "submitted",
-    "approved",
-    "disputed",
-    "ruled",
-    "expired",
-    "cancelled",
-}
+# Re-exported from ``ui_service.taxonomy`` so existing consumers (the tasks
+# router) keep importing it from this module.
+__all__ = ["VALID_TASK_STATUSES"]
 
 
 async def _delivery_quality(db: aiosqlite.Connection, agent_id: str) -> dict[str, Any]:
@@ -277,13 +276,13 @@ async def get_competitive_tasks(
             "FROM board_tasks bt "
             "LEFT JOIN board_bids bb ON bt.task_id = bb.task_id "
             "JOIN identity_agents ia ON bt.poster_id = ia.agent_id "
-            "WHERE bt.status IN ('open', 'accepted') "
+            f"WHERE bt.status IN ({sql_placeholders(COMPETITIVE_OPEN_STATUSES)}) "  # nosec B608
             "GROUP BY bt.task_id "
             "HAVING COUNT(bb.bid_id) > 0 "
             "ORDER BY COUNT(bb.bid_id) DESC "
             "LIMIT ?"
         )
-        rows = await execute_fetchall(db, sql, (limit,))
+        rows = await execute_fetchall(db, sql, (*COMPETITIVE_OPEN_STATUSES, limit))
     else:
         sql = (
             "SELECT bt.task_id, bt.title, bt.reward, bt.status, "
@@ -329,13 +328,13 @@ async def get_uncontested_tasks(
         "FROM board_tasks bt "
         "JOIN identity_agents ia ON bt.poster_id = ia.agent_id "
         "LEFT JOIN board_bids bb ON bt.task_id = bb.task_id "
-        "WHERE bt.status = 'open' "
+        "WHERE bt.status = ? "
         "AND bb.bid_id IS NULL "
         "AND (julianday('now') - julianday(bt.created_at)) * 1440 >= ? "
         "ORDER BY bt.created_at ASC "
         "LIMIT ?"
     )
-    rows = await execute_fetchall(db, sql, (min_age_minutes, limit))
+    rows = await execute_fetchall(db, sql, (TaskStatus.OPEN, min_age_minutes, limit))
 
     return [
         {
