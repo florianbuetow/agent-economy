@@ -180,19 +180,25 @@ def _start_ui_server_with_db(
     )
     config_path.write_text(config_content)
 
+    # Launch via a shim that freezes the injectable clock seam (database._clock)
+    # to just after the seed timestamps, so time-windowed metrics (e.g. the
+    # 30-day "active agents" window) are deterministic regardless of today's
+    # date. The override runs inside the spawned process before the app loads,
+    # so it reaches the server without any env var or config change.
+    server_script = work_dir / "run_frozen_server.py"
+    server_script.write_text(
+        "import datetime as dt\n"
+        "from ui_service.services import database\n"
+        "database._clock = lambda: dt.datetime(2026, 3, 2, 7, 0, 0, tzinfo=dt.UTC)\n"
+        "import uvicorn\n"
+        "from ui_service.app import create_app\n"
+        f"uvicorn.run(create_app, factory=True, host='127.0.0.1', port={port}, "
+        "log_level='warning')\n"
+    )
+
     env = {**os.environ, "CONFIG_PATH": str(config_path)}
     process = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "ui_service.app:create_app",
-            "--factory",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(port),
-        ],
+        [sys.executable, str(server_script)],
         cwd=str(PROJECT_ROOT / "services" / "ui"),
         env=env,
         stdout=subprocess.DEVNULL,
