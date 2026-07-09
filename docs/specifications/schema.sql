@@ -110,6 +110,7 @@ CREATE TABLE board_tasks (
 
     -- dispute / ruling
     dispute_reason           TEXT,
+    dispute_id               TEXT,             -- court claim id, "disp-<uuid4>"
     ruling_id                TEXT,
     worker_pct               INTEGER,          -- 0-100, court-determined
     ruling_summary           TEXT,

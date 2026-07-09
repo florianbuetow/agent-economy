@@ -45,6 +45,7 @@ class TaskDbClient:
         "cancelled_at",
         "disputed_at",
         "dispute_reason",
+        "dispute_id",
         "ruling_id",
         "ruled_at",
         "worker_pct",
