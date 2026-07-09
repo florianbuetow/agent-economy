@@ -22,6 +22,7 @@ TASK_UPDATE_COLUMNS: frozenset[str] = frozenset(
         "approved_at",
         "cancelled_at",
         "dispute_reason",
+        "dispute_id",
         "disputed_at",
         "ruling_id",
         "worker_pct",
@@ -67,6 +68,22 @@ class DbWriter:
         """Initialize database schema from SQL file (idempotent)."""
         with contextlib.suppress(sqlite3.OperationalError):
             self._db.executescript(schema_sql)
+        self._migrate_board_tasks_dispute_id()
+
+    def _migrate_board_tasks_dispute_id(self) -> None:
+        """Add board_tasks.dispute_id to databases created before the column existed.
+
+        The schema script above is a no-op on an existing database, so the column
+        must be added explicitly. Failures are deliberately not suppressed: without
+        this column every dispute would fail at runtime.
+        """
+        columns = self._db.execute("PRAGMA table_info(board_tasks)").fetchall()
+        if len(columns) == 0:
+            return
+        if any(row["name"] == "dispute_id" for row in columns):
+            return
+        self._db.execute("ALTER TABLE board_tasks ADD COLUMN dispute_id TEXT")
+        self._db.commit()
 
     # ------------------------------------------------------------------
     # Helpers
@@ -817,8 +834,9 @@ class DbWriter:
                 "INSERT INTO board_tasks "
                 "(task_id, poster_id, title, spec, reward, status, "
                 "bidding_deadline_seconds, deadline_seconds, review_deadline_seconds, "
-                "bidding_deadline, bid_count, escrow_pending, escrow_id, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "bidding_deadline, bid_count, escrow_pending, escrow_id, created_at, "
+                "dispute_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     data["task_id"],
                     data["poster_id"],
@@ -834,6 +852,7 @@ class DbWriter:
                     data.get("escrow_pending", 0),
                     data["escrow_id"],
                     data["created_at"],
+                    data.get("dispute_id"),
                 ),
             )
             event_id = self._insert_event(cursor, data["event"])

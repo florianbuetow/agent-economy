@@ -1002,6 +1002,7 @@ class TaskManager:
         11.  invalid_status — not SUBMITTED
         9b.  forbidden — signer != task's poster
         12.  invalid_reason — empty or too long
+        13.  court_unavailable — Court returned no dispute id
         """
         # Steps 4-7a: Verify JWS, validate action
         payload = await self._token_validator.validate_jws_token(
@@ -1077,11 +1078,27 @@ class TaskManager:
             escrow_id=str(task["escrow_id"]),
         )
 
+        # Step 13: A task must never enter 'disputed' without a Court dispute to
+        # bind rebuttals to, otherwise any worker could name an arbitrary dispute.
+        dispute_id = court_dispute.get("dispute_id")
+        if not isinstance(dispute_id, str) or len(dispute_id) < 1:
+            raise ServiceError(
+                "court_unavailable",
+                "Court did not return a dispute id",
+                502,
+                {},
+            )
+
         # Update task
         disputed_at = _now_iso()
         self._store.update_task(
             task_id,
-            {"status": "disputed", "disputed_at": disputed_at, "dispute_reason": reason},
+            {
+                "status": "disputed",
+                "disputed_at": disputed_at,
+                "dispute_reason": reason,
+                "dispute_id": dispute_id,
+            },
             expected_status=None,
         )
 
@@ -1090,9 +1107,7 @@ class TaskManager:
             msg = f"Task {task_id} not found after update"
             raise RuntimeError(msg)
         response = self._task_to_response(updated)
-        dispute_id = court_dispute.get("dispute_id")
-        if dispute_id is not None:
-            response["dispute_id"] = dispute_id
+        response["dispute_id"] = dispute_id
         return response
 
     async def submit_rebuttal(
@@ -1111,7 +1126,9 @@ class TaskManager:
         10.  task_not_found
         11.  invalid_status — not DISPUTED
         9b.  forbidden — signer != task's worker
-        12.  invalid_rebuttal — empty or too long
+        12a. invalid_status — task has no recorded dispute
+        12b. invalid_payload — dispute_id does not match this task's dispute
+        13.  invalid_rebuttal — empty or too long
         """
         payload = await self._token_validator.validate_jws_token(token, "submit_rebuttal")
         signer_id: str = payload["_signer_id"]
@@ -1151,9 +1168,23 @@ class TaskManager:
         if signer_id != task["worker_id"]:
             raise ServiceError("forbidden", "Only the worker can submit a rebuttal", 403, {})
 
+        # Steps 12a-12b: The rebuttal must target the dispute the Court opened for
+        # this task. Without this, a worker could inject a rebuttal into any dispute.
+        stored_dispute_id = task.get("dispute_id")
+        if not stored_dispute_id:
+            raise ServiceError("invalid_status", "Task has no recorded dispute", 409, {})
+
         dispute_id = payload["dispute_id"]
         if not isinstance(dispute_id, str) or len(dispute_id) < 1:
             raise ServiceError("invalid_payload", "dispute_id must be non-empty", 400, {})
+
+        if dispute_id != stored_dispute_id:
+            raise ServiceError(
+                "invalid_payload",
+                "dispute_id does not match this task's dispute",
+                400,
+                {},
+            )
 
         rebuttal = payload["rebuttal"]
         if not isinstance(rebuttal, str) or len(rebuttal) < 1:
@@ -1172,7 +1203,9 @@ class TaskManager:
                 {},
             )
 
-        response: dict[str, Any] = await platform_agent.submit_rebuttal(dispute_id, rebuttal)
+        response: dict[str, Any] = await platform_agent.submit_rebuttal(
+            str(stored_dispute_id), rebuttal
+        )
         return response
 
     async def record_ruling(self, task_id: str, token: str) -> dict[str, Any]:
