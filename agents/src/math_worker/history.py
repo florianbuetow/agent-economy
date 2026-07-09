@@ -18,6 +18,7 @@ class TaskOutcome(Enum):
     DISPUTED_LOST = "disputed_lost"
     BID_REJECTED = "bid_rejected"
     BID_TIMEOUT = "bid_timeout"
+    TIMEOUT = "timeout"
     ERROR = "error"
 
 

@@ -160,14 +160,19 @@ class MathWorkerLoop:
             disputed_task = await self._agent.get_task(task_id)
             await self._phase_disputed(disputed_task, solution)
         else:
+            logger.warning(
+                "[REVIEW] Review poll exhausted for task %s without a terminal "
+                "status; recording TIMEOUT with zero payout",
+                task_id,
+            )
             self._history.record(
                 task_id=task_id,
                 title=task.get("title", ""),
                 reward=task.get("reward", 0),
                 bid_amount=bid_result.get("amount", 0),
-                outcome=TaskOutcome.APPROVED,
+                outcome=TaskOutcome.TIMEOUT,
                 solution=solution,
-                payout=task.get("reward", 0),
+                payout=0,
             )
 
     # ------------------------------------------------------------------
@@ -328,7 +333,7 @@ class MathWorkerLoop:
             if attempt < self._config.max_poll_attempts - 1:
                 await asyncio.sleep(self._config.poll_interval_seconds)
 
-        logger.info("[REVIEW] Review timed out for task %s, assuming auto-approve", task_id)
+        logger.info("[REVIEW] Review timed out for task %s", task_id)
         return "timeout"
 
     async def _phase_disputed(
