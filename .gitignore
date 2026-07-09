@@ -121,8 +121,8 @@ data/*
 # Scratch (example project, not part of the repo)
 scratch/
 
-# OpenSpec specifications
-openspec/
+# OpenSpec specifications are canonical contracts and are tracked
+# (plan §5.0 H-1, docs/plans/2026-07-09-target-architecture-and-refactoring-plan.md)
 
 # Guard (file integrity tracking, machine-specific)
 .guardfile
@@ -150,8 +150,12 @@ services/ui/data/logs/
 # Local demo sandbox
 demo/
 
-# Documentation (tracked separately, not in git)
-docs/
+# Documentation: bulk/generated docs stay untracked; authored contracts
+# (service specs incl. the runtime schema.sql, plans & decision records)
+# are tracked — plan §5.0 H-1
+docs/*
+!docs/specifications/
+!docs/plans/
 
 # Dolt database files (added by bd init)
 .dolt/
