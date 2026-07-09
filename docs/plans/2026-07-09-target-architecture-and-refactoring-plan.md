@@ -184,7 +184,7 @@ Target flow (agent-task-economy § Court Dispute Resolution + R9 + R4):
 - `services/ui` @8008, FastAPI backend + vanilla JS assets (R6, R7).
 - Read side: observatory dashboards (ticker, metrics, leaderboard, quarterly report, task views).
 - Write side: **operator actions via `/proxy/*` backed by a registered UserAgent** (agent-task-economy § Scenario: UI proxy uses UserAgent) — the "dedicated user for the UI operator". Every proxy route must be specified and integration-tested (T-049).
-- Economy phase for a zero-activity economy is **`stalled`** (completion-backlog § Scenario: T-046) — this decides `tickets.md#T-001` in favor of changing the code (`metrics.py:653` emits `idle`), not the test. The phase state machine also restores the spec's dispute<15% ceiling on `stable` (currently dropped, `metrics.py:658`).
+- Economy phase for a zero-activity economy is **`stalled`** (completion-backlog § Scenario: T-046) — this decides `tickets.md#T-001` in favor of changing the code, not the test. ✅ shipped `9f506c9`. The `stable`/`contracting` boundary for combinations the spec table leaves uncovered is an open spec gap (see the §5.0 correction note), resolved in WP-12 — not by guesswork.
 - Pages (target): landing, observatory dashboard, task console (exist today) **plus** a quarterly-report page (T-093) and agent-profile view (T-095) — the backend endpoints already exist; the HTML/JS views do not. The observatory spec's React `/live` route is superseded (R7).
 - Read data source: today every UI read is direct read-only SQLite (`aiosqlite`, `mode=ro`); target treatment — keep-and-bless vs migrate to the gateway read API — is **Q-4**.
 - Write path: `/api/proxy/*` (post task, accept bid, approve, dispute, get identity) through the UserAgent; every proxy route must be specified and integration-tested (T-049). Operator identity → Q-2; proxy auth → Q-3.
@@ -359,7 +359,7 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | GAP-D2 | Env-var seams in production: `CONFIG_PATH` (commons `config.py:109`), court `api_key_env` (`lifespan.py:49`), agents `${VAR}` (`worker_config.py:12-40`) vs the project's no-env-var rule | sanctioned list or replacement | P2 | WP-10 ⚠Q-7 |
 | GAP-D3 | No hosted CI (`.github/` absent); quality gates are manual-only | per Q-14 | P2 | WP-10 ⚠Q-14 |
 | GAP-D4 | Port literals repeated ~15× in the justfile; compose healthchecks duplicate port literals | single source | P3 | WP-11 |
-| GAP-D5 | `.claude/settings.json` PreToolUse hook references nonexistent `ci-all-quiet-hook.sh` with a wrong jq path — the commit gate has never fired successfully | working or removed hook | P3 | WP-11 |
+| ~~GAP-D5~~ | ~~PreToolUse CI hook broken (audit F-75)~~ — **RETRACTED 2026-07-10**: verified `scripts/ci-quiet-hook.sh` exists and `.claude/settings.json` wires `bash scripts/ci-quiet-hook.sh`; it blocked a commit during H-2 while the tree was red. F-75 (sourced from the March retrospectives) is stale. | n/a | — | closed, no work |
 | GAP-D6 | Guard collections omit db-gateway/ui sources and protect the deleted `DELEGATE.md` | complete guards | P3 | WP-11 |
 | GAP-D7 | Bank `/health` 500s when the gateway is down (`health.py:19-21`) — health must degrade, not die | health contract | P3 | WP-11 |
 
@@ -416,13 +416,17 @@ Dependency spine: WP-01 → WP-02 → WP-03 → {WP-04 ∥ WP-05} → {WP-06 ∥
 
 Unblocked items promoted out of their WPs after the Codex adversarial review confirmed two live hazards; each follows failing-test-first and lands with its own verification:
 
-| # | Item | Origin | Scope |
-|---|---|---|---|
-| H-1 | Re-track authored contracts: `.gitignore` `docs/` → `docs/*` + `!docs/specifications/` + `!docs/plans/`; unignore `openspec/`; commit specs/plans/openspec incl. `schema.sql` and this plan | GAP-G4 | `.gitignore`, git index only |
-| H-2 | Rebuttal↔dispute binding: `dispute_task` persists Court `dispute_id` on the task (new `board_tasks.dispute_id` column: `schema.sql`, gateway `TASK_UPDATE_COLUMNS`/insert, TB status update); `submit_rebuttal` rejects `payload.dispute_id != task.dispute_id`; court-side token hardening deferred to WP-06 | GAP-B9 | task-board, db-gateway, schema.sql |
-| H-3 | Economy phase `stalled` + `stable` dispute<15% ceiling per observatory spec table | GAP-A11 (T-046) | services/ui `metrics.py` (+frontend phase styling if keyed) |
-| H-4 | Worker review-timeout recorded as `TaskOutcome.TIMEOUT`, zero earnings | GAP-A7 (T-016) | agents `math_worker/loop.py`, `history.py` usage |
-| H-5 | Gateway integrity trio: `delete_ruling` txn+event, `update_claim_status` mandatory event, idempotent replays return real `event_id`/`balance_after`, schema-load suppress removed | GAP-C2/C3/C4 (T-042/043) | db-gateway `db_writer.py` (runs after H-2 lands — same file) |
+| # | Item | Origin | Scope | Status |
+|---|---|---|---|---|
+| H-1 | Re-track authored contracts: `.gitignore` `docs/` → `docs/*` + `!docs/specifications/` + `!docs/plans/`; unignore `openspec/`; commit specs/plans/openspec incl. `schema.sql` and this plan | GAP-G4 | `.gitignore`, git index only | **DONE** `02fa5db` (72 files) |
+| H-2 | Rebuttal↔dispute binding: `dispute_task` persists Court `dispute_id` on the task (new `board_tasks.dispute_id` column: `schema.sql`, gateway `TASK_UPDATE_COLUMNS` + **idempotent `ALTER TABLE` migration** for existing `economy.db` files, TB status update); `submit_rebuttal` rejects `payload.dispute_id != task.dispute_id` (400) and an unbound dispute (409), forwarding the server-stored id; `dispute_task` fails 502 rather than marking a task disputed without a binding; court-side `kid`/party assertion deferred to WP-06 | GAP-B9 | task-board, db-gateway, schema.sql | **DONE** `e13711f` (mutation-checked) |
+| H-3 | Economy phase `stalled` for a zero-activity economy | GAP-A11 (T-046) | services/ui `metrics.py` | **DONE** `9f506c9` |
+| H-4 | Worker review-timeout recorded as `TaskOutcome.TIMEOUT`, zero earnings | GAP-A7 (T-016) | agents `math_worker/loop.py`, `history.py` | **DONE** `95fe63e` |
+| H-5 | Gateway integrity trio: `delete_ruling` txn+event, `update_claim_status` mandatory event, idempotent replays return real `event_id`/`balance_after`, schema-load suppress removed | GAP-C2/C3/C4 (T-042/043) | db-gateway `db_writer.py` (runs after H-2 lands — same file) | blocked on H-2 |
+
+**Correction to §2.8 (found while reviewing H-3):** the plan originally called for "restoring the spec's dispute<15% ceiling on `stable`". That is **not implementable as written**: the spec's Economy Phases table (`observatory-service-specs.md § Economy Phases`) states only *sufficient* conditions and leaves combinations uncovered — an increasing trend at a 12% dispute rate matches neither `growing` (needs <10%) nor `contracting` (needs a declining trend **or** >20%), and a flat trend at 15–20% matches nothing either. Adding the ceiling forces those cases into some phase, and no ratified decision or test-spec case says which. The residual therefore stays `stable`, and **defining the uncovered combinations is added to WP-12's spec sweep** (a candidate Q for Florian if the phase taxonomy is user-visible product surface). Only the `stalled` behavior (MET-12/MET-13) was ratified and shipped.
+
+**Frozen-test protocol clarification (established while resolving H-2):** fixture/fake modules (`tests/fakes/*`, `conftest.py`) are test *infrastructure*, not acceptance assertions. Making a mock deterministic or teaching a fake about a new schema column is permitted; adding, removing, weakening, or rewording any `assert` in an existing test file is not, and requires a ratified-decision exception recorded here first.
 
 ### WP-01 — Governance: one tracker, working gates (S) ⚠Q-1
 1. Execute the Q-1 decision; write `docs/plans/2026-07-XX-tracker-decision.md`. If openspec wins (recommended): migrate `tickets.md#T-001` into `openspec/specs/completion-backlog/spec.md` under a fresh stable ID (**T-100**, avoiding the collision), delete `tickets.md`; if tickets.md wins: mark `delivery-governance § Tracker Migration` superseded and renumber the open ticket to a non-colliding ID.
