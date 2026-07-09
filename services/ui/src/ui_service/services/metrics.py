@@ -650,12 +650,18 @@ async def compute_economy_phase(db: aiosqlite.Connection, total_tasks: int) -> d
     )
 
     if recent_tasks == 0:
-        phase = "idle"
+        phase = "stalled"
     elif task_creation_trend == "increasing" and dispute_rate < 0.10:
         phase = "growing"
     elif task_creation_trend == "decreasing" or dispute_rate > 0.20:
         phase = "contracting"
     else:
+        # Residual. The spec's phase table (observatory-service-specs.md,
+        # "Economy Phases") lists sufficient conditions only and does not cover
+        # every combination -- e.g. an increasing trend at a 12% dispute rate
+        # matches neither `growing` (needs <10%) nor `contracting` (needs a
+        # declining trend or >20%). Such cases stay `stable` rather than being
+        # classified by guesswork; the gap is tracked for the spec sweep (WP-12).
         phase = "stable"
 
     return {
