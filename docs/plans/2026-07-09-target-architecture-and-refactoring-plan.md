@@ -1,7 +1,7 @@
 # Agent Task Economy — Target Architecture & Refactoring Plan
 
 **Date:** 2026-07-09 · **Last updated:** 2026-07-10
-**Status:** ACTIVE. The analysis (§1–§4) is complete and the unblocked hotfix track (§5.0, H-1…H-7) has shipped and is verified — see the status column there and Appendix B for what review feedback was accepted or rejected. Everything marked ⚠Q-blocked still awaits the §9 product decisions from Florian.
+**Status:** ACTIVE and **self-contained — executable end-to-end from §5.-1 with no further input.** The analysis (§1–§4) is complete and the hotfix track (§5.0, H-1…H-7) has shipped and is verified. Appendix B records which review feedback was accepted and which rejected. The ⚠Q-blocked markers are cleared by Step E1, which ratifies §9's documented recommendations as decisions; only override them if you disagree with a specific one.
 **Method:** 17 parallel audit agents (per-service code audits, doc/spec extraction, repo-wide wiring maps) + orchestrator validation of every load-bearing claim against source, later extended by an adversarial Codex review of this document. Evidence cited as `path:line` (code) or `path § heading` (docs). No claim without a citation. UNVERIFIED items are labeled. Every shipped fix was mutation-checked (remove the guard, the test must fail), and no existing assertion was changed without a ratified-decision exception recorded in §5.0.
 **Supersedes:** `docs/plans/2026-06-12-completion-inventory.md` (folds in its findings, re-verified against the 2026-07-09 codebase).
 
@@ -10,6 +10,8 @@
 ---
 
 ## 0. How to read this document
+
+> **To execute this plan, go to §5.-1 (Execution Protocol) and start at Step E1.** That section is sufficient on its own: it ratifies the open questions, fixes the order of work, states the engineering and delegation rules, and defines when each package and the plan as a whole are done. No instruction lives outside this file.
 
 - **§2 is normative.** It defines the target state the system must reach. Every statement there is either (a) ratified by an existing decision record / canonical spec (cited), or (b) flagged as an open question in §9. Nothing in §2 is invented.
 - **§3 is descriptive.** Current state as-built, evidence-cited.
@@ -324,7 +326,7 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | GAP-A12 | UNVERIFIED residuals from the June inventory: labor bucket `51_to_100` excluding 100; frontend trend string `growing` vs API `increasing`; `title_too_long` custom code | §2.8/§2.5 | P2 | WP-08/WP-05 (T-047/048/037) — re-verify then fix |
 | GAP-A13 | Demo integrity: `scale.yaml` leaves a dispute unresolved; demo `reveal_feedback` posts to an endpoint absent from the Reputation API surface (`clients.py:414`); demo/base-SDK feedback contracts drifted | §2.9 honest demos | P2 | WP-09 (verify first) |
 | GAP-A14 | Bank auth precedence inverted on credit/release/split (403 before payload validation, `accounts.py:143`, `escrow.py:102,164`) | auth-spec precedence | P2 | WP-03 (T-033) |
-| GAP-A15 | **No autonomous component ever accepts a bid** (found 2026-07-10 while auditing T-035's blast radius). The only callers of `accept_bid` are `tools/src/demo_replay/engine.py:236` (the scripted demo) and the UI proxy (`ui_service/routers/proxy.py:42`, i.e. a human clicking). `agents/src/task_feeder/` posts and reviews but has no acceptance path, and `MathWorkerLoop` simply waits in its post-bid phase until poll exhaustion records `BID_TIMEOUT`. So `just start-feeder` + `just start-mathbot` cannot move a task past `open`. Together with GAP-A1 (nothing triggers rulings) this means **the autonomous economy has two missing drivers**, and §8's definition-of-done item 2 is unreachable until both are closed. Before T-035 the stranded task also held its escrow forever; it now expires and refunds the poster, which is an improvement but not a substitute for acceptance. | §2.9: feeder accepts a winning bid | **P0** (blocks the autonomous-economy claim) | new WP ⚠Q-16 |
+| GAP-A15 | **No autonomous component ever accepts a bid** (found 2026-07-10 while auditing T-035's blast radius). The only callers of `accept_bid` are `tools/src/demo_replay/engine.py:236` (the scripted demo) and the UI proxy (`ui_service/routers/proxy.py:42`, i.e. a human clicking). `agents/src/task_feeder/` posts and reviews but has no acceptance path, and `MathWorkerLoop` simply waits in its post-bid phase until poll exhaustion records `BID_TIMEOUT`. So `just start-feeder` + `just start-mathbot` cannot move a task past `open`. Together with GAP-A1 (nothing triggers rulings) this means **the autonomous economy has two missing drivers**, and §8's definition-of-done item 2 is unreachable until both are closed. Before T-035 the stranded task also held its escrow forever; it now expires and refunds the poster, which is an improvement but not a substitute for acceptance. | §2.9: feeder accepts a winning bid | **P0** (blocks the autonomous-economy claim) | **WP-15** ⚠Q-16 |
 
 ### B. Auth & security
 
@@ -410,11 +412,61 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 
 ## 5. REFACTORING PLAN (work packages)
 
-Rules of engagement (binding, from `openspec/specs/delivery-governance/spec.md`): every bug/feature item starts with a **failing test** observed failing; an item closes only with its own proof **plus** `just ci-quiet` exit 0 from the repo root; no assertion is weakened to pass. Tests are acceptance tests — behavior changes are reconciled **spec-side** (WP-12), never by editing frozen tests, except where a ratified decision changed the contract.
+### §5.-1 EXECUTION PROTOCOL — read this first; it is sufficient to run the plan
+
+This document is self-contained. An implementer (human or agent) needs no other instructions: everything required to execute the plan end-to-end is in this section plus §5.0–§5.15, §8, and §9.
+
+**Step E1 — Ratify §9 before writing any code.** Every question in §9 carries a **Recommendation**. Unless the project owner has answered otherwise, *adopt each Recommendation as the ratified decision*. Q-13 is the one question with no recommendation; its ratified default is: **mock judge in dev/test/CI** (deterministic, keeps CI free of live LLM calls); **production panel of 3 judges, odd-sized, median aggregation, providers config-driven**; **an explicit "vague spec" rubric written into the judge prompt**. Write one dated decision record per question under `docs/plans/` (`YYYY-MM-DD-<slug>-decision.md`), amend §9 to point at them, and strike the ⚠Q-blocked markers throughout this document. After E1 **no decision is outstanding**. If a genuine ambiguity surfaces later, choose the option most consistent with `openspec/specs/` (precedence order in §0), record the choice and its reason in the plan, and continue — do not stop to ask.
+
+**Step E2 — Execute the work packages in this exact order.** Later entries may begin only when every earlier entry is committed, pushed, and green.
+
+| Order | WP | Why here |
+|---|---|---|
+| 1 | **WP-01** Governance | One tracker before new work is filed anywhere. |
+| 2 | **WP-02** PKI extraction | One signing library must exist before anything changes what verifies tokens. |
+| 3 | **WP-03** Two-tier auth | Depends on exactly one token format (WP-02). |
+| 4 | **WP-06** Court chain + **WP-15** Autonomous acceptance | **Pull forward.** These close GAP-A1 and GAP-A15, the two P0 gaps that make the autonomous economy impossible. Ship them as early as their dependencies allow — everything after this point is quality, not capability. |
+| 5 | **WP-04** Gateway & client consolidation ∥ **WP-05** Task Board lifecycle | Independent of each other; both depend on WP-03. |
+| 6 | **WP-07** Reputation integrity | Independent; may run parallel with 5. |
+| 7 | **WP-08** UI & operator | Needs WP-03 (auth) and the Q-2/3/4 decisions from E1. |
+| 8 | **WP-09** Agent runtime & demo honesty | Needs WP-15 (the demo must stop being the only thing that accepts bids). |
+| 9 | **WP-10** Deployment & policy | Needs the Q-6/7/14 decisions from E1. |
+| 10 | **WP-11** Hygiene, dead code, structure | Do after behaviour settles, so deletions are provably safe. |
+| 11 | **WP-12** Documentation & specification sweep | Specs are rewritten to describe what the code now *does*. Must follow all behaviour work. |
+| 12 | **WP-13** Test-debt closure | The final gate. Includes wiring the orphaned suites into CI. |
+| 13 | **WP-14** Product tail | Vision work; last because it builds on everything. |
+
+**Step E3 — How to work each package.** These rules are binding and derive from `openspec/specs/delivery-governance/spec.md` plus the corrections recorded in §5.0.
+
+1. **Failing test first.** Write the test, run it, capture the failure, then implement, then capture the pass. A test that has never been observed failing proves nothing.
+2. **Mutation-check every regression test.** Remove the guard it protects; the test *must* fail. A test that passes with the fix reverted is decoration. (This caught two defects in the 2026-07-10 wave.)
+3. **Realistic inputs.** A replay test that reuses the same request body, or a concurrency test on one shared connection, cannot detect the bug it claims to guard. Ask what the real caller actually sends.
+4. **Frozen assertions.** `tests/fakes/*` and `conftest.py` are infrastructure and may be adjusted. An `assert` inside an existing test file may not be added, removed, weakened, or reworded — *unless* a ratified decision changed the contract, in which case record the exception in §5.0 with the spec citation **before** editing, as was done for T-035.
+5. **Never suppress.** No `# noqa` (semgrep `no-noqa`), no `# type: ignore` (`no-type-suppression`), no `pytest.mark.skip` (`no-pytest-skip`), no `--no-verify`, no bare `except` that swallows. Fix the cause.
+6. **Never destroy uncommitted work.** No `git checkout -- <file>`, `git restore`, or `git stash` while a file holds uncommitted changes — it restores to HEAD and discards them. Commit first, then experiment.
+7. **Python only via `uv run`.** No `python`, `pip`, or `uv pip`. Config comes from `config.yaml`; no hardcoded defaults, no new env vars.
+
+**Step E4 — Delegation and verification.** When sub-agents are used: Opus for service-scope changes and anything touching money, auth, or transactions; Sonnet or Haiku for mechanical sweeps and searches. The orchestrator **never trusts a self-report**. For every returned diff: read it, re-derive the invariant from the spec rather than from the agent's summary, mutation-check its tests, and run the real CI yourself with an absolute path (`cd /abs/path/service && just ci-quiet` — a compound `cd` in a second parallel command silently reuses the first directory; two identical green outputs are the tell). An agent that reports a blocker instead of guessing is behaving correctly; resolve it, don't override it.
+
+**Step E5 — Exit criteria for every work package.** A package is done only when *all* of:
+- its own proof (the tests named in the package) passes;
+- `just ci-quiet` exits 0 **from the repository root** — not a per-service CI;
+- the change is committed as one logical unit, with the failure it fixes explained in the commit body, and **pushed**;
+- this document is updated: gap rows struck through with the commit hash, §6's T-ID matrix corrected, and any new finding recorded as a new GAP-### with evidence.
+
+Partial work never closes a T-ID. If CI is red, the package stays open.
+
+**Step E6 — Session discipline.** This plan is days of work; it will not complete in one session. Each work package is self-contained and ends pushed, so a fresh session can resume at the next row of E2 with no context beyond this file. Commit intermediate progress rather than holding a large uncommitted tree. If the same failure resists three fixes, stop and re-read the surrounding code for architectural context before trying a fourth.
+
+**Step E7 — Definition of done for the whole plan.** §8. In particular, the plan is not complete until an **unattended** round runs: `just start-all` + `fund-feeder` + feeder + mathbot carry a task posted → bid → accepted → submitted → {approved | disputed → rebutted → **ruled**} with correct ledger balances and semantic events, with no demo script and no human in the UI, proven by an e2e test.
+
+---
 
 Sizing: S ≈ ≤½ day · M ≈ 1–2 days · L ≈ 3+ days (single implementer with agent support).
 
-Dependency spine: WP-01 → WP-02 → WP-03 → {WP-04 ∥ WP-05} → {WP-06 ∥ WP-07} → WP-08/WP-09 → WP-10 → WP-11 → WP-12 → WP-13 (final gate) → WP-14. Items marked ⚠Q-# cannot start before that answer; everything else can proceed immediately in order.
+Rules of engagement (binding, from `openspec/specs/delivery-governance/spec.md`): every bug/feature item starts with a **failing test** observed failing; an item closes only with its own proof **plus** `just ci-quiet` exit 0 from the repo root; no assertion is weakened to pass. Tests are acceptance tests — behavior changes are reconciled **spec-side** (WP-12), never by editing frozen tests, except where a ratified decision changed the contract.
+
+Dependency spine (superseded by the E2 table above, which pulls WP-06/WP-15 forward): WP-01 → WP-02 → WP-03 → {WP-04 ∥ WP-05} → {WP-06 ∥ WP-07} → WP-08/WP-09 → WP-10 → WP-11 → WP-12 → WP-13 (final gate) → WP-14.
 
 ### §5.0 Hotfixes (pulled forward, execution started 2026-07-10)
 
@@ -557,6 +609,15 @@ Grouped mechanical items, each landing with the relevant arch/unit test where on
 ### WP-14 — Product tail (vision work, post-target) ⚠Q-8/Q-11/Q-12/Q-15
 Text-Classification Arena workers + emergent-specialization assertions (T-091); economy-graph landing animation replanned for vanilla JS (T-094); bid-amount economics if Q-8 ratifies payment-at-bid; contract object if Q-11 ratifies it; reputation score aggregation endpoint if Q-12 ratifies it; dispute-cost/zero-balance/contract-cap mechanics per Q-15. Salary stays deferred (R8).
 
+### WP-15 — Autonomous bid acceptance (M) — closes GAP-A15 ⚠Q-16
+**Runs at E2 position 4, alongside WP-06.** Without it the economy cannot leave `open` unattended: the only callers of `accept_bid` today are `tools/src/demo_replay/engine.py:236` and the UI proxy. Scope is `agents/` only.
+
+1. Add an acceptance loop to `agents/src/task_feeder/`, wired concurrently in `__main__.py` beside the existing feed and review loops (`asyncio.gather`, mirroring how `review.py` is wired).
+2. Per the Q-16 decision: the loop polls the feeder's own `open` tasks; a task becomes eligible once its **bidding window has closed** (`created_at + bidding_deadline_seconds` reached) or a configured bid quorum is met; it then selects the **lowest `amount`**, breaking ties by the bidder's delivery-quality reputation, and calls `accept_bid`. Accepting the first bid to arrive is explicitly forbidden — it destroys the undercutting the product thesis rests on. **Interaction with T-035:** a task expires exactly when its bidding deadline passes, so the acceptance loop must accept *before* expiry. Make the eligibility threshold a config value strictly less than `bidding_deadline_seconds` (e.g. `acceptance_after_seconds`), and prove the ordering with a test — otherwise every task races its own expiry and the loop accepts nothing.
+3. New required config keys in `agents/config.yaml` under `task_feeder`: `acceptance_after_seconds`, `acceptance_poll_interval_seconds`, `min_bids_to_accept`. No defaults in code.
+4. Tests, failing-first: lowest bid wins; tie broken by reputation; nothing is accepted before the eligibility threshold; a task with zero bids is left to expire; acceptance happens strictly before the bidding deadline (the T-035 race); a 409 from a task that expired first is handled without crashing the loop.
+5. End-to-end proof (this is the plan's headline deliverable, §8 item 2 and E7): with `just start-all` + `fund-feeder` + feeder + mathbot and **no demo script and no human**, a task travels posted → bid → accepted → submitted → approved, and a disputed one reaches `ruled` once WP-06 lands. Add it to the agents e2e suite.
+
 ---
 
 ## 6. Backlog reconciliation (openspec T-IDs, verified against 2026-07-09 code)
@@ -658,7 +719,7 @@ Answers to these are the only missing inputs; each becomes a decision record (WP
 
 **Q-12 — Reputation score aggregation.** The vision defines numeric scores (start 100%, drop via rulings); the service deliberately stores raw feedback only, and no aggregate exists anywhere (agents can't ask "what's my standing?", which Scenario 2's specialization loop needs). Add `GET /reputation/agents/{id}/scores` (service-owned formula), keep consumer-side aggregation, or defer to WP-14 with the arena? **Recommendation: service-owned endpoint, spec'd formula, built in WP-14 together with T-091 (its first real consumer).**
 
-**Q-13 — Production judge panel + vagueness rubric.** Dev default is 1 mock judge (fixed 50% — the ambiguity-favors-worker thesis is currently *inert*); LM Studio config exists only as comments; no doc defines panel size/models for a real run, and no operational rubric for "vague spec" exists (arc42 flags it). What is the intended real-run panel (size, models, same/different providers) and do you want a written vagueness rubric in the judge prompt? *(Vision open question.)* Blocks WP-06.7/WP-12 judge docs.
+**Q-13 — Production judge panel + vagueness rubric.** Dev default is 1 mock judge (fixed 50% — the ambiguity-favors-worker thesis is currently *inert*); LM Studio config exists only as comments; no doc defines panel size/models for a real run, and no operational rubric for "vague spec" exists (arc42 flags it). What is the intended real-run panel (size, models, same/different providers) and do you want a written vagueness rubric in the judge prompt? *(Vision open question.)* **Recommendation: mock judge in dev/test/CI** (deterministic, keeps CI free of live LLM calls); **production panel of 3 judges, odd-sized, median aggregation, providers config-driven**; **write an explicit "vague spec" rubric into the judge prompt**, since without it the core thesis is enforced by nothing but the model's disposition. Blocks WP-06.7/WP-12 judge docs.
 
 **Q-14 — Hosted CI.** No `.github/`; every gate is manual. Add a minimal GitHub Actions workflow running `just ci-quiet` on push/PR (mock judges keep it LLM-free), or stay local-only? **Recommendation: add it** — the June inventory already rated this P1 and the repo now has a remote. Blocks WP-10.3.
 
