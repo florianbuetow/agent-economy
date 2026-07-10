@@ -60,7 +60,10 @@ class DeadlineEvaluator:
             )
             if bidding_deadline is not None:
                 deadline_dt = datetime.fromisoformat(bidding_deadline.replace("Z", "+00:00"))
-                if now >= deadline_dt and int(task["bid_count"]) == 0:
+                # Expire regardless of bid_count. A task that attracted bids but was
+                # never accepted has no other transition out of 'open', so guarding on
+                # bid_count == 0 left its escrow locked forever (T-035).
+                if now >= deadline_dt:
                     expired_at = _now_iso()
                     changed_rows = self._store.update_task(
                         str(task["task_id"]),
