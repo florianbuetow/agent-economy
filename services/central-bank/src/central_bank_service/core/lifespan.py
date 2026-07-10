@@ -30,10 +30,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     logger = get_logger(__name__)
 
     state = init_app_state()
-    state.platform_agent_id = settings.platform.agent_id
 
-    # Initialize ledger
-    if settings.db_gateway is None:
+    # Initialize ledger. db_gateway is a required config field (Pydantic enforces its
+    # presence at load); guard against an empty URL so startup still fails fast.
+    if not settings.db_gateway.url:
         msg = "db_gateway configuration is required"
         raise RuntimeError(msg)
 
@@ -47,9 +47,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.identity_client = IdentityClient(
         base_url=identity_config.base_url,
         get_agent_path=identity_config.get_agent_path,
-        verify_jws_path=identity_config.verify_jws_path or "",
-        timeout_seconds=identity_config.timeout_seconds or 10,
+        verify_jws_path=identity_config.verify_jws_path,
+        timeout_seconds=identity_config.timeout_seconds,
     )
+    # Platform identity is resolved from the registered PlatformAgent only.
     if settings.platform.agent_config_path:
         config_path = Path(settings.platform.agent_config_path)
         if not config_path.is_absolute():
@@ -57,8 +58,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         factory = AgentFactory(config_path=config_path)
         state.platform_agent = factory.platform_agent()
         await state.platform_agent.register()
-        if state.platform_agent.agent_id is not None:
-            state.platform_agent_id = str(state.platform_agent.agent_id)
         logger.info("Platform agent registered", extra={"agent_id": state.platform_agent.agent_id})
 
     logger.info(

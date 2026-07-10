@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
@@ -61,25 +61,19 @@ class IdentityConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     base_url: str
     get_agent_path: str
-    verify_jws_path: str | None = None
-    timeout_seconds: int | None = None
+    verify_jws_path: str
+    timeout_seconds: int
 
 
 class PlatformConfig(BaseModel):
-    """Platform agent configuration."""
+    """Platform agent configuration.
+
+    The platform identity is resolved from the registered PlatformAgent
+    (loaded from ``agent_config_path``); there is no configured ``agent_id``.
+    """
 
     model_config = ConfigDict(extra="forbid")
-    agent_id: str
     agent_config_path: str = ""
-
-    @field_validator("agent_id")
-    @classmethod
-    def agent_id_must_not_be_empty(cls, v: str) -> str:
-        """Reject empty platform agent_id at startup."""
-        if not v.strip():
-            msg = "platform.agent_id must not be empty"
-            raise ValueError(msg)
-        return v
 
 
 class RequestConfig(BaseModel):
@@ -113,7 +107,7 @@ class Settings(BaseModel):
     identity: IdentityConfig
     platform: PlatformConfig
     request: RequestConfig
-    db_gateway: DbGatewayConfig | None = None
+    db_gateway: DbGatewayConfig
 
 
 def get_config_path() -> Path:

@@ -19,7 +19,7 @@ from task_board_service.config import clear_settings_cache
 from task_board_service.core.lifespan import lifespan
 from task_board_service.core.state import get_app_state, reset_app_state
 from tests.fakes.in_memory_task_store import InMemoryTaskStore
-from tests.helpers import generate_keypair, make_jws_token
+from tests.helpers import generate_keypair, make_jws_token, verify_compact_jws
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -171,7 +171,7 @@ db_gateway:
         # Mock PlatformAgent for local certificate validation
         mock_platform = MagicMock()
         mock_platform.agent_id = PLATFORM_AGENT_ID
-        mock_platform.validate_certificate = MagicMock(side_effect=_extract_payload)
+        mock_platform.validate_certificate = MagicMock(side_effect=verify_compact_jws)
         mock_platform.file_claim = AsyncMock(
             return_value={"dispute_id": "disp-1", "status": "rebuttal_pending"}
         )
@@ -240,7 +240,7 @@ async def client(app: Any) -> AsyncIterator[AsyncClient]:
 def mock_identity_verify_success(_app: Any) -> None:
     """Configure the identity client mock to verify JWS successfully."""
     state = get_app_state()
-    state.platform_agent.validate_certificate = MagicMock(side_effect=_extract_payload)
+    state.platform_agent.validate_certificate = MagicMock(side_effect=verify_compact_jws)
     state.identity_client.verify_jws = AsyncMock(side_effect=_make_delegating_verify_jws(state))
     if state.token_validator is not None:
         state.token_validator._identity_client = state.identity_client
@@ -328,13 +328,6 @@ def mock_central_bank_unavailable(_app: Any) -> None:
 # ---------------------------------------------------------------------------
 # JWS helper utilities (used by token validation mocks)
 # ---------------------------------------------------------------------------
-
-
-def _extract_payload(token: str) -> dict[str, Any]:
-    """Extract the payload from a JWS compact token."""
-    payload_b64 = token.split(".")[1]
-    padded = payload_b64 + "=" * (4 - len(payload_b64) % 4)
-    return json.loads(base64.urlsafe_b64decode(padded))
 
 
 def _make_delegating_verify_jws(state_ref: Any) -> Any:

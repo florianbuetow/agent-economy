@@ -1,21 +1,33 @@
-"""In-process identity client for platform-local JWS verification."""
+"""Local JWS verifier backed by the platform agent.
+
+Implements the :class:`JwsVerifier` protocol via composition (holding a provider for the
+platform agent), rather than inheriting from ``IdentityClient`` — the old inheritance
+never called ``super().__init__`` and left the HTTP client fields unset (latent
+``AttributeError`` on any inherited method).
+"""
 
 from __future__ import annotations
 
 import base64
 import json
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from service_clients.identity import IdentityClient
+from cryptography.exceptions import InvalidSignature
+from service_auth.signing import TokenExpiredError
 from service_commons.exceptions import ServiceError
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
-class PlatformIdentityClient(IdentityClient):
-    """In-process identity client that delegates verification to platform agent."""
+    from service_auth.platform import PlatformAgent
+
+
+class PlatformJwsVerifier:
+    """Verifies platform-signed JWS tokens locally, with no Identity round-trip."""
 
     def __init__(
         self,
-        platform_agent_provider: Any,
+        platform_agent_provider: Callable[[], PlatformAgent | None],
     ) -> None:
         self._platform_agent_provider = platform_agent_provider
 
@@ -54,17 +66,8 @@ class PlatformIdentityClient(IdentityClient):
 
         try:
             payload = platform_agent.validate_certificate(token)
-        except ValueError:
+        except (InvalidSignature, ValueError, TokenExpiredError):
             return {"valid": False, "reason": "signature mismatch"}
-        except Exception as exc:
-            if type(exc).__name__ == "InvalidSignature":
-                return {"valid": False, "reason": "signature mismatch"}
-            raise ServiceError(
-                "identity_service_unavailable",
-                "Cannot reach Identity service",
-                502,
-                {},
-            ) from exc
 
         return {
             "valid": True,
@@ -73,4 +76,4 @@ class PlatformIdentityClient(IdentityClient):
         }
 
     async def close(self) -> None:
-        """No-op close to match IdentityClient interface."""
+        """No-op close to match the JwsVerifier interface."""

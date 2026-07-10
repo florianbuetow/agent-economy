@@ -10,9 +10,8 @@ from reputation_service.types import FeedbackRecord
 
 if TYPE_CHECKING:
     from service_auth.platform import PlatformAgent
-    from service_clients.identity import IdentityClient
 
-    from reputation_service.services.protocol import FeedbackStorageInterface
+    from reputation_service.services.protocol import FeedbackStorageInterface, JwsVerifier
 
 
 @dataclass
@@ -22,7 +21,8 @@ class AppState:
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     feedback_store: FeedbackStorageInterface | None = None
     platform_agent: PlatformAgent | None = None
-    identity_client: IdentityClient | None = None
+    identity_client: JwsVerifier | None = None
+    platform_verifier: JwsVerifier | None = None
     feedback_reveal_timeout_seconds: int = 0
     feedback_max_comment_length: int = 0
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from cryptography.exceptions import InvalidSignature
@@ -18,7 +19,19 @@ from service_commons.exceptions import ServiceError
 from identity_service.services.errors import DuplicateAgentError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from identity_service.services.protocol import IdentityStorageInterface
+
+
+def _system_clock() -> datetime:
+    """Return the real current UTC datetime."""
+    return datetime.now(UTC)
+
+
+# Injectable clock seam. Tests override the module attribute
+# (e.g. ``agent_registry._clock = lambda: frozen``) to control token-expiry evaluation.
+_clock: Callable[[], datetime] = _system_clock
 
 
 def _build_jws_registry() -> JWSRegistry:
@@ -234,6 +247,12 @@ class AgentRegistry:
                 400,
                 {},
             ) from exc
+
+        # Enforce header ``exp`` once the signature is authentic. Tokens without an
+        # ``exp`` claim keep the WP-02 legacy tolerance (accepted).
+        exp = header.get("exp")
+        if isinstance(exp, int) and exp < int(_clock().timestamp()):
+            raise ServiceError("token_expired", "JWS token has expired", 401, {})
 
         # Decode payload as JSON
         try:

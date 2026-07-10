@@ -88,7 +88,7 @@ async def test_validate_jws_token_identity_service_error() -> None:
 @pytest.mark.unit
 async def test_validate_jws_token_forbidden_tampered() -> None:
     """Payload tamper marker raises forbidden."""
-    mock_platform = _platform_mock(return_value={"action": "create_task", "_tampered": True})
+    mock_platform = _platform_mock(side_effect=InvalidSignature())
     validator = TokenValidator(platform_agent=mock_platform)
     private_key, _public_key = generate_keypair()
     token = make_jws_token(private_key, "a-agent", {"action": "create_task"})
