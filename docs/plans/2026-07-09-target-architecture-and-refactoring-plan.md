@@ -325,16 +325,16 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | ~~GAP-A11~~ | Economy phase emitted `idle` for an empty economy vs required `stalled`. (The `stable` dispute-ceiling half was **withdrawn**, not implemented — see the §5.0 correction: the spec's phase table leaves combinations uncovered, so the residual stays `stable`.) | §2.8 phases | P2 | **DONE** `9f506c9` (T-046) — decides `tickets.md#T-001` |
 | GAP-A12 | UNVERIFIED residuals from the June inventory: labor bucket `51_to_100` excluding 100; frontend trend string `growing` vs API `increasing`; `title_too_long` custom code | §2.8/§2.5 | P2 | WP-08/WP-05 (T-047/048/037) — re-verify then fix |
 | GAP-A13 | Demo integrity: `scale.yaml` leaves a dispute unresolved; demo `reveal_feedback` posts to an endpoint absent from the Reputation API surface (`clients.py:414`); demo/base-SDK feedback contracts drifted | §2.9 honest demos | P2 | WP-09 (verify first) |
-| GAP-A14 | Bank auth precedence inverted on credit/release/split (403 before payload validation, `accounts.py:143`, `escrow.py:102,164`) | auth-spec precedence | P2 | WP-03 (T-033) |
+| ~~GAP-A14~~ | Bank auth precedence inverted on credit/release/split (403 before payload validation) | auth-spec precedence | P2 | **DONE** `0abfe7f` (decode-first ordering: payload errors beat 403) |
 | GAP-A15 | **No autonomous component ever accepts a bid** (found 2026-07-10 while auditing T-035's blast radius). The only callers of `accept_bid` are `tools/src/demo_replay/engine.py:236` (the scripted demo) and the UI proxy (`ui_service/routers/proxy.py:42`, i.e. a human clicking). `agents/src/task_feeder/` posts and reviews but has no acceptance path, and `MathWorkerLoop` simply waits in its post-bid phase until poll exhaustion records `BID_TIMEOUT`. So `just start-feeder` + `just start-mathbot` cannot move a task past `open`. Together with GAP-A1 (nothing triggers rulings) this means **the autonomous economy has two missing drivers**, and §8's definition-of-done item 2 is unreachable until both are closed. Before T-035 the stranded task also held its escrow forever; it now expires and refunds the poster, which is an improvement but not a substitute for acceptance. | §2.9: feeder accepts a winning bid | **P0** (blocks the autonomous-economy claim) | **WP-15** Q-16 |
 
 ### B. Auth & security
 
 | ID | Gap | Target | Sev | Closes via |
 |---|---|---|---|---|
-| GAP-B1 | CB (`routers/helpers.py:47`), TB (`token_validator.py:134`), Reputation (`routers/feedback.py:126`) verify **platform ops** via Identity HTTP; only Court is local | §2.3 two-tier model | P1 | WP-03 (T-021) |
+| ~~GAP-B1~~ | CB/TB/Reputation verified **platform ops** via Identity HTTP; only Court was local | §2.3 two-tier model | P1 | **DONE** `0abfe7f` (WP-03: credit/release/split, record_ruling, force_visible verify locally; one accepted deviation: create_account, see §5.0) |
 | GAP-B2 | UI proxy = unauthenticated platform-privileged write console; UserAgent shares the platform key and mints/spends the treasury | §2.3/§2.8 | P1 | WP-08 Q-2,Q-3 |
-| GAP-B3 | `_tampered` test-helper marker branch inside production signature validation (`token_validator.py:158,203`) | clean prod code | P2 | WP-03 |
+| ~~GAP-B3~~ | `_tampered` test-helper marker branch inside production signature validation | clean prod code | P2 | **DONE** `0abfe7f` (markers deleted; test tamper helpers do faithful Ed25519 verification; exception #4) |
 | GAP-B4 | Court asserts platform identity by crypto only; spec'd `kid == platform.agent_id` check absent; `require_platform_signer` is dead code | spec/code align | P3 | WP-06 + WP-12 |
 | GAP-B5 | No replay/freshness protection in any JWS (no nonce/`iat`/`exp`); blunted by idempotency+state checks but unstated | explicit posture | P2 | Q-10 → WP-03 or docs |
 | GAP-B6 | Compose publishes the unauthenticated gateway to the host (`0.0.0.0` + `8007:8007`) | §2.11 never expose 8007 | P2 | WP-10 Q-6 |
@@ -650,13 +650,14 @@ DONE = verified in code · PARTIAL = code or doc half landed · OPEN = not done 
 | T-017 | loop/mixin tests | PARTIAL | some loop tests exist; mutation guard absent → WP-09 |
 | T-018 | dispute e2e chain | **DONE** | `agents/tests/e2e/test_disputes.py`, `test_court_rulings.py` |
 | T-020 | snake_case canonical | PARTIAL | code done; all 22 spec files + 3 shell suites still UPPERCASE → WP-12/13 |
-| T-021 | local platform auth | **OPEN** | CB/TB/reputation still Identity-HTTP → WP-03 |
+| T-021 | local platform auth | **DONE** `0abfe7f` | platform ops verify locally in CB/TB/reputation (+court since `ddeba66`); create_account deviation recorded in §5.0 |
 | T-022 | gateway read API blessed | OPEN (doc) | spec still "no reads" → WP-12 |
 | T-023 | escrow-split ownership | PARTIAL | code done (TB settles; court never calls bank); both specs + RULE tests stale → WP-12 |
 | T-024 | bid amount documented | OPEN (doc) | TB spec still proposal-only → WP-12 |
 | T-025 | ui@8008 canonical | OPEN (doc) | README/specs still observatory/8006-8007 → WP-12 |
 | T-026 | frontend stack decision | **DONE** (2 banner stragglers → WP-12) | decision record + 9 banners |
-| T-030/031/032/033/034 | bank store/auth/config | **OPEN** (T-030 partial: schema CHECK constrains gateway path) | audits §3.8; → WP-03/WP-04 |
+| T-030/031/032 | bank store parity | **OPEN** (T-030 partial: schema CHECK constrains gateway path) | audits §3.8; → WP-04 |
+| T-033/034 | bank auth precedence / no-Optional config | **DONE** `0abfe7f` | WP-03 (precedence decode-first; db_gateway+identity non-Optional in CB and reputation) |
 | T-035 | tasks with bids expire | **DONE** `a429120` | mutation-checked; two spec-contradicting tests corrected; real BA-10 now covered |
 | T-036/037/038 | TB aliases/title/spec | OPEN (T-037 UNVERIFIED) | → WP-05 + WP-12 |
 | T-039/040/041 | court cleanup/atomicity/judge docs | **OPEN** | → WP-06 + WP-12 |
