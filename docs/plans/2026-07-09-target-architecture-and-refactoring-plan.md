@@ -309,7 +309,7 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | ID | Gap (current, evidence) | Target (§2 ref) | Sev | Closes via |
 |---|---|---|---|---|
 | GAP-A1 | **No component ever triggers rulings**: `POST /disputes/{id}/rule` is called only by the demo engine; a feeder-disputed task with a worker rebuttal waits forever | §2.6 ruling trigger | **P0** | WP-06 ⚠Q-5 |
-| GAP-A2 | Open tasks with ≥1 bid never expire (`deadline_evaluator.py:63` guards `bid_count == 0`) → escrow locked forever | §2.5 table ▲ | P1 | WP-05 (T-035) |
+| ~~GAP-A2~~ | Open tasks with ≥1 bid never expired (`deadline_evaluator.py:63` guarded `bid_count == 0`) → escrow locked forever | §2.5 table ▲ | P1 | **DONE** `a429120` (mutation-checked; two spec-contradicting tests corrected, see the exception record above) |
 | GAP-A3 | Deadlines evaluated only lazily on reads; nothing transitions unread tasks; direct-DB readers (UI) see stale states indefinitely | §2.5 ▲ | P1 | WP-05 ⚠Q-5 |
 | GAP-A4 | Ruling side-effects non-atomic: Task Board ruling+escrow commit, then failure reverts **court state only** (`ruling_orchestrator.py:285-295`); retry would hit `invalid_status` on re-record | §2.6 recoverable-retry contract | P1 | WP-06 (T-040) |
 | ~~GAP-A5~~ | Production sealed-feedback reveal was a TOCTOU read-then-write; the reveal policy now lives inside the gateway's `BEGIN IMMEDIATE` (reverse lookup + both rows flipped + `feedback.revealed` emitted). `force_visible` stays a caller policy flag; "a reverse pair exists" is a fact the gateway derives. | §2.7 atomic reveal | P1 | **DONE** `478153e` (two-connection concurrency probe) |
