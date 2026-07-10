@@ -664,7 +664,7 @@ DONE = verified in code · PARTIAL = code or doc half landed · OPEN = not done 
 | T-085 | gateway health logging | UNVERIFIED | → WP-11 verify |
 | T-090 | salary | **DECIDED-DEFERRED** (R8); doc claims still to purge | → WP-12 |
 | T-091/093/094/095 | product tail | T-095 PARTIAL (badge metric removed `535c48b`); rest OPEN | → WP-08/WP-14 |
-| T-092 | vision open questions recorded | **OPEN** — this document's §9 is the collection; answers become the decision records | → WP-01/§9 |
+| T-092 | vision open questions recorded | **DONE** `a59d1a7` — all 16 §9 questions ratified as decision records (`docs/plans/2026-07-10-q*-decision.md`, Step E1) | closed |
 
 ---
 

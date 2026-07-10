@@ -306,3 +306,11 @@ Vision-level claims SHALL either be implemented or explicitly scoped as future w
 #### Scenario: T-095 leaderboard, earnings, and satisfaction UI
 - **WHEN** UI e2e tests inspect leaderboard and agent profile views
 - **THEN** top agents, worker/poster sorting labels, monthly earnings chart, and satisfaction color tokens render as specified
+
+### Requirement: Migrated Tickets
+Tickets migrated from the retired root `tickets.md` tracker (Q-1 decision, 2026-07-10) SHALL keep their history under fresh non-colliding T-IDs.
+
+#### Scenario: T-100 UI empty-economy phase label (migrated from tickets.md#T-001)
+- **WHEN** the UI computes the economy phase for a zero-activity economy
+- **THEN** it emits `stalled` (never `idle`), per the observatory spec's Economy Phases table and acceptance cases MET-12/MET-13
+- **Status:** CLOSED 2026-07-10 — fixed in `9f506c9` alongside ratified T-046; recorded here for history after migration from `tickets.md#T-001` (which reused the T-001 ID already taken by "make CI green" above)
