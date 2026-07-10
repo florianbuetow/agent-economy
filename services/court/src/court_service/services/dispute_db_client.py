@@ -223,9 +223,19 @@ class DisputeDbClient:
             raise RuntimeError(msg)
 
     def set_status(self, dispute_id: str, status: str) -> None:
+        changed_at = self._now_iso()
         response = self._client.post(
             f"/court/claims/{dispute_id}/status",
-            json={"status": status},
+            json={
+                "status": status,
+                "event": {
+                    "event_source": "court",
+                    "event_type": "claim.status_changed",
+                    "timestamp": changed_at,
+                    "summary": f"Claim {dispute_id} moved to {status}",
+                    "payload": json.dumps({"claim_id": dispute_id, "status": status}),
+                },
+            },
         )
         if response.status_code == 404:
             return
@@ -239,7 +249,20 @@ class DisputeDbClient:
 
     def _delete_ruling(self, dispute_id: str) -> None:
         """Delete the ruling record for a dispute (removes votes too)."""
-        response = self._client.delete(f"/court/rulings/{dispute_id}")
+        deleted_at = self._now_iso()
+        response = self._client.request(
+            "DELETE",
+            f"/court/rulings/{dispute_id}",
+            json={
+                "event": {
+                    "event_source": "court",
+                    "event_type": "ruling.deleted",
+                    "timestamp": deleted_at,
+                    "summary": f"Ruling for claim {dispute_id} withdrawn",
+                    "payload": json.dumps({"claim_id": dispute_id}),
+                },
+            },
+        )
         if response.status_code not in (200, 404):
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)

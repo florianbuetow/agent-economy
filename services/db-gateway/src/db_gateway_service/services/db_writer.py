@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -65,24 +64,51 @@ class DbWriter:
             self._init_schema(schema_sql)
 
     def _init_schema(self, schema_sql: str) -> None:
-        """Initialize database schema from SQL file (idempotent)."""
-        with contextlib.suppress(sqlite3.OperationalError):
-            self._db.executescript(schema_sql)
-        self._migrate_board_tasks_dispute_id()
+        """Initialize database schema from SQL file.
 
-    def _migrate_board_tasks_dispute_id(self) -> None:
-        """Add board_tasks.dispute_id to databases created before the column existed.
-
-        The schema script above is a no-op on an existing database, so the column
-        must be added explicitly. Failures are deliberately not suppressed: without
-        this column every dispute would fail at runtime.
+        The schema script is not re-runnable — its CREATE statements carry no
+        IF NOT EXISTS — so it runs only against a database with no tables yet.
+        Errors are never suppressed: a broken or missing schema kills startup.
         """
-        columns = self._db.execute("PRAGMA table_info(board_tasks)").fetchall()
+        if self._schema_is_absent():
+            self._db.executescript(schema_sql)
+        self._run_migrations()
+
+    def _schema_is_absent(self) -> bool:
+        """Report whether the database holds no application tables yet."""
+        cursor = self._db.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+        )
+        row = cursor.fetchone()
+        return int(row[0]) == 0
+
+    def _run_migrations(self) -> None:
+        """Add columns to databases created before those columns existed.
+
+        The schema script is a no-op on an existing database, so every column added
+        after a deployment must be introduced here. Failures are deliberately not
+        suppressed: without these columns disputes and event provenance fail at runtime.
+        """
+        self._add_column_if_missing("board_tasks", "dispute_id", "TEXT")
+        self._add_column_if_missing("bank_transactions", "event_id", "INTEGER")
+        self._add_column_if_missing("bank_escrow", "event_id", "INTEGER")
+
+    def _add_column_if_missing(self, table: str, column: str, decl: str) -> None:
+        """Add one column to an existing table. No-op when the table or column is absent."""
+        for identifier in (table, column, decl):
+            if not identifier.isidentifier():
+                raise ServiceError(
+                    "invalid_migration",
+                    "Migration identifiers must be valid identifiers",
+                    500,
+                    {"table": table, "column": column},
+                )
+        columns = self._db.execute(f"PRAGMA table_info({table})").fetchall()  # nosec B608
         if len(columns) == 0:
             return
-        if any(row["name"] == "dispute_id" for row in columns):
+        if any(row["name"] == column for row in columns):
             return
-        self._db.execute("ALTER TABLE board_tasks ADD COLUMN dispute_id TEXT")
+        self._db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")  # nosec B608
         self._db.commit()
 
     # ------------------------------------------------------------------
@@ -106,6 +132,29 @@ class DbWriter:
             ),
         )
         return cursor.lastrowid or 0
+
+    def _lookup_registration_event_id(
+        self,
+        agent_id: str,
+        event_source: str,
+        event_type: str,
+    ) -> int | None:
+        """Find the event emitted when this agent first registered.
+
+        An agent registers exactly once, so its earliest registration event is the
+        original. The *existing* agent_id must be passed, never the replayed payload's:
+        a replay mints a fresh agent_id that was never written to the events table.
+        Returns None for a legacy row whose registration predates the events table.
+        """
+        cursor = self._db.execute(
+            "SELECT MIN(event_id) FROM events "
+            "WHERE agent_id = ? AND event_source = ? AND event_type = ?",
+            (agent_id, event_source, event_type),
+        )
+        row = cursor.fetchone()
+        if row is None or row[0] is None:
+            return None
+        return int(row[0])
 
     def _compile_constraints(
         self,
@@ -251,7 +300,14 @@ class DbWriter:
                 # Check for idempotent replay
                 existing = self._lookup_agent_by_public_key(data["public_key"])
                 if existing is not None and self._agent_matches(existing, data):
-                    return {"agent_id": existing["agent_id"], "event_id": 0}
+                    return {
+                        "agent_id": existing["agent_id"],
+                        "event_id": self._lookup_registration_event_id(
+                            existing["agent_id"],
+                            data["event"]["event_source"],
+                            data["event"]["event_type"],
+                        ),
+                    }
                 raise ServiceError(
                     "public_key_exists",
                     "This public key is already registered",
@@ -316,13 +372,15 @@ class DbWriter:
                 "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?, ?, ?)",
                 (data["account_id"], data["balance"], data["created_at"]),
             )
+            event_id = self._insert_event(cursor, data["event"])
             # Optional initial credit transaction
             initial_credit = data.get("initial_credit")
             if initial_credit is not None:
                 cursor.execute(
                     "INSERT INTO bank_transactions "
-                    "(tx_id, account_id, type, amount, balance_after, reference, timestamp) "
-                    "VALUES (?, ?, 'credit', ?, ?, ?, ?)",
+                    "(tx_id, account_id, type, amount, balance_after, reference, timestamp, "
+                    "event_id) "
+                    "VALUES (?, ?, 'credit', ?, ?, ?, ?, ?)",
                     (
                         initial_credit["tx_id"],
                         data["account_id"],
@@ -330,9 +388,9 @@ class DbWriter:
                         data["balance"],
                         initial_credit["reference"],
                         initial_credit["timestamp"],
+                        event_id,
                     ),
                 )
-            event_id = self._insert_event(cursor, data["event"])
             self._db.commit()
             return {"account_id": data["account_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
@@ -387,11 +445,13 @@ class DbWriter:
             if cursor.rowcount == 0:
                 self._db.rollback()
                 raise ServiceError("account_not_found", "No account with this account_id", 404, {})
+            # The event is written first so the transaction row can name it.
+            event_id = self._insert_event(cursor, data["event"])
             cursor.execute(
                 "INSERT INTO bank_transactions "
-                "(tx_id, account_id, type, amount, balance_after, reference, timestamp) "
+                "(tx_id, account_id, type, amount, balance_after, reference, timestamp, event_id) "
                 "VALUES (?, ?, 'credit', ?, "
-                "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?)",
+                "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?, ?)",
                 (
                     data["tx_id"],
                     data["account_id"],
@@ -399,6 +459,7 @@ class DbWriter:
                     data["account_id"],
                     data["reference"],
                     data["timestamp"],
+                    event_id,
                 ),
             )
             balance_cursor = self._db.execute(
@@ -407,7 +468,6 @@ class DbWriter:
             )
             balance_row = balance_cursor.fetchone()
             balance_after = int(balance_row[0]) if balance_row else 0
-            event_id = self._insert_event(cursor, data["event"])
             self._db.commit()
             return {
                 "tx_id": data["tx_id"],
@@ -426,7 +486,7 @@ class DbWriter:
                     return {
                         "tx_id": existing["tx_id"],
                         "balance_after": existing["balance_after"],
-                        "event_id": 0,
+                        "event_id": existing["event_id"],
                     }
                 raise ServiceError(
                     "reference_conflict",
@@ -445,16 +505,19 @@ class DbWriter:
             raise
 
     def _lookup_credit_tx(self, account_id: str, reference: str) -> dict[str, Any] | None:
-        """Look up an existing credit transaction by (account_id, reference)."""
+        """Look up an existing credit transaction by (account_id, reference).
+
+        event_id is None for a legacy row written before the column existed.
+        """
         cursor = self._db.execute(
-            "SELECT tx_id, amount, balance_after FROM bank_transactions "
+            "SELECT tx_id, amount, balance_after, event_id FROM bank_transactions "
             "WHERE account_id = ? AND reference = ? AND type = 'credit'",
             (account_id, reference),
         )
         row = cursor.fetchone()
         if row is None:
             return None
-        return {"tx_id": row[0], "amount": row[1], "balance_after": row[2]}
+        return {"tx_id": row[0], "amount": row[1], "balance_after": row[2], "event_id": row[3]}
 
     # ------------------------------------------------------------------
     # Bank — Escrow Lock
@@ -490,25 +553,28 @@ class DbWriter:
                     402,
                     {},
                 )
+            # The event is written first so the escrow and transaction rows can name it.
+            event_id = self._insert_event(cursor, data["event"])
             # Create escrow record
             cursor.execute(
                 "INSERT INTO bank_escrow "
-                "(escrow_id, payer_account_id, amount, task_id, status, created_at) "
-                "VALUES (?, ?, ?, ?, 'locked', ?)",
+                "(escrow_id, payer_account_id, amount, task_id, status, created_at, event_id) "
+                "VALUES (?, ?, ?, ?, 'locked', ?, ?)",
                 (
                     data["escrow_id"],
                     data["payer_account_id"],
                     data["amount"],
                     data["task_id"],
                     data["created_at"],
+                    event_id,
                 ),
             )
             # Log escrow_lock transaction
             cursor.execute(
                 "INSERT INTO bank_transactions "
-                "(tx_id, account_id, type, amount, balance_after, reference, timestamp) "
+                "(tx_id, account_id, type, amount, balance_after, reference, timestamp, event_id) "
                 "VALUES (?, ?, 'escrow_lock', ?, "
-                "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?)",
+                "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?, ?)",
                 (
                     data["tx_id"],
                     data["payer_account_id"],
@@ -516,6 +582,7 @@ class DbWriter:
                     data["payer_account_id"],
                     data["task_id"],
                     data["created_at"],
+                    event_id,
                 ),
             )
             # Get balance after debit
@@ -525,7 +592,6 @@ class DbWriter:
             )
             balance_row = balance_cursor.fetchone()
             balance_after = int(balance_row[0]) if balance_row else 0
-            event_id = self._insert_event(cursor, data["event"])
             self._db.commit()
             return {
                 "escrow_id": data["escrow_id"],
@@ -548,10 +614,15 @@ class DbWriter:
                 # Idempotency: check existing escrow
                 existing = self._lookup_active_escrow(data["payer_account_id"], data["task_id"])
                 if existing is not None and existing["amount"] == data["amount"]:
+                    account = self._lookup_account(data["payer_account_id"])
+                    if account is None:
+                        raise ServiceError(
+                            "account_not_found", "No account for payer_account_id", 404, {}
+                        ) from exc
                     return {
                         "escrow_id": existing["escrow_id"],
-                        "balance_after": 0,
-                        "event_id": 0,
+                        "balance_after": int(account["balance"]),
+                        "event_id": existing["event_id"],
                     }
                 raise ServiceError(
                     "escrow_already_locked",
@@ -570,16 +641,19 @@ class DbWriter:
             raise
 
     def _lookup_active_escrow(self, payer_account_id: str, task_id: str) -> dict[str, Any] | None:
-        """Look up an active (locked) escrow."""
+        """Look up an active (locked) escrow.
+
+        event_id is None for a legacy row written before the column existed.
+        """
         cursor = self._db.execute(
-            "SELECT escrow_id, amount FROM bank_escrow "
+            "SELECT escrow_id, amount, event_id FROM bank_escrow "
             "WHERE payer_account_id = ? AND task_id = ? AND status = 'locked'",
             (payer_account_id, task_id),
         )
         row = cursor.fetchone()
         if row is None:
             return None
-        return {"escrow_id": row[0], "amount": row[1]}
+        return {"escrow_id": row[0], "amount": row[1], "event_id": row[2]}
 
     # ------------------------------------------------------------------
     # Bank — Escrow Release
@@ -609,12 +683,14 @@ class DbWriter:
             if cursor.rowcount == 0:
                 self._db.rollback()
                 raise ServiceError("account_not_found", "Recipient account not found", 404, {})
+            # The event is written first so the transaction row can name it.
+            event_id = self._insert_event(cursor, data["event"])
             # Log escrow_release transaction
             cursor.execute(
                 "INSERT INTO bank_transactions "
-                "(tx_id, account_id, type, amount, balance_after, reference, timestamp) "
+                "(tx_id, account_id, type, amount, balance_after, reference, timestamp, event_id) "
                 "VALUES (?, ?, 'escrow_release', ?, "
-                "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?)",
+                "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?, ?)",
                 (
                     data["tx_id"],
                     data["recipient_account_id"],
@@ -622,6 +698,7 @@ class DbWriter:
                     data["recipient_account_id"],
                     data["escrow_id"],
                     data["resolved_at"],
+                    event_id,
                 ),
             )
             # Resolve escrow
@@ -657,7 +734,6 @@ class DbWriter:
                     "WHERE escrow_id = ?",
                     (data["resolved_at"], data["escrow_id"]),
                 )
-            event_id = self._insert_event(cursor, data["event"])
             self._db.commit()
             return {
                 "escrow_id": data["escrow_id"],
@@ -723,6 +799,8 @@ class DbWriter:
                     400,
                     {},
                 )
+            # The event is written first so the transaction rows can name it.
+            event_id = self._insert_event(cursor, data["event"])
             # Credit worker (if amount > 0)
             if worker_amount > 0:
                 cursor.execute(
@@ -734,9 +812,10 @@ class DbWriter:
                     raise ServiceError("account_not_found", "Worker account not found", 404, {})
                 cursor.execute(
                     "INSERT INTO bank_transactions "
-                    "(tx_id, account_id, type, amount, balance_after, reference, timestamp) "
+                    "(tx_id, account_id, type, amount, balance_after, reference, timestamp, "
+                    "event_id) "
                     "VALUES (?, ?, 'escrow_release', ?, "
-                    "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?)",
+                    "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?, ?)",
                     (
                         data["worker_tx_id"],
                         data["worker_account_id"],
@@ -744,6 +823,7 @@ class DbWriter:
                         data["worker_account_id"],
                         data["escrow_id"],
                         data["resolved_at"],
+                        event_id,
                     ),
                 )
             # Credit poster (if amount > 0)
@@ -757,9 +837,10 @@ class DbWriter:
                     raise ServiceError("account_not_found", "Poster account not found", 404, {})
                 cursor.execute(
                     "INSERT INTO bank_transactions "
-                    "(tx_id, account_id, type, amount, balance_after, reference, timestamp) "
+                    "(tx_id, account_id, type, amount, balance_after, reference, timestamp, "
+                    "event_id) "
                     "VALUES (?, ?, 'escrow_release', ?, "
-                    "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?)",
+                    "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?, ?)",
                     (
                         data["poster_tx_id"],
                         data["poster_account_id"],
@@ -767,6 +848,7 @@ class DbWriter:
                         data["poster_account_id"],
                         data["escrow_id"],
                         data["resolved_at"],
+                        event_id,
                     ),
                 )
             # Resolve escrow
@@ -801,7 +883,6 @@ class DbWriter:
                     "UPDATE bank_escrow SET status = 'split', resolved_at = ? WHERE escrow_id = ?",
                     (data["resolved_at"], data["escrow_id"]),
                 )
-            event_id = self._insert_event(cursor, data["event"])
             self._db.commit()
             return {
                 "escrow_id": data["escrow_id"],
@@ -1215,8 +1296,16 @@ class DbWriter:
         """
         Update a claim status with optional constraints.
 
-        UPDATE court_claims + optional INSERT INTO events.
+        UPDATE court_claims + INSERT INTO events, in one transaction.
         """
+        event = data.get("event")
+        if event is None:
+            raise ServiceError(
+                "missing_field",
+                "Missing required field: event",
+                400,
+                {"field": "event"},
+            )
         cursor = self._db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
@@ -1253,10 +1342,7 @@ class DbWriter:
                 self._db.rollback()
                 raise ServiceError("claim_not_found", "No claim with this claim_id", 404, {})
 
-            event_id = 0
-            event = data.get("event")
-            if event is not None:
-                event_id = self._insert_event(cursor, event)
+            event_id = self._insert_event(cursor, event)
 
             self._db.commit()
             return {
@@ -1423,11 +1509,36 @@ class DbWriter:
             self._db.rollback()
             raise
 
-    def delete_ruling(self, claim_id: str) -> dict[str, object]:
-        """Delete a ruling record by claim_id."""
-        cursor = self._db.execute(
-            "DELETE FROM court_rulings WHERE claim_id = ?",
-            (claim_id,),
-        )
-        self._db.commit()
-        return {"deleted": cursor.rowcount > 0, "claim_id": claim_id}
+    def delete_ruling(self, claim_id: str, event: dict[str, Any]) -> dict[str, object]:
+        """
+        Delete a ruling record by claim_id.
+
+        DELETE FROM court_rulings + INSERT INTO events, in one transaction.
+        When no ruling matched, nothing was written and no event is logged.
+        """
+        cursor = self._db.cursor()
+        try:
+            cursor.execute("BEGIN IMMEDIATE")
+            cursor.execute(
+                "DELETE FROM court_rulings WHERE claim_id = ?",
+                (claim_id,),
+            )
+            deleted = cursor.rowcount > 0
+            event_id: int | None = None
+            if deleted:
+                event_id = self._insert_event(cursor, event)
+            self._db.commit()
+            return {"deleted": deleted, "claim_id": claim_id, "event_id": event_id}
+        except sqlite3.IntegrityError as exc:
+            self._db.rollback()
+            if "foreign" in str(exc).lower():
+                raise ServiceError(
+                    "foreign_key_violation",
+                    "Foreign key constraint failed",
+                    409,
+                    {},
+                ) from exc
+            raise
+        except Exception:
+            self._db.rollback()
+            raise
