@@ -314,3 +314,14 @@ Tickets migrated from the retired root `tickets.md` tracker (Q-1 decision, 2026-
 - **WHEN** the UI computes the economy phase for a zero-activity economy
 - **THEN** it emits `stalled` (never `idle`), per the observatory spec's Economy Phases table and acceptance cases MET-12/MET-13
 - **Status:** CLOSED 2026-07-10 — fixed in `9f506c9` alongside ratified T-046; recorded here for history after migration from `tickets.md#T-001` (which reused the T-001 ID already taken by "make CI green" above)
+
+### Requirement: Discovered During Refactoring Execution
+Defects and scope gaps discovered while executing the 2026-07-09 refactoring plan SHALL be tracked here with evidence.
+
+#### Scenario: T-101 task-board bid_count never incremented on the gateway path
+- **WHEN** a bid is placed against the gateway-backed task board and the task row or list summary is read
+- **THEN** `bid_count` reflects the real number of bids (`list_bids` length), instead of staying 0 while only the in-memory store increments it (`in_memory_task_store.py:159-160`) — discovered during the WP-15 e2e (2026-07-10); the acceptance loop works around it by counting `list_bids`; fix belongs with the WP-04 store-parity work
+
+#### Scenario: T-102 deterministic worker path for the unattended-round proof
+- **WHEN** the definition-of-done e2e (plan §8 item 2: posted→bid→accepted→submitted→approved/ruled with feeder + mathbot, no demo, no human) runs in CI
+- **THEN** a worker can bid/solve without a live LLM: `math_worker`'s `LLMClient` gains an injectable transport (or a deterministic arithmetic worker profile exists), since today `_select_task`/`_decide_bid`/`_solve` are hard-wired to AsyncOpenAI (verified 2026-07-10, WP-15) — lands with WP-09
