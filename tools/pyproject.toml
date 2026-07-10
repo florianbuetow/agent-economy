@@ -10,7 +10,11 @@ dependencies = [
     "pyyaml>=6.0.0",
     "rich>=13.0.0",
     "cryptography>=48.0.1",
+    "service-auth",
 ]
+
+[tool.uv.sources]
+service-auth = { path = "../libs/service-auth", editable = true }
 
 [project.optional-dependencies]
 dev = [

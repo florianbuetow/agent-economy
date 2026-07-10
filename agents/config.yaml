@@ -12,6 +12,11 @@ data:
   keys_dir: "../data/keys"
   roster_path: "roster.yaml"
 
+# JWS token signing (WP-02 / Q-10)
+signing:
+  # Lifetime stamped into each signed token's iat/exp header claims (seconds).
+  token_ttl_seconds: 300
+
 # LLM provider configuration (OpenAI-compatible endpoint)
 llm:
   base_url: "http://127.0.0.1:1234/v1"

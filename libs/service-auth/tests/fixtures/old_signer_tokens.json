@@ -1,0 +1,11 @@
+{
+  "_comment": "Captured 2026-07-10 from pre-WP-02 signers with a deterministic key (seed=bytes(range(32))).",
+  "public_key_b64_raw": "A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
+  "payload": {
+    "action": "escrow_release",
+    "escrow_id": "esc-1",
+    "agent_id": "a-platform"
+  },
+  "base_agent_old_token": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCIsImtpZCI6ImEtcGxhdGZvcm0ifQ.eyJhY3Rpb24iOiJlc2Nyb3dfcmVsZWFzZSIsImVzY3Jvd19pZCI6ImVzYy0xIiwiYWdlbnRfaWQiOiJhLXBsYXRmb3JtIn0.nwMws3YHVw4PJbExOp6pymxtBDV8rgDPEc0SJYyy0YlO41TpNaiB35zB0qIqpsXn0_Y3h9bWMlqq81QhMaDnAw",
+  "platform_signer_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImEtcGxhdGZvcm0ifQ.eyJhY3Rpb24iOiJlc2Nyb3dfcmVsZWFzZSIsImFnZW50X2lkIjoiYS1wbGF0Zm9ybSIsImVzY3Jvd19pZCI6ImVzYy0xIn0.PkSk6hozLjii9jPZQe6Qg_EHwzJbPvRZohxRMJH4HPw2QuuegmkobcRtYyfUTfFGECIGtt0UzvG0I1N29eu2Dw"
+}

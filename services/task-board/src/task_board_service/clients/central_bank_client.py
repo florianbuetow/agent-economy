@@ -10,7 +10,7 @@ from service_commons.exceptions import ServiceError
 from task_board_service.logging import get_logger
 
 if TYPE_CHECKING:
-    from task_board_service.clients.platform_signer import PlatformSigner
+    from service_auth import PlatformSigner
 
 
 class CentralBankClient:

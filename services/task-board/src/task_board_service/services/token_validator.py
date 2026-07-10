@@ -10,7 +10,7 @@ from cryptography.exceptions import InvalidSignature
 from service_commons.exceptions import ServiceError
 
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
+    from service_auth.platform import PlatformAgent
     from service_clients.identity import IdentityClient
 
 

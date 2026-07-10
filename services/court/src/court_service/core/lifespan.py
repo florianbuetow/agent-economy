@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from base_agent.factory import AgentFactory
+from service_auth.factory import AgentFactory
 
 from court_service.config import get_config_path, get_settings
 from court_service.core.state import init_app_state

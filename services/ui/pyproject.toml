@@ -9,7 +9,7 @@ dependencies = [
     "starlette>=1.0.1",
     "pydantic>=2.10.0",
     "service-commons",
-    "base-agent",
+    "service-auth",
     "aiosqlite>=0.20.0",
     "sse-starlette>=2.2.1",
     "pyjwt>=2.13.0",
@@ -57,7 +57,7 @@ constraint-dependencies = [
 
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
-base-agent = { path = "../../agents", editable = true }
+service-auth = { path = "../../libs/service-auth", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ui_service"]
@@ -125,10 +125,6 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "sse_starlette.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "base_agent.*"
 ignore_missing_imports = true
 
 # === Bandit ===

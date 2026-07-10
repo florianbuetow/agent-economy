@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from reputation_service.types import FeedbackRecord
 
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
+    from service_auth.platform import PlatformAgent
     from service_clients.identity import IdentityClient
 
     from reputation_service.services.protocol import FeedbackStorageInterface

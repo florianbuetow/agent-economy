@@ -9,10 +9,9 @@ dependencies = [
     "pydantic>=2.10.0",
     "service-commons",
     "service-clients",
-    "base-agent",
+    "service-auth",
     "cryptography>=48.0.1",
     "httpx>=0.28.0",
-    "joserfc>=1.6.7",
     "aiofiles>=24.0.0",
     "python-multipart>=0.0.31",
     "starlette>=1.0.1",
@@ -62,7 +61,7 @@ constraint-dependencies = [
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
 service-clients = { path = "../../libs/service-clients", editable = true }
-base-agent = { path = "../../agents", editable = true }
+service-auth = { path = "../../libs/service-auth", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/task_board_service"]
@@ -127,10 +126,6 @@ files = ["src"]
 module = "tests.*"
 disallow_untyped_defs = false
 
-[[tool.mypy.overrides]]
-module = ["base_agent", "base_agent.*"]
-ignore_missing_imports = true
-
 # === Bandit ===
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
@@ -178,7 +173,6 @@ DEP002 = [
     "uvicorn",
     "pydantic",
     "service-commons",
-    "base-agent",
     "cryptography",
     "pytest",
     "pytest-cov",
