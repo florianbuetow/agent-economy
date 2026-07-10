@@ -49,6 +49,12 @@ task_feeder:
   base_reward: 10
   reward_per_level: 10
   shuffle: true
+  # Autonomous bid acceptance (WP-15 / Q-16). acceptance_after_seconds MUST be
+  # strictly less than bidding_deadline_seconds (T-035) or tasks expire before
+  # they can be accepted.
+  acceptance_after_seconds: 30
+  acceptance_poll_interval_seconds: 5
+  min_bids_to_accept: 2
 
 # Named worker profiles — used by WorkerFactory
 workers:
