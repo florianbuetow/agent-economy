@@ -126,8 +126,9 @@ identity:
   base_url: "http://localhost:8001"
   get_agent_path: "/agents"
   verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 platform:
-  agent_id: "{PLATFORM_AGENT_ID}"
+  agent_config_path: ""
 request:
   max_body_size: 1048576
 db_gateway:

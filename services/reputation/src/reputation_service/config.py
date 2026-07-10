@@ -112,7 +112,7 @@ class Settings(BaseModel):
     request: RequestConfig
     database: DatabaseConfig
     feedback: FeedbackConfig
-    db_gateway: DbGatewayConfig | None = None
+    db_gateway: DbGatewayConfig
 
 
 def get_config_path() -> Path:

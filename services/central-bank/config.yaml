@@ -24,7 +24,6 @@ identity:
   timeout_seconds: 10
 
 platform:
-  agent_id: "a-platform-placeholder"
   agent_config_path: "../../agents/config.yaml"
 
 request:

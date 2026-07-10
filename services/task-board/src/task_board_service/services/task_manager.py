@@ -1220,8 +1220,8 @@ class TaskManager:
         11.  invalid_status — not DISPUTED
         12.  invalid_worker_pct
         """
-        # Steps 4-7a: Verify JWS, validate action
-        payload = await self._token_validator.validate_jws_token(
+        # Steps 4-7a: Verify JWS locally (platform op), validate action
+        payload = await self._token_validator.validate_platform_jws_token(
             token,
             ("record_ruling", "submit_ruling"),
         )

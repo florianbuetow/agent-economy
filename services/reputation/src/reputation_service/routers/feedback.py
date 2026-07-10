@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import json
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -18,7 +20,41 @@ from reputation_service.services.feedback import (
 )
 from reputation_service.types import FeedbackRecord
 
+if TYPE_CHECKING:
+    from reputation_service.core.state import AppState
+    from reputation_service.services.protocol import JwsVerifier
+
 router = APIRouter()
+
+
+def _token_kid(token: str) -> str:
+    """Return the ``kid`` from a JWS protected header without verifying the signature."""
+    header_b64 = token.split(".", maxsplit=1)[0]
+    padded = header_b64 + "=" * (-len(header_b64) % 4)
+    try:
+        header = json.loads(base64.urlsafe_b64decode(padded))
+    except (json.JSONDecodeError, ValueError, UnicodeDecodeError):
+        return ""
+    if not isinstance(header, dict):
+        return ""
+    kid = header.get("kid", "")
+    return kid if isinstance(kid, str) else ""
+
+
+def _select_verifier(state: AppState, token: str) -> JwsVerifier | None:
+    """Route platform-signed tokens to local verification, agent tokens to Identity.
+
+    The signer is read from the (unverified) ``kid`` only to pick the verifier; the
+    chosen verifier then authenticates the token.
+    """
+    platform_agent = state.platform_agent
+    if (
+        platform_agent is not None
+        and state.platform_verifier is not None
+        and _token_kid(token) == platform_agent.agent_id
+    ):
+        return state.platform_verifier
+    return state.identity_client
 
 
 def _extract_jws_token(data: dict[str, object]) -> str:
@@ -106,15 +142,8 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
     # --- JWS Token Extraction ---
     token = _extract_jws_token(data)
 
-    # --- JWS verification via Identity service ---
+    # --- JWS verification (two-tier: platform ops local, agent ops via Identity) ---
     state = get_app_state()
-    if state.identity_client is None:
-        raise ServiceError(
-            error="service_not_ready",
-            message="Identity client not initialized",
-            status_code=503,
-            details={},
-        )
     if state.feedback_store is None:
         raise ServiceError(
             error="service_not_ready",
@@ -123,7 +152,16 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
             details={},
         )
 
-    verify_result = await state.identity_client.verify_jws(token)
+    verifier = _select_verifier(state, token)
+    if verifier is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="Identity client not initialized",
+            status_code=503,
+            details={},
+        )
+
+    verify_result = await verifier.verify_jws(token)
 
     if not verify_result.get("valid"):
         raise ServiceError(

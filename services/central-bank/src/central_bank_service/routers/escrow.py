@@ -10,10 +10,10 @@ from starlette.concurrency import run_in_threadpool
 from central_bank_service.core.state import get_app_state
 from central_bank_service.logging import get_logger
 from central_bank_service.routers.helpers import (
-    get_platform_agent_id,
+    decode_unverified_payload,
     parse_json_body,
-    require_platform,
     verify_jws_token,
+    verify_platform_signature,
 )
 
 router = APIRouter()
@@ -89,7 +89,7 @@ async def escrow_lock(request: Request) -> JSONResponse:
 
 @router.post("/escrow/{escrow_id}/release")
 async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
-    """Release escrowed funds to recipient. Platform-only."""
+    """Release escrowed funds to recipient. Platform-signed, verified locally."""
     body = await request.body()
     data = parse_json_body(body)
 
@@ -98,10 +98,9 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
     if not isinstance(data["token"], str):
         raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
 
-    verified = await verify_jws_token(data["token"])
-    require_platform(verified["agent_id"], get_platform_agent_id())
+    # Validate payload shape before authorization so payload errors beat the 403 (T-033).
+    payload = decode_unverified_payload(data["token"])
 
-    payload = verified["payload"]
     action = payload.get("action")
     if action != "escrow_release":
         raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
@@ -123,6 +122,9 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
             400,
             {},
         )
+
+    # Platform authorization: local signature verification (survives Identity outage).
+    verify_platform_signature(data["token"])
 
     state = get_app_state()
     if state.ledger is None:
@@ -151,7 +153,7 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
 
 @router.post("/escrow/{escrow_id}/split")
 async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
-    """Split escrowed funds between worker and poster. Platform-only."""
+    """Split escrowed funds between worker and poster. Platform-signed, verified locally."""
     body = await request.body()
     data = parse_json_body(body)
 
@@ -160,10 +162,9 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
     if not isinstance(data["token"], str):
         raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
 
-    verified = await verify_jws_token(data["token"])
-    require_platform(verified["agent_id"], get_platform_agent_id())
+    # Validate payload shape before authorization so payload errors beat the 403 (T-033).
+    payload = decode_unverified_payload(data["token"])
 
-    payload = verified["payload"]
     action = payload.get("action")
     if action != "escrow_split":
         raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
@@ -198,6 +199,9 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
             400,
             {},
         )
+
+    # Platform authorization: local signature verification (survives Identity outage).
+    verify_platform_signature(data["token"])
 
     state = get_app_state()
     if state.ledger is None:

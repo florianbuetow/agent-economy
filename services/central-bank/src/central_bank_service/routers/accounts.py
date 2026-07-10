@@ -10,11 +10,12 @@ from starlette.concurrency import run_in_threadpool
 from central_bank_service.core.state import get_app_state
 from central_bank_service.logging import get_logger
 from central_bank_service.routers.helpers import (
+    decode_unverified_payload,
     get_platform_agent_id,
     parse_json_body,
     require_account_owner,
-    require_platform,
     verify_jws_token,
+    verify_platform_signature,
 )
 
 router = APIRouter()
@@ -121,7 +122,7 @@ async def create_account(request: Request) -> JSONResponse:
 
 @router.post("/accounts/{account_id}/credit")
 async def credit_account(request: Request, account_id: str) -> dict[str, object]:
-    """Add funds to an account. Platform-only."""
+    """Add funds to an account. Platform-signed, verified locally."""
     body = await request.body()
     data = parse_json_body(body)
 
@@ -139,10 +140,9 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
             details={},
         )
 
-    verified = await verify_jws_token(data["token"])
-    require_platform(verified["agent_id"], get_platform_agent_id())
+    # Validate payload shape before authorization so payload errors beat the 403 (T-033).
+    payload = decode_unverified_payload(data["token"])
 
-    payload = verified["payload"]
     action = payload.get("action")
     if action != "credit":
         raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
@@ -170,6 +170,9 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
         )
     if not isinstance(reference, str):
         raise ServiceError("invalid_payload", "reference must be a string", 400, {})
+
+    # Platform authorization: local signature verification (survives Identity outage).
+    verify_platform_signature(data["token"])
 
     result = await run_in_threadpool(state.ledger.credit, account_id, amount, reference)
 
