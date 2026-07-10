@@ -6,14 +6,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from base_agent.factory import AgentFactory
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+from service_auth import PlatformSigner
+from service_auth.factory import AgentFactory
 from service_clients.identity import IdentityClient
 from service_commons.config import load_yaml_config
 
 from task_board_service.clients.central_bank_client import CentralBankClient
-from task_board_service.clients.platform_signer import PlatformSigner
 from task_board_service.config import get_config_path, get_settings
 from task_board_service.core.state import init_app_state
 from task_board_service.logging import get_logger, setup_logging
@@ -27,8 +27,8 @@ from task_board_service.services.token_validator import TokenValidator
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from base_agent.platform import PlatformAgent
     from fastapi import FastAPI
+    from service_auth.platform import PlatformAgent
 
     from task_board_service.services.protocol import TaskStorageInterface
 
@@ -64,6 +64,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # Resolve platform key material and platform agent identity.
     private_key_path = settings.platform.private_key_path
     platform_agent_id = settings.platform.agent_id
+    # Token lifetime for platform-signed escrow tokens; sourced from the agent
+    # config that also builds the platform agent (None => legacy, no expiry).
+    platform_token_ttl_seconds: int | None = None
 
     if settings.platform.agent_config_path:
         config_path = Path(settings.platform.agent_config_path)
@@ -79,6 +82,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             msg = "Platform agent registration did not return an agent_id"
             raise RuntimeError(msg)
         platform_agent_id = platform_agent.agent_id
+        platform_token_ttl_seconds = platform_agent.config.token_ttl_seconds
 
         agent_config = load_yaml_config(config_path)
         data_config = agent_config.get("data")
@@ -121,8 +125,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # Initialize PlatformSigner (loads Ed25519 private key from disk)
     platform_signer = PlatformSigner(
-        private_key_path=private_key_path,
         platform_agent_id=platform_agent_id,
+        private_key_path=private_key_path,
+        token_ttl_seconds=platform_token_ttl_seconds,
     )
     state.platform_signer = platform_signer
 

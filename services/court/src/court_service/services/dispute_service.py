@@ -11,7 +11,7 @@ from court_service.services.errors import DuplicateDisputeError
 from court_service.services.ruling_orchestrator import RulingOrchestrator
 
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
+    from service_auth.platform import PlatformAgent
 
     from court_service.judges.base import Judge
     from court_service.services.protocol import DisputeStorageInterface

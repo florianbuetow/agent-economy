@@ -7,11 +7,11 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
+    from service_auth import PlatformSigner
+    from service_auth.platform import PlatformAgent
     from service_clients.identity import IdentityClient
 
     from task_board_service.clients.central_bank_client import CentralBankClient
-    from task_board_service.clients.platform_signer import PlatformSigner
     from task_board_service.services.asset_manager import AssetManager
     from task_board_service.services.escrow_coordinator import EscrowCoordinator
     from task_board_service.services.protocol import TaskStorageInterface

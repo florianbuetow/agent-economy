@@ -11,7 +11,7 @@ dependencies = [
     "service-commons",
     "service-clients",
     "httpx>=0.28.0",
-    "base-agent",
+    "service-auth",
     "pyjwt>=2.13.0",
 ]
 
@@ -56,7 +56,7 @@ constraint-dependencies = [
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
 service-clients = { path = "../../libs/service-clients", editable = true }
-base-agent = { path = "../../agents", editable = true }
+service-auth = { path = "../../libs/service-auth", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/central_bank_service"]
@@ -118,10 +118,6 @@ files = ["src"]
 module = "tests.*"
 disallow_untyped_defs = false
 
-[[tool.mypy.overrides]]
-module = ["base_agent", "base_agent.*"]
-ignore_missing_imports = true
-
 # === Bandit ===
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
@@ -169,7 +165,7 @@ DEP002 = [
     "uvicorn",
     "pydantic",
     "service-commons",
-    "base-agent",
+    "service-auth",
     "pytest",
     "pytest-cov",
     "pytest-asyncio",

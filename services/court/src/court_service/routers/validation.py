@@ -9,7 +9,7 @@ from cryptography.exceptions import InvalidSignature
 from service_commons.exceptions import ServiceError
 
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
+    from service_auth.platform import PlatformAgent
 
 
 def parse_json_body(raw_body: bytes) -> dict[str, Any]:

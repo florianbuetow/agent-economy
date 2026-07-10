@@ -9,7 +9,7 @@ from service_commons.exceptions import ServiceError
 from ui_service.core.state import get_app_state
 
 if TYPE_CHECKING:
-    from base_agent import UserAgent
+    from service_auth import UserAgent
 
 
 def _get_user_agent() -> UserAgent:

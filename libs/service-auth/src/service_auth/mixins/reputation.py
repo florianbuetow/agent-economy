@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 if TYPE_CHECKING:
-    from base_agent.config import AgentConfig
+    from service_auth.config import AgentConfig
 
 
 class _ReputationClient(Protocol):

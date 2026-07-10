@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import aiosqlite
-    from base_agent import UserAgent
+    from service_auth import UserAgent
 
 
 @dataclass

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import aiosqlite
 import httpx
-from base_agent import AgentFactory
+from service_auth import AgentFactory
 
 from ui_service.config import get_settings
 from ui_service.core.state import init_app_state

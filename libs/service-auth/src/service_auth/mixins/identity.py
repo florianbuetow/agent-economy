@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Protocol, cast
 if TYPE_CHECKING:
     import httpx
 
-    from base_agent.config import AgentConfig
+    from service_auth.config import AgentConfig
 
 
 class _IdentityClient(Protocol):

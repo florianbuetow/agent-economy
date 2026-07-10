@@ -11,7 +11,7 @@ from service_commons.exceptions import ServiceError
 from court_service.judges import DisputeContext, JudgeVote
 
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
+    from service_auth.platform import PlatformAgent
 
     from court_service.judges.base import Judge
     from court_service.services.protocol import DisputeStorageInterface

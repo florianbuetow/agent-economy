@@ -11,12 +11,28 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from joserfc import jws as jws_module
 from joserfc.errors import BadSignatureError
 from joserfc.jwk import OKPKey
+from joserfc.jws import JWSRegistry
+from joserfc.registry import HeaderParameter
 from service_commons.exceptions import ServiceError
 
 from identity_service.services.errors import DuplicateAgentError
 
 if TYPE_CHECKING:
     from identity_service.services.protocol import IdentityStorageInterface
+
+
+def _build_jws_registry() -> JWSRegistry:
+    """JWS registry that tolerates the optional ``iat``/``exp`` token-expiry
+    header claims added in WP-02 (Q-10). Their presence is accepted and ignored;
+    enforcement of expiry lands with WP-03. Without this, joserfc rejects any
+    token carrying these non-standard protected-header parameters."""
+    header_registry = dict(JWSRegistry().header_registry)
+    header_registry["iat"] = HeaderParameter("Issued At", "int", False)
+    header_registry["exp"] = HeaderParameter("Expiration Time", "int", False)
+    return JWSRegistry(header_registry=header_registry, algorithms=["EdDSA"])
+
+
+_JWS_REGISTRY = _build_jws_registry()
 
 
 class AgentRegistry:
@@ -206,7 +222,9 @@ class AgentRegistry:
 
         # Verify signature
         try:
-            obj = jws_module.deserialize_compact(token, public_jwk, algorithms=["EdDSA"])
+            obj = jws_module.deserialize_compact(
+                token, public_jwk, algorithms=["EdDSA"], registry=_JWS_REGISTRY
+            )
         except BadSignatureError:
             return {"valid": False, "reason": "signature mismatch"}
         except Exception as exc:
