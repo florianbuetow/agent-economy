@@ -113,8 +113,14 @@ async def test_evaluate_deadline_open_no_bids_expired(tmp_path) -> None:
 
 
 @pytest.mark.unit
-async def test_evaluate_deadline_open_with_bids_not_expired(tmp_path) -> None:
-    """Open task with bids stays open even past bidding deadline."""
+async def test_evaluate_deadline_open_with_bids_expires(tmp_path) -> None:
+    """Open task with bids expires past its bidding deadline, refunding the poster.
+
+    T-035 / GAP-A2. This previously asserted the task stayed open, which contradicted
+    task-board-service-tests.md LIFE-03 ("Bidding deadline auto-expires ... Escrow
+    released back to poster" -- no bid-count condition) and left escrow locked forever,
+    since an open task past its bidding deadline has no other transition available.
+    """
     store = TaskStore(db_path=str(tmp_path / "task-board.db"))
     created = _timestamp("2025-01-01T00:00:00")
     store.insert_task(_task_data("t-1", "open", created, None, None, 1, 0))
@@ -126,8 +132,8 @@ async def test_evaluate_deadline_open_with_bids_not_expired(tmp_path) -> None:
     with freeze_time("2025-01-01 01:10:00"):
         result = await evaluator.evaluate_deadline(task)
 
-    assert result["status"] == "open"
-    mock_coordinator.try_release_escrow.assert_not_awaited()
+    assert result["status"] == "expired"
+    mock_coordinator.try_release_escrow.assert_awaited_once()
     store.close()
 
 

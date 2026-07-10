@@ -836,7 +836,7 @@ class TestBidAcceptance:
         datetime.fromisoformat(data["accepted_at"])
 
     @pytest.mark.unit
-    async def test_ba_10_accept_after_bidding_deadline_if_open(
+    async def test_accept_after_bidding_deadline_is_rejected(
         self,
         client,
         alice_keypair,
@@ -844,7 +844,15 @@ class TestBidAcceptance:
         bob_keypair,
         bob_agent_id,
     ):
-        """BA-10: Accepting a bid after bidding_deadline still works if task is open."""
+        """Accepting a bid after the bidding deadline is rejected: the task has expired.
+
+        T-035 / GAP-A2. This previously asserted a late accept still returned 200 while
+        the task was "open", and was labelled BA-10 -- but spec BA-10 is "Accepting a bid
+        updates bid_count correctly" and says nothing about deadlines. The asserted
+        behaviour contradicted LIFE-07 ("task is expired, not open" once the bidding
+        deadline passes) and LIFE-09 (terminal EXPIRED blocks all mutations), and was only
+        reachable because bid-carrying tasks never expired.
+        """
         task_resp = await create_task(
             client,
             alice_keypair,
@@ -862,7 +870,10 @@ class TestBidAcceptance:
         # Wait for deadline to pass
         await asyncio.sleep(1.5)
 
-        # Accept should still work
+        # Lazy evaluation expires the task, so acceptance is no longer possible
         response = await accept_bid(client, alice_keypair, alice_agent_id, task_id, bid_id)
-        assert response.status_code == 200
-        assert response.json()["status"] == "accepted"
+        assert response.status_code == 409
+        assert response.json()["error"] == "invalid_status"
+
+        task = await client.get(f"/tasks/{task_id}")
+        assert task.json()["status"] == "expired"
