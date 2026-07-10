@@ -224,7 +224,10 @@ class TestCourtReads:
         # Update one claim to "ruled"
         app_with_writer.post(
             f"/court/claims/{cid2}/status",
-            json={"status": "ruled"},
+            json={
+                "status": "ruled",
+                "event": make_event(source="court", event_type="claim.status_changed"),
+            },
         )
         _wire_db_reader()
 
@@ -282,7 +285,10 @@ class TestCourtReads:
         # Rule one claim
         app_with_writer.post(
             f"/court/claims/{cid2}/status",
-            json={"status": "ruled"},
+            json={
+                "status": "ruled",
+                "event": make_event(source="court", event_type="claim.status_changed"),
+            },
         )
         _wire_db_reader()
 

@@ -178,11 +178,12 @@ async def get_claim(claim_id: str) -> JSONResponse:
 
 @router.post("/claims/{claim_id}/status")
 async def update_claim_status(claim_id: str, request: Request) -> JSONResponse:
-    """Update claim status with optional constraints and event."""
+    """Update claim status with optional constraints."""
     body = await request.body()
     data = parse_json_body(body)
     validate_required_fields(data, ["status"])
     constraints = validate_constraints(data)
+    validate_event(data)
 
     state = get_app_state()
     if state.db_writer is None:
@@ -242,8 +243,12 @@ async def get_ruling(claim_id: str) -> JSONResponse:
 
 
 @router.delete("/rulings/{claim_id}")
-async def delete_ruling(claim_id: str) -> JSONResponse:
+async def delete_ruling(claim_id: str, request: Request) -> JSONResponse:
     """Delete a ruling by claim_id."""
+    body = await request.body()
+    data = parse_json_body(body)
+    validate_event(data)
+
     state = get_app_state()
     if state.db_writer is None:
         raise ServiceError(
@@ -253,5 +258,5 @@ async def delete_ruling(claim_id: str) -> JSONResponse:
             details={},
         )
 
-    result = state.db_writer.delete_ruling(claim_id)
+    result = state.db_writer.delete_ruling(claim_id, data["event"])
     return JSONResponse(status_code=200, content=result)
