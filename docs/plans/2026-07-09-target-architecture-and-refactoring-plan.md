@@ -2,6 +2,7 @@
 
 **Date:** 2026-07-09 · **Last updated:** 2026-07-10
 **Status:** ACTIVE and **self-contained — executable end-to-end from §5.-1 with no further input.** The analysis (§1–§4) is complete and the hotfix track (§5.0, H-1…H-7) has shipped and is verified. Appendix B records which review feedback was accepted and which rejected. All §9 questions were ratified 2026-07-10 per Step E1 (decision records in `docs/plans/2026-07-10-q*-decision.md`); no decision is outstanding.
+**Execution progress (2026-07-10):** E1 `a59d1a7` · WP-01 `fa8bbe4` · WP-02 `8fcae08` · WP-03 `0abfe7f`+`7a346a8` · WP-15 `dd6957f` — all CI-gated and pushed. **GAP-A15 (P0) closed; GAP-A1 (P0) still open:** WP-06 was **paused mid-implementation** by owner decision — its partial, uncommitted work (ruling trigger, retry-clean ruling, rebuttal-window enforcement, deliverable fetcher, config de-hardcoding, kid/party assertions, all with new tests) lives in the git worktree `.worktrees/wp06` (branch `wp06`, based on `7a346a8`); no WP-06 change reached the `refactor` branch, so the main tree is unaffected. Remaining open: WP-04, WP-05, WP-06 (resume from the worktree), WP-07…WP-14 — pick up at E2 position 4/5 later.
 **Method:** 17 parallel audit agents (per-service code audits, doc/spec extraction, repo-wide wiring maps) + orchestrator validation of every load-bearing claim against source, later extended by an adversarial Codex review of this document. Evidence cited as `path:line` (code) or `path § heading` (docs). No claim without a citation. UNVERIFIED items are labeled. Every shipped fix was mutation-checked (remove the guard, the test must fail), and no existing assertion was changed without a ratified-decision exception recorded in §5.0.
 **Supersedes:** `docs/plans/2026-06-12-completion-inventory.md` (folds in its findings, re-verified against the 2026-07-09 codebase).
 
@@ -326,7 +327,7 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | GAP-A12 | UNVERIFIED residuals from the June inventory: labor bucket `51_to_100` excluding 100; frontend trend string `growing` vs API `increasing`; `title_too_long` custom code | §2.8/§2.5 | P2 | WP-08/WP-05 (T-047/048/037) — re-verify then fix |
 | GAP-A13 | Demo integrity: `scale.yaml` leaves a dispute unresolved; demo `reveal_feedback` posts to an endpoint absent from the Reputation API surface (`clients.py:414`); demo/base-SDK feedback contracts drifted | §2.9 honest demos | P2 | WP-09 (verify first) |
 | ~~GAP-A14~~ | Bank auth precedence inverted on credit/release/split (403 before payload validation) | auth-spec precedence | P2 | **DONE** `0abfe7f` (decode-first ordering: payload errors beat 403) |
-| GAP-A15 | **No autonomous component ever accepts a bid** (found 2026-07-10 while auditing T-035's blast radius). The only callers of `accept_bid` are `tools/src/demo_replay/engine.py:236` (the scripted demo) and the UI proxy (`ui_service/routers/proxy.py:42`, i.e. a human clicking). `agents/src/task_feeder/` posts and reviews but has no acceptance path, and `MathWorkerLoop` simply waits in its post-bid phase until poll exhaustion records `BID_TIMEOUT`. So `just start-feeder` + `just start-mathbot` cannot move a task past `open`. Together with GAP-A1 (nothing triggers rulings) this means **the autonomous economy has two missing drivers**, and §8's definition-of-done item 2 is unreachable until both are closed. Before T-035 the stranded task also held its escrow forever; it now expires and refunds the poster, which is an improvement but not a substitute for acceptance. | §2.9: feeder accepts a winning bid | **P0** (blocks the autonomous-economy claim) | **WP-15** Q-16 |
+| GAP-A15 | **No autonomous component ever accepts a bid** (found 2026-07-10 while auditing T-035's blast radius). The only callers of `accept_bid` are `tools/src/demo_replay/engine.py:236` (the scripted demo) and the UI proxy (`ui_service/routers/proxy.py:42`, i.e. a human clicking). `agents/src/task_feeder/` posts and reviews but has no acceptance path, and `MathWorkerLoop` simply waits in its post-bid phase until poll exhaustion records `BID_TIMEOUT`. So `just start-feeder` + `just start-mathbot` cannot move a task past `open`. Together with GAP-A1 (nothing triggers rulings) this means **the autonomous economy has two missing drivers**, and §8's definition-of-done item 2 is unreachable until both are closed. Before T-035 the stranded task also held its escrow forever; it now expires and refunds the poster, which is an improvement but not a substitute for acceptance. | §2.9: feeder accepts a winning bid | **P0** (blocks the autonomous-economy claim) | **DONE** `dd6957f` (WP-15: feeder acceptance loop per Q-16 — lowest bid after the window/quorum, reputation tie-break; live e2e observed red then green; GAP-A15 row kept verbose for history) |
 
 ### B. Auth & security
 
@@ -525,12 +526,12 @@ A third, independent citation settles it: the API spec's own state-transition ta
 
 **Accepted deviation (recorded, not silent):** central-bank `create_account` keeps Identity-path JWS verification for both its modes (self-service zero-balance and platform-funded). Rationale: the endpoint has a hard Identity dependency regardless (agent-existence check via `get_agent`), so local platform verification buys no outage resilience, and discriminating the two modes requires the verified signer identity either way. §2.3's platform-op list and the T-021 grep proof carry this one documented exception; WP-12 specs it. Revisit only if the existence check ever moves to gateway reads.
 
-### WP-01 — Governance: one tracker, working gates (S) Q-1
+### WP-01 — Governance: one tracker, working gates (S) Q-1 — ✅ DONE `fa8bbe4` (2026-07-10)
 1. Execute the Q-1 decision; write `docs/plans/2026-07-XX-tracker-decision.md`. If openspec wins (recommended): migrate `tickets.md#T-001` into `openspec/specs/completion-backlog/spec.md` under a fresh stable ID (**T-100**, avoiding the collision), delete `tickets.md`; if tickets.md wins: mark `delivery-governance § Tracker Migration` superseded and renumber the open ticket to a non-colliding ID.
 2. Fix the never-working commit gate: `.claude/settings.json` PreToolUse hook → point at the real `scripts/ci-quiet-hook.sh` and the correct jq field, or delete the hook (decide with Q-1's governance answer). Proof: trigger a commit with CI red → blocked.
 3. Remove the beads mandate from AGENTS.md tracking sections (full AGENTS rewrite lands in WP-12; the tracker paragraph swaps now so no new work lands in the wrong system).
 
-### WP-02 — PKI extraction into a library (M)
+### WP-02 — PKI extraction into a library (M) — ✅ DONE `8fcae08` (2026-07-10; incl. Q-10 iat/exp; Dockerfile COPY updates skipped per Q-6 descope)
 1. Create `libs/service-auth` (pyproject: cryptography, service-commons); move `agents/src/base_agent/signing.py`, `platform.py`, `user_agent.py` logic there; `agents/base_agent` keeps thin re-export shims so the frozen agents tests keep importing `base_agent.*` unchanged.
 2. **One canonicalization**: `create_jws` uses `json.dumps(payload, sort_keys=True, separators=(",", ":"))`, header `{"alg":"EdDSA","typ":"JWT","kid":…}`. (Verification is over bytes-as-sent, so in-flight mixed tokens stay valid during rollout.)
 3. Delete the two duplicate implementations: `services/task-board/src/task_board_service/clients/platform_signer.py` (task-board signs via the lib) and the crypto half of `tools/src/demo_replay/wallet.py` (imports the lib; its no-heavy-deps rationale dies once the lib is dependency-light).
@@ -538,7 +539,7 @@ A third, independent citation settles it: the API spec's own state-transition ta
 5. Tests first: new lib test suite (keygen roundtrip, sign/verify, tamper rejection, cross-canonicalization verify against fixtures captured from the old signers); per-service architecture test forbidding `base_agent` imports under `services/*/src`.
 6. Acceptance: `grep -rn "from base_agent" services/*/src` → 0 hits; `just ci-quiet` green.
 
-### WP-03 — Two-tier auth rollout (M) — closes GAP-B1/B3/A14, T-021/T-033/T-034
+### WP-03 — Two-tier auth rollout (M) — closes GAP-B1/B3/A14, T-021/T-033/T-034 — ✅ DONE `0abfe7f`+`7a346a8` (2026-07-10; exceptions #2–#5 + create_account deviation in §5.0)
 Per service, in this order (test-first: for each platform op, a failing integration test asserting the op **succeeds while Identity is stopped**; for each agent op, that verification still routes via Identity; plus precedence tests asserting payload-validation errors beat 403):
 1. **central-bank**: `routers/helpers.py` — platform ops (`create_account` w/ balance, `credit`, `release`, `split`) verify via `platform_agent.validate_certificate`; agent ops (`escrow_lock`, reads, zero-balance self-account) keep `IdentityClient.verify_jws`. Fix inverted precedence on credit/release/split (`accounts.py:143`, `escrow.py:102,164`). Config: `platform.agent_id` placeholder removed — identity always resolved from `agent_config_path` registration; `db_gateway`/`identity` become non-Optional in `config.py` (T-034).
 2. **reputation**: platform/`force_visible` path verifies locally; replace the broken `PlatformIdentityClient(IdentityClient)` inheritance with a narrow `JwsVerifier` Protocol + composition (fixes the latent `super().__init__` bug); `db_gateway` non-Optional.
@@ -624,7 +625,7 @@ Grouped mechanical items, each landing with the relevant arch/unit test where on
 ### WP-14 — Product tail (vision work, post-target) Q-8/Q-11/Q-12/Q-15
 Text-Classification Arena workers + emergent-specialization assertions (T-091); economy-graph landing animation replanned for vanilla JS (T-094); bid-amount economics if Q-8 ratifies payment-at-bid; contract object if Q-11 ratifies it; reputation score aggregation endpoint if Q-12 ratifies it; dispute-cost/zero-balance/contract-cap mechanics per Q-15. Salary stays deferred (R8).
 
-### WP-15 — Autonomous bid acceptance (M) — closes GAP-A15 Q-16
+### WP-15 — Autonomous bid acceptance (M) — closes GAP-A15 Q-16 — ✅ DONE `dd6957f` (2026-07-10; discoveries T-101/T-102 filed)
 **Runs at E2 position 4, alongside WP-06.** Without it the economy cannot leave `open` unattended: the only callers of `accept_bid` today are `tools/src/demo_replay/engine.py:236` and the UI proxy. Scope is `agents/` only.
 
 1. Add an acceptance loop to `agents/src/task_feeder/`, wired concurrently in `__main__.py` beside the existing feed and review loops (`asyncio.gather`, mirroring how `review.py` is wired).
@@ -679,6 +680,9 @@ DONE = verified in code · PARTIAL = code or doc half landed · OPEN = not done 
 | T-090 | salary | **DECIDED-DEFERRED** (R8); doc claims still to purge | → WP-12 |
 | T-091/093/094/095 | product tail | T-095 PARTIAL (badge metric removed `535c48b`); rest OPEN | → WP-08/WP-14 |
 | T-092 | vision open questions recorded | **DONE** `a59d1a7` — all 16 §9 questions ratified as decision records (`docs/plans/2026-07-10-q*-decision.md`, Step E1) | closed |
+| T-100 | UI empty-economy phase (migrated tickets.md#T-001) | **DONE** `9f506c9` (code) + `fa8bbe4` (migration) | closed |
+| T-101 | task-board `bid_count` not incremented on gateway path | **OPEN** (found by WP-15 e2e; workaround: count `list_bids`) | → WP-04 (GAP-E13) |
+| T-102 | deterministic worker path for the §8-item-2 CI proof | **OPEN** (LLMClient hard-wired to AsyncOpenAI) | → WP-09.9 |
 
 ---
 
