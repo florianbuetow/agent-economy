@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -10,6 +11,20 @@ from service_commons.exceptions import ServiceError
 
 if TYPE_CHECKING:
     from service_auth.platform import PlatformAgent
+
+
+def _extract_kid(token: str) -> str | None:
+    """Return the ``kid`` from a compact JWS protected header, or None."""
+    header_b64 = token.split(".", 1)[0]
+    padding = "=" * (-len(header_b64) % 4)
+    try:
+        header = json.loads(base64.urlsafe_b64decode(header_b64 + padding))
+    except (ValueError, json.JSONDecodeError):
+        return None
+    if not isinstance(header, dict):
+        return None
+    kid = header.get("kid")
+    return kid if isinstance(kid, str) else None
 
 
 def parse_json_body(raw_body: bytes) -> dict[str, Any]:
@@ -80,6 +95,12 @@ def verify_platform_token(token: str, platform_agent: PlatformAgent | None) -> d
 
     if not isinstance(payload, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
         raise ServiceError("invalid_payload", "JWS payload must be a JSON object", 400, {})
+
+    # GAP-B4: crypto authenticity alone is not enough — the spec'd identity binding
+    # (protected-header ``kid``) must name the platform agent. Reject a token whose
+    # header kid does not match, even if the signature verifies.
+    if _extract_kid(token) != platform_agent.agent_id:
+        raise ServiceError("forbidden", "JWS signer is not the platform agent", 403, {})
 
     return payload
 

@@ -113,6 +113,8 @@ CREATE TABLE board_tasks (
     -- dispute / ruling
     dispute_reason           TEXT,
     dispute_id               TEXT,             -- court claim id, "disp-<uuid4>"
+    rebuttal_deadline        TEXT,             -- court rebuttal window close (from file_claim)
+    rebuttal_submitted_at    TEXT,             -- set when the worker rebuttal is forwarded
     ruling_id                TEXT,
     worker_pct               INTEGER,          -- 0-100, court-determined
     ruling_summary           TEXT,

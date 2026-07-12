@@ -151,6 +151,22 @@ async def submit_rebuttal(dispute_id: str, request: Request) -> JSONResponse:
             {},
         )
 
+    # H-2 court-side deferral: when Task Board forwards the rebuttal party, assert it
+    # matches the respondent recorded on the dispute this Court opened. Without this a
+    # corrupted forward could attach a rebuttal on behalf of the wrong worker.
+    forwarded_party = payload.get("respondent_id")
+    if forwarded_party is not None:
+        dispute = await run_in_threadpool(state.dispute_service.get_dispute, dispute_id)
+        if dispute is None:
+            raise ServiceError("dispute_not_found", "Dispute not found", 404, {})
+        if not isinstance(forwarded_party, str) or forwarded_party != dispute["respondent_id"]:
+            raise ServiceError(
+                "forbidden",
+                "Rebuttal party does not match the dispute respondent",
+                403,
+                {},
+            )
+
     updated = await run_in_threadpool(state.dispute_service.submit_rebuttal, dispute_id, rebuttal)
     return JSONResponse(status_code=200, content=updated)
 
@@ -189,16 +205,39 @@ async def trigger_ruling(dispute_id: str, request: Request) -> JSONResponse:
             {},
         )
 
-    dispute = await run_in_threadpool(state.dispute_service.get_dispute, dispute_id)
-    if dispute is None:
-        raise ServiceError("dispute_not_found", "Dispute not found", 404, {})
+    # Validate readiness and mark the dispute 'judging' BEFORE any Task Board call:
+    # fetching the task (and its deliverables) below re-enters that same disputed
+    # task's lazy evaluation on Task Board's side, which re-triggers this very ruling
+    # (GAP-A1). Marking judging first makes that reentrant attempt fail fast with
+    # dispute_not_ready instead of Court and Task Board recursing into each other.
+    dispute = await run_in_threadpool(state.dispute_service.begin_ruling, dispute_id)
 
     task_id = str(dispute["task_id"])
-    task_data = await _fetch_task(task_id)
+    try:
+        task_data = await _fetch_task(task_id)
+
+        # GAP-A9: get_task carries no deliverable bytes, so fetch the task's uploaded
+        # asset content and hand it to the judges as the deliverables under review.
+        if state.deliverable_fetcher is not None:
+            task_data["deliverables"] = await state.deliverable_fetcher.fetch(task_id)
+    except ServiceError:
+        if state.store is not None:
+            await run_in_threadpool(state.store.revert_to_rebuttal_pending, dispute_id)
+        raise
+    except Exception as exc:
+        if state.store is not None:
+            await run_in_threadpool(state.store.revert_to_rebuttal_pending, dispute_id)
+        raise ServiceError(
+            "task_board_unavailable",
+            "Cannot reach Task Board service",
+            502,
+            {},
+        ) from exc
 
     judges = state.judges if state.judges is not None else []
-    ruled = await state.dispute_service.execute_ruling(
+    ruled = await state.dispute_service.finish_ruling(
         dispute_id=dispute_id,
+        dispute=dispute,
         judges=judges,
         task_data=task_data,
         platform_agent=state.platform_agent,

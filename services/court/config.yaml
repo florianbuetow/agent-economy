@@ -27,6 +27,10 @@ disputes:
 
 judges:
   panel_size: 1
+  # Fixed worker payout percentage returned by mock judges (dev/test/CI).
+  mock_worker_pct: 50
+  # Maximum total bytes of deliverable content fetched into the judge prompt.
+  max_deliverable_bytes: 65536
   judges:
     - id: "judge-0"
       provider: "mock"

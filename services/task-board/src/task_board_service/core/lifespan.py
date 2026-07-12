@@ -160,7 +160,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         identity_client=identity_client,
     )
     state.token_validator = token_validator
-    deadline_evaluator = DeadlineEvaluator(store=store, escrow_coordinator=escrow_coordinator)
+    deadline_evaluator = DeadlineEvaluator(
+        store=store,
+        escrow_coordinator=escrow_coordinator,
+        platform_agent=state.platform_agent,
+    )
     asset_manager = AssetManager(
         store=store,
         token_validator=token_validator,

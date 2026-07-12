@@ -23,6 +23,8 @@ TASK_UPDATE_COLUMNS: frozenset[str] = frozenset(
         "cancelled_at",
         "dispute_reason",
         "dispute_id",
+        "rebuttal_deadline",
+        "rebuttal_submitted_at",
         "disputed_at",
         "ruling_id",
         "worker_pct",
@@ -91,6 +93,8 @@ class DbWriter:
         suppressed: without these columns disputes and event provenance fail at runtime.
         """
         self._add_column_if_missing("board_tasks", "dispute_id", "TEXT")
+        self._add_column_if_missing("board_tasks", "rebuttal_deadline", "TEXT")
+        self._add_column_if_missing("board_tasks", "rebuttal_submitted_at", "TEXT")
         self._add_column_if_missing("bank_transactions", "event_id", "INTEGER")
         self._add_column_if_missing("bank_escrow", "event_id", "INTEGER")
 

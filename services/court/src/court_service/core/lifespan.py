@@ -15,7 +15,7 @@ from court_service.judges import LLMJudge, MockJudge
 from court_service.logging import get_logger, setup_logging
 from court_service.services.dispute_db_client import DisputeDbClient
 from court_service.services.dispute_service import DisputeService
-from court_service.services.ruling_orchestrator import RulingOrchestrator
+from court_service.services.ruling_orchestrator import DeliverableFetcher, RulingOrchestrator
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -35,7 +35,7 @@ def _build_judges(settings: Settings) -> list[Judge]:
             judges.append(
                 MockJudge(
                     judge_id=judge_cfg.id,
-                    fixed_worker_pct=50,
+                    fixed_worker_pct=settings.judges.mock_worker_pct,
                     reasoning="Mock judge default reasoning.",
                 )
             )
@@ -116,6 +116,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         settings.platform.agent_id = platform_agent.agent_id
         logger.info("Platform agent registered", extra={"agent_id": platform_agent.agent_id})
 
+        state.deliverable_fetcher = DeliverableFetcher(
+            task_board_url=platform_agent.config.task_board_url,
+            max_deliverable_bytes=settings.judges.max_deliverable_bytes,
+            timeout_seconds=settings.db_gateway.timeout_seconds,
+        )
+
     state.judges = _build_judges(settings)
 
     logger.info(
@@ -134,5 +140,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     if state.platform_agent is not None:
         await state.platform_agent.close()
+    if state.deliverable_fetcher is not None and isinstance(
+        state.deliverable_fetcher, DeliverableFetcher
+    ):
+        await state.deliverable_fetcher.close()
     if state.dispute_service is not None:  # pyright: ignore[reportUnnecessaryComparison]
         state.dispute_service.close()

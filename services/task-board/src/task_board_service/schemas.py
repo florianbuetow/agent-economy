@@ -51,6 +51,7 @@ class TaskResponse(BaseModel):
     cancelled_at: str | None
     disputed_at: str | None
     dispute_reason: str | None
+    dispute_id: str | None
     ruling_id: str | None
     ruled_at: str | None
     worker_pct: int | None

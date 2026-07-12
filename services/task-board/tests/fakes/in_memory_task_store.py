@@ -46,6 +46,8 @@ class InMemoryTaskStore:
         "disputed_at",
         "dispute_reason",
         "dispute_id",
+        "rebuttal_deadline",
+        "rebuttal_submitted_at",
         "ruling_id",
         "ruled_at",
         "worker_pct",

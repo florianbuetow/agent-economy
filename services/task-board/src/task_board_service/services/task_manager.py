@@ -117,6 +117,7 @@ class TaskManager:
             "cancelled_at": row["cancelled_at"],
             "disputed_at": row["disputed_at"],
             "dispute_reason": row["dispute_reason"],
+            "dispute_id": row["dispute_id"],
             "ruling_id": row["ruling_id"],
             "ruled_at": row["ruled_at"],
             "worker_pct": row["worker_pct"],
@@ -1089,16 +1090,22 @@ class TaskManager:
                 {},
             )
 
-        # Update task
+        # Update task. Persist the Court-authoritative rebuttal deadline alongside the
+        # dispute id so the deadline evaluator can fire the ruling once the window closes
+        # (GAP-A1); it may be absent if Court did not return one.
         disputed_at = _now_iso()
+        dispute_updates: dict[str, Any] = {
+            "status": "disputed",
+            "disputed_at": disputed_at,
+            "dispute_reason": reason,
+            "dispute_id": dispute_id,
+        }
+        rebuttal_deadline = court_dispute.get("rebuttal_deadline")
+        if isinstance(rebuttal_deadline, str) and rebuttal_deadline != "":
+            dispute_updates["rebuttal_deadline"] = rebuttal_deadline
         self._store.update_task(
             task_id,
-            {
-                "status": "disputed",
-                "disputed_at": disputed_at,
-                "dispute_reason": reason,
-                "dispute_id": dispute_id,
-            },
+            dispute_updates,
             expected_status=None,
         )
 
@@ -1206,6 +1213,13 @@ class TaskManager:
         response: dict[str, Any] = await platform_agent.submit_rebuttal(
             str(stored_dispute_id), rebuttal
         )
+        # Record that a rebuttal now exists so the deadline evaluator can fire the ruling
+        # immediately, without waiting for the rebuttal window to close (GAP-A1).
+        self._store.update_task(
+            task_id,
+            {"rebuttal_submitted_at": _now_iso()},
+            expected_status=None,
+        )
         return response
 
     async def record_ruling(self, task_id: str, token: str) -> dict[str, Any]:
@@ -1310,6 +1324,12 @@ class TaskManager:
         task = self._store.get_task(task_id)
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
+
+        # Idempotent retry (T-040): re-recording the identical ruling_id on an
+        # already-ruled task converges to the stored outcome without settling escrow
+        # a second time, so a Court retry after a partial failure cannot double-pay.
+        if task["status"] == "ruled" and str(task.get("ruling_id")) == ruling_id:
+            return self._task_to_response(task)
 
         # Step 11: Check status
         if task["status"] != "disputed":

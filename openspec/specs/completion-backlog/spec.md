@@ -325,3 +325,7 @@ Defects and scope gaps discovered while executing the 2026-07-09 refactoring pla
 #### Scenario: T-102 deterministic worker path for the unattended-round proof
 - **WHEN** the definition-of-done e2e (plan §8 item 2: posted→bid→accepted→submitted→approved/ruled with feeder + mathbot, no demo, no human) runs in CI
 - **THEN** a worker can bid/solve without a live LLM: `math_worker`'s `LLMClient` gains an injectable transport (or a deterministic arithmetic worker profile exists), since today `_select_task`/`_decide_bid`/`_solve` are hard-wired to AsyncOpenAI (verified 2026-07-10, WP-15) — lands with WP-09
+
+#### Scenario: T-103 start-all silently skips Court when its .env is missing
+- **WHEN** `just start-all` runs in a tree without `services/court/.env` (fresh clone or worktree)
+- **THEN** Court still launches: the recipe's `cd services/court && set -a && [ -f .env ] && . .env && set +a && uv run uvicorn ... &` single `&&` chain must not short-circuit at `[ -f .env ]` — discovered 2026-07-12 while verifying WP-06 in a worktree; today only 6 of 7 services start and nothing reports the failure

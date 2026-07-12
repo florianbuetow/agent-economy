@@ -278,7 +278,15 @@ async def test_dispute_proceeds_without_rebuttal(
     make_funded_agent,
     platform_agent: PlatformAgent,
 ) -> None:
-    """Edge case: ruling should proceed even without worker rebuttal."""
+    """Edge case: ruling without a rebuttal is rejected while the rebuttal
+    window is open (T-039 ``dispute_not_ready``), and the dispute stays
+    recoverable — a later rebuttal makes the ruling succeed.
+
+    Reworked under the plan's recorded frozen-test exception #7: the old
+    immediate-200 assertion encoded the pre-GAP-A8 permissive behavior, and a
+    live e2e cannot expire the 24h rebuttal window (that path is unit-tested
+    with a backdated deadline).
+    """
     agents_to_close: list[BaseAgent] = []
 
     try:
@@ -292,11 +300,23 @@ async def test_dispute_proceeds_without_rebuttal(
             poster, worker, platform_agent, disputed_task, dispute_reason
         )
 
-        # Skip rebuttal entirely — go straight to ruling
+        # Skip rebuttal and go straight to ruling: rejected while the window is open
+        premature_status, premature_payload = await _trigger_ruling(platform_agent, dispute_id)
+
+        assert premature_status == 409, (
+            f"Premature ruling without rebuttal should be 409, got {premature_status}"
+        )
+        assert premature_payload.get("error") == "dispute_not_ready"
+
+        # The dispute is untouched by the rejected attempt: a rebuttal now
+        # makes it eligible, and the ruling proceeds.
+        rebuttal_status = await _submit_rebuttal(platform_agent, dispute_id)
+        assert rebuttal_status == 200
+
         ruling_status, ruling_payload = await _trigger_ruling(platform_agent, dispute_id)
 
         assert ruling_status == 200, (
-            f"Court ruling without rebuttal failed with status {ruling_status}"
+            f"Court ruling after rebuttal failed with status {ruling_status}"
         )
         assert ruling_payload["status"] == "ruled"
         assert isinstance(ruling_payload.get("worker_pct"), int)

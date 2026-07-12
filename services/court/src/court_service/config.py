@@ -94,6 +94,8 @@ class JudgesConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     panel_size: int
+    mock_worker_pct: int
+    max_deliverable_bytes: int
     judges: list[JudgeConfig]
 
     @field_validator("judges")
