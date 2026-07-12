@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-09 · **Last updated:** 2026-07-10
 **Status:** ACTIVE and **self-contained — executable end-to-end from §5.-1 with no further input.** The analysis (§1–§4) is complete and the hotfix track (§5.0, H-1…H-7) has shipped and is verified. Appendix B records which review feedback was accepted and which rejected. All §9 questions were ratified 2026-07-10 per Step E1 (decision records in `docs/plans/2026-07-10-q*-decision.md`); no decision is outstanding.
-**Execution progress (2026-07-10):** E1 `a59d1a7` · WP-01 `fa8bbe4` · WP-02 `8fcae08` · WP-03 `0abfe7f`+`7a346a8` · WP-15 `dd6957f` — all CI-gated and pushed. **GAP-A15 (P0) closed; GAP-A1 (P0) still open:** WP-06 was **paused mid-implementation** by owner decision — its partial, uncommitted work (ruling trigger, retry-clean ruling, rebuttal-window enforcement, deliverable fetcher, config de-hardcoding, kid/party assertions, all with new tests) lives in the git worktree `.worktrees/wp06` (branch `wp06`, based on `7a346a8`); no WP-06 change reached the `refactor` branch, so the main tree is unaffected. Remaining open: WP-04, WP-05, WP-06 (resume from the worktree), WP-07…WP-14 — pick up at E2 position 4/5 later.
+**Execution progress (updated 2026-07-12):** E1 `a59d1a7` · WP-01 `fa8bbe4` · WP-02 `8fcae08` · WP-03 `0abfe7f`+`7a346a8` · WP-15 `dd6957f` · WP-06 `6aba0e2` — all CI-gated and pushed. **Both P0 gaps closed:** the economy leaves `open` autonomously (GAP-A15) and disputes reach `ruled` autonomously (GAP-A1), each proven by a live e2e. Remaining open: WP-04 ∥ WP-05 (E2 position 5), then WP-07…WP-14. The full feeder+mathbot unattended-round proof (§8 item 2) additionally needs T-102 (LLM-free worker seam, WP-09).
 **Method:** 17 parallel audit agents (per-service code audits, doc/spec extraction, repo-wide wiring maps) + orchestrator validation of every load-bearing claim against source, later extended by an adversarial Codex review of this document. Evidence cited as `path:line` (code) or `path § heading` (docs). No claim without a citation. UNVERIFIED items are labeled. Every shipped fix was mutation-checked (remove the guard, the test must fail), and no existing assertion was changed without a ratified-decision exception recorded in §5.0.
 **Supersedes:** `docs/plans/2026-06-12-completion-inventory.md` (folds in its findings, re-verified against the 2026-07-09 codebase).
 
@@ -313,15 +313,15 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 
 | ID | Gap (current, evidence) | Target (§2 ref) | Sev | Closes via |
 |---|---|---|---|---|
-| GAP-A1 | **No component ever triggers rulings**: `POST /disputes/{id}/rule` is called only by the demo engine; a feeder-disputed task with a worker rebuttal waits forever | §2.6 ruling trigger | **P0** | WP-06 Q-5 |
+| ~~GAP-A1~~ | **No component ever triggered rulings**: `POST /disputes/{id}/rule` was called only by the demo engine | §2.6 ruling trigger | **P0** | **DONE** `6aba0e2` (WP-06: TB deadline evaluator fires the platform-signed idempotent trigger; e2e red→green) |
 | ~~GAP-A2~~ | Open tasks with ≥1 bid never expired (`deadline_evaluator.py:63` guarded `bid_count == 0`) → escrow locked forever | §2.5 table ▲ | P1 | **DONE** `a429120` (mutation-checked; two spec-contradicting tests corrected, see the exception record above) |
 | GAP-A3 | Deadlines evaluated only lazily on reads; nothing transitions unread tasks; direct-DB readers (UI) see stale states indefinitely | §2.5 ▲ | P1 | WP-05 Q-5 |
-| GAP-A4 | Ruling side-effects non-atomic: Task Board ruling+escrow commit, then failure reverts **court state only** (`ruling_orchestrator.py:285-295`); retry would hit `invalid_status` on re-record | §2.6 recoverable-retry contract | P1 | WP-06 (T-040) |
+| ~~GAP-A4~~ | Ruling side-effects non-atomic; retry hit `invalid_status` on re-record | §2.6 recoverable-retry contract | P1 | **DONE** `6aba0e2` (deterministic ruling_id; TB re-record→200; feedback 409→success; crash-window convergence test) |
 | ~~GAP-A5~~ | Production sealed-feedback reveal was a TOCTOU read-then-write; the reveal policy now lives inside the gateway's `BEGIN IMMEDIATE` (reverse lookup + both rows flipped + `feedback.revealed` emitted). `force_visible` stays a caller policy flag; "a reverse pair exists" is a fact the gateway derives. | §2.7 atomic reveal | P1 | **DONE** `478153e` (two-connection concurrency probe) |
 | GAP-A6 | Court-generated feedback semantics muddy: `force_visible` requires `from_agent_id`=platform to pass signer-match (`routers/feedback.py:175-196`); zero tests exercise the path | §2.7 court feedback | P2 | WP-07 |
 | ~~GAP-A7~~ | Worker recorded review-poll timeout as full APPROVED earnings | §2.9 TIMEOUT outcome | P2 | **DONE** `95fe63e` (T-016; `TaskOutcome.TIMEOUT` had to be added — only `BID_TIMEOUT` existed) |
-| GAP-A8 | Rebuttal deadline computed and stored but enforced by nobody (court spec §"does NOT enforce deadlines"; Task Board doesn't either) | §2.6 window | P2 | WP-06 Q-5 |
-| GAP-A9 | UNCLEAR whether judges ever see deliverable **content**: court passes `task_data["deliverables"]` from `get_task` through to prompts (`ruling_orchestrator.py:27-32,118`) and never fetches assets | §2.6 + vision "judges can access everything" | P2 | WP-06 (verify first) |
+| ~~GAP-A8~~ | Rebuttal deadline computed and stored but enforced by nobody | §2.6 window | P2 | **DONE** `6aba0e2` (409 `dispute_not_ready`; exceptions #6/#7) |
+| ~~GAP-A9~~ | Judges never saw deliverable **content** (verified: `get_task` carries only asset metadata) | §2.6 + vision "judges can access everything" | P2 | **DONE** `6aba0e2` (court fetches asset bytes up to required `judges.max_deliverable_bytes` into the judge context) |
 | GAP-A10 | Bank store divergences: zero-amount split credits written (both stores); in-memory store uses `type:"debit"`/prefixed refs, lacks poster==payer guard, wrong worker_pct error code vs gateway path | §2.4 settlement | P2 | WP-04 (T-030/031/032) |
 | ~~GAP-A11~~ | Economy phase emitted `idle` for an empty economy vs required `stalled`. (The `stable` dispute-ceiling half was **withdrawn**, not implemented — see the §5.0 correction: the spec's phase table leaves combinations uncovered, so the residual stays `stable`.) | §2.8 phases | P2 | **DONE** `9f506c9` (T-046) — decides `tickets.md#T-001` |
 | GAP-A12 | UNVERIFIED residuals from the June inventory: labor bucket `51_to_100` excluding 100; frontend trend string `growing` vs API `increasing`; `title_too_long` custom code | §2.8/§2.5 | P2 | WP-08/WP-05 (T-047/048/037) — re-verify then fix |
@@ -336,7 +336,7 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | ~~GAP-B1~~ | CB/TB/Reputation verified **platform ops** via Identity HTTP; only Court was local | §2.3 two-tier model | P1 | **DONE** `0abfe7f` (WP-03: credit/release/split, record_ruling, force_visible verify locally; one accepted deviation: create_account, see §5.0) |
 | GAP-B2 | UI proxy = unauthenticated platform-privileged write console; UserAgent shares the platform key and mints/spends the treasury | §2.3/§2.8 | P1 | WP-08 Q-2,Q-3 |
 | ~~GAP-B3~~ | `_tampered` test-helper marker branch inside production signature validation | clean prod code | P2 | **DONE** `0abfe7f` (markers deleted; test tamper helpers do faithful Ed25519 verification; exception #4) |
-| GAP-B4 | Court asserts platform identity by crypto only; spec'd `kid == platform.agent_id` check absent; `require_platform_signer` is dead code | spec/code align | P3 | WP-06 + WP-12 |
+| ~~GAP-B4~~ | Court asserted platform identity by crypto only; `kid == platform.agent_id` check absent | spec/code align | P3 | **DONE** `6aba0e2` (kid assertion + rebuttal-party match, mutation-checked; dead `require_platform_signer` deletion → WP-11; spec side → WP-12) |
 | GAP-B5 | No replay/freshness protection in any JWS (no nonce/`iat`/`exp`); blunted by idempotency+state checks but unstated | explicit posture | P2 | Q-10 → WP-03 or docs |
 | GAP-B6 | Compose publishes the unauthenticated gateway to the host (`0.0.0.0` + `8007:8007`) | §2.11 never expose 8007 | P2 | WP-10 Q-6 |
 | GAP-B7 | `crypto.algorithm` config dead in identity (EdDSA hardcoded, `agent_registry.py:172,209`) | honest config | P3 | WP-11 |
@@ -569,7 +569,7 @@ Per service, in this order (test-first: for each platform op, a failing integrat
 5. Response contracts: align the dead Pydantic models to the real wire shapes (`BidResponse.proposal`→`amount` etc.), wire them as `response_model` (or delete + add explicit contract tests — pick wiring; it's the enforcement the hand-built dicts lack).
 6. Remove undocumented action aliases `file_dispute`/`submit_ruling` (`task_manager.py:1009,1193`) (T-036); verify + fix `title_too_long`→`invalid_payload` (T-037).
 
-### WP-06 — Court chain completion (L) — closes GAP-A1/A4/A8/A9/B4 + T-039/040/041 Q-5, Q-13(docs)
+### WP-06 — Court chain completion (L) — closes GAP-A1/A4/A8/A9/B4 + T-039/040 Q-5, Q-13(docs) — ✅ DONE `6aba0e2` (2026-07-12; cutoffs/cap + `require_platform_signer` → WP-11; T-041 docs → WP-12)
 1. **Ruling trigger** per Q-5 (recommended shape: the TB deadline evaluator watches `disputed` tasks; once a rebuttal exists or the rebuttal deadline passes, TB fires a platform-signed `POST /disputes/{id}/rule`, idempotent against `dispute_already_ruled`). Failing e2e first: feeder-disputed task reaches `ruled` with **no demo engine involved** — this is the proof for GAP-A1.
 2. **Retry-clean ruling (T-040)**: reorder so every step is idempotent and convergent — judges → persist votes+ruling court-side (recoverable state) → TB `record_ruling` (made idempotent: identical `ruling_id` re-record on an already-ruled task → 200) → Reputation feedback ×2 (409 `feedback_exists` treated as success) → dispute `ruled`. Spec wording updated in WP-12 (retry/compensation, not impossible rollback).
 3. Rebuttal-window enforcement on `/rule`: allowed only when a rebuttal exists or the deadline passed; formalize `dispute_not_ready` (spec it, T-039) and resolve the phantom `rebuttal_submitted` status.
@@ -669,7 +669,8 @@ DONE = verified in code · PARTIAL = code or doc half landed · OPEN = not done 
 | T-033/034 | bank auth precedence / no-Optional config | **DONE** `0abfe7f` | WP-03 (precedence decode-first; db_gateway+identity non-Optional in CB and reputation) |
 | T-035 | tasks with bids expire | **DONE** `a429120` | mutation-checked; two spec-contradicting tests corrected; real BA-10 now covered |
 | T-036/037/038 | TB aliases/title/spec | OPEN (T-037 UNVERIFIED) | → WP-05 + WP-12 |
-| T-039/040/041 | court cleanup/atomicity/judge docs | **OPEN** | → WP-06 + WP-12 |
+| T-039/040 | dispute_not_ready / retry-clean ruling | **DONE** `6aba0e2` | WP-06; spec wording → WP-12 |
+| T-041 | judge ops documentation | OPEN (doc) | → WP-12 (Q-13 ratified) |
 | T-042/043 | gateway event pairing / replay values | **DONE** `230e090` | `delete_ruling` txn+event; claim-status event mandatory; `event_id` persisted on bank rows |
 | T-044/045 | gateway spec + concurrency test | **OPEN** | → WP-12/13 (spec must also record the `DELETE` body) |
 | T-046 | stalled phase | **DONE** `9f506c9` | closes `tickets.md#T-001` (`10a9285`); stable-ceiling half withdrawn as unspecifiable |
