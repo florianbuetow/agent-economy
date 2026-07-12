@@ -329,3 +329,11 @@ Defects and scope gaps discovered while executing the 2026-07-09 refactoring pla
 #### Scenario: T-103 start-all silently skips Court when its .env is missing
 - **WHEN** `just start-all` runs in a tree without `services/court/.env` (fresh clone or worktree)
 - **THEN** Court still launches: the recipe's `cd services/court && set -a && [ -f .env ] && . .env && set +a && uv run uvicorn ... &` single `&&` chain must not short-circuit at `[ -f .env ]` — discovered 2026-07-12 while verifying WP-06 in a worktree; today only 6 of 7 services start and nothing reports the failure
+
+#### Scenario: T-104 flaky bid-acceptance timing test
+- **WHEN** `services/task-board/tests/unit/routers/test_bids.py::TestBidAcceptance::test_accept_after_bidding_deadline_is_rejected` runs under load
+- **THEN** it does not race a real `asyncio.sleep(1.5)` against a 1-second deadline with a 0.5s margin (observed flaking once on a loaded machine, 2026-07-13, passing in isolation) — widen the margin or use a clock seam
+
+#### Scenario: T-105 gateway get_transactions omits event_id
+- **WHEN** a caller reads `/bank/accounts/{id}/transactions` through the gateway
+- **THEN** each transaction row can carry its `event_id` provenance: `DbReader.get_transactions` never SELECTs the column that H-5 added, so the value is unreachable over HTTP (found during the WP-04 normalizer audit, 2026-07-13)
