@@ -177,7 +177,7 @@ async def identity_up_nonplatform(
 async def test_platform_credit_succeeds_when_identity_down(identity_down: Any) -> None:
     """A platform-signed credit succeeds via local verification while Identity is down."""
     client, state, private_key = identity_down
-    state.ledger.create_account("a-worker", 0)
+    await state.ledger.create_account("a-worker", 0)
 
     token = create_jws(
         {"action": "credit", "account_id": "a-worker", "amount": 50, "reference": "r-1"},
@@ -194,9 +194,9 @@ async def test_platform_credit_succeeds_when_identity_down(identity_down: Any) -
 async def test_platform_release_succeeds_when_identity_down(identity_down: Any) -> None:
     """A platform-signed escrow release succeeds via local verification while Identity is down."""
     client, state, private_key = identity_down
-    state.ledger.create_account("a-payer", 100)
-    state.ledger.create_account("a-worker", 0)
-    locked = state.ledger.escrow_lock("a-payer", 40, "t-1")
+    await state.ledger.create_account("a-payer", 100)
+    await state.ledger.create_account("a-worker", 0)
+    locked = await state.ledger.escrow_lock("a-payer", 40, "t-1")
     escrow_id = locked["escrow_id"]
 
     token = create_jws(
@@ -215,9 +215,9 @@ async def test_platform_release_succeeds_when_identity_down(identity_down: Any) 
 async def test_platform_split_succeeds_when_identity_down(identity_down: Any) -> None:
     """A platform-signed escrow split succeeds via local verification while Identity is down."""
     client, state, private_key = identity_down
-    state.ledger.create_account("a-poster", 100)
-    state.ledger.create_account("a-worker", 0)
-    locked = state.ledger.escrow_lock("a-poster", 100, "t-2")
+    await state.ledger.create_account("a-poster", 100)
+    await state.ledger.create_account("a-worker", 0)
+    locked = await state.ledger.escrow_lock("a-poster", 100, "t-2")
     escrow_id = locked["escrow_id"]
 
     token = create_jws(
@@ -242,7 +242,7 @@ async def test_platform_split_succeeds_when_identity_down(identity_down: Any) ->
 async def test_agent_escrow_lock_fails_cleanly_when_identity_down(identity_down: Any) -> None:
     """An agent op still routes via Identity and fails cleanly (502) when Identity is down."""
     client, state, _private_key = identity_down
-    state.ledger.create_account("a-alice", 100)
+    await state.ledger.create_account("a-alice", 100)
 
     agent_key = Ed25519PrivateKey.generate()
     token = create_jws(
@@ -261,7 +261,7 @@ async def test_credit_malformed_payload_beats_forbidden(identity_up_nonplatform:
     """T-033: a malformed credit payload returns the payload error, not 403, even for a
     non-platform signer."""
     client, state = identity_up_nonplatform
-    state.ledger.create_account("a-worker", 0)
+    await state.ledger.create_account("a-worker", 0)
 
     non_platform_key = Ed25519PrivateKey.generate()
     # "reference" missing → malformed payload.
@@ -280,7 +280,7 @@ async def test_credit_malformed_payload_beats_forbidden(identity_up_nonplatform:
 async def test_credit_wellformed_nonplatform_is_forbidden(identity_down: Any) -> None:
     """A well-formed but non-platform-signed credit is rejected with 403 (local verify)."""
     client, state, _private_key = identity_down
-    state.ledger.create_account("a-worker", 0)
+    await state.ledger.create_account("a-worker", 0)
 
     non_platform_key = Ed25519PrivateKey.generate()
     token = create_jws(

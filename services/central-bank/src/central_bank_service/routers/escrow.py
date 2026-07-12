@@ -5,7 +5,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
-from starlette.concurrency import run_in_threadpool
 
 from central_bank_service.core.state import get_app_state
 from central_bank_service.logging import get_logger
@@ -70,7 +69,7 @@ async def escrow_lock(request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await run_in_threadpool(state.ledger.escrow_lock, agent_id, amount, task_id)
+    result = await state.ledger.escrow_lock(agent_id, amount, task_id)
 
     get_logger(__name__).info(
         "Escrow locked",
@@ -135,7 +134,7 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
             details={},
         )
 
-    result = await run_in_threadpool(state.ledger.escrow_release, escrow_id, recipient_account_id)
+    result = await state.ledger.escrow_release(escrow_id, recipient_account_id)
 
     get_logger(__name__).info(
         "Escrow released",
@@ -212,8 +211,7 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
             details={},
         )
 
-    result = await run_in_threadpool(
-        state.ledger.escrow_split,
+    result = await state.ledger.escrow_split(
         escrow_id,
         worker_account_id,
         worker_pct,

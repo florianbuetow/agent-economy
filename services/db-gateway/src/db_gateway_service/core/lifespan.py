@@ -46,7 +46,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         journal_mode=settings.database.journal_mode,
         schema_sql=schema_sql,
     )
-    state.db_reader = DbReader(db=state.db_writer._db)
+    # GAP-C5: DbReader shares the writer's single connection through the public
+    # `connection` accessor, not a private-attribute reach-in. See
+    # DbWriter.connection for the single-writer/no-await-in-transaction invariant
+    # this relies on.
+    state.db_reader = DbReader(db=state.db_writer.connection)
 
     logger.info(
         "Service starting",

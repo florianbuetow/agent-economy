@@ -260,9 +260,56 @@ class DbWriter:
             )
         return dict(row)
 
+    @property
+    def connection(self) -> sqlite3.Connection:
+        """The single SQLite connection shared with DbReader.
+
+        Single-writer invariant (GAP-C5, ADR pending in WP-12): the gateway keeps
+        exactly one connection for the whole process and hands the same object to
+        DbReader instead of opening a second one. That is safe only because every
+        write method above is a plain (non-async) `def` that runs its
+        `BEGIN IMMEDIATE` through `COMMIT`/`ROLLBACK` to completion without
+        `await`ing anything in between — see
+        tests/architecture/test_gap_c5_single_writer_invariant.py, which fails if
+        that invariant is ever broken. Do not `await` between a write method's
+        `BEGIN IMMEDIATE` and its `COMMIT`/`ROLLBACK`.
+        """
+        return self._db
+
     def get_database_size_bytes(self) -> int:
-        """Get the size of the database file in bytes."""
-        return Path(self._db_path).stat().st_size
+        """Get the on-disk size of the database, including WAL-mode sidecar files.
+
+        In WAL journal mode, recently committed data lives in the `-wal` file (and
+        the `-shm` index) until the next checkpoint — stat'ing only the main file
+        undercounts the database's real footprint.
+        """
+        total = Path(self._db_path).stat().st_size
+        for suffix in ("-wal", "-shm"):
+            sidecar = Path(f"{self._db_path}{suffix}")
+            if sidecar.exists():
+                total += sidecar.stat().st_size
+        return total
+
+    @staticmethod
+    def _is_foreign_key_violation(exc: sqlite3.IntegrityError) -> bool:
+        """True when an IntegrityError is a FOREIGN KEY constraint failure.
+
+        Classified via the driver's structured error code (GAP-C7), never by
+        matching substrings in the exception's message text — that text embeds
+        real table/column names straight from the schema (SEC-02).
+        """
+        return exc.sqlite_errorcode == sqlite3.SQLITE_CONSTRAINT_FOREIGNKEY
+
+    @staticmethod
+    def _is_unique_violation(exc: sqlite3.IntegrityError) -> bool:
+        """True for a UNIQUE or PRIMARY KEY constraint failure (both report as
+        SQLITE_CONSTRAINT_UNIQUE / SQLITE_CONSTRAINT_PRIMARYKEY; the driver's
+        message text for both says "UNIQUE constraint failed", which is exactly
+        the substring the old code matched on)."""
+        return exc.sqlite_errorcode in (
+            sqlite3.SQLITE_CONSTRAINT_UNIQUE,
+            sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY,
+        )
 
     def get_total_events(self) -> int:
         """Count total rows in the events table."""
@@ -300,8 +347,9 @@ class DbWriter:
             return {"agent_id": data["agent_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "unique" in error_msg and "public_key" in error_msg:
+            # identity_agents has exactly one non-PK UNIQUE constraint (public_key),
+            # so SQLITE_CONSTRAINT_UNIQUE unambiguously means a public_key collision.
+            if exc.sqlite_errorcode == sqlite3.SQLITE_CONSTRAINT_UNIQUE:
                 # Check for idempotent replay
                 existing = self._lookup_agent_by_public_key(data["public_key"])
                 if existing is not None and self._agent_matches(existing, data):
@@ -319,7 +367,7 @@ class DbWriter:
                     409,
                     {},
                 ) from exc
-            if "foreign" in error_msg:
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",
@@ -400,8 +448,7 @@ class DbWriter:
             return {"account_id": data["account_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "foreign" in error_msg:
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",
@@ -483,8 +530,7 @@ class DbWriter:
             raise
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "unique" in error_msg:
+            if self._is_unique_violation(exc):
                 # Idempotency check — same (account_id, reference) for credit
                 existing = self._lookup_credit_tx(data["account_id"], data["reference"])
                 if existing is not None and existing["amount"] == data["amount"]:
@@ -607,15 +653,14 @@ class DbWriter:
             raise
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "foreign" in error_msg:
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
                 ) from exc
-            if "unique" in error_msg:
+            if self._is_unique_violation(exc):
                 # Idempotency: check existing escrow
                 existing = self._lookup_active_escrow(data["payer_account_id"], data["task_id"])
                 if existing is not None and existing["amount"] == data["amount"]:
@@ -946,8 +991,7 @@ class DbWriter:
             return {"task_id": data["task_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "foreign" in error_msg:
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",
@@ -976,8 +1020,13 @@ class DbWriter:
         """
         Submit a bid on a task.
 
-        INSERT INTO board_bids + INSERT INTO events.
-        Idempotency: idx_board_bids_one_per_agent on (task_id, bidder_id).
+        INSERT INTO board_bids + increment board_tasks.bid_count + INSERT INTO events,
+        all in the same transaction. bid_count is a materialized counter (GAP-E13,
+        T-101) updated at write time, matching how every other board_tasks field in
+        this schema works — not derived on read.
+        Idempotency: idx_board_bids_one_per_agent on (task_id, bidder_id) — a
+        rejected duplicate bid rolls the whole transaction back, so it never reaches
+        the increment below.
         """
         cursor = self._db.cursor()
         try:
@@ -1001,13 +1050,16 @@ class DbWriter:
                     data["submitted_at"],
                 ),
             )
+            cursor.execute(
+                "UPDATE board_tasks SET bid_count = bid_count + 1 WHERE task_id = ?",
+                (data["task_id"],),
+            )
             event_id = self._insert_event(cursor, data["event"])
             self._db.commit()
             return {"bid_id": data["bid_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "foreign" in error_msg:
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",
@@ -1152,8 +1204,7 @@ class DbWriter:
             return {"asset_id": data["asset_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "foreign" in error_msg:
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",
@@ -1293,8 +1344,7 @@ class DbWriter:
             }
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "foreign" in error_msg:
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",
@@ -1346,23 +1396,42 @@ class DbWriter:
             return {"claim_id": data["claim_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "foreign" in error_msg:
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",
                     409,
                     {},
                 ) from exc
+            # court_claims has two UNIQUE-family constraints: claim_id (PK) and
+            # task_id (one claim per task). A genuine claim_id collision keeps
+            # claim_exists; a task_id collision under a fresh claim_id is a
+            # different fact — the task already has a claim filed against it —
+            # and reporting it as claim_exists would be misleading (GAP-C7).
+            if self._lookup_claim_exists(data["claim_id"]):
+                raise ServiceError(
+                    "claim_exists",
+                    "Claim with this claim_id already exists",
+                    409,
+                    {},
+                ) from exc
             raise ServiceError(
-                "claim_exists",
-                "Claim with this claim_id already exists",
+                "task_already_disputed",
+                "This task already has a claim filed against it",
                 409,
                 {},
             ) from exc
         except Exception:
             self._db.rollback()
             raise
+
+    def _lookup_claim_exists(self, claim_id: str) -> bool:
+        """True if a claim row with this claim_id already exists."""
+        cursor = self._db.execute(
+            "SELECT 1 FROM court_claims WHERE claim_id = ?",
+            (claim_id,),
+        )
+        return cursor.fetchone() is not None
 
     def update_claim_status(
         self,
@@ -1511,8 +1580,7 @@ class DbWriter:
             return {"rebuttal_id": data["rebuttal_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "foreign" in error_msg:
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",
@@ -1568,8 +1636,7 @@ class DbWriter:
             return {"ruling_id": data["ruling_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            error_msg = str(exc).lower()
-            if "foreign" in error_msg:
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",
@@ -1608,7 +1675,7 @@ class DbWriter:
             return {"deleted": deleted, "claim_id": claim_id, "event_id": event_id}
         except sqlite3.IntegrityError as exc:
             self._db.rollback()
-            if "foreign" in str(exc).lower():
+            if self._is_foreign_key_violation(exc):
                 raise ServiceError(
                     "foreign_key_violation",
                     "Foreign key constraint failed",

@@ -34,6 +34,10 @@ dev = [
     "pip-audit>=2.7.0",
     "pygount>=1.8.0",
     "types-PyYAML>=6.0.0",
+    # Test-only: builds an in-process DB Gateway for the LedgerDbClient side of
+    # the bank-store parity contract suite (GAP-A10). Not a runtime dependency —
+    # never imported from src/.
+    "db-gateway-service",
 ]
 
 [build-system]
@@ -57,6 +61,7 @@ constraint-dependencies = [
 service-commons = { path = "../../libs/service-commons", editable = true }
 service-clients = { path = "../../libs/service-clients", editable = true }
 service-auth = { path = "../../libs/service-auth", editable = true }
+db-gateway-service = { path = "../db-gateway", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/central_bank_service"]
@@ -183,4 +188,5 @@ DEP002 = [
     "pip-audit",
     "pygount",
     "types-PyYAML",
+    "db-gateway-service",
 ]

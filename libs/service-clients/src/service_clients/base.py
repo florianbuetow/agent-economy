@@ -19,6 +19,13 @@ class BaseServiceClient:
             timeout=httpx.Timeout(timeout_seconds),
         )
 
+    @property
+    def connection(self) -> httpx.AsyncClient:
+        """The underlying httpx.AsyncClient — a public accessor for callers (e.g. a
+        service's own db-client facade, or a test) that need to reach the raw
+        transport, so they never have to touch a private attribute directly."""
+        return self._client
+
     async def _post(
         self,
         path: str,
@@ -54,6 +61,10 @@ class BaseServiceClient:
         """Send GET request and return the raw response."""
         return await self._request("GET", path, None)
 
+    async def _delete_raw(self, path: str, payload: dict[str, Any] | None) -> httpx.Response:
+        """Send DELETE request (optionally with a JSON body) and return the raw response."""
+        return await self._request("DELETE", path, payload)
+
     async def _request(
         self,
         method: str,
@@ -63,6 +74,8 @@ class BaseServiceClient:
         try:
             if method == "POST":
                 return await self._client.post(path, json=payload)
+            if method == "DELETE":
+                return await self._client.request("DELETE", path, json=payload)
             return await self._client.get(path)
         except (httpx.ConnectError, httpx.TimeoutException) as exc:
             raise ServiceError(
