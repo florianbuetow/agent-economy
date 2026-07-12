@@ -131,6 +131,18 @@ class InMemoryDisputeStore:
                 return
             row["status"] = status
 
+    def set_rebuttal_deadline(self, dispute_id: str, rebuttal_deadline: str) -> None:
+        """Test-only setter: arrange a dispute's rebuttal deadline for a test.
+
+        Used to set up an already-closed rebuttal window without waiting on a real
+        clock (GAP-A8, T-039).
+        """
+        with self._state.lock:
+            row = self._state.disputes.get(dispute_id)
+            if row is None:
+                return
+            row["rebuttal_deadline"] = rebuttal_deadline
+
     def revert_to_rebuttal_pending(self, dispute_id: str) -> None:
         with self._state.lock:
             row = self._state.disputes.get(dispute_id)

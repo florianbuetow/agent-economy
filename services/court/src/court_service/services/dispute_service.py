@@ -130,6 +130,28 @@ class DisputeService:
             platform_agent=platform_agent,
         )
 
+    def begin_ruling(self, dispute_id: str) -> dict[str, Any]:
+        """Validate preconditions and mark the dispute ``judging`` before any
+        Task Board call that could reenter this same dispute's ruling trigger."""
+        return self._orchestrator.begin_ruling(dispute_id)
+
+    async def finish_ruling(
+        self,
+        dispute_id: str,
+        dispute: dict[str, Any],
+        judges: list[Judge],
+        task_data: dict[str, Any],
+        platform_agent: PlatformAgent,
+    ) -> dict[str, Any]:
+        """Evaluate judges and commit the ruled outcome; ``dispute`` is already ``judging``."""
+        return await self._orchestrator.finish_ruling(
+            dispute_id=dispute_id,
+            dispute=dispute,
+            judges=judges,
+            task_data=task_data,
+            platform_agent=platform_agent,
+        )
+
     def get_dispute(self, dispute_id: str) -> dict[str, Any] | None:
         """Return dispute details with votes, or None."""
         return self._store.get_dispute(dispute_id)

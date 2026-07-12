@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
+
+from service_commons.exceptions import ServiceError
+
+from task_board_service.logging import get_logger
+from task_board_service.services.task_db_client import PlatformHttpError
 
 if TYPE_CHECKING:
+    from service_auth.platform import PlatformAgent
+
     from task_board_service.services.escrow_coordinator import EscrowCoordinator
     from task_board_service.services.protocol import TaskStorageInterface
 
@@ -21,9 +28,36 @@ def _now_iso() -> str:
 class DeadlineEvaluator:
     """Evaluates and applies deadline-driven task transitions."""
 
-    def __init__(self, store: TaskStorageInterface, escrow_coordinator: EscrowCoordinator) -> None:
+    def __init__(
+        self,
+        store: TaskStorageInterface,
+        escrow_coordinator: EscrowCoordinator,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        # Optional injected ``platform_agent`` (positional-after-two or keyword) so the
+        # evaluator stays constructible without Court wiring; when set, disputed tasks fire
+        # a platform-signed ruling trigger once the rebuttal window closes (GAP-A1). The
+        # variadic form avoids a default parameter value per project convention.
+        platform_agent: object | None = None
+        if len(args) > 1:
+            msg = "DeadlineEvaluator takes at most one positional arg after escrow_coordinator"
+            raise TypeError(msg)
+        if len(args) == 1:
+            platform_agent = args[0]
+        if "platform_agent" in kwargs:
+            if len(args) == 1:
+                msg = "platform_agent provided both positionally and by keyword"
+                raise TypeError(msg)
+            platform_agent = kwargs.pop("platform_agent")
+        if len(kwargs) > 0:
+            unknown = ", ".join(sorted(kwargs))
+            msg = f"Unexpected keyword argument(s): {unknown}"
+            raise TypeError(msg)
+
         self._store = store
         self._escrow_coordinator = escrow_coordinator
+        self._platform_agent = cast("PlatformAgent | None", platform_agent)
 
     @staticmethod
     def compute_deadline(base_timestamp: str | None, seconds: int) -> str | None:
@@ -134,7 +168,50 @@ class DeadlineEvaluator:
                         if refreshed is not None:
                             task = refreshed
 
+        elif task["status"] == "disputed":
+            task = await self._maybe_trigger_ruling(task)
+
         return task
+
+    def _rebuttal_window_closed(self, task: dict[str, Any]) -> bool:
+        """Report whether ruling may proceed: a rebuttal exists or its deadline passed."""
+        if task.get("rebuttal_submitted_at") is not None:
+            return True
+        deadline = task.get("rebuttal_deadline")
+        if not isinstance(deadline, str) or deadline == "":
+            return False
+        deadline_dt = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+        return datetime.now(UTC) >= deadline_dt
+
+    async def _maybe_trigger_ruling(self, task: dict[str, Any]) -> dict[str, Any]:
+        """Fire the Court ruling trigger for a disputed task whose window has closed.
+
+        Idempotent against a concurrent or prior ruling: Court answers a re-trigger with
+        ``dispute_already_ruled``/``dispute_not_ready`` (surfaced as an HTTP error), which
+        is treated as "nothing to do here". Any failure leaves the task disputed so the
+        next lazy evaluation retries — a trigger is never lost — and never breaks the read
+        that provoked it.
+        """
+        if self._platform_agent is None or not self._rebuttal_window_closed(task):
+            return task
+        dispute_id = task.get("dispute_id")
+        if not isinstance(dispute_id, str) or dispute_id == "":
+            return task
+
+        try:
+            await self._platform_agent.trigger_ruling(dispute_id)
+        except (PlatformHttpError, ServiceError) as exc:
+            get_logger(__name__).warning(
+                "Ruling trigger did not complete; will retry on next evaluation",
+                extra={
+                    "task_id": str(task["task_id"]),
+                    "dispute_id": dispute_id,
+                    "error": str(exc),
+                },
+            )
+
+        refreshed = self._store.get_task(str(task["task_id"]))
+        return refreshed if refreshed is not None else task
 
     async def evaluate_deadlines_batch(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Evaluate deadlines for a list of tasks."""

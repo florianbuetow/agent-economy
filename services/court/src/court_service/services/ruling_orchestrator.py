@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 import httpx
 from service_commons.exceptions import ServiceError
@@ -15,6 +15,78 @@ if TYPE_CHECKING:
 
     from court_service.judges.base import Judge
     from court_service.services.protocol import DisputeStorageInterface
+
+
+class DeliverableFetcherInterface(Protocol):
+    """Fetches decoded deliverable texts for a task."""
+
+    async def fetch(self, task_id: str) -> list[str]: ...
+
+
+class DeliverableFetcher:
+    """Reads task assets from Task Board and returns their text content.
+
+    Task Board's ``GET /tasks/{id}`` does not carry deliverable bytes (GAP-A9), so
+    this reads the task's uploaded assets from the public Task Board asset endpoints
+    and returns their text content, capped by a configured byte budget. Lives here
+    (rather than its own module) because only ``dispute_db_client``,
+    ``ruling_orchestrator``, and ``disputes`` are permitted to import ``httpx``
+    directly (see ``tests/architecture/test_db_client_isolation.py``).
+    """
+
+    def __init__(
+        self,
+        task_board_url: str,
+        max_deliverable_bytes: int,
+        timeout_seconds: int,
+    ) -> None:
+        self._client = httpx.AsyncClient(
+            base_url=task_board_url,
+            timeout=httpx.Timeout(timeout_seconds),
+        )
+        self._max_deliverable_bytes = max_deliverable_bytes
+
+    @staticmethod
+    def _asset_ids(listing: dict[str, Any]) -> list[str]:
+        assets = listing.get("assets")
+        if not isinstance(assets, list):
+            return []
+        ids: list[str] = []
+        for asset in assets:
+            if isinstance(asset, dict):
+                asset_id = asset.get("asset_id")
+                if isinstance(asset_id, str) and asset_id != "":
+                    ids.append(asset_id)
+        return ids
+
+    async def fetch(self, task_id: str) -> list[str]:
+        """Return decoded deliverable texts, total size capped by config.
+
+        Connection/transport errors propagate so a transient Task Board outage is
+        retried by the caller rather than silently ruling on no evidence. Individual
+        byte payloads are decoded leniently (never raising on non-UTF-8 content).
+        """
+        listing_response = await self._client.get(f"/tasks/{task_id}/assets")
+        listing_response.raise_for_status()
+        listing = listing_response.json()
+        if not isinstance(listing, dict):
+            return []
+
+        remaining = self._max_deliverable_bytes
+        texts: list[str] = []
+        for asset_id in self._asset_ids(listing):
+            if remaining <= 0:
+                break
+            asset_response = await self._client.get(f"/tasks/{task_id}/assets/{asset_id}")
+            asset_response.raise_for_status()
+            content = asset_response.content[:remaining]
+            remaining -= len(content)
+            texts.append(content.decode("utf-8", errors="replace"))
+        return texts
+
+    async def close(self) -> None:
+        """Close the underlying HTTP client."""
+        await self._client.aclose()
 
 
 class RulingOrchestrator:
@@ -110,7 +182,31 @@ class RulingOrchestrator:
                 {},
             )
 
+        # GAP-A8/T-039: ruling requires a rebuttal on record OR the rebuttal
+        # deadline having passed. Court's own status literal never actually reaches
+        # "rebuttal_submitted" in production (only "rebuttal_pending" is set by
+        # file_dispute, and update_rebuttal does not change status), so the
+        # rebuttal's presence is read directly off the dispute rather than trusted
+        # to a status value.
+        if dispute["rebuttal"] is None and not self._rebuttal_window_closed(dispute):
+            raise ServiceError(
+                "dispute_not_ready",
+                "Dispute is not ready for ruling",
+                409,
+                {},
+            )
+
         return dispute
+
+    @staticmethod
+    def _rebuttal_window_closed(dispute: dict[str, Any]) -> bool:
+        deadline_raw = dispute.get("rebuttal_deadline")
+        if not isinstance(deadline_raw, str) or deadline_raw == "":
+            return False
+        deadline = datetime.fromisoformat(deadline_raw.replace("Z", "+00:00"))
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=UTC)
+        return datetime.now(UTC) >= deadline
 
     def _build_context(self, dispute: dict[str, Any], task_data: dict[str, Any]) -> DisputeContext:
         return DisputeContext(
@@ -185,10 +281,36 @@ class RulingOrchestrator:
             "comment": comment,
         }
 
+        await self._submit_feedback_idempotent(platform_agent, spec_feedback_payload)
+        await self._submit_feedback_idempotent(platform_agent, delivery_feedback_payload)
+
+    @staticmethod
+    def _is_feedback_exists(exc: httpx.HTTPStatusError) -> bool:
+        """Report whether a Reputation error is a benign 'already recorded' 409."""
+        if exc.response.status_code != 409:
+            return False
         try:
-            await platform_agent.submit_platform_feedback(spec_feedback_payload)
-            await platform_agent.submit_platform_feedback(delivery_feedback_payload)
+            body = exc.response.json()
+        except ValueError:
+            return False
+        return isinstance(body, dict) and body.get("error") == "feedback_exists"
+
+    async def _submit_feedback_idempotent(
+        self,
+        platform_agent: PlatformAgent,
+        feedback_payload: dict[str, object],
+    ) -> None:
+        """Submit one feedback record, treating a 409 feedback_exists as success.
+
+        On a retried ruling the record may already exist; that is convergent, not a
+        failure. Every other Reputation error still surfaces as a 502 so the dispute
+        stays recoverable for a later retry (T-040).
+        """
+        try:
+            await platform_agent.submit_platform_feedback(feedback_payload)
         except httpx.HTTPStatusError as exc:
+            if self._is_feedback_exists(exc):
+                return
             raise ServiceError(
                 "reputation_service_unavailable",
                 "Cannot reach Reputation service",
@@ -241,18 +363,33 @@ class RulingOrchestrator:
                 {},
             ) from exc
 
-    async def execute_ruling(
+    def begin_ruling(self, dispute_id: str) -> dict[str, Any]:
+        """Validate preconditions and mark the dispute ``judging``.
+
+        Must run, and its status write must land, before any Task Board call that
+        could re-enter this same disputed task's lazy evaluation (fetching the task
+        or its deliverables): Task Board's read path re-triggers the GAP-A1 ruling
+        trigger for any task still ``disputed``, so a reentrant call for the same
+        dispute needs to see ``judging`` (not ``rebuttal_pending``/``rebuttal_submitted``)
+        and fail fast with ``dispute_not_ready`` instead of recursing indefinitely
+        between Court and Task Board.
+        """
+        dispute = self._validate_ruling_preconditions(dispute_id)
+        self._store.set_status(dispute_id, "judging")
+        return dispute
+
+    async def finish_ruling(
         self,
         dispute_id: str,
+        dispute: dict[str, Any],
         judges: list[Judge],
         task_data: dict[str, Any],
         platform_agent: PlatformAgent,
     ) -> dict[str, Any]:
-        """Evaluate dispute via judges and commit ruled outcome with side-effects."""
-        dispute = self._validate_ruling_preconditions(dispute_id)
+        """Evaluate judges and commit the ruled outcome with side-effects.
 
-        self._store.set_status(dispute_id, "judging")
-
+        ``dispute`` must already be in the ``judging`` status via ``begin_ruling``.
+        """
         try:
             context = self._build_context(dispute, task_data)
             normalized_votes = await self._evaluate_judges(judges, context)
@@ -299,3 +436,20 @@ class RulingOrchestrator:
             msg = "Failed to load ruled dispute"
             raise RuntimeError(msg)
         return ruled_dispute
+
+    async def execute_ruling(
+        self,
+        dispute_id: str,
+        judges: list[Judge],
+        task_data: dict[str, Any],
+        platform_agent: PlatformAgent,
+    ) -> dict[str, Any]:
+        """Evaluate dispute via judges and commit ruled outcome with side-effects.
+
+        Convenience wrapper over ``begin_ruling``/``finish_ruling`` for callers that
+        already have ``task_data`` in hand (no reentrancy risk). The Court router
+        calls the two phases directly so it can mark ``judging`` before fetching the
+        task from Task Board.
+        """
+        dispute = self.begin_ruling(dispute_id)
+        return await self.finish_ruling(dispute_id, dispute, judges, task_data, platform_agent)

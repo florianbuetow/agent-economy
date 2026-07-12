@@ -41,6 +41,8 @@ disputes:
   max_rebuttal_length: 10000
 judges:
   panel_size: {panel_size}
+  mock_worker_pct: 50
+  max_deliverable_bytes: 65536
   judges:{judges_yaml}
 """
     config_path = tmp_path / "config.yaml"

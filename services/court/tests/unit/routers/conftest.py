@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -34,6 +35,14 @@ CLAIMANT_ID = "a-claimant-test-id"
 RESPONDENT_ID = "a-respondent-test-id"
 
 
+class _NoDeliverableFetcher:
+    """Default deliverable fetcher for router tests: no on-platform assets."""
+
+    async def fetch(self, task_id: str) -> list[str]:
+        _ = task_id
+        return []
+
+
 def _valid_config(tmp_path: Any, db_path: str | None = None) -> str:
     """Write a valid court config.yaml and return its path."""
     if db_path is None:
@@ -61,6 +70,8 @@ disputes:
   max_rebuttal_length: 10000
 judges:
   panel_size: 1
+  mock_worker_pct: 50
+  max_deliverable_bytes: 65536
   judges:
     - id: "judge-0"
       provider: "mock"
@@ -96,6 +107,7 @@ async def app(tmp_path: Any) -> AsyncIterator[FastAPI]:
             task_response=make_task_data(),
         )
         state.judges = [make_mock_judge()]
+        state.deliverable_fetcher = _NoDeliverableFetcher()
         yield test_app
 
     reset_app_state()
@@ -211,6 +223,17 @@ def inject_judge(
     state.judges = [
         make_mock_judge(worker_pct=worker_pct, reasoning=reasoning, side_effect=side_effect)
     ]
+
+
+def expire_rebuttal_window(dispute_id: str) -> None:
+    """Test-infra setup helper (GAP-A8, T-039): backdate a dispute's rebuttal
+    deadline into the past, so ruling preconditions treat the window as closed
+    without a real rebuttal having been submitted and without waiting on a clock.
+    """
+    state = get_app_state()
+    store = cast("InMemoryDisputeStore", state.store)
+    past = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
+    store.set_rebuttal_deadline(dispute_id, past)
 
 
 def inject_central_bank_error(error: Exception) -> None:

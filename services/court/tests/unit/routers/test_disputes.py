@@ -36,6 +36,7 @@ from tests.helpers import (
 from tests.unit.routers.conftest import (
     PLATFORM_AGENT_ID,
     ROGUE_AGENT_ID,
+    expire_rebuttal_window,
     file_and_rebut,
     file_dispute,
     file_dispute_payload,
@@ -124,7 +125,9 @@ class TestFileDispute:
 
     async def test_file_05_task_not_found(self, client: AsyncClient) -> None:
         """FILE-05: Task not found in Task Board."""
-        inject_task_board_error(ServiceError("task_not_found", "Not found", status_code=404))
+        inject_task_board_error(
+            ServiceError("task_not_found", "Not found", status_code=404, details={})
+        )
         payload = file_dispute_payload()
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
@@ -494,6 +497,10 @@ class TestTriggerRuling:
         """RULE-14: File dispute, rule without rebuttal, try to rule again."""
         dispute = await file_dispute(client)
         dispute_id = dispute["dispute_id"]
+        # GAP-A8: ruling without a rebuttal requires the rebuttal window to have
+        # closed (T-039); arrange that precondition here rather than waiting on
+        # the real clock.
+        expire_rebuttal_window(dispute_id)
         inject_judge(worker_pct=80)
         rule_pay = ruling_payload(dispute_id)
         inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)
@@ -582,6 +589,10 @@ class TestTriggerRuling:
         """RULE-19: Ruling without rebuttal succeeds."""
         dispute = await file_dispute(client)
         dispute_id = dispute["dispute_id"]
+        # GAP-A8: ruling without a rebuttal requires the rebuttal window to have
+        # closed (T-039); arrange that precondition here rather than waiting on
+        # the real clock.
+        expire_rebuttal_window(dispute_id)
         inject_judge(worker_pct=80)
         rule_pay = ruling_payload(dispute_id)
         inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)
@@ -895,6 +906,10 @@ class TestDisputeLifecycle:
         """LIFE-02: File dispute, skip rebuttal, trigger ruling."""
         dispute = await file_dispute(client)
         dispute_id = dispute["dispute_id"]
+        # GAP-A8: ruling without a rebuttal requires the rebuttal window to have
+        # closed (T-039); arrange that precondition here rather than waiting on
+        # the real clock.
+        expire_rebuttal_window(dispute_id)
         inject_judge(worker_pct=80)
         rule_pay = ruling_payload(dispute_id)
         inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)
@@ -923,6 +938,10 @@ class TestDisputeLifecycle:
         """LIFE-04: Rebuttal after ruling is rejected."""
         dispute = await file_dispute(client)
         dispute_id = dispute["dispute_id"]
+        # GAP-A8: ruling without a rebuttal requires the rebuttal window to have
+        # closed (T-039); arrange that precondition here rather than waiting on
+        # the real clock.
+        expire_rebuttal_window(dispute_id)
         inject_judge(worker_pct=80)
         rule_pay = ruling_payload(dispute_id)
         inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)

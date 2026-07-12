@@ -10,6 +10,12 @@ import httpx
 
 from task_board_service.services.errors import DuplicateBidError, DuplicateTaskError
 
+# Re-exported so callers outside the HTTP-client boundary (e.g. the deadline
+# evaluator's platform-signed ruling trigger, GAP-A1) can catch transport errors
+# from other services without importing httpx directly; only *DbClient modules
+# are permitted to do that (tests/architecture/test_db_client_isolation.py).
+PlatformHttpError = httpx.HTTPError
+
 _LIFECYCLE_EVENTS_BY_STATUS: dict[str, str] = {
     "accepted": "task.accepted",
     "submitted": "task.submitted",
@@ -46,6 +52,8 @@ class TaskDbClient:
         "disputed_at",
         "dispute_reason",
         "dispute_id",
+        "rebuttal_deadline",
+        "rebuttal_submitted_at",
         "ruling_id",
         "ruled_at",
         "worker_pct",
