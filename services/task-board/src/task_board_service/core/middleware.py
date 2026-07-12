@@ -17,6 +17,7 @@ _JSON_VALIDATION_ENDPOINTS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("POST", re.compile(r"^/tasks/[^/]+/submit$")),
     ("POST", re.compile(r"^/tasks/[^/]+/approve$")),
     ("POST", re.compile(r"^/tasks/[^/]+/dispute$")),
+    ("POST", re.compile(r"^/tasks/[^/]+/rebuttal$")),
     ("POST", re.compile(r"^/tasks/[^/]+/ruling$")),
     ("POST", re.compile(r"^/tasks/[^/]+/bids$")),
     ("POST", re.compile(r"^/tasks/[^/]+/bids/[^/]+/accept$")),

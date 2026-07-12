@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 
@@ -18,6 +19,11 @@ if TYPE_CHECKING:
 
 # Terminal statuses — no further transitions
 _TERMINAL_STATUSES = frozenset({"approved", "cancelled", "ruled", "expired"})
+
+# Statuses the periodic sweep (Q-5, GAP-A3) visits every interval. This is exactly
+# the complement of _TERMINAL_STATUSES: every status a task can still transition
+# out of via evaluate_deadline.
+_SWEEPABLE_STATUSES: tuple[str, ...] = ("open", "accepted", "submitted", "disputed")
 
 
 def _now_iso() -> str:
@@ -220,3 +226,56 @@ class DeadlineEvaluator:
             evaluated = await self.evaluate_deadline(task)
             result.append(evaluated)
         return result
+
+    async def run_periodic_sweep(self, interval_seconds: int) -> None:
+        """Background loop sweeping non-terminal tasks through deadline evaluation.
+
+        Q-5 (GAP-A3): the only mechanism that guarantees forward progress when
+        nothing polls a task via the API — without this, deadline transitions and
+        ruling triggers depend entirely on an unrelated read arriving.
+
+        Runs until the enclosing asyncio task is cancelled (service shutdown).
+        Each task is evaluated one at a time via ``evaluate_deadline``, which does
+        real ``await``s (escrow retry, possible Court calls) — control is yielded
+        to the event loop between every task, so a large sweep never blocks other
+        requests. A single task's failure is logged and does not abort the sweep
+        or the loop; the next interval retries it.
+
+        Safe against a concurrent lazy evaluation of the same task (e.g. a request
+        handler reading it mid-sweep): ``evaluate_deadline`` transitions via
+        ``store.update_task(..., expected_status=...)``, a compare-and-swap that
+        only applies when the task is still in the expected status (see
+        ``InMemoryTaskStore.update_task`` and ``TaskDbClient.update_task``'s
+        ``constraints={"status": expected_status}`` forwarded to the gateway).
+        Whichever evaluation — sweep or lazy read — wins the race applies the
+        transition and releases escrow exactly once; the loser's update is a no-op.
+
+        Escrow failures are already handled inside ``EscrowCoordinator`` (caught,
+        logged, ``escrow_pending`` set for retry — never propagated). What can
+        still escape a single task's evaluation is the DB gateway itself being
+        transiently unreachable or erroring: ``TaskDbClient.update_task``/
+        ``get_task`` raise ``PlatformHttpError`` (connect/timeout) or
+        ``RuntimeError`` (non-2xx gateway response) with no internal handling.
+        Those two are caught here so one task's transient gateway failure
+        doesn't stop the rest of the sweep; any other exception is a genuine
+        bug and is left to propagate and fail loudly.
+        """
+        logger = get_logger(__name__)
+        while True:
+            await asyncio.sleep(interval_seconds)
+            for status in _SWEEPABLE_STATUSES:
+                tasks = self._store.list_tasks(
+                    status=status,
+                    poster_id=None,
+                    worker_id=None,
+                    limit=None,
+                    offset=None,
+                )
+                for task in tasks:
+                    try:
+                        await self.evaluate_deadline(task)
+                    except (PlatformHttpError, RuntimeError):
+                        logger.exception(
+                            "Deadline sweep failed for task; will retry next interval",
+                            extra={"task_id": str(task.get("task_id")), "status": status},
+                        )

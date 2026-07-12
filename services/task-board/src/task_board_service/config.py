@@ -129,6 +129,18 @@ class DbGatewayConfig(BaseModel):
     timeout_seconds: int
 
 
+class DeadlineEvaluationConfig(BaseModel):
+    """Periodic deadline-sweep configuration (Q-5, GAP-A3).
+
+    Kept separate from the legacy ``DeadlinesConfig`` block (which holds unrelated,
+    unused default-seconds fields) so this section can be required without forcing
+    every caller of the legacy block to also supply it.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    evaluation_interval_seconds: int
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -150,6 +162,7 @@ class Settings(BaseModel):
     assets: AssetsConfig | None = None
     deadlines: DeadlinesConfig | None = None
     limits: LimitsConfig | None = None
+    deadline_evaluation: DeadlineEvaluationConfig | None = None
 
 
 def get_config_path() -> Path:

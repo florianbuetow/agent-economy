@@ -5,12 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 from service_commons.exceptions import ServiceError
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from task_board_service.core.state import get_app_state
 from task_board_service.routers.validation import extract_bearer_token
+from task_board_service.schemas import AssetListResponse, AssetResponse
 
 router = APIRouter()
 
@@ -21,8 +22,8 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/assets", status_code=201)
-async def upload_asset(task_id: str, request: Request) -> JSONResponse:
+@router.post("/tasks/{task_id}/assets", status_code=201, response_model=AssetResponse)
+async def upload_asset(task_id: str, request: Request) -> dict[str, Any]:
     """Upload a deliverable asset (multipart/form-data)."""
     # Extract auth token from Authorization header
     authorization = request.headers.get("authorization")
@@ -69,14 +70,13 @@ async def upload_asset(task_id: str, request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await state.asset_manager.upload_asset(
+    return await state.asset_manager.upload_asset(
         task_id,
         token,
         content,
         filename,
         content_type,
     )
-    return JSONResponse(status_code=201, content=result)
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ async def upload_asset(task_id: str, request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/tasks/{task_id}/assets")
+@router.get("/tasks/{task_id}/assets", response_model=AssetListResponse)
 async def list_assets(task_id: str) -> dict[str, Any]:
     """List all assets for a task."""
     state = get_app_state()

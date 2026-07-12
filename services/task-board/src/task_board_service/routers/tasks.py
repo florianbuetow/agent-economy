@@ -10,6 +10,7 @@ from service_commons.exceptions import ServiceError
 
 from task_board_service.core.state import get_app_state
 from task_board_service.routers.validation import extract_token, parse_json_body
+from task_board_service.schemas import TaskListResponse, TaskResponse
 
 router = APIRouter()
 
@@ -19,8 +20,8 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks", status_code=201)
-async def create_task(request: Request) -> JSONResponse:
+@router.post("/tasks", status_code=201, response_model=TaskResponse)
+async def create_task(request: Request) -> dict[str, Any]:
     """Create a new task with escrow."""
     body = await request.body()
     data = {} if body == b"" else parse_json_body(body)
@@ -38,8 +39,7 @@ async def create_task(request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await state.task_manager.create_task(task_token, escrow_token)
-    return JSONResponse(status_code=201, content=result)
+    return await state.task_manager.create_task(task_token, escrow_token)
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ async def create_task(request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/tasks")
+@router.get("/tasks", response_model=TaskListResponse)
 async def list_tasks(request: Request) -> dict[str, Any]:
     """List tasks with optional filters."""
     status = request.query_params.get("status")
@@ -99,8 +99,8 @@ async def list_tasks(request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/cancel")
-async def cancel_task(task_id: str, request: Request) -> JSONResponse:
+@router.post("/tasks/{task_id}/cancel", response_model=TaskResponse)
+async def cancel_task(task_id: str, request: Request) -> dict[str, Any]:
     """Cancel a task and release escrow to the poster."""
     body = await request.body()
     data = parse_json_body(body)
@@ -115,8 +115,7 @@ async def cancel_task(task_id: str, request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await state.task_manager.cancel_task(task_id, token)
-    return JSONResponse(status_code=200, content=result)
+    return await state.task_manager.cancel_task(task_id, token)
 
 
 # ---------------------------------------------------------------------------
@@ -124,8 +123,8 @@ async def cancel_task(task_id: str, request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/submit")
-async def submit_deliverable(task_id: str, request: Request) -> JSONResponse:
+@router.post("/tasks/{task_id}/submit", response_model=TaskResponse)
+async def submit_deliverable(task_id: str, request: Request) -> dict[str, Any]:
     """Submit deliverables for review."""
     body = await request.body()
     data = parse_json_body(body)
@@ -140,8 +139,7 @@ async def submit_deliverable(task_id: str, request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await state.task_manager.submit_deliverable(task_id, token)
-    return JSONResponse(status_code=200, content=result)
+    return await state.task_manager.submit_deliverable(task_id, token)
 
 
 # ---------------------------------------------------------------------------
@@ -149,8 +147,8 @@ async def submit_deliverable(task_id: str, request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/approve")
-async def approve_task(task_id: str, request: Request) -> JSONResponse:
+@router.post("/tasks/{task_id}/approve", response_model=TaskResponse)
+async def approve_task(task_id: str, request: Request) -> dict[str, Any]:
     """Approve deliverables and release payment to the worker."""
     body = await request.body()
     data = parse_json_body(body)
@@ -165,8 +163,7 @@ async def approve_task(task_id: str, request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await state.task_manager.approve_task(task_id, token)
-    return JSONResponse(status_code=200, content=result)
+    return await state.task_manager.approve_task(task_id, token)
 
 
 # ---------------------------------------------------------------------------
@@ -174,8 +171,8 @@ async def approve_task(task_id: str, request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/dispute")
-async def dispute_task(task_id: str, request: Request) -> JSONResponse:
+@router.post("/tasks/{task_id}/dispute", response_model=TaskResponse)
+async def dispute_task(task_id: str, request: Request) -> dict[str, Any]:
     """Dispute deliverables and send to Court for resolution."""
     body = await request.body()
     data = parse_json_body(body)
@@ -198,8 +195,7 @@ async def dispute_task(task_id: str, request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await state.task_manager.dispute_task(task_id, token, state.platform_agent)
-    return JSONResponse(status_code=200, content=result)
+    return await state.task_manager.dispute_task(task_id, token, state.platform_agent)
 
 
 # ---------------------------------------------------------------------------
@@ -239,8 +235,8 @@ async def submit_rebuttal(task_id: str, request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/ruling")
-async def record_ruling(task_id: str, request: Request) -> JSONResponse:
+@router.post("/tasks/{task_id}/ruling", response_model=TaskResponse)
+async def record_ruling(task_id: str, request: Request) -> dict[str, Any]:
     """Record a Court ruling (platform-signed operation)."""
     body = await request.body()
     data = parse_json_body(body)
@@ -255,8 +251,7 @@ async def record_ruling(task_id: str, request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await state.task_manager.record_ruling(task_id, token)
-    return JSONResponse(status_code=200, content=result)
+    return await state.task_manager.record_ruling(task_id, token)
 
 
 # ---------------------------------------------------------------------------
@@ -333,7 +328,7 @@ async def ruling_method_not_allowed(task_id: str, request: Request) -> None:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/tasks/{task_id}")
+@router.get("/tasks/{task_id}", response_model=TaskResponse)
 async def get_task(task_id: str) -> dict[str, Any]:
     """Get full task details."""
     state = get_app_state()

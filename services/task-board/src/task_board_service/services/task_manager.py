@@ -12,6 +12,7 @@ from service_commons.exceptions import ServiceError
 from task_board_service.logging import get_logger
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.errors import DuplicateBidError, DuplicateTaskError
+from task_board_service.services.task_db_client import PlatformHttpError
 from task_board_service.services.token_validator import decode_base64url_json
 
 if TYPE_CHECKING:
@@ -242,9 +243,12 @@ class TaskManager:
                 400,
                 {},
             )
+        # T-037 (exception #9): the custom 'title_too_long' code contradicted
+        # test spec TC-15 (task-board-service-tests.md), which expects the
+        # generic invalid_payload code here — the message stays specific.
         if len(title_obj) > 200:
             raise ServiceError(
-                "title_too_long",
+                "invalid_payload",
                 "Title must not exceed 200 characters",
                 400,
                 {},
@@ -1005,10 +1009,12 @@ class TaskManager:
         12.  invalid_reason — empty or too long
         13.  court_unavailable — Court returned no dispute id
         """
-        # Steps 4-7a: Verify JWS, validate action
+        # Steps 4-7a: Verify JWS, validate action. T-036 (exception #8): the
+        # undocumented 'file_dispute' alias is removed — dispute_task is the
+        # only accepted action.
         payload = await self._token_validator.validate_jws_token(
             token,
-            ("dispute_task", "file_dispute"),
+            "dispute_task",
         )
         signer_id: str = payload["_signer_id"]
 
@@ -1071,13 +1077,23 @@ class TaskManager:
                 {},
             )
 
-        court_dispute = await platform_agent.file_claim(
-            task_id=task_id,
-            claimant_id=str(task["poster_id"]),
-            respondent_id=str(task["worker_id"]),
-            claim=reason,
-            escrow_id=str(task["escrow_id"]),
-        )
+        # Step 13: connect/timeout/HTTP errors from Court map to a typed 502 —
+        # the task must stay 'submitted' rather than surface a raw 500 (GAP-E7).
+        try:
+            court_dispute = await platform_agent.file_claim(
+                task_id=task_id,
+                claimant_id=str(task["poster_id"]),
+                respondent_id=str(task["worker_id"]),
+                claim=reason,
+                escrow_id=str(task["escrow_id"]),
+            )
+        except PlatformHttpError as exc:
+            raise ServiceError(
+                "court_unavailable",
+                "Cannot connect to Court",
+                502,
+                {},
+            ) from exc
 
         # Step 13: A task must never enter 'disputed' without a Court dispute to
         # bind rebuttals to, otherwise any worker could name an arbitrary dispute.
@@ -1210,9 +1226,19 @@ class TaskManager:
                 {},
             )
 
-        response: dict[str, Any] = await platform_agent.submit_rebuttal(
-            str(stored_dispute_id), rebuttal
-        )
+        # Connect/timeout/HTTP errors from Court map to a typed 502 — the dispute
+        # must stay exactly as it was rather than surface a raw 500 (GAP-E7).
+        try:
+            response: dict[str, Any] = await platform_agent.submit_rebuttal(
+                str(stored_dispute_id), rebuttal
+            )
+        except PlatformHttpError as exc:
+            raise ServiceError(
+                "court_unavailable",
+                "Cannot connect to Court",
+                502,
+                {},
+            ) from exc
         # Record that a rebuttal now exists so the deadline evaluator can fire the ruling
         # immediately, without waiting for the rebuttal window to close (GAP-A1).
         self._store.update_task(
@@ -1234,10 +1260,12 @@ class TaskManager:
         11.  invalid_status — not DISPUTED
         12.  invalid_worker_pct
         """
-        # Steps 4-7a: Verify JWS locally (platform op), validate action
+        # Steps 4-7a: Verify JWS locally (platform op), validate action.
+        # T-036: the undocumented 'submit_ruling' alias is removed — record_ruling
+        # is the only accepted action.
         payload = await self._token_validator.validate_platform_jws_token(
             token,
-            ("record_ruling", "submit_ruling"),
+            "record_ruling",
         )
         signer_id: str = payload["_signer_id"]
 
@@ -1254,33 +1282,18 @@ class TaskManager:
                 {},
             )
 
-        action = payload["action"]
-        if action == "record_ruling":
-            # Step 7d: Validate ruling_id present and non-empty
-            if "ruling_id" not in payload:
-                raise ServiceError("invalid_payload", "Missing required field: ruling_id", 400, {})
+        # Step 7d: Validate ruling_id present and non-empty
+        if "ruling_id" not in payload:
+            raise ServiceError("invalid_payload", "Missing required field: ruling_id", 400, {})
 
-            ruling_id = payload["ruling_id"]
-            if not isinstance(ruling_id, str) or len(ruling_id) < 1:
-                raise ServiceError(
-                    "invalid_payload",
-                    "ruling_id must be a non-empty string",
-                    400,
-                    {},
-                )
-        else:
-            payload_ruling_id = payload.get("ruling_id")
-            if payload_ruling_id is None:
-                ruling_id = f"rul-{uuid.uuid4()}"
-            elif isinstance(payload_ruling_id, str) and len(payload_ruling_id) > 0:
-                ruling_id = payload_ruling_id
-            else:
-                raise ServiceError(
-                    "invalid_payload",
-                    "ruling_id must be a non-empty string",
-                    400,
-                    {},
-                )
+        ruling_id = payload["ruling_id"]
+        if not isinstance(ruling_id, str) or len(ruling_id) < 1:
+            raise ServiceError(
+                "invalid_payload",
+                "ruling_id must be a non-empty string",
+                400,
+                {},
+            )
 
         # Step 7e: Validate ruling_summary present and non-empty
         if "ruling_summary" not in payload:

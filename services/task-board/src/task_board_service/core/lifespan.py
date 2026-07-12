@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -165,6 +167,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         escrow_coordinator=escrow_coordinator,
         platform_agent=state.platform_agent,
     )
+
+    # Q-5 (GAP-A3): required periodic sweep — mirrors the db_gateway required-check
+    # above (Optional at the schema level, enforced here so a missing section fails
+    # fast at startup rather than silently leaving deadlines lazy-only).
+    if settings.deadline_evaluation is None:
+        msg = "deadline_evaluation configuration is required"
+        raise RuntimeError(msg)
+    deadline_sweep_task = asyncio.create_task(
+        deadline_evaluator.run_periodic_sweep(
+            settings.deadline_evaluation.evaluation_interval_seconds
+        )
+    )
+    state.deadline_sweep_task = deadline_sweep_task
     asset_manager = AssetManager(
         store=store,
         token_validator=token_validator,
@@ -203,6 +218,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # === SHUTDOWN ===
     logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
+
+    # Stop the deadline sweep before closing the store it reads from.
+    deadline_sweep_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await deadline_sweep_task
 
     # Close task manager (closes SQLite database)
     task_manager.close()
