@@ -337,3 +337,7 @@ Defects and scope gaps discovered while executing the 2026-07-09 refactoring pla
 #### Scenario: T-105 gateway get_transactions omits event_id
 - **WHEN** a caller reads `/bank/accounts/{id}/transactions` through the gateway
 - **THEN** each transaction row can carry its `event_id` provenance: `DbReader.get_transactions` never SELECTs the column that H-5 added, so the value is unreachable over HTTP (found during the WP-04 normalizer audit, 2026-07-13)
+
+#### Scenario: T-106 role column meaningless on platform force_visible rows
+- **WHEN** a court-generated (platform-signed, force_visible) feedback row is stored
+- **THEN** its `role` column describes something real: today `_role_for_category` computes the from-agent's role, but the from-agent of a court row is the platform, so a spec_quality ruling row stores role="worker" describing nobody (found 2026-07-13, WP-07). Harmless while `role` is never read back; fix or spec it before any consumer reads `role` (candidate for WP-12's feedback-semantics spec)
