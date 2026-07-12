@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
 from task_board_service.core.state import get_app_state
@@ -14,6 +13,7 @@ from task_board_service.routers.validation import (
     extract_token,
     parse_json_body,
 )
+from task_board_service.schemas import BidListResponse, BidResponse, TaskResponse
 
 router = APIRouter()
 
@@ -24,8 +24,8 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/bids", status_code=201)
-async def submit_bid(task_id: str, request: Request) -> JSONResponse:
+@router.post("/tasks/{task_id}/bids", status_code=201, response_model=BidResponse)
+async def submit_bid(task_id: str, request: Request) -> dict[str, Any]:
     """Submit a bid on a task."""
     body = await request.body()
     data = parse_json_body(body)
@@ -40,8 +40,7 @@ async def submit_bid(task_id: str, request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await state.task_manager.submit_bid(task_id, token)
-    return JSONResponse(status_code=201, content=result)
+    return await state.task_manager.submit_bid(task_id, token)
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +48,7 @@ async def submit_bid(task_id: str, request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/tasks/{task_id}/bids")
+@router.get("/tasks/{task_id}/bids", response_model=BidListResponse)
 async def list_bids(task_id: str, request: Request) -> dict[str, Any]:
     """List bids for a task. Sealed during OPEN phase (requires poster auth)."""
     # Extract optional Authorization header
@@ -73,8 +72,8 @@ async def list_bids(task_id: str, request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/bids/{bid_id}/accept")
-async def accept_bid(task_id: str, bid_id: str, request: Request) -> JSONResponse:
+@router.post("/tasks/{task_id}/bids/{bid_id}/accept", response_model=TaskResponse)
+async def accept_bid(task_id: str, bid_id: str, request: Request) -> dict[str, Any]:
     """Accept a bid, assign worker, start execution deadline."""
     body = await request.body()
     data = parse_json_body(body)
@@ -89,8 +88,7 @@ async def accept_bid(task_id: str, bid_id: str, request: Request) -> JSONRespons
             details={},
         )
 
-    result = await state.task_manager.accept_bid(task_id, bid_id, token)
-    return JSONResponse(status_code=200, content=result)
+    return await state.task_manager.accept_bid(task_id, bid_id, token)
 
 
 # ---------------------------------------------------------------------------

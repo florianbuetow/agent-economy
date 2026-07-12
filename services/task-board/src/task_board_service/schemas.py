@@ -88,13 +88,29 @@ class TaskListResponse(BaseModel):
 
 
 class BidResponse(BaseModel):
-    """Response model for a single bid."""
+    """Response model for POST /tasks/{task_id}/bids.
+
+    ``amount``, not ``proposal`` — the real bidding model is undercutting on a
+    positive-integer amount (see task_manager.submit_bid), not a free-text
+    proposal. The published API spec still describes the old proposal-only
+    model; that doc correction is tracked separately (T-024, WP-12).
+    """
 
     model_config = ConfigDict(extra="forbid")
     bid_id: str
     task_id: str
     bidder_id: str
-    proposal: str
+    amount: int
+    submitted_at: str
+
+
+class BidSummary(BaseModel):
+    """Bid list-item model for GET /tasks/{task_id}/bids — no task_id per item."""
+
+    model_config = ConfigDict(extra="forbid")
+    bid_id: str
+    bidder_id: str
+    amount: int
     submitted_at: str
 
 
@@ -103,11 +119,11 @@ class BidListResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     task_id: str
-    bids: list[BidResponse]
+    bids: list[BidSummary]
 
 
 class AssetResponse(BaseModel):
-    """Response model for a single asset."""
+    """Response model for POST /tasks/{task_id}/assets."""
 
     model_config = ConfigDict(extra="forbid")
     asset_id: str
@@ -116,6 +132,20 @@ class AssetResponse(BaseModel):
     filename: str
     content_type: str
     size_bytes: int
+    content_hash: str
+    uploaded_at: str
+
+
+class AssetSummary(BaseModel):
+    """Asset list-item model for GET /tasks/{task_id}/assets — no task_id per item."""
+
+    model_config = ConfigDict(extra="forbid")
+    asset_id: str
+    uploader_id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    content_hash: str
     uploaded_at: str
 
 
@@ -124,4 +154,4 @@ class AssetListResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     task_id: str
-    assets: list[AssetResponse]
+    assets: list[AssetSummary]

@@ -151,6 +151,8 @@ limits:
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+deadline_evaluation:
+  evaluation_interval_seconds: 3600
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -518,10 +520,14 @@ async def file_dispute(
     *,
     reason: str = "Work does not meet specification",
 ) -> Any:
-    """File a dispute via POST /tasks/{task_id}/dispute."""
+    """File a dispute via POST /tasks/{task_id}/dispute.
+
+    Uses the canonical 'dispute_task' action — the undocumented 'file_dispute'
+    alias was removed (T-036, exception #8).
+    """
     private_key = poster_keypair[0]
     payload = {
-        "action": "file_dispute",
+        "action": "dispute_task",
         "task_id": task_id,
         "poster_id": poster_id,
         "reason": reason,
@@ -539,11 +545,18 @@ async def submit_ruling(
     worker_pct: int = 50,
     ruling_summary: str = "Split ruling",
 ) -> Any:
-    """Submit a ruling via POST /tasks/{task_id}/ruling."""
+    """Submit a ruling via POST /tasks/{task_id}/ruling.
+
+    Uses the canonical 'record_ruling' action — the undocumented 'submit_ruling'
+    alias was removed (T-036). record_ruling always requires an explicit
+    ruling_id (the real Court caller generates and persists one for idempotent
+    retry, per T-040); this helper generates one the same way the alias used to.
+    """
     private_key = platform_keypair[0]
     payload = {
-        "action": "submit_ruling",
+        "action": "record_ruling",
         "task_id": task_id,
+        "ruling_id": f"rul-{uuid.uuid4()}",
         "worker_pct": worker_pct,
         "ruling_summary": ruling_summary,
     }

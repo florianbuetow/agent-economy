@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import asyncio
+
     from service_auth import PlatformSigner
     from service_auth.platform import PlatformAgent
     from service_clients.identity import IdentityClient
@@ -33,6 +35,7 @@ class AppState:
     token_validator: TokenValidator | None = None
     asset_manager: AssetManager | None = None
     store: TaskStorageInterface | None = None
+    deadline_sweep_task: asyncio.Task[None] | None = None
 
     @property
     def uptime_seconds(self) -> float:
