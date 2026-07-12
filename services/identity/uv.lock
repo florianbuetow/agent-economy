@@ -737,6 +737,7 @@ dependencies = [
     { name = "joserfc" },
     { name = "pydantic" },
     { name = "pyjwt" },
+    { name = "service-clients" },
     { name = "service-commons" },
     { name = "starlette" },
     { name = "uvicorn" },
@@ -782,6 +783,7 @@ requires-dist = [
     { name = "pytestarch", extras = ["visualization"], marker = "extra == 'dev'", specifier = ">=2.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
     { name = "semgrep", marker = "extra == 'dev'", specifier = ">=1.99.0" },
+    { name = "service-clients", editable = "../../libs/service-clients" },
     { name = "service-commons", editable = "../../libs/service-commons" },
     { name = "starlette", specifier = ">=1.0.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.0" },
@@ -2188,6 +2190,32 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/4e/2d/2a4eef1926b55e93ada27d5e983d8c008f66a802b0370161e0222cd35df5/semgrep-1.152.0-cp310.cp311.cp312.cp313.cp314.py310.py311.py312.py313.py314-none-musllinux_1_0_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5c565f0b1bdf09202cd8dc4209b988536b8dd12b4dc043d219a4e6687a5830fa", size = 50573771, upload-time = "2026-02-18T00:42:53.114Z" },
     { url = "https://files.pythonhosted.org/packages/11/c8/bfdf94394452fc08c32f446dd60bd4d220fcd3a641e7f644ba3d34e38b84/semgrep-1.152.0-cp310.cp311.cp312.cp313.cp314.py310.py311.py312.py313.py314-none-win_amd64.whl", hash = "sha256:33a58370a5be505dc3ab1de1ea00965cbe8333acea3ef771abf054a0de1e200f", size = 43071580, upload-time = "2026-02-18T00:42:56.775Z" },
 ]
+
+[[package]]
+name = "service-clients"
+version = "0.1.0"
+source = { editable = "../../libs/service-clients" }
+dependencies = [
+    { name = "httpx" },
+    { name = "service-commons" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.0" },
+    { name = "codespell", marker = "extra == 'dev'", specifier = ">=2.3.0" },
+    { name = "deptry", marker = "extra == 'dev'", specifier = ">=0.21.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13.0" },
+    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.390" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
+    { name = "service-commons", editable = "../../libs/service-commons" },
+    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.0" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "service-commons"

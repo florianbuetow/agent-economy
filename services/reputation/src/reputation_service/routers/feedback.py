@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from reputation_service.core.exceptions import ServiceError
 from reputation_service.core.state import get_app_state
@@ -226,7 +227,8 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
         state.platform_agent is not None and signer_agent_id == state.platform_agent.agent_id
     )
 
-    result = submit_feedback(
+    result = await run_in_threadpool(
+        submit_feedback,
         store=state.feedback_store,
         body=feedback_body,
         max_comment_length=state.feedback_max_comment_length,
@@ -259,7 +261,8 @@ async def get_task_feedback(task_id: str) -> JSONResponse:
             details={},
         )
 
-    records = get_feedback_for_task(
+    records = await run_in_threadpool(
+        get_feedback_for_task,
         store=state.feedback_store,
         task_id=task_id,
         reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
@@ -285,7 +288,8 @@ async def get_agent_feedback(agent_id: str) -> JSONResponse:
             details={},
         )
 
-    records = get_feedback_for_agent(
+    records = await run_in_threadpool(
+        get_feedback_for_agent,
         store=state.feedback_store,
         agent_id=agent_id,
         reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
@@ -311,7 +315,8 @@ async def get_feedback(feedback_id: str) -> JSONResponse:
             details={},
         )
 
-    record = get_feedback_by_id(
+    record = await run_in_threadpool(
+        get_feedback_by_id,
         store=state.feedback_store,
         feedback_id=feedback_id,
         reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,

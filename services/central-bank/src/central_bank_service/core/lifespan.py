@@ -76,4 +76,4 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if state.platform_agent is not None:
         await state.platform_agent.close()
     await state.identity_client.close()
-    state.ledger.close()
+    await state.ledger.close()

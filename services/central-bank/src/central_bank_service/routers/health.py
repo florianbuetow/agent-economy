@@ -17,8 +17,8 @@ async def health_check() -> HealthResponse:
     total_accounts = 0
     total_escrowed = 0
     if state.ledger is not None:
-        total_accounts = state.ledger.count_accounts()
-        total_escrowed = state.ledger.total_escrowed()
+        total_accounts = await state.ledger.count_accounts()
+        total_escrowed = await state.ledger.total_escrowed()
     return HealthResponse(
         status="ok",
         uptime_seconds=state.uptime_seconds,

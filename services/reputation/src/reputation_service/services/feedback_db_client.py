@@ -47,6 +47,7 @@ class FeedbackDbClient:
             comment=str(data["comment"]) if data.get("comment") is not None else None,
             submitted_at=str(data["submitted_at"]),
             visible=bool(data["visible"]),
+            role=str(data["role"]) if data.get("role") is not None else None,
         )
 
     def insert_feedback(

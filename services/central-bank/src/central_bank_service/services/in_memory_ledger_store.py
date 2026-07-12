@@ -219,10 +219,10 @@ class InMemoryLedgerStore:
 
             debit_tx = {
                 "tx_id": self._new_tx_id(),
-                "type": "debit",
+                "type": "escrow_lock",
                 "amount": amount,
                 "balance_after": int(payer["balance"]),
-                "reference": f"escrow_lock:{task_id}",
+                "reference": task_id,
                 "timestamp": self._now(),
             }
             self._append_tx(payer_account_id, debit_tx)
@@ -271,10 +271,10 @@ class InMemoryLedgerStore:
 
             tx = {
                 "tx_id": self._new_tx_id(),
-                "type": "credit",
+                "type": "escrow_release",
                 "amount": amount,
                 "balance_after": new_balance,
-                "reference": f"escrow_release:{escrow_id}",
+                "reference": escrow_id,
                 "timestamp": self._now(),
             }
             self._append_tx(recipient_account_id, tx)
@@ -313,7 +313,7 @@ class InMemoryLedgerStore:
         poster_account_id: str,
     ) -> dict[str, object]:
         if worker_pct < 0 or worker_pct > 100:
-            raise ServiceError("invalid_payload", "worker_pct must be 0-100", 400, {})
+            raise ServiceError("invalid_amount", "worker_pct must be 0-100", 400, {})
 
         with self._state.lock:
             escrow = self._state.escrows.get(escrow_id)
@@ -328,38 +328,57 @@ class InMemoryLedgerStore:
                     {},
                 )
 
-            worker = self._state.accounts.get(worker_account_id)
-            poster = self._state.accounts.get(poster_account_id)
-            if worker is None or poster is None:
-                raise ServiceError("account_not_found", "Account not found", 404, {})
+            if str(escrow["payer_account_id"]) != poster_account_id:
+                raise ServiceError(
+                    "payload_mismatch",
+                    "poster_account_id must match the escrow payer_account_id",
+                    400,
+                    {},
+                )
 
             amount = int(escrow["amount"])
             worker_amount = amount * worker_pct // 100
             poster_amount = amount - worker_amount
 
-            worker_new_balance = int(worker["balance"]) + worker_amount
-            poster_new_balance = int(poster["balance"]) + poster_amount
-            worker["balance"] = worker_new_balance
-            poster["balance"] = poster_new_balance
+            # Zero-amount legs are skipped entirely (no balance no-op write, no tx
+            # row, no existence check) — mirrors the gateway's db_writer.escrow_split.
+            if worker_amount > 0:
+                worker = self._state.accounts.get(worker_account_id)
+                if worker is None:
+                    raise ServiceError("account_not_found", "Worker account not found", 404, {})
+                worker_new_balance = int(worker["balance"]) + worker_amount
+                worker["balance"] = worker_new_balance
+                worker_tx = {
+                    "tx_id": self._new_tx_id(),
+                    "type": "escrow_release",
+                    "amount": worker_amount,
+                    "balance_after": worker_new_balance,
+                    "reference": escrow_id,
+                    "timestamp": self._now(),
+                }
+                self._append_tx(worker_account_id, worker_tx)
+                worker_tx_id = str(worker_tx["tx_id"])
+            else:
+                worker_tx_id = None
 
-            worker_tx = {
-                "tx_id": self._new_tx_id(),
-                "type": "credit",
-                "amount": worker_amount,
-                "balance_after": worker_new_balance,
-                "reference": f"escrow_split_worker:{escrow_id}",
-                "timestamp": self._now(),
-            }
-            poster_tx = {
-                "tx_id": self._new_tx_id(),
-                "type": "credit",
-                "amount": poster_amount,
-                "balance_after": poster_new_balance,
-                "reference": f"escrow_split_poster:{escrow_id}",
-                "timestamp": self._now(),
-            }
-            self._append_tx(worker_account_id, worker_tx)
-            self._append_tx(poster_account_id, poster_tx)
+            if poster_amount > 0:
+                poster = self._state.accounts.get(poster_account_id)
+                if poster is None:
+                    raise ServiceError("account_not_found", "Poster account not found", 404, {})
+                poster_new_balance = int(poster["balance"]) + poster_amount
+                poster["balance"] = poster_new_balance
+                poster_tx = {
+                    "tx_id": self._new_tx_id(),
+                    "type": "escrow_release",
+                    "amount": poster_amount,
+                    "balance_after": poster_new_balance,
+                    "reference": escrow_id,
+                    "timestamp": self._now(),
+                }
+                self._append_tx(poster_account_id, poster_tx)
+                poster_tx_id = str(poster_tx["tx_id"])
+            else:
+                poster_tx_id = None
 
             escrow["status"] = "split"
             escrow["resolved_at"] = self._now()
@@ -385,8 +404,8 @@ class InMemoryLedgerStore:
                     "worker_amount": worker_amount,
                     "poster_amount": poster_amount,
                     "reference": escrow_id,
-                    "worker_tx_id": str(worker_tx["tx_id"]),
-                    "poster_tx_id": str(poster_tx["tx_id"]),
+                    "worker_tx_id": worker_tx_id,
+                    "poster_tx_id": poster_tx_id,
                 },
             )
             return result

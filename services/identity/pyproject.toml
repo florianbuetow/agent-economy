@@ -9,6 +9,7 @@ dependencies = [
     "starlette>=1.0.0",
     "pydantic>=2.10.0",
     "service-commons",
+    "service-clients",
     "cryptography>=48.0.1",
     "joserfc>=1.6.7",
     "pyjwt>=2.13.0",
@@ -52,6 +53,7 @@ constraint-dependencies = [
 
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
+service-clients = { path = "../../libs/service-clients", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/identity_service"]

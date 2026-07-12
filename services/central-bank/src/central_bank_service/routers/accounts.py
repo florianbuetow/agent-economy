@@ -5,7 +5,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
-from starlette.concurrency import run_in_threadpool
 
 from central_bank_service.core.state import get_app_state
 from central_bank_service.logging import get_logger
@@ -108,7 +107,7 @@ async def create_account(request: Request) -> JSONResponse:
             {},
         )
 
-    result = await run_in_threadpool(state.ledger.create_account, agent_id, initial_balance)
+    result = await state.ledger.create_account(agent_id, initial_balance)
 
     get_logger(__name__).info(
         "Account created",
@@ -174,7 +173,7 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
     # Platform authorization: local signature verification (survives Identity outage).
     verify_platform_signature(data["token"])
 
-    result = await run_in_threadpool(state.ledger.credit, account_id, amount, reference)
+    result = await state.ledger.credit(account_id, amount, reference)
 
     get_logger(__name__).info(
         "Account credited",
@@ -231,7 +230,7 @@ async def get_balance(request: Request, account_id: str) -> dict[str, object]:
             details={},
         )
 
-    account = await run_in_threadpool(state.ledger.get_account, account_id)
+    account = await state.ledger.get_account(account_id)
     if account is None:
         raise ServiceError("account_not_found", "Account not found", 404, {})
 
@@ -281,7 +280,7 @@ async def get_transactions(request: Request, account_id: str) -> dict[str, list[
             details={},
         )
 
-    transactions = await run_in_threadpool(state.ledger.get_transactions, account_id)
+    transactions = await state.ledger.get_transactions(account_id)
     return {"transactions": transactions}
 
 
