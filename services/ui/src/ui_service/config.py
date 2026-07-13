@@ -32,7 +32,14 @@ class ServiceConfig(BaseModel):
 
 
 class ServerConfig(BaseModel):
-    """HTTP server configuration."""
+    """HTTP server configuration.
+
+    ``host`` is the Q-3 security boundary (see
+    docs/plans/2026-07-10-q3-proxy-exposure-decision.md): /api/proxy/* is
+    unauthenticated, so 127.0.0.1-only binding is what keeps it
+    local-single-user. No shared-secret header exists yet — add one before
+    ever binding this service to a non-loopback address.
+    """
 
     model_config = ConfigDict(extra="forbid")
     host: str
@@ -83,7 +90,13 @@ class UserAgentConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     agent_config_path: str
-    treasury_balance: int
+    # Roster handle the UI's UserAgent signs proxy actions as (Q-2). A
+    # distinct economic identity from "platform" — see
+    # docs/plans/2026-07-10-q2-operator-identity-decision.md. Genesis funding
+    # for this identity is NOT UI config's concern (Q-9) — see
+    # docs/plans/2026-07-10-q9-treasury-bootstrap-decision.md and
+    # agents/src/treasury_provision_cli.
+    handle: str
 
 
 class Settings(BaseModel):

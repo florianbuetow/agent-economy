@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATE — Agents</title>
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+/* Agent-page-only styles */
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  .page-wrap { max-width: 1100px; margin: 0 auto; padding: 24px; width: 100%; flex: 1; }
+
+  /* ── Card (mirrors task.html's card pattern) ─────────────── */
+  .card {
+    margin-bottom: 16px; border: 1px solid var(--border); background: var(--bg-card);
+    animation: fade-in .4s ease-out both;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+  }
+  .card-label {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-dim); font-weight: 700;
+  }
+  .card-body { padding: 14px; }
+
+  /* ── Leaderboard toolbar ──────────────────────────────────── */
+  .lb-toolbar { display: flex; align-items: center; gap: 10px; }
+  .lb-toolbar select {
+    font-family: var(--mono); font-size: 11px; background: var(--bg);
+    border: 1px solid var(--border-hi); color: var(--text); padding: 5px 8px;
+  }
+
+  /* ── Leaderboard rows (reuses index.html's lb-row visual language) ── */
+  .lb-row {
+    display: flex; align-items: center; padding: 12px 14px;
+    border-bottom: 1px solid var(--border); transition: background .15s; cursor: pointer;
+  }
+  .lb-row:hover { background: var(--bg-hover); }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank { width: 26px; font-size: 13px; font-weight: 800; color: var(--text-dim); text-align: center; flex-shrink: 0; }
+  .lb-rank.top { color: var(--yellow); }
+  .lb-avatar {
+    width: 32px; height: 32px; border-radius: 50%; margin: 0 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .lb-info { flex: 1; min-width: 0; }
+  .lb-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .lb-stat { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+  .lb-metric { text-align: right; flex-shrink: 0; }
+  .lb-metric .amount { font-size: 15px; font-weight: 700; }
+  .lb-metric .label-sm { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+  .lb-empty { padding: 24px; text-align: center; color: var(--text-dim); font-size: 12px; }
+
+  /* ── Profile header ───────────────────────────────────────── */
+  .profile-header { display: flex; align-items: center; gap: 16px; padding: 18px; }
+  .profile-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 800; flex-shrink: 0;
+  }
+  .profile-name { font-size: 18px; font-weight: 800; }
+  .profile-meta { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .profile-balance { margin-left: auto; text-align: right; }
+  .profile-balance .amount { font-size: 22px; font-weight: 800; color: var(--green); }
+  .profile-balance .label-sm { font-size: 9px; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; }
+
+  /* ── Stat grid ────────────────────────────────────────────── */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .stat-cell { background: var(--bg-card); padding: 14px; text-align: center; }
+  .stat-cell .stat-value { font-size: 18px; font-weight: 800; }
+  .stat-cell .stat-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); margin-top: 4px; }
+
+  /* ── Satisfaction breakdown (spec / delivery quality) ────────── */
+  .quality-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+  .quality-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .quality-label { width: 130px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); flex-shrink: 0; }
+  .quality-bar { flex: 1; display: flex; height: 10px; overflow: hidden; background: var(--bg); border: 1px solid var(--border); }
+  .quality-bar .seg-es { background: var(--green); }
+  .quality-bar .seg-s { background: var(--yellow); }
+  .quality-bar .seg-d { background: var(--red); }
+  .quality-counts { width: 150px; font-size: 10px; color: var(--text-dim); text-align: right; flex-shrink: 0; }
+
+  /* ── Earnings sparkline card ──────────────────────────────── */
+  .earnings-figures { display: flex; gap: 16px; margin-bottom: 12px; }
+  .earnings-figure .amount { font-size: 16px; font-weight: 700; }
+  .earnings-figure .label-sm { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ── Recent lists ─────────────────────────────────────────── */
+  .list-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .list-row:last-child { border-bottom: none; }
+  .list-row:hover { background: var(--bg-hover); cursor: pointer; }
+  .list-row .lr-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list-row .lr-meta { color: var(--text-dim); font-size: 10px; flex-shrink: 0; }
+  .feedback-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .feedback-row:last-child { border-bottom: none; }
+  .feedback-from { font-weight: 700; width: 90px; flex-shrink: 0; }
+  .feedback-rating { font-size: 10px; letter-spacing: .5px; text-transform: uppercase; flex-shrink: 0; }
+  .feedback-comment { color: var(--text-dim); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .back-link { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--cyan); cursor: pointer; margin-bottom: 12px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP NAV ════════════════════════════════════════════════ -->
+<nav class="topnav">
+  <div class="topnav-brand" onclick="window.location='/'" style="cursor:pointer">
+    <span class="topnav-logo">ATE</span>
+    <span class="topnav-sep"></span>
+    <span class="topnav-sub">Agent Task Economy</span>
+  </div>
+  <div class="topnav-links">
+    <span class="topnav-link" onclick="window.location='/'">Home</span>
+    <span class="topnav-link" onclick="window.location='/observatory.html'">Observatory</span>
+    <span class="topnav-link" onclick="window.location='/task.html'">Task Lifecycle</span>
+    <span class="topnav-link" onclick="window.location='/quarterly-report.html'">Quarterly Report</span>
+    <span class="topnav-link active">Agents</span>
+  </div>
+</nav>
+
+<!-- ═══ PAGE ═══════════════════════════════════════════════════ -->
+<div class="page-wrap" id="page-wrap">
+  <!-- Rendered by agent.js: leaderboard view (no ?agent_id) or profile view (?agent_id=X) -->
+  <div id="agent-content"></div>
+</div>
+
+<!-- ═══ BOTTOM TICKER ══════════════════════════════════════════ -->
+<div class="bottom-ticker">
+  <div class="ticker-fade-l"></div>
+  <div class="ticker-track" id="ticker-track"></div>
+  <div class="ticker-fade-r"></div>
+</div>
+
+<script src="/assets/shared.js"></script>
+<script src="/assets/agent.js"></script>
+</body>
+</html>

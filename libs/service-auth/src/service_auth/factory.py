@@ -134,16 +134,24 @@ class AgentFactory:
         config = self._load_config("platform")
         return PlatformAgent(config)
 
-    def user_agent(self) -> UserAgent:
+    def user_agent(self, handle: str) -> UserAgent:
         """Create the user agent for UI-driven operations.
 
-        The user agent shares the platform agent's keys and identity.
+        The user agent is a distinct economic identity from the platform
+        agent (Q-2, docs/plans/2026-07-10-q2-operator-identity-decision.md):
+        it has its own keypair and bank account, separating treasury power
+        from browser-driven actions and making operator activity
+        attributable in the economy.
+
+        Args:
+            handle: Roster handle whose keys and identity the agent uses
+                (e.g. "operator").
 
         Returns:
-            A UserAgent initialized with the platform keypair.
+            A UserAgent initialized with the given handle's keypair.
 
         Raises:
-            KeyError: If "platform" is not in the roster.
+            KeyError: If the handle is not in the roster.
         """
-        config = self._load_config("platform")
+        config = self._load_config(handle)
         return UserAgent(config)

@@ -535,7 +535,7 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
     r_51_100 = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE reward BETWEEN 51 AND 99",
+            "SELECT COUNT(*) FROM board_tasks WHERE reward BETWEEN 51 AND 100",
             (),
         )
         or 0
@@ -543,7 +543,7 @@ async def compute_labor_market(db: aiosqlite.Connection, active_agents: int) -> 
     r_over_100 = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE reward >= 100",
+            "SELECT COUNT(*) FROM board_tasks WHERE reward > 100",
             (),
         )
         or 0
@@ -671,21 +671,52 @@ async def compute_economy_phase(db: aiosqlite.Connection, total_tasks: int) -> d
     }
 
 
-async def compute_gdp_at_timestamp(db: aiosqlite.Connection, ts_iso: str) -> int:
-    """Compute cumulative GDP up to a given timestamp."""
-    approved = await execute_scalar(
-        db,
-        "SELECT COALESCE(SUM(reward), 0) FROM board_tasks WHERE status = ? AND approved_at <= ?",
-        (TaskStatus.APPROVED, ts_iso),
+async def _gdp_bucket_deltas(
+    db: aiosqlite.Connection,
+    timestamp_column: str,
+    status_value: str,
+    amount_expr: str,
+    extra_where: str,
+    start_iso: str,
+    now_iso_val: str,
+    resolution_seconds: int,
+) -> dict[int, int]:
+    """Bucket a status's GDP contributions by the index of the data point at
+    which each row's contribution first becomes visible in the cumulative
+    total — i.e. the smallest ``idx >= 0`` such that
+    ``start_iso + idx * resolution_seconds >= timestamp_column``, matching the
+    original per-point ``timestamp_column <= T_p`` semantics exactly.
+
+    Rows at or before ``start_iso`` all land in bucket 0 (visible from the
+    very first data point). Rows strictly after ``start_iso`` need a ceiling
+    division — a row exactly ON a later bucket boundary must appear starting
+    at THAT bucket, not the next one — computed via the standard
+    ``(diff + resolution - 1) / resolution`` integer trick (valid since
+    ``diff`` is always >= 1 in that branch).
+    """
+    sql = (
+        f"SELECT CASE WHEN {timestamp_column} <= ? THEN 0 "
+        f"ELSE (CAST(strftime('%s', {timestamp_column}) AS INTEGER) - "
+        f"CAST(strftime('%s', ?) AS INTEGER) + ? - 1) / ? "
+        "END AS bucket_idx, "
+        f"SUM({amount_expr}) AS amt "
+        "FROM board_tasks "
+        f"WHERE status = ? {extra_where} AND {timestamp_column} <= ? "  # nosec B608
+        "GROUP BY bucket_idx"
     )
-    ruled = await execute_scalar(
+    rows = await execute_fetchall(
         db,
-        "SELECT COALESCE(SUM(reward * worker_pct / 100), 0) "
-        "FROM board_tasks WHERE status = ? AND worker_pct IS NOT NULL "
-        "AND ruled_at <= ?",
-        (TaskStatus.RULED, ts_iso),
+        sql,
+        (
+            start_iso,
+            start_iso,
+            resolution_seconds,
+            resolution_seconds,
+            status_value,
+            now_iso_val,
+        ),
     )
-    return int(approved) + int(ruled)
+    return {int(row[0]): int(row[1] or 0) for row in rows}
 
 
 async def compute_gdp_history(
@@ -693,7 +724,13 @@ async def compute_gdp_history(
     window: str,
     resolution: str,
 ) -> list[dict[str, Any]]:
-    """Compute GDP time series for the given window and resolution."""
+    """Compute GDP time series for the given window and resolution.
+
+    Bucketed GROUP BY (GAP-E10, mirrors the sparklines pattern): two
+    aggregation queries total (approved, ruled) instead of two queries per
+    requested data point — the old per-step loop issued up to ~20k queries
+    for a 7d window at 1m resolution.
+    """
     now = datetime.fromisoformat(now_iso().replace("Z", "+00:00"))
 
     window_map = {"1h": timedelta(hours=1), "24h": timedelta(hours=24), "7d": timedelta(days=7)}
@@ -705,16 +742,43 @@ async def compute_gdp_history(
 
     window_delta = window_map[window]
     resolution_delta = resolution_map[resolution]
+    resolution_seconds = int(resolution_delta.total_seconds())
 
     start = now - window_delta
+    start_iso = to_iso(start)
+    now_iso_val = to_iso(now)
+
+    approved_deltas = await _gdp_bucket_deltas(
+        db,
+        "approved_at",
+        TaskStatus.APPROVED,
+        "reward",
+        "",
+        start_iso,
+        now_iso_val,
+        resolution_seconds,
+    )
+    ruled_deltas = await _gdp_bucket_deltas(
+        db,
+        "ruled_at",
+        TaskStatus.RULED,
+        "reward * worker_pct / 100",
+        "AND worker_pct IS NOT NULL",
+        start_iso,
+        now_iso_val,
+        resolution_seconds,
+    )
+
+    cumulative = 0
     data_points: list[dict[str, Any]] = []
 
     current = start
+    idx = 0
     while current < now:
-        ts_iso = to_iso(current)
-        gdp = await compute_gdp_at_timestamp(db, ts_iso)
-        data_points.append({"timestamp": ts_iso, "gdp": gdp})
+        cumulative += approved_deltas.get(idx, 0) + ruled_deltas.get(idx, 0)
+        data_points.append({"timestamp": to_iso(current), "gdp": cumulative})
         current += resolution_delta
+        idx += 1
 
     return data_points
 

@@ -341,3 +341,7 @@ Defects and scope gaps discovered while executing the 2026-07-09 refactoring pla
 #### Scenario: T-106 role column meaningless on platform force_visible rows
 - **WHEN** a court-generated (platform-signed, force_visible) feedback row is stored
 - **THEN** its `role` column describes something real: today `_role_for_category` computes the from-agent's role, but the from-agent of a court row is the platform, so a spec_quality ruling row stores role="worker" describing nobody (found 2026-07-13, WP-07). Harmless while `role` is never read back; fix or spec it before any consumer reads `role` (candidate for WP-12's feedback-semantics spec)
+
+#### Scenario: T-107 UI Playwright suite has test-ordering state leakage
+- **WHEN** the full `services/ui/tests/e2e` Playwright suite runs together (`pytest tests/e2e -m e2e`, all files)
+- **THEN** every test passes regardless of ordering: today 11-13 failures appear in `test_task_lifecycle.py`/`test_observatory.py` from cross-test state leakage (phase strip reads "Settle" early, worker_pct/ruling mismatches, off-by-one reward bucket) — reproduced on the unmodified baseline 2026-07-13 (WP-08), pre-existing; the suite had never been run as a whole (wired to nothing). Fix belongs with WP-13's suite wiring (T-072/F-3 area)

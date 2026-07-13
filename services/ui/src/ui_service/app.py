@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from ui_service.config import get_settings
 from ui_service.core.exceptions import register_exception_handlers
 from ui_service.core.lifespan import lifespan
+from ui_service.core.middleware import RequestValidationMiddleware
 from ui_service.routers import agents, events, health, metrics, proxy, quarterly, tasks
 
 
@@ -38,6 +39,11 @@ def create_app() -> FastAPI:
     app.include_router(events.router, prefix="/api", tags=["Events"])
     app.include_router(quarterly.router, prefix="/api", tags=["Quarterly"])
     app.include_router(proxy.router, prefix="/api", tags=["Proxy"])
+
+    app.add_middleware(
+        RequestValidationMiddleware,
+        max_body_size=settings.request.max_body_size,
+    )
 
     # Keep static frontend mount last, because SPA fallback captures all unmatched paths.
     _mount_frontend(app, settings.frontend.web_root)

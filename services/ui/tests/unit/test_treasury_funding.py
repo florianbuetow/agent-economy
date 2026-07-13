@@ -1,20 +1,24 @@
-"""Acceptance tests for platform-treasury funding during UI startup.
+"""Acceptance tests for the ABSENCE of treasury funding during UI startup.
 
-The UI's user agent shares the platform identity and posts tasks, which lock
-escrow from its own bank account. ``lifespan`` mints that account on startup so
-posting works; without it ``escrow_lock`` fails with ``account_not_found``,
-surfaced to the UI as a misleading 404 on ``POST /tasks``.
+Frozen-test exception #10 (WP-08, 2026-07-13, recorded in
+docs/plans/2026-07-09-target-architecture-and-refactoring-plan.md §5.0):
+these three tests used to assert the UI's user agent shared the platform
+identity and minted its own treasury account on startup. The ratified Q-9
+decision (docs/plans/2026-07-10-q9-treasury-bootstrap-decision.md) moves
+genesis to an explicit, idempotent ``just provision`` step
+(``agents/src/treasury_provision_cli``) instead — "UI down => no treasury"
+is exactly the failure mode Q-9 eliminates. Startup now only registers the
+operator identity (Q-2); it never touches the bank.
 
-These tests stub the agent factory so they never touch the network, then assert
-on the emitted log file (the ``"ui"`` logger sets ``propagate = False``, so
-``caplog`` cannot see these records).
+These tests stub the agent factory so they never touch the network, then
+assert on the emitted log file (the ``"ui"`` logger sets ``propagate =
+False``, so ``caplog`` cannot see these records).
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import httpx
 import pytest
 from fastapi import FastAPI
 
@@ -40,68 +44,49 @@ class _StubUserAgent:
         return None
 
 
-class _SuccessPlatformAgent:
-    """Platform agent whose account creation succeeds."""
+class _UnreachablePlatformAgent:
+    """A platform agent that fails loudly if the bank is ever touched.
+
+    Startup must not construct a real platform-agent bank call at all under
+    the new contract, so any method invocation here is a test failure — this
+    stub exists to catch a regression that reintroduces a startup mint.
+    """
 
     def __init__(self) -> None:
         self.agent_id: str | None = None
 
     async def create_account(self, agent_id: str, initial_balance: int) -> dict[str, Any]:
-        return {"account_id": agent_id, "balance": initial_balance}
+        msg = f"create_account({agent_id}, {initial_balance}) called — startup must not mint"
+        raise AssertionError(msg)
+
+    async def credit_account(self, account_id: str, amount: int, reference: str) -> dict[str, Any]:
+        msg = f"credit_account({account_id}, {amount}, {reference}) called — startup must not mint"
+        raise AssertionError(msg)
 
     async def close(self) -> None:
         return None
 
 
-class _ConflictPlatformAgent:
-    """Platform agent whose account already exists (409)."""
-
-    def __init__(self) -> None:
-        self.agent_id: str | None = None
-
-    async def create_account(self, agent_id: str, initial_balance: int) -> dict[str, Any]:
-        request = httpx.Request("POST", f"http://bank/accounts/{agent_id}")
-        response = httpx.Response(409, request=request)
-        msg = f"account already exists (requested balance {initial_balance})"
-        raise httpx.HTTPStatusError(msg, request=request, response=response)
-
-    async def close(self) -> None:
-        return None
-
-
-class _SuccessFactory:
-    """Factory whose treasury funding succeeds."""
+class _NoMintFactory:
+    """Factory whose platform_agent() explodes if startup ever calls the bank."""
 
     def __init__(self, config_path: Path) -> None:
         self._config_path = config_path
 
-    def user_agent(self) -> _StubUserAgent:
+    def user_agent(self, handle: str) -> _StubUserAgent:  # noqa: ARG002
         return _StubUserAgent()
 
-    def platform_agent(self) -> _SuccessPlatformAgent:
-        return _SuccessPlatformAgent()
+    def platform_agent(self) -> _UnreachablePlatformAgent:
+        return _UnreachablePlatformAgent()
 
 
-class _ConflictFactory:
-    """Factory whose treasury account already exists."""
-
-    def __init__(self, config_path: Path) -> None:
-        self._config_path = config_path
-
-    def user_agent(self) -> _StubUserAgent:
-        return _StubUserAgent()
-
-    def platform_agent(self) -> _ConflictPlatformAgent:
-        return _ConflictPlatformAgent()
-
-
-def _write_ui_config(tmp_path: Path, *, treasury_balance: int | None) -> Path:
-    """Write a UI config at INFO level; omit ``treasury_balance`` when None."""
+def _write_ui_config(tmp_path: Path, *, handle: str | None) -> Path:
+    """Write a UI config at INFO level; omit ``handle`` when None (tests backfill)."""
     logs_dir = tmp_path / "logs"
     config_path = tmp_path / "config.yaml"
     user_agent_block = '  agent_config_path: "../../agents/config.yaml"\n'
-    if treasury_balance is not None:
-        user_agent_block += f"  treasury_balance: {treasury_balance}\n"
+    if handle is not None:
+        user_agent_block += f'  handle: "{handle}"\n'
     config_path.write_text(
         f"""\
 service:
@@ -135,14 +120,14 @@ def _read_logs(tmp_path: Path) -> str:
 
 
 @pytest.mark.unit
-async def test_treasury_funded_is_logged(
+async def test_startup_performs_no_treasury_mint(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A successful treasury mint logs success, never the failure path."""
-    config_path = _write_ui_config(tmp_path, treasury_balance=750)
+    """Exception #10: startup never mints — no bank call, no mint-related log line."""
+    config_path = _write_ui_config(tmp_path, handle="operator")
     monkeypatch.setenv("CONFIG_PATH", str(config_path))
-    monkeypatch.setattr(lifespan_module, "AgentFactory", _SuccessFactory)
+    monkeypatch.setattr(lifespan_module, "AgentFactory", _NoMintFactory)
 
     clear_settings_cache()
     reset_app_state()
@@ -154,19 +139,26 @@ async def test_treasury_funded_is_logged(
         reset_app_state()
 
     log_text = _read_logs(tmp_path)
-    assert "Platform treasury funded" in log_text
+    assert "UserAgent initialized" in log_text
+    assert "treasury" not in log_text.lower()
     assert "funding failed" not in log_text
 
 
 @pytest.mark.unit
-async def test_existing_treasury_account_is_not_a_failure(
+async def test_zero_balance_operator_at_startup_is_not_a_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A 409 (account already exists) is informational, not a failure."""
-    config_path = _write_ui_config(tmp_path, treasury_balance=750)
+    """Exception #10: a freshly-registered, zero-balance operator is a normal startup.
+
+    Genesis belongs to ``just provision`` now, so an operator with no bank
+    account yet (as it would be on a completely fresh economy) must not
+    surface as any kind of startup failure — even a totally unreachable bank
+    (the ``_UnreachablePlatformAgent`` stub) must not be consulted.
+    """
+    config_path = _write_ui_config(tmp_path, handle="operator")
     monkeypatch.setenv("CONFIG_PATH", str(config_path))
-    monkeypatch.setattr(lifespan_module, "AgentFactory", _ConflictFactory)
+    monkeypatch.setattr(lifespan_module, "AgentFactory", _NoMintFactory)
 
     clear_settings_cache()
     reset_app_state()
@@ -178,17 +170,19 @@ async def test_existing_treasury_account_is_not_a_failure(
         reset_app_state()
 
     log_text = _read_logs(tmp_path)
-    assert "Platform treasury account already exists" in log_text
+    assert "UserAgent initialized" in log_text
+    assert "UserAgent initialization failed" not in log_text
+    assert "treasury" not in log_text.lower()
     assert "funding failed" not in log_text
 
 
 @pytest.mark.unit
-def test_partial_user_agent_block_backfills_treasury_balance(
+def test_partial_user_agent_block_backfills_handle_no_treasury_balance(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A user_agent block missing treasury_balance is backfilled, not rejected."""
-    config_path = _write_ui_config(tmp_path, treasury_balance=None)
+    """Exception #10: user_agent config backfills ``handle``; ``treasury_balance`` is gone."""
+    config_path = _write_ui_config(tmp_path, handle=None)
     monkeypatch.setenv("CONFIG_PATH", str(config_path))
 
     clear_settings_cache()
@@ -197,5 +191,6 @@ def test_partial_user_agent_block_backfills_treasury_balance(
     finally:
         clear_settings_cache()
 
-    assert isinstance(settings.user_agent.treasury_balance, int)
-    assert settings.user_agent.treasury_balance > 0
+    assert isinstance(settings.user_agent.handle, str)
+    assert settings.user_agent.handle != ""
+    assert not hasattr(settings.user_agent, "treasury_balance")
