@@ -1,3 +1,8 @@
+> **SUPERSEDED (2026-07-09):** This document is superseded by
+> [2026-07-09-target-architecture-and-refactoring-plan.md](2026-07-09-target-architecture-and-refactoring-plan.md),
+> whose own header states: "**Supersedes:** `docs/plans/2026-06-12-completion-inventory.md`
+> (folds in its findings, re-verified against the 2026-07-09 codebase)." Read that document instead.
+
 # Project Completion Inventory — 2026-06-12
 
 Inventory of work remaining to bring Agent Task Economy to its documented target state.

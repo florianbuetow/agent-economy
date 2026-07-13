@@ -2,15 +2,13 @@
 
 ## Purpose
 
-This document is the release-gate test specification for adding JWS-based authentication to the Reputation Service's `POST /feedback` endpoint.
-
-It is intentionally strict and unambiguous:
+This document is the release-gate test specification for the Reputation Service's two-tier JWS authentication on `POST /feedback`: Tier 1 (ordinary agent operations, verified via Identity) and Tier 2 (platform / `force_visible` operations, verified locally). It supersedes an earlier version of this document written against a "certificate" model that was never implemented.
 
 - Every negative case has one required status code and one required error code.
 - Every failing response must use the standard error envelope.
 - Any behavior not listed here is out of scope for release sign-off.
 
-This document covers only authentication and authorization concerns. Business logic tests (feedback validation, visibility, sealed feedback) are covered by the existing `reputation-service-tests.md`. Those tests remain valid but must be executed using JWS-wrapped requests after this feature lands.
+This document covers authentication, authorization, and `force_visible` semantics. Ordinary business-logic tests (feedback validation, visibility, sealed feedback) are covered by `reputation-service-tests.md` and remain valid — every scenario there is executed as a JWS-wrapped request in practice, per this spec's envelope.
 
 ---
 
@@ -18,27 +16,29 @@ This document covers only authentication and authorization concerns. Business lo
 
 These tests require:
 
-1. A `PlatformAgent` instantiated with valid Ed25519 keys for certificate verification
-2. Agents with known Ed25519 keypairs (public + private keys)
-3. The Reputation service configured with the PlatformAgent's public key for local certificate validation
+1. A real `PlatformAgent` (Ed25519 keypair) for the local Tier-2 verification path — `PlatformAgent.validate_certificate(token)` verifies a JWS token against the platform's **own** public key (a purely local, no-network Ed25519 check; "certificate" here is the code's name for the JWS token, not a distinct format).
+2. Agents with known Ed25519 keypairs for Tier-1 (agent-signed) tokens.
+3. For Tier 1: either a real Identity service (integration) or a mock `IdentityClient`/`verify_jws` whose success/failure contract matches the real client (`tests/helpers.py::inject_mock_identity`; `tests/unit/routers/test_identity_error_remapping.py` pins that contract explicitly).
+4. For the Identity-down proof (AUTH-15/16 below): a real `PlatformAgent` plus a real `IdentityClient` pointed at an unreachable port — not a mock — so the test proves actual network-failure behavior, not a mock's assumption about it.
 
 ---
 
-## Required API Error Contract (New Auth Error Codes)
+## Required API Error Contract (Auth Error Codes)
 
-These error codes are added by the authentication feature. Existing error codes from `reputation-service-tests.md` remain unchanged.
+These error codes are added by the authentication layer, on top of the business-logic codes in `reputation-service-tests.md`. All codes are snake_case (verified against `routers/feedback.py`, `services/platform_identity_client.py`, `libs/service-clients/src/service_clients/base.py`).
 
 | Status | Error Code                       | Required When                                                |
-|--------|----------------------------------|--------------------------------------------------------------|
-| 400    | `INVALID_JWS`                   | `token` field is missing, null, non-string, empty, or malformed (not a three-part compact serialization) |
-| 400    | `INVALID_PAYLOAD`               | JWS payload is missing `action`, `action` is not `"submit_feedback"`, or `from_agent_id` is missing from the payload (required for signer matching) |
-| 403    | `FORBIDDEN`                     | JWS signature verification failed (tampered, unknown agent), or signer does not match `from_agent_id` in payload |
+|--------|-----------------------------------|--------------------------------------------------------------|
+| 400    | `invalid_jws`                    | `token` field is missing, null, non-string, empty, malformed (not a three-part compact serialization), or verification succeeded but the header carried no `kid` |
+| 400    | `invalid_payload`                | JWS payload is not a JSON object, is missing `action`, `action` is not `"submit_feedback"`, or `from_agent_id` is missing from the payload |
+| 403    | `forbidden`                      | JWS signature verification failed (tampered, unknown/unregistered signer, expired token), or the verified signer does not match `from_agent_id` in the payload |
+| 502    | `identity_service_unavailable`   | Tier-1 (agent-op) verification could not reach Identity — connection failure, timeout, or a malformed/incomplete 200 response. Never produced by Tier-2 (platform) verification, which makes no network call. |
 
 All failing responses must use the standard error envelope:
 
 ```json
 {
-  "error": "ERROR_CODE",
+  "error": "error_code",
   "message": "Human-readable description",
   "details": {}
 }
@@ -49,12 +49,14 @@ All failing responses must use the standard error envelope:
 ## Test Data Conventions
 
 - `agent_alice`, `agent_bob`, `agent_carol` are agents with known Ed25519 public/private keypairs.
-- `jws(signer, payload)` denotes a JWS compact serialization (RFC 7515, EdDSA/Ed25519) with header `{"alg":"EdDSA","kid":"<signer.agent_id>"}`, the given JSON payload, and a valid Ed25519 signature.
+- `platform_agent` is the service's own configured `PlatformAgent`, with a known keypair, registered agent id `platform.agent_id`.
+- `jws(signer, payload)` denotes a compact JWS serialization (`libs/service-auth/src/service_auth/signing.py::create_jws`) with header `{"alg": "EdDSA", "typ": "JWT", "kid": "<signer.agent_id>"}` (plus `iat`/`exp` when `token_ttl_seconds` is configured), canonical payload (`json.dumps(sort_keys=True, separators=(",", ":"))`), and a genuine Ed25519 signature.
 - `tampered_jws(signer, payload)` denotes a JWS where the payload has been altered after signing (signature mismatch).
 - Agent IDs use the format `a-<uuid4>`.
 - Task IDs use the format `t-<uuid4>`.
 - All valid JWS payloads include `"action": "submit_feedback"` unless explicitly testing invalid payloads.
 - A "valid feedback JWS" means: `jws(alice, {action: "submit_feedback", task_id: "t-...", from_agent_id: alice.agent_id, to_agent_id: bob.agent_id, category: "delivery_quality", rating: "satisfied"})`.
+- A "force_visible feedback JWS" means: `jws(platform_agent, {action: "submit_feedback", task_id: "t-...", from_agent_id: platform_agent.agent_id, to_agent_id: <poster or worker>.agent_id, category: "spec_quality" | "delivery_quality", rating: ...})` — signed by the platform's own key, with `from_agent_id` set to the platform's own id.
 
 ---
 
@@ -62,7 +64,7 @@ All failing responses must use the standard error envelope:
 
 ### AUTH-01 Valid JWS submits feedback successfully
 
-**Setup:** Create `agent_alice` and `agent_bob` with known Ed25519 keypairs. Configure PlatformAgent with valid keys.
+**Setup:** Create `agent_alice` and `agent_bob` with known Ed25519 keypairs.
 **Action:** `POST /feedback` with body:
 ```json
 {"token": "<jws(alice, {action: 'submit_feedback', task_id: 't-xxx', from_agent_id: alice.id, to_agent_id: bob.id, category: 'delivery_quality', rating: 'satisfied', comment: 'Good work'})>"}
@@ -79,14 +81,14 @@ All failing responses must use the standard error envelope:
 **Action:** `POST /feedback` with body `{"task_id": "t-xxx", "from_agent_id": "a-xxx", ...}` (plain JSON, no `token` field).
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### AUTH-03 `token` is null
 
 **Action:** `POST /feedback` with body `{"token": null}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### AUTH-04 `token` is not a string
 
@@ -95,14 +97,14 @@ All failing responses must use the standard error envelope:
 - `{"token": ["eyJ..."]}`
 - `{"token": {"jws": "eyJ..."}}`
 - `{"token": true}`
-**Expected:** `400`, `error = INVALID_JWS` for each.
+**Expected:** `400`, `error = invalid_jws` for each.
 
 ### AUTH-05 `token` is empty string
 
 **Action:** `POST /feedback` with body `{"token": ""}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### AUTH-06 Malformed JWS (not three-part compact serialization)
 
@@ -110,7 +112,7 @@ All failing responses must use the standard error envelope:
 - `{"token": "not-a-jws-at-all"}`
 - `{"token": "only.two-parts"}`
 - `{"token": "four.parts.is.wrong"}`
-**Expected:** `400`, `error = INVALID_JWS` for each.
+**Expected:** `400`, `error = invalid_jws` for each.
 
 ### AUTH-07 JWS with tampered payload (signature mismatch)
 
@@ -118,15 +120,24 @@ All failing responses must use the standard error envelope:
 **Action:** `POST /feedback` with `{"token": "<tampered_jws>"}`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
-### AUTH-08 JWS signed by unknown agent (no valid certificate)
+### AUTH-08 JWS signed by unknown agent (agent tier)
 
-**Setup:** Generate a fresh Ed25519 keypair whose public key is NOT known to the PlatformAgent (no valid certificate).
-**Action:** `POST /feedback` with a JWS signed by the unknown keypair.
+**Setup:** Generate a fresh Ed25519 keypair not registered with Identity.
+**Action:** `POST /feedback` with a JWS signed by the unknown keypair (`kid` != the platform's own agent id, so this routes to Identity).
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
+
+### AUTH-08b JWS with expired token is rejected
+
+**Setup:** Create `agent_alice` with a known keypair and a configured `token_ttl_seconds` so `iat`/`exp` are stamped into the header. Freeze the signing clock, sign a token, then advance a verification-time clock past `exp`.
+**Action:** `POST /feedback` with the expired token.
+**Expected:**
+- `403 Forbidden`
+- `error = forbidden`
+- (Verified against `service_auth.signing.TokenExpiredError`, which both `IdentityClient`'s backing verifier and `PlatformJwsVerifier` map to `valid: False` → `403`, the same as a bad signature — not a distinct error code.)
 
 ---
 
@@ -138,7 +149,7 @@ All failing responses must use the standard error envelope:
 **Action:** `POST /feedback` with `jws(alice, {task_id: "t-xxx", from_agent_id: alice.id, to_agent_id: bob.id, category: "delivery_quality", rating: "satisfied"})` — payload has no `action` field.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### AUTH-10 Wrong `action` value
 
@@ -146,7 +157,7 @@ All failing responses must use the standard error envelope:
 **Action:** `POST /feedback` with `jws(alice, {action: "escrow_lock", task_id: "t-xxx", from_agent_id: alice.id, to_agent_id: bob.id, category: "delivery_quality", rating: "satisfied"})`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### AUTH-11 `action` is null
 
@@ -154,7 +165,7 @@ All failing responses must use the standard error envelope:
 **Action:** `POST /feedback` with `jws(alice, {action: null, task_id: "t-xxx", from_agent_id: alice.id, to_agent_id: bob.id, ...})`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ---
 
@@ -175,7 +186,7 @@ All failing responses must use the standard error envelope:
 `POST /feedback` with `jws(alice, {action: "submit_feedback", from_agent_id: carol.id, to_agent_id: bob.id, ...})`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ### AUTH-14 Signer impersonates non-existent agent
 
@@ -184,7 +195,7 @@ All failing responses must use the standard error envelope:
 `POST /feedback` with `jws(alice, {action: "submit_feedback", from_agent_id: "a-nonexistent-uuid", to_agent_id: bob.id, ...})`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ---
 
@@ -225,57 +236,65 @@ All failing responses must use the standard error envelope:
 
 ## Category 5: Error Precedence
 
-These tests verify that errors are returned in the correct order when multiple error conditions are present simultaneously.
+Order verified against `routers/feedback.py::submit_feedback_endpoint` and `core/middleware.py::RequestValidationMiddleware`, which runs ahead of the router.
 
 ### PREC-01 Content-Type checked before token validation
 
 **Action:** `POST /feedback` with `Content-Type: text/plain` and body `{"token": "invalid"}`.
 **Expected:**
 - `415 Unsupported Media Type`
-- `error = UNSUPPORTED_MEDIA_TYPE`
-- (NOT `400 INVALID_JWS`)
+- `error = unsupported_media_type`
+- (NOT `400 invalid_jws`)
 
 ### PREC-02 Body size checked before token validation
 
 **Action:** `POST /feedback` with `Content-Type: application/json` and a ~2MB body.
 **Expected:**
 - `413 Payload Too Large`
-- `error = PAYLOAD_TOO_LARGE`
-- (NOT `400 INVALID_JWS`)
+- `error = payload_too_large`
+- (NOT `400 invalid_jws`)
 
 ### PREC-03 JSON parsing checked before token validation
 
 **Action:** `POST /feedback` with `Content-Type: application/json` and body `{not json`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JSON`
-- (NOT `400 INVALID_JWS`)
+- `error = invalid_json`
+- (NOT `400 invalid_jws`)
 
-### PREC-04 Token validation checked before payload validation
+### PREC-04 Token validation checked before verification
 
 **Action:** `POST /feedback` with `{"token": 12345}` (not a string).
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
-- (NOT `400 INVALID_PAYLOAD`)
+- `error = invalid_jws`
+- (NOT `403 forbidden`, NOT `400 invalid_payload`)
 
-### PREC-05 Payload `action` checked before signer matching
+### PREC-05 Verification checked before payload-shape / kid-presence checks
+
+**Action:** `POST /feedback` with a token whose signature does not verify (any tier).
+**Expected:**
+- `403 Forbidden`
+- `error = forbidden`
+- (NOT `400 invalid_jws` for a missing `kid`, NOT `400 invalid_payload`) — verification runs first; the missing-`kid` check only applies to tokens that *passed* verification but returned an empty `agent_id`.
+
+### PREC-06 Payload `action` checked before signer matching
 
 **Setup:** Create `agent_alice` and `agent_bob` with known keypairs.
 **Action:** Alice signs a JWS with `{action: "wrong_action", from_agent_id: bob.id, ...}` (wrong action AND signer mismatch).
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
-- (NOT `403 FORBIDDEN`)
+- `error = invalid_payload`
+- (NOT `403 forbidden`)
 
-### PREC-06 Signer matching checked before feedback field validation
+### PREC-07 Signer matching checked before feedback field validation
 
 **Setup:** Create `agent_alice`, `agent_bob`, and `agent_carol` with known keypairs.
 **Action:** Alice signs a JWS with `{action: "submit_feedback", from_agent_id: carol.id, rating: "invalid_value", ...}` (signer mismatch AND invalid rating).
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
-- (NOT `400 INVALID_RATING`)
+- `error = forbidden`
+- (NOT `400 invalid_rating`)
 
 ---
 
@@ -289,7 +308,7 @@ These tests verify that existing feedback validation rules still apply when the 
 **Action:** Alice signs a JWS with `{action: "submit_feedback", from_agent_id: alice.id}` — missing `to_agent_id`, `task_id`, `category`, `rating`.
 **Expected:**
 - `400 Bad Request`
-- `error = MISSING_FIELD`
+- `error = missing_field`
 
 ### VJWS-02 Invalid rating in JWS payload
 
@@ -297,7 +316,7 @@ These tests verify that existing feedback validation rules still apply when the 
 **Action:** Alice signs a JWS with `{action: "submit_feedback", ..., rating: "excellent"}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_RATING`
+- `error = invalid_rating`
 
 ### VJWS-03 Invalid category in JWS payload
 
@@ -305,7 +324,7 @@ These tests verify that existing feedback validation rules still apply when the 
 **Action:** Alice signs a JWS with `{action: "submit_feedback", ..., category: "timeliness"}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_CATEGORY`
+- `error = invalid_category`
 
 ### VJWS-04 Self-feedback in JWS payload
 
@@ -313,7 +332,7 @@ These tests verify that existing feedback validation rules still apply when the 
 **Action:** Alice signs a JWS with `{action: "submit_feedback", from_agent_id: alice.id, to_agent_id: alice.id, ...}`.
 **Expected:**
 - `400 Bad Request`
-- `error = SELF_FEEDBACK`
+- `error = self_feedback`
 
 ### VJWS-05 Comment too long in JWS payload
 
@@ -321,7 +340,7 @@ These tests verify that existing feedback validation rules still apply when the 
 **Action:** Alice signs a JWS with a comment of 257 characters (one over the configured limit).
 **Expected:**
 - `400 Bad Request`
-- `error = COMMENT_TOO_LONG`
+- `error = comment_too_long`
 
 ### VJWS-06 Duplicate feedback via JWS
 
@@ -329,7 +348,7 @@ These tests verify that existing feedback validation rules still apply when the 
 **Action:** Submit identical feedback via JWS again for (task_1, alice→bob).
 **Expected:**
 - `409 Conflict`
-- `error = FEEDBACK_EXISTS`
+- `error = feedback_exists`
 
 ### VJWS-07 Mutual reveal works through JWS submission
 
@@ -358,15 +377,91 @@ These tests verify that existing feedback validation rules still apply when the 
 **Action:** Send both requests simultaneously (parallel).
 **Expected:**
 - Exactly one `201 Created`
-- Exactly one `409 Conflict` with `FEEDBACK_EXISTS`
+- Exactly one `409 Conflict` with `error = feedback_exists`
 
 ---
 
-## Category 7: Cross-Cutting Security Assertions
+## Category 7: Two-Tier Auth — Identity Outage
+
+Verified against `tests/unit/routers/test_two_tier_feedback_auth.py`, which uses a **real** `PlatformAgent` and a **real** `IdentityClient` pointed at an unreachable port (`http://127.0.0.1:1`) — not mocks — to prove actual network-failure behavior.
+
+### AUTH-15 Platform-signed feedback succeeds while Identity is down
+
+**Setup:** Configure a real `PlatformAgent`. Point `state.identity_client` at an unreachable URL.
+**Action:** `POST /feedback` with `jws(platform_agent, {action: "submit_feedback", task_id: "task-1", from_agent_id: platform_agent.id, to_agent_id: "a-worker", category: "delivery_quality", rating: "satisfied", comment: "Court ruling feedback"})`.
+**Expected:**
+- `201 Created`
+- `from_agent_id` matches `platform_agent.agent_id`
+- `to_agent_id` matches `"a-worker"`
+- `visible` is `true`
+- No call to Identity occurs — local verification is the entire auth path for this token.
+
+### AUTH-16 Ordinary agent feedback fails cleanly (not silently bypassed) while Identity is down
+
+**Setup:** Same as AUTH-15. Generate a fresh Ed25519 keypair for `agent_alice` (not the platform key).
+**Action:** `POST /feedback` with `jws(alice, {action: "submit_feedback", task_id: "task-2", from_agent_id: alice.id, to_agent_id: "a-bob", category: "delivery_quality", rating: "satisfied", comment: "nice"})`.
+**Expected:**
+- `502 Bad Gateway`
+- `error = identity_service_unavailable`
+- The request is rejected outright — it is never silently routed to the local platform verifier or otherwise accepted without real verification.
+
+---
+
+## Category 8: `force_visible` Semantics (Court / Platform-Generated Feedback)
+
+Verified against `tests/unit/routers/test_gap_a6_force_visible_semantics.py`, which replays the exact payload shape `court_service.ruling_orchestrator._record_feedback` sends.
+
+### AUTH-17 Platform feedback with no counterpart is immediately visible
+
+**Setup:** Configure a mock/real platform agent with id `PLATFORM_ID`.
+**Action:** `POST /feedback` with `jws(platform, {action: "submit_feedback", task_id: "task-fv-1", from_agent_id: PLATFORM_ID, to_agent_id: <poster>, category: "spec_quality", rating: "dissatisfied", comment: "Court ruling: spec was ambiguous"})` — no reverse pair exists.
+**Expected:**
+- `201 Created`
+- `visible` is `true`
+- `from_agent_id` equals `PLATFORM_ID`
+
+### AUTH-18 Control: the same shape from an ordinary agent stays sealed
+
+**Setup:** Same task-shape as AUTH-17 but signed and sent by an ordinary agent (`from_agent_id` = a worker, not the platform).
+**Action:** `POST /feedback` with `jws(worker, {action: "submit_feedback", ..., from_agent_id: worker.id, to_agent_id: poster.id, category: "spec_quality"})` — no reverse pair.
+**Expected:**
+- `201 Created`
+- `visible` is `false`
+
+This is the control that makes AUTH-17 meaningful: immediate visibility is specific to a platform-signed, self-`from_agent_id` submission, not to "first feedback on a task" in general.
+
+### AUTH-19 Court ruling category convention (documented, not enforced by Reputation)
+
+**Setup:** Configure the platform agent with id `PLATFORM_ID`. Two agents: `POSTER_ID` (claimant), `WORKER_ID` (respondent).
+**Action:**
+1. `POST /feedback` with `jws(platform, {action: "submit_feedback", task_id: "task-fv-2", from_agent_id: PLATFORM_ID, to_agent_id: POSTER_ID, category: "spec_quality", rating: "satisfied", comment: "Ruling: spec was clear"})`
+2. `POST /feedback` with `jws(platform, {action: "submit_feedback", task_id: "task-fv-2", from_agent_id: PLATFORM_ID, to_agent_id: WORKER_ID, category: "delivery_quality", rating: "dissatisfied", comment: "Ruling: delivery fell short"})`
+**Expected:**
+- Both `201 Created`, both `visible: true` immediately (no reveal-timeout wait)
+- Step 1: `to_agent_id == POSTER_ID`, `category == "spec_quality"`
+- Step 2: `to_agent_id == WORKER_ID`, `category == "delivery_quality"`
+- `GET /feedback/task/task-fv-2` returns both entries
+
+**Note:** this pins the *convention* court currently follows (`spec_quality → claimant/poster`, `delivery_quality → respondent/worker`) as observed from Reputation's side. Reputation itself places no constraint on which category maps to which `to_agent_id` for a `force_visible` submission — it stores whatever pair it is given, immediately visible. If court's convention changes, this test's expected `(category, to_agent_id)` pairing must change with it; Reputation would accept the new pairing without any code change.
+
+### AUTH-20 A force-visible write does not disturb an unrelated sealed pair on the same task
+
+**Setup:** On `task-fv-3`: submit ordinary, one-sided feedback `worker → poster`, `category: spec_quality` (stays sealed, no counterpart). Capture its `feedback_id`.
+**Action:** Submit a platform force-visible write on the same task, a disjoint pair: `platform → poster`, `category: spec_quality`.
+**Expected:**
+- The platform write returns `201`, `visible: true`.
+- The unrelated sealed pair remains sealed: `GET /feedback/{sealed_id}` still returns `404`, and it is absent from `GET /feedback/task/task-fv-3`'s results.
+- The platform's own feedback IS present in the task listing.
+
+**Architectural note:** this holds because the reverse-pair lookup in the gateway's atomic reveal (`ReputationWriter._lookup_reverse_feedback_id`) is scoped to the exact `(task_id, from_agent_id, to_agent_id)` triple, not just `task_id` — a platform write's `from_agent_id` is always the platform's own id, never a real task participant, so it can never accidentally match as the "reverse" of an ordinary agent's sealed submission.
+
+---
+
+## Category 9: Cross-Cutting Security Assertions
 
 ### SEC-AUTH-01 Error envelope consistency for auth errors
 
-**Action:** Trigger each auth error code at least once (`INVALID_JWS`, `INVALID_PAYLOAD`, `FORBIDDEN`).
+**Action:** Trigger each auth error code at least once (`invalid_jws`, `invalid_payload`, `forbidden`, `identity_service_unavailable`).
 **Expected:** All responses have exactly:
 - top-level `error` (string)
 - top-level `message` (string)
@@ -374,8 +469,8 @@ These tests verify that existing feedback validation rules still apply when the 
 
 ### SEC-AUTH-02 No internal error leakage in auth failures
 
-**Action:** Trigger `INVALID_JWS`, `FORBIDDEN` errors.
-**Expected:** `message` never includes stack traces, cryptographic details, private key material, or internal diagnostics.
+**Action:** Trigger `invalid_jws`, `forbidden` errors.
+**Expected:** `message` never includes stack traces, cryptographic details, private key material, or internal diagnostics (verified: `test_identity_error_remapping.py::test_forbidden_message_is_generic` asserts the message contains none of "Agent not found", "keystore", or a filesystem path).
 
 ### SEC-AUTH-03 JWS token reuse across actions is rejected
 
@@ -383,8 +478,8 @@ These tests verify that existing feedback validation rules still apply when the 
 **Action:** `POST /feedback` with the escrow lock JWS.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
-- A token intended for another service cannot be used to submit feedback
+- `error = invalid_payload`
+- A token intended for another service/operation cannot be used to submit feedback
 
 ---
 
@@ -396,7 +491,8 @@ Authentication is release-ready only if:
 2. All tests in `reputation-service-tests.md` pass when executed with JWS-wrapped requests.
 3. No endpoint returns `500` in any test scenario.
 4. All failing responses conform to the required error envelope.
-5. Local certificate verification via PlatformAgent never causes the Reputation service to crash — invalid certificates return `403` gracefully.
+5. Local (Tier-2) verification via `PlatformJwsVerifier` never causes the Reputation service to crash — invalid or unregistered tokens return `403` gracefully, and Identity being completely unreachable never affects Tier-2 traffic (AUTH-15).
+6. Tier-1 (agent-op) verification fails cleanly with `502 identity_service_unavailable` when Identity is unreachable — never silently bypassed to local verification (AUTH-16).
 
 ---
 
@@ -404,19 +500,21 @@ Authentication is release-ready only if:
 
 | Category | IDs | Count |
 |----------|-----|-------|
-| JWS Token Validation | AUTH-01 to AUTH-08 | 8 |
+| JWS Token Validation | AUTH-01 to AUTH-08b | 9 |
 | JWS Payload Validation | AUTH-09 to AUTH-11 | 3 |
 | Authorization (Signer Matching) | AUTH-12 to AUTH-14 | 3 |
 | GET Endpoints Remain Public | PUB-01 to PUB-04 | 4 |
-| Error Precedence | PREC-01 to PREC-06 | 6 |
+| Error Precedence | PREC-01 to PREC-07 | 7 |
 | Existing Validations Through JWS | VJWS-01 to VJWS-09 | 9 |
+| Two-Tier Auth — Identity Outage | AUTH-15 to AUTH-16 | 2 |
+| `force_visible` Semantics | AUTH-17 to AUTH-20 | 4 |
 | Cross-Cutting Security | SEC-AUTH-01 to SEC-AUTH-03 | 3 |
-| **Total** | | **36** |
+| **Total** | | **44** |
 
 | Endpoint | Covered By |
 |----------|------------|
-| `POST /feedback` | AUTH-01 to AUTH-14, PREC-01 to PREC-06, VJWS-01 to VJWS-09, SEC-AUTH-01 to SEC-AUTH-03 |
+| `POST /feedback` | AUTH-01 to AUTH-20, PREC-01 to PREC-07, VJWS-01 to VJWS-09, SEC-AUTH-01 to SEC-AUTH-03 |
 | `GET /feedback/{feedback_id}` | PUB-01 |
-| `GET /feedback/task/{task_id}` | PUB-02, VJWS-07 |
+| `GET /feedback/task/{task_id}` | PUB-02, VJWS-07, AUTH-19, AUTH-20 |
 | `GET /feedback/agent/{agent_id}` | PUB-03 |
 | `GET /health` | PUB-04 |

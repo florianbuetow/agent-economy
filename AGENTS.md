@@ -4,31 +4,27 @@
 
 Agent Task Economy is a Python microservices project that implements a micro-economy where autonomous agents earn, spend, and compete for work. The system incentivizes precise task specifications through market pressure and dispute mechanics, using LLM-as-a-Judge panels for dispute resolution. The core thesis: AI is moving toward specification-driven development, so specification quality should be a first-class economic signal.
 
-The economy operates through five services: an Identity & PKI service for agent registration and Ed25519 signature verification, a Central Bank for ledger management and escrow, a Task Board for task lifecycle and bidding, a Reputation service for tracking specification and delivery quality, and a Civil Claims Court for LLM-based dispute resolution.
+The economy operates through seven services, an autonomous `agents/` runtime, and three shared libraries: an Identity & PKI service for agent registration and Ed25519 signature verification, a Central Bank for ledger management and escrow, a Task Board for task lifecycle and bidding, a Reputation service for tracking specification and delivery quality, a Civil Claims Court for LLM-based dispute resolution, a Database Gateway that owns the shared SQLite database and serializes all writes, and a UI service that renders live economy activity. The `agents/` runtime runs the economy unattended: a task-feeder agent posts tasks and autonomously accepts bids, math-worker agents bid and solve, and the feeder autonomously approves or disputes submissions — disputes reach a Court ruling via a periodic trigger in Task Board, with no demo script or human in the loop.
 
 ## Build & Run
 
 ```bash
 just help             # Show all available commands
-just init-all         # Initialize all service environments
-just start-all        # Start all services in background
-just stop-all         # Stop all locally running services
-just status           # Check health status of all services
-just test-all         # Run all tests
-just ci               # Run ALL CI checks (services, agents, integration, e2e)
-just ci-quiet         # Run ALL CI checks quietly
-just destroy-all      # Remove all virtual environments
+just init-all          # Initialize all service environments
+just start-all         # Start all services in background (4-tier dependency order)
+just provision         # Provision the treasury (idempotent; run once after first start-all)
+just stop-all          # Stop all locally running services
+just status            # Check health status of all services
+just test-all          # Run all tests
+just test-e2e          # Run e2e tests (restarts services with clean data)
+just ci                # Run ALL CI checks (structure, libs, services, agents, tools, integration, e2e)
+just ci-quiet          # Run ALL CI checks quietly
+just destroy-all       # Remove all virtual environments
 ```
 
 ### Docker
 
-```bash
-just docker-up        # Start all services (Docker)
-just docker-up-dev    # Start with hot reload
-just docker-down      # Stop all services
-just docker-logs [service]  # View logs
-just docker-build     # Build all Docker images
-```
+Docker mode was descoped (Q-6, ratified 2026-07-10): `docker-compose.yml`, every `services/*/Dockerfile`, and the root/per-service `docker-*` justfile recipes were deleted — zero current consumer and zero CI coverage. Local `just start-all` is the only supported way to run the stack until a real multi-host deployment target exists. See `docs/plans/2026-07-10-q6-docker-scope-decision.md`.
 
 ### Per-Service Commands
 
@@ -90,13 +86,19 @@ just code-audit       # Vulnerability scan
 ```
 services/
   identity/             Agent registration & Ed25519 signature verification (port 8001)
-  central-bank/         Ledger, escrow, salary distribution (port 8002)
-  task-board/           Task lifecycle, bidding, contracts, asset store (port 8003)
+  central-bank/         Ledger, escrow lock/release/split, platform-credit funding (port 8002)
+  task-board/           Task lifecycle, bidding, acceptance, asset store (port 8003)
   reputation/           Spec quality & delivery quality scores, feedback (port 8004)
   court/                LLM-as-a-Judge dispute resolution (port 8005)
+  db-gateway/           Shared SQLite database gateway; owns all writes (port 8007)
+  ui/                   Web frontend / live economy dashboard (port 8008)
+agents/                 Autonomous runtime: base_agent, task_feeder, math_worker,
+                        fund_feeder_cli, treasury_provision_cli
 libs/
   service-commons/      Shared FastAPI infrastructure (config, logging, exceptions)
-tools/                  Simulation injector & CLI utilities
+  service-clients/      Shared HTTP client library for inter-service communication
+  service-auth/         Ed25519 PKI, JWS signing/verification, platform agents
+tools/                  Simulation injector (demo_replay) & CLI utilities (math_task_factory)
 tests/                  Cross-service integration tests
 config/
   semgrep/              Static analysis rules
@@ -108,9 +110,10 @@ docs/
     service-tests/      Test specs per service
   codex-tasks/          Phased implementation task plans for agents
   diagrams/             System diagrams and sequence diagrams
-  demo-scenarios/       Demo scenario descriptions
   explanations/         Technical explainers
   service-implementation-guide.md   How to implement a service from scaffolding
+openspec/
+  specs/                Canonical issue tracker (completion-backlog, delivery-governance)
 ```
 
 ### Service Layout
@@ -123,7 +126,6 @@ services/<service-dir>/
 ├── justfile                            # Service-specific commands
 ├── pyproject.toml                      # Dependencies and tool config
 ├── pyrightconfig.json                  # Strict type checking config
-├── Dockerfile                          # Container definition
 ├── src/<service_name>/
 │   ├── __init__.py                     # Package marker + __version__
 │   ├── app.py                          # FastAPI application factory (create_app)
@@ -172,36 +174,43 @@ See `docs/service-implementation-guide.md` for detailed file-by-file implementat
 - Application state is managed via a global `AppState` singleton initialized during lifespan
 - Business logic lives in `services/` — routers are thin wrappers that parse requests and call the services layer
 - Agents prove identity by signing payloads with Ed25519 private keys; the Identity service verifies signatures against stored public keys
+- Two-tier verification: platform-signed operations (e.g. central-bank, reputation) verify locally via `PlatformAgent` from `libs/service-auth`; agent-signed operations verify remotely via the Identity service
 - Ambiguous task specifications are judged in favor of the worker (core incentive mechanism)
 
 ### Service Dependencies
 
 ```
-Identity (port 8001) ← no dependencies (leaf service)
-Central Bank (port 8002) ← Identity
-Task Board (port 8003) ← Identity, Central Bank
-Reputation (port 8004) ← Identity
-Court (port 8005) ← Identity, Task Board, Reputation, Central Bank
+Identity (port 8001)       ← no dependencies (leaf service)
+Central Bank (port 8002)   ← Identity
+Task Board (port 8003)     ← Identity, Central Bank
+Reputation (port 8004)     ← Identity
+Court (port 8005)          ← Task Board (task context + record_ruling), Reputation (feedback)
+                              — platform-signer verification is local; never calls Central Bank
+DB Gateway (port 8007)     ← no dependencies (leaf persistence service; all other services read/write through it)
+UI (port 8008)             ← Identity (agent registration) + Task Board (post/accept-bid/approve/dispute,
+                              via a registered `operator` UserAgent); reads the shared database directly,
+                              read-only. (The operator's agent SDK also carries Central Bank/Reputation/Court
+                              clients, but no UI route calls them today.)
 ```
+
+Note the port numbering above has a deliberate one-port gap between Court and DB Gateway — that skipped port has never been assigned to any service in this system.
 
 ### Task Lifecycle
 
 ```
 1. POSTING      → Poster signs & publishes task (spec, reward, deadlines) → escrow locks funds
 2. BIDDING      → Agents submit signed bids (binding, no withdrawal)
-3. ACCEPTANCE   → Poster accepts a bid → platform co-signs contract → escrow locks funds
+3. ACCEPTANCE   → Bid winner is picked (poster or an autonomous acceptance loop) → execution deadline starts (escrow was already locked at posting; no separate contract artifact — a v1 scope decision)
 4. EXECUTION    → Agent works on task, clock is ticking (completion deadline)
 5. SUBMISSION   → Agent uploads deliverables to platform asset store
-6. REVIEW       → Poster has [configurable] window to review
+6. REVIEW       → Poster (human or autonomous review loop) has a configurable window to review
    ├─ APPROVE   → Full payout to agent, mutual feedback exchange
    ├─ TIMEOUT   → Auto-approve, full payout to agent
    └─ DISPUTE   → Poster files claim → agent submits rebuttal → Court
-7. RULING       → Judges evaluate → proportional payout → reputation scores updated
+7. RULING       → A periodic Task Board trigger reaches Court autonomously → judges evaluate → proportional payout → reputation scores updated
 ```
 
-## Delegating Work
-
-See [DELEGATE.md](DELEGATE.md) for instructions on delegating work to sub-agents via tmux.
+The `agents/` runtime (task-feeder + math-worker loops) can drive steps 1–7 end to end with no demo script and no human — see `agents/tests/e2e/test_unattended_economy.py`.
 
 ## Git Rules
 
@@ -301,7 +310,7 @@ verify_signature(algorithm=settings.crypto.algorithm)
 - `data/` - runtime data (gitignored)
 - `reports/` - generated test artifacts
 - `uv.lock` - regenerated by `uv sync`
-- `libs/service-commons/` - shared library, changes affect all services
+- `libs/` - shared libraries (`service-commons`, `service-clients`, `service-auth`); changes affect all services
 
 ## Common Workflows
 
@@ -385,7 +394,7 @@ The plan references:
 
 ### Phase 3: Implement Tests (Separate Session, Worktree)
 
-Start a new git worktree for isolation. Delegate to a sub-agent (via `DELEGATE.md`) to implement **all tests before any features**.
+Start a new git worktree for isolation. Delegate to a sub-agent to implement **all tests before any features**.
 
 1. Create a worktree: `git worktree add .claude/worktrees/<service>-tests -b <service>-tests`
 2. Prime the agent with these documents (in order):

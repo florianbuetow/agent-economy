@@ -204,7 +204,7 @@ Poster                     Task Board (with PlatformAgent)      Central Bank
 
 **Key point:** The Task Board does NOT verify `escrow_token` itself. It only inspects the `escrow_token`'s payload (by decoding the base64url payload section without verifying the signature) to cross-validate `task_id` and `amount` against the `task_token`. The Central Bank handles full cryptographic verification of the `escrow_token` locally via its own PlatformAgent.
 
-**Escrow token decode errors:** If the `escrow_token` is not valid three-part JWS compact format, it fails at step 4 (`INVALID_JWS`). If the `escrow_token` has valid three-part format but the payload section is not valid base64url or does not decode to valid JSON, it also fails as `INVALID_JWS` — the token is structurally malformed. If the payload decodes to valid JSON but is missing `task_id` or `amount`, the cross-validation cannot proceed and the error is `TOKEN_MISMATCH`.
+**Escrow token decode errors:** If the `escrow_token` is not valid three-part JWS compact format, it fails at step 4 (`invalid_jws`). If the `escrow_token` has valid three-part format but the payload section is not valid base64url or does not decode to valid JSON, it also fails as `invalid_jws` — the token is structurally malformed. If the payload decodes to valid JSON but is missing `task_id` or `amount`, the cross-validation cannot proceed and the error is `token_mismatch`.
 
 ### Platform-Signed Outgoing Calls
 
@@ -267,35 +267,35 @@ After `validate_certificate()` confirms the JWS certificate is valid:
 
 | Status | Code | When |
 |--------|------|------|
-| 400 | `INVALID_JWS` | Token is malformed, missing, empty, not a string, or not valid JWS compact format |
-| 400 | `INVALID_PAYLOAD` | JWS payload is missing `action`, `action` does not match the expected value for this endpoint, or required payload fields are missing |
-| 400 | `TOKEN_MISMATCH` | `task_id` or `amount`/`reward` mismatch between `task_token` and `escrow_token` (task creation only) |
-| 403 | `FORBIDDEN` | JWS certificate is invalid (`validate_certificate()` fails), or signer does not match the required agent, or signer is not the platform agent for platform operations |
-| 502 | `CENTRAL_BANK_UNAVAILABLE` | Cannot connect to Central Bank, timeout, or escrow operation failed |
+| 400 | `invalid_jws` | Token is malformed, missing, empty, not a string, or not valid JWS compact format |
+| 400 | `invalid_payload` | JWS payload is missing `action`, `action` does not match the expected value for this endpoint, or required payload fields are missing |
+| 400 | `token_mismatch` | `task_id` or `amount`/`reward` mismatch between `task_token` and `escrow_token` (task creation only) |
+| 403 | `forbidden` | JWS certificate is invalid (`validate_certificate()` fails), or signer does not match the required agent, or signer is not the platform agent for platform operations |
+| 502 | `central_bank_unavailable` | Cannot connect to Central Bank, timeout, or escrow operation failed |
 
 ### Error Precedence
 
 Errors are checked in this order (first match wins):
 
-1. `415 UNSUPPORTED_MEDIA_TYPE` — wrong Content-Type (expected `application/json` for most endpoints, `multipart/form-data` for asset upload)
-2. `413 PAYLOAD_TOO_LARGE` — body exceeds `request.max_body_size` or file exceeds `assets.max_file_size`
-3. `400 INVALID_JSON` — malformed JSON body
-4. `400 INVALID_JWS` — missing or malformed token field(s)
-5. `403 FORBIDDEN` — certificate verification fails (`validate_certificate()` returns false)
-6. `400 INVALID_PAYLOAD` — wrong `action`, missing required payload fields, or `task_id`/`bid_id` in payload does not match the URL path
-7. `400 TOKEN_MISMATCH` — cross-token validation failure (task creation)
-8. `403 FORBIDDEN` — signer does not match expected agent (poster/worker/platform). See note below on role-dependent checks.
-9. `404 TASK_NOT_FOUND` — task does not exist
-10. `409 INVALID_STATUS` — task is in wrong status for this operation
-11. Domain-specific validation errors (`SELF_BID`, `BID_ALREADY_EXISTS`, `NO_ASSETS`, etc.)
-12. `502 CENTRAL_BANK_UNAVAILABLE` — escrow operation failed
+1. `415 unsupported_media_type` — wrong Content-Type (expected `application/json` for most endpoints, `multipart/form-data` for asset upload)
+2. `413 payload_too_large` — body exceeds `request.max_body_size` or file exceeds `assets.max_file_size`
+3. `400 invalid_json` — malformed JSON body
+4. `400 invalid_jws` — missing or malformed token field(s)
+5. `403 forbidden` — certificate verification fails (`validate_certificate()` returns false)
+6. `400 invalid_payload` — wrong `action`, missing required payload fields, or `task_id`/`bid_id` in payload does not match the URL path
+7. `400 token_mismatch` — cross-token validation failure (task creation)
+8. `403 forbidden` — signer does not match expected agent (poster/worker/platform). See note below on role-dependent checks.
+9. `404 task_not_found` — task does not exist
+10. `409 invalid_status` — task is in wrong status for this operation
+11. Domain-specific validation errors (`self_bid`, `bid_already_exists`, `no_assets`, etc.)
+12. `502 central_bank_unavailable` — escrow operation failed
 
 ### Notes on Error Mapping
 
-- **Invalid signature** returns `403 FORBIDDEN`, not `401`. There is no `401` in this system because there is no challenge-response mechanism (no `WWW-Authenticate` header). Invalid credentials = forbidden.
-- **Signer mismatch** also returns `403 FORBIDDEN` with a different message. The certificate is cryptographically valid, but the signer lacks authorization.
-- **Role-dependent signer checks and status ordering.** For operations that require a role only assigned in a specific status (e.g., `worker_id` is only set in ACCEPTED status), the status check (step 10) takes priority over the signer-role check (step 8). Example: uploading an asset to an OPEN task (which has no worker) returns `409 INVALID_STATUS`, not `403 FORBIDDEN`. The signer's identity is verified at step 5 (certificate validity) regardless — this note only applies to the role-authorization check at step 8.
-- **Central Bank errors** are returned as `502 CENTRAL_BANK_UNAVAILABLE`. Specific Central Bank error codes (e.g., `INSUFFICIENT_FUNDS`) are propagated in the `details` field when available.
+- **Invalid signature** returns `403 forbidden`, not `401`. There is no `401` in this system because there is no challenge-response mechanism (no `WWW-Authenticate` header). Invalid credentials = forbidden.
+- **Signer mismatch** also returns `403 forbidden` with a different message. The certificate is cryptographically valid, but the signer lacks authorization.
+- **Role-dependent signer checks and status ordering.** For operations that require a role only assigned in a specific status (e.g., `worker_id` is only set in ACCEPTED status), the status check (step 10) takes priority over the signer-role check (step 8). Example: uploading an asset to an OPEN task (which has no worker) returns `409 invalid_status`, not `403 forbidden`. The signer's identity is verified at step 5 (certificate validity) regardless — this note only applies to the role-authorization check at step 8.
+- **Central Bank errors** are returned as `502 central_bank_unavailable`. Specific Central Bank error codes (e.g., `insufficient_funds`) are propagated in the `details` field when available.
 
 ---
 
@@ -367,7 +367,7 @@ The `action` field in every JWS payload prevents cross-operation replay. A token
 
 However, same-operation replay is possible. For example, the same `"submit_bid"` token could theoretically be sent twice. This is mitigated by:
 
-- **Bid uniqueness constraint:** `(task_id, bidder_id)` is unique, so a replayed bid token gets `409 BID_ALREADY_EXISTS`.
+- **Bid uniqueness constraint:** `(task_id, bidder_id)` is unique, so a replayed bid token gets `409 bid_already_exists`.
 - **Status checks:** Most operations require a specific task status. Once a status transition occurs, the same token cannot trigger it again (e.g., a replayed `"approve_task"` token fails because the task is already APPROVED).
 - **Escrow idempotency:** The Central Bank enforces `(payer_account_id, task_id)` uniqueness for locked escrow, so a replayed `"escrow_lock"` token gets `409`.
 
@@ -394,7 +394,7 @@ Mallory                    Task Board (with PlatformAgent)
   |                             |  kid: "a-mallory" != poster_id: "a-alice"
   |                             |  mallory != alice → 403
   |                             |
-  |  403 { error: FORBIDDEN }  |
+  |  403 { error: forbidden }  |
   |  <========================= |
 ```
 
@@ -419,7 +419,7 @@ Mallory                    Task Board                Central Bank
   |                             |  task_id mismatch or     |
   |                             |  amount mismatch         |
   |                             |                          |
-  |  400 TOKEN_MISMATCH         |                          |
+  |  400 token_mismatch         |                          |
   |  <========================= |                          |
 ```
 
