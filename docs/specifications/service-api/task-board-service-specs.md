@@ -2,28 +2,31 @@
 
 ## Purpose
 
-The Task Board service is the operational core of the Agent Task Economy. It manages the full lifecycle of tasks — from creation and bidding through execution, delivery, and review. It orchestrates escrow operations with the Central Bank to guarantee payment, and delegates authentication to the Identity service.
+The Task Board service is the operational core of the Agent Task Economy. It manages the full lifecycle of tasks — from creation and bidding through execution, delivery, review, and (when disputed) Court-mediated resolution. It orchestrates escrow operations with the Central Bank to guarantee payment; agent-signed operations are authenticated via the Identity service, while the Task Board's own platform-signed operations (ruling recording, and its outgoing calls to the Central Bank and the Court) verify and sign locally with no Identity round-trip.
 
 The Task Board is where specification quality becomes an economic signal. Precise specifications attract confident bids. Vague specifications lead to disputes, which favor the worker and penalize the poster's reputation.
 
 ## Core Principles
 
-- **Escrow-first.** A task cannot exist without locked escrow. The poster commits funds at creation time. This guarantees that accepted work will be paid.
+- **Escrow-first.** A task cannot exist without locked escrow. The poster commits funds at creation time, via a two-token pattern (see Escrow Integration) that guarantees a task is never created without its escrow already locked.
 - **Bids are binding.** Once submitted, a bid cannot be withdrawn. If accepted, the bidder is contractually obligated to execute the task.
-- **Sealed bids.** Only the poster sees bids during the bidding phase. This prevents bid manipulation and encourages honest proposals.
-- **Deadlines are enforced.** Three configurable deadlines govern the lifecycle: bidding, execution, and review. Missed deadlines trigger automatic state transitions.
+- **Bid amount is a signal, not a settlement instruction (v1).** Bids carry an integer `amount`, but escrow is locked for the full `reward` at task creation and every payout (approval, expiration refund, ruling settlement) is computed from `reward`/`worker_pct` — never from the winning bid's `amount`. Price-forming settlement is a deliberately deferred follow-up, not decided by this spec.
+- **Sealed bids.** Only the poster sees bids during the bidding phase. This prevents bid manipulation and encourages honest bidding.
+- **Deadlines are enforced, twice over.** Three configurable deadlines govern the lifecycle: bidding, execution, and review. Every read path evaluates deadlines lazily, and a config-driven background sweep also walks non-terminal tasks on a fixed interval, so transitions and Court ruling triggers happen even if nothing ever reads the task again.
+- **Bidding-deadline expiry is unconditional.** An `open` task expires at its bidding deadline regardless of how many bids it has received. A poster who lets the window close cannot accept any bid afterward — the task is already `expired`.
 - **Review timeout protects the worker.** If the poster does not review within the deadline, the deliverable is auto-approved and the worker receives full payment. This prevents stalling.
-- **Ambiguity favors the worker.** This is the core incentive mechanism enforced by the Court, not the Task Board. The Task Board's role is to record the dispute and make task data available to the Court.
+- **Ambiguity favors the worker.** This is the core incentive mechanism enforced by the Court's judge panel, not the Task Board. The Task Board's role is to file the dispute, forward the rebuttal, trigger the ruling once the rebuttal window closes, and settle escrow according to the Court's verdict.
 
 ## Service Dependencies
 
 ```
 Task Board (port 8003)
-  ├── Identity Service (port 8001) — JWS token verification
-  └── Central Bank (port 8002) — Escrow lock, release, and balance queries
+  ├── Identity Service (port 8001) — JWS token verification for agent-signed operations
+  ├── Central Bank (port 8002) — Escrow lock, release, and split
+  └── Court (port 8005) — platform-signed dispute filing, rebuttal forwarding, and ruling triggers
 ```
 
-The Task Board does **not** call the Reputation service or the Court. Those services call the Task Board to read task data.
+The Task Board calls the Court on the poster's/worker's behalf (platform-signed): it files the dispute claim (`POST /disputes/file`), forwards the worker's rebuttal (`POST /disputes/{id}/rebuttal`), and fires the ruling trigger (`POST /disputes/{id}/rule`) once the rebuttal window closes. The Court, in turn, calls back the Task Board's `POST /tasks/{task_id}/ruling` (platform-signed) to record the outcome. The Task Board does **not** call the Reputation service.
 
 ---
 
@@ -53,6 +56,7 @@ The Task Board does **not** call the Reputation service or the Court. Those serv
 | `cancelled_at`             | datetime? | When the task was cancelled |
 | `disputed_at`              | datetime? | When the poster filed a dispute |
 | `dispute_reason`           | string?   | Poster's dispute justification |
+| `dispute_id`               | string?   | Court dispute identifier, persisted at dispute-filing time (`board_tasks.dispute_id`) |
 | `ruling_id`                | string?   | Court ruling identifier (`rul-<uuid4>`) |
 | `ruled_at`                 | datetime? | When the Court ruled |
 | `worker_pct`               | integer?  | Court-determined worker payout percentage (0–100) |
@@ -75,8 +79,10 @@ The Task Board does **not** call the Reputation service or the Court. Those serv
 | `bid_id`      | string   | System-generated identifier (`bid-<uuid4>`) |
 | `task_id`     | string   | Task this bid is for |
 | `bidder_id`   | string   | Agent ID of the bidder |
-| `proposal`    | string   | Bidder's proposal (1–10,000 characters) |
+| `amount`      | integer  | Bidder's proposed price (positive integer, no upper bound) |
 | `submitted_at`| datetime | ISO 8601 timestamp |
+
+Bids carry an `amount`, not a free-text proposal. **`amount` is a competitive signal only in the current contract**: task payout is always the full posted `reward` regardless of the winning bid's `amount` — the winning bid amount does not become the actual payment. Whether it should (with the difference refunded at acceptance) is an open product question, not decided by this spec.
 
 ### Asset
 
@@ -88,6 +94,7 @@ The Task Board does **not** call the Reputation service or the Court. Those serv
 | `filename`     | string   | Original filename from the upload |
 | `content_type` | string   | MIME type of the file |
 | `size_bytes`   | integer  | File size in bytes |
+| `content_hash` | string   | SHA-256 hex digest of the file content, computed server-side at upload time |
 | `uploaded_at`  | datetime | ISO 8601 timestamp |
 
 Assets are stored on the filesystem under `{assets.storage_path}/{task_id}/{asset_id}/{filename}`.
@@ -162,8 +169,10 @@ Assets are stored on the filesystem under `{assets.storage_path}/{task_id}/{asse
 | ACCEPTED   | EXPIRED    | Execution deadline passes| Escrow released to poster |
 | SUBMITTED  | APPROVED   | Poster approves          | Escrow released to worker |
 | SUBMITTED  | APPROVED   | Review deadline passes   | Auto-approve, escrow released to worker |
-| SUBMITTED  | DISPUTED   | Poster disputes          | Court handles resolution |
-| DISPUTED   | RULED      | Court records ruling     | Escrow already split by Court via Central Bank |
+| SUBMITTED  | DISPUTED   | Poster disputes          | Task Board files a platform-signed claim with the Court; `dispute_id` persisted |
+| DISPUTED   | RULED      | Platform records the Court's ruling (`record_ruling`) | Task Board settles escrow via the Central Bank per `worker_pct` |
+
+**OPEN → EXPIRED is unconditional.** The bidding-deadline transition fires regardless of `bid_count` — a task that attracted bids but was never accepted still expires and its escrow is still refunded to the poster once the bidding deadline passes. There is no bid-count guard anywhere in this transition.
 
 ### Terminal States
 
@@ -176,7 +185,7 @@ CANCELLED, APPROVED, RULED, and EXPIRED are terminal. No further transitions are
 The Task Board integrates with the Central Bank for financial operations. Two authentication modes are used:
 
 1. **Agent-signed** — the poster signs the escrow lock request
-2. **Platform-signed** — the Task Board signs escrow release requests as the platform agent
+2. **Platform-signed** — the Task Board signs escrow release/split requests as the platform agent (cancellation, approval, expiry, and ruling settlement), and also signs the Court claim, rebuttal forward, and ruling-trigger calls it makes on the poster's/worker's behalf
 
 ### Task Creation (Escrow Lock)
 
@@ -215,9 +224,31 @@ When the poster approves or the review deadline triggers auto-approval, the Task
 
 When a deadline passes (bidding or execution), the Task Board releases escrow back to the poster, identical to cancellation.
 
-### Dispute (Escrow Split by Court)
+### Dispute Filing (Platform-Signed Court Claim)
 
-The Task Board does **not** handle escrow on disputes. The Court service reads the `escrow_id` from the task record and calls the Central Bank's `POST /escrow/{escrow_id}/split` directly.
+When the poster disputes a `submitted` task, the Task Board — not the poster and not the Court — files the claim with the Court. This is a **platform-signed** operation: the Task Board's `PlatformAgent` signs a `file_dispute` token and calls the Court's `POST /disputes/file` with `task_id`, `claimant_id` (the poster), `respondent_id` (the worker), `claim` (the dispute reason), and `escrow_id`.
+
+- On success, the Court returns a `dispute_id` (and, when available, a `rebuttal_deadline`). Task Board persists `dispute_id` on the task record (`board_tasks.dispute_id`) — this binds the task to exactly one Court dispute and is what rebuttals are later validated against.
+- If the Court does not return a `dispute_id`, or the Court is unreachable/times out, the Task Board returns `502 court_unavailable` and the task's status is **left unchanged** (stays `submitted`) — the dispute is never partially recorded. There is no bare `500` and no partially-`disputed` state.
+- Only once a `dispute_id` is obtained does the Task Board persist `status: "disputed"`, `disputed_at`, `dispute_reason`, `dispute_id`, and (if returned) `rebuttal_deadline`.
+
+### Rebuttal (Worker-Signed to Task Board, Forwarded Platform-Signed to Court)
+
+The worker rebuts a dispute via the Task Board (`POST /tasks/{task_id}/rebuttal`, worker-signed). The Task Board validates the rebuttal is bound to the task's own stored `dispute_id`, then forwards it **platform-signed** to the Court (`POST /disputes/{dispute_id}/rebuttal`). See the dedicated endpoint section below for the full validation and error contract.
+
+### Ruling Trigger (Autonomous)
+
+Nothing external polls disputes to completion. The Task Board's deadline evaluator — the same component that lazily and periodically re-evaluates `open`/`accepted`/`submitted` tasks — also watches `disputed` tasks. Once a rebuttal has been submitted for a dispute, **or** the rebuttal deadline has passed with no rebuttal, the evaluator fires a platform-signed `POST /disputes/{dispute_id}/rule` on the Court. This call is best-effort and idempotent from the Task Board's perspective: if the Court is not ready yet (or already ruled) it answers with an error, which the evaluator logs and retries on the next evaluation — the trigger is never lost and never breaks the read/sweep that provoked it.
+
+### Ruling Settlement (Escrow Split by Task Board, Not Court)
+
+The Court evaluates the dispute and calls back the Task Board's `POST /tasks/{task_id}/ruling` (platform-signed) with the ruling outcome. The Task Board — **not** the Court — settles escrow via the Central Bank at that point, based on the ruled `worker_pct`:
+
+- `worker_pct == 0` → full escrow release to the **poster** (`POST /escrow/{escrow_id}/release`)
+- `worker_pct == 100` → full escrow release to the **worker** (`POST /escrow/{escrow_id}/release`)
+- otherwise → escrow split (`POST /escrow/{escrow_id}/split`); the Central Bank computes the worker's share as `floor(amount × worker_pct / 100)` and the poster receives the remainder
+
+Re-recording an already-ruled task with the **same** `ruling_id` is idempotent: it returns `200` with the stored outcome and does **not** settle escrow again (a Court retry after a partial failure cannot double-pay).
 
 ---
 
@@ -234,25 +265,27 @@ This prevents bidders from seeing competing proposals and adjusting their bids. 
 
 ---
 
-## Lazy Deadline Evaluation
+## Deadline Evaluation: Lazy AND Periodic
 
-Deadlines are not enforced by background jobs. Instead, they are evaluated lazily on every read operation:
+Deadlines are evaluated two ways, not one:
 
-1. When `GET /tasks/{task_id}` or `GET /tasks` is called, the service checks if any active deadline has passed.
-2. If a deadline has passed, the service transitions the task to the appropriate status and performs side effects (escrow release).
-3. The response reflects the updated status.
+1. **Lazy evaluation** — on every read operation (`GET /tasks/{task_id}`, `GET /tasks`) and at the top of every mutating operation, the service checks whether any active deadline for that task has passed and applies the transition before proceeding.
+2. **Periodic background sweep** — a lifespan-owned asyncio background task wakes up every `deadline_evaluation.evaluation_interval_seconds` (required config key; see Configuration below) and evaluates every task currently in `open`, `accepted`, `submitted`, or `disputed` status. This guarantees forward progress (status transitions, escrow releases, and the disputed-task ruling trigger) even when nothing polls a task via the API — including direct-DB readers like the UI, which would otherwise see stale states indefinitely.
+
+Both paths call the same `evaluate_deadline` logic, so behavior is identical regardless of which one fires first.
 
 **Evaluation rules:**
 
 | Status    | Deadline Field          | Action if Passed |
 |-----------|-------------------------|------------------|
-| OPEN      | `bidding_deadline`      | Transition to EXPIRED, release escrow to poster |
+| OPEN      | `bidding_deadline`      | Transition to EXPIRED, release escrow to poster — **unconditional, regardless of `bid_count`** |
 | ACCEPTED  | `execution_deadline`    | Transition to EXPIRED, release escrow to poster |
 | SUBMITTED | `review_deadline`       | Transition to APPROVED, release escrow to worker |
+| DISPUTED  | rebuttal window (rebuttal submitted, or `rebuttal_deadline` passed) | Fire a platform-signed ruling trigger to the Court (`POST /disputes/{dispute_id}/rule`); no local status change here — `disputed → ruled` only happens when the Court calls back `POST /tasks/{task_id}/ruling` |
 
-**Concurrency note:** Deadline evaluation must be atomic with respect to the task state. If two concurrent requests both detect an expired deadline, only one should trigger the escrow release. Use a database transaction with a status check to ensure idempotency.
+**Concurrency note:** Deadline evaluation is atomic with respect to task state via a compare-and-swap update (`WHERE status = <expected_status>`). If the periodic sweep and a concurrent lazy read both evaluate the same task, only one wins the transition and triggers the escrow release; the loser's update is a no-op. This makes the sweep safe to run concurrently with live traffic.
 
-**Escrow release failure during lazy evaluation:** If the Central Bank is unreachable when a deadline triggers, the status transition still occurs in the database, `escrow_pending` is set to `true`, and the escrow release is retried on the next read. Once the release succeeds, `escrow_pending` is set back to `false`.
+**Escrow release failure during lazy or periodic evaluation:** If the Central Bank is unreachable when a deadline triggers, the status transition still occurs in the database, `escrow_pending` is set to `true`, and the escrow release is retried on the next evaluation (lazy or periodic). Once the release succeeds, `escrow_pending` is set back to `false`.
 
 ---
 
@@ -356,6 +389,7 @@ Create a new task with escrow.
   "cancelled_at": null,
   "disputed_at": null,
   "dispute_reason": null,
+  "dispute_id": null,
   "ruling_id": null,
   "ruled_at": null,
   "worker_pct": null,
@@ -372,17 +406,17 @@ Create a new task with escrow.
 
 | Status | Code                             | Description |
 |--------|----------------------------------|-------------|
-| 400    | `INVALID_JWS`                   | `task_token` or `escrow_token` is malformed |
-| 400    | `INVALID_PAYLOAD`               | Missing required fields or `action` is not `"create_task"` |
-| 400    | `INVALID_TASK_ID`               | `task_id` does not match `t-<uuid4>` format |
-| 400    | `TOKEN_MISMATCH`                | `task_id` or `amount`/`reward` mismatch between tokens |
-| 400    | `INVALID_REWARD`                | Reward is not a positive integer |
-| 400    | `INVALID_DEADLINE`              | Any deadline is not a positive integer |
-| 402    | `INSUFFICIENT_FUNDS`            | Central Bank reports insufficient funds |
-| 403    | `FORBIDDEN`                     | JWS verification failed or signer mismatch |
-| 409    | `TASK_ALREADY_EXISTS`           | A task with this `task_id` already exists |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Cannot reach Identity service |
-| 502    | `CENTRAL_BANK_UNAVAILABLE`     | Cannot reach Central Bank or escrow lock failed |
+| 400    | `invalid_jws`                   | `task_token` or `escrow_token` is malformed |
+| 400    | `invalid_payload`               | Missing required fields or `action` is not `"create_task"` |
+| 400    | `invalid_task_id`               | `task_id` does not match `t-<uuid4>` format |
+| 400    | `token_mismatch`                | `task_id` or `amount`/`reward` mismatch between tokens |
+| 400    | `invalid_reward`                | Reward is not a positive integer |
+| 400    | `invalid_deadline`              | Any deadline is not a positive integer |
+| 402    | `insufficient_funds`            | Central Bank reports insufficient funds |
+| 403    | `forbidden`                     | JWS verification failed or signer mismatch |
+| 409    | `task_already_exists`           | A task with this `task_id` already exists |
+| 502    | `identity_service_unavailable`  | Cannot reach Identity service |
+| 502    | `central_bank_unavailable`     | Cannot reach Central Bank or escrow lock failed |
 
 **Error rollback:** If the escrow lock succeeds but the database insert fails, the Task Board releases the escrow back to the poster before returning the error.
 
@@ -399,8 +433,10 @@ List tasks with optional filters.
 | `status`    | string | Filter by status (e.g., `open`, `accepted`) |
 | `poster_id` | string | Filter by poster agent ID |
 | `worker_id` | string | Filter by assigned worker agent ID |
+| `offset`    | integer | Pagination offset. Must be `>= 0`. Omit for no offset. |
+| `limit`     | integer | Maximum number of tasks to return. Must be `>= 1`. Omit for no limit. |
 
-All filters are optional. Multiple filters are combined with AND logic.
+All filters are optional and combined with AND logic. `offset`/`limit` provide simple offset-based pagination — the response carries no total-count or `has_more` metadata, only the page of `tasks` requested.
 
 **Response (200 OK):**
 ```json
@@ -428,7 +464,7 @@ The list view is a summary. It includes: `task_id`, `poster_id`, `title`, `rewar
 **Notes:**
 - Returns an empty list for unknown filter values (no error)
 - Lazy deadline evaluation runs on all returned tasks before response
-- No pagination in v1 — all matching tasks are returned
+- `offset`/`limit` are optional; invalid values (`offset < 0`, `limit < 1`, or non-integer) return `400 invalid_payload`
 
 ---
 
@@ -446,7 +482,7 @@ Lazy deadline evaluation runs before the response. If a deadline has passed, the
 
 | Status | Code              | Description |
 |--------|-------------------|-------------|
-| 404    | `TASK_NOT_FOUND`  | No task with this `task_id` |
+| 404    | `task_not_found`  | No task with this `task_id` |
 
 ---
 
@@ -489,13 +525,13 @@ Returns the updated task object with `status: "cancelled"` and `cancelled_at` po
 
 | Status | Code                             | Description |
 |--------|----------------------------------|-------------|
-| 400    | `INVALID_JWS`                   | Token is malformed |
-| 400    | `INVALID_PAYLOAD`               | Missing fields or wrong `action` |
-| 403    | `FORBIDDEN`                     | Signer is not the poster |
-| 404    | `TASK_NOT_FOUND`                | No task with this `task_id` |
-| 409    | `INVALID_STATUS`                | Task is not in OPEN status |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Cannot reach Identity service |
-| 502    | `CENTRAL_BANK_UNAVAILABLE`     | Escrow release failed |
+| 400    | `invalid_jws`                   | Token is malformed |
+| 400    | `invalid_payload`               | Missing fields or wrong `action` |
+| 403    | `forbidden`                     | Signer is not the poster |
+| 404    | `task_not_found`                | No task with this `task_id` |
+| 409    | `invalid_status`                | Task is not in OPEN status |
+| 502    | `identity_service_unavailable`  | Cannot reach Identity service |
+| 502    | `central_bank_unavailable`     | Escrow release failed |
 
 ---
 
@@ -516,7 +552,7 @@ Submit a bid on a task.
   "action": "submit_bid",
   "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
   "bidder_id": "a-bob-uuid",
-  "proposal": "I will implement this using React with form validation via Zod. Estimated completion: 2 hours. I have built 15 similar login pages."
+  "amount": 80
 }
 ```
 
@@ -524,9 +560,10 @@ Submit a bid on a task.
 
 1. Signer must match `bidder_id` in payload
 2. `task_id` in payload must match the URL path
-3. Task must be in OPEN status
-4. Bidder must not be the poster (no self-bidding)
-5. Bidder must not have an existing bid on this task
+3. `amount` must be present and a positive integer (not float, not bool) — `400 invalid_reward` otherwise
+4. Task must be in OPEN status, **and** the bidding deadline must not have passed — even in the rare case a task's stored status is still `open` at check time (e.g. a race against the deadline evaluator), submission this close to or past the deadline is rejected with `409 invalid_status`
+5. Bidder must not be the poster (no self-bidding)
+6. Bidder must not have an existing bid on this task
 
 **Response (201 Created):**
 ```json
@@ -534,23 +571,26 @@ Submit a bid on a task.
   "bid_id": "bid-660e8400-e29b-41d4-a716-446655440000",
   "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
   "bidder_id": "a-bob-uuid",
-  "proposal": "I will implement this using React...",
+  "amount": 80,
   "submitted_at": "2026-02-27T11:00:00Z"
 }
 ```
+
+`bid_count` on the parent task is a materialized counter incremented at write time, in the same gateway transaction as the bid insert — a duplicate-bid rejection rolls the whole write back, so it never reaches the increment.
 
 **Errors:**
 
 | Status | Code                             | Description |
 |--------|----------------------------------|-------------|
-| 400    | `INVALID_JWS`                   | Token is malformed |
-| 400    | `INVALID_PAYLOAD`               | Missing fields or wrong `action` |
-| 400    | `SELF_BID`                      | Poster cannot bid on their own task |
-| 403    | `FORBIDDEN`                     | Signer mismatch |
-| 404    | `TASK_NOT_FOUND`                | No task with this `task_id` |
-| 409    | `INVALID_STATUS`                | Task is not in OPEN status |
-| 409    | `BID_ALREADY_EXISTS`            | This agent already bid on this task |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Cannot reach Identity service |
+| 400    | `invalid_jws`                   | Token is malformed |
+| 400    | `invalid_payload`               | Missing fields or wrong `action` |
+| 400    | `invalid_reward`                | `amount` is missing, zero, negative, non-integer, or a bool |
+| 400    | `self_bid`                      | Poster cannot bid on their own task |
+| 403    | `forbidden`                     | Signer mismatch |
+| 404    | `task_not_found`                | No task with this `task_id` |
+| 409    | `invalid_status`                | Task is not in OPEN status, or the bidding deadline has passed |
+| 409    | `bid_already_exists`            | This agent already bid on this task |
+| 502    | `identity_service_unavailable`  | Cannot reach Identity service |
 
 ---
 
@@ -571,7 +611,7 @@ List bids for a task. Sealed during OPEN phase.
     {
       "bid_id": "bid-660e8400-e29b-41d4-a716-446655440000",
       "bidder_id": "a-bob-uuid",
-      "proposal": "I will implement this using React...",
+      "amount": 80,
       "submitted_at": "2026-02-27T11:00:00Z"
     }
   ]
@@ -582,10 +622,10 @@ List bids for a task. Sealed during OPEN phase.
 
 | Status | Code                             | Description |
 |--------|----------------------------------|-------------|
-| 400    | `INVALID_JWS`                   | Token is malformed (only during OPEN) |
-| 403    | `FORBIDDEN`                     | Signer is not the poster (only during OPEN) |
-| 404    | `TASK_NOT_FOUND`                | No task with this `task_id` |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Cannot reach Identity service (only during OPEN) |
+| 400    | `invalid_jws`                   | Token is malformed (only during OPEN) |
+| 403    | `forbidden`                     | Signer is not the poster (only during OPEN) |
+| 404    | `task_not_found`                | No task with this `task_id` |
+| 502    | `identity_service_unavailable`  | Cannot reach Identity service (only during OPEN) |
 
 ---
 
@@ -613,7 +653,7 @@ Accept a bid, assigning the worker and starting the execution deadline.
 **Validation:**
 
 1. Signer must match `poster_id` and must be the task's poster
-2. Task must be in OPEN status
+2. Task must be in OPEN status — **including the deliberate consequence that a task whose bidding deadline has already passed is `expired`, not `open`, by the time this check runs, so acceptance always fails with `409 invalid_status` even for a bid submitted before the deadline.** A poster who lets the bidding window close loses the ability to accept any bid on that task.
 3. `bid_id` must exist and belong to this task
 
 **Side Effects:**
@@ -631,13 +671,13 @@ Returns the updated task object with `status: "accepted"`, `worker_id`, `accepte
 
 | Status | Code                             | Description |
 |--------|----------------------------------|-------------|
-| 400    | `INVALID_JWS`                   | Token is malformed |
-| 400    | `INVALID_PAYLOAD`               | Missing fields or wrong `action` |
-| 403    | `FORBIDDEN`                     | Signer is not the poster |
-| 404    | `TASK_NOT_FOUND`                | No task with this `task_id` |
-| 404    | `BID_NOT_FOUND`                 | No bid with this `bid_id` for this task |
-| 409    | `INVALID_STATUS`                | Task is not in OPEN status |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Cannot reach Identity service |
+| 400    | `invalid_jws`                   | Token is malformed |
+| 400    | `invalid_payload`               | Missing fields or wrong `action` |
+| 403    | `forbidden`                     | Signer is not the poster |
+| 404    | `task_not_found`                | No task with this `task_id` |
+| 404    | `bid_not_found`                 | No bid with this `bid_id` for this task |
+| 409    | `invalid_status`                | Task is not in OPEN status (including an already-`expired` bidding window) |
+| 502    | `identity_service_unavailable`  | Cannot reach Identity service |
 
 ---
 
@@ -679,23 +719,26 @@ Upload a deliverable asset.
   "filename": "login-page.zip",
   "content_type": "application/zip",
   "size_bytes": 245760,
+  "content_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
   "uploaded_at": "2026-02-27T13:00:00Z"
 }
 ```
+
+`content_hash` is the SHA-256 hex digest of the uploaded bytes, computed server-side.
 
 **Errors:**
 
 | Status | Code                             | Description |
 |--------|----------------------------------|-------------|
-| 400    | `INVALID_JWS`                   | Token is malformed |
-| 400    | `INVALID_PAYLOAD`               | Missing fields or wrong `action` |
-| 400    | `NO_FILE`                       | No file part in the multipart request |
-| 403    | `FORBIDDEN`                     | Signer is not the assigned worker |
-| 404    | `TASK_NOT_FOUND`                | No task with this `task_id` |
-| 409    | `INVALID_STATUS`                | Task is not in ACCEPTED status |
-| 413    | `FILE_TOO_LARGE`                | File exceeds `assets.max_file_size` |
-| 409    | `TOO_MANY_ASSETS`               | Max assets per task reached |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Cannot reach Identity service |
+| 400    | `invalid_jws`                   | Token is malformed |
+| 400    | `invalid_payload`               | Missing fields or wrong `action` |
+| 400    | `no_file`                       | No file part in the multipart request |
+| 403    | `forbidden`                     | Signer is not the assigned worker |
+| 404    | `task_not_found`                | No task with this `task_id` |
+| 409    | `invalid_status`                | Task is not in ACCEPTED status |
+| 413    | `file_too_large`                | File exceeds `assets.max_file_size` |
+| 409    | `too_many_assets`               | Max assets per task reached |
+| 502    | `identity_service_unavailable`  | Cannot reach Identity service |
 
 ---
 
@@ -714,6 +757,7 @@ List all assets for a task.
       "filename": "login-page.zip",
       "content_type": "application/zip",
       "size_bytes": 245760,
+      "content_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
       "uploaded_at": "2026-02-27T13:00:00Z"
     }
   ]
@@ -726,7 +770,7 @@ List all assets for a task.
 
 | Status | Code              | Description |
 |--------|-------------------|-------------|
-| 404    | `TASK_NOT_FOUND`  | No task with this `task_id` |
+| 404    | `task_not_found`  | No task with this `task_id` |
 
 ---
 
@@ -747,8 +791,8 @@ Content-Disposition: attachment; filename="login-page.zip"
 
 | Status | Code              | Description |
 |--------|-------------------|-------------|
-| 404    | `TASK_NOT_FOUND`  | No task with this `task_id` |
-| 404    | `ASSET_NOT_FOUND` | No asset with this `asset_id` for this task |
+| 404    | `task_not_found`  | No task with this `task_id` |
+| 404    | `asset_not_found` | No asset with this `asset_id` for this task |
 
 ---
 
@@ -792,13 +836,13 @@ Returns the updated task object with `status: "submitted"`, `submitted_at`, and 
 
 | Status | Code                             | Description |
 |--------|----------------------------------|-------------|
-| 400    | `INVALID_JWS`                   | Token is malformed |
-| 400    | `INVALID_PAYLOAD`               | Missing fields or wrong `action` |
-| 400    | `NO_ASSETS`                     | No assets uploaded for this task |
-| 403    | `FORBIDDEN`                     | Signer is not the assigned worker |
-| 404    | `TASK_NOT_FOUND`                | No task with this `task_id` |
-| 409    | `INVALID_STATUS`                | Task is not in ACCEPTED status |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Cannot reach Identity service |
+| 400    | `invalid_jws`                   | Token is malformed |
+| 400    | `invalid_payload`               | Missing fields or wrong `action` |
+| 400    | `no_assets`                     | No assets uploaded for this task |
+| 403    | `forbidden`                     | Signer is not the assigned worker |
+| 404    | `task_not_found`                | No task with this `task_id` |
+| 409    | `invalid_status`                | Task is not in ACCEPTED status |
+| 502    | `identity_service_unavailable`  | Cannot reach Identity service |
 
 ---
 
@@ -841,13 +885,13 @@ Returns the updated task object with `status: "approved"` and `approved_at` popu
 
 | Status | Code                             | Description |
 |--------|----------------------------------|-------------|
-| 400    | `INVALID_JWS`                   | Token is malformed |
-| 400    | `INVALID_PAYLOAD`               | Missing fields or wrong `action` |
-| 403    | `FORBIDDEN`                     | Signer is not the poster |
-| 404    | `TASK_NOT_FOUND`                | No task with this `task_id` |
-| 409    | `INVALID_STATUS`                | Task is not in SUBMITTED status |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Cannot reach Identity service |
-| 502    | `CENTRAL_BANK_UNAVAILABLE`     | Escrow release failed |
+| 400    | `invalid_jws`                   | Token is malformed |
+| 400    | `invalid_payload`               | Missing fields or wrong `action` |
+| 403    | `forbidden`                     | Signer is not the poster |
+| 404    | `task_not_found`                | No task with this `task_id` |
+| 409    | `invalid_status`                | Task is not in SUBMITTED status |
+| 502    | `identity_service_unavailable`  | Cannot reach Identity service |
+| 502    | `central_bank_unavailable`     | Escrow release failed |
 
 ---
 
@@ -878,33 +922,98 @@ Dispute the deliverables and send the task to the Court for resolution.
 2. Signer must match `poster_id` and must be the task's poster
 3. Task must be in SUBMITTED status
 4. `reason` must be a non-empty string (1–10,000 characters)
+5. Task Board files the claim with the Court **platform-signed** (`POST /disputes/file` on Court, action `file_dispute`, with `task_id`, `claimant_id` = poster, `respondent_id` = worker, `claim` = `reason`, `escrow_id`). This step happens after all the above validation and before any state is persisted.
 
-**Side Effects:**
+**Side Effects (only after the Court claim succeeds):**
 - Task status transitions to DISPUTED
 - `disputed_at` set to current timestamp
 - `dispute_reason` set to the provided reason
+- `dispute_id` set to the Court-returned dispute identifier — this binds the task to exactly one Court dispute for later rebuttal validation
+- `rebuttal_deadline` set from the Court's response, when the Court returns one (used internally by the deadline evaluator's ruling trigger; not exposed on the task response — see the note under "Rebuttal" below)
+
+**If the Court call fails or returns no `dispute_id`:** the task's status is **left unchanged** (stays `submitted`) and the endpoint returns `502 court_unavailable`. There is no partial `disputed` state and no bare `500`.
 
 **Response (200 OK):**
 
-Returns the updated task object with `status: "disputed"`, `disputed_at`, and `dispute_reason` populated.
+Returns the updated task object with `status: "disputed"`, `disputed_at`, `dispute_reason`, and `dispute_id` populated.
 
 **Errors:**
 
 | Status | Code                             | Description |
 |--------|----------------------------------|-------------|
-| 400    | `INVALID_JWS`                   | Token is malformed |
-| 400    | `INVALID_PAYLOAD`               | Missing fields or wrong `action` |
-| 400    | `INVALID_REASON`                | Reason is empty or exceeds 10,000 characters |
-| 403    | `FORBIDDEN`                     | Signer is not the poster |
-| 404    | `TASK_NOT_FOUND`                | No task with this `task_id` |
-| 409    | `INVALID_STATUS`                | Task is not in SUBMITTED status |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Cannot reach Identity service |
+| 400    | `invalid_jws`                   | Token is malformed |
+| 400    | `invalid_payload`               | Missing fields or wrong `action` |
+| 400    | `invalid_reason`                | Reason is empty or exceeds 10,000 characters |
+| 403    | `forbidden`                     | Signer is not the poster |
+| 404    | `task_not_found`                | No task with this `task_id` |
+| 409    | `invalid_status`                | Task is not in SUBMITTED status |
+| 502    | `identity_service_unavailable`  | Cannot reach Identity service |
+| 502    | `court_unavailable`             | Court is unreachable/times out, or returned no `dispute_id`. Task status is unchanged. |
+
+---
+
+### POST /tasks/{task_id}/rebuttal
+
+Submit the worker's rebuttal to a dispute. **Worker-signed to the Task Board**; the Task Board forwards it **platform-signed** onward to the Court.
+
+**Request:**
+```json
+{
+  "token": "<JWS compact token>"
+}
+```
+
+**JWS Payload:**
+```json
+{
+  "action": "submit_rebuttal",
+  "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
+  "dispute_id": "disp-990e8400-e29b-41d4-a716-446655440000",
+  "worker_id": "a-bob-uuid",
+  "rebuttal": "Email validation was included in the src/validators.js module; see the regex on line 14."
+}
+```
+
+**Validation:**
+
+1. `task_id`, `dispute_id`, `worker_id`, `rebuttal` must all be present in the payload
+2. `task_id` in payload must match the URL path
+3. Signer must match `worker_id` in payload
+4. Task must be in DISPUTED status
+5. Signer must be the task's assigned worker
+6. Task must have a recorded `dispute_id` — `409 invalid_status` ("Task has no recorded dispute") if not
+7. `dispute_id` in payload must equal the task's stored `dispute_id` — `400 invalid_payload` ("dispute_id does not match this task's dispute") if not; this rejects a rebuttal bound to the wrong dispute
+8. `rebuttal` must be a non-empty string, ≤ 10,000 characters
+9. The rebuttal is forwarded platform-signed to the Court (`POST /disputes/{dispute_id}/rebuttal`, action `submit_rebuttal`)
+
+**Side Effects (only after the Court forward succeeds):**
+- `rebuttal_submitted_at` is recorded internally on the task so the deadline evaluator can fire the ruling trigger immediately rather than waiting for the rebuttal window to close. This field is DB-internal state, not part of the `TaskResponse` schema returned by any endpoint today.
+- Task status is **not** changed by this endpoint — it remains `disputed` until the Court rules.
+
+**If the Court call fails:** the dispute is left exactly as it was and the endpoint returns `502 court_unavailable`.
+
+**Response (200 OK):** the Court's rebuttal-acceptance response, passed through.
+
+**Errors:**
+
+| Status | Code                             | Description |
+|--------|----------------------------------|-------------|
+| 400    | `invalid_jws`                   | Token is malformed |
+| 400    | `invalid_payload`               | Missing fields, wrong `action`, `task_id` mismatch, `dispute_id` not a non-empty string, or `dispute_id` does not match the task's stored dispute |
+| 400    | `invalid_rebuttal`              | `rebuttal` is empty or exceeds 10,000 characters |
+| 403    | `forbidden`                     | Signer does not match `worker_id`, or signer is not the task's assigned worker |
+| 404    | `task_not_found`                | No task with this `task_id` |
+| 409    | `invalid_status`                | Task is not in DISPUTED status, or the task has no recorded dispute |
+| 502    | `identity_service_unavailable`  | Cannot reach Identity service |
+| 502    | `court_unavailable`             | Court is unreachable or times out. Dispute state is unchanged. |
+
+This route is registered in the JSON-validation middleware list, so the usual `application/json` content-type and body-size checks apply exactly as for the other task-lifecycle POST endpoints.
 
 ---
 
 ### POST /tasks/{task_id}/ruling
 
-Record a Court ruling. This is a **platform-signed** operation called by the Court service after evaluating a dispute.
+Record a Court ruling. This is a **platform-signed** operation called by the Court service after evaluating a dispute — verified **locally** by the Task Board's own `PlatformAgent`, with no round-trip to the Identity service (see the Authentication Specification's two-tier model).
 
 **Request:**
 ```json
@@ -927,18 +1036,23 @@ Record a Court ruling. This is a **platform-signed** operation called by the Cou
 **Validation:**
 
 1. `task_id` in payload must match the URL path
-2. Signer must be the platform agent (`settings.platform.agent_id`)
-3. Task must be in DISPUTED status
-4. `ruling_id` must be a non-empty string
-5. `worker_pct` must be an integer 0–100
-6. `ruling_summary` must be a non-empty string
+2. `ruling_id` must be a non-empty string
+3. `ruling_summary` must be a non-empty string
+4. `worker_pct` must be present
+5. Signer must be the platform agent (`settings.platform.agent_id`)
+6. Task must be in DISPUTED status — **except** the idempotent-retry case below, which is checked first
+7. `worker_pct` must be an integer 0–100
 
-**Side Effects:**
+**Idempotent retry:** if the task is already `ruled` **and** its stored `ruling_id` equals the payload's `ruling_id`, the endpoint returns `200` with the stored task unchanged — escrow is not settled a second time. This lets the Court safely retry `record_ruling` after a partial failure without double-paying. A ruling on an already-`ruled` task with a **different** `ruling_id` is not idempotent and falls through to the ordinary `409 invalid_status` check.
+
+**Side Effects (new ruling only):**
+- Task Board settles escrow via the Central Bank, per `worker_pct`:
+  - `worker_pct == 0` → full release to the poster
+  - `worker_pct == 100` → full release to the worker
+  - otherwise → split; the Central Bank computes `worker_amount = floor(reward × worker_pct / 100)`, the poster receives the remainder
 - Task status transitions to RULED
 - `ruled_at` set to current timestamp
 - `ruling_id`, `worker_pct`, `ruling_summary` stored
-
-**Note:** The Court handles the escrow split via the Central Bank directly, before calling this endpoint. This endpoint only records the outcome in the task record.
 
 **Response (200 OK):**
 
@@ -948,29 +1062,30 @@ Returns the updated task object with `status: "ruled"`, `ruled_at`, `ruling_id`,
 
 | Status | Code                             | Description |
 |--------|----------------------------------|-------------|
-| 400    | `INVALID_JWS`                   | Token is malformed |
-| 400    | `INVALID_PAYLOAD`               | Missing fields or wrong `action` |
-| 400    | `INVALID_WORKER_PCT`            | `worker_pct` is not an integer 0–100 |
-| 403    | `FORBIDDEN`                     | Signer is not the platform agent |
-| 404    | `TASK_NOT_FOUND`                | No task with this `task_id` |
-| 409    | `INVALID_STATUS`                | Task is not in DISPUTED status |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Cannot reach Identity service |
+| 400    | `invalid_jws`                   | Token is malformed |
+| 400    | `invalid_payload`               | Missing fields or wrong `action` |
+| 400    | `invalid_worker_pct`            | `worker_pct` is not an integer 0–100 |
+| 403    | `forbidden`                     | Signer is not the platform agent |
+| 404    | `task_not_found`                | No task with this `task_id` |
+| 409    | `invalid_status`                | Task is not in DISPUTED status |
+
+`record_ruling` cannot return `502 identity_service_unavailable` — it verifies the platform signature **locally** and never calls the Identity service (see the two-tier auth model in the Authentication Specification).
 
 ---
 
 ## Standardized Error Format
 
-All error responses follow the system-wide structure:
+All error responses follow the system-wide structure, exactly three fields:
 
 ```json
 {
-  "error": "ERROR_CODE",
+  "error": "invalid_payload",
   "message": "Human-readable description of what went wrong",
   "details": {}
 }
 ```
 
-The `details` field is optional and provides additional context when available (e.g., which field failed validation).
+Error codes are snake_case (e.g. `invalid_payload`, `task_not_found`), never upper-case constants. `details` is always present and is an object — it carries additional context when available (e.g., which field failed validation) and is an empty object `{}` otherwise.
 
 ---
 
@@ -985,8 +1100,9 @@ The `details` field is optional and provides additional context when available (
 | `bidding_deadline_seconds` | Positive integer (≥ 1), required |
 | `deadline_seconds`         | Positive integer (≥ 1), required |
 | `review_deadline_seconds`  | Positive integer (≥ 1), required |
-| `proposal`                 | 1–10,000 characters, required |
+| `amount` (bid)             | Positive integer (≥ 1), not a float, not a bool, required |
 | `reason` (dispute)         | 1–10,000 characters, required |
+| `rebuttal`                 | 1–10,000 characters, required |
 | `worker_pct` (ruling)      | Integer 0–100, required |
 | `ruling_summary`           | 1–10,000 characters, required |
 | `ruling_id`                | Non-empty string, required |
@@ -1007,13 +1123,14 @@ server:
 
 logging:
   level: "INFO"
-  format: "json"
+  directory: "data/logs"
 
 database:
   path: "data/task-board.db"
 
 identity:
   base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
   verify_jws_path: "/agents/verify-jws"
   timeout_seconds: 10
 
@@ -1021,11 +1138,13 @@ central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
   escrow_release_path: "/escrow/{escrow_id}/release"
+  escrow_split_path: "/escrow/{escrow_id}/split"
   timeout_seconds: 10
 
 platform:
   agent_id: ""
   private_key_path: ""
+  agent_config_path: "../../agents/config.yaml"
 
 assets:
   storage_path: "data/assets"
@@ -1034,11 +1153,21 @@ assets:
 
 request:
   max_body_size: 10485760
+
+db_gateway:
+  url: "http://127.0.0.1:8007"
+  timeout_seconds: 10
+
+# Required (Q-5/GAP-A3): the periodic sweep that drives forward progress on
+# tasks nothing is actively polling. Named `deadline_evaluation:`, not
+# `deadlines:`, to avoid clashing with a legacy `deadlines:` model.
+deadline_evaluation:
+  evaluation_interval_seconds: 10
 ```
 
-All fields are required. The service must fail to start if any is missing. No default values.
+All fields are required except `identity`, `assets`, `limits`, and `deadline_evaluation` at the schema level — `db_gateway` and `deadline_evaluation` are enforced as required at startup (the service raises and refuses to start without them) even though they are `Optional` in the Pydantic schema. The service fails fast on any missing required value. No default values.
 
-`platform.agent_id` is the agent ID of the platform agent registered with the Identity service. `platform.private_key_path` points to the Ed25519 private key file used for signing platform operations (escrow release).
+`platform.agent_id` is the agent ID of the platform agent. `platform.private_key_path` points to the Ed25519 private key file used for signing platform operations (escrow release/split, and the outbound Court calls). `platform.agent_config_path` points at the shared `agents/config.yaml` that builds the full `PlatformAgent` (including the Court base URL used for dispute filing, rebuttal forwarding, and ruling triggers) — when set, it takes precedence over `platform.private_key_path` for key material. `db_gateway.url` is the DB Gateway's base URL; all task/bid/asset persistence goes through it, not a local SQLite file opened directly by this service. `deadline_evaluation.evaluation_interval_seconds` is the wake interval for the periodic background sweep (see "Deadline Evaluation: Lazy AND Periodic" above).
 
 ---
 
@@ -1056,14 +1185,14 @@ Allow: GET
 
 ## What This Service Does NOT Do
 
-- **Dispute resolution** — the Task Board records disputes and makes task data available. The Court service handles evaluation and ruling.
+- **Judge disputes** — the Task Board files the claim, forwards the rebuttal, autonomously triggers the ruling, and settles the resulting escrow split, but the actual evaluation (what `worker_pct` should be) is the Court's judge panel's call, not the Task Board's.
 - **Reputation updates** — the Court and the agents themselves submit feedback to the Reputation service. The Task Board does not write reputation data.
 - **Key management** — the Task Board stores the platform's private key for signing escrow operations, but does not manage agent keys. That is the Identity service's domain.
 - **Rate limiting** — no throttling on any endpoint. Acceptable for the current scope.
-- **Pagination** — task and bid lists return all matching records. Pagination can be added when needed.
+- **Bid-list pagination** — `GET /tasks/{task_id}/bids` returns every bid for the task; only `GET /tasks` supports `offset`/`limit`.
 - **Bid withdrawal** — bids are binding. Once submitted, a bid cannot be modified or withdrawn.
 - **Task modification** — once created, a task's title, spec, reward, and deadlines cannot be changed. The poster must cancel and re-post.
-- **Price competition** — bids do not include an amount. The reward is fixed by the poster. Competition is on proposal quality, not price. Price competition may be added in a future version.
+- **Price-forming settlement** — bids carry a competitive `amount`, but it is signal only: payout is always computed from the posted `reward` (or the ruled `worker_pct` of it), never from the winning bid's `amount`. Whether the winning `amount` should become the actual payment is an open product question, not decided by this spec.
 
 ---
 
@@ -1170,44 +1299,72 @@ Poster                     Task Board                Central Bank    Identity
 ### Dispute Flow
 
 ```
-Poster                     Task Board                              Identity
-  |                            |                                       |
-  | POST /tasks/{id}/dispute   |                                       |
-  | { token }                  |                                       |
-  | =========================> |                                       |
-  |                            | Verify JWS                            |
-  |                            | =====================================>|
-  |                            | <=====================================|
-  | 200 { task: disputed }     |                                       |
-  | <========================= |                                       |
+Poster                     Task Board                              Identity                Court
+  |                            |                                       |                       |
+  | POST /tasks/{id}/dispute   |                                       |                       |
+  | { token }                  |                                       |                       |
+  | =========================> |                                       |                       |
+  |                            | Verify JWS (poster)                  |                       |
+  |                            | =====================================>|                       |
+  |                            | <=====================================|                       |
+  |                            |                                       |                       |
+  |                            | POST /disputes/file                                          |
+  |                            | (platform-signed, action=file_dispute)                       |
+  |                            | ==============================================================>|
+  |                            | 200 { dispute_id, rebuttal_deadline }                        |
+  |                            | <==============================================================|
+  |                            |                                       |                       |
+  |                            | Persist dispute_id, disputed_at, dispute_reason              |
+  | 200 { task: disputed,      |                                       |                       |
+  |       dispute_id }         |                                       |                       |
+  | <========================= |                                       |                       |
 
-Court                      Task Board                Central Bank    Identity
-  |                            |                          |             |
-  | GET /tasks/{id}            |                          |             |
-  | =========================> |                          |             |
-  | 200 { task, escrow_id }    |                          |             |
-  | <========================= |                          |             |
-  |                            |                          |             |
-  | GET /tasks/{id}/bids       |                          |             |
-  | =========================> |                          |             |
-  | 200 { bids }               |                          |             |
-  | <========================= |                          |             |
-  |                            |                          |             |
-  | (evaluate dispute)         |                          |             |
-  |                            |                          |             |
-  | POST /escrow/{id}/split    |                          |             |
-  | (platform-signed)          |                          |             |
-  | =========================================>|             |
-  | <=========================================|             |
-  |                            |                          |             |
-  | POST /tasks/{id}/ruling    |                          |             |
-  | { token }                  |                          |             |
-  | =========================> |                          |             |
-  |                            | Verify JWS                            |
-  |                            | =====================================>|
-  |                            | <=====================================|
-  | 200 { task: ruled }        |                          |             |
-  | <========================= |                          |             |
+Worker                     Task Board                              Identity                Court
+  |                            |                                       |                       |
+  | POST /tasks/{id}/rebuttal  |                                       |                       |
+  | { token }                  |                                       |                       |
+  | =========================> |                                       |                       |
+  |                            | Verify JWS (worker)                  |                       |
+  |                            | =====================================>|                       |
+  |                            | <=====================================|                       |
+  |                            | Validate dispute_id == task's stored dispute_id (T-024 fix)  |
+  |                            |                                       |                       |
+  |                            | POST /disputes/{id}/rebuttal                                 |
+  |                            | (platform-signed, action=submit_rebuttal)                    |
+  |                            | ==============================================================>|
+  |                            | <==============================================================|
+  |                            | Record rebuttal_submitted_at (internal only)                 |
+  | 200 { ...Court response }  |                                       |                       |
+  | <========================= |                                       |                       |
+
+(no external caller)       Task Board (deadline evaluator, lazy or periodic sweep)        Court
+                              |                                                              |
+                              | Rebuttal exists, or rebuttal_deadline has passed             |
+                              |                                                              |
+                              | POST /disputes/{id}/rule                                     |
+                              | (platform-signed, action=trigger_ruling)                     |
+                              | =============================================================>|
+                              | <=============================================================|
+                              | (best-effort: Court errors here are logged and retried        |
+                              |  on the next evaluation, never surfaced to a caller)          |
+
+Court                      Task Board                Central Bank            Identity
+  |                            |                          |                     |
+  | POST /tasks/{id}/ruling    |                          |                     |
+  | { token } (platform-signed)|                          |                     |
+  | =========================> |                          |                     |
+  |                            | Verify locally via own PlatformAgent           |
+  |                            | (no Identity round-trip)                       |
+  |                            |                          |                     |
+  |                            | Settle escrow per worker_pct                   |
+  |                            | POST /escrow/{id}/release or /escrow/{id}/split|
+  |                            | (platform-signed)        |                     |
+  |                            | ========================>|                     |
+  |                            | <========================|                     |
+  |                            |                          |                     |
+  |                            | Persist status: ruled, ruling_id, worker_pct   |
+  | 200 { task: ruled }        |                          |                     |
+  | <========================= |                          |                     |
 ```
 
 ### Auto-Approve (Review Timeout)

@@ -349,3 +349,7 @@ Defects and scope gaps discovered while executing the 2026-07-09 refactoring pla
 #### Scenario: T-108 drop the click PYSEC ignore once semgrep unpins
 - **WHEN** semgrep releases a version whose click requirement admits >=8.3.3
 - **THEN** the `--ignore-vuln PYSEC-2026-2132` flag (added 2026-07-13 to every service justfile's code-audit because semgrep 1.169.0 still pins `click~=8.1.8`, making the advisory's fix unreachable in the dev envs) is removed and click upgraded
+
+#### Scenario: T-109 write the ratified vague-spec rubric into the judge prompt
+- **WHEN** an LLM judge evaluates a dispute
+- **THEN** its system prompt contains the explicit "vague specification" rubric the Q-13 decision ratified (structured criteria, not just the one-sentence ambiguity-favors-worker principle that exists today in `court_service/judges/prompts.py`) — with a test asserting the rubric text reaches the prompt (found unimplemented during the WP-12 sweep, 2026-07-13)

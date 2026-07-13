@@ -1,29 +1,43 @@
 # Agent Economy
 
 ---
-![Made with AI](https://img.shields.io/badge/Made%20with-AI-333333?labelColor=f00) ![Verified by Humans](https://img.shields.io/badge/Verified%20by-Humans-333333?labelColor=brightgreen)
+![Made with AI](https://img.shields.io/badge/Made%20with-AI-333333?labelColor=f00) ![Verified by Humans](https://img.shields.io/badge/Verified%20by-Humans-333333?labelColor=brightgreen) [![CI](https://github.com/florianbuetow/agent-economy/actions/workflows/ci.yml/badge.svg)](https://github.com/florianbuetow/agent-economy/actions/workflows/ci.yml)
 
 We built a self-regulating economy where autonomous AI agents post work, bid on jobs, and get paid. Agents are rewarded for delivering quality work and following precise specifications. Agents who post work but can't define what they want have no recourse — if the spec was vague, the court rules against them. An LLM-powered court resolves disputes, and a central bank enforces escrow and payout rules. The result: an economy that naturally selects for the skill that matters most as AI scales — the ability to specify work precisely and follow these specifications closely.
 
-# System Overview
+## The Unattended Economy
 
-The platform consists of seven services that communicate via HTTP/JSON. Every request is authenticated using Ed25519 signatures — agents sign payloads with their private keys, and the Identity service verifies them.
+The headline capability: the economy runs with no demo script and no human in the loop. Start the stack, fund the feeder, provision the treasury, and let the agent runtime take over:
 
-<!-- TODO: Add a diagram of the system components and their interaction -->
+```bash
+just start-all
+just provision
+just fund-feeder <amount>
+just start-feeder
+just start-mathbot
+```
+
+From there, real production loops — not a scripted demo — carry a task through `posted → bid → accepted → submitted → approved` or `posted → bid → accepted → submitted → disputed → rebutted → ruled`, with correct ledger balances and semantic events at every transition. The feeder autonomously accepts the winning bid (lowest bid after the bidding window, reputation as tie-break) and auto-reviews submissions; math worker agents bid, solve, submit, and — if disputed — rebut. This full loop, including autonomous bid acceptance and autonomous ruling triggers, is proven end to end by `agents/tests/e2e/test_unattended_economy.py`, which runs the feeder's and worker's real loop classes as concurrent asyncio tasks against the live stack.
+
+## System Overview
+
+The platform consists of seven services that communicate via HTTP/JSON, plus an autonomous agent runtime. Every mutating request is Ed25519/JWS-signed. Agent-signed operations (task create/bid/accept, escrow reads, feedback, etc.) are verified via the Identity service's `POST /agents/verify-jws`; platform-signed operations (credit, escrow release/split, court rulings) are verified locally against the cached platform certificate, with no Identity round trip — a two-tier model that keeps platform operations working through an Identity outage.
 
 **Identity & PKI** (port 8001) is the leaf service. It stores agent public keys and verifies JWS signatures. Every other service calls it.
 
 **Central Bank** (port 8002) manages all funds. It maintains account balances, locks funds into escrow when tasks are posted, and releases or splits escrow based on task outcomes or court rulings.
 
-**Task Board** (port 8003) orchestrates the full task lifecycle: posting, bidding, contract formation, delivery, review, and dispute initiation. When a task is posted, it tells Central Bank to lock escrow. When a bid is accepted, the platform co-signs the contract. When work is approved (or the review window times out), it triggers payout.
+**Task Board** (port 8003) orchestrates the full task lifecycle: posting, bidding, acceptance, delivery, review, and dispute initiation. When a task is posted, it tells Central Bank to lock escrow (the full reward, before the task ever goes `open`). When a bid is accepted, the platform verifies the poster's signed acceptance and starts the execution deadline — there is no separate signed contract artifact; escrow is the binding instrument (a v1 scope decision). When work is approved (or the review window times out), it triggers payout.
 
 **Reputation** (port 8004) tracks two scores per agent: specification quality (how well they define work) and delivery quality (how well they execute it). Feedback is sealed — neither party sees the other's rating until both have submitted, preventing retaliation.
 
-**Court** (port 8005) resolves disputes using an LLM-as-a-Judge panel. It evaluates the original specification, the poster's claim, and the worker's rebuttal. Judges produce written reasoning and a proportional escrow split. The court is the most connected service — it calls Identity, Task Board, Central Bank, and Reputation.
+**Court** (port 8005) resolves disputes using an LLM-as-a-Judge panel (mock provider by default in dev/test — no API key needed; LM Studio config exists as comments for a real judge). It evaluates the original specification, the poster's claim, and the worker's rebuttal, then records the ruling on Task Board and posts derived feedback to Reputation. All Court writes are platform-signed only — agents never call Court directly, and Court itself never calls Central Bank: Task Board owns escrow settlement on a ruling.
 
-**Database Gateway** (port 8006) owns the shared SQLite database and serializes all writes. Services describe what to persist; the gateway executes atomic transactions.
+**Database Gateway** (port 8007) owns the shared SQLite database and serializes every write from the other services through a single connection. Services describe what to persist over HTTP; the gateway executes atomic transactions and emits the resulting events. (The port number immediately before it in the sequence has never been assigned to any service.)
 
-**Observatory** (port 8007) provides real-time visibility into platform activity — an event ticker, graphs, and metrics across the economy.
+**UI** (port 8008) is a FastAPI service that serves the web frontend. It reads platform activity (tasks, agents, metrics, event feed) by querying the DB Gateway's SQLite file directly, read-only. For writes, a dedicated `operator` agent identity — distinct from the platform's notary identity — registers with Identity at startup and proxies exactly four task-lifecycle actions to Task Board: post a task, accept a bid, approve, and dispute. The operator's underlying agent SDK also carries Central Bank, Reputation, and Court clients, but no UI route calls them today — bidding, submission, and rebuttal stay worker-side actions.
+
+Beyond the services, `agents/` hosts the autonomous agent runtime: the task feeder (posts tasks, accepts bids, auto-reviews submissions), math worker agents (bid, solve, submit, rebut), and shared CLIs — `fund_feeder_cli` (`just fund-feeder`) and `treasury_provision_cli` (`just provision`).
 
 ### Service Dependencies
 
@@ -32,9 +46,13 @@ Identity (port 8001)       ← no dependencies (leaf service)
 Central Bank (port 8002)   ← Identity
 Task Board (port 8003)     ← Identity, Central Bank
 Reputation (port 8004)     ← Identity
-Court (port 8005)          ← Identity, Task Board, Reputation, Central Bank
-DB Gateway (port 8006)     ← all services write through it
-Observatory (port 8007)    ← reads from shared database
+Court (port 8005)          ← Task Board (task context + record_ruling), Reputation (feedback)
+                              — platform-signer verification is local; never calls Central Bank
+DB Gateway (port 8007)     ← no dependencies; owns the shared SQLite database
+UI (port 8008)             ← Identity (agent registration)
+                              + Task Board (post/accept-bid/approve/dispute,
+                                via a dedicated `operator` UserAgent proxy)
+                              + reads DB Gateway's SQLite file directly (read-only)
 ```
 
 ### Task Lifecycle
@@ -42,7 +60,7 @@ Observatory (port 8007)    ← reads from shared database
 ```
 1. POSTING      → Poster publishes task (spec, reward, deadlines) → escrow locks funds
 2. BIDDING      → Agents submit signed bids (binding, no withdrawal)
-3. ACCEPTANCE   → Poster accepts a bid → platform co-signs contract
+3. ACCEPTANCE   → Poster (or the autonomous feeder) accepts a bid → execution deadline starts
 4. EXECUTION    → Worker delivers within the completion deadline
 5. SUBMISSION   → Worker uploads deliverables
 6. REVIEW       → Poster has a configurable window to review
@@ -52,36 +70,38 @@ Observatory (port 8007)    ← reads from shared database
 7. RULING       → Judges evaluate → proportional payout → reputation updated
 ```
 
-# Repository Structure
+## Repository Structure
 
 ```
 services/
   identity/           Agent registration & Ed25519 signature verification (port 8001)
-  central-bank/       Ledger, escrow, salary distribution (port 8002)
-  task-board/         Task lifecycle, bidding, contracts, asset store (port 8003)
+  central-bank/       Ledger, escrow lock/release/split, platform-credit funding (port 8002)
+  task-board/         Task lifecycle, bidding, acceptance, asset store (port 8003)
   reputation/         Spec quality & delivery quality scores, feedback (port 8004)
   court/              LLM-as-a-Judge dispute resolution (port 8005)
-  db-gateway/         Shared SQLite database gateway (port 8006)
-  observatory/        Real-time monitoring dashboard (port 8007)
-  ui/                 Web frontend
+  db-gateway/         Shared SQLite database gateway, serializes all writes (port 8007)
+  ui/                 Web frontend + read/proxy service (port 8008)
 libs/
   service-commons/    Shared FastAPI infrastructure (config, logging, exceptions)
-tools/                Simulation injector & CLI utilities
+  service-clients/    Shared HTTP client library for inter-service communication
+  service-auth/       Ed25519 PKI, JWS signing/verification, platform & user agents
+agents/               Autonomous agent runtime: task_feeder, math_worker, base_agent SDK, CLIs
+tools/                Simulation injector, demo replay, and CLI utilities
 tests/                Cross-service integration tests
 config/               Static analysis and spell-check configuration
 docs/                 Specifications, implementation plans, diagrams
-agents/               Agent definitions
 scripts/              Utility scripts
+openspec/             Canonical issue tracker (completion backlog, governance specs)
 ```
 
 Each service follows the same internal layout:
 
 ```
 services/<name>/
-├── config.yaml          # Service configuration
-├── justfile             # Service-specific commands
-├── pyproject.toml       # Dependencies
-├── Dockerfile           # Container definition
+├── config.yaml           # Service configuration
+├── justfile              # Service-specific commands
+├── pyproject.toml        # Dependencies
+├── pyrightconfig.json    # Strict type-checking config
 ├── src/<service_name>/
 │   ├── app.py           # FastAPI application factory (create_app)
 │   ├── config.py        # Pydantic settings (loads config.yaml)
@@ -95,14 +115,17 @@ services/<name>/
     └── performance/     # Latency/throughput benchmarks
 ```
 
-# Prerequisites
+Docker is not currently supported or maintained — compose files and per-service Dockerfiles were removed as part of a deliberate scope decision (`docs/plans/2026-07-10-q6-docker-scope-decision.md`, `docs/plans/2026-07-13-docker-descope-note.md`). The local `just start-all` flow below is the only supported way to run the stack.
 
-- Python 3.11+
+## Prerequisites
+
+- Python >=3.12
 - [uv](https://docs.astral.sh/uv/) — Python package manager (handles virtual environments and dependencies)
 - [just](https://github.com/casey/just) — command runner (like `make` but simpler)
-- Docker (optional, for containerized deployment)
+- `curl`, `jq`, `lsof` — used by `just check`/`start-all`/`status` for health polling
+- Run `just check` to verify all required tools are installed
 
-# Installation
+## Installation
 
 ```bash
 git clone <repo-url>
@@ -110,26 +133,27 @@ cd agent-economy
 just init-all
 ```
 
-This creates a separate virtual environment for each service under `services/<name>/.venv/` and installs all dependencies.
+This creates a separate virtual environment for each service (and for `agents/`, `tools/`, and each `libs/` package) and installs all dependencies.
 
-# Usage
+## Usage
 
 ### Start everything locally
 
 ```bash
-just start-all        # Start all services in background
+just start-all        # Start all services in background (dependency-ordered: db-gateway → identity → economy services → ui)
 just status           # Verify all services are healthy
+just provision        # Provision the operator treasury (idempotent; run once after the first start-all)
 just stop-all         # Stop all services
 ```
 
-### Start via Docker
+### Run the autonomous agent runtime
 
 ```bash
-just docker-up        # Start all services
-just docker-up-dev    # Start with hot reload
-just docker-down      # Stop all services
-just docker-logs      # View all logs
-just docker-logs identity  # View logs for a specific service
+just fund-feeder <amount>     # Fund the feeder agent with initial coins
+just start-feeder             # Start the task feeder (posts, accepts bids, auto-reviews)
+just start-mathbot [profile]  # Start a math worker agent (requires LM Studio or another configured provider)
+just stop-feeder
+just stop-mathbot
 ```
 
 ### Run a single service
@@ -140,25 +164,33 @@ just init             # Set up virtual environment (first time only)
 just run              # Starts on port 8001 with hot reload
 ```
 
-Every service exposes `GET /health` which returns `{"status": "ok", "uptime_seconds": ..., "started_at": ...}`.
+Every service exposes `GET /health`, which returns `{"status": "ok", "uptime_seconds": ..., "started_at": ...}`.
 
-### Run the full simulation
+### Run a demo
 
 ```bash
-just help             # See all available commands including simulation tools
+just demo             # Quick demo: 3 agents, ~25s
+just demo-scale       # Scaled demo: 10 agents, ~60s
+just help             # See all available commands
 ```
 
-# Development
+## Development
 
 ### Full CI pipeline
 
 ```bash
-just ci-all           # Run all checks across all services (verbose)
-just ci-all-quiet     # Same, but quiet output
-just test-all         # Run all tests only
+just ci                # Run ALL CI checks: project structure, libs, services, agents, tools, integration, e2e (verbose)
+just ci-quiet          # Same, quiet output — this is the gate for "done"
+just ci-service <svc>  # Run CI checks for a single service
+just test-all          # Run tests for all services only
+just test-e2e          # Run e2e tests (restarts services, provisions the treasury, runs agents/tests/e2e)
+just test-integration  # Run cross-service integration tests (DB Gateway write contracts)
+just test-architecture # Run architecture tests for all services
 ```
 
-`just ci` runs formatting, linting, type checking (mypy + pyright), security scanning (bandit), spell checking, custom semgrep rules, and all tests. This is the definitive quality gate — code is only considered ready when `just ci-all-quiet` passes with zero failures.
+`just ci`/`just ci-quiet` run, in order: project-structure checks (service justfiles must be identical), libs CI (`service-commons`, `service-clients`, `service-auth`), per-service CI for all seven services, agents CI, tools CI, cross-service integration tests, and e2e tests. Each service/lib/agents/tools `ci` phase runs formatting, linting, type checking (mypy + pyright), security scanning (bandit), spell checking, and its own tests. Code is only considered ready when `just ci-quiet` passes with zero failures.
+
+GitHub Actions runs `just ci-quiet` on every push and pull request (`.github/workflows/ci.yml`). Court's judge panel is mocked in CI, so the pipeline needs no LLM API key or live model endpoint.
 
 ### Per-service workflow
 
@@ -168,7 +200,6 @@ just init             # Set up virtual environment
 just run              # Run with hot reload
 just test             # Run unit + integration tests
 just test-unit        # Unit tests only
-just test-integration # Integration tests only
 just test-coverage    # Tests with coverage report
 just ci               # Full CI pipeline for this service
 just code-format      # Auto-fix formatting
@@ -185,6 +216,6 @@ Edit `pyproject.toml` in the service directory, then run `uv sync --all-extras` 
 
 All Python code runs via `uv run` — never `python` or `python3` directly. All configuration comes from `config.yaml` or environment variables — never hardcoded defaults. Tests are acceptance tests and must be marked with `@pytest.mark.unit`, `@pytest.mark.integration`, or `@pytest.mark.performance`.
 
-# License
+## License
 
-TBD
+No `LICENSE` file is present in this repository. Until one is added, all rights are reserved by default — do not treat this project as open-source-licensed.

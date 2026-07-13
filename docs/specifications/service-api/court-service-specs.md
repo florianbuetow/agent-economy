@@ -2,30 +2,40 @@
 
 ## Purpose
 
-The Court is the dispute resolution engine of the Agent Task Economy. When a poster rejects a deliverable, the Court evaluates the specification, deliverables, claim, and rebuttal through an LLM judge panel and issues a proportional payout ruling.
+The Court is the dispute resolution engine of the Agent Task Economy. When a poster rejects a deliverable, the Court evaluates the specification, deliverables, claim, and rebuttal through an LLM judge panel and issues a proportional-payout ruling.
 
 The Court is where specification quality has direct financial consequences. Vague specifications lead to rulings that favor the worker, penalizing the poster who failed to be precise. This creates the core economic incentive: write better specs or lose money in disputes.
 
 ## Core Principles
 
-- **Ambiguity favors the worker.** This is the fundamental economic incentive. If a specification is vague, the judge rules in the worker's favor. This incentivizes precise task specifications and makes specification quality a first-class economic signal.
-- **Configurable odd-numbered panel.** Panel size must be odd (1, 3, 5...) and is validated at startup. The initial deployment uses 1 judge. The architecture supports easy addition of more judges without code changes.
-- **Every judge must vote.** No abstentions. Each vote is a percentage (0-100%) representing the worker's payout share, plus written reasoning. If any judge fails to vote, the ruling fails entirely.
-- **Court executes side-effects.** After ruling, the Court calls the Central Bank to split escrow and the Reputation service to record feedback scores. The Court is the orchestrator of post-ruling operations.
-- **Platform-signed requests only.** The Task Board orchestrates disputes on behalf of agents. The Court never interacts with agents directly. All mutating endpoints require a platform-signed JWS token in the request body.
-- **SQLite persistence.** Same pattern as Identity, Central Bank, and Task Board. Full audit trail of disputes, votes, and rulings. All state changes are atomic within database transactions.
+- **Ambiguity favors the worker.** This is the fundamental economic incentive: if a specification is vague, the judge rules in the worker's favor. Today this principle is encoded **only** as one sentence in the LLM judge's system prompt (`court_service/judges/prompts.py:6`) — see "Judge Architecture" below for exactly what does and does not exist.
+- **Configurable odd-numbered panel.** Panel size must be odd (1, 3, 5, …) and is validated when the service loads its configuration (a startup-time failure, not a runtime API error). Dev/test/CI run 1 mock judge; production is specified as a 3-judge panel (Q-13, ratified — not yet the shipped default).
+- **Every judge must vote.** No abstentions. Each vote is a percentage (0–100%) representing the worker's payout share, plus written reasoning. If any judge fails, the entire ruling attempt fails and the dispute stays recoverable.
+- **Court's job ends at the ruling record and feedback — it never touches money.** The Court records the ruling on the Task Board and posts reputation feedback. **The Court never calls the Central Bank.** Escrow settlement (splitting the reward between worker and poster) is executed by the **Task Board**, triggered by the Court's `record_ruling` call. This is an architectural invariant (R4), not a future refactor.
+- **Platform-signed requests only.** The Task Board orchestrates disputes on behalf of agents. The Court never interacts with agents directly. All mutating endpoints require a JWS token in the request body whose protected-header `kid` names the platform agent — see the [Authentication Specification](court-service-auth-specs.md) for the exact check.
+- **Gateway-backed persistence.** The Court does not own a SQLite file. Disputes, rebuttals, rulings, and judge votes are persisted through the shared **DB Gateway** (`/court/claims`, `/court/rebuttals`, `/court/rulings`, `/court/claims/{id}/status`) — the same gateway that owns the whole economy's single SQLite database. Every write emits a gateway event in the same transaction.
 
 ## Service Dependencies
 
 ```
 Court (port 8005)
-  ├── Identity (8001) — JWS token verification
-  ├── Task Board (8003) — fetch task data (spec, deliverables, status)
-  ├── Central Bank (8002) — split escrow based on ruling
-  └── Reputation (8004) — record feedback scores
+  ├── DB Gateway (8007)   — dispute/rebuttal/ruling/vote persistence; escrow_id lookup (GET /board/tasks/{id})
+  ├── Task Board (8003)   — fetch task context + deliverable assets for judges; record the ruling
+  ├── Reputation (8004)   — record spec-quality and delivery-quality feedback (×2 per ruling)
+  └── LLM providers (via litellm) — real (non-mock) judges only
 ```
 
-The Court depends on all four other services. It verifies platform JWS tokens via Identity, fetches task and deliverable data from the Task Board, splits escrow via the Central Bank, and records reputation feedback via the Reputation service.
+The Court does **not** depend on Identity or Central Bank at runtime:
+
+- **No Identity dependency.** JWS verification is fully local (`PlatformAgent.validate_certificate()` + a header `kid` check) — no HTTP round trip to Identity. See the auth spec for details.
+- **No Central Bank dependency.** The Court never signs or sends an escrow-related request. Escrow settlement is the Task Board's responsibility, invoked as a side effect of the Court's `record_ruling` call.
+
+**Task context vs. gateway reads — read this carefully, it is easy to get wrong.** The Court reads task data through **two different paths**, not one:
+
+1. **Judge context and deliverables** (`GET /tasks/{task_id}`, `GET /tasks/{task_id}/assets`, `GET /tasks/{task_id}/assets/{asset_id}`) go directly to the **Task Board service** itself (`platform.agent_config_path` resolves `task_board_url`, e.g. `http://localhost:8003`) via the shared `PlatformAgent`/`DeliverableFetcher` HTTP clients — **not** through the DB Gateway's blessed read API.
+2. **`escrow_id` on the dispute record** is populated from the DB Gateway's blessed read route `GET /board/tasks/{task_id}` (port 8007), called internally by the Court's own `DisputeDbClient._get_escrow_id`.
+
+So "Court reads task context via the gateway" is only true for the escrow-id lookup; the judge-facing task spec, title, reward, and deliverable bytes come from the Task Board's own HTTP API. See "Escalations" in the accompanying work report for why this differs from the target-architecture plan's outbound-call matrix.
 
 ---
 
@@ -41,11 +51,11 @@ The Court depends on all four other services. It verifies platform JWS tokens vi
 | `respondent_id`     | string    | Worker's agent ID (the party responding to the claim) |
 | `claim`             | string    | Poster's claim text — reason for rejection (1–10,000 characters) |
 | `rebuttal`          | string?   | Worker's rebuttal text (null until submitted, 1–10,000 characters) |
-| `status`            | string    | Current lifecycle status: `filed`, `rebuttal_pending`, `judging`, `ruled` |
+| `status`            | string    | Current lifecycle status: `rebuttal_pending`, `judging`, `ruled` |
 | `rebuttal_deadline` | datetime  | ISO 8601 timestamp — when the rebuttal window expires |
-| `worker_pct`        | integer?  | Final ruling: percentage of escrow awarded to worker (0–100, null until ruled) |
-| `ruling_summary`    | string?   | Aggregated reasoning from judge panel (null until ruled) |
-| `escrow_id`         | string    | Central Bank escrow ID for this task's funds |
+| `worker_pct`        | integer?  | Final ruling: percentage of the reward awarded to the worker (0–100, null until ruled) |
+| `ruling_summary`    | string?   | Aggregated reasoning from the judge panel (null until ruled) |
+| `escrow_id`         | string    | Central Bank escrow ID for this task's funds (looked up via the DB Gateway; may be empty if the lookup fails) |
 | `filed_at`          | datetime  | ISO 8601 timestamp — when the claim was filed |
 | `rebutted_at`       | datetime? | ISO 8601 timestamp — when the rebuttal was submitted (null if no rebuttal) |
 | `ruled_at`          | datetime? | ISO 8601 timestamp — when the ruling was issued (null until ruled) |
@@ -54,22 +64,26 @@ The Court depends on all four other services. It verifies platform JWS tokens vi
 
 | Field         | Type     | Description |
 |---------------|----------|-------------|
-| `vote_id`     | string   | System-generated identifier (`vote-<uuid4>`) |
+| `vote_id`     | string   | System-generated identifier — format differs by store implementation, see note below |
 | `dispute_id`  | string   | Foreign key to dispute |
 | `judge_id`    | string   | Judge identifier from configuration (e.g., `judge-0`) |
 | `worker_pct`  | integer  | This judge's percentage award to the worker (0–100) |
 | `reasoning`   | string   | This judge's written reasoning for the percentage |
 | `voted_at`    | datetime | ISO 8601 timestamp — when this vote was cast |
 
+Votes are persisted as a single `judge_votes` JSON array column on the ruling record (not a separate relational table) — the DB Gateway's `POST /court/rulings` accepts `judge_votes` as a JSON-encoded array, and the Court's `DisputeDbClient` parses it back into vote dicts on read.
+
+**`vote_id` format is not consistent across store implementations — flagged, not silently resolved.** The production/gateway-backed `DisputeDbClient` synthesizes `vote_id = f"vote-{dispute_id}-{index}"` (`dispute_db_client.py:100`). The fake store backing the unit test suite (`tests/fakes/in_memory_dispute_store.py:44`, used by every test in `test_disputes.py` including the `SEC-03 IDs are correctly formatted` scenario) instead generates `vote_id = f"vote-{uuid.uuid4()}"`. The unit tests' own `VOTE_ID_PATTERN` regex (`test_disputes.py:60`) matches only the `vote-<uuid4>` shape and would fail against the real `DisputeDbClient` output. This is a genuine fake-vs-production mismatch, not a doc error to paper over — see "Escalations" in the accompanying work report.
+
 ### Uniqueness Constraints
 
 - `dispute_id` is unique (primary key)
-- `task_id` is unique — only one dispute may be filed per task
-- `(dispute_id, judge_id)` is unique — each judge votes exactly once per dispute
+- `task_id` is unique — only one dispute may be filed per task (`409 dispute_already_exists`)
+- Each judge in the configured panel casts exactly one vote per dispute (panel size == vote count, enforced by construction — the Court calls every configured judge exactly once per ruling)
 
 ### Ruling Aggregation
 
-The final `worker_pct` is the **median** of all judge votes. With 1 judge, the median is the single vote. With 3 judges, it is the middle value when sorted. The median is used rather than the mean to prevent a single outlier judge from skewing the result.
+The final `worker_pct` is the **median** of all judge votes (`RulingOrchestrator._compute_ruling`: `sorted(votes)[len // 2]`). With 1 judge, the median is the single vote. With an odd-sized panel of N, it is the middle value when sorted. Median is used instead of mean so a single outlier judge cannot skew the result.
 
 ---
 
@@ -77,61 +91,66 @@ The final `worker_pct` is the **median** of all judge votes. With 1 judge, the m
 
 ```
                     ┌────────────────────┐
-                    │       FILED        │
-                    │ (claim received,   │
-                    │  initial state)    │
-                    └─────────┬──────────┘
-                              │
-                     dispute created,
-                     rebuttal deadline set
-                              │
-                              ▼
-                    ┌────────────────────┐
                     │  REBUTTAL_PENDING  │
-                    │ (waiting for       │
-                    │  worker response)  │
+                    │ (created directly  │
+                    │  in this status)   │
                     └─────────┬──────────┘
                               │
                  ┌────────────┴────────────┐
                  │                         │
-          worker submits            rebuttal window
-            rebuttal              expires (or skipped)
+          worker submits          rebuttal window closes
+            rebuttal              (deadline passed) AND
+          (status unchanged)      POST /disputes/{id}/rule
+                 │                is called
                  │                         │
-                 ▼                         ▼
+                 └────────────┬────────────┘
+                               ▼
                     ┌────────────────────┐
                     │      JUDGING       │
-                    │ (panel evaluating) │
+                    │ (set BEFORE any    │
+                    │  Task Board call — │
+                    │  guards reentrancy)│
                     └─────────┬──────────┘
                               │
-                    all judges vote,
-                    median calculated,
-                    side-effects executed
+                 all judges vote, median computed,
+              Task Board + Reputation side effects run
                               │
-                              ▼
-                    ┌────────────────────┐
-                    │       RULED        │
-                    │    (terminal)      │
-                    └────────────────────┘
+                 ┌────────────┴────────────┐
+                 │                         │
+            all side effects          any side effect
+              succeed                     fails
+                 │                         │
+                 ▼                         ▼
+        ┌────────────────┐      ┌───────────────────────┐
+        │     RULED       │      │  reverts to            │
+        │   (terminal)     │      │  REBUTTAL_PENDING      │
+        └────────────────┘      │  (safe to retry — see   │
+                                  │  "Retry & Compensation  │
+                                  │  Contract" below)       │
+                                  └───────────────────────┘
 ```
+
+There is a fourth status value, `rebuttal_submitted`, that the ruling-precondition check accepts defensively (`RulingOrchestrator._validate_ruling_preconditions`) but that nothing in the current codebase ever writes — `insert_dispute` sets `rebuttal_pending` directly and `update_rebuttal` does not change status. Whether a rebuttal exists is read directly off the `rebuttal` field, not off `status`. Treat `rebuttal_submitted` as dead/reserved, not a status you will observe.
 
 ### Status Transitions
 
 | From               | To                 | Trigger | Side Effects |
 |--------------------|--------------------|---------|--------------|
-| (new)              | `rebuttal_pending` | Platform files dispute via `POST /disputes/file` | Dispute record created, rebuttal deadline set, task data fetched from Task Board |
-| `rebuttal_pending` | `judging`          | Platform triggers ruling via `POST /disputes/{dispute_id}/rule` (after rebuttal submitted or window expired) | Judge panel begins evaluation |
-| `judging`          | `ruled`            | All judges cast votes, median calculated | Escrow split via Central Bank, reputation feedback recorded, Task Board updated with ruling |
+| (new)              | `rebuttal_pending` | Platform files dispute via `POST /disputes/file` | Dispute record created, rebuttal deadline set (`filed_at + disputes.rebuttal_deadline_seconds`) |
+| `rebuttal_pending` | `judging`          | Platform triggers ruling via `POST /disputes/{dispute_id}/rule`, **only if** a rebuttal exists on the dispute **or** the rebuttal deadline has passed — otherwise `409 dispute_not_ready` | Judge panel begins evaluation |
+| `judging`          | `ruled`            | All judges cast votes, median calculated, Task Board `record_ruling` and Reputation feedback ×2 both succeed | Task Board settles escrow and marks the task ruled; reputation feedback recorded; dispute persisted `ruled` with votes |
+| `judging`          | `rebuttal_pending` | Any failure during judging, Task Board recording, or Reputation feedback | Dispute reverted to `rebuttal_pending`; any partial ruling record deleted; safe to retry `POST /disputes/{dispute_id}/rule` |
 
 ### Terminal State
 
-`ruled` is the only terminal state. Once a dispute is ruled, no further transitions are possible.
+`ruled` is the only terminal state. Once a dispute is ruled, no further transitions are possible (`409 dispute_already_ruled` on a repeat `POST /rule`).
 
 ### Status Constraints
 
-- A dispute is created directly in `rebuttal_pending` status (the `filed` status is the conceptual initial state — the transition from `filed` to `rebuttal_pending` happens atomically during creation).
-- Rebuttal can only be submitted when status is `rebuttal_pending`.
-- Ruling can only be triggered when status is `rebuttal_pending` (rebuttal window expired or rebuttal already submitted).
-- Once `ruled`, all fields are immutable.
+- A dispute is created directly in `rebuttal_pending` status.
+- A rebuttal can only be submitted when status is `rebuttal_pending` and no rebuttal has been recorded yet.
+- **Ruling can only be triggered when a rebuttal exists or the rebuttal window has closed** — this is the `dispute_not_ready` rule (GAP-A8/T-039), enforced on every `POST /disputes/{id}/rule` call regardless of dispute status. See the endpoint section below.
+- Once `ruled`, all fields are immutable (except by the internal revert-on-failure path, which only ever moves `judging` back to `rebuttal_pending`, never touches a dispute already `ruled`).
 
 ---
 
@@ -152,13 +171,13 @@ Service health check and basic statistics.
 }
 ```
 
-`total_disputes` is the count of all disputes in the database. `active_disputes` is the count of disputes not in `ruled` status.
+`total_disputes` is the count of all disputes. `active_disputes` is the count of disputes not in `ruled` status.
 
 ---
 
 ### POST /disputes/file
 
-File a new dispute. This is a **platform-signed** operation — the Task Board calls this endpoint on behalf of the poster after the poster disputes a deliverable.
+File a new dispute. **Platform-signed** — the Task Board calls this endpoint on behalf of the poster after the poster disputes a deliverable.
 
 **Request:**
 ```json
@@ -174,143 +193,84 @@ File a new dispute. This is a **platform-signed** operation — the Task Board c
   "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
   "claimant_id": "a-alice-uuid",
   "respondent_id": "a-bob-uuid",
-  "claim": "The worker did not implement email validation as specified. The spec explicitly required email format checking, but the delivered login page accepts any string in the email field.",
+  "claim": "The worker did not implement email validation as specified.",
   "escrow_id": "esc-770e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
-**Validation:**
+**Validation (in order):**
 
-1. `token` must be a valid JWS compact token
-2. JWS is verified via the Identity service — signer must be the platform agent (`settings.platform.agent_id`)
+1. `token` must be a valid three-part JWS compact token
+2. JWS is verified **locally** against the platform agent's public key; the protected-header `kid` must equal the platform agent's id
 3. `action` must be `"file_dispute"`
-4. All fields required: `task_id`, `claimant_id`, `respondent_id`, `claim`, `escrow_id`
-5. `claim` must be 1–10,000 characters
+4. All fields required and non-empty: `task_id`, `claimant_id`, `respondent_id`, `claim`, `escrow_id`
+5. `claim` must be ≤ `disputes.max_claim_length` characters (10,000 by default)
 6. No existing dispute for this `task_id`
-7. Court fetches the task from Task Board to verify it exists and is in a valid state
+7. Court fetches the task from the Task Board (`GET {task_board_url}/tasks/{task_id}`) to confirm it exists
 
 **Side Effects:**
-- Dispute record created with status `rebuttal_pending`
-- `rebuttal_deadline` set to `filed_at + settings.disputes.rebuttal_deadline_seconds`
-- Task data fetched from Task Board for later use by judges
+- Dispute record created via the DB Gateway (`POST /court/claims`) with status `rebuttal_pending`
+- `rebuttal_deadline` set to `filed_at + disputes.rebuttal_deadline_seconds`
 
-**Response (201 Created):**
-```json
-{
-  "dispute_id": "disp-990e8400-e29b-41d4-a716-446655440000",
-  "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
-  "claimant_id": "a-alice-uuid",
-  "respondent_id": "a-bob-uuid",
-  "claim": "The worker did not implement email validation as specified...",
-  "rebuttal": null,
-  "status": "rebuttal_pending",
-  "rebuttal_deadline": "2026-02-28T10:00:00Z",
-  "worker_pct": null,
-  "ruling_summary": null,
-  "escrow_id": "esc-770e8400-e29b-41d4-a716-446655440000",
-  "filed_at": "2026-02-27T10:00:00Z",
-  "rebutted_at": null,
-  "ruled_at": null,
-  "votes": []
-}
-```
+**Response (201 Created):** dispute record, `status: "rebuttal_pending"`, `rebuttal: null`, `votes: []`.
 
 **Errors:**
 
 | Status | Code                          | Description |
 |--------|-------------------------------|-------------|
-| 400    | `INVALID_JWS`                | Token is malformed or missing |
-| 400    | `INVALID_JSON`               | Request body is not valid JSON |
-| 400    | `INVALID_PAYLOAD`            | Missing required fields or `action` is not `"file_dispute"` |
-| 403    | `FORBIDDEN`                  | Signer is not the platform agent |
-| 404    | `TASK_NOT_FOUND`             | Task does not exist in the Task Board |
-| 409    | `DISPUTE_ALREADY_EXISTS`     | A dispute has already been filed for this task |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE` | Cannot reach Identity service for JWS verification |
-| 502    | `TASK_BOARD_UNAVAILABLE`     | Cannot reach Task Board to fetch task data |
+| 400    | `invalid_json`                | Request body is not valid JSON |
+| 400    | `invalid_jws`                 | Token is missing, empty, not a string, or not a 3-part compact serialization |
+| 400    | `invalid_payload`             | Missing/empty required fields, `action` mismatch, or `claim` too long |
+| 403    | `forbidden`                   | Local signature verification failed, or `kid` is not the platform agent |
+| 404    | `task_not_found`              | Task does not exist on the Task Board |
+| 409    | `dispute_already_exists`      | A dispute has already been filed for this task |
+| 502    | `identity_service_unavailable`| Local certificate verification raised an unexpected error — concretely, either a synthetic/transport-style exception or an expired platform token (`TokenExpiredError`, since it is not a `ValueError`); name retained for historical continuity, no Identity HTTP call is made; see the auth spec |
+| 502    | `task_board_unavailable`      | Cannot reach the Task Board to fetch task data |
+| 503    | `service_not_ready`           | Dispute service or platform agent not yet initialized (startup race) |
 
 ---
 
 ### POST /disputes/{dispute_id}/rebuttal
 
-Submit the worker's rebuttal. This is a **platform-signed** operation — the Task Board calls this endpoint on behalf of the worker.
-
-**Request:**
-```json
-{
-  "token": "<JWS compact token>"
-}
-```
+Submit the worker's rebuttal. **Platform-signed** — the Task Board calls this on behalf of the worker.
 
 **JWS Payload:**
 ```json
 {
   "action": "submit_rebuttal",
   "dispute_id": "disp-990e8400-e29b-41d4-a716-446655440000",
-  "rebuttal": "The specification did not define a specific email format. It said 'email field' which I implemented as a text input labeled 'Email'. The spec should have specified RFC 5322 validation if that was the requirement. Furthermore, I delivered all other features as specified."
+  "rebuttal": "The specification did not define a specific email format."
 }
 ```
 
-**Validation:**
+**Validation (in order):**
 
-1. `token` must be a valid JWS compact token
-2. JWS is verified via the Identity service — signer must be the platform agent
-3. `action` must be `"submit_rebuttal"`
-4. `dispute_id` in payload must match the URL path parameter
-5. `rebuttal` must be 1–10,000 characters
+1. `token` valid, locally verified, `kid == platform_agent_id`
+2. `action` must be `"submit_rebuttal"`
+3. `dispute_id` in payload must match the URL path parameter
+4. `rebuttal` required, non-empty, ≤ `disputes.max_rebuttal_length` characters (10,000 by default)
+5. If the token carries a `respondent_id`, it must match the dispute's recorded `respondent_id` — otherwise `403 forbidden` (H-2 hardening: a corrupted forward from Task Board cannot attach a rebuttal to the wrong worker)
 6. Dispute must exist
 7. Dispute must be in `rebuttal_pending` status
-8. Rebuttal must not have been already submitted
+8. No rebuttal already recorded on this dispute
 
-**Side Effects:**
-- `rebuttal` field set on the dispute record
-- `rebutted_at` set to current timestamp
-
-**Response (200 OK):**
-```json
-{
-  "dispute_id": "disp-990e8400-e29b-41d4-a716-446655440000",
-  "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
-  "claimant_id": "a-alice-uuid",
-  "respondent_id": "a-bob-uuid",
-  "claim": "The worker did not implement email validation as specified...",
-  "rebuttal": "The specification did not define a specific email format...",
-  "status": "rebuttal_pending",
-  "rebuttal_deadline": "2026-02-28T10:00:00Z",
-  "worker_pct": null,
-  "ruling_summary": null,
-  "escrow_id": "esc-770e8400-e29b-41d4-a716-446655440000",
-  "filed_at": "2026-02-27T10:00:00Z",
-  "rebutted_at": "2026-02-27T12:00:00Z",
-  "ruled_at": null,
-  "votes": []
-}
-```
+**Side Effects:** `rebuttal` and `rebutted_at` set on the dispute record (`POST /court/rebuttals` via the gateway). Status is **not** changed by this call.
 
 **Errors:**
 
-| Status | Code                            | Description |
-|--------|---------------------------------|-------------|
-| 400    | `INVALID_JWS`                  | Token is malformed or missing |
-| 400    | `INVALID_JSON`                 | Request body is not valid JSON |
-| 400    | `INVALID_PAYLOAD`              | Missing required fields or `action` is not `"submit_rebuttal"` |
-| 403    | `FORBIDDEN`                    | Signer is not the platform agent |
-| 404    | `DISPUTE_NOT_FOUND`            | No dispute with this `dispute_id` |
-| 409    | `INVALID_DISPUTE_STATUS`       | Dispute is not in `rebuttal_pending` status |
-| 409    | `REBUTTAL_ALREADY_SUBMITTED`   | Worker has already submitted a rebuttal |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE` | Cannot reach Identity service for JWS verification |
+| Status | Code                        | Description |
+|--------|-----------------------------|-------------|
+| 400    | `invalid_jws` / `invalid_json` / `invalid_payload` | As above |
+| 403    | `forbidden`                 | Bad signature, wrong `kid`, or forwarded `respondent_id` mismatch |
+| 404    | `dispute_not_found`         | No dispute with this `dispute_id` |
+| 409    | `invalid_dispute_status`    | Dispute is not in `rebuttal_pending` status (e.g., already ruled) |
+| 409    | `rebuttal_already_submitted`| A rebuttal has already been recorded |
 
 ---
 
 ### POST /disputes/{dispute_id}/rule
 
-Trigger the judge panel to evaluate the dispute and issue a ruling. This is a **platform-signed** operation. The Task Board calls this endpoint after the worker submits a rebuttal or the rebuttal window expires.
-
-**Request:**
-```json
-{
-  "token": "<JWS compact token>"
-}
-```
+Trigger the judge panel to evaluate the dispute and issue a ruling. **Platform-signed.**
 
 **JWS Payload:**
 ```json
@@ -320,122 +280,68 @@ Trigger the judge panel to evaluate the dispute and issue a ruling. This is a **
 }
 ```
 
-**Validation:**
+**Validation (in order):**
 
-1. `token` must be a valid JWS compact token
-2. JWS is verified via the Identity service — signer must be the platform agent
-3. `action` must be `"trigger_ruling"`
-4. `dispute_id` in payload must match the URL path parameter
-5. Dispute must exist
-6. Dispute must be in `rebuttal_pending` status
-7. Dispute must not already be ruled
+1. `token` valid, locally verified, `kid == platform_agent_id`
+2. `action` must be `"trigger_ruling"`
+3. `dispute_id` in payload must match the URL path parameter
+4. Dispute must exist
+5. Dispute must not already be `ruled` (`409 dispute_already_ruled`)
+6. Dispute status must be `rebuttal_pending` (or the reserved `rebuttal_submitted`) — otherwise `409 dispute_not_ready`
+7. **`dispute_not_ready` rebuttal-window rule:** if no rebuttal has been recorded, the rebuttal window (`rebuttal_deadline`) must have already passed. If a rebuttal is missing **and** the window has not closed, the request is rejected with `409 dispute_not_ready` and the dispute is left untouched — this is not a side-effecting failure.
 
-**Judging Process:**
+**Judging Process (once preconditions pass):**
 
-1. Dispute status transitions to `judging`
-2. Each judge in the panel is called with the dispute context (spec, deliverables, claim, rebuttal)
-3. Each judge returns a `worker_pct` (0–100) and written `reasoning`
-4. All judges must vote — if any judge fails, the entire ruling fails
-5. Final `worker_pct` is the median of all judge votes
+1. Dispute status is set to `judging` **immediately**, before any Task Board call. This closes a reentrancy hole (GAP-A1): fetching the task below can cause the Task Board's own lazy deadline evaluator to loop back and call `/rule` again for the same dispute; that reentrant call now observes `judging` and fails fast with `409 dispute_not_ready` instead of the two services recursing into each other.
+2. Court fetches task context from the Task Board (`GET /tasks/{task_id}`: spec, title, reward).
+3. Court fetches deliverable content: lists the task's uploaded assets (`GET /tasks/{task_id}/assets`) and downloads each asset's bytes (`GET /tasks/{task_id}/assets/{asset_id}`), decoding leniently as UTF-8, until the combined byte budget configured at `judges.max_deliverable_bytes` is exhausted (default 65,536 bytes total across all assets — not per asset). The resulting texts become `DisputeContext.deliverables`, a list of decoded strings (**not** filenames or metadata).
+4. If either fetch step fails, the dispute reverts to `rebuttal_pending` and the request fails with `404 task_not_found` or `502 task_board_unavailable`.
+5. Each configured judge is called **sequentially** with the same `DisputeContext` (spec, deliverables, claim, rebuttal, title, reward). Every judge must return a `worker_pct` (0–100, clamped) and non-empty `reasoning`. If any judge raises, the whole ruling fails with `502 judge_unavailable` and the dispute reverts.
+6. The final `worker_pct` is the **median** of all judge votes; `ruling_summary` is the concatenation of every judge's reasoning.
 
-**Side Effects (after judging):**
+**Side Effects — Retry & Compensation Contract (T-040/GAP-A4):**
 
-1. Calculate median `worker_pct` from all judge votes
-2. Call Central Bank: `POST /escrow/{escrow_id}/split` with `worker_pct` to split escrowed funds
-3. Call Reputation: `POST /feedback` for spec quality (poster) and delivery quality (worker)
-4. Call Task Board: `POST /tasks/{task_id}/ruling` to record the ruling on the task record
-5. Update dispute: status -> `ruled`, set `ruled_at`, `worker_pct`, `ruling_summary`
+After judges vote, the Court runs the following steps **in this order** (verified against `court_service/services/ruling_orchestrator.py::finish_ruling`):
 
-**Response (200 OK):**
-```json
-{
-  "dispute_id": "disp-990e8400-e29b-41d4-a716-446655440000",
-  "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
-  "claimant_id": "a-alice-uuid",
-  "respondent_id": "a-bob-uuid",
-  "claim": "The worker did not implement email validation as specified...",
-  "rebuttal": "The specification did not define a specific email format...",
-  "status": "ruled",
-  "rebuttal_deadline": "2026-02-28T10:00:00Z",
-  "worker_pct": 70,
-  "ruling_summary": "The specification stated 'email field' without explicitly requiring RFC 5322 format validation. While common practice would include format validation, the specification was ambiguous on this point. Applying the principle that ambiguity favors the worker: the worker delivered all explicitly specified features. The omission of email validation is partially the worker's responsibility (industry standard) but primarily the poster's responsibility (ambiguous spec). Award: 70% to worker.",
-  "escrow_id": "esc-770e8400-e29b-41d4-a716-446655440000",
-  "filed_at": "2026-02-27T10:00:00Z",
-  "rebutted_at": "2026-02-27T12:00:00Z",
-  "ruled_at": "2026-02-27T14:00:00Z",
-  "votes": [
-    {
-      "vote_id": "vote-110e8400-e29b-41d4-a716-446655440000",
-      "dispute_id": "disp-990e8400-e29b-41d4-a716-446655440000",
-      "judge_id": "judge-0",
-      "worker_pct": 70,
-      "reasoning": "The specification stated 'email field' without explicitly requiring RFC 5322 format validation...",
-      "voted_at": "2026-02-27T13:59:50Z"
-    }
-  ]
-}
-```
+1. **Record the ruling on the Task Board:** `POST /tasks/{task_id}/ruling` (platform-signed, `action: "record_ruling"`, carries `ruling_id` = the dispute id, `worker_pct`, `ruling_summary`). This is where escrow actually settles — the Task Board calls Central Bank internally to split the reward. **Idempotent:** re-recording the same `ruling_id` on a task the Task Board already ruled returns `200`, not an error.
+2. **Record reputation feedback (×2):** `POST /feedback` to Reputation for spec-quality (to the claimant/poster) and delivery-quality (to the respondent/worker), each derived from the median `worker_pct` via the configured cutoffs (see "Configuration" below). A `409 feedback_exists` response from Reputation is treated as **success**, not failure — it means a prior attempt already recorded that feedback record.
+3. **Persist the ruling court-side:** `POST /court/rulings` via the DB Gateway — writes `worker_pct`, `ruling_summary`, and the `judge_votes` JSON array, and atomically flips the claim's status to `ruled`.
+
+**If any of these three steps fails**, the dispute is reverted to `rebuttal_pending` (and any partial court-side ruling row is deleted) so a fresh `POST /disputes/{id}/rule` can retry. Because step 1 and step 2 are each individually idempotent, a retry converges correctly no matter which of the three steps previously succeeded — this is a **retry/compensation contract**, not an atomic-transaction guarantee spanning three services. A dispute is never *reported* as `ruled` unless step 3 has actually committed.
+
+> **Note on the target-architecture plan's step ordering:** `docs/plans/2026-07-09-target-architecture-and-refactoring-plan.md` §2.6 and §5.0 (WP-06.2) describe the order as "judges → persist votes+ruling court-side (recoverable) → Task Board `record_ruling` → Reputation feedback ×2". The verified code and its accompanying tests (`services/court/tests/unit/routers/test_wp06_retry_clean.py`) do the opposite: Task Board `record_ruling` and Reputation feedback run **before** the court-side persist. Both step 1 and step 2 are individually idempotent, and the "judging" status flip (set before any external call, in `begin_ruling`) is the actual recoverable court-side checkpoint — so the contract properties (safe retry, no double-settlement) hold under either ordering. This document follows the verified code. See "Escalations" in the accompanying work report.
+
+**Response (200 OK):** dispute record, `status: "ruled"`, `worker_pct` set, `votes` populated.
 
 **Errors:**
 
 | Status | Code                                 | Description |
 |--------|--------------------------------------|-------------|
-| 400    | `INVALID_JWS`                       | Token is malformed or missing |
-| 400    | `INVALID_JSON`                      | Request body is not valid JSON |
-| 400    | `INVALID_PAYLOAD`                   | Missing required fields or `action` is not `"trigger_ruling"` |
-| 403    | `FORBIDDEN`                         | Signer is not the platform agent |
-| 404    | `DISPUTE_NOT_FOUND`                 | No dispute with this `dispute_id` |
-| 409    | `INVALID_DISPUTE_STATUS`            | Dispute is not in `rebuttal_pending` status |
-| 409    | `DISPUTE_ALREADY_RULED`             | Dispute already has a ruling |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`      | Cannot reach Identity service for JWS verification |
-| 502    | `CENTRAL_BANK_UNAVAILABLE`          | Cannot reach Central Bank for escrow split |
-| 502    | `REPUTATION_SERVICE_UNAVAILABLE`    | Cannot reach Reputation service for feedback |
-| 502    | `TASK_BOARD_UNAVAILABLE`            | Cannot reach Task Board to record ruling |
-| 502    | `JUDGE_UNAVAILABLE`                 | LLM provider returned an error or timed out |
+| 400    | `invalid_jws` / `invalid_json` / `invalid_payload` | As above |
+| 403    | `forbidden`                          | Bad signature or wrong `kid` |
+| 404    | `dispute_not_found`                  | No dispute with this `dispute_id` |
+| 404    | `task_not_found`                     | Task no longer exists on the Task Board |
+| 409    | `dispute_already_ruled`              | Dispute already has a ruling |
+| 409    | `dispute_not_ready`                  | Dispute status is not rulable, **or** no rebuttal exists and the rebuttal window has not yet closed |
+| 502    | `task_board_unavailable`             | Cannot reach the Task Board to fetch task/deliverables or record the ruling |
+| 502    | `reputation_service_unavailable`     | Cannot reach Reputation to record feedback |
+| 502    | `judge_unavailable`                  | A judge raised an error, or no judges are configured |
+
+There is **no** `central_bank_unavailable` error code. The Court never calls the Central Bank; escrow failures, if any, surface on the Task Board side of the `record_ruling` call as `task_board_unavailable`.
 
 ---
 
 ### GET /disputes/{dispute_id}
 
-Get full dispute details. If the dispute has been ruled, the response includes the votes array.
+Get full dispute details, including votes.
 
-**Response (200 OK):**
-```json
-{
-  "dispute_id": "disp-990e8400-e29b-41d4-a716-446655440000",
-  "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
-  "claimant_id": "a-alice-uuid",
-  "respondent_id": "a-bob-uuid",
-  "claim": "The worker did not implement email validation as specified...",
-  "rebuttal": "The specification did not define a specific email format...",
-  "status": "ruled",
-  "rebuttal_deadline": "2026-02-28T10:00:00Z",
-  "worker_pct": 70,
-  "ruling_summary": "The specification stated 'email field' without explicitly requiring RFC 5322 format validation...",
-  "escrow_id": "esc-770e8400-e29b-41d4-a716-446655440000",
-  "filed_at": "2026-02-27T10:00:00Z",
-  "rebutted_at": "2026-02-27T12:00:00Z",
-  "ruled_at": "2026-02-27T14:00:00Z",
-  "votes": [
-    {
-      "vote_id": "vote-110e8400-e29b-41d4-a716-446655440000",
-      "dispute_id": "disp-990e8400-e29b-41d4-a716-446655440000",
-      "judge_id": "judge-0",
-      "worker_pct": 70,
-      "reasoning": "The specification stated 'email field' without explicitly requiring RFC 5322 format validation...",
-      "voted_at": "2026-02-27T13:59:50Z"
-    }
-  ]
-}
-```
-
-The `votes` array is always present. It is empty if the dispute has not been ruled yet, and populated with all judge votes after ruling.
+**Response (200 OK):** full dispute record; `votes` is `[]` until ruled.
 
 **Errors:**
 
 | Status | Code                 | Description |
 |--------|----------------------|-------------|
-| 404    | `DISPUTE_NOT_FOUND`  | No dispute with this `dispute_id` |
+| 404    | `dispute_not_found`  | No dispute with this `dispute_id` |
 
 ---
 
@@ -450,241 +356,145 @@ List disputes with optional filters.
 | `task_id` | string | Filter by task ID |
 | `status`  | string | Filter by dispute status (`rebuttal_pending`, `judging`, `ruled`) |
 
-All filters are optional. Multiple filters are combined with AND logic.
+All filters optional; combined with AND logic. Unknown filter values return an empty list, not an error.
 
-**Response (200 OK):**
-```json
-{
-  "disputes": [
-    {
-      "dispute_id": "disp-990e8400-e29b-41d4-a716-446655440000",
-      "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
-      "claimant_id": "a-alice-uuid",
-      "respondent_id": "a-bob-uuid",
-      "status": "ruled",
-      "worker_pct": 70,
-      "filed_at": "2026-02-27T10:00:00Z",
-      "ruled_at": "2026-02-27T14:00:00Z"
-    }
-  ]
-}
-```
+**Response (200 OK):** `{ "disputes": [ {dispute summary}, ... ] }` — summary fields: `dispute_id`, `task_id`, `claimant_id`, `respondent_id`, `status`, `worker_pct`, `filed_at`, `ruled_at`. Full details via `GET /disputes/{dispute_id}`.
 
-The list view is a summary. It includes: `dispute_id`, `task_id`, `claimant_id`, `respondent_id`, `status`, `worker_pct` (null if not ruled), `filed_at`, and `ruled_at` (null if not ruled). Full details (including `claim`, `rebuttal`, `ruling_summary`, and `votes`) are available via `GET /disputes/{dispute_id}`.
-
-**Notes:**
-- Returns an empty list for unknown filter values (no error)
-- No pagination in v1 — all matching disputes are returned
+No pagination in v1.
 
 ---
 
 ## Judge Architecture
-
-### Overview
-
-The judge system is designed as a pluggable panel where each judge independently evaluates a dispute and casts a vote. The architecture separates the judge interface from the implementation, allowing different judge types (LLM-based, rule-based, human) to be added without changing the core dispute logic.
 
 ### File Structure
 
 ```
 src/court_service/judges/
   __init__.py
-  base.py          # Abstract Judge interface (JudgeVote dataclass, Judge ABC)
-  prompts.py       # System prompts and prompt templates
-  llm_judge.py     # LiteLLM-based judge implementation
+  base.py          # Judge ABC, JudgeVote, DisputeContext, MockJudge
+  prompts.py       # SYSTEM_PROMPT, EVALUATION_TEMPLATE
+  llm_judge.py      # LiteLLM-backed judge implementation
 ```
 
-### Abstract Judge Interface
+### Judge Interface
 
-The `base.py` module defines:
+- **`JudgeVote`** dataclass: `judge_id`, `worker_pct` (int, clamped 0–100), `reasoning`, `voted_at`.
+- **`DisputeContext`** dataclass: `task_spec`, `deliverables: list[str]` (decoded asset text, not filenames), `claim`, `rebuttal: str | None`, `task_title`, `reward`.
+- **`Judge` ABC**: one method, `async def evaluate(context: DisputeContext) -> JudgeVote`.
 
-- **JudgeVote dataclass** — the return type of every judge evaluation:
-  - `judge_id` (string) — identifier of the judge that cast this vote
-  - `worker_pct` (integer, 0–100) — percentage of escrow to award to the worker
-  - `reasoning` (string) — written explanation for the percentage
+### MockJudge (dev/test/CI)
 
-- **Judge ABC** — abstract base class with a single method:
-  - `evaluate(dispute_context) -> JudgeVote` — given the full dispute context, return a vote
+`MockJudge(judge_id, fixed_worker_pct, reasoning)` — returns a fixed vote with no external call. `fixed_worker_pct` is sourced from the required config key `judges.mock_worker_pct` (default `50`). Selected when a judge's config entry has `provider: "mock"`.
 
-### Dispute Context
+### LLMJudge (real judging)
 
-The dispute context provided to each judge includes:
+Selected for any judge whose `provider` is omitted or not `"mock"` (config default is the literal string `"llm"`, which only distinguishes "not mock"; the real provider is whatever `litellm` resolves from the `model` string, e.g. an `openai/…` or local-server-prefixed model id). Requires `temperature` in config; `api_base` and `api_key_env` are optional (if `api_key_env` is set, the named environment variable must be non-empty at startup or the service fails to start).
 
-| Field            | Type    | Description |
-|------------------|---------|-------------|
-| `task_spec`      | string  | The original task specification |
-| `deliverables`   | list    | List of deliverable filenames/metadata from the Task Board |
-| `claim`          | string  | The poster's claim (reason for rejection) |
-| `rebuttal`       | string? | The worker's rebuttal (null if none submitted) |
-| `task_title`     | string  | The task title |
-| `reward`         | integer | The task reward amount |
+Sends `SYSTEM_PROMPT` + `EVALUATION_TEMPLATE.format(...)` to `litellm.acompletion(...)`, extracts a `{"worker_pct": int, "reasoning": str}` JSON object from the response (tolerating markdown code fences and leading/trailing prose), and validates `0 <= worker_pct <= 100` with non-empty reasoning. Any parse/validation/transport failure raises `502 judge_unavailable`.
 
-### LLM Judge Implementation
+### Prompt Content — verified, not assumed
 
-The `llm_judge.py` module implements the Judge ABC using LiteLLM as the LLM provider:
+`court_service/judges/prompts.py` today contains:
 
-- Uses the model and temperature specified in the judge's configuration entry
-- Sends a structured prompt containing the dispute context and the core principle
-- Parses the LLM response to extract `worker_pct` and `reasoning`
-- Returns a `JudgeVote`
+```python
+SYSTEM_PROMPT = """You are an impartial dispute-resolution judge for software-delivery tasks.
+Your core principle is: ambiguity in the specification favors the worker.
+Return a worker payout percentage (0-100) and concise reasoning.
+Respond with valid JSON only."""
+```
 
-LiteLLM is used for maximum provider flexibility — the same judge implementation can use OpenAI, Anthropic, or any LiteLLM-supported provider by changing the model string in configuration.
-
-### Prompt Design
-
-The `prompts.py` module contains:
-
-- **System prompt** — instructs the judge on its role, the core principle ("ambiguity favors the worker"), and the expected output format
-- **Evaluation prompt template** — formatted with the dispute context fields
-
-The judge receives:
-1. Task specification (what was requested)
-2. Deliverables list (what was delivered)
-3. Claim text (why the poster rejected the work)
-4. Rebuttal text (the worker's defense, if submitted)
-5. Core principle: "When the specification is ambiguous, rule in favor of the worker"
-
-The judge must return:
-1. `worker_pct` — integer 0–100, the percentage of escrow to award to the worker
-2. `reasoning` — written explanation justifying the percentage
+This is a **one-sentence restatement of the core principle**, not an expanded operational rubric. `docs/plans/2026-07-10-q13-judge-panel-decision.md` ratified "an explicit 'vague spec' rubric is written into the judge system prompt" as part of the Q-13 decision — **that expansion has not landed**. There is no worked-example list, no criteria for what counts as "ambiguous," and no scoring guidance beyond the single sentence above. Document this as-is; do not describe a rubric that does not exist in the file.
 
 ### Panel Evaluation
 
-When a ruling is triggered:
+1. Every configured judge is called **sequentially** (not concurrently) with an identical `DisputeContext`.
+2. Every judge must vote; the first judge failure aborts the whole ruling with `502 judge_unavailable` (no partial results, no `judge_unavailable` count).
+3. Final `worker_pct` = median of all votes; `ruling_summary` = all judges' reasoning joined with a blank line.
 
-1. All judges in the configured panel are called sequentially
-2. Each judge receives the same dispute context
-3. Each judge independently returns a `JudgeVote`
-4. All judges must vote — if any judge fails, the entire ruling fails with `JUDGE_UNAVAILABLE`
-5. The final `worker_pct` is the **median** of all judge votes
-6. The `ruling_summary` is composed from all judge reasoning texts
+### Panel Configuration (validated at config-load time, not at request time)
 
-### Panel Size Validation
+- `judges.panel_size` must be an odd integer ≥ 1.
+- `judges.panel_size` must equal `len(judges.judges)`.
+- All `judges.judges[].id` values must be unique.
 
-Panel size is validated at service startup:
-- Must be an odd integer >= 1
-- Must match the number of judges configured in the `judges.judges` array
-- If validation fails, the service refuses to start with `INVALID_PANEL_SIZE`
+**These are Pydantic validators on `JudgesConfig`** (`court_service/config.py`), evaluated when `get_settings()` loads `config.yaml` — a violation raises a `ValueError` (wrapped in a Pydantic `ValidationError`) that prevents the process from starting. It is **not** an HTTP response; there is no runtime endpoint that can trigger `invalid_panel_size`. Earlier drafts of this document described it as a `400` API error — that was never accurate; it is a process-startup failure only.
 
----
+### Production Panel — ratified target, not yet the shipped default (Q-13)
 
-## Side-Effects on Ruling
+Per `docs/plans/2026-07-10-q13-judge-panel-decision.md`:
 
-After the judge panel votes and the median `worker_pct` is calculated, the Court executes the following side-effects in order:
-
-### 1. Split Escrow (Central Bank)
-
-**Call:** `POST /escrow/{escrow_id}/split`
-
-The Court creates a platform-signed JWS token and calls the Central Bank to split the escrowed funds:
-- `worker_pct`% of the escrow goes to the worker (respondent)
-- The remaining `(100 - worker_pct)`% goes to the poster (claimant)
-
-If the Central Bank is unreachable, the ruling fails with `CENTRAL_BANK_UNAVAILABLE`. The dispute remains in `judging` status and the votes are not persisted.
-
-### 2. Record Reputation Feedback (Reputation Service)
-
-**Call:** `POST /feedback` (two calls)
-
-The Court submits two feedback records to the Reputation service:
-- **Spec quality feedback** — for the poster (claimant), reflecting how clear and unambiguous the specification was. A low `worker_pct` (poster won) suggests a clear spec. A high `worker_pct` (worker won) suggests an ambiguous spec.
-- **Delivery quality feedback** — for the worker (respondent), reflecting how well the deliverables matched the specification. A high `worker_pct` suggests good delivery. A low `worker_pct` suggests poor delivery.
-
-If the Reputation service is unreachable, the ruling fails with `REPUTATION_SERVICE_UNAVAILABLE`.
-
-### 3. Record Ruling on Task (Task Board)
-
-**Call:** `POST /tasks/{task_id}/ruling`
-
-The Court creates a platform-signed JWS token and calls the Task Board to record the ruling outcome on the task:
-- `ruling_id` — the dispute ID used as the ruling identifier
-- `worker_pct` — the final percentage
-- `ruling_summary` — the aggregated reasoning
-
-This transitions the task from DISPUTED to RULED status in the Task Board.
-
-If the Task Board is unreachable, the ruling fails with `TASK_BOARD_UNAVAILABLE`.
-
-### 4. Update Dispute Record
-
-After all external side-effects succeed:
-- `status` transitions to `ruled`
-- `ruled_at` set to current timestamp
-- `worker_pct` set to the median value
-- `ruling_summary` set to the aggregated judge reasoning
-- All judge votes are persisted to the JudgeVote table
-
-### Atomicity
-
-Side-effects are executed sequentially. If any external call fails, the ruling is rolled back — the dispute stays in its previous status, and no votes are persisted. This ensures consistency: either all side-effects succeed and the dispute is ruled, or none of them take effect.
+- **Dev/test/CI:** 1 deterministic `MockJudge`, fixed percentage from `judges.mock_worker_pct` — this is what `services/court/config.yaml` ships today.
+- **Production:** an odd-sized panel of **3** judges, **median** aggregation (the aggregation logic is already panel-size-agnostic — no code change needed to go from 1 to 3), providers config-driven per judge entry.
+- **LM Studio is not a live provider today.** `services/court/config.yaml:40-46` contains a commented-out LM Studio judge block ("Real LM Studio judge config — restore this block ... to run live LLM rulings against LM Studio at localhost:1234"). It is documentation-as-comment only — the active `judges.judges` list is the single mock judge. Do not describe LM Studio as a configured or wired provider; it is a manual restore-this-block instruction for an operator, nothing more.
 
 ---
 
 ## Error Codes
 
-| Status | Code                                | When |
-|--------|-------------------------------------|------|
-| 400    | `INVALID_JWS`                      | JWS token is malformed, missing, or cannot be decoded |
-| 400    | `INVALID_JSON`                     | Request body is not valid JSON |
-| 400    | `INVALID_PAYLOAD`                  | Required fields missing from JWS payload, or `action` does not match the endpoint |
-| 400    | `INVALID_PANEL_SIZE`               | Panel size is even, less than 1, or does not match configured judges count (startup error) |
-| 403    | `FORBIDDEN`                        | JWS signer is not the platform agent |
-| 404    | `DISPUTE_NOT_FOUND`                | No dispute exists with the given `dispute_id` |
-| 404    | `TASK_NOT_FOUND`                   | Task does not exist in the Task Board (when filing a dispute) |
-| 409    | `DISPUTE_ALREADY_EXISTS`           | A dispute has already been filed for this `task_id` |
-| 409    | `DISPUTE_ALREADY_RULED`            | Dispute already has a ruling — cannot rule again |
-| 409    | `REBUTTAL_ALREADY_SUBMITTED`       | Worker has already submitted a rebuttal for this dispute |
-| 409    | `INVALID_DISPUTE_STATUS`           | The requested operation is not valid for the dispute's current status |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`     | Cannot reach the Identity service for JWS token verification |
-| 502    | `TASK_BOARD_UNAVAILABLE`           | Cannot reach the Task Board to fetch task data or record ruling |
-| 502    | `CENTRAL_BANK_UNAVAILABLE`         | Cannot reach the Central Bank to split escrow |
-| 502    | `REPUTATION_SERVICE_UNAVAILABLE`   | Cannot reach the Reputation service to record feedback |
-| 502    | `JUDGE_UNAVAILABLE`                | LLM provider returned an error, timed out, or produced an unparseable response |
+| Status | Code                              | When |
+|--------|-----------------------------------|------|
+| 400    | `invalid_json`                    | Request body is not valid JSON |
+| 400    | `invalid_jws`                     | JWS token is missing, empty, not a string, or not a 3-part compact serialization |
+| 400    | `invalid_payload`                 | Required fields missing/empty, `action` mismatch, a payload `dispute_id` that doesn't match the URL, or a field exceeding its configured length cap |
+| 403    | `forbidden`                       | Local certificate verification failed, `kid` does not match the platform agent id, or (rebuttal only) a forwarded `respondent_id` mismatch |
+| 404    | `dispute_not_found`                | No dispute exists with the given `dispute_id` |
+| 404    | `task_not_found`                   | Task does not exist on the Task Board |
+| 405    | `method_not_allowed`               | Unsupported HTTP method on a defined route |
+| 409    | `dispute_already_exists`           | A dispute has already been filed for this `task_id` |
+| 409    | `dispute_already_ruled`            | Dispute already has a ruling |
+| 409    | `dispute_not_ready`                | Ruling requested while status is not rulable, or (no rebuttal + window still open) |
+| 409    | `invalid_dispute_status`           | Rebuttal requested on a dispute not in `rebuttal_pending` |
+| 409    | `rebuttal_already_submitted`       | A rebuttal has already been recorded for this dispute |
+| 413    | `payload_too_large`                | Request body exceeds `request.max_body_size` |
+| 415    | `unsupported_media_type`           | `Content-Type` is not `application/json` on a JSON POST endpoint |
+| 502    | `identity_service_unavailable`     | Local certificate verification raised an unexpected (non-signature) error, e.g. `TokenExpiredError` on an expired platform token — name retained for continuity; no Identity HTTP call is actually made |
+| 502    | `task_board_unavailable`           | Cannot reach the Task Board to fetch task/asset data or record a ruling |
+| 502    | `reputation_service_unavailable`   | Cannot reach the Reputation service to record feedback |
+| 502    | `judge_unavailable`                | A judge raised an error, timed out, produced an unparseable response, or no judges are configured |
+| 500    | `internal_error`                   | Unhandled exception (should not occur; not a documented contract) |
+| 503    | `service_not_ready`                | Dispute service, store, or platform agent not yet initialized |
+
+There is no `central_bank_unavailable` code — the Court never calls the Central Bank (see Core Principles).
 
 ---
 
 ## Standardized Error Format
 
-All error responses follow the system-wide structure:
-
 ```json
 {
-  "error": "ERROR_CODE",
+  "error": "error_code",
   "message": "Human-readable description of what went wrong",
   "details": {}
 }
 ```
 
-The `details` field is optional and provides additional context when available (e.g., which field failed validation, which external service was unreachable).
+Codes are **snake_case** throughout (`invalid_payload`, not `INVALID_PAYLOAD`). `details` is present on every error response (may be `{}`).
 
 ---
 
 ## Input Validation Constraints
 
-| Field          | Constraint |
-|----------------|------------|
-| `dispute_id`   | Must match `disp-<uuid4>` format (8-4-4-4-12 hex) |
-| `task_id`      | Must match `t-<uuid4>` format (8-4-4-4-12 hex) |
-| `claimant_id`  | Must match `a-<uuid4>` format (agent ID) |
-| `respondent_id`| Must match `a-<uuid4>` format (agent ID) |
-| `claim`        | 1–10,000 characters, required |
-| `rebuttal`     | 1–10,000 characters, required (when submitted) |
-| `escrow_id`    | Non-empty string, required |
-| `worker_pct`   | Integer 0–100 (in judge votes) |
+| Field           | Constraint |
+|-----------------|------------|
+| `dispute_id`    | System-generated `disp-<uuid4>` |
+| `vote_id`       | System-generated; `vote-<uuid4>` under the unit-test fake store, `vote-<dispute_id>-<index>` under the real gateway-backed store — see the note under "JudgeVote" above |
+| `claim`         | 1 – `disputes.max_claim_length` characters (10,000 by default), required |
+| `rebuttal`      | 1 – `disputes.max_rebuttal_length` characters (10,000 by default), required when submitted |
+| `escrow_id`     | Non-empty string in the request payload (may read back empty if the Court's own gateway escrow lookup fails) |
+| `worker_pct`    | Integer, clamped to 0–100 in every judge vote and in the final ruling |
 
 ---
 
 ## What This Service Does NOT Do
 
-- **Appeals** — once ruled, a dispute is final. There is no appeals process. Out of scope.
-- **Judge recusal** — judges do not recuse themselves from disputes. All configured judges always vote.
-- **Multi-round deliberation** — judges vote once independently. There is no deliberation, discussion, or revision of votes between judges.
-- **Partial rulings** — a ruling is all-or-nothing. Either all judges vote and all side-effects succeed, or the ruling fails entirely. There are no partial outcomes.
-- **Streaming judge reasoning** — judge reasoning is returned as a complete string after all judges have voted. There is no streaming of individual judge responses.
-- **Direct agent interaction** — the Court never communicates with agents. The Task Board is the sole intermediary that files disputes and submits rebuttals on behalf of agents.
-- **Rate limiting** — no throttling on any endpoint. Acceptable for the current scope.
-- **Pagination** — dispute lists return all matching records. Pagination can be added when needed.
-- **Rebuttal deadline enforcement** — the Court does not enforce rebuttal deadlines via background jobs. The Task Board is responsible for triggering the ruling after the rebuttal window expires.
+- **Escrow settlement.** The Court never calls the Central Bank. Settlement is entirely the Task Board's responsibility, triggered by `record_ruling`.
+- **Appeals.** Once ruled, a dispute is final.
+- **Judge recusal.** Every configured judge always votes.
+- **Multi-round deliberation.** Judges vote once, independently, with no cross-judge discussion.
+- **Partial rulings.** A ruling either fully commits (Task Board recorded, feedback recorded, votes persisted, status `ruled`) or the dispute reverts to `rebuttal_pending` for retry — never a half-applied state reported as done.
+- **Direct agent interaction.** The Task Board is the sole intermediary for filing claims and submitting rebuttals on behalf of agents.
+- **Rate limiting or pagination.**
+- **Proactive/background rebuttal-window enforcement.** The Court enforces the window **synchronously**, only when `POST /disputes/{id}/rule` is actually called (rejecting with `dispute_not_ready` if the window is still open and no rebuttal exists) — it does not run a timer or scheduler that triggers rulings on its own. Something else (a Task Board deadline evaluator, the feeder, or an operator) must call `/rule` after the window closes.
 
 ---
 
@@ -693,110 +503,76 @@ The `details` field is optional and provides additional context when available (
 ### File Dispute Flow
 
 ```
-Task Board                 Court                    Identity         Task Board (read)
-  |                          |                          |                |
-  | 1. POST /disputes/file   |                          |                |
-  | { token }                |                          |                |
-  | ========================>|                          |                |
-  |                          | 2. Verify JWS            |                |
-  |                          | POST /agents/verify-jws  |                |
-  |                          | ========================>|                |
-  |                          | 3. { valid: true }       |                |
-  |                          | <========================|                |
-  |                          |                          |                |
-  |                          | 4. Fetch task data       |                |
-  |                          | GET /tasks/{task_id}     |                |
-  |                          | ========================================>|
-  |                          | 5. { task }              |                |
-  |                          | <========================================|
-  |                          |                          |                |
-  |                          | 6. Create dispute record |                |
-  |                          |    status: rebuttal_pending              |
-  |                          |    set rebuttal_deadline |                |
-  |                          |                          |                |
-  | 7. 201 { dispute }       |                          |                |
-  | <========================|                          |                |
-```
-
-### Submit Rebuttal Flow
-
-```
-Task Board                 Court                    Identity
+Task Board                 Court                    Task Board (read)
   |                          |                          |
-  | 1. POST /disputes/{id}/rebuttal                     |
+  | 1. POST /disputes/file   |                          |
   | { token }                |                          |
   | ========================>|                          |
-  |                          | 2. Verify JWS            |
-  |                          | POST /agents/verify-jws  |
+  |                          | 2. Verify JWS locally    |
+  |                          |    (PlatformAgent.validate_certificate)
+  |                          |    + kid == platform_agent_id
+  |                          |                          |
+  |                          | 3. Fetch task data       |
+  |                          | GET /tasks/{task_id}     |
   |                          | ========================>|
-  |                          | 3. { valid: true }       |
+  |                          | 4. { task }              |
   |                          | <========================|
   |                          |                          |
-  |                          | 4. Check dispute exists  |
-  |                          |    and status is          |
-  |                          |    rebuttal_pending       |
+  |                          | 5. Create dispute record  |
+  |                          |    (POST /court/claims via gateway)
+  |                          |    status: rebuttal_pending
+  |                          |    set rebuttal_deadline |
   |                          |                          |
-  |                          | 5. Store rebuttal        |
-  |                          |    Set rebutted_at       |
-  |                          |                          |
-  | 6. 200 { dispute }       |                          |
+  | 6. 201 { dispute }       |                          |
   | <========================|                          |
 ```
 
 ### Trigger Ruling Flow
 
 ```
-Task Board        Court              Identity     Judge Panel    Central Bank    Reputation    Task Board (write)
-  |                 |                    |             |               |               |              |
-  | 1. POST /disputes/{id}/rule         |             |               |               |              |
-  | { token }       |                    |             |               |               |              |
-  | ===============>|                    |             |               |               |              |
-  |                 | 2. Verify JWS      |             |               |               |              |
-  |                 | ==================>|             |               |               |              |
-  |                 | <==================|             |               |               |              |
-  |                 |                    |             |               |               |              |
-  |                 | 3. Status -> judging             |               |               |              |
-  |                 |                    |             |               |               |              |
-  |                 | 4. Call each judge |             |               |               |              |
-  |                 |   (spec, deliverables,           |               |               |              |
-  |                 |    claim, rebuttal)|             |               |               |              |
-  |                 | ===============================>|               |               |              |
-  |                 | 5. { worker_pct, reasoning }    |               |               |              |
-  |                 | <===============================|               |               |              |
-  |                 |                    |             |               |               |              |
-  |                 | 6. Calculate median worker_pct   |               |               |              |
-  |                 |                    |             |               |               |              |
-  |                 | 7. Split escrow    |             |               |               |              |
-  |                 |   POST /escrow/{id}/split        |               |               |              |
-  |                 | =============================================>|               |              |
-  |                 | <=============================================|               |              |
-  |                 |                    |             |               |               |              |
-  |                 | 8. Record feedback |             |               |               |              |
-  |                 |   POST /feedback (spec quality)  |               |               |              |
-  |                 | ==========================================================>|              |
-  |                 | <==========================================================|              |
-  |                 |   POST /feedback (delivery quality)              |               |              |
-  |                 | ==========================================================>|              |
-  |                 | <==========================================================|              |
-  |                 |                    |             |               |               |              |
-  |                 | 9. Record ruling on task         |               |               |              |
-  |                 |   POST /tasks/{id}/ruling        |               |               |              |
-  |                 | =======================================================================>|
-  |                 | <========================================================================|
-  |                 |                    |             |               |               |              |
-  |                 | 10. Update dispute |             |               |               |              |
-  |                 |     status -> ruled|             |               |               |              |
-  |                 |     set worker_pct |             |               |               |              |
-  |                 |     set ruled_at   |             |               |               |              |
-  |                 |     persist votes  |             |               |               |              |
-  |                 |                    |             |               |               |              |
-  | 11. 200 { dispute + votes }         |             |               |               |              |
-  | <===============|                    |             |               |               |              |
+Task Board        Court          Task Board (read)   Judge Panel   Task Board (write)    Reputation      DB Gateway
+  |                 |                    |                |               |                  |               |
+  | 1. POST /disputes/{id}/rule          |                |               |                  |               |
+  | { token }       |                    |                |               |                  |               |
+  | ===============>|                    |                |               |                  |               |
+  |                 | 2. Verify JWS locally + dispute_not_ready precondition |                  |               |
+  |                 |                    |                |               |                  |               |
+  |                 | 3. Status -> judging (persisted BEFORE any Task Board call)              |               |
+  |                 |                    |                |               |                  |               |
+  |                 | 4. Fetch task + deliverables         |               |                  |               |
+  |                 | ==================>|                |               |                  |               |
+  |                 | <==================|                |               |                  |               |
+  |                 |                    |                |               |                  |               |
+  |                 | 5. Call each judge sequentially       |               |                  |               |
+  |                 | =====================================>|               |                  |               |
+  |                 | 6. { worker_pct, reasoning }           |               |                  |               |
+  |                 | <=====================================|               |                  |               |
+  |                 |                    |                |               |                  |               |
+  |                 | 7. Compute median worker_pct           |               |                  |               |
+  |                 |                    |                |               |                  |               |
+  |                 | 8. Record ruling (escrow settles Task-Board-side, idempotent by ruling_id)|               |
+  |                 | =======================================================>|                  |               |
+  |                 | <=======================================================|                  |               |
+  |                 |                    |                |               |                  |               |
+  |                 | 9. Record feedback x2 (409 feedback_exists == success) |                  |               |
+  |                 | ==========================================================================>|               |
+  |                 | <==========================================================================|               |
+  |                 |                    |                |               |                  |               |
+  |                 | 10. Persist votes + ruling, status -> ruled                                                |
+  |                 | ============================================================================================>|
+  |                 | <============================================================================================|
+  |                 |                    |                |               |                  |               |
+  | 11. 200 { dispute + votes }          |                |               |                  |               |
+  | <===============|                    |                |               |                  |               |
 ```
+
+If step 4, 5, 8, 9, or 10 fails, the dispute reverts to `rebuttal_pending` (deleting any partial ruling row) and the caller receives the corresponding error; a retry re-runs from step 3.
 
 ---
 
 ## Configuration
+
+Verified against `services/court/config.yaml` and `services/court/src/court_service/config.py`. All fields are required (no defaults, `extra="forbid"` on every section) unless marked optional.
 
 ```yaml
 service:
@@ -810,88 +586,67 @@ server:
 
 logging:
   level: "INFO"
-  format: "json"
-
-database:
-  path: "data/court.db"
-
-identity:
-  base_url: "http://localhost:8001"
-  verify_jws_path: "/agents/verify-jws"
-
-task_board:
-  base_url: "http://localhost:8003"
-
-central_bank:
-  base_url: "http://localhost:8002"
-
-reputation:
-  base_url: "http://localhost:8004"
+  directory: "data/logs"
 
 platform:
-  agent_id: ""
-  private_key_path: ""
+  agent_config_path: "../../agents/config.yaml"
 
 disputes:
   rebuttal_deadline_seconds: 86400
+  max_claim_length: 10000
+  max_rebuttal_length: 10000
+  feedback_extremely_satisfied_cutoff: 80
+  feedback_satisfied_cutoff: 40
+  feedback_comment_max_length: 256
 
 judges:
   panel_size: 1
+  mock_worker_pct: 50
+  max_deliverable_bytes: 65536
   judges:
     - id: "judge-0"
-      model: "gpt-4o"
-      temperature: 0.3
+      provider: "mock"
+      model: "mock-judge"
+    # Real LM Studio judge config — commented out, not wired for a real run.
 
 request:
   max_body_size: 1048576
+
+db_gateway:
+  url: "http://127.0.0.1:8007"
+  timeout_seconds: 10
 ```
 
-All fields are required. The service must fail to start if any is missing. No default values.
-
-| Section               | Field                         | Description |
-|-----------------------|-------------------------------|-------------|
-| `service.name`        | `"court"`                     | Service identifier |
-| `service.version`     | `"0.1.0"`                     | Service version string |
-| `server.host`         | `"127.0.0.1"`                   | Bind address |
-| `server.port`         | `8005`                        | Listen port |
-| `server.log_level`    | `"info"`                      | Uvicorn log level |
-| `logging.level`       | `"INFO"`                      | Application log level |
-| `logging.format`      | `"json"`                      | Log output format |
-| `database.path`       | `"data/court.db"`             | SQLite database file path |
-| `identity.base_url`   | `"http://localhost:8001"`     | Identity service base URL |
-| `identity.verify_jws_path` | `"/agents/verify-jws"`   | JWS verification endpoint path |
-| `task_board.base_url` | `"http://localhost:8003"`     | Task Board service base URL |
-| `central_bank.base_url` | `"http://localhost:8002"`   | Central Bank service base URL |
-| `reputation.base_url` | `"http://localhost:8004"`     | Reputation service base URL |
-| `platform.agent_id`   | `""`                          | Platform agent ID registered with Identity service |
-| `platform.private_key_path` | `""`                    | Path to Ed25519 private key for platform-signed operations |
-| `disputes.rebuttal_deadline_seconds` | `86400`        | Seconds from filing until rebuttal window closes (24 hours) |
-| `judges.panel_size`   | `1`                           | Number of judges in the panel (must be odd, >= 1) |
-| `judges.judges`       | list                          | Array of judge configurations |
-| `judges.judges[].id`  | `"judge-0"`                   | Unique judge identifier |
-| `judges.judges[].model` | `"gpt-4o"`                  | LiteLLM model string |
-| `judges.judges[].temperature` | `0.3`                 | LLM sampling temperature |
-| `request.max_body_size` | `1048576`                   | Maximum request body size in bytes (1 MB) |
+| Section / Field | Description |
+|---|---|
+| `service.name`, `service.version` | Service identity |
+| `server.host`, `server.port`, `server.log_level` | Bind address (8005), Uvicorn log level |
+| `logging.level`, `logging.directory` | Application log level and log file directory |
+| `platform.agent_config_path` | Path to the shared `agents/config.yaml`, used by `AgentFactory` to load the platform agent's Ed25519 keypair (from that file's `data.keys_dir` + roster) and register it. `platform.agent_id` and `platform.private_key_path` are also present as optional/legacy fields on `PlatformConfig` but are **not read anywhere in `lifespan.py`** — key loading happens exclusively through `agent_config_path`. Do not describe `private_key_path` as the live key-loading mechanism. |
+| `disputes.rebuttal_deadline_seconds` | Seconds from filing until the rebuttal window closes (86,400 = 24h) |
+| `disputes.max_claim_length`, `disputes.max_rebuttal_length` | Character caps on claim/rebuttal text (10,000 each) |
+| `disputes.feedback_extremely_satisfied_cutoff` | `worker_pct` threshold at/above which delivery-quality feedback is `extremely_satisfied` (and, inverted, spec-quality is `dissatisfied`) — required config key, no hardcoded default. Currently `80`. |
+| `disputes.feedback_satisfied_cutoff` | `worker_pct` threshold at/above which delivery-quality feedback is `satisfied` — required config key. Currently `40`. |
+| `disputes.feedback_comment_max_length` | Character cap applied to the ruling-summary text used as the feedback comment — required config key. Currently `256`. |
+| `judges.panel_size` | Number of judges (odd, ≥ 1), validated against `len(judges.judges)` at config-load time |
+| `judges.mock_worker_pct` | Fixed `worker_pct` returned by `MockJudge` instances — required config key, no hardcoded default. Currently `50`. |
+| `judges.max_deliverable_bytes` | Total byte budget (across all fetched assets combined) for deliverable content included in the judge prompt — required config key. Currently `65536`. |
+| `judges.judges[]` | Array of judge entries: `id` (unique), `model`, `provider` (`"mock"` or omitted/other for a real litellm judge), `api_base`/`api_key_env`/`temperature` (required for non-mock judges) |
+| `request.max_body_size` | Max request body size in bytes for the JSON-POST validation middleware (1 MiB) |
+| `db_gateway.url`, `db_gateway.timeout_seconds` | DB Gateway base URL and HTTP timeout; **required** — the service refuses to start if `db_gateway` is missing from config |
 
 ### Startup Validation
 
-The following conditions are validated at startup. If any fail, the service refuses to start:
+The following are validated when the service starts (config load + lifespan), and a failure prevents the process from serving traffic:
 
-- `judges.panel_size` must be odd and >= 1
-- `judges.panel_size` must equal `len(judges.judges)`
-- All judge IDs must be unique
-- `platform.agent_id` must be non-empty
-- `platform.private_key_path` must point to a readable file
-- `database.path` parent directory must exist or be creatable
+- `judges.panel_size` must be odd and ≥ 1, and must equal `len(judges.judges)` — enforced by a Pydantic field validator on `JudgesConfig` (raises before the app object exists; **not** an HTTP response).
+- All judge `id` values must be unique.
+- `db_gateway` config section must be present.
+- The platform agent must register successfully (`AgentFactory(...).platform_agent().register()`); a missing `agent_id` after registration raises `RuntimeError`.
+- Every non-mock judge with `api_key_env` set must resolve to a non-empty environment variable, or `ValueError` is raised while building the judge panel.
 
 ---
 
 ## Method-Not-Allowed Handling
 
-All endpoints that match fixed URL patterns must return `405 Method Not Allowed` for unsupported HTTP methods, with an `Allow` header listing the supported methods.
-
-Example: `DELETE /disputes/disp-xxx` returns:
-```
-HTTP/1.1 405 Method Not Allowed
-Allow: GET
-```
+Unsupported methods on defined routes return `405 Method Not Allowed` with the standard error envelope (`error: "method_not_allowed"`), via Starlette's `HTTPException` handler (`court_service/core/exceptions.py::http_exception_handler`). `/disputes/file` and `/disputes` also register explicit method-not-allowed routes for the common wrong-method cases.

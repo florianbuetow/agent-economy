@@ -18,7 +18,7 @@ async def health_check() -> HealthResponse:
     state = get_app_state()
     if state.feedback_store is None:
         raise ServiceError(
-            error="SERVICE_UNAVAILABLE",
+            error="service_not_ready",
             message="Feedback store not initialized",
             status_code=503,
             details={},
