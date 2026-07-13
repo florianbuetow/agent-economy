@@ -71,7 +71,7 @@ def gen_large_sum_series(rng: random.Random) -> MathTask:
   Common difference: {d}
   Number of terms: {n}
 
-The series is: {a}, {a + d}, {a + 2*d}, ..., {last}
+The series is: {a}, {a + d}, {a + 2 * d}, ..., {last}
 
 What is the sum of all {n} terms?
 
@@ -96,7 +96,7 @@ What is the total?
 
 OUTPUT FORMAT: A single integer.
 
-VERIFICATION: Using the formula n*(n+1)*(2n+1)/6 = {n}*{n+1}*{2*n+1}/6 = {total}.""",
+VERIFICATION: Using the formula n*(n+1)*(2n+1)/6 = {n}*{n + 1}*{2 * n + 1}/6 = {total}.""",
             solutions=[str(total)],
             level=14,
             problem_type="large_sum_series",

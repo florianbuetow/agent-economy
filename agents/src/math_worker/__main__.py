@@ -3,9 +3,11 @@
 Usage::
 
     cd agents/
-    uv run python -m math_worker                  # legacy: flat config sections
     uv run python -m math_worker mathbot           # factory: named worker profile
     uv run python -m math_worker mathbot_openai    # factory: different profile
+
+A worker profile name is required. Profiles are defined in config.yaml's
+``workers:`` section and validated against roster.yaml.
 """
 
 from __future__ import annotations
@@ -14,15 +16,16 @@ import asyncio
 import logging
 import signal
 import sys
+from typing import TYPE_CHECKING
 
 import httpx
 
-from base_agent.agent import BaseAgent
-from base_agent.config import load_agent_config
 from base_agent.worker_factory import WorkerFactory
-from math_worker.config import load_math_worker_settings
-from math_worker.llm_client import LLMClient
-from math_worker.loop import MathWorkerLoop
+
+if TYPE_CHECKING:
+    from base_agent.agent import BaseAgent
+    from math_worker.llm_client import LLMClient
+    from math_worker.loop import MathWorkerLoop
 
 
 def _setup_logging() -> None:
@@ -91,32 +94,20 @@ async def _main_factory(worker_name: str) -> None:
     await _run_loop(bundle.agent, bundle.llm, bundle.loop, logger)
 
 
-async def _main_legacy() -> None:
-    """Launch a math worker via the legacy flat config sections."""
-    _setup_logging()
-    logger = logging.getLogger("math_worker")
-
-    llm_config, worker_config = load_math_worker_settings()
-    agent_config = load_agent_config(worker_config.handle)
-
-    logger.info("Starting Math Worker Agent (handle=%s)", worker_config.handle)
-    logger.info("LLM endpoint: %s model: %s", llm_config.base_url, llm_config.model_id)
-
-    agent = BaseAgent(agent_config)
-    await _register_and_create_account(agent, logger)
-
-    llm = LLMClient(llm_config)
-    loop = MathWorkerLoop(agent=agent, llm=llm, config=worker_config)
-    await _run_loop(agent, llm, loop, logger)
-
-
 def main() -> None:
-    """Sync entry point."""
-    if len(sys.argv) > 1:
-        worker_name = sys.argv[1]
-        asyncio.run(_main_factory(worker_name))
-    else:
-        asyncio.run(_main_legacy())
+    """Sync entry point.
+
+    Requires a worker profile name (config.yaml's ``workers:`` section).
+    Fails loudly with a usage message rather than silently falling back
+    to any implicit default.
+    """
+    if len(sys.argv) <= 1:
+        sys.exit(
+            "Usage: python -m math_worker <worker_profile_name>\n"
+            "Worker profiles are defined in config.yaml's 'workers:' section."
+        )
+    worker_name = sys.argv[1]
+    asyncio.run(_main_factory(worker_name))
 
 
 if __name__ == "__main__":

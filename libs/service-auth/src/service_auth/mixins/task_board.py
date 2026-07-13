@@ -6,6 +6,8 @@ import uuid
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 if TYPE_CHECKING:
+    import httpx
+
     from service_auth.config import AgentConfig
 
 
@@ -18,6 +20,8 @@ class _TaskBoardClient(Protocol):
     def _auth_header(self, payload: dict[str, object]) -> dict[str, str]: ...
 
     async def _request(self, method: str, url: str, **kwargs: Any) -> dict[str, Any]: ...
+
+    async def _request_raw(self, method: str, url: str, **kwargs: Any) -> httpx.Response: ...
 
 
 class TaskBoardMixin:
@@ -190,6 +194,19 @@ class TaskBoardMixin:
             }
         )
         return await self._request("POST", url, json={"token": token})
+
+    async def list_assets(self: _TaskBoardClient, task_id: str) -> list[dict[str, Any]]:
+        """List all assets uploaded for a task (public, no auth required)."""
+        url = f"{self.config.task_board_url}/tasks/{task_id}/assets"
+        response = await self._request("GET", url)
+        return cast("list[dict[str, Any]]", response["assets"])
+
+    async def download_asset(self: _TaskBoardClient, task_id: str, asset_id: str) -> bytes:
+        """Download an asset's raw file content (public, no auth required)."""
+        url = f"{self.config.task_board_url}/tasks/{task_id}/assets/{asset_id}"
+        response = await self._request_raw("GET", url)
+        response.raise_for_status()
+        return response.content
 
     async def submit_worker_rebuttal(
         self: _TaskBoardClient,

@@ -67,7 +67,7 @@ help:
     @printf "  \033[0;37mjust stop-ui          \033[0;34m Stop UI service\033[0m\n"
     @printf "  \033[0;37mjust start-feeder     \033[0;34m Start task feeder (posts math tasks)\033[0m\n"
     @printf "  \033[0;37mjust stop-feeder      \033[0;34m Stop task feeder\033[0m\n"
-    @printf "  \033[0;37mjust start-mathbot    \033[0;34m Start math worker agent (requires services + LM Studio)\033[0m\n"
+    @printf "  \033[0;37mjust start-mathbot [profile]\033[0;34m Start math worker agent from a named profile (default: mathbot; requires services + LM Studio)\033[0m\n"
     @printf "  \033[0;37mjust stop-mathbot     \033[0;34m Stop math worker agent\033[0m\n"
     @printf "  \033[0;37mjust fund-feeder <amount>\033[0;34m Fund the feeder agent with initial coins\033[0m\n"
     @printf "  \033[0;37mjust provision        \033[0;34m Provision the treasury (idempotent; run once after first start-all)\033[0m\n"
@@ -93,7 +93,7 @@ help:
     @printf "  \033[0;37mjust test-architecture\033[0;34m Run architecture tests for all services\033[0m\n"
     @printf "  \033[0;37mjust test-project-structure\033[0;34m Verify all service justfiles are identical\033[0m\n"
     @printf "  \033[0;37mjust test <service>   \033[0;34m Run tests for a specific service\033[0m\n"
-    @printf "  \033[0;37mjust ci               \033[0;34m Run ALL CI checks (services, agents, integration, e2e)\033[0m\n"
+    @printf "  \033[0;37mjust ci               \033[0;34m Run ALL CI checks (services, agents, tools, integration, e2e)\033[0m\n"
     @printf "  \033[0;37mjust ci-quiet         \033[0;34m Run ALL CI checks quietly\033[0m\n"
     @printf "  \033[0;37mjust ci-service <svc> \033[0;34m Run CI checks for a specific service\033[0m\n"
     @printf "  \033[0;37mjust ci-quiet-hook    \033[0;34m CI hook for Claude Code (blocks git commit if CI fails)\033[0m\n"
@@ -379,13 +379,13 @@ stop-feeder:
         printf "\033[0;33m⚠ Task feeder not running\033[0m\n"
     printf "\n"
 
-# Start math worker agent (requires running services + LM Studio)
-start-mathbot:
+# Start math worker agent from a named profile (requires running services + LM Studio)
+start-mathbot profile="mathbot":
     #!/usr/bin/env bash
     printf "\n"
-    printf "\033[0;34m=== Starting Math Worker Agent ===\033[0m\n"
+    printf "\033[0;34m=== Starting Math Worker Agent (profile: {{profile}}) ===\033[0m\n"
     printf "\n"
-    cd agents && uv run python -m math_worker &
+    cd agents && uv run python -m math_worker {{profile}} &
     printf "Math worker agent starting in background (PID: $!)\n"
     printf "\n"
 
@@ -766,7 +766,7 @@ ci-service service:
     cd services/{{service}} && just ci
     @echo ""
 
-# Run ALL CI checks: services, agents, cross-service integration tests, e2e tests
+# Run ALL CI checks: services, agents, tools, cross-service integration tests, e2e tests
 ci:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -790,19 +790,23 @@ ci:
     printf "\033[0;34m--- Phase 2: Agents CI ---\033[0m\n"
     cd "$root/agents" && just ci
 
-    # Phase 3: Cross-service integration tests (DB Gateway writes, offline gateway)
-    printf "\033[0;34m--- Phase 3: Cross-service integration tests ---\033[0m\n"
+    # Phase 3: Tools CI (format, lint, types, security, spell, unit tests)
+    printf "\033[0;34m--- Phase 3: Tools CI ---\033[0m\n"
+    cd "$root/tools" && just ci
+
+    # Phase 4: Cross-service integration tests (DB Gateway writes, offline gateway)
+    printf "\033[0;34m--- Phase 4: Cross-service integration tests ---\033[0m\n"
     cd "$root"
     PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
         pytest "$root/tests/integration/" -v --tb=short
 
-    # Phase 4: E2E tests (restarts services, runs full lifecycle tests)
-    printf "\033[0;34m--- Phase 4: E2E tests ---\033[0m\n"
+    # Phase 5: E2E tests (restarts services, runs full lifecycle tests)
+    printf "\033[0;34m--- Phase 5: E2E tests ---\033[0m\n"
     cd "$root"
     just test-e2e
 
     printf "\n"
-    printf "\033[0;32m✓ Full CI passed (services + agents + integration + e2e)\033[0m\n"
+    printf "\033[0;32m✓ Full CI passed (services + agents + tools + integration + e2e)\033[0m\n"
     printf "\n"
 
 # Run ALL CI checks quietly
@@ -829,19 +833,23 @@ ci-quiet:
     printf "\033[0;34m--- Phase 2: Agents CI ---\033[0m\n"
     cd "$root/agents" && just ci-quiet
 
-    # Phase 3: Cross-service integration tests
-    printf "\033[0;34m--- Phase 3: Cross-service integration tests ---\033[0m\n"
+    # Phase 3: Tools CI
+    printf "\033[0;34m--- Phase 3: Tools CI ---\033[0m\n"
+    cd "$root/tools" && just ci-quiet
+
+    # Phase 4: Cross-service integration tests
+    printf "\033[0;34m--- Phase 4: Cross-service integration tests ---\033[0m\n"
     cd "$root"
     PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
         pytest "$root/tests/integration/" -v --tb=short
 
-    # Phase 4: E2E tests
-    printf "\033[0;34m--- Phase 4: E2E tests ---\033[0m\n"
+    # Phase 5: E2E tests
+    printf "\033[0;34m--- Phase 5: E2E tests ---\033[0m\n"
     cd "$root"
     just test-e2e
 
     printf "\n"
-    printf "\033[0;32m✓ Full CI passed (services + agents + integration + e2e)\033[0m\n"
+    printf "\033[0;32m✓ Full CI passed (services + agents + tools + integration + e2e)\033[0m\n"
     printf "\n"
 
 # CI hook for Claude Code — blocks git commit if CI fails
@@ -890,6 +898,12 @@ test-e2e:
 
     printf "\033[0;34m--- Starting all services ---\033[0m\n"
     just start-all
+
+    # A wiped database has no operator/treasury; genesis is an explicit,
+    # idempotent bootstrap step (Q-9), so the e2e environment must provision
+    # itself before the suites run.
+    printf "\033[0;34m--- Provisioning treasury (idempotent) ---\033[0m\n"
+    just provision
 
     printf "\033[0;34m--- Running e2e tests ---\033[0m\n"
     test_exit=0

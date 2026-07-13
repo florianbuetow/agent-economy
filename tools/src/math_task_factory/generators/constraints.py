@@ -27,9 +27,7 @@ def gen_number_constraints(rng: random.Random) -> MathTask:
     mod_base = rng.choice([d for d in [11, 13, 17, 19] if d != divisor])
     remainder = answer % mod_base
     constraints.append(f"remainder {remainder} when divided by {mod_base}")
-    constraint_details.append(
-        f"  - When divided by {mod_base}, the remainder is {remainder}."
-    )
+    constraint_details.append(f"  - When divided by {mod_base}, the remainder is {remainder}.")
 
     # Constraint 3: digit sum
     digit_sum = sum(int(d) for d in str(abs(answer)))
@@ -75,9 +73,7 @@ def gen_scheduling_constraints(rng: random.Random) -> MathTask:
         if not deps[t]:
             earliest_start[t] = 0
         else:
-            earliest_start[t] = max(
-                earliest_start[d] + durations[d] for d in deps[t]
-            )
+            earliest_start[t] = max(earliest_start[d] + durations[d] for d in deps[t])
 
     earliest_finish = {t: earliest_start[t] + durations[t] for t in task_labels}
     answer = max(earliest_finish.values())
@@ -86,10 +82,7 @@ def gen_scheduling_constraints(rng: random.Random) -> MathTask:
     task_lines: list[str] = []
     for t in task_labels:
         dep_str = ", ".join(deps[t]) if deps[t] else "none"
-        task_lines.append(
-            f"  - Task {t}: duration = {durations[t]} hours, "
-            f"depends on: {dep_str}"
-        )
+        task_lines.append(f"  - Task {t}: duration = {durations[t]} hours, depends on: {dep_str}")
     tasks_text = "\n".join(task_lines)
 
     return MathTask(
@@ -139,9 +132,7 @@ def gen_allocation_constraints(rng: random.Random) -> MathTask:
         divisor = 2
         allocation[target_bin] = target_val - (target_val % 2)
         total = sum(allocation.values())
-    constraint_lines.append(
-        f"  - {target_bin} must hold a number of items divisible by {divisor}."
-    )
+    constraint_lines.append(f"  - {target_bin} must hold a number of items divisible by {divisor}.")
 
     constraints_text = "\n".join(constraint_lines)
     alloc_text = ", ".join(f"{bn}: {allocation[bn]}" for bn in bin_names)
@@ -154,7 +145,7 @@ subject to these constraints:
 
 Provide the number of items in each bin.
 
-OUTPUT FORMAT: {', '.join(f'{bn}: N' for bn in bin_names)} (e.g. "{alloc_text}")
+OUTPUT FORMAT: {", ".join(f"{bn}: N" for bn in bin_names)} (e.g. "{alloc_text}")
 
 VERIFICATION: Check that the total equals {total} and all constraints are satisfied.""",
         solutions=[alloc_text],

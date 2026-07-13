@@ -47,7 +47,7 @@ def gen_combined_chain_constraint(rng: random.Random) -> MathTask:
     final_add = rng.randint(10, 100)
     result = after_mod * final_mult + final_add
 
-    ops_text = "\n".join(f"  {i+1}. {o}" for i, o in enumerate(ops))
+    ops_text = "\n".join(f"  {i + 1}. {o}" for i, o in enumerate(ops))
     return MathTask(
         title="Combined chain + constraint",
         spec=f"""TASK: Perform the following computation:
@@ -79,8 +79,7 @@ VERIFICATION:
 
 def gen_combined_state_large(rng: random.Random) -> MathTask:
     """State tracking problem with large numbers (5-digit per entity, 5+ entities)."""
-    entity_names = ["Warehouse A", "Warehouse B", "Warehouse C",
-                    "Warehouse D", "Warehouse E"]
+    entity_names = ["Warehouse A", "Warehouse B", "Warehouse C", "Warehouse D", "Warehouse E"]
     num_entities = rng.randint(5, 5)
     entities = entity_names[:num_entities]
     state = {e: rng.randint(10000, 99999) for e in entities}
@@ -138,7 +137,7 @@ def gen_combined_state_large(rng: random.Random) -> MathTask:
         answer = state[target]
         question = f"What is the final count at {target}?"
 
-    ops_numbered = "\n".join(f"  {i+1}. {o}" for i, o in enumerate(ops_text))
+    ops_numbered = "\n".join(f"  {i + 1}. {o}" for i, o in enumerate(ops_text))
     return MathTask(
         title="Large-scale state tracking",
         spec=f"""TASK: There are {num_entities} warehouses with initial stock:

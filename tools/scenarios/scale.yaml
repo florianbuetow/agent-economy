@@ -310,6 +310,17 @@ steps:
     reason: "Deliverable is missing two required features: API key validation and request/response logging. The spec explicitly required both."
     delay: 2.0
 
+  - action: submit_rebuttal
+    worker: atlas
+    task_ref: api_gateway
+    rebuttal: "Rate limiting and proxying were the core ask; API key validation and logging were stretch items, not blocking requirements."
+    delay: 2.0
+
+  - action: trigger_ruling
+    agent: nova
+    task_ref: api_gateway
+    delay: 2.0
+
   # ── Phase 6: Wave 3 — More tasks ─────────────────────
   - action: post_task
     poster: buildbot

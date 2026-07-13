@@ -6,7 +6,6 @@ requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.0",
     "pydantic>=2.10.0",
-    "strands-agents>=1.28.0",
     "openai>=1.0.0",
     "service-auth",
     "service-commons",
@@ -96,10 +95,6 @@ module = "tests.*"
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
-module = "strands.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
 module = "openai.*"
 ignore_missing_imports = true
 
@@ -143,7 +138,6 @@ extend_exclude = [".venv", "tests"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = [
-    "strands-agents",
     "pytest",
     "pytest-cov",
     "pytest-asyncio",
