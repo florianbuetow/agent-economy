@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiosqlite
-from base_agent import AgentFactory
+from service_auth import AgentFactory
 
 from ui_service.config import get_settings
 from ui_service.core.state import init_app_state
@@ -43,18 +43,22 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             extra={"path": settings.database.path, "error": str(exc)},
         )
 
-    # Initialize UserAgent for UI-driven task operations
+    # Initialize UserAgent for UI-driven task operations. Genesis funding is
+    # NOT this service's concern (Q-9): treasury provisioning is an explicit,
+    # idempotent bootstrap step (`just provision`, agents/src/treasury_provision_cli)
+    # that runs independently of UI startup — a zero-balance operator here is
+    # a normal, non-error state.
     try:
         config_path = Path(settings.user_agent.agent_config_path)
         if not config_path.is_absolute():
             config_path = Path.cwd() / config_path
         factory = AgentFactory(config_path=config_path.resolve())
-        user_agent = factory.user_agent()
+        user_agent = factory.user_agent(settings.user_agent.handle)
         await user_agent.register()
         state.user_agent = user_agent
         logger.info(
             "UserAgent initialized",
-            extra={"agent_id": user_agent.agent_id, "name": user_agent.name},
+            extra={"agent_id": user_agent.agent_id, "agent_name": user_agent.name},
         )
     except Exception as exc:
         logger.error(

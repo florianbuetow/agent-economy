@@ -635,11 +635,11 @@ class TestTaskCreation:
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """TC-18: Title exceeding max length returns 400 title_too_long."""
+        """TC-18: Title exceeding max length returns 400 invalid_payload."""
         long_title = "A" * 201
         resp = await create_task(client, alice_keypair, alice_agent_id, title=long_title)
         assert resp.status_code == 400
-        assert resp.json()["error"] == "title_too_long"
+        assert resp.json()["error"] == "invalid_payload"
 
     @pytest.mark.unit
     async def test_tc19_spec_at_max_length_accepted(

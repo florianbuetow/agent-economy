@@ -12,6 +12,7 @@ from ui_service.services.database import (
     execute_scalar,
     utc_now,
 )
+from ui_service.taxonomy import DISPUTED_STATUSES, TaskStatus, sql_placeholders
 
 if TYPE_CHECKING:
     from typing import Any
@@ -76,15 +77,15 @@ async def _compute_gdp_for_period(db: aiosqlite.Connection, start: str, end: str
     approved = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward), 0) FROM board_tasks "
-        "WHERE status = 'approved' AND approved_at >= ? AND approved_at <= ?",
-        (start, end),
+        "WHERE status = ? AND approved_at >= ? AND approved_at <= ?",
+        (TaskStatus.APPROVED, start, end),
     )
     ruled = await execute_scalar(
         db,
         "SELECT COALESCE(SUM(reward * worker_pct / 100), 0) "
-        "FROM board_tasks WHERE status = 'ruled' AND worker_pct IS NOT NULL "
+        "FROM board_tasks WHERE status = ? AND worker_pct IS NOT NULL "
         "AND ruled_at >= ? AND ruled_at <= ?",
-        (start, end),
+        (TaskStatus.RULED, start, end),
     )
     return int(approved) + int(ruled)
 
@@ -200,21 +201,34 @@ async def _compute_notable(
         db,
         "SELECT a.agent_id, a.name, "
         "  COALESCE(SUM(CASE "
-        "    WHEN t.status = 'approved' AND t.approved_at >= ? AND t.approved_at <= ? "
+        "    WHEN t.status = ? AND t.approved_at >= ? AND t.approved_at <= ? "
         "      THEN t.reward "
-        "    WHEN t.status = 'ruled' AND t.ruled_at >= ? AND t.ruled_at <= ? "
+        "    WHEN t.status = ? AND t.ruled_at >= ? AND t.ruled_at <= ? "
         "      THEN t.reward * t.worker_pct / 100 "
         "    ELSE 0 "
         "  END), 0) AS earned "
         "FROM identity_agents a "
         "JOIN board_tasks t ON a.agent_id = t.worker_id "
-        "WHERE (t.status = 'approved' AND t.approved_at >= ? AND t.approved_at <= ?) "
-        "   OR (t.status = 'ruled' AND t.ruled_at >= ? AND t.ruled_at <= ?) "
+        "WHERE (t.status = ? AND t.approved_at >= ? AND t.approved_at <= ?) "
+        "   OR (t.status = ? AND t.ruled_at >= ? AND t.ruled_at <= ?) "
         "GROUP BY a.agent_id "
         "HAVING earned > 0 "
         "ORDER BY earned DESC "
         "LIMIT 3",
-        (start, end, start, end, start, end, start, end),
+        (
+            TaskStatus.APPROVED,
+            start,
+            end,
+            TaskStatus.RULED,
+            start,
+            end,
+            TaskStatus.APPROVED,
+            start,
+            end,
+            TaskStatus.RULED,
+            start,
+            end,
+        ),
     )
     top_workers = [{"agent_id": r[0], "name": r[1], "earned": int(r[2])} for r in top_workers_rows]
 
@@ -241,16 +255,8 @@ async def _compute_notable(
     }
 
 
-async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[str, Any] | None:
-    """Compute and return the full quarterly report.
-
-    Raises ValueError for invalid quarter format.
-    Returns None if no data exists for the quarter.
-    """
-    year, q = validate_quarter(quarter)
-    start, end = _quarter_period(year, q)
-
-    # Check if any data exists in this quarter
+async def _quarter_has_data(db: aiosqlite.Connection, start: str, end: str) -> bool:
+    """Return True if any tasks, agents, or GDP-bearing tasks exist in the quarter."""
     task_count = int(
         await execute_scalar(
             db,
@@ -273,21 +279,25 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
         await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks "
-            "WHERE (status = 'approved' AND approved_at >= ? AND approved_at <= ?) "
-            "OR (status = 'ruled' AND ruled_at >= ? AND ruled_at <= ?)",
-            (start, end, start, end),
+            "WHERE (status = ? AND approved_at >= ? AND approved_at <= ?) "
+            "OR (status = ? AND ruled_at >= ? AND ruled_at <= ?)",
+            (TaskStatus.APPROVED, start, end, TaskStatus.RULED, start, end),
         )
         or 0
     )
 
-    if task_count == 0 and agent_count == 0 and gdp_task_count == 0:
-        return None
+    return not (task_count == 0 and agent_count == 0 and gdp_task_count == 0)
 
-    # --- GDP ---
+
+async def _compute_quarter_gdp(
+    db: aiosqlite.Connection,
+    start: str,
+    end: str,
+    prev_start: str,
+    prev_end: str,
+) -> dict[str, Any]:
+    """Compute GDP totals for a quarter and the delta versus its predecessor."""
     total_gdp = await _compute_gdp_for_period(db, start, end)
-
-    prev_year, prev_q = _previous_quarter(year, q)
-    prev_start, prev_end = _quarter_period(prev_year, prev_q)
     prev_gdp = await _compute_gdp_for_period(db, prev_start, prev_end)
 
     delta_pct = round((total_gdp - prev_gdp) / prev_gdp * 100, 1) if prev_gdp > 0 else 0.0
@@ -303,14 +313,16 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
 
     per_agent = total_gdp / total_agents if total_agents > 0 else 0.0
 
-    gdp = {
+    return {
         "total": total_gdp,
         "previous_quarter": prev_gdp,
         "delta_pct": delta_pct,
         "per_agent": round(per_agent, 1),
     }
 
-    # --- Tasks ---
+
+async def _compute_quarter_tasks(db: aiosqlite.Connection, start: str, end: str) -> dict[str, Any]:
+    """Compute task counts and completion rate for a quarter."""
     posted = int(
         await execute_scalar(
             db,
@@ -324,8 +336,8 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
         await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks "
-            "WHERE status = 'approved' AND approved_at >= ? AND approved_at <= ?",
-            (start, end),
+            "WHERE status = ? AND approved_at >= ? AND approved_at <= ?",
+            (TaskStatus.APPROVED, start, end),
         )
         or 0
     )
@@ -334,9 +346,9 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
         await execute_scalar(
             db,
             "SELECT COUNT(*) FROM board_tasks "
-            "WHERE status IN ('disputed', 'ruled') "
+            f"WHERE status IN ({sql_placeholders(DISPUTED_STATUSES)}) "  # nosec B608
             "AND created_at >= ? AND created_at <= ?",
-            (start, end),
+            (*DISPUTED_STATUSES, start, end),
         )
         or 0
     )
@@ -344,14 +356,16 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
     denom = completed + disputed
     completion_rate = round(completed / denom, 2) if denom > 0 else 0.0
 
-    tasks = {
+    return {
         "posted": posted,
         "completed": completed,
         "disputed": disputed,
         "completion_rate": completion_rate,
     }
 
-    # --- Labor Market ---
+
+async def _compute_quarter_labor(db: aiosqlite.Connection, start: str, end: str) -> dict[str, Any]:
+    """Compute labor-market metrics for a quarter."""
     avg_bids = await execute_scalar(
         db,
         "SELECT AVG(bid_count) FROM ("
@@ -381,22 +395,15 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
     )
     avg_reward = round(float(avg_reward_val), 0) if avg_reward_val is not None else 0.0
 
-    labor_market = {
+    return {
         "avg_bids_per_task": avg_bids_per_task,
         "avg_time_to_acceptance_minutes": avg_time_to_acceptance,
         "avg_reward": avg_reward,
     }
 
-    # --- Spec Quality ---
-    spec_quality = await _compute_spec_quality(
-        db,
-        start,
-        end,
-        prev_start,
-        prev_end,
-    )
 
-    # --- Agents ---
+async def _compute_quarter_agents(db: aiosqlite.Connection, start: str, end: str) -> dict[str, Any]:
+    """Compute agent registration counts for a quarter."""
     new_registrations = int(
         await execute_scalar(
             db,
@@ -415,10 +422,48 @@ async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[s
         or 0
     )
 
-    agents = {
+    return {
         "new_registrations": new_registrations,
         "total_at_quarter_end": total_at_quarter_end,
     }
+
+
+async def get_quarterly_report(db: aiosqlite.Connection, quarter: str) -> dict[str, Any] | None:
+    """Compute and return the full quarterly report.
+
+    Raises ValueError for invalid quarter format.
+    Returns None if no data exists for the quarter.
+    """
+    year, q = validate_quarter(quarter)
+    start, end = _quarter_period(year, q)
+
+    # Check if any data exists in this quarter
+    if not await _quarter_has_data(db, start, end):
+        return None
+
+    prev_year, prev_q = _previous_quarter(year, q)
+    prev_start, prev_end = _quarter_period(prev_year, prev_q)
+
+    # --- GDP ---
+    gdp = await _compute_quarter_gdp(db, start, end, prev_start, prev_end)
+
+    # --- Tasks ---
+    tasks = await _compute_quarter_tasks(db, start, end)
+
+    # --- Labor Market ---
+    labor_market = await _compute_quarter_labor(db, start, end)
+
+    # --- Spec Quality ---
+    spec_quality = await _compute_spec_quality(
+        db,
+        start,
+        end,
+        prev_start,
+        prev_end,
+    )
+
+    # --- Agents ---
+    agents = await _compute_quarter_agents(db, start, end)
 
     notable = await _compute_notable(db, start, end)
 

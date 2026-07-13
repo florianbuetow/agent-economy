@@ -14,9 +14,6 @@ logging:
   level: "INFO"
   directory: "data/logs"
 
-database:
-  path: "data/court.db"
-
 platform:
   agent_config_path: "../../agents/config.yaml"
 
@@ -24,15 +21,29 @@ disputes:
   rebuttal_deadline_seconds: 86400
   max_claim_length: 10000
   max_rebuttal_length: 10000
+  # Ruling feedback-rating cutoffs (worker_pct >= this -> the given rating)
+  # and the feedback comment cap, threaded into RulingOrchestrator (WP-11).
+  feedback_extremely_satisfied_cutoff: 80
+  feedback_satisfied_cutoff: 40
+  feedback_comment_max_length: 256
 
 judges:
   panel_size: 1
+  # Fixed worker payout percentage returned by mock judges (dev/test/CI).
+  mock_worker_pct: 50
+  # Maximum total bytes of deliverable content fetched into the judge prompt.
+  max_deliverable_bytes: 65536
   judges:
     - id: "judge-0"
-      model: "openai/google/gemma-3-1b"
-      api_base: "http://localhost:1234/v1"
-      api_key_env: "LMSTUDIO_API_KEY"
-      temperature: 0.3
+      provider: "mock"
+      model: "mock-judge"
+    # Real LM Studio judge config — restore this block (and remove the mock judge
+    # above) to run live LLM rulings against LM Studio at localhost:1234:
+    # - id: "judge-0"
+    #   model: "openai/google/gemma-3-1b"
+    #   api_base: "http://localhost:1234/v1"
+    #   api_key_env: "LMSTUDIO_API_KEY"
+    #   temperature: 0.3
 
 request:
   max_body_size: 1048576

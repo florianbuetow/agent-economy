@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from cryptography.exceptions import InvalidSignature
@@ -11,12 +12,40 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from joserfc import jws as jws_module
 from joserfc.errors import BadSignatureError
 from joserfc.jwk import OKPKey
+from joserfc.jws import JWSRegistry
+from joserfc.registry import HeaderParameter
 from service_commons.exceptions import ServiceError
 
 from identity_service.services.errors import DuplicateAgentError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from identity_service.services.protocol import IdentityStorageInterface
+
+
+def _system_clock() -> datetime:
+    """Return the real current UTC datetime."""
+    return datetime.now(UTC)
+
+
+# Injectable clock seam. Tests override the module attribute
+# (e.g. ``agent_registry._clock = lambda: frozen``) to control token-expiry evaluation.
+_clock: Callable[[], datetime] = _system_clock
+
+
+def _build_jws_registry() -> JWSRegistry:
+    """JWS registry that tolerates the optional ``iat``/``exp`` token-expiry
+    header claims added in WP-02 (Q-10). Their presence is accepted and ignored;
+    enforcement of expiry lands with WP-03. Without this, joserfc rejects any
+    token carrying these non-standard protected-header parameters."""
+    header_registry = dict(JWSRegistry().header_registry)
+    header_registry["iat"] = HeaderParameter("Issued At", "int", False)
+    header_registry["exp"] = HeaderParameter("Expiration Time", "int", False)
+    return JWSRegistry(header_registry=header_registry, algorithms=["EdDSA"])
+
+
+_JWS_REGISTRY = _build_jws_registry()
 
 
 class AgentRegistry:
@@ -27,13 +56,11 @@ class AgentRegistry:
     def __init__(
         self,
         store: IdentityStorageInterface,
-        algorithm: str,
         public_key_prefix: str,
         public_key_bytes: int,
         signature_bytes: int,
     ) -> None:
         self._store = store
-        self._algorithm = algorithm
         self._public_key_prefix = public_key_prefix
         self._public_key_bytes = public_key_bytes
         self._signature_bytes = signature_bytes
@@ -206,7 +233,9 @@ class AgentRegistry:
 
         # Verify signature
         try:
-            obj = jws_module.deserialize_compact(token, public_jwk, algorithms=["EdDSA"])
+            obj = jws_module.deserialize_compact(
+                token, public_jwk, algorithms=["EdDSA"], registry=_JWS_REGISTRY
+            )
         except BadSignatureError:
             return {"valid": False, "reason": "signature mismatch"}
         except Exception as exc:
@@ -216,6 +245,12 @@ class AgentRegistry:
                 400,
                 {},
             ) from exc
+
+        # Enforce header ``exp`` once the signature is authentic. Tokens without an
+        # ``exp`` claim keep the WP-02 legacy tolerance (accepted).
+        exp = header.get("exp")
+        if isinstance(exp, int) and exp < int(_clock().timestamp()):
+            raise ServiceError("token_expired", "JWS token has expired", 401, {})
 
         # Decode payload as JSON
         try:

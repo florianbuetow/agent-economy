@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiosqlite
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 async def execute_query(
@@ -17,17 +20,6 @@ async def execute_query(
     db.row_factory = aiosqlite.Row
     cursor = await db.execute(sql, params)
     return list(await cursor.fetchall())
-
-
-async def execute_query_one(
-    db: aiosqlite.Connection,
-    sql: str,
-    params: tuple[Any, ...],
-) -> aiosqlite.Row | None:
-    """Execute a read-only query and return first row or None."""
-    db.row_factory = aiosqlite.Row
-    cursor = await db.execute(sql, params)
-    return await cursor.fetchone()
 
 
 async def execute_scalar(
@@ -63,9 +55,19 @@ async def execute_fetchall(
         return list(await cursor.fetchall())
 
 
-def utc_now() -> datetime:
-    """Return current UTC datetime."""
+def _system_clock() -> datetime:
+    """Return the real current UTC datetime."""
     return datetime.now(UTC)
+
+
+# Injectable time source. Production uses the system clock; tests override
+# ``_clock`` (e.g. ``database._clock = lambda: frozen``) to freeze time.
+_clock: Callable[[], datetime] = _system_clock
+
+
+def utc_now() -> datetime:
+    """Return current UTC datetime via the injectable clock seam."""
+    return _clock()
 
 
 def to_iso(dt: datetime) -> str:

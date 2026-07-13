@@ -35,17 +35,7 @@
 
   function statusBadge(task) {
     if (!task) return { text: 'DRAFT', cls: 'status-open' };
-    var map = {
-      'open': { text: 'OPEN', cls: 'status-open' },
-      'accepted': { text: 'ACTIVE', cls: 'status-active' },
-      'submitted': { text: 'SUBMITTED', cls: 'status-submitted' },
-      'disputed': { text: 'DISPUTED', cls: 'status-disputed' },
-      'ruled': { text: 'RULED', cls: 'status-ruled' },
-      'approved': { text: 'APPROVED', cls: 'status-approved' },
-      'cancelled': { text: 'CANCELLED', cls: 'status-open' },
-      'expired': { text: 'EXPIRED', cls: 'status-open' }
-    };
-    return map[task.status] || { text: task.status.toUpperCase(), cls: 'status-open' };
+    return ATE.TASK_STATUS_BADGE[task.status] || { text: task.status.toUpperCase(), cls: 'status-open' };
   }
 
   // ── Escrow bar ─────────────────────────────────────────────

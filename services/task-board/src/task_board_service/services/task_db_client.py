@@ -10,6 +10,22 @@ import httpx
 
 from task_board_service.services.errors import DuplicateBidError, DuplicateTaskError
 
+# Re-exported so callers outside the HTTP-client boundary (e.g. the deadline
+# evaluator's platform-signed ruling trigger, GAP-A1) can catch transport errors
+# from other services without importing httpx directly; only *DbClient modules
+# are permitted to do that (tests/architecture/test_db_client_isolation.py).
+PlatformHttpError = httpx.HTTPError
+
+_LIFECYCLE_EVENTS_BY_STATUS: dict[str, str] = {
+    "accepted": "task.accepted",
+    "submitted": "task.submitted",
+    "approved": "task.approved",
+    "disputed": "task.disputed",
+    "ruled": "task.ruled",
+    "cancelled": "task.cancelled",
+    "expired": "task.expired",
+}
+
 
 class TaskDbClient:
     """Task storage backed by the DB Gateway HTTP API."""
@@ -35,6 +51,9 @@ class TaskDbClient:
         "cancelled_at",
         "disputed_at",
         "dispute_reason",
+        "dispute_id",
+        "rebuttal_deadline",
+        "rebuttal_submitted_at",
         "ruling_id",
         "ruled_at",
         "worker_pct",
@@ -89,6 +108,14 @@ class TaskDbClient:
 
     def _normalize_task(self, data: dict[str, Any]) -> dict[str, Any]:
         return {column: data.get(column) for column in self._TASK_COLUMNS}
+
+    def _event_type_for_updates(self, updates: dict[str, Any]) -> str:
+        status = updates.get("status")
+        if status == "approved" and updates.get("escrow_pending") == 1:
+            return "task.auto_approved"
+        if isinstance(status, str):
+            return _LIFECYCLE_EVENTS_BY_STATUS.get(status, "task.updated")
+        return "task.updated"
 
     def insert_task(self, task_data: dict[str, Any]) -> None:
         created_at = str(task_data["created_at"])
@@ -157,7 +184,7 @@ class TaskDbClient:
             "updates": updates,
             "constraints": constraints,
             "event": self._build_event(
-                event_type="task.updated",
+                event_type=self._event_type_for_updates(updates),
                 summary=f"Task updated: {task_id}",
                 payload={"updates": updates},
                 task_id=task_id,

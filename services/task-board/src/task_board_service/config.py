@@ -60,7 +60,9 @@ class IdentityConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     base_url: str
+    get_agent_path: str | None = None
     verify_jws_path: str
+    timeout_seconds: int | None = None
 
 
 class CentralBankConfig(BaseModel):
@@ -99,22 +101,18 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
-class DeadlinesConfig(BaseModel):
-    """Optional legacy deadline defaults configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    default_bidding_seconds: int
-    default_execution_seconds: int
-    default_review_seconds: int
-
-
 class LimitsConfig(BaseModel):
-    """Optional legacy limits configuration."""
+    """Optional legacy limits configuration (asset-storage fallback only).
+
+    ``max_title_length``/``max_spec_length``/``max_reason_length`` were
+    removed (GAP-C8/exception #16, WP-11 round 2): title/spec/reason length
+    validation in task_creation.py and task_ruling.py uses hardcoded limits,
+    never these fields. ``max_file_size``/``max_assets_per_task`` are kept —
+    lifespan.py reads them as the legacy fallback when no ``assets:`` section
+    is present.
+    """
 
     model_config = ConfigDict(extra="forbid")
-    max_title_length: int
-    max_spec_length: int
-    max_reason_length: int
     max_file_size: int
     max_assets_per_task: int
 
@@ -125,6 +123,13 @@ class DbGatewayConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     url: str
     timeout_seconds: int
+
+
+class DeadlineEvaluationConfig(BaseModel):
+    """Periodic deadline-sweep configuration (Q-5, GAP-A3)."""
+
+    model_config = ConfigDict(extra="forbid")
+    evaluation_interval_seconds: int
 
 
 class Settings(BaseModel):
@@ -144,10 +149,10 @@ class Settings(BaseModel):
     central_bank: CentralBankConfig
     platform: PlatformConfig
     request: RequestConfig
-    db_gateway: DbGatewayConfig | None = None
+    db_gateway: DbGatewayConfig
     assets: AssetsConfig | None = None
-    deadlines: DeadlinesConfig | None = None
     limits: LimitsConfig | None = None
+    deadline_evaluation: DeadlineEvaluationConfig | None = None
 
 
 def get_config_path() -> Path:

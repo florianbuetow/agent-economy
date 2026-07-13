@@ -9,7 +9,6 @@ services it is not allowed to depend on, enforcing the architecture:
     Reputation (8004)     <- Identity
     Court (8005)          <- Identity, Task Board, Reputation, Central Bank
     DB Gateway (8007)     <- no upstream dependencies (infrastructure)
-    Observatory (8006)    <- no upstream dependencies (infrastructure)
 """
 
 from __future__ import annotations
@@ -28,7 +27,6 @@ _ALL_SERVICE_PACKAGES = frozenset(
         "reputation_service",
         "court_service",
         "db_gateway_service",
-        "observatory_service",
     }
 )
 

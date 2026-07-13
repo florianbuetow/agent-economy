@@ -1,0 +1,870 @@
+# Agent Task Economy — Target Architecture & Refactoring Plan
+
+**Date:** 2026-07-09 · **Last updated:** 2026-07-10
+**Status:** ACTIVE and **self-contained — executable end-to-end from §5.-1 with no further input.** The analysis (§1–§4) is complete and the hotfix track (§5.0, H-1…H-7) has shipped and is verified. Appendix B records which review feedback was accepted and which rejected. All §9 questions were ratified 2026-07-10 per Step E1 (decision records in `docs/plans/2026-07-10-q*-decision.md`); no decision is outstanding.
+**Execution progress (updated 2026-07-13):** E1 `a59d1a7` · WP-01 `fa8bbe4` · WP-02 `8fcae08` · WP-03 `0abfe7f`+`7a346a8` · WP-15 `dd6957f` · WP-06 `6aba0e2` · WP-05 `722b494` · WP-04 `2fd507e` · WP-07 `45729a6` · WP-08 `57fcc57` — all CI-gated and pushed. **Both P0 gaps closed; every behavior work package through E2 position 7 is done.** WP-09 `ded2a90` · WP-10 `3c8e6e6`+`ce5d791` · WP-11 (this commit) also done. Remaining open: WP-12 (docs/spec sweep incl. §2.4 operator-genesis delta + hosted-CI badge/README), WP-13 (test debt incl. T-104/T-107; hosted CI first green run pending after the agents-Init fix), WP-14 (product tail: T-091/T-094 + Q-8/11/12/15 deferral records).
+**Method:** 17 parallel audit agents (per-service code audits, doc/spec extraction, repo-wide wiring maps) + orchestrator validation of every load-bearing claim against source, later extended by an adversarial Codex review of this document. Evidence cited as `path:line` (code) or `path § heading` (docs). No claim without a citation. UNVERIFIED items are labeled. Every shipped fix was mutation-checked (remove the guard, the test must fail), and no existing assertion was changed without a ratified-decision exception recorded in §5.0.
+**Supersedes:** `docs/plans/2026-06-12-completion-inventory.md` (folds in its findings, re-verified against the 2026-07-09 codebase).
+
+**Two P0 gaps block the autonomous economy** and are not fixable without a decision: nothing accepts bids (**GAP-A15**, Q-16) and nothing triggers court rulings (**GAP-A1**, Q-5). Until both close, a task cannot travel from posted to ruled without the scripted demo or a human in the UI, and §8's definition-of-done item 2 is unreachable.
+
+---
+
+## 0. How to read this document
+
+> **To execute this plan, go to §5.-1 (Execution Protocol) and start at Step E1.** That section is sufficient on its own: it ratifies the open questions, fixes the order of work, states the engineering and delegation rules, and defines when each package and the plan as a whole are done. No instruction lives outside this file.
+
+- **§2 is normative.** It defines the target state the system must reach. Every statement there is either (a) ratified by an existing decision record / canonical spec (cited), or (b) flagged as an open question in §9. Nothing in §2 is invented.
+- **§3 is descriptive.** Current state as-built, evidence-cited.
+- **§4 is the diff.** Numbered gap register GAP-### linking current → target.
+- **§5 is the work.** Phased work packages WP-### with exact files, contracts, test obligations, and verification commands. Each WP references the GAPs it closes and the stable T-IDs from `openspec/specs/completion-backlog/spec.md` where they exist.
+- **§9 collects every question the documentation could not answer.** Work packages depending on an answer are marked Q-blocked(Q-#).
+
+Precedence order used when documents conflict (rationale in §1):
+
+1. Decision records in `docs/plans/2026-06-13-*.md` and ratified decisions in `openspec/specs/delivery-governance/spec.md § Ratified Decisions`
+2. `openspec/specs/agent-task-economy/spec.md` (canonical product contract)
+3. `openspec/specs/completion-backlog/spec.md` (canonical backlog, stable T-IDs)
+4. `docs/specifications/service-api/*` + `service-tests/*` (per-service contracts — stale in places; staleness itself is tracked as gaps)
+5. `docs/main/agent-task-economy.md` (vision — authoritative for intent, not for mechanics)
+6. `README.md`, `AGENTS.md`/`CLAUDE.md` (currently stale; must be regenerated from this document, never treated as truth)
+
+---
+
+## 1. Sources of truth & governance state (verified firsthand)
+
+### 1.1 The canonical tracker is ambiguous — this must be resolved first
+
+- `openspec/specs/delivery-governance/spec.md § Tracker Migration` declares: "OpenSpec SHALL be the canonical tracker after `tickets.md` and `tickets-test-plans.md` are removed" and "markdown TODO trackers are not reintroduced."
+- Yet a repo-root `tickets.md` exists again (created ~2026-06-29, commit `d8e757e`) and **reuses ID `T-001`** for a UI bug, colliding with `openspec/specs/completion-backlog/spec.md § Scenario: T-001 make CI green`. Two different issues now share the ID T-001.
+- Project memory/instructions (AGENTS.md) still mandate **beads (`bd`)**, removed in commit `c447396`.
+
+**Consequence for this plan:** T-IDs cited here always mean the openspec backlog IDs. The root `tickets.md` T-001 is referred to as `tickets.md#T-001`. Resolution is WP-01 / Q-1.
+
+### 1.2 Ratified decisions (binding for the target state)
+
+From `openspec/specs/delivery-governance/spec.md § Ratified Decisions` (ratified 2026-06-12) and the two decision records:
+
+| # | Decision | Source |
+|---|---|---|
+| R1 | Error codes are **snake_case** everywhere; SCREAMING_SNAKE assertions are stale | delivery-governance § Error-code casing (T-020) |
+| R2 | Platform-signed operations are verified **locally via PlatformAgent** in central-bank and reputation; remote Identity verification config (`verify_jws_path`, `get_agent_path`) is removed | delivery-governance § Platform auth model (T-021) |
+| R3 | The DB Gateway **read API is blessed**; "reads bypass the gateway" claims are stale; all GET routes get documented | delivery-governance § DB Gateway reads (T-022) |
+| R4 | **Task Board owns escrow settlement on ruling**; Court does not call Central Bank for splits | delivery-governance § Escrow split ownership (T-023) |
+| R5 | Bids carry an **integer `amount`**; proposal-only bid models are stale | delivery-governance § Bid model (T-024) |
+| R6 | The frontend/observability service is **`services/ui` on port 8008**; "observatory" service and port 8006 are historical | delivery-governance § UI service naming and port (T-025) |
+| R7 | Frontend stays **vanilla JS**; React/TS/Vite plans are SUPERSEDED | `docs/plans/2026-06-13-frontend-stack-decision.md` (T-026) |
+| R8 | **Salary distribution is out of scope for v1**; manual platform credit + fund-feeder CLI is the v1 funding mechanism | delivery-governance § Salary distribution (T-090) |
+| R9 | **All Court write operations are platform-signed only**; agents never call Court directly; Task Board mediates filings and worker rebuttals; Court reads are public | `docs/plans/2026-06-13-court-trust-model-decision.md` (T-012) |
+| R10 | Canonical ports: identity 8001, central-bank 8002, task-board 8003, reputation 8004, court 8005, db-gateway **8007**, ui **8008**; 8006 unused | delivery-governance § Service ports |
+| R11 | Failing-test-first for all bug/feature work; `just ci-quiet` exit 0 from repo root is the universal closure gate | delivery-governance § Ticket Closure Gate, § Failing-Test-First Work |
+
+### 1.3 Canonical product contract
+
+`openspec/specs/agent-task-economy/spec.md` (the "baseline spec") is the single richest statement of the target product behavior: canonical lowercase status vocabulary, platform-notary authority, escrow-at-posting, sealed binding bids, on-platform assets, Task-Board-mediated rebuttals via `POST /tasks/{task_id}/rebuttal`, semantic lifecycle events, gateway-owned persistence, UserAgent-backed UI proxy, factory-based agent runtime, and uniform service contracts. §2 below is structured around it.
+
+### 1.4 Known-stale top-level docs (verified 2026-07-09 firsthand)
+
+| Doc | Verified stale content | Tracked as |
+|---|---|---|
+| `README.md` | "Database Gateway (port 8006)"; "Observatory (port 8007)" as an existing service; `services/observatory/` in the repo tree; `just ci-all`/`ci-all-quiet` recipes that don't exist; "Python 3.11+" | T-060 → WP-02 |
+| `AGENTS.md` (symlinked as `CLAUDE.md`) | Five-service architecture block (no db-gateway/ui/agents/service-clients); dependency map ends at port 8005; references `docs/demo-scenarios/` (doesn't exist); mandates beads (`bd`) for all tracking; duplicated "Landing the Plane" section | T-061 → WP-02 |
+| `CHANGELOG.md` | 2026-04-13 entry: "five-service … monorepo" | T-063 → WP-02 |
+
+---
+
+## 2. TARGET STATE (normative)
+
+Everything below is normative. Statements are backed by a ratified decision (R#), the canonical baseline spec, or code-verified as-built behavior being promoted to contract; genuinely undecided points reference a Q-# in §9 and bind once answered.
+
+### 2.1 System topology
+
+Eight deployable components: seven FastAPI services + the agent runtime, plus shared libraries.
+
+| Component | Port | Responsibility (target) |
+|---|---|---|
+| identity | 8001 | Agent registration, public-key roster, JWS verification support |
+| central-bank | 8002 | Accounts, ledger + audit log, escrow lock/release/split, platform-credit funding |
+| task-board | 8003 | Task lifecycle source of truth, bidding, contracts, asset store, dispute mediation toward Court, escrow settlement on ruling (R4) |
+| reputation | 8004 | Spec-quality & delivery-quality feedback, sealed mutual feedback, court-derived feedback |
+| court | 8005 | Dispute records, LLM judge panel, rulings; writes platform-signed only (R9) |
+| db-gateway | 8007 | Owns the shared SQLite database; serializes all writes; blessed read API (R3); semantic event log |
+| ui | 8008 | Observatory pages (vanilla JS, R7) + operator write path via UserAgent proxy |
+| agents/ (runtime) | n/a | Feeder, workers (mathbot et al.), factories, roster; the simulation layer |
+
+Outbound-call matrix (target = as-built minus the Q/T deltas noted; ✗ = must not call):
+
+| Caller ↓ / Callee → | identity | central-bank | task-board | reputation | court | db-gateway | LLM provider |
+|---|---|---|---|---|---|---|---|
+| identity | — | ✗ | ✗ | ✗ | ✗ | writes+reads `/identity/*` | ✗ |
+| central-bank | verify-jws (agent ops only, after T-021) | — | ✗ | ✗ | ✗ | `/bank/*` | ✗ |
+| task-board | verify-jws (agent ops) | escrow lock/release/split | — | ✗ | file claim + forward rebuttal (platform-signed) | `/board/*` | ✗ |
+| reputation | verify-jws (agent ops, after T-021) | ✗ | ✗ | — | ✗ | `/reputation/*` | ✗ |
+| court | ✗ (local platform verify) | ✗ (R4 — never; specs to be fixed) | get task context + record_ruling | feedback ×2 | — | `/court/*` + read `/board/tasks/{id}` | judges (litellm) |
+| ui | via UserAgent | via UserAgent (treasury) | via UserAgent (proxy) | via UserAgent | via UserAgent | Q-4 (today: direct SQLite read) | ✗ |
+| agents/ | register/lookup | accounts/escrow-lock | full lifecycle | feedback | ✗ (R9 — never directly; rebuttal via task-board) | ✗ | workers (AsyncOpenAI) |
+| tools/demo_replay | ✓ | ✓ | ✓ | ✓ | ✓ (platform key) | ✗ | ✗ |
+
+Startup order (4 health-gated tiers, as-fixed in commit `624f124`): db-gateway → identity (health + `GET /agents` live) → central-bank ∥ task-board ∥ reputation ∥ court → ui.
+
+### 2.2 Data & persistence architecture
+
+- Single shared SQLite database, **owned exclusively by db-gateway**; domain services never open the DB file directly (`openspec/specs/agent-task-economy/spec.md § Gateway-Owned Persistence`).
+- Writes: only through gateway POST/PUT/DELETE routes; every write emits an event row in the same transaction.
+- Reads: through the gateway's blessed read API (R3), which is service-agnostic — e.g. Court legitimately reads task context via gateway `GET /board/tasks/{id}` rather than the Task Board API; R3 blesses the read routes without restricting callers. The single exception today is the UI's direct read-only SQLite connection; its target treatment is **Q-4**.
+- The gateway stays **unauthenticated by design** ("trusts internal callers" — db-gateway spec § What This Service Does NOT Do). v1 posture: never bind/expose 8007 beyond localhost/the compose network; recorded as a deployment constraint, not a gap.
+- Semantic events: task lifecycle transitions emit `task.accepted`, `task.submitted`, `task.approved`, `task.auto_approved`, `task.disputed`, `task.ruled`, `task.cancelled`, `task.expired`; court/reputation flows emit `claim.filed`, `rebuttal.submitted`, `ruling.delivered`, `feedback.revealed` (agent-task-economy § Gateway-Owned Persistence and Semantic Events).
+
+### 2.3 Identity & authentication architecture
+
+- Ed25519 keypairs per agent; every mutating agent action is JWS-signed (compact serialization, `alg: EdDSA`, `kid` = signer's agent id) and verified before applying (agent-task-economy § Signed Identity and Platform Authority).
+- **Two-tier verification model.** This resolves the long-standing "local vs Identity-HTTP" spec conflict (June C2): R2 is scoped to *platform operations* (delivery-governance § Platform auth model: "WHEN central-bank or reputation validates **platform operations** THEN local PlatformAgent verification is used").
+  - **Agent-signed operations** — task create/cancel, bid, accept, asset upload, submit, approve, dispute, rebuttal-to-Task-Board, `escrow_lock`, balance/transaction reads, feedback submission, self-service zero-balance account creation — are verified via Identity `POST /agents/verify-jws` using the shared `service_clients.IdentityClient`. That endpoint becomes **spec'd** (T-050); the spec'd-but-never-called raw `POST /agents/verify` is retired.
+  - **Platform-signed operations** — account creation with non-zero balance, credit, escrow release/split, Task Board `record_ruling`, all Court writes, court-generated feedback — are verified **locally** via `PlatformAgent.validate_certificate()` (the Court pattern; no Identity round trip, survives Identity outages). Central Bank, Reputation, and Task Board migrate their platform-op checks to this path (T-021).
+- Court trust model: all Court writes platform-signed only; Task Board is the mediating authorization layer; Court reads public (R9).
+- Registration stays open/self-service and unauthenticated (as-built; identity spec scopes authorization to callers). Key revocation/rotation remains out of scope for v1 unless Q-10 decides otherwise (accepted risk, arc42 §11.1.3).
+- **UI operator**: as-built, the UI's `UserAgent` *is* the platform identity (`AgentFactory.user_agent()` loads handle `"platform"`, sharing `data/keys/platform.key`), and the `/api/proxy/*` routes carry **no authentication**. Target identity for the operator is **Q-2**; proxy exposure/auth is **Q-3**.
+
+### 2.4 Economic model
+
+- Escrow for the full task reward locks at **posting** via the two-token create: the poster signs both a `create_task` token and a matching `escrow_lock` token; the task never becomes `open` without locked escrow (agent-task-economy § Funds and Escrow Lifecycle). The vision doc's "escrow locks at acceptance" narrative is superseded.
+- Settlement — all executed by **Task Board** through Central Bank (R4):
+  - approve, or review-timeout auto-approve → `POST /escrow/{id}/release` to the worker (**full reward**);
+  - cancel / expiry → release to the poster (refund path; no separate refund primitive exists or is needed);
+  - ruling → split: worker `floor(amount × worker_pct / 100)`, poster the remainder; `worker_pct` 0 → release-to-poster, 100 → release-to-worker (`task_manager.py:1301-1315`).
+- **Bid `amount` is a competitive signal only in the current contract**: payout is always the full posted reward regardless of the winning bid. Whether the winning bid should become the actual payment (with the difference refunded at acceptance) is **Q-8**.
+- Funding: platform-signed `credit`/account-creation-with-balance are the only money sources. **Minting is unbounded by design** (platform = sovereign issuer, no supply cap) — documented posture, not a defect. Feeder funding via the `fund-feeder` CLI; no fees in v1; no salary scheduler in v1 (R8) — the `salary.paid` event label stays reserved for the future mechanism.
+- Treasury: the `platform` account seeded with 1,000,000 coins. Bootstrap ownership (today: **UI lifespan** mints it) is **Q-9**.
+- Idempotency: credit replay guarded by the partial unique index `(account_id, reference) WHERE type='credit'`; one active escrow per `(payer_account_id, task_id)`.
+
+### 2.5 Task lifecycle state machine
+
+Canonical lowercase statuses (agent-task-economy § Canonical Task Lifecycle): `open`, `accepted`, `submitted`, `approved`, `cancelled`, `disputed`, `ruled`, `expired`.
+
+Target transition table (as-coded today in `task_board_service/services/task_manager.py` + `deadline_evaluator.py`, with the two target deltas marked ▲):
+
+| From → To | Trigger | Mechanism |
+|---|---|---|
+| ∅ → open | `POST /tasks` (two-token; escrow locked first) | API |
+| open → cancelled | poster `cancel` | API (escrow → poster) |
+| open → accepted | poster `accept_bid` | API |
+| open → expired | bidding deadline passed — ▲ **regardless of bid count** (T-035; today only when `bid_count == 0`, `deadline_evaluator.py:63`) | lazy evaluation |
+| accepted → submitted | worker `submit` (requires ≥1 uploaded asset) | API |
+| accepted → expired | execution deadline passed (escrow → poster) | lazy evaluation |
+| submitted → approved | poster `approve` (escrow → worker) | API |
+| submitted → approved | review deadline passed → auto-approve (escrow → worker, event `task.auto_approved`) | lazy evaluation |
+| submitted → disputed | poster `dispute` → Task Board synchronously files the platform-signed Court claim, then persists `disputed` | API |
+| disputed → ruled | platform `record_ruling` (Task Board settles escrow per `worker_pct`) | API |
+
+- Invalid transitions are rejected with `invalid_status`/409 — never coerced.
+- Deadline mechanics: **lazy evaluation** on every read and at the top of each mutating op; there is **no background scheduler**. ▲ Whether a config-driven periodic evaluator is added (so statuses/escrow can't stall when nothing polls, and direct-DB readers like the UI never see stale states) is **Q-5**.
+- Escrow side-effects on lazy transitions stay best-effort with `escrow_pending=1` + retry-on-next-read (`escrow_coordinator.py:78-129`).
+
+### 2.6 Dispute & court flow
+
+Target flow (agent-task-economy § Court Dispute Resolution + R9 + R4):
+
+1. Poster disputes a `submitted` task on Task Board (poster-signed).
+2. Task Board validates, files the Court claim **platform-signed** with `task_id`, `claimant_id`, `respondent_id`, `claim`, `escrow_id`; task → `disputed`; Court `dispute_id` returned when available.
+3. Worker rebuts via Task Board `POST /tasks/{task_id}/rebuttal` (worker-signed to Task Board; platform-signed onward to Court). Ruling may proceed without a rebuttal (null rebuttal context).
+4. Ruling: judge panel evaluates → **median** worker payout percentage; Court records ruling on Task Board (platform-signed); Task Board settles escrow via Central Bank; Court records spec/delivery feedback on Reputation; dispute persisted with judge votes.
+5. Partial-failure contract: a dispute is never reported fully ruled unless all side effects committed; it remains recoverable for retry (agent-task-economy § Scenario: Ruling failure does not leave partial completion).
+
+- Judge panel: configurable size (must be **odd**), aggregation = **median** `worker_pct`; each judge returns `worker_pct` 0–100 plus written reasoning; votes persisted as a `judge_votes` JSON array. Dev/test default: `provider: mock`, `panel_size: 1`; LM Studio config exists only as comments in `services/court/config.yaml:34-39`. Production judge composition/providers is **Q-13**.
+- Claim and rebuttal bodies ≤ 10,000 chars; rebuttal window 24h (config-driven).
+- The ambiguity-favors-worker rule is encoded **only** in the LLM judge system prompt (`court_service/services/prompts.py:6`) and is therefore inert under the mock judge (fixed 50%). An operational "vague spec" rubric exists nowhere; both the rubric and production panel composition are **Q-13**.
+- Ruling execution contract (openspec § Scenario: Ruling failure): sequence is judges → Task Board `record_ruling` (escrow settles) → Reputation feedback ×2 → persist ruling+votes; on failure the dispute must remain **recoverable for retry** — the current revert-to-`rebuttal_pending` leaves the Task Board ruling already committed, so retry is NOT clean (GAP; T-040).
+- **Ruling trigger**: today nothing triggers `POST /disputes/{id}/rule` autonomously (only the scripted demo does); the rebuttal deadline is stored but never enforced by anyone. Who triggers rulings after the rebuttal window is part of **Q-5**.
+
+### 2.7 Reputation & feedback
+
+- Two per-agent scores: specification quality (poster) and delivery quality (worker); vision defaults: both start at 100% and drop only via dispute rulings (`docs/main/agent-task-economy.md § Reputation`).
+- Three-tier feedback (Dissatisfied / Satisfied / Extremely Satisfied) + optional text ≤256 chars, bidirectional, **sealed until both submitted** (vision § Reputation; agent-task-economy § Reputation and Feedback).
+- Court-generated feedback derives from the worker payout percentage (agent-task-economy § Scenario: Court-generated feedback); it is platform-signed and stored immediately visible (`force_visible`): spec_quality → poster, delivery_quality → worker.
+- Reveal semantics: stored sealed (`visible=0`); revealed when the counterparty submits — **atomically** (the production gateway path's TOCTOU race is a gap, GAP-R2) — or lazily once `reveal_timeout_seconds` (86,400s) elapses.
+- The Reputation service stores **raw feedback only** ("Feedback is data, not scores" — reputation spec § Core Principles); no numeric aggregation exists anywhere, while the vision promises two scores defaulting to 100% that drop via rulings. Whether score aggregation becomes a Reputation endpoint (so agents can query their own standing, per vision Scenario 2) or stays consumer-side is **Q-12**.
+
+### 2.8 UI / Observatory
+
+- `services/ui` @8008, FastAPI backend + vanilla JS assets (R6, R7).
+- Read side: observatory dashboards (ticker, metrics, leaderboard, quarterly report, task views).
+- Write side: **operator actions via `/proxy/*` backed by a registered UserAgent** (agent-task-economy § Scenario: UI proxy uses UserAgent) — the "dedicated user for the UI operator". Every proxy route must be specified and integration-tested (T-049).
+- Economy phase for a zero-activity economy is **`stalled`** (completion-backlog § Scenario: T-046) — this decides `tickets.md#T-001` in favor of changing the code, not the test. ✅ shipped `9f506c9`. The `stable`/`contracting` boundary for combinations the spec table leaves uncovered is an open spec gap (see the §5.0 correction note), resolved in WP-12 — not by guesswork.
+- Pages (target): landing, observatory dashboard, task console (exist today) **plus** a quarterly-report page (T-093) and agent-profile view (T-095) — the backend endpoints already exist; the HTML/JS views do not. The observatory spec's React `/live` route is superseded (R7).
+- Read data source: today every UI read is direct read-only SQLite (`aiosqlite`, `mode=ro`); target treatment — keep-and-bless vs migrate to the gateway read API — is **Q-4**.
+- Write path: `/api/proxy/*` (post task, accept bid, approve, dispute, get identity) through the UserAgent; every proxy route must be specified and integration-tested (T-049). Operator identity → Q-2; proxy auth → Q-3.
+
+### 2.9 Agent runtime & simulation
+
+- `AgentFactory` from roster handles; `WorkerFactory` for named math-worker profiles validated against `roster.yaml`; feeder funding via the platform-mediated fund-feeder CLI (agent-task-economy § Agent Runtime and UI Proxy).
+- Agent loops use canonical lowercase statuses; workers handle disputes via the Task-Board-mediated rebuttal and record **ruled** outcomes with the actual payout — a review-poll timeout must be recorded as `TaskOutcome.TIMEOUT`, never as a full approved win (T-016).
+- The feeder runs both loops: feed (post from `data/math_tasks.jsonl`, reward = base + level×increment) and review (approve on answer match, dispute on mismatch). The autonomous dispute chain completes only when a ruling trigger exists (Q-5).
+- Worker LLM access (AsyncOpenAI → LM Studio/OpenAI/Mistral profiles) is an external channel outside the platform boundary — accepted by design; keys via the agents config profiles (Q-7 governs the env-var seam). The declared `strands-agents` dependency is unused and is dropped; the LLM-driven `@tool` agent design stays future work.
+- Demos are honest: every claimed behavior goes through real APIs (openspec § Honest Demonstrations) — the direct-SQL `tools/seed-economy.sh` is retired.
+- Vision Scenario 2 "Text Classification Arena" (Regex Ron / Sklearn Sam / LLM Luna) remains target backlog (T-091).
+
+### 2.10 Shared libraries & uniform service contracts
+
+- `libs/service-commons`: config loading, logging, exceptions/`ServiceError`, `middleware_error_response`, health contract. No consumer may monkeypatch its classes (the court's process-wide `ServiceError.__init__` patch is removed).
+- `libs/service-clients`: the only sanctioned HTTP client layer — every exported client has callers or is removed (T-082); clients are **async** (the five hand-rolled synchronous `*_db_client.py` classes that block the event loop are replaced by/aligned with the lib's async clients).
+- **PKI moves into a library.** Ed25519 keygen/JWS signing/verification and `PlatformAgent` leave the `agents/` application package for a lib (e.g. `libs/service-auth`), with **one** canonicalization (today: `base_agent/signing.py` [no sort_keys, `typ` header] vs task-board `PlatformSigner` [joserfc, sort_keys, no `typ`] vs a third copy in `tools/demo_replay/wallet.py`). Services then depend on libs only — the current build-time inversion (5 services depending on `agents/`) disappears, as do the blanket `base_agent` mypy overrides.
+- Error envelope `{"error","message","details"}` (3 fields) everywhere, snake_case codes (R1); the 2-field variants in the identity/observatory specs are stale.
+- Uniform per-service contract: `create_app()` factory, YAML-backed fail-fast config (no defaults; Optional-but-required-at-runtime fields are outlawed — T-034), `GET /health`, pytest markers unit/integration/performance/architecture, byte-identical service justfiles.
+
+### 2.11 Deployment & operations
+
+- Local mode is the primary deployment: `just start-all` (4 health-gated tiers), `just status`, `just stop-all`; e2e via `just test-e2e` (clean-data restart). All services bind 127.0.0.1; the unauthenticated gateway (8007) must never be reachable beyond the trusted host boundary.
+- Docker: scope is **Q-6**. If kept, the target requires: per-service docker configs with compose service-name URLs (not 127.0.0.1), a shared volume for `economy.db` (or Q-4's gateway-read migration removing the need), Dockerfiles that copy all editable path deps (`libs/*`, `agents/` until the PKI lib lands), a consistent build-context convention, correct `depends_on` (T-081), and not publishing 8007 to the host.
+- CI: `just ci-quiet` = structure check + 7 service CIs + agents CI + cross-service integration + agents e2e; repo-root green is the only done-gate (R11). Target additions: per-service integration suites and `tools/` tests join a CI phase, and the 111-test UI Playwright e2e suite gets a root recipe and a CI phase (today it is wired to nothing). Hosted CI is **Q-14**.
+- Guard collections cover db-gateway and ui sources (today omitted) and stop referencing the deleted `DELEGATE.md`.
+
+---
+
+## 3. CURRENT STATE inventory (as of 2026-07-09, branch `refactor`)
+
+Facts marked ✅V were verified directly by the orchestrator (file read); others carry the auditing agent's citation and were plausibility-checked against neighboring evidence.
+
+### 3.1 Topology as-built
+
+Seven services + agent runtime + tools + two shared libs. Actual ports (each from its `config.yaml:10`, mirrored in `docker-compose.yml` and the root justfile port array `(8001 8002 8003 8004 8005 8007 8008)` at `justfile:503,562`):
+
+| Component | Port | Notes |
+|---|---|---|
+| identity | 8001 | leaf |
+| central-bank | 8002 | |
+| task-board | 8003 | |
+| reputation | 8004 | |
+| court | 8005 | judge provider `mock`, panel_size 1; LM Studio config exists only as comments (`services/court/config.yaml:31-39`) |
+| db-gateway | 8007 | ✅V — README's "port 8006" is wrong |
+| ui | 8008 | ✅V — README's "Observatory (port 8007)" service does not exist anywhere in the repo |
+| agents/ | n/a | client runtime; service URLs from `agents/config.yaml:5-9` |
+
+### 3.2 Persistence & data access as-built
+
+- **One live database**: `services/db-gateway/data/economy.db` (WAL, busy_timeout 5000ms), created/owned by db-gateway (`db_gateway_service/core/lifespan.py:33-46`), schema loaded from `docs/specifications/schema.sql` (12 tables + `events`).
+- **Domain services write AND read via gateway HTTP**, each through a hand-rolled client: identity `services/agent_db_client.py:22-26`, central-bank `services/ledger_db_client.py:21-24`, task-board `services/task_db_client.py:56-59`, reputation `services/feedback_db_client.py:19-22`, court `services/dispute_db_client.py:18-21`. The shared `libs/service-clients/src/service_clients/gateway.py` `GatewayClient` has **zero importers** — dead code.
+- **Court performs a cross-domain read** of task-board data through the gateway (`dispute_db_client.py:71` → `GET /board/tasks/{task_id}`), i.e. it bypasses the Task Board service API for reads.
+- **UI bypasses the gateway entirely**: opens the same SQLite file directly, read-only (`ui_service/core/lifespan.py:66-71`, aiosqlite `mode=ro`), path `../db-gateway/data/economy.db` from `services/ui/config.yaml:17-18` ✅V.
+- **Dead/legacy storage remnants**: reputation's direct-SQLite `sqlite_feedback_store.py` is not wired into app state (lifespan always builds `FeedbackDbClient`; the store survives only via a legacy shim imported by two unit tests); `database.path` config keys exist but are never read in identity/central-bank/reputation/court (`config.yaml:18` each, 0 src references) — central-bank's ✅V; task-board reads its `database.path` only in a vestigial legacy-`limits:` branch that current config never triggers (`task_board_service/core/lifespan.py:47`); stale generated key `services/task-board/data/platform.pem` orphaned by the current config path.
+- **Asset store**: filesystem `data/assets/{task_id}/{asset_id}/` under the task-board service dir (`asset_manager.py:39,44,137-139`), config-driven.
+
+### 3.3 Identity & auth as-built
+
+- Ed25519/JWS everywhere; Identity is the registration/trust root; keys on disk at repo `data/keys/{platform,mathbot,feeder}.{key,pub}` (gitignored), generated by `agents/src/base_agent/signing.py:24-58`.
+- **Signature-verification architecture has diverged** (ratified target R2 = local PlatformAgent for platform ops):
+  - court: local `PlatformAgent.validate_certificate()` — matches R2 (migration commit `ddeba66`).
+  - central-bank: still configured for Identity-HTTP verification — `identity.base_url/get_agent_path/verify_jws_path` live in `services/central-bank/config.yaml:20-24` ✅V; per the codex-task archaeology, its routers still call Identity over HTTP.
+  - reputation: reverted to Identity-HTTP verification (`reputation-identity-verification-fix.md`; `reputation_service/core/lifespan.py:62` wires `identity.base_url`).
+  - task-board: dual-path `TokenValidator` — prefers `IdentityClient.verify_jws()` over HTTP when configured (it is), local `platform_agent.validate_certificate` only as fallback (`token_validator.py:125-206`). Additionally, the production validator branches on a `_tampered` marker injected by a test helper (`token_validator.py:158,203`) — test scaffolding inside production signature checking.
+- central-bank `platform.agent_id: "a-platform-placeholder"` ✅V — a literal placeholder in live config; at runtime `get_platform_agent_id()` prefers the live registered `PlatformAgent.agent_id` and falls back to the config value (`central_bank_service/routers/helpers.py:71-83`), so the placeholder is dead weight that only misleads (removed in WP-03.1).
+- **db-gateway has no authentication by design** — "trusts internal callers" (`db-gateway-implementation/README:5`); anyone with network access to 8007 can write arbitrary domain rows.
+- **UI UserAgent = platform identity**: `services/ui/config.yaml:31-36` ✅V — `user_agent.agent_config_path: ../../agents/config.yaml` with in-file comment "The user agent shares the platform identity, which is authorized to mint its own balance"; `treasury_balance: 1000000` minted at UI startup (`ui_service/core/lifespan.py:84-91`). There is **no dedicated operator identity**; browser-driven actions are signed as the platform/treasury itself.
+- **Env-var usage in production code (3 sites, violating the project's no-env-var rule)**: `CONFIG_PATH` (`libs/service-commons/src/service_commons/config.py:109`, used by docker-compose for all 7 services); court judge `api_key_env` (`court_service/core/lifespan.py:49`); agents `${VAR}` resolution for LLM keys (`agents/src/base_agent/worker_config.py:12-40`). Plus `.env` files for court/agents sourced by `justfile:276`.
+
+### 3.4 UI service as-built
+
+Vanilla-JS multi-page site served by FastAPI: `index.html`, `observatory.html`, `task.html` from git-tracked `services/ui/data/web/` (`.gitignore:99` exception); the spec's agent-profile and quarterly pages have API endpoints but no HTML views. SSE: 1s poll / 15s keepalive / batch 50 (`services/ui/config.yaml:20-23` ✅V). Write path: `/api/proxy/*` (task post, bid accept, approve, dispute, identity) via the platform-keyed UserAgent — **no authentication on these routes**: any HTTP caller reaching 8008 can act as the platform and spend the treasury (`routers/proxy.py`). Known bugs/facts: empty-economy phase emits `idle` vs required `stalled` (`metrics.py:653`, T-046/`tickets.md#T-001`); `stable` phase ignores the spec's dispute<15% ceiling (`metrics.py:658`); `request.max_body_size` config is validated but never enforced; the injectable `_clock` seam covers Python time only — SQL `julianday('now')`/`datetime('now')` in `tasks.py:347,353`/`agents.py:379-499` stay unfrozen in e2e; `list_agents` is N+1 (~10 queries per agent, Python-side sort/paginate, `agents.py:27-215`).
+
+### 3.5 Agent runtime & tools as-built
+
+`agents/roster.yaml` defines 7 handles (`platform`, `alice`, `bob` [vestigial], `mathbot`, `mathbot_openai`, `mathbot_mistral`, `feeder`). Feeder runs feed + review loops concurrently: posts math tasks from `data/math_tasks.jsonl` (reward = 10 + 10×level; deadlines 120/300/120s), then approves on exact-normalized answer match / disputes on mismatch (`task_feeder/review.py:16-63`). Math workers scan every 10s, bid 50–10,000, solve via `AsyncOpenAI` (LM Studio default) and, when disputed, rebut via Task Board then wait for `ruled` — **which never comes autonomously: no agent, service, or scheduler calls `POST /disputes/{id}/rule` outside the scripted demo** (`engine.py` is the sole `trigger_ruling` caller). A worker review-poll timeout is still recorded as a full APPROVED win (`math_worker/loop.py:162-171`, T-016). `just start-mathbot` takes the legacy config path (hardcoded `api_key: "lm-studio"`), silently bypassing the `workers:` profiles. Dead surface: `strands-agents` hard dep with zero imports; `PuppetMaster`/`PuppetAgent`; `TaskOutcome.BID_REJECTED`; `auto_approve_on_error`; bank-mixin `lock_escrow` and platform `release/split_escrow` (never called agent-side). `tools/demo_replay` re-implements signing and all clients (hardcoded URLs `clients.py:18-21,296,418`; zero tests); `tools/seed-economy.sh` writes the DB directly and is wired to nothing; `tools/` has no CI recipe at all.
+
+### 3.6 Deployment as-built
+
+- **Local**: `just start-all` boots in 4 health-gated tiers: db-gateway → identity (health + `GET /agents` to kill the registration race, commit `624f124`) → bank/board/reputation/court in parallel → ui (which then mints the treasury).
+- **Docker mode is comprehensively broken** (✅V compose read in full; no `volumes:` key exists anywhere in either compose file):
+  1. Four services (identity, central-bank, task-board, court) load their plain `config.yaml` in-container (`docker-compose.yml:9,23,40,76`), whose `db_gateway.url` is `http://127.0.0.1:8007` — each container's **own** loopback under bridge networking → every gateway write connect-fails.
+  2. reputation alone uses `docker-config.yaml` (`docker-compose.yml:59` ✅V), which omits the `db_gateway`, `identity`, and `database` sections and still has the retired `logging.format` shape ✅V → fails Pydantic `extra="forbid"`/missing-field or, at best, starts with `db_gateway=None` and dies on first call (`reputation_service/config.py:115` Optional-with-default contradicts its own "no defaults" docstring at `:100-104`).
+  3. Image builds: central-bank, task-board, court, reputation, ui Dockerfiles copy only `libs/service-commons` while their pyprojects declare editable path deps on `../../libs/service-clients` and/or `../../agents` → `uv sync --frozen` cannot resolve them (e.g. `services/central-bank/Dockerfile:8` vs `pyproject.toml:57-59`).
+  4. db-gateway's Dockerfile diverges from every sibling: `WORKDIR /app`, `COPY pyproject.toml ./` (no repo-root pyproject exists in the root build context), `COPY ../../libs/service-commons` (escapes the build context) ✅V (`services/db-gateway/Dockerfile:3,9,10`).
+  5. No shared volume for `economy.db` between db-gateway and ui (`docs/arc42/07 § 7.2.1.6` + compose ✅V) — the UI's direct-read path cannot work in Docker.
+  6. The unauthenticated gateway binds `0.0.0.0` in-container and compose **publishes 8007 to the host** (`docker-compose.yml:94-95`) — anyone reaching the host can write arbitrary ledger/task/ruling rows.
+- docker-compose `depends_on` gaps (court missing central-bank; db-gateway has none) — T-081; healthcheck URLs duplicate each service's port literal (`docker-compose.yml:11,25,42,61,78,99,113`). No CI exercises Docker at all, so none of this is caught.
+
+### 3.7 Documentation corpus state
+
+- Canonical layer: `openspec/` (3 specs; `openspec/changes/` is empty).
+- `docs/codex-tasks/*` (and other generated docs + the delegation guide) were **removed from git tracking** in commit `a791984` (2026-06-21) — they exist on disk only; post-removal edits leave no history. `DELEGATE.md` is gone from the repo root while `AGENTS.md § Delegating Work` still links to it ✅V.
+- Two frontend documentation eras: 9 React-era docs carry SUPERSEDED banners (per R7), but two siblings that edit the same React files carry none (`2026-03-01-leaderboard-improvements-design.md`, `2026-03-01-monthly-earnings-and-satisfaction-colors-design.md`).
+- `docs/arc42/` is a generated as-built reference (12 sections): internally consistent with the code-level audits above, carrying 27 registered human-input/no-evidence gaps, 8 undated reconstructed ADRs, and one low-confidence lifecycle diagram (`06-runtime-view.md § 6.8`).
+- README/AGENTS.md/CHANGELOG staleness itemized in §1.4.
+- `docs/diagrams/system-sequence-diagrams.md` is confirmed stale: pre-gateway-migration flows, db-gateway@8006/observatory@8007 port claims, and "Notary" naming for the platform agent.
+
+### 3.8 Component digests (audit highlights not covered above)
+
+- **identity** (≈1.4k LOC): open self-service registration; `POST /agents/verify` (spec'd) has zero callers while `POST /agents/verify-jws` (unspec'd) serves CB/TB/reputation; envelope has 3 fields vs spec's 2; `crypto.algorithm` config is dead (EdDSA hardcoded, `agent_registry.py:172,209`); 49 acceptance shell scripts assert UPPERCASE codes and are wired into no CI; integration/performance test dirs are empty stubs; dead `pyjwt` dep and legacy store shims.
+- **central-bank** (≈2.2k LOC): endpoints per spec + self-service zero-balance accounts (code-only, ratified direction); auth precedence inverted on credit/release/split (authz before payload checks, `accounts.py:143`, `escrow.py:102,164` — T-033); in-memory vs gateway store divergence (tx types `debit`/prefixed refs, missing poster==payer guard, differing worker_pct error code — T-030/T-032); zero-amount split credits not skipped (T-031); `/health` 500s if the gateway is down (`health.py:19-21`); unit tests bypass real JWS verification via a payload-decoding mock; the 24-script acceptance suite generates a config that cannot even boot the current service.
+- **task-board** (≈5k LOC src): biggest service; `task_manager.py` is a 1,362-line god class (~270-line `create_task`); all Pydantic response models except Health are dead (hand-built dicts; `BidResponse.proposal` contradicts the real `amount` payload); `/tasks/{id}/rebuttal` exists in code only and skips the request-validation middleware (`core/middleware.py:14-23`); Court-unavailable during dispute/rebuttal surfaces as raw 500 (no 502 mapping, no try/except around `platform_agent.file_claim`, `task_manager.py:1072,1175`) while the Central-Bank 502-mapping fix is fully in place; undocumented action aliases `file_dispute`/`submit_ruling`; no contract object exists anywhere.
+- **reputation** (≈1.8k LOC): production reveal is a TOCTOU read-then-write via the gateway (`feedback_db_client.py:52-83` vs atomic test-only `sqlite_feedback_store.py:106-152`); court/platform `force_visible` bypass is untested and forces `from_agent_id`=platform; `FeedbackDbClient` (the production store) has zero functional tests; VIS-09 timeout reveal untested (no clock seam); `PlatformIdentityClient` subclass never calls `super().__init__` (latent AttributeError); acceptance shell suite posts unauthenticated bodies (all 51 would fail).
+- **court** (≈2.4k LOC): platform-signed-only writes fully adhere to R9; never calls Central Bank (matches R4; court spec/tests-spec stale, `CENTRAL_BANK_UNAVAILABLE` dead); ruling side-effect order TaskBoard→Reputation→persist with court-only revert (T-040); `require_platform_signer` dead (no `kid` assertion); rebuttal deadline stored, never enforced; `__init__.py:10-32` monkeypatches `ServiceError.__init__` process-wide; judges: MockJudge fixed 50%, litellm path never exercised by any test; hardcoded 80/40 feedback cutoffs and 256-char comment cap; deliverables reach judges only as whatever `get_task` returns — no asset-content fetch (UNCLEAR whether judges ever see real deliverable bytes; must be verified in WP-06).
+- **db-gateway** (≈3.6k LOC): 1,414-line `DbWriter` for 5 domains; single shared connection, reader reaches into writer's private `_db` (`lifespan.py:49`); schema loaded from `docs/specifications/schema.sql` with errors silently suppressed (`db_writer.py:66-69`); `DELETE /court/rulings/{id}` runs with no transaction and no event; `POST /court/claims/{id}/status` event-optional; idempotent replays return `event_id: 0`/`balance_after: 0`; `constraints` compare-and-set (state enforcement) contradicts the spec's "no business logic"; FK/UNIQUE mapped by substring-matching driver messages; unused `pyjwt`.
+- **ui**: §3.4.
+- **libs**: service-commons solid but `middleware_error_response(details=None)` violates the lib's own no-defaults stance; JSON log timestamps have minute precision only; service-clients has **no tests** and 5 of 7 clients have zero importers; no nonce/`iat`/`exp`/replay protection anywhere in the JWS layer.
+- **agents/tools**: §3.5; additionally the demo `clients.py` feedback contract (signs `role`, has `reveal_feedback`) has drifted from the base SDK (signs `from_agent_id`, no reveal method) — one of the two is wrong against the real Reputation API (verify in WP-09).
+- **tests/CI**: root `tests/integration` = in-process gateway write-contract tests (no real cross-service HTTP); the real live-stack suite is `agents/tests/e2e` (58 tests; covers happy path, dispute→ruling chain, auto-approve timeout, platform-auth boundaries, economic invariants) — excluded from `agents` own CI (`-m "not e2e"`) and reached only via root `just test-e2e`; per-service `tests/integration` suites are reached by **no** root CI phase; the 111-test UI Playwright suite is wired to nothing; per-service `test_cross_service_deps.py` still forbid-lists a phantom `observatory_service`; `.claude/settings.json` PreToolUse CI hook references a nonexistent script with a wrong jq path (never fired successfully; F-75).
+
+---
+
+## 4. GAP ANALYSIS (register)
+
+Severity: **P0** = the economy loop or money correctness is broken · **P1** = target-blocking architectural divergence · **P2** = robustness/quality defect · **P3** = hygiene. "Closes via" names the §5 work package (and openspec T-ID where one exists). Q-references point at ratified decision records (E1, 2026-07-10).
+
+### A. Lifecycle & economic correctness
+
+| ID | Gap (current, evidence) | Target (§2 ref) | Sev | Closes via |
+|---|---|---|---|---|
+| ~~GAP-A1~~ | **No component ever triggered rulings**: `POST /disputes/{id}/rule` was called only by the demo engine | §2.6 ruling trigger | **P0** | **DONE** `6aba0e2` (WP-06: TB deadline evaluator fires the platform-signed idempotent trigger; e2e red→green) |
+| ~~GAP-A2~~ | Open tasks with ≥1 bid never expired (`deadline_evaluator.py:63` guarded `bid_count == 0`) → escrow locked forever | §2.5 table ▲ | P1 | **DONE** `a429120` (mutation-checked; two spec-contradicting tests corrected, see the exception record above) |
+| ~~GAP-A3~~ | Deadlines evaluated only lazily on reads; nothing transitioned unread tasks | §2.5 ▲ | P1 | **DONE** `722b494` (WP-05: config-driven background sweep over all non-terminal statuses; CAS-safe vs concurrent lazy evaluation) |
+| ~~GAP-A4~~ | Ruling side-effects non-atomic; retry hit `invalid_status` on re-record | §2.6 recoverable-retry contract | P1 | **DONE** `6aba0e2` (deterministic ruling_id; TB re-record→200; feedback 409→success; crash-window convergence test) |
+| ~~GAP-A5~~ | Production sealed-feedback reveal was a TOCTOU read-then-write; the reveal policy now lives inside the gateway's `BEGIN IMMEDIATE` (reverse lookup + both rows flipped + `feedback.revealed` emitted). `force_visible` stays a caller policy flag; "a reverse pair exists" is a fact the gateway derives. | §2.7 atomic reveal | P1 | **DONE** `478153e` (two-connection concurrency probe) |
+| ~~GAP-A6~~ | Court-generated feedback semantics had zero tests | §2.7 court feedback | P2 | **DONE** `45729a6` (WP-07: 4 semantics tests incl. non-interference with sealed pairs; all guards mutation-checked; T-106 filed for the stored `role` column) |
+| ~~GAP-A7~~ | Worker recorded review-poll timeout as full APPROVED earnings | §2.9 TIMEOUT outcome | P2 | **DONE** `95fe63e` (T-016; `TaskOutcome.TIMEOUT` had to be added — only `BID_TIMEOUT` existed) |
+| ~~GAP-A8~~ | Rebuttal deadline computed and stored but enforced by nobody | §2.6 window | P2 | **DONE** `6aba0e2` (409 `dispute_not_ready`; exceptions #6/#7) |
+| ~~GAP-A9~~ | Judges never saw deliverable **content** (verified: `get_task` carries only asset metadata) | §2.6 + vision "judges can access everything" | P2 | **DONE** `6aba0e2` (court fetches asset bytes up to required `judges.max_deliverable_bytes` into the judge context) |
+| ~~GAP-A10~~ | Bank store divergences (tx types, prefixed refs, missing poster==payer guard, wrong worker_pct code, zero-amount split legs) | §2.4 settlement | P2 | **DONE** `2fd507e` (in-memory stores aligned; shared contract suite runs against BOTH stores via in-process gateway) |
+| ~~GAP-A11~~ | Economy phase emitted `idle` for an empty economy vs required `stalled`. (The `stable` dispute-ceiling half was **withdrawn**, not implemented — see the §5.0 correction: the spec's phase table leaves combinations uncovered, so the residual stays `stable`.) | §2.8 phases | P2 | **DONE** `9f506c9` (T-046) — decides `tickets.md#T-001` |
+| ~~GAP-A12~~ | June-inventory residuals — all three verified REAL and fixed | §2.8/§2.5 | P2 | **DONE** `722b494` (title code, exception #9) + `57fcc57` (bucket includes 100; frontend accepts `increasing`) |
+| ~~GAP-A13~~ | Demo integrity: dangling dispute, phantom reveal endpoint, drifted feedback contract | §2.9 honest demos | P2 | **DONE** `ded2a90` (verified: the SDK was right, the demo wrong — `from_agent_id` fixed, dead `reveal_feedback` deleted, dispute resolved, unknown actions hard-error) |
+| ~~GAP-A14~~ | Bank auth precedence inverted on credit/release/split (403 before payload validation) | auth-spec precedence | P2 | **DONE** `0abfe7f` (decode-first ordering: payload errors beat 403) |
+| GAP-A15 | **No autonomous component ever accepts a bid** (found 2026-07-10 while auditing T-035's blast radius). The only callers of `accept_bid` are `tools/src/demo_replay/engine.py:236` (the scripted demo) and the UI proxy (`ui_service/routers/proxy.py:42`, i.e. a human clicking). `agents/src/task_feeder/` posts and reviews but has no acceptance path, and `MathWorkerLoop` simply waits in its post-bid phase until poll exhaustion records `BID_TIMEOUT`. So `just start-feeder` + `just start-mathbot` cannot move a task past `open`. Together with GAP-A1 (nothing triggers rulings) this means **the autonomous economy has two missing drivers**, and §8's definition-of-done item 2 is unreachable until both are closed. Before T-035 the stranded task also held its escrow forever; it now expires and refunds the poster, which is an improvement but not a substitute for acceptance. | §2.9: feeder accepts a winning bid | **P0** (blocks the autonomous-economy claim) | **DONE** `dd6957f` (WP-15: feeder acceptance loop per Q-16 — lowest bid after the window/quorum, reputation tie-break; live e2e observed red then green; GAP-A15 row kept verbose for history) |
+
+### B. Auth & security
+
+| ID | Gap | Target | Sev | Closes via |
+|---|---|---|---|---|
+| ~~GAP-B1~~ | CB/TB/Reputation verified **platform ops** via Identity HTTP; only Court was local | §2.3 two-tier model | P1 | **DONE** `0abfe7f` (WP-03: credit/release/split, record_ruling, force_visible verify locally; one accepted deviation: create_account, see §5.0) |
+| ~~GAP-B2~~ | UI proxy was a platform-privileged write console sharing the platform key and minting the treasury | §2.3/§2.8 | P1 | **DONE** `57fcc57` (dedicated `operator` identity; UserAgent no longer extends PlatformAgent; startup mint deleted per exception #10; genesis = `just provision`; 127.0.0.1 posture documented per Q-3) |
+| ~~GAP-B3~~ | `_tampered` test-helper marker branch inside production signature validation | clean prod code | P2 | **DONE** `0abfe7f` (markers deleted; test tamper helpers do faithful Ed25519 verification; exception #4) |
+| ~~GAP-B4~~ | Court asserted platform identity by crypto only; `kid == platform.agent_id` check absent | spec/code align | P3 | **DONE** `6aba0e2` (kid assertion + rebuttal-party match, mutation-checked; dead `require_platform_signer` deletion → WP-11; spec side → WP-12) |
+| GAP-B5 | No replay/freshness protection in any JWS (no nonce/`iat`/`exp`); blunted by idempotency+state checks but unstated | explicit posture | P2 | Q-10 → WP-03 or docs |
+| GAP-B6 | Compose publishes the unauthenticated gateway to the host (`0.0.0.0` + `8007:8007`) | §2.11 never expose 8007 | P2 | WP-10 Q-6 |
+| GAP-B7 | `crypto.algorithm` config dead in identity (EdDSA hardcoded, `agent_registry.py:172,209`) | honest config | P3 | WP-11 |
+| GAP-B8 | No key revocation/rotation (arc42 risk 11.1.3) | accepted-risk record or scope | P3 | Q-10 |
+| ~~GAP-B9~~ **DONE** `e13711f` | **Cross-dispute rebuttal injection** (found by Codex adversarial review 2026-07-10, orchestrator-verified): `submit_rebuttal` validates only that `payload["dispute_id"]` is a non-empty string (`task_manager.py:1154-1156`) before forwarding it platform-signed to Court — a worker with any disputed task can attach a rebuttal to **another** task's dispute (dispute ids are publicly listable), corrupting judge context | Task Board persists the Court `dispute_id` at dispute time and rejects mismatched rebuttals | **P0** | Hotfix H-2 (§5.0) |
+
+### C. Data & persistence
+
+| ID | Gap | Target | Sev | Closes via |
+|---|---|---|---|---|
+| ~~GAP-C1~~ | UI's direct read-only SQLite was a silent exception | §2.2 read rule | P1 | **DONE** `57fcc57` (Q-4 ratified keep: semgrep exception annotated with the decision record; `mode=ro` architecture test) |
+| ~~GAP-C2~~ **DONE** `230e090` | `DELETE /court/rulings/{id}`: no transaction, no event (`db_writer.py:1407-1414`); `POST /court/claims/{id}/status`: event optional (`:1237-1240`) — both violate "every write includes an event" | §2.2 events | P1 | WP-04 (T-042) |
+| ~~GAP-C3~~ | Idempotent replays returned `event_id: 0` / `balance_after: 0` sentinels | real values | P2 | **DONE** `230e090` (T-043; the emitting `event_id` is now persisted on `bank_transactions`/`bank_escrow`) |
+| ~~GAP-C4~~ | Schema init failures silently suppressed (`contextlib.suppress(sqlite3.OperationalError)`) | fail-fast | P2 | **DONE** `230e090` (the suppression was hiding that `schema.sql` is not re-runnable) |
+| ~~GAP-C5~~ | Reader consumed writer's private `_db`; the single-writer/no-await-in-transaction invariant was implicit and unguarded (measured 2026-07-10: the gateway is not thread-safe) | explicit ownership + documented invariant with a test | P2 | **DONE** `2fd507e` (explicit `DbWriter.connection` wiring; static guard test fails on any async DbWriter method or `await` in the module; ADR → WP-12) |
+| ~~GAP-C6~~ | Gateway `constraints` CAS was real state enforcement while the spec claimed "no business logic / no reads" | bless + document | P2 | **DONE** WP-12 (blessed read API + CAS mechanism fully spec'd) |
+| ~~GAP-C7~~ | FK/UNIQUE mapped by driver-message substrings; `claim_exists` covered the `task_id` UNIQUE too; health size ignored WAL; SEC-02 | robust mapping | P3 | **DONE** `2fd507e` (`exc.sqlite_errorcode` constants; new 409 `task_already_disputed`; health sums -wal/-shm) |
+| ~~GAP-C8~~ | Dead storage remnants | none of it | P3 | **DONE** WP-11 (shims/pem/dead `database.path` keys deleted via exceptions #14–#16; CB `InMemoryLedgerStore` kept deliberately — real audit-log divergence, documented) |
+| ~~GAP-C9~~ | `tools/seed-economy.sh` wrote the DB directly | retired (§2.9) | P3 | **DONE** WP-11 (deleted) |
+
+### D. Deployment & operations
+
+| ID | Gap | Target | Sev | Closes via |
+|---|---|---|---|---|
+| GAP-D1 | Docker broken six ways (§3.6): loopback gateway URLs, invalid reputation docker-config, uninstallable editable deps in 5 images, divergent db-gateway Dockerfile, no shared DB volume, 8007 published | §2.11 | P1 | WP-10 Q-6 (T-081 subsumed) |
+| GAP-D2 | Env-var seams in production: `CONFIG_PATH` (commons `config.py:109`), court `api_key_env` (`lifespan.py:49`), agents `${VAR}` (`worker_config.py:12-40`) vs the project's no-env-var rule | sanctioned list or replacement | P2 | WP-10 Q-7 |
+| GAP-D3 | No hosted CI (`.github/` absent); quality gates are manual-only | per Q-14 | P2 | WP-10 Q-14 |
+| ~~GAP-D4~~ | Port literals repeated in the root justfile (compose gone with Q-6) | single source | P3 | **DONE** WP-11 (variable block, 32 sites) |
+| ~~GAP-D5~~ | ~~PreToolUse CI hook broken (audit F-75)~~ — **RETRACTED 2026-07-10**: verified `scripts/ci-quiet-hook.sh` exists and `.claude/settings.json` wires `bash scripts/ci-quiet-hook.sh`; it blocked a commit during H-2 while the tree was red. F-75 (sourced from the March retrospectives) is stale. | n/a | — | closed, no work |
+| ~~GAP-D6~~ | Guard collections omitted db-gateway/ui and protected the deleted `DELEGATE.md` | complete guards | P3 | **DONE** WP-11 (verified via `just setup-guard`) |
+| ~~GAP-D7~~ | Bank `/health` 500d when the gateway was down | health contract | P3 | **DONE** WP-11 (503 `service_not_ready`; failing-first + mutation-checked) |
+
+### E. Client layer & code structure
+
+| ID | Gap | Target | Sev | Closes via |
+|---|---|---|---|---|
+| ~~GAP-E1~~ | PKI lived in the `agents/` app package; 5 services build-depended on it; 3 signing implementations with 2 canonicalizations | §2.10 PKI lib | P1 | **DONE** `8fcae08` (WP-02: `libs/service-auth`; base_agent = shims; one canonicalization; Q-10 iat/exp) |
+| ~~GAP-E2~~ | 4 of 5 gateway db-clients were synchronous `httpx.Client` inside async routers | async clients | P1 | **DONE-with-deviation** `2fd507e` (identity + central-bank rebuilt async on lib `GatewayClient`; reputation + court stay sync by recorded deviation #4 — frozen sync business layers — with every call `run_in_threadpool`-wrapped, so the stall risk itself is closed) |
+| ~~GAP-E3~~ | 5 of 7 lib clients had zero importers; libs had zero tests | §2.10 sanctioned layer | P2 | **DONE** `2fd507e` (lib gains full CI tooling + 39-test suite; dead Court/Reputation/TaskBoard clients deleted; `BankClient` kept for task-board's deferred swap — see WP-11 note) |
+| ~~GAP-E4~~ | God units `task_manager.py`/`db_writer.py` | bounded decomposition | P2 | **DONE** WP-11 (per-domain coordinators behind a 163-LOC facade; 5 domain writers behind a ~290-LOC facade; zero test edits; invariant guards extended to the new files via NEW test files; `metrics.py`/`factory.py` accepted as cohesive single-domain modules) |
+| ~~GAP-E5~~ | Court `ServiceError.__init__` monkeypatch; commons `middleware_error_response(details=None)` default | §2.10 | P2 | **DONE** `6aba0e2` (monkeypatch) + WP-11 (default removed, 16 call sites explicit; commons wired into real CI for the first time, 7 pre-existing lint/type issues fixed) |
+| ~~GAP-E6~~ | Task-board Pydantic response models all dead except Health; `BidResponse.proposal` contradicted the real `amount` field | enforced schemas | P2 | **DONE** `722b494` (models aligned + wired as `response_model`; `/rebuttal` deliberately unwired — it proxies Court's shape) |
+| ~~GAP-E7~~ | Court-unavailable during dispute/rebuttal → raw 500; `/rebuttal` skipped the validation middleware | 502 mapping + full middleware | P2 | **DONE** `722b494` (502 `court_unavailable` with state unchanged; `/rebuttal` added to `_JSON_VALIDATION_ENDPOINTS`; full route audit clean) |
+| GAP-E8 | Dead dependencies/surface — agents side **DONE** `ded2a90` (`strands-agents` + 29 transitive gone; `BID_REJECTED`, `PuppetMaster`/`PuppetAgent` deleted; retained by recorded deviation: `auto_approve_on_error` + roster `type` [frozen fixtures] and agent-side escrow methods [they back the e2e negative-authorization tests — deliberate surface, not dead]). Remaining for WP-11: `pyjwt` ×4, `require_platform_signer`, `execute_query_one`, `ProxyTaskResponse`, `BaseAgent.get_tools()` | removed | P3 | WP-09 (agents, done) / WP-11 (services) |
+| ~~GAP-E9~~ | Convention drift (identity handlers/validation helpers; UI events.py) | shared handlers | P3 | **DONE** WP-11 (identity adopts the commons factory + services-layer validation; events.py reuses `get_db()` — full DI-param blocked by a frozen direct-call test, single-source intent achieved; the F-19 auth-preamble dedup accepted as-is, it is uniform post-WP-03) |
+| ~~GAP-E10~~ | UI `list_agents` N+1; GDP history 2 queries per point | SQL-side aggregation | P2 | **DONE** `57fcc57` (single aggregated JOIN, ≤6 calls guard; bucketed GROUP BY, ≤4 calls guard; behavior-preserving on all 60 existing assertions) |
+| ~~GAP-E11~~ | `tools/demo_replay`: hardcoded URLs, no config, zero tests | config-driven + tested | P3 | **DONE** `ded2a90` (tools/config.yaml; zero URL defaults; 25 dispatch tests; tools/ has full CI + a root CI phase) |
+| ~~GAP-E13~~ | Task-board `bid_count` was never incremented on the gateway path (found by the WP-15 e2e) | store parity | P2 | **DONE** `2fd507e` (incremented in the same transaction as the bid insert; rejected duplicates roll back cleanly) |
+| GAP-E12 | **Whitelist normalizers silently drop new columns in production only.** `TaskDbClient._normalize_task` (`task_db_client.py:102`) rebuilds every gateway response from its `_TASK_COLUMNS` tuple, so a column present in the database but missing from that tuple vanishes on the production read path while router unit tests — which inject an in-memory fake store — stay green. `dispute_id` was exactly this case: omitting it would have made `get_task` return `dispute_id=None` and every legitimate rebuttal fail with 409, with no failing test anywhere. Audit for the same pattern in the other services' `*_db_client.py` normalizers. | schema-pinned whitelists | P2 | **DONE** `91b649b` (task-board) + `2fd507e` (identity/central-bank/reputation/court audited & pinned; real bug found+fixed: reputation dropped the persisted `role` column on reads) |
+
+### F. Tests & CI
+
+| ID | Gap | Target | Sev | Closes via |
+|---|---|---|---|---|
+| GAP-F1 | Per-service `integration/`+`performance/` suites are empty stubs (identity, CB, TB, court; gateway has 1 test) and no root CI phase runs any per-service integration suite | real suites, CI-wired | P1 | WP-13 (T-071) |
+| GAP-F2 | Acceptance shell suites (identity 49, bank 24, reputation 51 scripts) assert UPPERCASE codes, can't boot current configs, and are wired into nothing | pass against live services with snake_case | P1 | WP-13 (T-070) |
+| GAP-F3 | The 111-test UI Playwright e2e suite is reachable from no `just` recipe and gates nothing (why `tickets.md#T-001` stayed open) | root recipe + CI phase | P1 | WP-13 |
+| GAP-F4 | Production paths with zero tests: `LedgerDbClient`, `FeedbackDbClient`, litellm judge path, `force_visible`, VIS-09 timeout reveal, fund-feeder CLI entry, all of `demo_replay`; `tools/` has no CI recipe at all | covered | P2 | WP-13 (T-072/075) |
+| ~~GAP-F5~~ | Historically drifted acceptance tests vs stale specs | specs updated to ratified reality | P2 | **DONE** WP-12 (specs reconciled to `amount` bids + TB escrow ownership) |
+| GAP-F6 | Missing e2e: cancellation escrow refund; Docker smoke; true multi-connection gateway concurrency; startup-order regression | added | P2 | WP-13 (T-073/045) |
+| ~~GAP-F7~~ | `test_cross_service_deps.py` forbid-listed a phantom `observatory_service` | phantom removed | P3 | **DONE** WP-11 (all 6 files that exist; UI has none) |
+
+### G. Documentation & governance
+
+| ID | Gap | Target | Sev | Closes via |
+|---|---|---|---|---|
+| ~~GAP-G1~~ | Tracker triad: openspec declares itself canonical; root `tickets.md` was reintroduced and **reuses T-001**; AGENTS.md still mandated beads | one tracker | P1 | **DONE** `fa8bbe4` (WP-01: openspec canonical, tickets.md#T-001 migrated as T-100, tickets.md deleted, AGENTS.md beads mandate replaced) |
+| ~~GAP-G2~~ | README/AGENTS.md/CHANGELOG stale | §1.4 regeneration | P1 | **DONE** WP-12 (regenerated + code-verified; unattended-economy headline; CI badge) |
+| ~~GAP-G3~~ | All 22 service specs materially wrong vs ratified reality | §2 as the source for a full spec sweep | P1 | **DONE** WP-12 (24 files rewritten/verified incl. the ui-service spec replacing observatory; all 5 acceptance grep gates pass) |
+| ~~GAP-G4~~ **DONE** `02fa5db` (policy record still owed → WP-12.4) | **The entire `docs/` tree and `openspec/` are gitignored** (`.gitignore:154,125`, since `a791984`): `git ls-files docs/` = 0 files ✅V. Unversioned: all 22 service specs, **`docs/specifications/schema.sql` (loaded by db-gateway at startup — a runtime dependency)**, both 2026-06-13 decision records, the canonical openspec specs, and this plan. A clean clone loses the DB schema and every contract; combined with GAP-C4 (suppressed schema-load errors) the gateway would start against an empty schema. Scope confirmed by the 2026-07-10 Codex adversarial review | authored contracts (`docs/specifications/`, `docs/plans/`, `openspec/`) tracked; only bulk/generated docs stay ignored | **P1** | Hotfix H-1 (§5.0) + WP-12.4 policy record |
+| ~~GAP-G5~~ | Load-bearing architecture decisions undocumented | ADRs written | P2 | **DONE** WP-12 (8 ADRs + docs-tracking policy under `docs/plans/2026-07-13-*`; arc42 re-dating deferred with the arc42 regeneration) |
+| ~~GAP-G6~~ | Small-doc staleness | swept | P3 | **DONE** WP-12 (diagrams regenerated from §2; demo README fixed; banners added; vision doc got the status-vs-v1 preface) |
+
+---
+
+## 5. REFACTORING PLAN (work packages)
+
+### §5.-1 EXECUTION PROTOCOL — read this first; it is sufficient to run the plan
+
+This document is self-contained. An implementer (human or agent) needs no other instructions: everything required to execute the plan end-to-end is in this section plus §5.0–§5.15, §8, and §9.
+
+**Step E1 — Ratify §9 before writing any code.** Every question in §9 carries a **Recommendation**. Unless the project owner has answered otherwise, *adopt each Recommendation as the ratified decision*. Q-13's recommendation, added 2026-07-10, is: **mock judge in dev/test/CI** (deterministic, keeps CI free of live LLM calls); **production panel of 3 judges, odd-sized, median aggregation, providers config-driven**; **an explicit "vague spec" rubric written into the judge prompt**. Write one dated decision record per question under `docs/plans/` (`YYYY-MM-DD-<slug>-decision.md`), amend §9 to point at them, and strike the Q-blocked markers throughout this document. After E1 **no decision is outstanding**. If a genuine ambiguity surfaces later, choose the option most consistent with `openspec/specs/` (precedence order in §0), record the choice and its reason in the plan, and continue — do not stop to ask.
+
+> **Verify the decision records are actually tracked.** `.gitignore` ignores `docs/*` and re-includes only specific subtrees; whether `!docs/plans/` is present has changed during this project's life. Untracked decision records are worse than none — they vanish on a clean clone while appearing to exist locally, which is precisely the GAP-G4 defect. After writing them, run `git ls-files docs/plans/ | wc -l` and confirm the count grew by the number of records you wrote. If any are ignored, `git add -f` them (do **not** silently rewrite `.gitignore` — that is the repository owner's file). The same check applies to every new file this plan tells you to create under `docs/`.
+
+**Step E2 — Execute the work packages in this exact order.** Later entries may begin only when every earlier entry is committed, pushed, and green.
+
+| Order | WP | Why here |
+|---|---|---|
+| 1 | **WP-01** Governance | One tracker before new work is filed anywhere. |
+| 2 | **WP-02** PKI extraction | One signing library must exist before anything changes what verifies tokens. |
+| 3 | **WP-03** Two-tier auth | Depends on exactly one token format (WP-02). |
+| 4 | **WP-06** Court chain + **WP-15** Autonomous acceptance | **Pull forward.** These close GAP-A1 and GAP-A15, the two P0 gaps that make the autonomous economy impossible. Ship them as early as their dependencies allow — everything after this point is quality, not capability. |
+| 5 | **WP-04** Gateway & client consolidation ∥ **WP-05** Task Board lifecycle | Independent of each other; both depend on WP-03. |
+| 6 | **WP-07** Reputation integrity | Independent; may run parallel with 5. |
+| 7 | **WP-08** UI & operator | Needs WP-03 (auth) and the Q-2/3/4 decisions from E1. |
+| 8 | **WP-09** Agent runtime & demo honesty | Needs WP-15 (the demo must stop being the only thing that accepts bids). |
+| 9 | **WP-10** Deployment & policy | Needs the Q-6/7/14 decisions from E1. |
+| 10 | **WP-11** Hygiene, dead code, structure | Do after behaviour settles, so deletions are provably safe. |
+| 11 | **WP-12** Documentation & specification sweep | Specs are rewritten to describe what the code now *does*. Must follow all behaviour work. |
+| 12 | **WP-13** Test-debt closure | The final gate. Includes wiring the orphaned suites into CI. |
+| 13 | **WP-14** Product tail | Vision work; last because it builds on everything. |
+
+**Step E3 — How to work each package.** These rules are binding and derive from `openspec/specs/delivery-governance/spec.md` plus the corrections recorded in §5.0.
+
+1. **Failing test first.** Write the test, run it, capture the failure, then implement, then capture the pass. A test that has never been observed failing proves nothing.
+2. **Mutation-check every regression test.** Remove the guard it protects; the test *must* fail. A test that passes with the fix reverted is decoration. (This caught two defects in the 2026-07-10 wave.)
+3. **Realistic inputs.** A replay test that reuses the same request body, or a concurrency test on one shared connection, cannot detect the bug it claims to guard. Ask what the real caller actually sends.
+4. **Frozen assertions.** `tests/fakes/*` and `conftest.py` are infrastructure and may be adjusted. An `assert` inside an existing test file may not be added, removed, weakened, or reworded — *unless* a ratified decision changed the contract, in which case record the exception in §5.0 with the spec citation **before** editing, as was done for T-035.
+5. **Never suppress.** No `# noqa` (semgrep `no-noqa`), no `# type: ignore` (`no-type-suppression`), no `pytest.mark.skip` (`no-pytest-skip`), no `--no-verify`, no bare `except` that swallows. Fix the cause.
+6. **Never destroy uncommitted work.** No `git checkout -- <file>`, `git restore`, or `git stash` while a file holds uncommitted changes — it restores to HEAD and discards them. Commit first, then experiment.
+7. **Python only via `uv run`.** No `python`, `pip`, or `uv pip`. Config comes from `config.yaml`; no hardcoded defaults, no new env vars.
+
+**Step E4 — Delegation and verification.** When sub-agents are used: Opus for service-scope changes and anything touching money, auth, or transactions; Sonnet or Haiku for mechanical sweeps and searches. The orchestrator **never trusts a self-report**. For every returned diff: read it, re-derive the invariant from the spec rather than from the agent's summary, mutation-check its tests, and run the real CI yourself with an absolute path (`cd /abs/path/service && just ci-quiet` — a compound `cd` in a second parallel command silently reuses the first directory; two identical green outputs are the tell). An agent that reports a blocker instead of guessing is behaving correctly; resolve it, don't override it.
+
+**Step E5 — Exit criteria for every work package.** A package is done only when *all* of:
+- its own proof (the tests named in the package) passes;
+- `just ci-quiet` exits 0 **from the repository root** — not a per-service CI;
+- the change is committed as one logical unit, with the failure it fixes explained in the commit body, and **pushed**;
+- this document is updated: gap rows struck through with the commit hash, §6's T-ID matrix corrected, and any new finding recorded as a new GAP-### with evidence.
+
+Partial work never closes a T-ID. If CI is red, the package stays open.
+
+**Step E6 — Session discipline.** This plan is days of work; it will not complete in one session. Each work package is self-contained and ends pushed, so a fresh session can resume at the next row of E2 with no context beyond this file. Commit intermediate progress rather than holding a large uncommitted tree. If the same failure resists three fixes, stop and re-read the surrounding code for architectural context before trying a fourth.
+
+**Step E7 — Definition of done for the whole plan.** §8. In particular, the plan is not complete until an **unattended** round runs: `just start-all` + `fund-feeder` + feeder + mathbot carry a task posted → bid → accepted → submitted → {approved | disputed → rebutted → **ruled**} with correct ledger balances and semantic events, with no demo script and no human in the UI, proven by an e2e test.
+
+---
+
+Sizing: S ≈ ≤½ day · M ≈ 1–2 days · L ≈ 3+ days (single implementer with agent support).
+
+Rules of engagement (binding, from `openspec/specs/delivery-governance/spec.md`): every bug/feature item starts with a **failing test** observed failing; an item closes only with its own proof **plus** `just ci-quiet` exit 0 from the repo root; no assertion is weakened to pass. Tests are acceptance tests — behavior changes are reconciled **spec-side** (WP-12), never by editing frozen tests, except where a ratified decision changed the contract.
+
+Dependency spine (superseded by the E2 table above, which pulls WP-06/WP-15 forward): WP-01 → WP-02 → WP-03 → {WP-04 ∥ WP-05} → {WP-06 ∥ WP-07} → WP-08/WP-09 → WP-10 → WP-11 → WP-12 → WP-13 (final gate) → WP-14.
+
+### §5.0 Hotfixes (pulled forward, execution started 2026-07-10)
+
+Unblocked items promoted out of their WPs after the Codex adversarial review confirmed two live hazards; each follows failing-test-first and lands with its own verification:
+
+| # | Item | Origin | Scope | Status |
+|---|---|---|---|---|
+| H-1 | Re-track authored contracts: `.gitignore` `docs/` → `docs/*` + `!docs/specifications/` + `!docs/plans/`; unignore `openspec/`; commit specs/plans/openspec incl. `schema.sql` and this plan | GAP-G4 | `.gitignore`, git index only | **DONE** `02fa5db` (72 files) |
+| H-2 | Rebuttal↔dispute binding: `dispute_task` persists Court `dispute_id` on the task (new `board_tasks.dispute_id` column: `schema.sql`, gateway `TASK_UPDATE_COLUMNS` + **idempotent `ALTER TABLE` migration** for existing `economy.db` files, TB status update); `submit_rebuttal` rejects `payload.dispute_id != task.dispute_id` (400) and an unbound dispute (409), forwarding the server-stored id; `dispute_task` fails 502 rather than marking a task disputed without a binding; court-side `kid`/party assertion deferred to WP-06 | GAP-B9 | task-board, db-gateway, schema.sql | **DONE** `e13711f` (mutation-checked) |
+| H-3 | Economy phase `stalled` for a zero-activity economy | GAP-A11 (T-046) | services/ui `metrics.py` | **DONE** `9f506c9` |
+| H-4 | Worker review-timeout recorded as `TaskOutcome.TIMEOUT`, zero earnings | GAP-A7 (T-016) | agents `math_worker/loop.py`, `history.py` | **DONE** `95fe63e` |
+| H-5 | Gateway integrity trio: `delete_ruling` txn+event, `update_claim_status` mandatory event, idempotent replays return real `event_id`/`balance_after`, schema-load suppress removed | GAP-C2/C3/C4 (T-042/043) | db-gateway `db_writer.py`, gateway `routers/court.py`, court `dispute_db_client.py`, `schema.sql` | **DONE** `230e090` (verified against a copy of the live `economy.db`) |
+
+Two further P1 items were pulled forward after the hotfix wave, both fully unblocked and ratified:
+
+| # | Item | Origin | Status |
+|---|---|---|---|
+| H-6 | Open tasks with bids expire at the bidding deadline, refunding the poster exactly once | GAP-A2 (T-035) | **DONE** `a429120` (mutation-checked; frozen-test exception recorded above) |
+| H-7 | Sealed mutual-feedback reveal moves into the gateway's `BEGIN IMMEDIATE`; `force_visible` stays a caller policy, "a reverse pair exists" becomes a gateway-derived fact | GAP-A5 | **DONE** `478153e` (two-connection concurrency probe) |
+
+**H-5 review findings (orchestrator, 2026-07-10) — two carried forward:**
+
+1. **`schema.sql` is not re-runnable.** Its `CREATE TABLE` statements carry no `IF NOT EXISTS`; that is precisely what the `contextlib.suppress(sqlite3.OperationalError)` in `_init_schema` was hiding (GAP-C4). Removing the suppression therefore requires gating the `executescript` on an empty database (`_schema_is_absent()`), plus explicit additive `ALTER TABLE` migrations for any new column. Schema evolution now has a real, if minimal, migration path — previously it had none, and a new column would simply never reach an existing `economy.db`.
+2. **Idempotent-replay event ids cannot be recovered by matching event content.** Every client mints a fresh `timestamp` per call, and `escrow_lock`'s event payload embeds a fresh `escrow_id`, while `register_agent` mints a fresh `agent_id` (`agent_db_client.py:37-52`, `ledger_db_client.py:115-125,198-215`). The original `event_id` must instead be **persisted on the row it accompanies** — new nullable `bank_transactions.event_id` and `bank_escrow.event_id` columns — and read back on replay (`register_agent` can key on the existing agent's id, since an agent registers once). Rows written before the migration return `null`, which is the only honest answer for them. *A replay test that reuses the same request body cannot detect this class of bug; replay tests must construct a fresh body the way the real client does.*
+
+**Contract delta for WP-12:** `DELETE /court/rulings/{claim_id}` now requires a JSON body carrying `event`, so that the deletion emits an event in the same transaction (T-042's "every write includes an event"). `db-gateway-service-specs.md` documents it as bodyless. The gateway spec must be updated; Court is the only caller and now sends the body.
+
+**Correction to §2.8 (found while reviewing H-3):** the plan originally called for "restoring the spec's dispute<15% ceiling on `stable`". That is **not implementable as written**: the spec's Economy Phases table (`observatory-service-specs.md § Economy Phases`) states only *sufficient* conditions and leaves combinations uncovered — an increasing trend at a 12% dispute rate matches neither `growing` (needs <10%) nor `contracting` (needs a declining trend **or** >20%), and a flat trend at 15–20% matches nothing either. Adding the ceiling forces those cases into some phase, and no ratified decision or test-spec case says which. The residual therefore stays `stable`, and **defining the uncovered combinations is added to WP-12's spec sweep** (a candidate Q for Florian if the phase taxonomy is user-visible product surface). Only the `stalled` behavior (MET-12/MET-13) was ratified and shipped.
+
+**Frozen-test protocol clarification (established while resolving H-2):** fixture/fake modules (`tests/fakes/*`, `conftest.py`) are test *infrastructure*, not acceptance assertions. Making a mock deterministic or teaching a fake about a new schema column is permitted; adding, removing, weakening, or rewording any `assert` in an existing test file is not, and requires a ratified-decision exception recorded here first.
+
+**Recorded frozen-test exception #1 (T-035, 2026-07-10).** Fixing GAP-A2 required changing two assertions, because both contradicted the frozen *test specification* they were supposed to implement:
+
+| Test | What it asserted | Why it is wrong |
+|---|---|---|
+| `services/task-board/tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_open_with_bids_not_expired` | an open task with bids stays open past its bidding deadline | Directly encodes GAP-A2. Contradicts `task-board-service-tests.md` **LIFE-03** ("Bidding deadline auto-expires… escrow released back to poster"), which sets no bid-count condition, and ratified openspec **T-035**. |
+| `services/task-board/tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_10_accept_after_bidding_deadline_if_open` | a poster can still accept a bid after the bidding deadline | Contradicts **LIFE-07** ("task is expired, not open" after the bidding deadline) and **LIFE-09** (terminal `EXPIRED` blocks all mutations). It is also **mislabeled**: spec **BA-10** is "Accepting a bid updates `bid_count` correctly" and says nothing about deadlines. The behavior was invented locally and given a spec ID that means something else. |
+
+A third, independent citation settles it: the API spec's own state-transition table (`docs/specifications/service-api/task-board-service-specs.md:158`) reads `| OPEN | EXPIRED | Bidding deadline passes | Escrow released to poster |` — unconditional, with no bid-count qualifier, and the adjacent `OPEN → ACCEPTED` row grants no post-deadline allowance.
+
+**Product consequence, surfaced deliberately:** a poster who lets the bidding deadline pass can no longer accept a bid; the task expires and escrow is refunded to them. That is what T-035 ratifies ("expires it and releases escrow back to the poster") and what LIFE-03/07/09 plus the transition table describe. Previously such a task stayed `open` forever with escrow locked. If this is not the intended product behavior, it is a decision to revisit — but every spec and the ratified backlog say it is.
+
+**Residual risk accepted, not silently absorbed:** `agents/tests/e2e/test_task_board.py:309` posts with `bidding_deadline_seconds=5`, then bids and accepts. Before T-035 a bid made the task immune to bidding-deadline expiry, so the window was irrelevant; now the three localhost round trips must complete inside 5 s or the accept returns 409. Measured margin is roughly three orders of magnitude, and root `just ci-quiet` (which runs this e2e against the live stack) passes, so the test is left untouched rather than edited. If it ever flakes, raise that one setup value — the test's subject is the *execution* deadline, and the 5 s bidding window is incidental to it.
+
+**Recorded frozen-test exceptions #2–#5 (WP-03, 2026-07-10).** The WP-03 implementation stopped (correctly) on four frozen tests that encode contracts superseded by ratified decisions. Per E3 rule 4 the exceptions are recorded here **before** any edit. In every case the authorized change is the narrowest one that lets the ratified contract land; no assertion is weakened below the behavior it guards.
+
+| # | Test | What it encodes | Superseding decision | Authorized change |
+|---|---|---|---|---|
+| 2 | `services/central-bank/tests/unit/test_config.py::test_config_loads_from_yaml` | `platform.agent_id` config field asserted; fixture config omits `db_gateway` and half of `identity` yet must load | **T-034** (Optional-but-required-at-runtime outlawed) + WP-03.1 (placeholder removed) | fixture config gains the now-required sections; the `platform.agent_id` assertion is removed together with the field it asserts |
+| 3 | `services/central-bank/tests/unit/test_platform_integration.py::test_get_platform_agent_id_returns_config_value_when_no_platform_agent` | the config fallback for the platform id | WP-03.1: identity resolved from registration only | test reworked to assert the failure mode (no registered platform agent → explicit error), not a config fallback |
+| 4 | `services/task-board/tests/unit/test_token_validator.py::test_validate_jws_token_forbidden_tampered` | the `_tampered` scaffolding marker itself (GAP-B3): mock **returns** `{"_tampered": true}` and expects 403 | GAP-B3 (P2, ratified plan): no test scaffolding in production signature checking | mock setup changes to `side_effect=InvalidSignature()` (faithful semantics); the 403/`forbidden` assertions stay byte-identical. Router-level tamper helpers (`conftest.py`/`tamper_jws`) are infrastructure and become faithful (corrupt real signature bytes) |
+| 5 | `services/reputation/tests/architecture/test_shared_identity_client.py::test_platform_identity_client_extends_shared` | mandates `PlatformIdentityClient` importing (and per docstring subclassing) the shared `IdentityClient` | WP-03.2: Protocol + composition replaces the broken inheritance (latent `super().__init__` bug) | the architecture test is updated to assert the ratified shape: a `JwsVerifier` protocol implementation with **no** `IdentityClient` inheritance |
+
+**Recorded frozen-test exception #6 (WP-06, 2026-07-12).** GAP-A8 (rebuttal-window enforcement on `/rule`) is contradicted by `services/court/tests/unit/routers/test_disputes.py::test_rule_14_already_ruled_without_rebuttal` and `::test_rule_19_ruling_without_rebuttal`, which rule immediately with no rebuttal and an unexpired window and assert 200. The court test spec's own RULE-19 row (`court-service-tests.md:445`) describes "Ruling without rebuttal **(rebuttal window expired)**" — the implemented tests diverge from the scenario their spec ID names (the same defect class as the T-035/BA-10 mislabel). Authorized change: **setup-only** — the affected tests expire the rebuttal window before ruling (assertions stay byte-identical: 200/ruled); a new failing-first test covers the now-enforced 409 `dispute_not_ready` for the unexpired-no-rebuttal case (T-039). *Amendment (post-implementation, ratified):* the audit of every `/rule` call site found two further tests sharing the identical premise — `test_life_02_skip_rebuttal` (LIFE-02) and `test_life_04_rebuttal_after_ruling_rejected` (LIFE-04) — and the same setup-only fix was applied to all four; a guard-absent regression run proved the setup additions inert (genuinely setup, not disguised assertion changes).
+
+**Recorded frozen-test exception #7 (WP-06, 2026-07-12).** `agents/tests/e2e/test_court_rulings.py::test_dispute_proceeds_without_rebuttal` asserts an immediate no-rebuttal ruling returns 200 — the exact behavior T-039/GAP-A8 (ratified, exception #6) now rejects with `409 dispute_not_ready`. Unlike RULE-14/19 there is no setup-only fix: a live e2e cannot expire the 24-hour rebuttal window, so the no-rebuttal-success path (window expired → 200, per §2.6 "ruling may proceed without a rebuttal") is structurally untestable end-to-end and stays covered by the unit tests with a backdated deadline. Authorized change: the e2e's subject becomes the ratified contract — the premature attempt returns `409 dispute_not_ready` and leaves the dispute recoverable, after which a rebuttal makes the ruling succeed (the original 200/`ruled`/`worker_pct` assertions preserved in their now-legitimate position).
+
+**Recorded frozen-test exceptions #8–#9 (WP-05, 2026-07-13).**
+
+| # | Test | What it encodes | Superseding decision | Authorized change |
+|---|---|---|---|---|
+| 8 | `services/task-board/tests/unit/routers/test_security.py::test_status_validation_before_domain_validation` (PREC-09) | constructs its dispute token with the undocumented `file_dispute` alias — the test's subject is error-code precedence, not the alias | T-036 (ratified: undocumented aliases removed) | **setup-only**: the token's action literal becomes `dispute_task`; every assertion stays byte-identical; then the alias is removed from `task_manager.py` |
+| 9 | `services/task-board/tests/unit/routers/test_tasks.py::test_tc18_title_exceeds_max_length` | asserts the custom `title_too_long` error code | T-037 (ratified) + test spec TC-15 (`task-board-service-tests.md`: 201-char title → 400 `invalid_payload`) — the frozen assertion contradicts the very spec row it implements | the error-code assertion is updated to `invalid_payload`; the 400 status assertion is unchanged |
+
+**Accepted deviations #2–#3 (WP-06, 2026-07-12, deferred to WP-11 with their frozen-test conflicts):** (a) the court feedback cutoffs 80/40 and 256-char comment cap stay hardcoded — de-hardcoding them structurally breaks `test_ruling_orchestrator.py`'s bare-static-method assertions (`RulingOrchestrator._delivery_rating(80)`) and three constructor call sites; the de-hardcode moves to WP-11 together with the exception those tests will need. (b) `require_platform_signer` stays as dead code — it is fully superseded by the `_extract_kid` platform-kid check on every platform route, but deleting it breaks `test_validation.py`'s direct calls; deletion moves to WP-11's dead-code sweep.
+
+**Recorded frozen-test exceptions #11–#13 (WP-11, 2026-07-13, pre-authorized — these formalize the deferrals recorded above).** (#11) Court cutoffs/cap de-hardcode: `test_ruling_orchestrator.py`'s bare-static calls (`RulingOrchestrator._delivery_rating(80)` etc.) and 3 `RulingOrchestrator(store=store)` construction sites may be updated to the config-driven shape (constructor params from court config.yaml; the mapping assertions keep their input→rating pairs at the configured 80/40 values). (#12) `require_platform_signer` deletion: `test_validation.py::test_require_platform_signer_correct`/`_wrong` are deleted WITH the function they exclusively test — its security property is covered by the `_extract_kid` tests since `6aba0e2`. (#13) Task-board strict T-034: the inline-YAML fixtures in `test_config.py` (3 tests) gain the now-required sections (setup-only) so `db_gateway`/`deadline_evaluation` become non-Optional; assertions unchanged.
+
+**Plan-text corrections from the WP-12 spec sweep (2026-07-13, verified against code):** (1) §2.6/WP-06.2's described ruling order ("persist court-side first, then TB, then Reputation") does not match the shipped, test-proven order (judges → TB `record_ruling` → Reputation ×2 → court-side persist); both satisfy the retry contract — the `judging` flip in `begin_ruling` is the real recoverable checkpoint and every external step is idempotent — the specs document the real order. (2) §2.2/§3.2's "Court reads task context via the gateway" is only true for the `escrow_id` enrichment lookup; the judge-context read and deliverable fetch go through Task Board's own API (which is what lets the lazy deadline evaluator fire during rulings). The specs document the two-path split. (3) Q-13's "vague spec" rubric was ratified but never written into the judge prompt — filed as **T-109**; the specs state honestly that only the one-sentence principle exists.
+
+**Recorded frozen-test exceptions #14–#16 (WP-11 round 2, 2026-07-13).** GAP-C8 ratifies the `database.path` config keys dead (0 src reads, §3.2). (#14) identity `test_config.py:43` and central-bank `test_config.py:51` assert `settings.database.path` — the assertions are removed together with the dead field (fixture `database:` sections dropped). (#15) reputation `test_persistence.py` CFG-01..CFG-04 encode the dead `database:` section as required config; the tests are reworked to exercise the same fail-fast subject against a genuinely-consumed section (`db_gateway`), spec side reconciled in WP-12. (#16, CONDITIONAL) task-board `test_config.py` asserts `deadlines.default_bidding_seconds`/`limits.max_title_length`: authorized ONLY for fields verified read-nowhere in src — if any field is actually consumed (e.g. a title-length limit used by create_task validation), it is not dead; keep it and delete only the genuinely-unread parts. `deadline_evaluation` stays Optional-with-lifespan-guard (the WP-05-accepted pattern); the identity `agent_store` shim-test deletion judgment call is RATIFIED as within exception #12's class.
+
+**Recorded frozen-test exception #10 (WP-08, 2026-07-13).** `services/ui/tests/unit/test_treasury_funding.py` (`test_treasury_funded_is_logged`, `test_existing_treasury_account_is_not_a_failure`, `test_partial_user_agent_block_backfills_treasury_balance`) asserts the UI mints the treasury at startup and that `user_agent.treasury_balance` exists — the exact contract ratified Q-9 removes (genesis = explicit idempotent `just provision`; "UI down ⇒ no treasury" fixed). Authorized change: the three tests are rewritten to assert the NEW contract (UI startup performs no mint; a zero-balance operator at startup is not a failure; provision owns genesis), and the `user_agent.treasury_balance` config key is deleted with the mint code.
+
+**Ratified contract delta (Q-2 × Q-9 interaction, 2026-07-13):** the 1,000,000 genesis balance is provisioned to the **operator** account (the browser's economic identity per Q-2), not the platform account: platform `credit` mints unboundedly by design and needs no balance, while the operator must fund task escrows posted via the proxy. §2.4's "the `platform` account seeded with 1,000,000 coins" wording is superseded; WP-12 updates it (and §2.8) accordingly.
+
+**Accepted deviation #4 (WP-04, 2026-07-13):** reputation's `FeedbackDbClient` and court's `DisputeDbClient` keep their synchronous `httpx.Client`. Their whole business layers are synchronous by frozen-test construction: reputation's `services/feedback.py` functions are called synchronously by `test_feedback_service.py` against the permanently-sync `FeedbackStore`, and `test_feedback_db_client_reveal.py` swaps in a plain sync `httpx.Client(MockTransport)`; court's `DisputeService`/`RulingOrchestrator` store calls are exercised synchronously by `test_dispute_store.py`/`test_ruling_orchestrator.py`. GAP-E2's actual harm — event-loop stalls — is closed regardless: every such call now runs via `run_in_threadpool` (reputation previously had NO such mitigation; court already did). A full async conversion would need frozen-test exceptions across four files for no additional runtime benefit; revisit only if those layers are ever rewritten. §8 item 7's "no sync `httpx.Client` in async services" carries these two documented, threadpool-mitigated exceptions.
+
+**Accepted deviation (recorded, not silent):** central-bank `create_account` keeps Identity-path JWS verification for both its modes (self-service zero-balance and platform-funded). Rationale: the endpoint has a hard Identity dependency regardless (agent-existence check via `get_agent`), so local platform verification buys no outage resilience, and discriminating the two modes requires the verified signer identity either way. §2.3's platform-op list and the T-021 grep proof carry this one documented exception; WP-12 specs it. Revisit only if the existence check ever moves to gateway reads.
+
+### WP-01 — Governance: one tracker, working gates (S) Q-1 — ✅ DONE `fa8bbe4` (2026-07-10)
+1. Execute the Q-1 decision; write `docs/plans/2026-07-XX-tracker-decision.md`. If openspec wins (recommended): migrate `tickets.md#T-001` into `openspec/specs/completion-backlog/spec.md` under a fresh stable ID (**T-100**, avoiding the collision), delete `tickets.md`; if tickets.md wins: mark `delivery-governance § Tracker Migration` superseded and renumber the open ticket to a non-colliding ID.
+2. Fix the never-working commit gate: `.claude/settings.json` PreToolUse hook → point at the real `scripts/ci-quiet-hook.sh` and the correct jq field, or delete the hook (decide with Q-1's governance answer). Proof: trigger a commit with CI red → blocked.
+3. Remove the beads mandate from AGENTS.md tracking sections (full AGENTS rewrite lands in WP-12; the tracker paragraph swaps now so no new work lands in the wrong system).
+
+### WP-02 — PKI extraction into a library (M) — ✅ DONE `8fcae08` (2026-07-10; incl. Q-10 iat/exp; Dockerfile COPY updates skipped per Q-6 descope)
+1. Create `libs/service-auth` (pyproject: cryptography, service-commons); move `agents/src/base_agent/signing.py`, `platform.py`, `user_agent.py` logic there; `agents/base_agent` keeps thin re-export shims so the frozen agents tests keep importing `base_agent.*` unchanged.
+2. **One canonicalization**: `create_jws` uses `json.dumps(payload, sort_keys=True, separators=(",", ":"))`, header `{"alg":"EdDSA","typ":"JWT","kid":…}`. (Verification is over bytes-as-sent, so in-flight mixed tokens stay valid during rollout.)
+3. Delete the two duplicate implementations: `services/task-board/src/task_board_service/clients/platform_signer.py` (task-board signs via the lib) and the crypto half of `tools/src/demo_replay/wallet.py` (imports the lib; its no-heavy-deps rationale dies once the lib is dependency-light).
+4. Rewire the 5 service pyprojects from `base-agent` → `service-auth`; drop the `base_agent` mypy ignore overrides; update Dockerfile COPY sets.
+5. Tests first: new lib test suite (keygen roundtrip, sign/verify, tamper rejection, cross-canonicalization verify against fixtures captured from the old signers); per-service architecture test forbidding `base_agent` imports under `services/*/src`.
+6. Acceptance: `grep -rn "from base_agent" services/*/src` → 0 hits; `just ci-quiet` green.
+
+### WP-03 — Two-tier auth rollout (M) — closes GAP-B1/B3/A14, T-021/T-033/T-034 — ✅ DONE `0abfe7f`+`7a346a8` (2026-07-10; exceptions #2–#5 + create_account deviation in §5.0)
+Per service, in this order (test-first: for each platform op, a failing integration test asserting the op **succeeds while Identity is stopped**; for each agent op, that verification still routes via Identity; plus precedence tests asserting payload-validation errors beat 403):
+1. **central-bank**: `routers/helpers.py` — platform ops (`create_account` w/ balance, `credit`, `release`, `split`) verify via `platform_agent.validate_certificate`; agent ops (`escrow_lock`, reads, zero-balance self-account) keep `IdentityClient.verify_jws`. Fix inverted precedence on credit/release/split (`accounts.py:143`, `escrow.py:102,164`). Config: `platform.agent_id` placeholder removed — identity always resolved from `agent_config_path` registration; `db_gateway`/`identity` become non-Optional in `config.py` (T-034).
+2. **reputation**: platform/`force_visible` path verifies locally; replace the broken `PlatformIdentityClient(IdentityClient)` inheritance with a narrow `JwsVerifier` Protocol + composition (fixes the latent `super().__init__` bug); `db_gateway` non-Optional.
+3. **task-board**: `record_ruling` verifies locally; **delete the `_tampered` test-marker branches** (`token_validator.py:158,203`) and inject a verification strategy at the composition root instead; agent ops unchanged.
+4. Acceptance: delivery-governance T-021 proof — grep shows no `verify_jws` call on any platform-op path; live stack with Identity down still accepts platform ops and rejects agent ops cleanly; `just ci-quiet` green.
+
+### WP-04 — Gateway integrity & client-layer consolidation (L) — closes GAP-C2..C7, A10, A14-adjacent stores, E2/E3 — ✅ DONE `2fd507e` (2026-07-13; items 1–3 were H-5; deviation #4 for reputation/court sync clients; task-board client swap deferred to WP-11)
+1. `delete_ruling`: wrap in `BEGIN IMMEDIATE`, write a `ruling.deleted` event in the same transaction; `update_claim_status`: event becomes mandatory (`db_writer.py:1190-1240,1407-1414`). Failing tests: delete → events row exists; status update without event → 400.
+2. Idempotent replays return the original `event_id` and the real `balance_after` (`db_writer.py:237,412,536-537`) (T-043).
+3. Remove `contextlib.suppress` around schema load (`db_writer.py:66-69`) — schema failure kills startup.
+4. `DbReader` gets the connection via explicit lifespan wiring (no `state.db_writer._db` reach-in); the single-writer/no-await-in-txn invariant gets an ADR (WP-12) and a comment at the connection site.
+5. Error mapping via `sqlite3` error codes (`e.sqlite_errorcode`), not message substrings; constraint-violation messages stop leaking table/column internals (SEC-02); `/health` size includes `-wal`/`-shm`.
+6. Bank-store parity (T-030/031/032): zero-amount split credits skipped in **both** stores; in-memory store aligns tx `type` vocabulary (`escrow_lock`/`escrow_release`), bare references, poster==payer guard, `invalid_amount` code; add ONE shared contract test-suite executed against both `InMemoryLedgerStore` and `LedgerDbClient` (via in-process gateway) so they can never drift silently again.
+7. Client consolidation (T-082, F-04), staged service-by-service: extend `libs/service-clients` (async) to cover the read routes services actually use; each service's sync `*_db_client.py` is replaced by (or rebuilt on) the async lib client; task-board drops its bespoke 439-line `CentralBankClient` for lib `BankClient` + WP-02 signer. End state: zero exported lib clients without importers, zero `httpx.Client(` (sync) under `services/*/src`, and the lib has its own test suite.
+
+### WP-05 — Task Board lifecycle correctness (M) — closes GAP-A2/A3/E6/E7 + T-035/036/037 — ✅ DONE `722b494` (2026-07-13; T-035/A2 were H-6; config section named `deadline_evaluation:` to avoid the legacy `deadlines:` model)
+1. T-035 (failing e2e first): expired evaluation fires **regardless of bid count**; escrow released to poster exactly once (CAS via gateway `constraints`); emits `task.expired`.
+2. Q-5: if the periodic evaluator is ratified — add a lifespan background task (interval from new required config `deadlines.evaluation_interval_seconds`) sweeping open/accepted/submitted (+ disputed once WP-06 lands) through the existing `evaluate_deadline` path; if lazy-only is ratified — record the ADR and route all readers through TB (couples to Q-4).
+3. Court-call resilience: typed mapping of connect/timeout/HTTP errors from `file_claim`/`submit_rebuttal` → `502 court_unavailable`; dispute state unchanged on failure (failing unit test with a dead Court first).
+4. Add `("POST","/rebuttal")` (and audit the full list) to `_JSON_VALIDATION_ENDPOINTS` (`core/middleware.py:14-23`).
+5. Response contracts: align the dead Pydantic models to the real wire shapes (`BidResponse.proposal`→`amount` etc.), wire them as `response_model` (or delete + add explicit contract tests — pick wiring; it's the enforcement the hand-built dicts lack).
+6. Remove undocumented action aliases `file_dispute`/`submit_ruling` (`task_manager.py:1009,1193`) (T-036); verify + fix `title_too_long`→`invalid_payload` (T-037).
+
+### WP-06 — Court chain completion (L) — closes GAP-A1/A4/A8/A9/B4 + T-039/040 Q-5, Q-13(docs) — ✅ DONE `6aba0e2` (2026-07-12; cutoffs/cap + `require_platform_signer` → WP-11; T-041 docs → WP-12)
+1. **Ruling trigger** per Q-5 (recommended shape: the TB deadline evaluator watches `disputed` tasks; once a rebuttal exists or the rebuttal deadline passes, TB fires a platform-signed `POST /disputes/{id}/rule`, idempotent against `dispute_already_ruled`). Failing e2e first: feeder-disputed task reaches `ruled` with **no demo engine involved** — this is the proof for GAP-A1.
+2. **Retry-clean ruling (T-040)**: reorder so every step is idempotent and convergent — judges → persist votes+ruling court-side (recoverable state) → TB `record_ruling` (made idempotent: identical `ruling_id` re-record on an already-ruled task → 200) → Reputation feedback ×2 (409 `feedback_exists` treated as success) → dispute `ruled`. Spec wording updated in WP-12 (retry/compensation, not impossible rollback).
+3. Rebuttal-window enforcement on `/rule`: allowed only when a rebuttal exists or the deadline passed; formalize `dispute_not_ready` (spec it, T-039) and resolve the phantom `rebuttal_submitted` status.
+4. **Deliverables to judges** (verify-first): determine what `get_task` actually returns; if judges never see content, court fetches the task's assets (`GET /tasks/{id}/assets/{asset_id}`) up to a new required `judges.max_deliverable_bytes` and includes text content in the prompt. Failing test: judge prompt contains the uploaded solution text.
+5. De-hardcode: feedback cutoffs 80/40, comment cap 256, MockJudge fixed pct → `config.yaml` (required keys).
+6. Remove the process-wide `ServiceError.__init__` monkeypatch (`court_service/__init__.py:10-32`) — fix the legacy 3-arg call sites instead.
+7. Judge ops documentation (mock vs LM Studio vs hosted) lands with WP-12 (T-041) once Q-13 answers.
+
+### WP-07 — Reputation integrity (M) — closes GAP-A5/A6 + VIS-09 — ✅ DONE `45729a6` (2026-07-13; GAP-A5 was H-7)
+1. **Atomic reveal server-side**: gateway `POST /reputation/feedback` performs the reverse-pair lookup + dual `visible=1` UPDATE inside its `BEGIN IMMEDIATE` (mutual-reveal policy moves out of the client); `FeedbackDbClient` drops its read-then-write. Failing test first: interleaved mutual submissions against the in-process gateway must both end visible (currently can both stay sealed).
+2. Court/platform feedback: spec + tests for the `force_visible` path (platform-signed, `from`=platform, immediate visibility, category semantics per §2.7); today it has zero tests.
+3. VIS-09: add an injectable clock seam (mirror `ui_service.services.database._clock`) + failing test for the 24h lazy reveal.
+
+### WP-08 — UI & operator (L) — closes GAP-A11/A12/B2/C1/E10 + T-046/047/048/049/093/095 Q-2/Q-3/Q-4 for items 4–6 — ✅ DONE `57fcc57` (2026-07-13; GAP-A11/T-046 was H-3; exception #10 + operator-genesis contract delta in §5.0; T-107 filed)
+1. Phase fix (unblocked; decides `tickets.md#T-001`): `compute_economy_phase` emits `stalled` when no recent tasks (`metrics.py:653`) and restores the dispute<15% ceiling on `stable` (`metrics.py:658`). The already-written e2e `test_x01…` becomes the failing test that turns green.
+2. Verify-then-fix the June residuals: reward bucket includes 100 (T-047), frontend accepts `increasing` (T-048).
+3. Enforce `request.max_body_size` (wire the commons middleware) — today declared, never enforced.
+4. Q-2: dedicated operator identity (recommended: new roster handle `operator` with own keypair + zero-balance account; proxy signs as operator; platform key retreats to notary ops only).
+5. Q-3: proxy exposure per answer (minimum: keep 127.0.0.1 bind documented as the boundary; optional shared-secret header from config).
+6. Q-4: read path per answer; note migration to gateway reads requires adding a gateway `GET /events?after_id=` route (none exists today) for SSE polling.
+7. Performance: `list_agents` single-query aggregation (kill the ~10-queries-per-agent N+1) and bucketed GDP history (mirror the sparklines `GROUP BY` pattern).
+8. Product views: quarterly-report page (T-093), agent-profile + leaderboard/earnings/satisfaction views (T-095) in vanilla JS against existing endpoints.
+9. Integration tests for every `/proxy/*` route against a live downstream (T-049 test side; spec side WP-12).
+
+### WP-09 — Agent runtime & demo honesty (M) — closes GAP-A7/A13/E8(agents)/E11 + T-016/017/075/102 — ✅ DONE `ded2a90` (2026-07-13; GAP-A7/T-016 was H-4; §8 item 2 proven; test-e2e now provisions after the wipe)
+1. T-016 (failing unit first): review-poll timeout records `TaskOutcome.TIMEOUT`, no earnings inflation (`math_worker/loop.py:162-171`).
+2. T-017: `MathWorkerLoop` phase-machine unit tests incl. the mutation guard (reverting a status literal to `"BIDDING"` must fail tests).
+3. `just start-mathbot` defaults to the profile/factory path (legacy flat-config path retired or explicitly flagged).
+4. Drop the unused `strands-agents` dependency; keep the `@tool` design doc as future work.
+5. Demo/API drift (verify-first): reconcile `demo_replay/clients.py` feedback contract with the real Reputation API (`role` vs `from_agent_id`; `reveal_feedback` endpoint existence); unknown scenario action becomes a hard error; resolve `scale.yaml`'s dangling dispute.
+6. `demo_replay` gets a config file (kills `clients.py:18-21,296,418` hardcoded URLs) + unit tests over step dispatch with mocked clients; delete dead `PuppetMaster`/`PuppetAgent`.
+7. `tools/justfile` gains `test`/`ci` recipes; root `just ci` gains a tools phase.
+8. Fund-feeder CLI tests: arg parsing, non-positive amount, exit codes (T-075).
+9. **T-102 (added 2026-07-10, WP-15 finding):** `math_worker`'s `LLMClient` gains an injectable transport (or a deterministic arithmetic worker profile) so the §8-item-2 unattended-round e2e can run LLM-free in CI; today `_select_task`/`_decide_bid`/`_solve` are hard-wired to AsyncOpenAI.
+
+### WP-10 — Deployment & policy (L) Q-6/Q-7/Q-14
+1. Docker per Q-6 — full fix means: per-service `docker-config.yaml` with compose service-name URLs + current config schema; a named volume for `economy.db` (unless Q-4 removed the UI's file dependency); Dockerfiles copying all editable path deps (post-WP-02: `libs/*`); db-gateway Dockerfile rebuilt on the common convention; 8007 unpublished (internal network only); `depends_on` completed (T-081); a compose smoke test (up → all healthy → one task lifecycle) as an opt-in CI phase. Descope alternative: delete compose/Dockerfiles and document local-only.
+2. Env policy per Q-7: either an ADR sanctioning exactly `CONFIG_PATH` + LLM `api_key_env`/`${VAR}` as the only env seams, or replace `CONFIG_PATH` with an explicit `--config` argument plumbed through justfiles/compose.
+3. Hosted CI per Q-14 (e.g. `.github/workflows/ci.yml` running `just ci-quiet` with uv+just setup; mock judges keep it LLM-free).
+
+### WP-11 — Hygiene, dead code, structure (M) — ✅ DONE (2026-07-13; exceptions #11–#16; incl. inherited items: BankClient swap, court de-hardcode, `require_platform_signer` deletion, T-105, libs CI phase, agents/tools fresh-env Init fix; T-108 filed for the semgrep-pinned click PYSEC ignore)
+Grouped mechanical items, each landing with the relevant arch/unit test where one is expressible: remove dead deps (`pyjwt` ×4) and dead config (`database.path` ×4, `DeadlinesConfig`/`LimitsConfig`, `crypto.algorithm` or wire it); delete legacy shims (`*_store.py` aliases, identity `agent_store` compat, reputation sqlite store + shim) and the stale `services/task-board/data/platform.pem`; single-source the duplicated in-memory stores into `tests/fakes/`; drop phantom `observatory_service` from all seven `test_cross_service_deps.py`; justfile port variables + compose healthcheck de-duplication; guard collections add db-gateway/ui and drop `DELEGATE.md`; bank `/health` degrades (`503`/flag) instead of 500 when the gateway is down; commons: remove `middleware_error_response` default param (update 6 middlewares), add seconds to the JSON log timestamp; identity adopts the commons exception-handler factory and moves router-layer validation helpers into its services layer; UI `events.py` uses the `DbConn` dependency; delete `tools/seed-economy.sh`; bounded god-class decompositions — `task_manager.py` into per-domain coordinators (creation/bidding/review/ruling), `db_writer.py` into per-domain writers behind the existing routers, keeping router surfaces byte-stable.
+
+### WP-12 — Documentation & specification sweep (L) — after behavior WPs settle; closes GAP-G2..G6, C6, F5 doc-sides — ✅ DONE (2026-07-13; GAP-G4 was H-1; 3 plan-text corrections recorded in §5.0; T-109 filed for the unwritten vagueness rubric; escalations for WP-13: retired-but-live `/agents/verify`, gateway 405-vs-503 list-route inconsistency, fake-vs-prod `vote_id` format)
+1. Rewrite the per-service API/auth/test specs to §2: snake_case codes everywhere (T-020/062); gateway spec gains the read API, `constraints`, port 8007, event-pairing contract incl. the new delete/status events, stale columns (T-022/044); court spec drops the Central-Bank split + `CENTRAL_BANK_UNAVAILABLE`, gains retry semantics + `dispute_not_ready` + kid policy (T-023/039/041 with Q-13); task-board spec gains `amount` bids + BID-09..12 rework, dispute→Court call, ruling-settles-escrow, pagination, `content_hash`, `/rebuttal` (T-024/038); identity spec gains `verify-jws`, gateway persistence, 3-field envelope, retires raw `/verify` (T-050/051); the observatory spec is replaced by a **ui-service spec** (port 8008, vanilla JS, proxy routes + operator identity per Q-2/3/4) (T-025/049); reputation auth-spec rewritten to the real JWS-token model; `rebuttal` vs `rebuttal_pending` literal unified.
+2. Regenerate README/AGENTS.md from this document (T-060/061: seven services + agents + both libs, real ports, real recipes, no beads/DELEGATE.md/demo-scenarios, single Landing-the-Plane block, Python ≥3.12); CHANGELOG count (T-063); service-implementation-guide (T-064); sequence diagrams regenerated from §2 flows; small-doc sweep incl. the two missing SUPERSEDED banners and `scripts/demo/README.md` (T-065).
+3. Write the missing ADRs: escrow-settlement ownership (R4), two-tier auth (R2 refinement), events-via-gateway (Option B), DB-over-HTTP gateway tradeoff, tracker decision (Q-1), env-var policy (Q-7), UI read path (Q-4) — and date the 8 reconstructed arc42 ADRs.
+4. Record the untracked-generated-docs policy (commit `a791984`): which docs/ subtrees are archival (banner-marked) vs re-tracked.
+5. Acceptance greps: zero UPPERCASE error codes in `docs/specifications/`; zero `8006`; zero `bd ` / beads references outside historical archives; zero `observatory` as a live service.
+
+### WP-13 — Test-debt closure & the final gate (L) — closes GAP-F1..F6 + T-045/070/071/072/073
+1. Shell acceptance suites: regenerate configs to boot current services, flip assertions to snake_case, wire a root `just test-acceptance` recipe (T-070) — or retire them if WP-12 makes the pytest suites the sole acceptance layer (default: fix identity/CB/reputation suites; they're the only executable spec of record).
+2. Real per-service integration suites replacing the empty stubs (T-071), incl. the untested production stores (`LedgerDbClient`, `FeedbackDbClient`) and a litellm `LLMJudge` test via mocked transport; wire per-service `test-integration` into a root CI phase (stack-up pattern from `2a907b1`).
+3. Root recipe + CI phase for the UI Playwright suite (111 tests).
+4. New e2e: cancellation escrow refund (T-073 second half), autonomous dispute→ruling (from WP-06), true multi-connection gateway concurrency incl. exactly-one-201 duplicate registration (T-045), startup-order regression.
+5. Coverage-vs-spec-ID sweep (T-072): every test-spec ID either has a passing pytest reference or is re-specified in WP-12.
+6. **Definition-of-done run**: `just ci-quiet` exit 0 from repo root with all new phases included (§8).
+
+### WP-14 — Product tail (vision work, post-target) Q-8/Q-11/Q-12/Q-15
+Text-Classification Arena workers + emergent-specialization assertions (T-091); economy-graph landing animation replanned for vanilla JS (T-094); bid-amount economics if Q-8 ratifies payment-at-bid; contract object if Q-11 ratifies it; reputation score aggregation endpoint if Q-12 ratifies it; dispute-cost/zero-balance/contract-cap mechanics per Q-15. Salary stays deferred (R8).
+
+### WP-15 — Autonomous bid acceptance (M) — closes GAP-A15 Q-16 — ✅ DONE `dd6957f` (2026-07-10; discoveries T-101/T-102 filed)
+**Runs at E2 position 4, alongside WP-06.** Without it the economy cannot leave `open` unattended: the only callers of `accept_bid` today are `tools/src/demo_replay/engine.py:236` and the UI proxy. Scope is `agents/` only.
+
+1. Add an acceptance loop to `agents/src/task_feeder/`, wired concurrently in `__main__.py` beside the existing feed and review loops (`asyncio.gather`, mirroring how `review.py` is wired).
+2. Per the Q-16 decision: the loop polls the feeder's own `open` tasks; a task becomes eligible once its **bidding window has closed** (`created_at + bidding_deadline_seconds` reached) or a configured bid quorum is met; it then selects the **lowest `amount`**, breaking ties by the bidder's delivery-quality reputation, and calls `accept_bid`. Accepting the first bid to arrive is explicitly forbidden — it destroys the undercutting the product thesis rests on. **Interaction with T-035:** a task expires exactly when its bidding deadline passes, so the acceptance loop must accept *before* expiry. Make the eligibility threshold a config value strictly less than `bidding_deadline_seconds` (e.g. `acceptance_after_seconds`), and prove the ordering with a test — otherwise every task races its own expiry and the loop accepts nothing.
+3. New required config keys in `agents/config.yaml` under `task_feeder`: `acceptance_after_seconds`, `acceptance_poll_interval_seconds`, `min_bids_to_accept`. No defaults in code.
+4. Tests, failing-first: lowest bid wins; tie broken by reputation; nothing is accepted before the eligibility threshold; a task with zero bids is left to expire; acceptance happens strictly before the bidding deadline (the T-035 race); a 409 from a task that expired first is handled without crashing the loop.
+5. End-to-end proof (this is the plan's headline deliverable, §8 item 2 and E7): with `just start-all` + `fund-feeder` + feeder + mathbot and **no demo script and no human**, a task travels posted → bid → accepted → submitted → approved, and a disputed one reaches `ruled` once WP-06 lands. Add it to the agents e2e suite.
+
+---
+
+## 6. Backlog reconciliation (openspec T-IDs, verified against 2026-07-09 code)
+
+DONE = verified in code · PARTIAL = code or doc half landed · OPEN = not done · UNVERIFIED = not re-checked this pass (re-verify before working it).
+
+| T-ID | Subject | Status | Evidence / where it lives now |
+|---|---|---|---|
+| T-001 | CI green | UNVERIFIED (gate rerun = WP-13 §6) | not executed in this analysis pass |
+| T-010 | lowercase agent status vocab | **DONE** | loops query `open`/`submitted`/`disputed`/`ruled`; CHANGELOG Unreleased |
+| T-011 | Court mixin + rebuttal | **DONE** | `CourtMixin` file_claim(5-arg)/submit_rebuttal/trigger_ruling; TB `/rebuttal` |
+| T-012 | trust-model decision | **DONE** | decision record + court code adheres (audit §10) |
+| T-013 | dispute→Court handoff | **DONE** | `task_manager.py:1072-1078` synchronous platform `file_claim` |
+| T-014 | semantic lifecycle events | **DONE** | `task_db_client.py:13-21,104-109` status→event map incl. `task.auto_approved` |
+| T-015 | Court in demo | **DONE** (minor: `scale.yaml` dangling dispute → WP-09) | quick/full-lifecycle rebuttal+ruling steps; commit `2f2ef42` |
+| T-016 | timeout ≠ approved | **DONE** `95fe63e` | `TaskOutcome.TIMEOUT` added (only `BID_TIMEOUT` existed); zero payout |
+| T-017 | loop/mixin tests | **DONE** `ded2a90` | phase-machine suite + uppercase-literal mutation guard observed red/green |
+| T-018 | dispute e2e chain | **DONE** | `agents/tests/e2e/test_disputes.py`, `test_court_rulings.py` |
+| T-020 | snake_case canonical | **DONE (code+specs)** WP-12 | shell suites → WP-13 (T-070) |
+| T-021 | local platform auth | **DONE** `0abfe7f` | platform ops verify locally in CB/TB/reputation (+court since `ddeba66`); create_account deviation recorded in §5.0 |
+| T-022 | gateway read API blessed | **DONE** WP-12 | read API (25 GET routes) + CAS spec'd |
+| T-023 | escrow-split ownership | **DONE** WP-12 | specs reconciled |
+| T-024 | bid amount documented | **DONE** WP-12 | `amount` spec'd as signal-only, loudly (Q-8) |
+| T-025 | ui@8008 canonical | **DONE** WP-12 | ui-service spec replaces observatory |
+| T-026 | frontend stack decision | **DONE** (2 banner stragglers → WP-12) | decision record + 9 banners |
+| T-030/031/032 | bank store parity | **DONE** `2fd507e` | shared contract suite guards both stores |
+| T-033/034 | bank auth precedence / no-Optional config | **DONE** `0abfe7f` | WP-03 (precedence decode-first; db_gateway+identity non-Optional in CB and reputation) |
+| T-035 | tasks with bids expire | **DONE** `a429120` | mutation-checked; two spec-contradicting tests corrected; real BA-10 now covered |
+| T-036/037 | TB aliases / title code | **DONE** `722b494` | exceptions #8/#9; aliases removed, `invalid_payload` per TC-15 |
+| T-038 | TB spec sweep | **DONE** WP-12 | |
+| T-039/040 | dispute_not_ready / retry-clean ruling | **DONE** `6aba0e2` | WP-06; spec wording → WP-12 |
+| T-041 | judge ops documentation | **DONE** WP-12 | mock-dev / 3-judge-prod documented; the unwritten rubric = T-109 |
+| T-042/043 | gateway event pairing / replay values | **DONE** `230e090` | `delete_ruling` txn+event; claim-status event mandatory; `event_id` persisted on bank rows |
+| T-044 | gateway spec | **DONE** WP-12 | DELETE body + event pairing recorded |
+| T-045 | gateway concurrency test | **OPEN** | → WP-13 |
+| T-046 | stalled phase | **DONE** `9f506c9` | closes `tickets.md#T-001` (`10a9285`); stable-ceiling half withdrawn as unspecifiable |
+| T-047/048 | bucket 100 / trend string | **DONE** `57fcc57` | both verified real, fixed failing-first |
+| T-049 | proxy spec'd+tested | **DONE (test side)** `57fcc57` | every /proxy/* route live-tested signing as operator; spec side → WP-12 |
+| T-050/051 | identity verify-jws/persistence spec | **DONE** WP-12 | raw `/verify` demoted in docs (route+tests still live → WP-13 decision) |
+| T-060–T-065 | docs sweep | **DONE** WP-12 | README/AGENTS/CHANGELOG/guide/diagrams/small docs regenerated + code-verified |
+| T-075 | fund-feeder CLI tests | **DONE** `ded2a90` | 13 tests + 6 for treasury-provision CLI |
+| T-070/071/072/073/074 | test debt | T-074 largely DONE (semgrep + isolation tests; ui exception now explicit per Q-4); T-073 PARTIAL (auto-approve e2e exists; cancellation-refund absent); rest **OPEN** | → WP-13 |
+| T-081 | compose depends_on | OPEN — subsumed by the 6-defect Docker reality | → WP-10 Q-6 |
+| T-082 | client consolidation | **DONE-with-deviation** `2fd507e` | identity+CB async on lib; reputation/court sync by deviation #4 (threadpool-mitigated); task-board swap deferred (BankClient waiting) |
+| T-083 | cleanup | PARTIAL (4.4GB copy + root logs gone; stray `agents/test_api_keys.py`, dead configs remain) | → WP-11 |
+| T-084 | semgrep rule audit | PARTIAL (rules updated `5f514c1`; no-default-values FP status unverified) | → WP-11 |
+| T-085 | gateway health logging | UNVERIFIED | → WP-11 verify |
+| T-090 | salary | **DECIDED-DEFERRED** (R8); doc claims still to purge | → WP-12 |
+| T-093/095 | quarterly page / agent+leaderboard views | **DONE** `57fcc57` | vanilla JS + 10 Playwright e2e tests |
+| T-091/094 | arena / landing animation | OPEN | → WP-14 |
+| T-092 | vision open questions recorded | **DONE** `a59d1a7` — all 16 §9 questions ratified as decision records (`docs/plans/2026-07-10-q*-decision.md`, Step E1) | closed |
+| T-100 | UI empty-economy phase (migrated tickets.md#T-001) | **DONE** `9f506c9` (code) + `fa8bbe4` (migration) | closed |
+| T-101 | task-board `bid_count` not incremented on gateway path | **DONE** `2fd507e` | feeder's `list_bids` workaround now redundant (harmless) |
+| T-102 | deterministic worker path for the §8-item-2 CI proof | **DONE** `ded2a90` | LLMTransport seam + deterministic e2e transport; **§8 item 2 PROVEN** by `test_unattended_economy.py` (real loops, both branches); also fixed the ReviewLoop phantom-field bug that auto-disputed every real submission |
+
+---
+
+## 7. Risks & sequencing strategy
+
+1. **Money-path changes carry the highest regression risk** (WP-04/05/06). Mitigation: the shared bank-store contract suite (WP-04.6) lands *before* behavior changes; every escrow-touching item is proven by an e2e that inspects ledger rows; `escrow_pending` retry semantics are preserved.
+2. **Frozen-acceptance-test discipline vs stale specs.** Several suites already encode deviations (bid `amount`, court escrow). Order matters: behavior WPs implement the *ratified* contract; WP-12 re-issues the specs; WP-13 then reconciles suites. Never edit a frozen test in the same change that alters the behavior it guards.
+3. **Two-tier auth rollout can lock everyone out if mis-staged.** WP-03 goes service-by-service behind failing-first integration tests, with Identity-down proofs; WP-02 (single signing lib) must land first so there is exactly one token format in play.
+4. **Docker work is high-effort/low-information until Q-6.** Nothing else depends on it; it is deliberately late (WP-10) and skippable by decision.
+5. **Context for implementers**: each WP is sized for one focused session/worktree (per AGENTS.md workflow); WP-04 and WP-06 are the two that warrant their own worktrees and intermediate commits.
+6. **The final gate is cumulative**: WP-13's full `just ci-quiet` (with the newly wired phases) is the only claim of completion; partial WPs never close their T-IDs (delivery-governance § Ticket Closure Gate).
+
+---
+
+## 8. Definition of done for the target state
+
+All of the following hold simultaneously:
+
+1. `just ci-quiet` exits 0 from the repo root, where CI now includes: structure check, 7 service CIs, agents CI, **tools CI**, per-service integration phase, cross-service gateway tests, agents e2e, **UI Playwright e2e**, and (if Q-6 kept Docker) the compose smoke phase.
+2. An **autonomous** economy round completes with zero manual/demo intervention: `just start-all` + `fund-feeder` + feeder + mathbot produce posted→bid→accepted→submitted→{approved | disputed→rebutted→**ruled**} tasks with correct ledger balances and semantic events — verified by the WP-06 e2e. **Two distinct drivers are missing today** and both must land first: nobody accepts bids (GAP-A15, Q-16) and nobody triggers rulings (GAP-A1, Q-5). Until then the loop stalls at `open`, and this criterion cannot be met no matter how many other gaps close.
+3. Platform operations verify locally in all five services (Identity may be down; platform ops still work); agent operations verify via Identity `verify-jws`; grep proofs per T-021.
+4. Every gateway write emits an event in the same transaction (incl. delete/status paths); replays return real values.
+5. The UI shows a live economy without seeded SQL, renders `stalled` on an empty DB, and its write path uses the Q-2/Q-3-decided operator identity; every `/proxy/*` route is spec'd and integration-tested.
+6. `docs/specifications/**` + README + AGENTS.md describe exactly this system (grep gates from WP-12.5 pass); every §9 answer exists as a decision record; exactly one issue tracker is in use.
+7. No dead lib clients, no `base_agent` imports under `services/*/src`, no sync `httpx.Client` in async services, no `_tampered` branch, no `ServiceError` monkeypatch, no phantom `observatory_service` references.
+
+---
+
+## 9. OPEN QUESTIONS for Florian
+
+Answers to these are the only missing inputs; each becomes a decision record (WP-01/WP-12) and unblocks the Q-marked items. **Recommendation ≠ assumption** — nothing below was pre-implemented. **All 16 questions were ratified 2026-07-10 per Step E1** — see the `**Decision:**` line under each question below and the corresponding `docs/plans/2026-07-10-q*-decision.md` record.
+
+**Q-1 — Canonical issue tracker.** `openspec/specs/delivery-governance/spec.md` declares OpenSpec canonical and bans markdown trackers; yet root `tickets.md` was reintroduced (2026-06-29) and its `T-001` collides with backlog T-001; AGENTS.md still mandates beads (removed). Options: (a) OpenSpec canonical, migrate+delete `tickets.md`; (b) `tickets.md` canonical, supersede the openspec governance clause. **Recommendation: (a)** — the backlog's stable T-IDs already live there. *(Note: openspec/ is currently untracked by git — whichever wins should be committed.)* Blocks WP-01.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q1-tracker-decision.md`.
+
+**Q-2 — Dedicated UI-operator identity.** The UI's UserAgent **is** the platform (treasury) identity today. Should the operator be a distinct economic agent (own keypair/account, e.g. roster handle `operator`), leaving the platform key for notary ops only? **Recommendation: yes** — separates treasury power from browser actions and makes operator activity attributable in the economy. Blocks WP-08.4.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q2-operator-identity-decision.md`.
+
+**Q-3 — UI proxy exposure.** `/api/proxy/*` is unauthenticated; anyone reaching 8008 can act as platform (today) / operator (after Q-2) and spend funds. Accept as local-single-user posture (documented), or add a minimal auth (config-driven shared secret)? **Recommendation: document 127.0.0.1-only as the boundary now; add the shared-secret header only if the UI is ever exposed.** Blocks WP-08.5.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q3-proxy-exposure-decision.md`.
+
+**Q-4 — UI read path.** Keep the direct read-only SQLite connection (bless it: schema-coupled, breaks in Docker without a shared volume, needs the semgrep exception made explicit) or migrate UI reads to the gateway read API (consistent single data path, Docker-clean, requires a new gateway `GET /events` route and rewriting ~6 query modules)? **Recommendation: keep direct read-only for v1, formally documented as the single sanctioned exception (observatory pattern), revisit only if Docker (Q-6) is kept.** Blocks WP-08.6, shapes WP-10.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q4-ui-read-path-decision.md`.
+
+**Q-5 — Lifecycle automation.** Today all deadline transitions are lazy-on-read and **nothing ever triggers court rulings** (GAP-A1) or enforces the rebuttal window. Add a config-driven periodic evaluator in Task Board (recommended: one background loop sweeping deadlines *and* firing platform-signed ruling triggers after the rebuttal window), or stay lazy-only and accept stalled disputes/stale statuses when nothing polls? **Recommendation: periodic evaluator, interval in `config.yaml`.** Blocks WP-05.2, WP-06.1.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q5-lifecycle-automation-decision.md`.
+
+**Q-6 — Docker scope for v1.** Docker mode is broken six independent ways (§3.6) and zero CI covers it. Fix fully (≈WP-10.1, substantial) or descope (delete compose/Dockerfiles, document local-only until multi-host need)? **Recommendation: descope now, fix when there's a deployment target** — the local 4-tier flow is the only mode anything actually uses. Blocks WP-10.1.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q6-docker-scope-decision.md`.
+
+**Q-7 — Environment-variable policy.** Your no-env-var rule vs three production seams: `CONFIG_PATH` (config-file selection, used by tests+compose), court `api_key_env`, agents `${VAR}` LLM keys (secrets can't live in YAML). Sanction exactly these as documented exceptions (ADR), or replace `CONFIG_PATH` with an explicit `--config` CLI argument everywhere? **Recommendation: sanction the two secret seams; replace `CONFIG_PATH` with `--config` only if you want strictness over churn.** Blocks WP-10.2.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q7-env-var-policy-decision.md`. Ratified scope: sanction exactly three env seams as documented exceptions — `CONFIG_PATH` (kept: `uvicorn --factory` cannot take CLI arguments, and Docker is descoped by Q-6 anyway), court `judges.api_key_env`, and agents `${VAR}` LLM secrets. The `--config` replacement is explicitly NOT adopted (churn > strictness for v1). ADR lands in WP-10.2/WP-12.3.
+
+**Q-8 — Bid-amount economics.** Bids carry an integer `amount` (ratified R5) but it has **zero monetary effect**: escrow = full reward at posting, and approval releases the full reward regardless of the winning bid. Should the winning bid become the actual payment (release bid amount to worker + refund difference to poster at settlement), as the vision's undercutting story implies — or stay signal-only for v1? **Recommendation: signal-only for v1 (document loudly); price-forming settlement as a WP-14 economic change with its own tests.** Blocks WP-14 item.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q8-bid-amount-economics-decision.md`.
+
+**Q-9 — Treasury bootstrap ownership.** The **UI** mints the 1,000,000-coin treasury at startup (tier 4). Where should genesis live: (a) a `just provision` bootstrap step / extended fund-feeder CLI (recommended), (b) central-bank startup config, (c) keep in UI? **Recommendation: (a)** — explicit, idempotent, service-neutral; also fixes "UI down ⇒ no treasury". Blocks the treasury part of WP-08/WP-11.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q9-treasury-bootstrap-decision.md`.
+
+**Q-10 — Token/key hardening scope.** No JWS replay protection (no `iat`/`exp`/nonce — blunted by idempotency+state checks) and no key revocation. Accept both as documented v1 risks, or add token expiry (`iat`+`exp`, cheap with WP-02) now? **Recommendation: add `iat`/`exp` in WP-02 while the signing lib is open; defer revocation.**
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q10-token-hardening-decision.md`.
+
+**Q-11 — Contract object.** The vision promises a three-party co-signed contract at acceptance ("both parties can independently prove the agreement"); nothing of the sort exists — acceptance just sets fields, and the openspec baseline codified that. Build a signed contract artifact, or formally descope it (escrow remains the binding instrument)? **Recommendation: descope for v1 with an explicit decision record; revisit if external parties ever need proof.** Blocks WP-14 item.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q11-contract-object-decision.md`.
+
+**Q-12 — Reputation score aggregation.** The vision defines numeric scores (start 100%, drop via rulings); the service deliberately stores raw feedback only, and no aggregate exists anywhere (agents can't ask "what's my standing?", which Scenario 2's specialization loop needs). Add `GET /reputation/agents/{id}/scores` (service-owned formula), keep consumer-side aggregation, or defer to WP-14 with the arena? **Recommendation: service-owned endpoint, spec'd formula, built in WP-14 together with T-091 (its first real consumer).**
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q12-reputation-scores-decision.md`.
+
+**Q-13 — Production judge panel + vagueness rubric.** Dev default is 1 mock judge (fixed 50% — the ambiguity-favors-worker thesis is currently *inert*); LM Studio config exists only as comments; no doc defines panel size/models for a real run, and no operational rubric for "vague spec" exists (arc42 flags it). What is the intended real-run panel (size, models, same/different providers) and do you want a written vagueness rubric in the judge prompt? *(Vision open question.)* **Recommendation: mock judge in dev/test/CI** (deterministic, keeps CI free of live LLM calls); **production panel of 3 judges, odd-sized, median aggregation, providers config-driven**; **write an explicit "vague spec" rubric into the judge prompt**, since without it the core thesis is enforced by nothing but the model's disposition. Blocks WP-06.7/WP-12 judge docs.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q13-judge-panel-decision.md`.
+
+**Q-14 — Hosted CI.** No `.github/`; every gate is manual. Add a minimal GitHub Actions workflow running `just ci-quiet` on push/PR (mock judges keep it LLM-free), or stay local-only? **Recommendation: add it** — the June inventory already rated this P1 and the repo now has a remote. Blocks WP-10.3.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q14-hosted-ci-decision.md`.
+
+**Q-15 — Remaining vision economics** *(the unrecorded T-092 set)*: (a) should filing a dispute cost coins? (b) what happens at zero balance — can a broke agent still bid/work? (c) cap concurrent contracts per agent or let reputation regulate? One answer each (or an explicit "defer, out of v1 scope") lets me close T-092 with decision records. **Recommendation: defer all three from v1 mechanics; record as explicit deferrals.**
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q15-vision-economics-decision.md`.
+
+**Q-16 — Who accepts bids, and on what rule?** *(GAP-A15, found 2026-07-10 — the highest-value question in this list.)* No autonomous component accepts a bid today; only the scripted demo (`tools/src/demo_replay/engine.py:236`) and a human in the UI proxy do. For the economy to run on its own, the **poster agent** (the feeder) needs an acceptance loop, and that loop needs a winning-bid rule. The vision implies lowest-price wins ("Bob bids 8 coins, Carol undercuts at 6. Alice accepts Carol" — `docs/main/agent-task-economy.md § Demo Scenario 1`), but nothing is specified about ties, reputation weighting, or a reserve price. Two parts: (a) what rule picks the winner? (b) does the poster accept as soon as a bid arrives, or wait out the bidding window? **Part (b) is load-bearing:** accepting the first bid destroys the undercutting the entire thesis rests on, so the feeder must almost certainly wait. **Recommendation: wait for the bidding window to close (or a configured quorum), then accept the lowest bid, breaking ties by delivery-quality reputation.** Blocks the new autonomous-acceptance WP; combined with **Q-5** it gates §8's definition-of-done item 2.
+
+**Decision:** RATIFIED 2026-07-10 — see `docs/plans/2026-07-10-q16-bid-acceptance-decision.md`.
+
+---
+
+## Appendix A: Documentation staleness ledger
+
+| Doc / group | Action | Via |
+|---|---|---|
+| `openspec/specs/*` (3) | KEEP — canonical (pending Q-1); commit to git; fold §9 answers in | WP-01/WP-12 |
+| `docs/plans/2026-06-13-*` decisions, `2026-06-26` startup-race | KEEP (current) | — |
+| `docs/plans/2026-06-12-completion-inventory.md` | SUPERSEDED by this document — add banner | WP-12 |
+| `docs/arc42/*` | KEEP as as-built reference; regenerate after WP-06/08; date the 8 ADRs | WP-12 |
+| `docs/specifications/service-api/*` + `service-tests/*` (22) | REWRITE per §2 (casing, ports, gateway reads, escrow ownership, bids, identity, ui-replaces-observatory, reputation auth model) | WP-12.1 |
+| `docs/specifications/schema.sql` | KEEP (live schema source); document the code-only columns in the gateway spec | WP-12.1 |
+| `docs/specifications/{endpoint-error-handling,request-validation}.md` | KEEP casing authority; FIX request-validation (deposit example, loose PKI narrative) | WP-12.1 |
+| `README.md`, `AGENTS.md`/`CLAUDE.md`, `CHANGELOG.md` | REGENERATE from this doc (T-060/061/063) | WP-12.2 |
+| `docs/diagrams/system-sequence-diagrams.md` | REGENERATE from §2 flows (ports, gateway, Notary→platform) | WP-12.2 |
+| `docs/main/agent-task-economy.md` | KEEP as vision; add a "status vs v1" preface (salary deferred, escrow-at-posting, Q-8/Q-11 outcomes) | WP-12.2 |
+| React-era plans/mockups (9 banners + 2 stragglers) | ARCHIVE — add the 2 missing SUPERSEDED banners | WP-12.2 |
+| `docs/plans/2026-02/03-*` remaining, `docs/codex-tasks/*`, `docs/java/*` | ARCHIVE (historical; untracked since `a791984`) — record the policy | WP-12.4 |
+| `docs/plans/events-architecture.md` | ADDENDUM: Option B (gateway-written events) is the decision | WP-12.3 |
+| `scripts/demo/README.md`, `tickets.md` | UPDATE / RETIRE per Q-1 | WP-01/WP-12 |
+
+## Appendix B: Review-feedback ledger (2026-07-10)
+
+Every piece of review feedback received during the implementation wave, and what was done with it. Rejections are recorded with their reason so they are not silently re-proposed.
+
+### Accepted
+
+| # | Source | Feedback | Disposition |
+|---|---|---|---|
+| 1 | Codex adversarial review | The plan, the canonical `openspec/` specs, and `docs/specifications/schema.sql` — a file db-gateway loads at **startup** — are all gitignored; a clean clone loses them | ACCEPTED. GAP-G4 expanded; fixed in `02fa5db`. Codex's framing ("the branch adds these ignore rules") was wrong — they predate the branch (`a791984`) — but the defect was real. |
+| 2 | Codex adversarial review | `submit_rebuttal` validates only that `dispute_id` is a non-empty string before forwarding it platform-signed, so any worker with a disputed task can inject a rebuttal into another dispute | ACCEPTED. New GAP-B9 (P0); fixed in `e13711f` and mutation-checked. |
+| 3 | `impl-h5` | `schema.sql`'s `CREATE TABLE`s carry no `IF NOT EXISTS`, which is what the suppressed `OperationalError` was hiding; removing the suppression requires gating on an empty database plus explicit `ALTER TABLE` migrations | ACCEPTED. This is why the project had no migration path at all. Landed in `230e090`. |
+| 4 | `impl-h2` | `task_db_client._normalize_task` rebuilds responses from a column whitelist, so a new column omitted there is dropped **only in production** while fake-store unit tests stay green | ACCEPTED, and it was an unrequested edit that turned out to be mandatory. Recorded as GAP-E12; guard test in `91b649b`. |
+| 5 | `impl-wp05` | The API spec's transition table (`task-board-service-specs.md:158`) states `OPEN → EXPIRED` on "Bidding deadline passes" unconditionally — a third citation for T-035 | ACCEPTED; added to the frozen-test exception record. |
+| 6 | `impl-wp05` | `test_ba_10_accept_after_bidding_deadline_if_open` squats on a spec ID: real BA-10 is "Accepting a bid updates `bid_count` correctly" | ACCEPTED. Independently reached the same conclusion. The mislabeling meant the **real BA-10 had never been tested**; it now is. |
+| 7 | `impl-wp05` | Scope warning: landing T-035 flips `accept_bid` from 200 to 409 after the bidding deadline, and the e2e tree was not audited for that pattern | ACCEPTED and acted on. The audit found exactly one exposure (`test_task_board.py:309`, 5 s window, ~1000× margin) — documented, test left untouched — and, far more importantly, surfaced **GAP-A15**. |
+| 8 | `impl-h3` | The spec's phase table leaves combinations unnamed; this is a genuine spec gap, not an implementation ambiguity | ACCEPTED as a *finding*; its *resolution* was rejected (below). Recorded for the WP-12 spec sweep. |
+| 9 | `impl-h4` | `TaskOutcome.TIMEOUT` did not exist — only `BID_TIMEOUT`, which is a semantically distinct bid-acceptance timeout | ACCEPTED; the brief was wrong, the agent was right. |
+
+### Rejected
+
+| # | Source | Proposal | Why rejected |
+|---|---|---|---|
+| R1 | `impl-h3` | Route the spec's uncovered phase combinations to `contracting` as a "conservative default" | An increasing task-creation trend at a 12% dispute rate would be labelled *contracting*. No ratified decision or test-spec case names these cases. The residual stays `stable`; the gap goes to WP-12 rather than being resolved by guesswork. |
+| R2 | `impl-h5` | Recover a replayed write's original `event_id` by matching the event's full content | Cannot work: clients stamp a fresh `timestamp` per call, `escrow_lock` embeds a fresh `escrow_id` in the event payload, and `register_agent` mints a fresh `agent_id`. It would have returned `null` in production — the exact placeholder T-043 exists to remove. Its tests passed only because they replayed a byte-identical body. Replaced with a persisted `event_id` column. |
+| R3 | this plan (self-correction) | "Restore the spec's `stable` dispute<15% ceiling" (original §2.8 wording) | Not implementable as written: adding the ceiling forces the uncovered combinations into *some* phase, and nothing says which. Withdrawn; only the ratified `stalled` behaviour shipped. |
+| R4 | audit finding F-75 (inherited) | The PreToolUse CI hook references a nonexistent script and has never fired | False. `scripts/ci-quiet-hook.sh` exists, `.claude/settings.json` wires it, and it blocked a commit during this session. GAP-D5 retracted. |
+
+### Open watch item
+
+`impl-h2` honestly reported one backgrounded run showing 4 failures in `test_rebuttal_dispute_binding.py` that it could not reproduce across 8 subsequent runs (isolated, whole-file, full-tree, and deliberately raced against the db-gateway suite). Independently re-run 5× plus two full-tree runs here, always green. The task-board fakes share a class-level `_DATABASES` dict keyed by `db_path` (`tests/fakes/in_memory_task_store.py:25`), which is a plausible cross-test state-leak vector if a path ever repeats. Not reproduced, not diagnosed, not dismissed — if it resurfaces, start there.
+
+---
+
+## Appendix C: Evidence base & method
+
+17 parallel audit agents (2026-07-09): per-service code audits (identity, central-bank, task-board, reputation, court, db-gateway, ui — Opus), libs + agents/tools + tests/CI audits (Opus/Sonnet), repo-wide wiring/storage/port/key/env map (Sonnet), and five documentation extractors (target-architecture synthesis, API/test-spec contracts, codex-task archaeology with git-timestamp reconstruction, prior-audit findings register F-01..F-75, arc42 as-built + feature-plan eras). Orchestrator validation: every load-bearing claim used in §1–§4 was spot-checked against source (✅V marks direct file reads: ui/central-bank/db-gateway/reputation configs, db-gateway Dockerfile, reputation docker-config, docker-compose.yml, README, AGENTS.md, tickets.md, openspec specs ×3, vision doc, CHANGELOG, both 2026-06-13 decision records, the 2026-06-12 inventory); one inter-agent conflict (reputation's Docker CONFIG_PATH wiring) was resolved by direct read of `docker-compose.yml:59` against the erring agent. Claims not independently re-verified are attributed to their audit with `path:line` citations; items where evidence was genuinely insufficient are marked UNCLEAR/UNVERIFIED rather than assumed.
+
+**Codex adversarial review (2026-07-10):** two high findings, both orchestrator-verified against source and folded in — (1) the blanket `docs/`/`openspec/` gitignore incl. the runtime `schema.sql` (extends GAP-G4 → H-1; Codex's framing that "the branch adds" the rules was wrong — they predate the branch, commit `a791984`); (2) the cross-dispute rebuttal injection (new GAP-B9 → H-2). No other challenge to the target architecture survived verification.

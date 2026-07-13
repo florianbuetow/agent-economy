@@ -39,8 +39,18 @@ VALID_FEEDBACK: dict[str, object] = {
 }
 
 
-def _write_config(tmp_path: Path, db_path: str, reveal_timeout: int = 86400) -> str:
-    """Write a test config.yaml and return the path."""
+def _write_config(tmp_path: Path, _db_path: str, reveal_timeout: int = 86400) -> str:
+    """Write a test config.yaml and return the path.
+
+    ``_db_path`` is unused in this body — it no longer feeds a ``database:``
+    config section (GAP-C8/exception #15: reputation reads no local
+    database.path in production — it talks to the DB Gateway). The parameter
+    is kept (and still passed by every call site below) because the autouse
+    ``_patch_persistence_helpers`` fixture (tests/unit/conftest.py) monkeypatches
+    this function with a wrapper of the same signature that DOES use it, to
+    back the test-only SqliteFeedbackStore that lets these tests simulate
+    persistence across a restart.
+    """
     config_content = f"""\
 service:
   name: "reputation"
@@ -56,8 +66,6 @@ platform:
   agent_config_path: ""
 request:
   max_body_size: 1048576
-database:
-  path: "{db_path}"
 feedback:
   reveal_timeout_seconds: {reveal_timeout}
   max_comment_length: 256
@@ -141,12 +149,44 @@ async def _post_feedback_jws(
 # ---------------------------------------------------------------------------
 
 
+# CFG-01..04 test config strictness (exception #15, WP-11 round 2): the
+# original `database.path` subject was ratified dead (GAP-C8, 0 src reads —
+# reputation talks to the DB Gateway, it owns no local database file). These
+# four now exercise the identical fail-fast SUBJECT — a required config
+# section, present-but-empty, and a value that passes schema validation but
+# fails a deeper runtime guard — against `db_gateway`, the section that is
+# genuinely read in production (see lifespan.py's "db_gateway configuration
+# is required" guard on an empty `db_gateway.url`).
+
+
 @pytest.mark.unit
-async def test_cfg_01_service_starts_with_valid_database_path(tmp_path: Path) -> None:
-    """CFG-01: Service starts with valid database.path."""
-    db_path = str(tmp_path / "test.db")
-    config_path = _write_config(tmp_path, db_path)
-    old = _setup_env(config_path)
+async def test_cfg_01_service_starts_with_valid_db_gateway(tmp_path: Path) -> None:
+    """CFG-01: Service starts with a valid db_gateway config."""
+    config_content = """\
+service:
+  name: "reputation"
+  version: "0.1.0"
+server:
+  host: "127.0.0.1"
+  port: 8004
+  log_level: "info"
+logging:
+  level: "INFO"
+  directory: "data/logs"
+platform:
+  agent_config_path: ""
+request:
+  max_body_size: 1048576
+feedback:
+  reveal_timeout_seconds: 86400
+  max_comment_length: 256
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
+"""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(config_content)
+    old = _setup_env(str(config_path))
     try:
         app = create_app()
         async for client in _make_client(app):
@@ -158,8 +198,8 @@ async def test_cfg_01_service_starts_with_valid_database_path(tmp_path: Path) ->
 
 
 @pytest.mark.unit
-async def test_cfg_02_fails_without_database_section(tmp_path: Path) -> None:
-    """CFG-02: Service fails to start without database section."""
+async def test_cfg_02_fails_without_db_gateway_section(tmp_path: Path) -> None:
+    """CFG-02: Service fails to start without a db_gateway section."""
     config_content = """\
 service:
   name: "reputation"
@@ -188,8 +228,8 @@ feedback:
 
 
 @pytest.mark.unit
-async def test_cfg_03_fails_without_database_path(tmp_path: Path) -> None:
-    """CFG-03: Service fails to start without database.path."""
+async def test_cfg_03_fails_without_db_gateway_url(tmp_path: Path) -> None:
+    """CFG-03: Service fails to start without db_gateway.url."""
     config_content = """\
 service:
   name: "reputation"
@@ -201,10 +241,10 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
-database: {}
 feedback:
   reveal_timeout_seconds: 86400
   max_comment_length: 256
+db_gateway: {}
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -219,11 +259,39 @@ feedback:
 
 
 @pytest.mark.unit
-async def test_cfg_04_fails_with_unwritable_path(tmp_path: Path) -> None:
-    """CFG-04: Service fails to start with unwritable database.path."""
-    db_path = "/proc/nonexistent/reputation.db"
-    config_path = _write_config(tmp_path, db_path)
-    old = _setup_env(config_path)
+async def test_cfg_04_fails_with_empty_db_gateway_url(tmp_path: Path) -> None:
+    """CFG-04: Service fails to start with an empty db_gateway.url.
+
+    An empty string still satisfies Pydantic's `str` schema check (unlike a
+    missing field, CFG-03's subject) but fails lifespan.py's runtime
+    fail-fast guard — the same "passes schema, fails deeper" shape the
+    original unwritable-database-path scenario tested.
+    """
+    config_content = """\
+service:
+  name: "reputation"
+  version: "0.1.0"
+server:
+  host: "127.0.0.1"
+  port: 8004
+  log_level: "info"
+logging:
+  level: "INFO"
+  directory: "data/logs"
+platform:
+  agent_config_path: ""
+request:
+  max_body_size: 1048576
+feedback:
+  reveal_timeout_seconds: 86400
+  max_comment_length: 256
+db_gateway:
+  url: ""
+  timeout_seconds: 10
+"""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(config_content)
+    old = _setup_env(str(config_path))
     try:
         with pytest.raises(Exception):  # noqa: B017
             app = create_app()

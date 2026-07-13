@@ -47,19 +47,8 @@ class FeedbackDbClient:
             comment=str(data["comment"]) if data.get("comment") is not None else None,
             submitted_at=str(data["submitted_at"]),
             visible=bool(data["visible"]),
+            role=str(data["role"]) if data.get("role") is not None else None,
         )
-
-    def _find_reverse_feedback_id(
-        self,
-        task_id: str,
-        from_agent_id: str,
-        to_agent_id: str,
-    ) -> str | None:
-        existing = self.get_by_task(task_id)
-        for record in existing:
-            if record.from_agent_id == to_agent_id and record.to_agent_id == from_agent_id:
-                return record.feedback_id
-        return None
 
     def insert_feedback(
         self,
@@ -72,15 +61,16 @@ class FeedbackDbClient:
         *,
         force_visible: bool,
     ) -> FeedbackRecord:
+        """
+        Persist feedback via the gateway, which owns the sealed-reveal policy.
+
+        The gateway looks up the reverse pair and flips both rows inside the same
+        transaction as the insert, then reports the resulting visibility. Reading
+        the reverse pair here first would race: two concurrent counter-feedbacks
+        would both see "no reverse yet" and both stay sealed.
+        """
         feedback_id = f"fb-{uuid.uuid4()}"
         submitted_at = datetime.now(UTC).isoformat()
-
-        reverse_feedback_id = self._find_reverse_feedback_id(
-            task_id=task_id,
-            from_agent_id=from_agent_id,
-            to_agent_id=to_agent_id,
-        )
-        reveal_reverse = force_visible or reverse_feedback_id is not None
 
         payload: dict[str, Any] = {
             "feedback_id": feedback_id,
@@ -92,8 +82,7 @@ class FeedbackDbClient:
             "rating": rating,
             "comment": comment,
             "submitted_at": submitted_at,
-            "reveal_reverse": reveal_reverse,
-            "reverse_feedback_id": reverse_feedback_id,
+            "force_visible": force_visible,
             "event": {
                 "event_source": "reputation",
                 "event_type": "feedback.submitted",
@@ -121,6 +110,11 @@ class FeedbackDbClient:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
 
+        body = self._json(response)
+        if "visible" not in body:
+            msg = "Gateway response omitted 'visible' for the submitted feedback"
+            raise RuntimeError(msg)
+
         return FeedbackRecord(
             feedback_id=feedback_id,
             task_id=task_id,
@@ -130,7 +124,7 @@ class FeedbackDbClient:
             rating=rating,
             comment=comment,
             submitted_at=submitted_at,
-            visible=reveal_reverse,
+            visible=bool(body["visible"]),
         )
 
     def get_by_id(self, feedback_id: str) -> FeedbackRecord | None:

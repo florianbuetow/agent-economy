@@ -83,3 +83,21 @@ Add a shared writer in `libs/service-commons/`:
   - Keep write semantics append-only.
 
 Integrate `EventWriter` in each service method listed above immediately after successful state commit.
+
+## Addendum (2026-07-13)
+
+This document's Option A/B analysis predates the DB-over-HTTP-gateway consolidation
+(see `docs/plans/2026-07-13-adr-db-gateway-tradeoff.md`): direct per-service SQLite
+writes (this file's "Option A") no longer exist at all — DB Gateway is now the
+project's sole SQLite writer, and every domain service reaches the database only
+through gateway HTTP calls. Event emission moved with it: DB Gateway's domain
+writers (`bank_writer.py`, `board_writer.py`, `court_writer.py`, etc.) insert the
+`events` row inside the same `BEGIN IMMEDIATE` transaction as the state mutation
+that causes it, verified against a live copy of `economy.db` in commit `230e090`.
+The completion-backlog plan labels this outcome "Option B (gateway-written)" in
+GAP-G5 — a different sense of "Option B" than the central-event-collector-service
+option this file originally described under that same letter, since the gateway
+consolidation made a separate collector service unnecessary. The ratified,
+load-bearing statement of this decision is
+`docs/plans/2026-07-13-adr-events-via-gateway.md`; treat that ADR, not this
+sketch, as the current source of truth for event-emission architecture.

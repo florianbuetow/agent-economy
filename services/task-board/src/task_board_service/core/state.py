@@ -7,13 +7,15 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
+    import asyncio
 
-    from task_board_service.clients.central_bank_client import CentralBankClient
-    from task_board_service.clients.platform_signer import PlatformSigner
+    from service_auth import PlatformSigner
+    from service_auth.platform import PlatformAgent
+    from service_clients.bank import BankClient
+    from service_clients.identity import IdentityClient
+
     from task_board_service.services.asset_manager import AssetManager
     from task_board_service.services.escrow_coordinator import EscrowCoordinator
-    from task_board_service.services.identity_client import IdentityClient
     from task_board_service.services.protocol import TaskStorageInterface
     from task_board_service.services.task_manager import TaskManager
     from task_board_service.services.token_validator import TokenValidator
@@ -25,7 +27,7 @@ class AppState:
 
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     task_manager: TaskManager | None = None
-    central_bank_client: CentralBankClient | None = None
+    central_bank_client: BankClient | None = None
     platform_signer: PlatformSigner | None = None
     platform_agent: PlatformAgent | None = None
     identity_client: IdentityClient | None = None
@@ -33,6 +35,7 @@ class AppState:
     token_validator: TokenValidator | None = None
     asset_manager: AssetManager | None = None
     store: TaskStorageInterface | None = None
+    deadline_sweep_task: asyncio.Task[None] | None = None
 
     @property
     def uptime_seconds(self) -> float:

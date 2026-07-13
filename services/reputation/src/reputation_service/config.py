@@ -60,7 +60,9 @@ class IdentityConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     base_url: str
+    get_agent_path: str | None = None
     verify_jws_path: str
+    timeout_seconds: int | None = None
 
 
 class RequestConfig(BaseModel):
@@ -68,13 +70,6 @@ class RequestConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     max_body_size: int
-
-
-class DatabaseConfig(BaseModel):
-    """Database configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    path: str
 
 
 class FeedbackConfig(BaseModel):
@@ -108,9 +103,8 @@ class Settings(BaseModel):
     platform: PlatformConfig
     identity: IdentityConfig | None = None
     request: RequestConfig
-    database: DatabaseConfig
     feedback: FeedbackConfig
-    db_gateway: DbGatewayConfig | None = None
+    db_gateway: DbGatewayConfig
 
 
 def get_config_path() -> Path:

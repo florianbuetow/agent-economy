@@ -1,8 +1,11 @@
 """Async HTTP clients for each platform service.
 
-Thin wrappers matching the API contracts in agents/src/base_agent/mixins/.
-Each function takes a DemoAgent and the relevant parameters, signs the
-request, and returns the parsed JSON response.
+Thin wrappers matching the API contracts in
+``libs/service-auth/src/service_auth/mixins/``. Each function takes a
+DemoAgent, the relevant parameters, and the service URL(s) it needs
+(resolved once by the caller from config.yaml — GAP-E11, no hardcoded
+URLs and no code defaults here), signs the request, and returns the
+parsed JSON response.
 """
 
 from __future__ import annotations
@@ -14,16 +17,11 @@ import httpx
 
 from demo_replay.wallet import DemoAgent
 
-# Default service URLs (same as agents/config.yaml)
-IDENTITY_URL = "http://localhost:8001"
-BANK_URL = "http://localhost:8002"
-TASK_BOARD_URL = "http://localhost:8003"
-
 
 async def register_agent(
     client: httpx.AsyncClient,
     agent: DemoAgent,
-    identity_url: str = IDENTITY_URL,
+    identity_url: str,
 ) -> dict[str, Any]:
     """Register an agent with the Identity service. Sets agent.agent_id on success.
 
@@ -63,7 +61,7 @@ async def create_account(
     client: httpx.AsyncClient,
     platform: DemoAgent,
     agent_id: str,
-    bank_url: str = BANK_URL,
+    bank_url: str,
 ) -> dict[str, Any]:
     """Create a bank account for an agent (platform-signed)."""
     url = f"{bank_url}/accounts"
@@ -82,7 +80,7 @@ async def credit_account(
     platform: DemoAgent,
     account_id: str,
     amount: int,
-    bank_url: str = BANK_URL,
+    bank_url: str,
 ) -> dict[str, Any]:
     """Credit funds to an agent's account (platform-signed)."""
     url = f"{bank_url}/accounts/{account_id}/credit"
@@ -106,7 +104,7 @@ async def post_task(
     title: str,
     spec: str,
     reward: int,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
     bidding_deadline_seconds: int = 3600,
     execution_deadline_seconds: int = 7200,
     review_deadline_seconds: int = 3600,
@@ -135,9 +133,7 @@ async def post_task(
             "agent_id": poster.agent_id,
         }
     )
-    resp = await client.post(
-        url, json={"task_token": task_token, "escrow_token": escrow_token}
-    )
+    resp = await client.post(url, json={"task_token": task_token, "escrow_token": escrow_token})
     resp.raise_for_status()
     return resp.json()  # type: ignore[no-any-return]
 
@@ -147,7 +143,7 @@ async def submit_bid(
     bidder: DemoAgent,
     task_id: str,
     amount: int,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
 ) -> dict[str, Any]:
     """Submit a bid on a task."""
     url = f"{task_board_url}/tasks/{task_id}/bids"
@@ -168,7 +164,7 @@ async def list_bids(
     client: httpx.AsyncClient,
     poster: DemoAgent,
     task_id: str,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
 ) -> list[dict[str, Any]]:
     """List bids for a task (poster-signed auth header)."""
     url = f"{task_board_url}/tasks/{task_id}/bids"
@@ -191,7 +187,7 @@ async def accept_bid(
     poster: DemoAgent,
     task_id: str,
     bid_id: str,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
 ) -> dict[str, Any]:
     """Accept a bid on a task."""
     url = f"{task_board_url}/tasks/{task_id}/bids/{bid_id}/accept"
@@ -208,20 +204,30 @@ async def accept_bid(
     return resp.json()  # type: ignore[no-any-return]
 
 
+async def get_task(
+    client: httpx.AsyncClient,
+    task_id: str,
+    task_board_url: str,
+) -> dict[str, Any]:
+    """Fetch task details from the Task Board."""
+    url = f"{task_board_url}/tasks/{task_id}"
+    resp = await client.get(url)
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
 async def upload_asset(
     client: httpx.AsyncClient,
     worker: DemoAgent,
     task_id: str,
     filename: str,
     content: bytes,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
 ) -> dict[str, Any]:
     """Upload a file asset for a task."""
     url = f"{task_board_url}/tasks/{task_id}/assets"
     headers = worker.auth_header({"action": "upload_asset", "task_id": task_id})
-    resp = await client.post(
-        url, headers=headers, files={"file": (filename, content)}
-    )
+    resp = await client.post(url, headers=headers, files={"file": (filename, content)})
     resp.raise_for_status()
     return resp.json()  # type: ignore[no-any-return]
 
@@ -230,7 +236,7 @@ async def submit_deliverable(
     client: httpx.AsyncClient,
     worker: DemoAgent,
     task_id: str,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
 ) -> dict[str, Any]:
     """Submit deliverables for review."""
     url = f"{task_board_url}/tasks/{task_id}/submit"
@@ -250,7 +256,7 @@ async def approve_task(
     client: httpx.AsyncClient,
     poster: DemoAgent,
     task_id: str,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
 ) -> dict[str, Any]:
     """Approve a submitted task."""
     url = f"{task_board_url}/tasks/{task_id}/approve"
@@ -271,7 +277,7 @@ async def dispute_task(
     poster: DemoAgent,
     task_id: str,
     reason: str,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
 ) -> dict[str, Any]:
     """Dispute a submitted task."""
     url = f"{task_board_url}/tasks/{task_id}/dispute"
@@ -288,28 +294,42 @@ async def dispute_task(
     return resp.json()  # type: ignore[no-any-return]
 
 
-async def submit_feedback(
+async def list_disputes(
     client: httpx.AsyncClient,
-    agent: DemoAgent,
+    court_url: str,
+    task_id: str | None = None,
+) -> list[dict[str, Any]]:
+    """List Court disputes, optionally filtered by task_id."""
+    params: dict[str, str] = {}
+    if task_id is not None:
+        params["task_id"] = task_id
+    resp = await client.get(f"{court_url}/disputes", params=params)
+    resp.raise_for_status()
+    data: dict[str, Any] = resp.json()
+    disputes: list[dict[str, Any]] = data["disputes"]
+    return disputes
+
+
+async def file_claim(
+    client: httpx.AsyncClient,
+    platform: DemoAgent,
     task_id: str,
-    to_agent_id: str,
-    role: str,
-    category: str,
-    rating: str,
-    comment: str,
-    reputation_url: str = "http://localhost:8004",
+    claimant_id: str,
+    respondent_id: str,
+    claim: str,
+    escrow_id: str,
+    court_url: str,
 ) -> dict[str, Any]:
-    """Submit sealed feedback for a task."""
-    url = f"{reputation_url}/feedback"
-    token = agent.sign_jws(
+    """File a Court claim directly with a platform-signed token."""
+    url = f"{court_url}/disputes/file"
+    token = platform.sign_jws(
         {
-            "action": "submit_feedback",
+            "action": "file_dispute",
             "task_id": task_id,
-            "to_agent_id": to_agent_id,
-            "role": role,
-            "category": category,
-            "rating": rating,
-            "comment": comment,
+            "claimant_id": claimant_id,
+            "respondent_id": respondent_id,
+            "claim": claim,
+            "escrow_id": escrow_id,
         }
     )
     resp = await client.post(url, json={"token": token})
@@ -317,18 +337,74 @@ async def submit_feedback(
     return resp.json()  # type: ignore[no-any-return]
 
 
-async def reveal_feedback(
+async def submit_rebuttal(
+    client: httpx.AsyncClient,
+    worker: DemoAgent,
+    task_id: str,
+    dispute_id: str,
+    rebuttal: str,
+    task_board_url: str,
+) -> dict[str, Any]:
+    """Submit a worker rebuttal through Task Board mediation."""
+    url = f"{task_board_url}/tasks/{task_id}/rebuttal"
+    token = worker.sign_jws(
+        {
+            "action": "submit_rebuttal",
+            "task_id": task_id,
+            "dispute_id": dispute_id,
+            "worker_id": worker.agent_id,
+            "rebuttal": rebuttal,
+        }
+    )
+    resp = await client.post(url, json={"token": token})
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
+async def trigger_ruling(
+    client: httpx.AsyncClient,
+    platform: DemoAgent,
+    dispute_id: str,
+    court_url: str,
+) -> dict[str, Any]:
+    """Trigger a Court ruling with a platform-signed token."""
+    url = f"{court_url}/disputes/{dispute_id}/rule"
+    token = platform.sign_jws({"action": "trigger_ruling", "dispute_id": dispute_id})
+    resp = await client.post(url, json={"token": token})
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
+async def submit_feedback(
     client: httpx.AsyncClient,
     agent: DemoAgent,
     task_id: str,
-    reputation_url: str = "http://localhost:8004",
+    to_agent_id: str,
+    category: str,
+    rating: str,
+    comment: str,
+    reputation_url: str,
 ) -> dict[str, Any]:
-    """Reveal feedback for a task (both parties have submitted)."""
-    url = f"{reputation_url}/tasks/{task_id}/feedback/reveal"
+    """Submit sealed feedback for a task.
+
+    Matches the real Reputation API contract (``services/reputation/src/
+    reputation_service/routers/feedback.py``): the signer's identity is
+    carried as ``from_agent_id`` in the JWS payload — verified against the
+    signer's ``kid`` — not as a free-text ``role``. There is no separate
+    "reveal" action; a sealed record becomes visible automatically once
+    both parties have submitted feedback, or after the service's reveal
+    timeout elapses.
+    """
+    url = f"{reputation_url}/feedback"
     token = agent.sign_jws(
         {
-            "action": "reveal_feedback",
+            "action": "submit_feedback",
+            "from_agent_id": agent.agent_id,
             "task_id": task_id,
+            "to_agent_id": to_agent_id,
+            "category": category,
+            "rating": rating,
+            "comment": comment,
         }
     )
     resp = await client.post(url, json={"token": token})

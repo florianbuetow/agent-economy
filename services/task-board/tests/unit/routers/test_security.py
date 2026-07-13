@@ -252,7 +252,7 @@ class TestErrorPrecedence:
             alice_keypair[0],
             alice_agent_id,
             {
-                "action": "file_dispute",
+                "action": "dispute_task",
                 "task_id": task_id,
                 "poster_id": alice_agent_id,
                 "reason": "",

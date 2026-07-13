@@ -9,13 +9,12 @@ fi
 guard create project-root
 guard create ci-config
 guard create app-config
-guard create docker
 guard create justfiles
 guard create dependencies
 guard create docs
 
 # Per-service collections: source, per-test-type, and all-tests aggregate
-for svc in identity central-bank task-board reputation court; do
+for svc in identity central-bank task-board reputation court db-gateway ui; do
   guard create "${svc}-service"
   guard create "${svc}-tests"
   for test_type in unit integration performance acceptance; do
@@ -34,7 +33,6 @@ guard add file .guardfile
 
 guard update project-root add ./.gitignore
 guard update project-root add ./AGENTS.md
-guard update project-root add ./DELEGATE.md
 
 # =============================================================================
 # ci-config — linting, static analysis, type checking, quality tools
@@ -61,18 +59,6 @@ for subdir in ./services/*/; do
   if [[ -f "$config_file" ]]; then
     guard update app-config add "$config_file"
   fi
-done
-
-# =============================================================================
-# docker — Dockerfiles and docker-compose orchestration
-# =============================================================================
-
-guard update docker add ./docker-compose.yml
-guard update docker add ./docker-compose.dev.yml
-
-fd --type f Dockerfile ./services/ -0 | \
-while IFS= read -r -d '' file; do \
-  guard update docker add "$file"
 done
 
 # =============================================================================
@@ -106,7 +92,7 @@ done
 # Per-service: source code + test collections
 # =============================================================================
 
-for svc in identity central-bank task-board reputation court; do
+for svc in identity central-bank task-board reputation court db-gateway ui; do
   svc_dir="./services/${svc}"
 
   # Source code

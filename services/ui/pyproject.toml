@@ -6,17 +6,17 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn>=0.34.0",
-    "starlette>=0.47.2",
+    "starlette>=1.0.1",
     "pydantic>=2.10.0",
     "service-commons",
-    "base-agent",
+    "service-auth",
     "aiosqlite>=0.20.0",
     "sse-starlette>=2.2.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
+    "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
     "pytest-asyncio>=0.24.0",
     "httpx>=0.28.0",
@@ -40,9 +40,23 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv]
+constraint-dependencies = [
+    "gitpython>=3.1.50",
+    "idna>=3.15",
+    "msgpack>=1.2.1",
+    "pillow>=12.2.0",
+    "pip>=26.1.2",
+    "pydantic-settings>=2.14.2",
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.31",
+    "starlette>=1.0.1",
+    "urllib3>=2.7.0",
+]
+
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
-base-agent = { path = "../../agents", editable = true }
+service-auth = { path = "../../libs/service-auth", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ui_service"]
@@ -110,10 +124,6 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "sse_starlette.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "base_agent.*"
 ignore_missing_imports = true
 
 # === Bandit ===

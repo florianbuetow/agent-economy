@@ -32,7 +32,14 @@ class ServiceConfig(BaseModel):
 
 
 class ServerConfig(BaseModel):
-    """HTTP server configuration."""
+    """HTTP server configuration.
+
+    ``host`` is the Q-3 security boundary (see
+    docs/plans/2026-07-10-q3-proxy-exposure-decision.md): /api/proxy/* is
+    unauthenticated, so 127.0.0.1-only binding is what keeps it
+    local-single-user. No shared-secret header exists yet — add one before
+    ever binding this service to a non-loopback address.
+    """
 
     model_config = ConfigDict(extra="forbid")
     host: str
@@ -83,6 +90,13 @@ class UserAgentConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     agent_config_path: str
+    # Roster handle the UI's UserAgent signs proxy actions as (Q-2). A
+    # distinct economic identity from "platform" — see
+    # docs/plans/2026-07-10-q2-operator-identity-decision.md. Genesis funding
+    # for this identity is NOT UI config's concern (Q-9) — see
+    # docs/plans/2026-07-10-q9-treasury-bootstrap-decision.md and
+    # agents/src/treasury_provision_cli.
+    handle: str
 
 
 class Settings(BaseModel):
@@ -129,8 +143,15 @@ def get_settings() -> Settings:
     """Load and validate settings from YAML config."""
     config_path = get_config_path()
     yaml_config = load_yaml_config(config_path)
-    if "user_agent" not in yaml_config:
-        yaml_config["user_agent"] = _load_default_user_agent_config()
+    default_user_agent = _load_default_user_agent_config()
+    user_agent_config = yaml_config.get("user_agent")
+    if isinstance(user_agent_config, dict):
+        # Backfill keys missing from a partial user_agent block with the
+        # canonical values from the service config.yaml.
+        for key, value in default_user_agent.items():
+            user_agent_config.setdefault(key, value)
+    else:
+        yaml_config["user_agent"] = default_user_agent
     return load_settings(Settings, yaml_config)
 
 

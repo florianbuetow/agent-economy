@@ -1,0 +1,42 @@
+name: CI
+
+# Q-14 (docs/plans/2026-07-10-q14-hosted-ci-decision.md): minimal hosted CI running
+# `just ci-quiet` on push/PR. Mock judges (services/court/config.yaml judges.judges[0].provider:
+# mock) keep this LLM-free — no API keys, no live model endpoint required.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci-quiet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        # setup-uv publishes exact tags only (no moving v8 major tag)
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          enable-cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@v4
+
+      - name: Ensure jq and lsof are present (used by start-all/status scripts)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq lsof
+
+      # services/ui/tests/unit/test_trend_visual_js.py (pytest.mark.unit) drives a
+      # headless Chromium via playwright.sync_api; no just recipe installs the browser
+      # binary today, so it must happen before `just ci-quiet` reaches the ui service.
+      - name: Install Playwright Chromium for the ui unit suite
+        run: |
+          cd services/ui
+          uv sync --all-extras
+          uv run playwright install --with-deps chromium
+
+      - name: Run full CI (just ci-quiet)
+        run: just ci-quiet

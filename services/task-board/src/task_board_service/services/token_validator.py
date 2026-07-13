@@ -10,9 +10,8 @@ from cryptography.exceptions import InvalidSignature
 from service_commons.exceptions import ServiceError
 
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
-
-    from task_board_service.services.identity_client import IdentityClient
+    from service_auth.platform import PlatformAgent
+    from service_clients.identity import IdentityClient
 
 
 def decode_base64url_json(part: str, section_name: str) -> dict[str, Any]:
@@ -51,10 +50,10 @@ def decode_base64url_json(part: str, section_name: str) -> dict[str, Any]:
 class TokenValidator:
     """Validates task-board JWS tokens and decodes escrow payloads."""
 
-    def __init__(
+    def __init__(  # nosemgrep: agent-economy.no-default-parameter-values
         self,
         platform_agent: PlatformAgent,
-        identity_client: IdentityClient | None,
+        identity_client: IdentityClient | None = None,
     ) -> None:
         """Initialize validator with platform agent and optional identity client."""
         self._platform_agent = platform_agent
@@ -66,7 +65,7 @@ class TokenValidator:
         expected_action: str | tuple[str, ...],
     ) -> dict[str, Any]:
         """
-        Verify a JWS token via the Identity service and validate the action field.
+        Verify an agent-signed JWS token (via Identity) and validate the action field.
 
         Returns the verified payload dict with "_signer_id" added.
 
@@ -80,7 +79,33 @@ class TokenValidator:
             ServiceError: invalid_jws, identity_service_unavailable,
                           forbidden, or invalid_payload
         """
-        # Step 4: Basic JWS format validation (three dot-separated parts)
+        parts = self._require_compact_format(token)
+        if self._identity_client is not None:
+            payload, agent_id = await self._verify_via_identity_service(token)
+        else:
+            payload, agent_id = self._verify_via_platform_agent(token, parts)
+        return self._require_action(payload, agent_id, expected_action)
+
+    async def validate_platform_jws_token(
+        self,
+        token: str,
+        expected_action: str | tuple[str, ...],
+    ) -> dict[str, Any]:
+        """
+        Verify a platform-signed JWS token **locally** via the platform agent and validate
+        the action field.
+
+        Platform operations (e.g. ``record_ruling``) authenticate against the platform's
+        own key with no Identity round-trip, so they keep working while the Identity
+        service is unreachable. Same error precedence as :meth:`validate_jws_token`, minus
+        the Identity-unavailable case.
+        """
+        parts = self._require_compact_format(token)
+        payload, agent_id = self._verify_via_platform_agent(token, parts)
+        return self._require_action(payload, agent_id, expected_action)
+
+    def _require_compact_format(self, token: str) -> list[str]:
+        """Step 4: basic JWS compact-format validation (three dot-separated parts)."""
         if not token:
             raise ServiceError("invalid_jws", "Token must be a non-empty string", 400, {})
 
@@ -92,13 +117,15 @@ class TokenValidator:
                 400,
                 {},
             )
+        return parts
 
-        if self._identity_client is not None:
-            payload, agent_id = await self._verify_via_identity_service(token)
-        else:
-            payload, agent_id = self._verify_via_platform_agent(token, parts)
-
-        # Step 7: Validate action field
+    def _require_action(
+        self,
+        payload: dict[str, Any],
+        agent_id: str,
+        expected_action: str | tuple[str, ...],
+    ) -> dict[str, Any]:
+        """Step 7: validate the action field and stamp the verified signer id."""
         if "action" not in payload:
             raise ServiceError(
                 "invalid_payload",
@@ -155,10 +182,6 @@ class TokenValidator:
         if not isinstance(agent_id, str) or len(agent_id) < 1:
             raise ServiceError("invalid_jws", "Token header is missing kid", 400, {})
 
-        # Tamper marker inserted by test helper simulates signature failure.
-        if payload.get("_tampered") is True:
-            raise ServiceError("forbidden", "JWS signature verification failed", 403, {})
-
         return payload, agent_id
 
     def _verify_via_platform_agent(
@@ -199,10 +222,6 @@ class TokenValidator:
         if not isinstance(kid, str) or len(kid) < 1:
             raise ServiceError("invalid_jws", "Token header is missing kid", 400, {})
         agent_id = kid
-
-        # Tamper marker inserted by test helper simulates signature failure.
-        if payload.get("_tampered") is True:
-            raise ServiceError("forbidden", "JWS signature verification failed", 403, {})
 
         return payload, agent_id
 

@@ -2,24 +2,26 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from base_agent.factory import AgentFactory
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+from service_auth import PlatformSigner
+from service_auth.factory import AgentFactory
+from service_clients.bank import BankClient
+from service_clients.identity import IdentityClient
 from service_commons.config import load_yaml_config
 
-from task_board_service.clients.central_bank_client import CentralBankClient
-from task_board_service.clients.platform_signer import PlatformSigner
 from task_board_service.config import get_config_path, get_settings
 from task_board_service.core.state import init_app_state
 from task_board_service.logging import get_logger, setup_logging
 from task_board_service.services.asset_manager import AssetManager
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
-from task_board_service.services.identity_client import IdentityClient
 from task_board_service.services.task_db_client import TaskDbClient
 from task_board_service.services.task_manager import TaskManager
 from task_board_service.services.token_validator import TokenValidator
@@ -27,8 +29,8 @@ from task_board_service.services.token_validator import TokenValidator
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from base_agent.platform import PlatformAgent
     from fastapi import FastAPI
+    from service_auth.platform import PlatformAgent
 
     from task_board_service.services.protocol import TaskStorageInterface
 
@@ -64,6 +66,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # Resolve platform key material and platform agent identity.
     private_key_path = settings.platform.private_key_path
     platform_agent_id = settings.platform.agent_id
+    # Token lifetime for platform-signed escrow tokens; sourced from the agent
+    # config that also builds the platform agent (None => legacy, no expiry).
+    platform_token_ttl_seconds: int | None = None
 
     if settings.platform.agent_config_path:
         config_path = Path(settings.platform.agent_config_path)
@@ -79,6 +84,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             msg = "Platform agent registration did not return an agent_id"
             raise RuntimeError(msg)
         platform_agent_id = platform_agent.agent_id
+        platform_token_ttl_seconds = platform_agent.config.token_ttl_seconds
 
         agent_config = load_yaml_config(config_path)
         data_config = agent_config.get("data")
@@ -113,19 +119,22 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if settings.identity is not None:
         identity_client = IdentityClient(
             base_url=settings.identity.base_url,
+            get_agent_path=settings.identity.get_agent_path or "",
             verify_jws_path=settings.identity.verify_jws_path,
+            timeout_seconds=settings.identity.timeout_seconds or 10,
         )
         state.identity_client = identity_client
 
     # Initialize PlatformSigner (loads Ed25519 private key from disk)
     platform_signer = PlatformSigner(
-        private_key_path=private_key_path,
         platform_agent_id=platform_agent_id,
+        private_key_path=private_key_path,
+        token_ttl_seconds=platform_token_ttl_seconds,
     )
     state.platform_signer = platform_signer
 
-    # Initialize CentralBankClient (HTTP client for escrow operations)
-    central_bank_client = CentralBankClient(
+    # Initialize BankClient (HTTP client for escrow operations)
+    central_bank_client = BankClient(
         base_url=settings.central_bank.base_url,
         escrow_lock_path=settings.central_bank.escrow_lock_path,
         escrow_release_path=settings.central_bank.escrow_release_path,
@@ -136,11 +145,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.central_bank_client = central_bank_client
 
     # Initialize TaskManager (all business logic)
+    # db_gateway configuration is required — enforced by Pydantic (Settings.db_gateway
+    # is a required field, WP-11); startup fails fast on a missing section without a
+    # runtime guard here.
     store: TaskStorageInterface
-    if settings.db_gateway is None:
-        msg = "db_gateway configuration is required"
-        raise RuntimeError(msg)
-
     store = TaskDbClient(
         base_url=settings.db_gateway.url,
         timeout_seconds=settings.db_gateway.timeout_seconds,
@@ -153,7 +161,24 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         identity_client=identity_client,
     )
     state.token_validator = token_validator
-    deadline_evaluator = DeadlineEvaluator(store=store, escrow_coordinator=escrow_coordinator)
+    deadline_evaluator = DeadlineEvaluator(
+        store=store,
+        escrow_coordinator=escrow_coordinator,
+        platform_agent=state.platform_agent,
+    )
+
+    # Q-5 (GAP-A3): required periodic sweep — mirrors the db_gateway required-check
+    # above (Optional at the schema level, enforced here so a missing section fails
+    # fast at startup rather than silently leaving deadlines lazy-only).
+    if settings.deadline_evaluation is None:
+        msg = "deadline_evaluation configuration is required"
+        raise RuntimeError(msg)
+    deadline_sweep_task = asyncio.create_task(
+        deadline_evaluator.run_periodic_sweep(
+            settings.deadline_evaluation.evaluation_interval_seconds
+        )
+    )
+    state.deadline_sweep_task = deadline_sweep_task
     asset_manager = AssetManager(
         store=store,
         token_validator=token_validator,
@@ -192,6 +217,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # === SHUTDOWN ===
     logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
+
+    # Stop the deadline sweep before closing the store it reads from.
+    deadline_sweep_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await deadline_sweep_task
 
     # Close task manager (closes SQLite database)
     task_manager.close()

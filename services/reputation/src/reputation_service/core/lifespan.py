@@ -6,13 +6,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from base_agent.factory import AgentFactory
+from service_auth.factory import AgentFactory
+from service_clients.identity import IdentityClient
 
 from reputation_service.config import get_config_path, get_settings
 from reputation_service.core.state import init_app_state
 from reputation_service.logging import get_logger, setup_logging
 from reputation_service.services.feedback_db_client import FeedbackDbClient
-from reputation_service.services.identity_client import IdentityClient, PlatformIdentityClient
+from reputation_service.services.platform_identity_client import PlatformJwsVerifier
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -33,7 +34,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.feedback_reveal_timeout_seconds = settings.feedback.reveal_timeout_seconds
     state.feedback_max_comment_length = settings.feedback.max_comment_length
 
-    if settings.db_gateway is None:
+    # db_gateway is a required config field (Pydantic enforces its presence at load);
+    # guard against an empty URL so startup still fails fast on bad db_gateway config.
+    if not settings.db_gateway.url:
         msg = "db_gateway configuration is required"
         raise RuntimeError(msg)
 
@@ -54,16 +57,24 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await platform_agent.register()
         state.platform_agent = platform_agent
 
-    # Initialize identity client for JWS verification
+    # Two-tier verification. Platform operations (force_visible feedback) verify locally
+    # via the platform agent — no Identity round-trip, so they survive Identity outages.
+    state.platform_verifier = PlatformJwsVerifier(
+        platform_agent_provider=lambda: state.platform_agent,
+    )
+
+    # Agent feedback operations verify via Identity. When Identity is not configured,
+    # fall back to local platform verification for all callers.
     if settings.identity is not None:
+        identity_config = settings.identity
         state.identity_client = IdentityClient(
-            base_url=settings.identity.base_url,
-            verify_jws_path=settings.identity.verify_jws_path,
+            base_url=identity_config.base_url,
+            get_agent_path=identity_config.get_agent_path or "",
+            verify_jws_path=identity_config.verify_jws_path,
+            timeout_seconds=identity_config.timeout_seconds or 10,
         )
     else:
-        state.identity_client = PlatformIdentityClient(
-            platform_agent_provider=lambda: state.platform_agent,
-        )
+        state.identity_client = state.platform_verifier
 
     logger.info(
         "Service starting",

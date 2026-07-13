@@ -10,6 +10,13 @@ from ui_service.services.database import (
     execute_fetchone,
     execute_scalar,
 )
+from ui_service.taxonomy import (
+    AGENT_FEED_EVENT_TYPES,
+    DEFAULT_EVENT_BADGE,
+    EVENT_TYPE_TO_BADGE,
+    TaskStatus,
+    sql_placeholders,
+)
 
 if TYPE_CHECKING:
     from typing import Any
@@ -31,8 +38,8 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
     tasks_completed_as_worker = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = 'approved'",
-            (agent_id,),
+            "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = ?",
+            (agent_id, TaskStatus.APPROVED),
         )
         or 0
     )
@@ -121,22 +128,6 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
         or 0
     )
 
-    # Count consecutive approved tasks as worker from most recent backwards.
-    streak_rows = await execute_fetchall(
-        db,
-        "SELECT status FROM board_tasks "
-        "WHERE worker_id = ? "
-        "AND status IN ('approved', 'disputed', 'ruled', 'cancelled') "
-        "ORDER BY COALESCE(approved_at, submitted_at, created_at) DESC",
-        (agent_id,),
-    )
-    current_streak = 0
-    for row in streak_rows:
-        if row[0] == "approved":
-            current_streak += 1
-        else:
-            break
-
     return {
         "tasks_posted": tasks_posted,
         "tasks_completed_as_worker": tasks_completed_as_worker,
@@ -152,31 +143,32 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
             "satisfied": del_sat,
             "dissatisfied": del_dis,
         },
-        "current_streak": current_streak,
     }
 
 
-def _quality_sort_key(stats: dict[str, Any], category: str) -> float:
-    """Compute proportion of extremely_satisfied for sorting."""
-    quality = stats[category]
-    total: int = quality["extremely_satisfied"] + quality["satisfied"] + quality["dissatisfied"]
-    if total == 0:
-        return 0.0
-    return float(quality["extremely_satisfied"]) / float(total)
+def _quality_ratio_sql(es_expr: str, sat_expr: str, dis_expr: str) -> str:
+    """Build a SQL CASE expression for extremely_satisfied / total ratio.
+
+    Mirrors ``_quality_sort_key``'s Python-side computation, but as SQL so it
+    can be used directly in an ``ORDER BY`` clause (GAP-E10).
+    """
+    total = f"({es_expr} + {sat_expr} + {dis_expr})"
+    return f"CASE WHEN {total} = 0 THEN 0.0 ELSE CAST({es_expr} AS REAL) / {total} END"
 
 
-def _get_sort_key(stats: dict[str, Any], sort_by: str) -> float | int:
-    """Return the value to sort by for a given sort_by field."""
-    sort_map: dict[str, float | int] = {
-        "total_earned": stats["total_earned"],
-        "total_spent": stats["total_spent"],
-        "tasks_completed": stats["tasks_completed_as_worker"],
-        "tasks_completed_as_worker": stats["tasks_completed_as_worker"],
-        "tasks_posted": stats["tasks_posted"],
-        "spec_quality": _quality_sort_key(stats, "spec_quality"),
-        "delivery_quality": _quality_sort_key(stats, "delivery_quality"),
-    }
-    return sort_map.get(sort_by, 0)
+# Maps the router's validated sort_by values to a SELECT-list alias in the
+# list_agents query below. "0" is a safe no-op fallback (matches the
+# pre-GAP-E10 dict.get(sort_by, 0) behavior) — unreachable in practice since
+# the router already 400s on an unknown sort_by before calling this.
+_SORT_ALIASES: dict[str, str] = {
+    "total_earned": "total_earned",
+    "total_spent": "total_spent",
+    "tasks_completed": "tasks_completed_as_worker",
+    "tasks_completed_as_worker": "tasks_completed_as_worker",
+    "tasks_posted": "tasks_posted",
+    "spec_quality": "spec_quality_ratio",
+    "delivery_quality": "delivery_quality_ratio",
+}
 
 
 async def list_agents(
@@ -186,39 +178,103 @@ async def list_agents(
     limit: int,
     offset: int,
 ) -> dict[str, Any]:
-    """List agents with computed stats, sorted and paginated."""
-    # Get all agents
-    rows = await execute_fetchall(
-        db,
-        "SELECT agent_id, name, registered_at FROM identity_agents",
-        (),
+    """List agents with computed stats, sorted and paginated.
+
+    Single aggregated query (GAP-E10): one LEFT JOIN per stat category,
+    computed and sorted in SQL, instead of an N+1 fan-out (~10 queries per
+    agent) followed by a Python-side sort and slice.
+    """
+    total_count = int(await execute_scalar(db, "SELECT COUNT(*) FROM identity_agents", ()) or 0)
+
+    sort_alias = _SORT_ALIASES.get(sort_by, "0")
+    direction = "DESC" if order == "desc" else "ASC"
+
+    spec_es_expr = "COALESCE(sq.spec_es, 0)"
+    spec_sat_expr = "COALESCE(sq.spec_sat, 0)"
+    spec_dis_expr = "COALESCE(sq.spec_dis, 0)"
+    del_es_expr = "COALESCE(dq.del_es, 0)"
+    del_sat_expr = "COALESCE(dq.del_sat, 0)"
+    del_dis_expr = "COALESCE(dq.del_dis, 0)"
+
+    # nosec B608 -- sort_alias/direction come from the fixed _SORT_ALIASES lookup
+    # above, never raw user input; sort_by is also pre-validated by the router's
+    # VALID_SORT_FIELDS allow-list before reaching here.
+    sql = (
+        "SELECT ia.agent_id, ia.name, ia.registered_at, "  # nosec B608
+        "COALESCE(tp.tasks_posted, 0) AS tasks_posted, "
+        "COALESCE(tc.tasks_completed_as_worker, 0) AS tasks_completed_as_worker, "
+        "COALESCE(er.total_earned, 0) AS total_earned, "
+        "COALESCE(ts.total_spent, 0) AS total_spent, "
+        f"{spec_es_expr} AS spec_es, {spec_sat_expr} AS spec_sat, {spec_dis_expr} AS spec_dis, "
+        f"{del_es_expr} AS del_es, {del_sat_expr} AS del_sat, {del_dis_expr} AS del_dis, "
+        f"{_quality_ratio_sql(spec_es_expr, spec_sat_expr, spec_dis_expr)} AS spec_quality_ratio, "
+        f"{_quality_ratio_sql(del_es_expr, del_sat_expr, del_dis_expr)} AS delivery_quality_ratio "
+        "FROM identity_agents ia "
+        "LEFT JOIN ("
+        "  SELECT poster_id AS agent_id, COUNT(*) AS tasks_posted "
+        "  FROM board_tasks GROUP BY poster_id"
+        ") tp ON tp.agent_id = ia.agent_id "
+        "LEFT JOIN ("
+        "  SELECT worker_id AS agent_id, COUNT(*) AS tasks_completed_as_worker "
+        "  FROM board_tasks WHERE status = ? GROUP BY worker_id"
+        ") tc ON tc.agent_id = ia.agent_id "
+        "LEFT JOIN ("
+        "  SELECT account_id AS agent_id, SUM(amount) AS total_earned "
+        "  FROM bank_transactions WHERE type = 'escrow_release' GROUP BY account_id"
+        ") er ON er.agent_id = ia.agent_id "
+        "LEFT JOIN ("
+        "  SELECT account_id AS agent_id, SUM(amount) AS total_spent "
+        "  FROM bank_transactions WHERE type = 'escrow_lock' GROUP BY account_id"
+        ") ts ON ts.agent_id = ia.agent_id "
+        "LEFT JOIN ("
+        "  SELECT to_agent_id AS agent_id, "
+        "    SUM(CASE WHEN rating = 'extremely_satisfied' THEN 1 ELSE 0 END) AS spec_es, "
+        "    SUM(CASE WHEN rating = 'satisfied' THEN 1 ELSE 0 END) AS spec_sat, "
+        "    SUM(CASE WHEN rating = 'dissatisfied' THEN 1 ELSE 0 END) AS spec_dis "
+        "  FROM reputation_feedback WHERE category = 'spec_quality' AND visible = 1 "
+        "  GROUP BY to_agent_id"
+        ") sq ON sq.agent_id = ia.agent_id "
+        "LEFT JOIN ("
+        "  SELECT to_agent_id AS agent_id, "
+        "    SUM(CASE WHEN rating = 'extremely_satisfied' THEN 1 ELSE 0 END) AS del_es, "
+        "    SUM(CASE WHEN rating = 'satisfied' THEN 1 ELSE 0 END) AS del_sat, "
+        "    SUM(CASE WHEN rating = 'dissatisfied' THEN 1 ELSE 0 END) AS del_dis "
+        "  FROM reputation_feedback WHERE category = 'delivery_quality' AND visible = 1 "
+        "  GROUP BY to_agent_id"
+        ") dq ON dq.agent_id = ia.agent_id "
+        f"ORDER BY {sort_alias} {direction}, ia.rowid ASC "
+        "LIMIT ? OFFSET ?"
     )
 
-    total_count = len(rows)
+    rows = await execute_fetchall(db, sql, (TaskStatus.APPROVED, limit, offset))
 
-    # Compute stats for each agent
-    agents: list[dict[str, Any]] = []
-    for row in rows:
-        agent_id, name, registered_at = row
-        stats = await _compute_agent_stats(db, agent_id)
-        agents.append(
-            {
-                "agent_id": agent_id,
-                "name": name,
-                "registered_at": registered_at,
-                "stats": stats,
-            }
-        )
-
-    # Sort
-    reverse = order == "desc"
-    agents.sort(key=lambda a: _get_sort_key(a["stats"], sort_by), reverse=reverse)
-
-    # Paginate
-    paginated = agents[offset : offset + limit]
+    agents: list[dict[str, Any]] = [
+        {
+            "agent_id": row["agent_id"],
+            "name": row["name"],
+            "registered_at": row["registered_at"],
+            "stats": {
+                "tasks_posted": int(row["tasks_posted"]),
+                "tasks_completed_as_worker": int(row["tasks_completed_as_worker"]),
+                "total_earned": int(row["total_earned"]),
+                "total_spent": int(row["total_spent"]),
+                "spec_quality": {
+                    "extremely_satisfied": int(row["spec_es"]),
+                    "satisfied": int(row["spec_sat"]),
+                    "dissatisfied": int(row["spec_dis"]),
+                },
+                "delivery_quality": {
+                    "extremely_satisfied": int(row["del_es"]),
+                    "satisfied": int(row["del_sat"]),
+                    "dissatisfied": int(row["del_dis"]),
+                },
+            },
+        }
+        for row in rows
+    ]
 
     return {
-        "agents": paginated,
+        "agents": agents,
         "total_count": total_count,
         "limit": limit,
         "offset": offset,
@@ -338,51 +394,6 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str
     }
 
 
-# ---------------------------------------------------------------------------
-# Event types included in the agent activity feed (per spec §3)
-# ---------------------------------------------------------------------------
-_INCLUDED_EVENT_TYPES = {
-    "agent.registered",
-    "salary.paid",
-    "task.created",
-    "bid.submitted",
-    "task.accepted",
-    "asset.uploaded",
-    "task.submitted",
-    "task.approved",
-    "task.auto_approved",
-    "task.disputed",
-    "task.ruled",
-    "task.cancelled",
-    "task.expired",
-    "escrow.locked",
-    "escrow.released",
-    "escrow.split",
-    "feedback.revealed",
-}
-
-# Map event_type -> badge category (same taxonomy as macro feed)
-_EVENT_TYPE_TO_BADGE: dict[str, str] = {
-    "agent.registered": "SYSTEM",
-    "salary.paid": "SYSTEM",
-    "task.created": "TASK",
-    "bid.submitted": "BID",
-    "task.accepted": "TASK",
-    "asset.uploaded": "TASK",
-    "task.submitted": "TASK",
-    "task.approved": "PAYOUT",
-    "task.auto_approved": "PAYOUT",
-    "task.disputed": "TASK",
-    "task.ruled": "TASK",
-    "task.cancelled": "TASK",
-    "task.expired": "TASK",
-    "escrow.locked": "ESCROW",
-    "escrow.released": "PAYOUT",
-    "escrow.split": "ESCROW",
-    "feedback.revealed": "REP",
-}
-
-
 def _derive_agent_role(
     agent_id: str,
     event_agent_id: str | None,
@@ -418,9 +429,9 @@ async def get_agent_feed(
     """
     # Build the base query per spec §2: join events with board_tasks
     # to find events where agent is actor, poster, or worker.
-    placeholders = ", ".join("?" for _ in _INCLUDED_EVENT_TYPES)
+    placeholders = sql_placeholders(AGENT_FEED_EVENT_TYPES)
     conditions = [f"e.event_type IN ({placeholders})"]
-    params: list[Any] = list(_INCLUDED_EVENT_TYPES)
+    params: list[Any] = list(AGENT_FEED_EVENT_TYPES)
 
     # Agent involvement condition
     conditions.append("(e.agent_id = ? OR t.poster_id = ? OR t.worker_id = ?)")
@@ -485,7 +496,7 @@ async def get_agent_feed(
         if role_filter == "AS_WORKER" and role != "WORKER":
             continue
 
-        badge = _EVENT_TYPE_TO_BADGE.get(event_type, "SYSTEM")
+        badge = EVENT_TYPE_TO_BADGE.get(event_type, DEFAULT_EVENT_BADGE)
 
         # Apply type filter
         if type_filter is not None and badge != type_filter:
@@ -561,8 +572,8 @@ async def get_agent_earnings(
     tasks_approved = int(
         await execute_scalar(
             db,
-            "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = 'approved'",
-            (agent_id,),
+            "SELECT COUNT(*) FROM board_tasks WHERE worker_id = ? AND status = ?",
+            (agent_id, TaskStatus.APPROVED),
         )
         or 0
     )

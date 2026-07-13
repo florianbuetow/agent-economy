@@ -4,7 +4,7 @@
   var ATE = window.ATE;
   var S = ATE.S;
 
-  var EVENT_TYPES = ['ALL', 'TASK', 'BID', 'PAYOUT', 'CONTRACT', 'ESCROW', 'SUBMIT', 'REP', 'DISPUTE', 'RULING', 'CANCEL', 'AGENT'];
+  var EVENT_TYPES = ATE.EVENT_FILTER_TYPES;
 
   var activeFilter = 'ALL';
   var paused = false;
@@ -39,9 +39,9 @@
     var phaseBorder = S.phase === 'growing' ? 'var(--green)' : S.phase === 'contracting' ? 'var(--red)' : 'var(--text-dim)';
     var distTotal = Object.values(S.rewardDist).reduce(function(acc, val) { return acc + val; }, 0) || 1;
 
-    var trendArrow = S.taskCreationTrend === 'growing' ? '\u2191' : S.taskCreationTrend === 'declining' ? '\u2193' : '\u2192';
+    var trendArrow = ATE.trendVisual(S.taskCreationTrend).arrow;
     var trendLabel = S.taskCreationTrend;
-    var trendClr = S.taskCreationTrend === 'growing' ? 'var(--green)' : S.taskCreationTrend === 'declining' ? 'var(--red)' : 'var(--amber)';
+    var trendClr = ATE.trendVisual(S.taskCreationTrend).color;
     var disputeRate = (S.tasks.disputed / Math.max(S.tasks.completedAll, 1)) * 100;
     var disputeColor = disputeRate > 15 ? 'var(--red)' : disputeRate > 5 ? 'var(--amber)' : 'var(--green)';
 
@@ -99,8 +99,7 @@
       var workers = AGENTS.filter(function(a) { return a.role === 'worker'; }).sort(function(a, b) { return b.tc - a.tc; });
       el.innerHTML = '<div class="lb-section-label">By Tasks Completed</div>' + workers.map(function(worker, index) {
         var initials = worker.name.replace(/[^A-Z0-9]/gi, '').slice(0, 2).toUpperCase();
-        var streak = worker.streak >= 3 ? '<span style="font-size:8px;color:var(--yellow);margin-left:3px">\ud83d\udd25' + worker.streak + '</span>' : '';
-        return '<div class="lb-row"><div class="lb-rank' + (index === 0 ? ' top' : '') + '">' + (index + 1) + '</div><div class="lb-avatar" style="background:' + worker.color + '18;color:' + worker.color + ';border:1px solid ' + worker.color + '33">' + initials + '</div><div class="lb-info"><div class="lb-name">' + worker.name + streak + '</div><div class="lb-meta">' + worker.tc + ' tasks completed</div><div class="lb-stars"><span class="s">\u2605\u2605\u2605</span>' + worker.dq.es + ' <span class="s">\u2605\u2605</span>' + worker.dq.s + ' <span class="s">\u2605</span>' + worker.dq.d + '</div></div><div class="lb-right"><div class="lb-amount" style="color:var(--green)">' + worker.earned.toLocaleString() + ' \u00a9</div><div class="lb-amount-label">earned</div></div></div>';
+        return '<div class="lb-row"><div class="lb-rank' + (index === 0 ? ' top' : '') + '">' + (index + 1) + '</div><div class="lb-avatar" style="background:' + worker.color + '18;color:' + worker.color + ';border:1px solid ' + worker.color + '33">' + initials + '</div><div class="lb-info"><div class="lb-name">' + worker.name + '</div><div class="lb-meta">' + worker.tc + ' tasks completed</div><div class="lb-stars"><span class="s">\u2605\u2605\u2605</span>' + worker.dq.es + ' <span class="s">\u2605\u2605</span>' + worker.dq.s + ' <span class="s">\u2605</span>' + worker.dq.d + '</div></div><div class="lb-right"><div class="lb-amount" style="color:var(--green)">' + worker.earned.toLocaleString() + ' \u00a9</div><div class="lb-amount-label">earned</div></div></div>';
       }).join('');
       return;
     }

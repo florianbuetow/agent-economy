@@ -48,18 +48,10 @@ class LoggingConfig(BaseModel):
     directory: str
 
 
-class DatabaseConfig(BaseModel):
-    """Database configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    path: str
-
-
 class CryptoConfig(BaseModel):
     """Cryptography configuration."""
 
     model_config = ConfigDict(extra="forbid")
-    algorithm: str
     public_key_prefix: str
     public_key_bytes: int
     signature_bytes: int
@@ -92,7 +84,6 @@ class Settings(BaseModel):
     service: ServiceConfig
     server: ServerConfig
     logging: LoggingConfig
-    database: DatabaseConfig
     crypto: CryptoConfig
     request: RequestConfig
     db_gateway: DbGatewayConfig | None = None

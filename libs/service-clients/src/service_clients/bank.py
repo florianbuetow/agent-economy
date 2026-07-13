@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
-import httpx
 from service_commons.exceptions import ServiceError
 
 from service_clients.base import BaseServiceClient
+
+if TYPE_CHECKING:
+    import httpx
 
 
 class TokenSigner(Protocol):
@@ -15,6 +17,7 @@ class TokenSigner(Protocol):
 
     def sign(self, payload: dict[str, Any]) -> str:
         """Sign a payload and return a JWS compact token."""
+        ...
 
 
 class BankClient(BaseServiceClient):

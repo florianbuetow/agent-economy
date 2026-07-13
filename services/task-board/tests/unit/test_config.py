@@ -35,16 +35,14 @@ platform:
   agent_id: "a-platform-id"
 request:
   max_body_size: 1048576
-deadlines:
-  default_bidding_seconds: 3600
-  default_execution_seconds: 86400
-  default_review_seconds: 86400
 limits:
-  max_title_length: 200
-  max_spec_length: 10000
-  max_reason_length: 2000
   max_file_size: 10485760
   max_assets_per_task: 20
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
+deadline_evaluation:
+  evaluation_interval_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -59,8 +57,6 @@ limits:
     assert settings.database.path == "data/task-board.db"
     assert settings.central_bank.base_url == "http://localhost:8002"
     assert settings.platform.agent_id == "a-platform-id"
-    assert settings.deadlines.default_bidding_seconds == 3600
-    assert settings.limits.max_title_length == 200
 
     os.environ.pop("CONFIG_PATH", None)
 
@@ -92,16 +88,14 @@ platform:
   agent_id: "a-platform-id"
 request:
   max_body_size: 1048576
-deadlines:
-  default_bidding_seconds: 3600
-  default_execution_seconds: 86400
-  default_review_seconds: 86400
 limits:
-  max_title_length: 200
-  max_spec_length: 10000
-  max_reason_length: 2000
   max_file_size: 10485760
   max_assets_per_task: 20
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
+deadline_evaluation:
+  evaluation_interval_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -159,16 +153,14 @@ platform:
   agent_id: "a-platform-id"
 request:
   max_body_size: 1048576
-deadlines:
-  default_bidding_seconds: 3600
-  default_execution_seconds: 86400
-  default_review_seconds: 86400
 limits:
-  max_title_length: 200
-  max_spec_length: 10000
-  max_reason_length: 2000
   max_file_size: 10485760
   max_assets_per_task: 20
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
+deadline_evaluation:
+  evaluation_interval_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)

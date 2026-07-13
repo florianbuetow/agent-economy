@@ -43,18 +43,18 @@ These error codes apply to authentication failures. Existing error codes from `t
 
 | Status | Error Code                      | Required When                                                |
 |--------|---------------------------------|--------------------------------------------------------------|
-| 400    | `INVALID_JWS`                  | `token` / `task_token` field is missing, null, non-string, empty, or malformed (not a three-part compact serialization); or `Authorization` header is missing, lacks the `Bearer ` prefix, or contains an empty/malformed token |
-| 400    | `INVALID_JSON`                 | Request body is not valid JSON, or is valid JSON but not an object (e.g., array, string) |
-| 400    | `INVALID_PAYLOAD`              | JWS payload is missing `action`, `action` does not match the expected value for the endpoint, or required payload fields are missing |
-| 400    | `TOKEN_MISMATCH`               | `task_id` or `amount`/`reward` mismatch between `task_token` and `escrow_token` during task creation |
-| 403    | `FORBIDDEN`                    | JWS signature verification failed locally via `PlatformAgent.validate_certificate()` (tampered token, unknown agent, invalid certificate), signer does not match the required role (poster, worker, platform), or agent is not authorized for the operation |
-| 502    | `CENTRAL_BANK_UNAVAILABLE`     | Central Bank service is unreachable or returns an unexpected response during escrow operations |
+| 400    | `invalid_jws`                  | `token` / `task_token` field is missing, null, non-string, empty, or malformed (not a three-part compact serialization); or `Authorization` header is missing, lacks the `Bearer ` prefix, or contains an empty/malformed token |
+| 400    | `invalid_json`                 | Request body is not valid JSON, or is valid JSON but not an object (e.g., array, string) |
+| 400    | `invalid_payload`              | JWS payload is missing `action`, `action` does not match the expected value for the endpoint, or required payload fields are missing |
+| 400    | `token_mismatch`               | `task_id` or `amount`/`reward` mismatch between `task_token` and `escrow_token` during task creation |
+| 403    | `forbidden`                    | JWS signature verification failed locally via `PlatformAgent.validate_certificate()` (tampered token, unknown agent, invalid certificate), signer does not match the required role (poster, worker, platform), or agent is not authorized for the operation |
+| 502    | `central_bank_unavailable`     | Central Bank service is unreachable or returns an unexpected response during escrow operations |
 
 All failing responses must use the standard error envelope:
 
 ```json
 {
-  "error": "ERROR_CODE",
+  "error": "error_code",
   "message": "Human-readable description",
   "details": {}
 }
@@ -87,42 +87,42 @@ These tests cover token format validation patterns not already tested in the mai
 **Action:** `POST /tasks` with body `{"task_token": null, "escrow_token": null}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### AUTH-02 Null `token` in POST body (single-token endpoint)
 
 **Action:** `POST /tasks/{task_id}/bids` with body `{"token": null}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### AUTH-03 Non-string `token` in POST body (integer)
 
 **Action:** `POST /tasks/{task_id}/cancel` with body `{"token": 12345}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### AUTH-04 Non-string `token` in POST body (array)
 
 **Action:** `POST /tasks/{task_id}/bids` with body `{"token": ["eyJ..."]}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### AUTH-05 Non-string `token` in POST body (object)
 
 **Action:** `POST /tasks/{task_id}/submit` with body `{"token": {"jws": "eyJ..."}}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### AUTH-06 Non-string `token` in POST body (boolean)
 
 **Action:** `POST /tasks/{task_id}/approve` with body `{"token": true}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### AUTH-07 Missing `action` field in JWS payload
 
@@ -130,7 +130,7 @@ These tests cover token format validation patterns not already tested in the mai
 **Action:** `POST /tasks/{task_id}/cancel` with `jws(poster, {poster_id: poster.agent_id, task_id: "t-xxx"})` — payload has no `action` field.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### AUTH-08 Missing `action` field on platform endpoint
 
@@ -138,28 +138,28 @@ These tests cover token format validation patterns not already tested in the mai
 **Action:** `POST /tasks/{task_id}/ruling` with `jws(platform_agent, {task_id: "t-xxx", worker_pct: 50, ruling_summary: "..."})` — payload has no `action` field.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### AUTH-09 Non-object JSON body (array) on single-token endpoint
 
 **Action:** `POST /tasks/{task_id}/cancel` with `Content-Type: application/json` and body `[{"token": "eyJ..."}]`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JSON`
+- `error = invalid_json`
 
 ### AUTH-10 Non-object JSON body (string) on single-token endpoint
 
 **Action:** `POST /tasks/{task_id}/bids` with `Content-Type: application/json` and body `"just a string"`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JSON`
+- `error = invalid_json`
 
 ### AUTH-11 Non-object JSON body (array) on dual-token endpoint
 
 **Action:** `POST /tasks` with `Content-Type: application/json` and body `[{"task_token": "eyJ...", "escrow_token": "eyJ..."}]`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JSON`
+- `error = invalid_json`
 
 ### AUTH-12 Null `task_token` with valid `escrow_token` on task creation
 
@@ -167,7 +167,7 @@ These tests cover token format validation patterns not already tested in the mai
 **Action:** `POST /tasks` with body `{"task_token": null, "escrow_token": "<valid_escrow_jws>"}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### AUTH-13 Valid `task_token` with null `escrow_token` on task creation
 
@@ -175,7 +175,7 @@ These tests cover token format validation patterns not already tested in the mai
 **Action:** `POST /tasks` with body `{"task_token": "<valid_task_jws>", "escrow_token": null}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ---
 
@@ -207,7 +207,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `GET /tasks/{task_id}/bids` with no `Authorization` header.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### BEARER-04 Authorization header without "Bearer " prefix
 
@@ -215,7 +215,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `GET /tasks/{task_id}/bids` with header `Authorization: Token <jws(poster, {action: "list_bids", task_id: task_id})>`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### BEARER-05 Empty Bearer token
 
@@ -223,7 +223,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `GET /tasks/{task_id}/bids` with header `Authorization: Bearer `.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### BEARER-06 Malformed Bearer token (not three-part JWS)
 
@@ -231,7 +231,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `GET /tasks/{task_id}/bids` with header `Authorization: Bearer not-a-jws`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### BEARER-07 Tampered Bearer token (signature mismatch)
 
@@ -239,7 +239,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `GET /tasks/{task_id}/bids` with header `Authorization: Bearer <tampered_jws(poster, {action: "list_bids", task_id: task_id})>`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ### BEARER-08 Wrong `action` in Bearer JWS (sealed bid listing)
 
@@ -247,7 +247,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `GET /tasks/{task_id}/bids` with header `Authorization: Bearer <jws(poster, {action: "create_task", task_id: task_id})>` — action is `"create_task"` instead of `"list_bids"`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### BEARER-09 Wrong `action` in Bearer JWS (asset upload)
 
@@ -255,7 +255,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `POST /tasks/{task_id}/assets` with header `Authorization: Bearer <jws(worker, {action: "submit_bid", task_id: task_id})>` — action is `"submit_bid"` instead of `"upload_asset"`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### BEARER-10 Payload `task_id` mismatch with URL path (sealed bid listing)
 
@@ -263,7 +263,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `GET /tasks/{task_id}/bids` with header `Authorization: Bearer <jws(poster, {action: "list_bids", task_id: "t-different-uuid"})>` — payload `task_id` does not match URL.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### BEARER-11 Payload `task_id` mismatch with URL path (asset upload)
 
@@ -271,7 +271,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `POST /tasks/{task_id}/assets` with header `Authorization: Bearer <jws(worker, {action: "upload_asset", task_id: "t-different-uuid"})>` — payload `task_id` does not match URL.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### BEARER-12 Non-poster accessing sealed bids
 
@@ -279,7 +279,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `GET /tasks/{task_id}/bids` with header `Authorization: Bearer <jws(bidder, {action: "list_bids", task_id: task_id})>` — bidder is not the poster.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ### BEARER-13 Non-worker uploading asset
 
@@ -287,7 +287,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `POST /tasks/{task_id}/assets` with header `Authorization: Bearer <jws(rogue_agent, {action: "upload_asset", task_id: task_id})>` — rogue agent is not the assigned worker.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ---
 
@@ -349,7 +349,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `POST /tasks/{task_id}/cancel` with `jws(poster, {action: "escrow_lock", agent_id: poster.agent_id, amount: 100, task_id: "t-xxx"})` — a Central Bank action used on a Task Board endpoint.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### REPLAY-02 Court file_dispute token rejected on Task Board
 
@@ -357,7 +357,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `POST /tasks/{task_id}/ruling` with `jws(platform_agent, {action: "file_dispute", task_id: "t-xxx", claimant_id: "a-xxx", respondent_id: "a-xxx", claim: "...", escrow_id: "esc-xxx"})` — a Court action used on a Task Board endpoint.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### REPLAY-03 Reputation submit_feedback token rejected on Task Board
 
@@ -365,7 +365,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `POST /tasks/{task_id}/approve` with `jws(poster, {action: "submit_feedback", task_id: "t-xxx", from_agent_id: poster.agent_id, to_agent_id: "a-xxx", category: "spec_quality", rating: "satisfied"})` — a Reputation action used on a Task Board endpoint.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ---
 
@@ -373,7 +373,7 @@ The Task Board uses Bearer tokens for two endpoints:
 
 ### SEC-AUTH-01 Error envelope consistency for auth errors
 
-**Action:** Trigger each auth error code at least once (`INVALID_JWS`, `INVALID_PAYLOAD`, `FORBIDDEN`).
+**Action:** Trigger each auth error code at least once (`invalid_jws`, `invalid_payload`, `forbidden`).
 **Expected:** All responses have exactly:
 - top-level `error` (string)
 - top-level `message` (string)
@@ -381,7 +381,7 @@ The Task Board uses Bearer tokens for two endpoints:
 
 ### SEC-AUTH-02 No internal error leakage in auth failures
 
-**Action:** Trigger `INVALID_JWS` and `FORBIDDEN` errors.
+**Action:** Trigger `invalid_jws` and `forbidden` errors.
 **Expected:** `message` never includes stack traces, cryptographic details, private key material, internal file paths, or internal diagnostics.
 
 ### SEC-AUTH-03 JWS token reuse across services is rejected
@@ -390,7 +390,7 @@ The Task Board uses Bearer tokens for two endpoints:
 **Action:** `POST /tasks` with `{"task_token": "<create_account_jws>", "escrow_token": "<create_account_jws>"}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 - A token intended for another service cannot be used on the Task Board
 
 ---

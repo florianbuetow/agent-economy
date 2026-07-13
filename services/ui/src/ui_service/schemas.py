@@ -189,7 +189,6 @@ class AgentStats(BaseModel):
     total_spent: int
     spec_quality: SpecQualityStats
     delivery_quality: DeliveryQualityStats
-    current_streak: int
 
 
 class AgentListItem(BaseModel):
@@ -564,11 +563,3 @@ class ProxyIdentityResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     agent_id: str
-
-
-class ProxyTaskResponse(BaseModel):
-    """Generic proxy response wrapping task-board response data."""
-
-    model_config = ConfigDict(extra="forbid")
-    task_id: str
-    status: str

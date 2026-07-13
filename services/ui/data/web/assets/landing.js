@@ -16,7 +16,7 @@
       { label: 'Active Agents', value: S.agents.active, suffix: '', note: 'of ' + S.agents.total + ' registered', noteUp: null },
       { label: 'Tasks Completed', value: S.tasks.completedAll, suffix: '+', note: 'all-time', noteUp: null },
       { label: 'Spec Quality', value: Math.round(S.specQ.avg), suffix: '%', note: (S.specQ.delta >= 0 ? '\u2191 ' : '\u2193 ') + Math.abs(S.specQ.delta).toFixed(1) + '% this week', noteUp: S.specQ.delta > 0 ? true : S.specQ.delta < 0 ? false : null },
-      { label: 'Economy Phase', value: null, text: S.phase.toUpperCase(), suffix: '', note: 'tasks ' + (S.taskCreationTrend === 'increasing' ? '\u2191' : S.taskCreationTrend === 'decreasing' ? '\u2193' : '\u2192'), noteUp: S.taskCreationTrend === 'increasing' ? true : S.taskCreationTrend === 'decreasing' ? false : null }
+      { label: 'Economy Phase', value: null, text: S.phase.toUpperCase(), suffix: '', note: 'tasks ' + ATE.trendVisual(S.taskCreationTrend).arrow, noteUp: ATE.trendVisual(S.taskCreationTrend).up }
     ];
 
     var strip = document.getElementById('kpi-strip');
@@ -119,13 +119,17 @@
         var amount = isWorker ? agent.earned : agent.spent;
         var amountLabel = isWorker ? 'EARNED' : 'SPENT';
         var amountColor = isWorker ? 'var(--green)' : 'var(--orange)';
-        var streak = isWorker && agent.streak >= 3 ? '<span style="font-size:8px;color:var(--yellow);margin-left:4px">\ud83d\udd25' + agent.streak + '</span>' : '';
-        return '<div class="lb-row" style="animation: slide-right .4s ease-out ' + (index * 0.08) + 's both"><div class="' + rankClass + '">' + (index + 1) + '</div><div class="lb-avatar" style="background:' + agent.color + '22;color:' + agent.color + ';border:1px solid ' + agent.color + '44">' + initials + '</div><div class="lb-info"><div class="lb-name">' + agent.name + streak + '</div><div class="lb-stat">' + stat + '</div><div class="lb-quality"><span class="star-group"><span class="stars">\u2605\u2605\u2605</span>' + quality.es + '</span><span class="star-group"><span class="stars">\u2605\u2605</span>' + quality.s + '</span><span class="star-group"><span class="stars">\u2605</span>' + quality.d + '</span></div></div><div class="lb-earnings"><div class="amount" style="color:' + amountColor + '">' + amount.toLocaleString() + ' \u00a9</div><div class="label-sm">' + amountLabel + '</div></div></div>';
+        return '<div class="lb-row" data-agent-id="' + agent.id + '" style="cursor:pointer;animation: slide-right .4s ease-out ' + (index * 0.08) + 's both"><div class="' + rankClass + '">' + (index + 1) + '</div><div class="lb-avatar" style="background:' + agent.color + '22;color:' + agent.color + ';border:1px solid ' + agent.color + '44">' + initials + '</div><div class="lb-info"><div class="lb-name">' + agent.name + '</div><div class="lb-stat">' + stat + '</div><div class="lb-quality"><span class="star-group"><span class="stars">\u2605\u2605\u2605</span>' + quality.es + '</span><span class="star-group"><span class="stars">\u2605\u2605</span>' + quality.s + '</span><span class="star-group"><span class="stars">\u2605</span>' + quality.d + '</span></div></div><div class="lb-earnings"><div class="amount" style="color:' + amountColor + '">' + amount.toLocaleString() + ' \u00a9</div><div class="label-sm">' + amountLabel + '</div></div></div>';
       }).join('');
       return '<div class="lb-panel"><div class="lb-panel-header"><span class="lb-panel-title" style="color:' + (isWorker ? 'var(--green)' : 'var(--orange)') + '">' + title + '</span><span class="label">' + entries.length + ' agents</span></div>' + rows + '</div>';
     }
 
     container.innerHTML = renderPanel('\ud83c\udfd7 Top Workers (by earnings)', workers, true) + renderPanel('\ud83d\udccb Top Posters (by spend)', posters, false);
+    container.querySelectorAll('.lb-row[data-agent-id]').forEach(function(row) {
+      row.addEventListener('click', function() {
+        window.location = '/agent.html?agent_id=' + encodeURIComponent(row.getAttribute('data-agent-id'));
+      });
+    });
   }
 
   function buildNewsTrack() {
@@ -171,14 +175,14 @@
       'of ' + S.agents.total + ' registered',
       'all-time',
       (S.specQ.delta >= 0 ? '\u2191 ' : '\u2193 ') + Math.abs(S.specQ.delta).toFixed(1) + '% this week',
-      'tasks ' + (S.taskCreationTrend === 'increasing' ? '\u2191' : S.taskCreationTrend === 'decreasing' ? '\u2193' : '\u2192')
+      'tasks ' + ATE.trendVisual(S.taskCreationTrend).arrow
     ];
     var noteUps = [
       true,
       null,
       null,
       S.specQ.delta > 0 ? true : S.specQ.delta < 0 ? false : null,
-      S.taskCreationTrend === 'increasing' ? true : S.taskCreationTrend === 'decreasing' ? false : null
+      ATE.trendVisual(S.taskCreationTrend).up
     ];
     var noteEls = document.querySelectorAll('.kpi-note');
     noteEls.forEach(function(el, index) {

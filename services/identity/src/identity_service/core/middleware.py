@@ -52,6 +52,7 @@ class RequestValidationMiddleware:
                 error="unsupported_media_type",
                 message="Content-Type must be application/json",
                 status_code=415,
+                details={},
             )
             await response(scope, receive, send)
             return
@@ -71,6 +72,7 @@ class RequestValidationMiddleware:
                     error="payload_too_large",
                     message="Request body exceeds maximum allowed size",
                     status_code=413,
+                    details={},
                 )
                 await response(scope, receive, send)
                 return

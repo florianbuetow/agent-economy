@@ -6,22 +6,23 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn>=0.34.0",
-    "starlette>=0.47.2",
+    "starlette>=1.0.0",
     "pydantic>=2.10.0",
     "service-commons",
+    "service-clients",
     "httpx>=0.28.0",
-    "base-agent",
+    "service-auth",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
+    "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
     "pytest-asyncio>=0.24.0",
-    "cryptography>=44.0.0",
+    "cryptography>=48.0.1",
     "pytestarch[visualization]>=2.0.0",
     "httpx>=0.28.0",
-    "joserfc>=1.6.3",
+    "joserfc>=1.6.7",
     "ruff>=0.8.0",
     "mypy>=1.13.0",
     "pyright>=1.1.390",
@@ -32,15 +33,34 @@ dev = [
     "pip-audit>=2.7.0",
     "pygount>=1.8.0",
     "types-PyYAML>=6.0.0",
+    # Test-only: builds an in-process DB Gateway for the LedgerDbClient side of
+    # the bank-store parity contract suite (GAP-A10). Not a runtime dependency —
+    # never imported from src/.
+    "db-gateway-service",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv]
+constraint-dependencies = [
+    "gitpython>=3.1.50",
+    "idna>=3.15",
+    "msgpack>=1.2.1",
+    "pillow>=12.2.0",
+    "pip>=26.1.2",
+    "pydantic-settings>=2.14.2",
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.31",
+    "urllib3>=2.7.0",
+]
+
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
-base-agent = { path = "../../agents", editable = true }
+service-clients = { path = "../../libs/service-clients", editable = true }
+service-auth = { path = "../../libs/service-auth", editable = true }
+db-gateway-service = { path = "../db-gateway", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/central_bank_service"]
@@ -102,10 +122,6 @@ files = ["src"]
 module = "tests.*"
 disallow_untyped_defs = false
 
-[[tool.mypy.overrides]]
-module = ["base_agent", "base_agent.*"]
-ignore_missing_imports = true
-
 # === Bandit ===
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
@@ -152,7 +168,7 @@ DEP002 = [
     "uvicorn",
     "pydantic",
     "service-commons",
-    "base-agent",
+    "service-auth",
     "pytest",
     "pytest-cov",
     "pytest-asyncio",
@@ -170,4 +186,5 @@ DEP002 = [
     "pip-audit",
     "pygount",
     "types-PyYAML",
+    "db-gateway-service",
 ]

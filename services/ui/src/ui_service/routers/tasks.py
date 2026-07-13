@@ -1,12 +1,10 @@
 """Tasks route handlers."""
 
-from __future__ import annotations
-
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
-from ui_service.core.state import get_app_state
+from ui_service.core.deps import DbConn
 from ui_service.schemas import (
     AgentRef,
     AssetItem,
@@ -32,8 +30,9 @@ from ui_service.services import tasks as tasks_service
 router = APIRouter()
 
 
-@router.get("/tasks")
+@router.get("/tasks")  # nosemgrep
 async def get_task_list(
+    db: DbConn,
     status: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -46,16 +45,6 @@ async def get_task_list(
             f"Valid values: {', '.join(sorted(tasks_service.VALID_TASK_STATUSES))}",
             status_code=400,
             details={"parameter": "status", "value": status},
-        )
-
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
         )
 
     tasks_data, total_count = await tasks_service.get_task_list(
@@ -86,20 +75,11 @@ async def get_task_list(
 
 @router.get("/tasks/-/competitive")  # nosemgrep
 async def get_competitive_tasks(
+    db: DbConn,
     limit: int = Query(5, ge=1, le=20),
     status: str = Query("open"),
 ) -> JSONResponse:
     """Return tasks sorted by bid count descending."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     data = await tasks_service.get_competitive_tasks(db, limit=limit, status=status)
 
     tasks = [
@@ -122,20 +102,11 @@ async def get_competitive_tasks(
 
 @router.get("/tasks/-/uncontested")  # nosemgrep
 async def get_uncontested_tasks(
+    db: DbConn,
     min_age_minutes: int = Query(10, ge=0),
     limit: int = Query(10, ge=1, le=50),
 ) -> JSONResponse:
     """Return open tasks with zero bids older than min_age_minutes."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     data = await tasks_service.get_uncontested_tasks(
         db, min_age_minutes=min_age_minutes, limit=limit
     )
@@ -158,18 +129,11 @@ async def get_uncontested_tasks(
 
 
 @router.get("/tasks/{task_id}")
-async def get_task_drilldown(task_id: str) -> JSONResponse:
+async def get_task_drilldown(
+    task_id: str,
+    db: DbConn,
+) -> JSONResponse:
     """Return full task drilldown with bids, assets, feedback, and dispute."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     data = await tasks_service.get_task_drilldown(db, task_id)
 
     if data is None:

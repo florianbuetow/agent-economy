@@ -17,7 +17,7 @@ from tests.fakes.in_memory_agent_store import InMemoryAgentStore
 async def app(tmp_path):
     """Create a test app with a temporary database."""
     db_path = tmp_path / "test.db"
-    config_content = f"""
+    config_content = """
 service:
   name: "identity"
   version: "0.1.0"
@@ -28,10 +28,7 @@ server:
 logging:
   level: "WARNING"
   directory: "data/logs"
-database:
-  path: "{db_path}"
 crypto:
-  algorithm: "ed25519"
   public_key_prefix: "ed25519:"
   public_key_bytes: 32
   signature_bytes: 64
@@ -55,7 +52,6 @@ db_gateway:
         fake_store = InMemoryAgentStore(db_path=str(db_path))
         state.registry = AgentRegistry(
             store=fake_store,
-            algorithm=settings.crypto.algorithm,
             public_key_prefix=settings.crypto.public_key_prefix,
             public_key_bytes=settings.crypto.public_key_bytes,
             signature_bytes=settings.crypto.signature_bytes,

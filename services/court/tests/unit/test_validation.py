@@ -10,7 +10,6 @@ from court_service.routers.validation import (
     parse_json_body,
     require_action,
     require_non_empty_string,
-    require_platform_signer,
 )
 
 
@@ -80,20 +79,6 @@ def test_require_action_missing() -> None:
     with pytest.raises(ServiceError) as exc:
         require_action({}, "file_dispute")
     assert exc.value.error == "invalid_payload"
-
-
-@pytest.mark.unit
-def test_require_platform_signer_correct() -> None:
-    """require_platform_signer accepts matching platform agent."""
-    require_platform_signer({"agent_id": "agent-platform"}, "agent-platform")
-
-
-@pytest.mark.unit
-def test_require_platform_signer_wrong() -> None:
-    """require_platform_signer rejects wrong platform agent."""
-    with pytest.raises(ServiceError) as exc:
-        require_platform_signer({"agent_id": "agent-rogue"}, "agent-platform")
-    assert exc.value.error == "forbidden"
 
 
 @pytest.mark.unit

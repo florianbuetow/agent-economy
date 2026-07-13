@@ -44,6 +44,7 @@ CREATE TABLE bank_transactions (
     balance_after  INTEGER NOT NULL,
     reference      TEXT NOT NULL,               -- idempotency key (e.g. "salary_round_3", task_id)
     timestamp      TEXT NOT NULL,
+    event_id       INTEGER,                     -- event row emitted with this write; NULL for rows written before the column existed
 
     FOREIGN KEY (account_id) REFERENCES bank_accounts (account_id)
 );
@@ -63,6 +64,7 @@ CREATE TABLE bank_escrow (
     status           TEXT NOT NULL DEFAULT 'locked',  -- "locked" | "released" | "split"
     created_at       TEXT NOT NULL,
     resolved_at      TEXT,                      -- null while locked
+    event_id         INTEGER,                   -- event row emitted with this write; NULL for rows written before the column existed
 
     FOREIGN KEY (payer_account_id) REFERENCES bank_accounts (account_id)
 );
@@ -110,6 +112,9 @@ CREATE TABLE board_tasks (
 
     -- dispute / ruling
     dispute_reason           TEXT,
+    dispute_id               TEXT,             -- court claim id, "disp-<uuid4>"
+    rebuttal_deadline        TEXT,             -- court rebuttal window close (from file_claim)
+    rebuttal_submitted_at    TEXT,             -- set when the worker rebuttal is forwarded
     ruling_id                TEXT,
     worker_pct               INTEGER,          -- 0-100, court-determined
     ruling_summary           TEXT,

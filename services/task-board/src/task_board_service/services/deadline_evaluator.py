@@ -2,15 +2,28 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
+
+from service_commons.exceptions import ServiceError
+
+from task_board_service.logging import get_logger
+from task_board_service.services.task_db_client import PlatformHttpError
 
 if TYPE_CHECKING:
+    from service_auth.platform import PlatformAgent
+
     from task_board_service.services.escrow_coordinator import EscrowCoordinator
     from task_board_service.services.protocol import TaskStorageInterface
 
 # Terminal statuses — no further transitions
 _TERMINAL_STATUSES = frozenset({"approved", "cancelled", "ruled", "expired"})
+
+# Statuses the periodic sweep (Q-5, GAP-A3) visits every interval. This is exactly
+# the complement of _TERMINAL_STATUSES: every status a task can still transition
+# out of via evaluate_deadline.
+_SWEEPABLE_STATUSES: tuple[str, ...] = ("open", "accepted", "submitted", "disputed")
 
 
 def _now_iso() -> str:
@@ -21,9 +34,36 @@ def _now_iso() -> str:
 class DeadlineEvaluator:
     """Evaluates and applies deadline-driven task transitions."""
 
-    def __init__(self, store: TaskStorageInterface, escrow_coordinator: EscrowCoordinator) -> None:
+    def __init__(
+        self,
+        store: TaskStorageInterface,
+        escrow_coordinator: EscrowCoordinator,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        # Optional injected ``platform_agent`` (positional-after-two or keyword) so the
+        # evaluator stays constructible without Court wiring; when set, disputed tasks fire
+        # a platform-signed ruling trigger once the rebuttal window closes (GAP-A1). The
+        # variadic form avoids a default parameter value per project convention.
+        platform_agent: object | None = None
+        if len(args) > 1:
+            msg = "DeadlineEvaluator takes at most one positional arg after escrow_coordinator"
+            raise TypeError(msg)
+        if len(args) == 1:
+            platform_agent = args[0]
+        if "platform_agent" in kwargs:
+            if len(args) == 1:
+                msg = "platform_agent provided both positionally and by keyword"
+                raise TypeError(msg)
+            platform_agent = kwargs.pop("platform_agent")
+        if len(kwargs) > 0:
+            unknown = ", ".join(sorted(kwargs))
+            msg = f"Unexpected keyword argument(s): {unknown}"
+            raise TypeError(msg)
+
         self._store = store
         self._escrow_coordinator = escrow_coordinator
+        self._platform_agent = cast("PlatformAgent | None", platform_agent)
 
     @staticmethod
     def compute_deadline(base_timestamp: str | None, seconds: int) -> str | None:
@@ -60,7 +100,10 @@ class DeadlineEvaluator:
             )
             if bidding_deadline is not None:
                 deadline_dt = datetime.fromisoformat(bidding_deadline.replace("Z", "+00:00"))
-                if now >= deadline_dt and int(task["bid_count"]) == 0:
+                # Expire regardless of bid_count. A task that attracted bids but was
+                # never accepted has no other transition out of 'open', so guarding on
+                # bid_count == 0 left its escrow locked forever (T-035).
+                if now >= deadline_dt:
                     expired_at = _now_iso()
                     changed_rows = self._store.update_task(
                         str(task["task_id"]),
@@ -131,7 +174,50 @@ class DeadlineEvaluator:
                         if refreshed is not None:
                             task = refreshed
 
+        elif task["status"] == "disputed":
+            task = await self._maybe_trigger_ruling(task)
+
         return task
+
+    def _rebuttal_window_closed(self, task: dict[str, Any]) -> bool:
+        """Report whether ruling may proceed: a rebuttal exists or its deadline passed."""
+        if task.get("rebuttal_submitted_at") is not None:
+            return True
+        deadline = task.get("rebuttal_deadline")
+        if not isinstance(deadline, str) or deadline == "":
+            return False
+        deadline_dt = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+        return datetime.now(UTC) >= deadline_dt
+
+    async def _maybe_trigger_ruling(self, task: dict[str, Any]) -> dict[str, Any]:
+        """Fire the Court ruling trigger for a disputed task whose window has closed.
+
+        Idempotent against a concurrent or prior ruling: Court answers a re-trigger with
+        ``dispute_already_ruled``/``dispute_not_ready`` (surfaced as an HTTP error), which
+        is treated as "nothing to do here". Any failure leaves the task disputed so the
+        next lazy evaluation retries — a trigger is never lost — and never breaks the read
+        that provoked it.
+        """
+        if self._platform_agent is None or not self._rebuttal_window_closed(task):
+            return task
+        dispute_id = task.get("dispute_id")
+        if not isinstance(dispute_id, str) or dispute_id == "":
+            return task
+
+        try:
+            await self._platform_agent.trigger_ruling(dispute_id)
+        except (PlatformHttpError, ServiceError) as exc:
+            get_logger(__name__).warning(
+                "Ruling trigger did not complete; will retry on next evaluation",
+                extra={
+                    "task_id": str(task["task_id"]),
+                    "dispute_id": dispute_id,
+                    "error": str(exc),
+                },
+            )
+
+        refreshed = self._store.get_task(str(task["task_id"]))
+        return refreshed if refreshed is not None else task
 
     async def evaluate_deadlines_batch(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Evaluate deadlines for a list of tasks."""
@@ -140,3 +226,56 @@ class DeadlineEvaluator:
             evaluated = await self.evaluate_deadline(task)
             result.append(evaluated)
         return result
+
+    async def run_periodic_sweep(self, interval_seconds: int) -> None:
+        """Background loop sweeping non-terminal tasks through deadline evaluation.
+
+        Q-5 (GAP-A3): the only mechanism that guarantees forward progress when
+        nothing polls a task via the API — without this, deadline transitions and
+        ruling triggers depend entirely on an unrelated read arriving.
+
+        Runs until the enclosing asyncio task is cancelled (service shutdown).
+        Each task is evaluated one at a time via ``evaluate_deadline``, which does
+        real ``await``s (escrow retry, possible Court calls) — control is yielded
+        to the event loop between every task, so a large sweep never blocks other
+        requests. A single task's failure is logged and does not abort the sweep
+        or the loop; the next interval retries it.
+
+        Safe against a concurrent lazy evaluation of the same task (e.g. a request
+        handler reading it mid-sweep): ``evaluate_deadline`` transitions via
+        ``store.update_task(..., expected_status=...)``, a compare-and-swap that
+        only applies when the task is still in the expected status (see
+        ``InMemoryTaskStore.update_task`` and ``TaskDbClient.update_task``'s
+        ``constraints={"status": expected_status}`` forwarded to the gateway).
+        Whichever evaluation — sweep or lazy read — wins the race applies the
+        transition and releases escrow exactly once; the loser's update is a no-op.
+
+        Escrow failures are already handled inside ``EscrowCoordinator`` (caught,
+        logged, ``escrow_pending`` set for retry — never propagated). What can
+        still escape a single task's evaluation is the DB gateway itself being
+        transiently unreachable or erroring: ``TaskDbClient.update_task``/
+        ``get_task`` raise ``PlatformHttpError`` (connect/timeout) or
+        ``RuntimeError`` (non-2xx gateway response) with no internal handling.
+        Those two are caught here so one task's transient gateway failure
+        doesn't stop the rest of the sweep; any other exception is a genuine
+        bug and is left to propagate and fail loudly.
+        """
+        logger = get_logger(__name__)
+        while True:
+            await asyncio.sleep(interval_seconds)
+            for status in _SWEEPABLE_STATUSES:
+                tasks = self._store.list_tasks(
+                    status=status,
+                    poster_id=None,
+                    worker_id=None,
+                    limit=None,
+                    offset=None,
+                )
+                for task in tasks:
+                    try:
+                        await self.evaluate_deadline(task)
+                    except (PlatformHttpError, RuntimeError):
+                        logger.exception(
+                            "Deadline sweep failed for task; will retry next interval",
+                            extra={"task_id": str(task.get("task_id")), "status": status},
+                        )

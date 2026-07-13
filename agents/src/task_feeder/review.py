@@ -46,6 +46,8 @@ class ReviewLoop:
             or payload.get("deliverable", {}).get("answer")
             or ""
         )
+        if not submitted_answer:
+            submitted_answer = await self._fetch_submitted_answer_from_assets(task_id)
 
         raw_task = self._task_map[task_id]
         if check_answer(submitted_answer, raw_task.solutions):
@@ -56,11 +58,43 @@ class ReviewLoop:
         await self._agent.dispute_task(task_id, reason)
         return "disputed"
 
+    async def _fetch_submitted_answer_from_assets(self, task_id: str) -> str:
+        """Read the submitted answer from the worker's uploaded asset.
+
+        The real Task Board API has no ``submitted_answer``/``submission``/
+        ``deliverable`` field on the task payload — ``MathWorkerLoop`` uploads
+        its solution as a file asset (``{task_id}_solution.txt``, see
+        ``math_worker/loop.py:_phase_submitting``). Falls back here only when
+        the payload-based fields above are empty, so callers that already
+        provide a task payload with those fields (e.g. existing unit tests)
+        are unaffected.
+        """
+        try:
+            assets = await self._agent.list_assets(task_id)
+        except Exception:
+            logger.exception("Failed to list assets for task_id=%s", task_id)
+            return ""
+        if not assets:
+            return ""
+
+        latest = assets[-1]
+        asset_id = str(latest.get("asset_id", ""))
+        if not asset_id:
+            return ""
+
+        try:
+            content = await self._agent.download_asset(task_id, asset_id)
+        except Exception:
+            logger.exception("Failed to download asset_id=%s for task_id=%s", asset_id, task_id)
+            return ""
+
+        return content.decode("utf-8").strip()
+
     async def run(self, interval_seconds: int) -> None:
         """Continuously review submitted tasks for this poster."""
         while self._running:
             tasks = await self._agent.list_tasks(
-                status="SUBMITTED",
+                status="submitted",
                 poster_id=self._agent.agent_id,
             )
             for task in tasks:

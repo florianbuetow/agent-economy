@@ -4,31 +4,27 @@
 
 Agent Task Economy is a Python microservices project that implements a micro-economy where autonomous agents earn, spend, and compete for work. The system incentivizes precise task specifications through market pressure and dispute mechanics, using LLM-as-a-Judge panels for dispute resolution. The core thesis: AI is moving toward specification-driven development, so specification quality should be a first-class economic signal.
 
-The economy operates through five services: an Identity & PKI service for agent registration and Ed25519 signature verification, a Central Bank for ledger management and escrow, a Task Board for task lifecycle and bidding, a Reputation service for tracking specification and delivery quality, and a Civil Claims Court for LLM-based dispute resolution.
+The economy operates through seven services, an autonomous `agents/` runtime, and three shared libraries: an Identity & PKI service for agent registration and Ed25519 signature verification, a Central Bank for ledger management and escrow, a Task Board for task lifecycle and bidding, a Reputation service for tracking specification and delivery quality, a Civil Claims Court for LLM-based dispute resolution, a Database Gateway that owns the shared SQLite database and serializes all writes, and a UI service that renders live economy activity. The `agents/` runtime runs the economy unattended: a task-feeder agent posts tasks and autonomously accepts bids, math-worker agents bid and solve, and the feeder autonomously approves or disputes submissions — disputes reach a Court ruling via a periodic trigger in Task Board, with no demo script or human in the loop.
 
 ## Build & Run
 
 ```bash
 just help             # Show all available commands
-just init-all         # Initialize all service environments
-just start-all        # Start all services in background
-just stop-all         # Stop all locally running services
-just status           # Check health status of all services
-just test-all         # Run all tests
-just ci               # Run ALL CI checks (services, agents, integration, e2e)
-just ci-quiet         # Run ALL CI checks quietly
-just destroy-all      # Remove all virtual environments
+just init-all          # Initialize all service environments
+just start-all         # Start all services in background (4-tier dependency order)
+just provision         # Provision the treasury (idempotent; run once after first start-all)
+just stop-all          # Stop all locally running services
+just status            # Check health status of all services
+just test-all          # Run all tests
+just test-e2e          # Run e2e tests (restarts services with clean data)
+just ci                # Run ALL CI checks (structure, libs, services, agents, tools, integration, e2e)
+just ci-quiet          # Run ALL CI checks quietly
+just destroy-all       # Remove all virtual environments
 ```
 
 ### Docker
 
-```bash
-just docker-up        # Start all services (Docker)
-just docker-up-dev    # Start with hot reload
-just docker-down      # Stop all services
-just docker-logs [service]  # View logs
-just docker-build     # Build all Docker images
-```
+Docker mode was descoped (Q-6, ratified 2026-07-10): `docker-compose.yml`, every `services/*/Dockerfile`, and the root/per-service `docker-*` justfile recipes were deleted — zero current consumer and zero CI coverage. Local `just start-all` is the only supported way to run the stack until a real multi-host deployment target exists. See `docs/plans/2026-07-10-q6-docker-scope-decision.md`.
 
 ### Per-Service Commands
 
@@ -62,19 +58,47 @@ just code-audit       # Vulnerability scan
 - Always run `just test-all` or `just ci-quiet` to verify changes before claiming they work
 - **Tests are acceptance tests — do NOT modify existing test files.** Add new test files to cover new or additional requirements instead.
 - Tests must be marked with `@pytest.mark.unit`, `@pytest.mark.integration`, or `@pytest.mark.performance`
+- **Never claim a task is complete without showing verification output.** Run `just ci-quiet` and include the result in your response before saying "done."
+- Never close a tracker item in the same turn as the last code change -- always verify first.
+- After codex completes, always run `just ci-quiet` independently before reporting success. Never trust codex's self-reported completion.
+- "I believe this works" is not verification. Show the passing output.
+
+### Debugging
+
+- After any test or CI failure, STOP before attempting a fix:
+  1. State the root cause hypothesis in one sentence
+  2. Identify what changed that caused this failure
+  3. Only then propose and implement a fix
+- If the fix fails, form a NEW hypothesis -- do not retry the same approach with minor variations
+- If you've attempted 3 fixes for the same failure without success, step back and re-read the surrounding code for architectural context you may have missed
+- Never suppress errors, skip tests, or add try/except as a "fix" -- these are symptoms, not solutions
+
+### Iterative Development
+
+- During fix-test-fix cycles, use targeted test runs first:
+  - `just test-unit` for the specific service
+  - `uv run pytest tests/unit/test_<module>.py -x` for specific files
+- Run `just ci-quiet` only at checkpoints: after completing a logical unit, before committing, before declaring done
+- If you've run full CI more than 5 times in a session without it passing, stop and diagnose the root cause
 
 ## Architecture
 
 ```
 services/
   identity/             Agent registration & Ed25519 signature verification (port 8001)
-  central-bank/         Ledger, escrow, salary distribution (port 8002)
-  task-board/           Task lifecycle, bidding, contracts, asset store (port 8003)
+  central-bank/         Ledger, escrow lock/release/split, platform-credit funding (port 8002)
+  task-board/           Task lifecycle, bidding, acceptance, asset store (port 8003)
   reputation/           Spec quality & delivery quality scores, feedback (port 8004)
   court/                LLM-as-a-Judge dispute resolution (port 8005)
+  db-gateway/           Shared SQLite database gateway; owns all writes (port 8007)
+  ui/                   Web frontend / live economy dashboard (port 8008)
+agents/                 Autonomous runtime: base_agent, task_feeder, math_worker,
+                        fund_feeder_cli, treasury_provision_cli
 libs/
   service-commons/      Shared FastAPI infrastructure (config, logging, exceptions)
-tools/                  Simulation injector & CLI utilities
+  service-clients/      Shared HTTP client library for inter-service communication
+  service-auth/         Ed25519 PKI, JWS signing/verification, platform agents
+tools/                  Simulation injector (demo_replay) & CLI utilities (math_task_factory)
 tests/                  Cross-service integration tests
 config/
   semgrep/              Static analysis rules
@@ -86,9 +110,10 @@ docs/
     service-tests/      Test specs per service
   codex-tasks/          Phased implementation task plans for agents
   diagrams/             System diagrams and sequence diagrams
-  demo-scenarios/       Demo scenario descriptions
   explanations/         Technical explainers
   service-implementation-guide.md   How to implement a service from scaffolding
+openspec/
+  specs/                Canonical issue tracker (completion-backlog, delivery-governance)
 ```
 
 ### Service Layout
@@ -101,7 +126,6 @@ services/<service-dir>/
 ├── justfile                            # Service-specific commands
 ├── pyproject.toml                      # Dependencies and tool config
 ├── pyrightconfig.json                  # Strict type checking config
-├── Dockerfile                          # Container definition
 ├── src/<service_name>/
 │   ├── __init__.py                     # Package marker + __version__
 │   ├── app.py                          # FastAPI application factory (create_app)
@@ -150,40 +174,68 @@ See `docs/service-implementation-guide.md` for detailed file-by-file implementat
 - Application state is managed via a global `AppState` singleton initialized during lifespan
 - Business logic lives in `services/` — routers are thin wrappers that parse requests and call the services layer
 - Agents prove identity by signing payloads with Ed25519 private keys; the Identity service verifies signatures against stored public keys
+- Two-tier verification: platform-signed operations (e.g. central-bank, reputation) verify locally via `PlatformAgent` from `libs/service-auth`; agent-signed operations verify remotely via the Identity service
 - Ambiguous task specifications are judged in favor of the worker (core incentive mechanism)
 
 ### Service Dependencies
 
 ```
-Identity (port 8001) ← no dependencies (leaf service)
-Central Bank (port 8002) ← Identity
-Task Board (port 8003) ← Identity, Central Bank
-Reputation (port 8004) ← Identity
-Court (port 8005) ← Identity, Task Board, Reputation, Central Bank
+Identity (port 8001)       ← no dependencies (leaf service)
+Central Bank (port 8002)   ← Identity
+Task Board (port 8003)     ← Identity, Central Bank
+Reputation (port 8004)     ← Identity
+Court (port 8005)          ← Task Board (task context + record_ruling), Reputation (feedback)
+                              — platform-signer verification is local; never calls Central Bank
+DB Gateway (port 8007)     ← no dependencies (leaf persistence service; all other services read/write through it)
+UI (port 8008)             ← Identity (agent registration) + Task Board (post/accept-bid/approve/dispute,
+                              via a registered `operator` UserAgent); reads the shared database directly,
+                              read-only. (The operator's agent SDK also carries Central Bank/Reputation/Court
+                              clients, but no UI route calls them today.)
 ```
+
+Note the port numbering above has a deliberate one-port gap between Court and DB Gateway — that skipped port has never been assigned to any service in this system.
 
 ### Task Lifecycle
 
 ```
 1. POSTING      → Poster signs & publishes task (spec, reward, deadlines) → escrow locks funds
 2. BIDDING      → Agents submit signed bids (binding, no withdrawal)
-3. ACCEPTANCE   → Poster accepts a bid → platform co-signs contract → escrow locks funds
+3. ACCEPTANCE   → Bid winner is picked (poster or an autonomous acceptance loop) → execution deadline starts (escrow was already locked at posting; no separate contract artifact — a v1 scope decision)
 4. EXECUTION    → Agent works on task, clock is ticking (completion deadline)
 5. SUBMISSION   → Agent uploads deliverables to platform asset store
-6. REVIEW       → Poster has [configurable] window to review
+6. REVIEW       → Poster (human or autonomous review loop) has a configurable window to review
    ├─ APPROVE   → Full payout to agent, mutual feedback exchange
    ├─ TIMEOUT   → Auto-approve, full payout to agent
    └─ DISPUTE   → Poster files claim → agent submits rebuttal → Court
-7. RULING       → Judges evaluate → proportional payout → reputation scores updated
+7. RULING       → A periodic Task Board trigger reaches Court autonomously → judges evaluate → proportional payout → reputation scores updated
 ```
 
-## Delegating Work
-
-See [DELEGATE.md](DELEGATE.md) for instructions on delegating work to sub-agents via tmux.
+The `agents/` runtime (task-feeder + math-worker loops) can drive steps 1–7 end to end with no demo script and no human — see `agents/tests/e2e/test_unattended_economy.py`.
 
 ## Git Rules
 
 - **Never use `git -C <path>`** to operate on other worktrees. Always use the full `git` command from the current working directory.
+
+## Operating Mode
+
+### Autonomy
+- When the user gives a clear directive ("fix the tests", "update the README", "clean this up"), inspect the current state, determine what needs changing, execute, and report. Do NOT ask "what specifically?" or "shall I proceed?" -- figure it out.
+- Only ask clarifying questions when choices have genuinely different tradeoffs the user must decide between.
+- If a task is ambiguous but has an obvious default, do the obvious thing and mention your assumption.
+
+### Investigation First
+- When encountering unexpected behavior, investigate the codebase before asking the user. Read configs, check code, look at tests. The user hired you to investigate, not to be quizzed.
+- When the user says "why does X happen?", look at the code and answer. Do not ask them to explain their own codebase.
+
+### User's Words Are Law
+- When the user specifies a name for a class, variable, file, or concept, use that exact name. Do not substitute your own preferred name.
+- When the user provides a specification or references a document, restate the specific deliverable in one sentence before starting. If they say "create X", create exactly X -- not Y that seems related.
+
+### Conciseness
+- Lead with the answer or action, not the reasoning. Use bullet points, not paragraphs.
+- Do not over-explain. If the user wants more detail, they will ask.
+- After 2 corrections on the same task, STOP and restate your understanding: "To confirm, you need X because Y. Here is my revised approach: ..." Only proceed after the user confirms.
+- After 3 corrections, ask: "Should I try a completely different approach?"
 
 ## Code Style
 
@@ -202,6 +254,12 @@ See [DELEGATE.md](DELEGATE.md) for instructions on delegating work to sub-agents
 - Each service has its **own** virtual environment in `services/<name>/.venv/`
 - **Never** use: `pip install`, `python -m pip`, or `uv pip`
 - All dependencies declared in service's `pyproject.toml`
+
+### Shell Script Execution
+
+- **Always** run shell scripts directly: `./scriptname.sh` or `/tmp/scriptname.sh`
+- **Never** prefix with `bash`: ~~`bash scriptname.sh`~~ — use `./scriptname.sh` instead
+- Ensure scripts have the execute bit set: `chmod +x scriptname.sh` before first run
 
 ### Configuration
 
@@ -252,7 +310,7 @@ verify_signature(algorithm=settings.crypto.algorithm)
 - `data/` - runtime data (gitignored)
 - `reports/` - generated test artifacts
 - `uv.lock` - regenerated by `uv sync`
-- `libs/service-commons/` - shared library, changes affect all services
+- `libs/` - shared libraries (`service-commons`, `service-clients`, `service-auth`); changes affect all services
 
 ## Common Workflows
 
@@ -336,7 +394,7 @@ The plan references:
 
 ### Phase 3: Implement Tests (Separate Session, Worktree)
 
-Start a new git worktree for isolation. Delegate to a sub-agent (via `DELEGATE.md`) to implement **all tests before any features**.
+Start a new git worktree for isolation. Delegate to a sub-agent to implement **all tests before any features**.
 
 1. Create a worktree: `git worktree add .claude/worktrees/<service>-tests -b <service>-tests`
 2. Prime the agent with these documents (in order):
@@ -385,7 +443,6 @@ Start a new session. Delegate to a sub-agent to implement the service features.
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd sync
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -398,3 +455,18 @@ Start a new session. Delegate to a sub-agent to implement the service features.
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
+
+## Session Management
+
+- At 150 turns: proactively suggest checkpointing: "This session has 150+ turns. I recommend we commit, push, and start fresh to avoid context degradation."
+- At 200 turns: strongly recommend wrapping up.
+- Marathon sessions (>200 turns) correlate with 3x higher frustration and 2x higher correction rates.
+- When delegating to codex for long tasks, commit intermediate progress every 30-45 minutes.
+
+## Issue Tracking (OpenSpec)
+
+**Canonical tracker:** `openspec/specs/completion-backlog/spec.md` (stable `T-###` IDs). Governance rules live in `openspec/specs/delivery-governance/spec.md` (ratified decisions, ticket closure gate, failing-test-first).
+
+- New work items are added as `#### Scenario: T-###` entries in the completion backlog with WHEN/THEN acceptance wording.
+- An item closes only with its own failing-test-first proof **plus** `just ci-quiet` exit 0 from the repo root.
+- Do NOT use beads (`bd`), markdown TODO lists, or a root `tickets.md` — all retired (Q-1 decision, 2026-07-10).

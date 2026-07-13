@@ -5,16 +5,16 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
-from starlette.concurrency import run_in_threadpool
 
 from central_bank_service.core.state import get_app_state
 from central_bank_service.logging import get_logger
 from central_bank_service.routers.helpers import (
+    decode_unverified_payload,
     get_platform_agent_id,
     parse_json_body,
     require_account_owner,
-    require_platform,
     verify_jws_token,
+    verify_platform_signature,
 )
 
 router = APIRouter()
@@ -107,7 +107,7 @@ async def create_account(request: Request) -> JSONResponse:
             {},
         )
 
-    result = await run_in_threadpool(state.ledger.create_account, agent_id, initial_balance)
+    result = await state.ledger.create_account(agent_id, initial_balance)
 
     get_logger(__name__).info(
         "Account created",
@@ -121,7 +121,7 @@ async def create_account(request: Request) -> JSONResponse:
 
 @router.post("/accounts/{account_id}/credit")
 async def credit_account(request: Request, account_id: str) -> dict[str, object]:
-    """Add funds to an account. Platform-only."""
+    """Add funds to an account. Platform-signed, verified locally."""
     body = await request.body()
     data = parse_json_body(body)
 
@@ -139,10 +139,9 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
             details={},
         )
 
-    verified = await verify_jws_token(data["token"])
-    require_platform(verified["agent_id"], get_platform_agent_id())
+    # Validate payload shape before authorization so payload errors beat the 403 (T-033).
+    payload = decode_unverified_payload(data["token"])
 
-    payload = verified["payload"]
     action = payload.get("action")
     if action != "credit":
         raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
@@ -171,7 +170,10 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
     if not isinstance(reference, str):
         raise ServiceError("invalid_payload", "reference must be a string", 400, {})
 
-    result = await run_in_threadpool(state.ledger.credit, account_id, amount, reference)
+    # Platform authorization: local signature verification (survives Identity outage).
+    verify_platform_signature(data["token"])
+
+    result = await state.ledger.credit(account_id, amount, reference)
 
     get_logger(__name__).info(
         "Account credited",
@@ -228,7 +230,7 @@ async def get_balance(request: Request, account_id: str) -> dict[str, object]:
             details={},
         )
 
-    account = await run_in_threadpool(state.ledger.get_account, account_id)
+    account = await state.ledger.get_account(account_id)
     if account is None:
         raise ServiceError("account_not_found", "Account not found", 404, {})
 
@@ -278,7 +280,7 @@ async def get_transactions(request: Request, account_id: str) -> dict[str, list[
             details={},
         )
 
-    transactions = await run_in_threadpool(state.ledger.get_transactions, account_id)
+    transactions = await state.ledger.get_transactions(account_id)
     return {"transactions": transactions}
 
 

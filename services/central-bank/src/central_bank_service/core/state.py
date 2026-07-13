@@ -6,12 +6,10 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from central_bank_service.config import get_settings
-
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
+    from service_auth.platform import PlatformAgent
+    from service_clients.identity import IdentityClient
 
-    from central_bank_service.services.identity_client import IdentityClient
     from central_bank_service.services.protocol import LedgerStorageInterface
 
 
@@ -23,7 +21,6 @@ class AppState:
     ledger: LedgerStorageInterface | None = None
     identity_client: IdentityClient | None = None
     platform_agent: PlatformAgent | None = None
-    platform_agent_id: str = ""
 
     @property
     def uptime_seconds(self) -> float:
@@ -51,7 +48,7 @@ def get_app_state() -> AppState:
 
 def init_app_state() -> AppState:
     """Initialize application state. Called during startup."""
-    app_state = AppState(platform_agent_id=get_settings().platform.agent_id)
+    app_state = AppState()
     _state_container["app_state"] = app_state
     return app_state
 

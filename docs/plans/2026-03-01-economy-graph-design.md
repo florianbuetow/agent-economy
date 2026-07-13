@@ -1,3 +1,8 @@
+> **SUPERSEDED (2026-06-13, T-026):** This document targets a React/TypeScript/Vite frontend
+> that was never built. Decision: the UI stays vanilla JS — see
+> [2026-06-13-frontend-stack-decision.md](2026-06-13-frontend-stack-decision.md). The
+> animation remains wanted via T-094, to be implemented in plain JS.
+
 # Economy Graph — Design Document
 
 _2026-03-01. Approved design for the agent economy graph visualization._

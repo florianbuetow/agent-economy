@@ -19,7 +19,9 @@ database:
 
 identity:
   base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
   verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 
 central_bank:
   base_url: "http://localhost:8002"
@@ -44,3 +46,8 @@ request:
 db_gateway:
   url: "http://127.0.0.1:8007"
   timeout_seconds: 10
+
+# Q-5 (GAP-A3): periodic background sweep that pushes open/accepted/submitted/disputed
+# tasks through deadline evaluation without waiting for an API read to trigger it.
+deadline_evaluation:
+  evaluation_interval_seconds: 10

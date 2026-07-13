@@ -19,7 +19,7 @@ from task_board_service.config import clear_settings_cache
 from task_board_service.core.lifespan import lifespan
 from task_board_service.core.state import get_app_state, reset_app_state
 from tests.fakes.in_memory_task_store import InMemoryTaskStore
-from tests.helpers import generate_keypair, make_jws_token
+from tests.helpers import generate_keypair, make_jws_token, verify_compact_jws
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -138,19 +138,14 @@ platform:
   agent_id: "{PLATFORM_AGENT_ID}"
 request:
   max_body_size: 1048576
-deadlines:
-  default_bidding_seconds: 3600
-  default_execution_seconds: 86400
-  default_review_seconds: 86400
 limits:
-  max_title_length: 200
-  max_spec_length: 10000
-  max_reason_length: 2000
   max_file_size: 10485760
   max_assets_per_task: 20
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+deadline_evaluation:
+  evaluation_interval_seconds: 3600
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -171,7 +166,13 @@ db_gateway:
         # Mock PlatformAgent for local certificate validation
         mock_platform = MagicMock()
         mock_platform.agent_id = PLATFORM_AGENT_ID
-        mock_platform.validate_certificate = MagicMock(side_effect=_extract_payload)
+        mock_platform.validate_certificate = MagicMock(side_effect=verify_compact_jws)
+        mock_platform.file_claim = AsyncMock(
+            return_value={"dispute_id": "disp-1", "status": "rebuttal_pending"}
+        )
+        mock_platform.submit_rebuttal = AsyncMock(
+            return_value={"dispute_id": f"disp-{uuid.uuid4()}", "status": "rebuttal_pending"}
+        )
         mock_platform.close = AsyncMock()
         state.platform_agent = mock_platform
 
@@ -234,7 +235,7 @@ async def client(app: Any) -> AsyncIterator[AsyncClient]:
 def mock_identity_verify_success(_app: Any) -> None:
     """Configure the identity client mock to verify JWS successfully."""
     state = get_app_state()
-    state.platform_agent.validate_certificate = MagicMock(side_effect=_extract_payload)
+    state.platform_agent.validate_certificate = MagicMock(side_effect=verify_compact_jws)
     state.identity_client.verify_jws = AsyncMock(side_effect=_make_delegating_verify_jws(state))
     if state.token_validator is not None:
         state.token_validator._identity_client = state.identity_client
@@ -322,13 +323,6 @@ def mock_central_bank_unavailable(_app: Any) -> None:
 # ---------------------------------------------------------------------------
 # JWS helper utilities (used by token validation mocks)
 # ---------------------------------------------------------------------------
-
-
-def _extract_payload(token: str) -> dict[str, Any]:
-    """Extract the payload from a JWS compact token."""
-    payload_b64 = token.split(".")[1]
-    padded = payload_b64 + "=" * (4 - len(payload_b64) % 4)
-    return json.loads(base64.urlsafe_b64decode(padded))
 
 
 def _make_delegating_verify_jws(state_ref: Any) -> Any:
@@ -519,10 +513,14 @@ async def file_dispute(
     *,
     reason: str = "Work does not meet specification",
 ) -> Any:
-    """File a dispute via POST /tasks/{task_id}/dispute."""
+    """File a dispute via POST /tasks/{task_id}/dispute.
+
+    Uses the canonical 'dispute_task' action — the undocumented 'file_dispute'
+    alias was removed (T-036, exception #8).
+    """
     private_key = poster_keypair[0]
     payload = {
-        "action": "file_dispute",
+        "action": "dispute_task",
         "task_id": task_id,
         "poster_id": poster_id,
         "reason": reason,
@@ -540,11 +538,18 @@ async def submit_ruling(
     worker_pct: int = 50,
     ruling_summary: str = "Split ruling",
 ) -> Any:
-    """Submit a ruling via POST /tasks/{task_id}/ruling."""
+    """Submit a ruling via POST /tasks/{task_id}/ruling.
+
+    Uses the canonical 'record_ruling' action — the undocumented 'submit_ruling'
+    alias was removed (T-036). record_ruling always requires an explicit
+    ruling_id (the real Court caller generates and persists one for idempotent
+    retry, per T-040); this helper generates one the same way the alias used to.
+    """
     private_key = platform_keypair[0]
     payload = {
-        "action": "submit_ruling",
+        "action": "record_ruling",
         "task_id": task_id,
+        "ruling_id": f"rul-{uuid.uuid4()}",
         "worker_pct": worker_pct,
         "ruling_summary": ruling_summary,
     }

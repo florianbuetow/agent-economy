@@ -112,7 +112,7 @@ git commit -m "feat(ui): extract shared CSS into assets/style.css"
 
 **What:** Extract JavaScript that's shared across pages:
 
-1. **AGENTS roster** — the 10 mock agents array (used by all three pages). Use the richer version from the observatory mockup that includes `earned`, `spent`, `tc`, `tp`, `dq`, `sq`, `streak` fields.
+1. **AGENTS roster** — the 10 mock agents array (used by all three pages). Use the richer version from the observatory mockup that includes `earned`, `spent`, `tc`, `tp`, `dq`, `sq` fields.
 
 2. **Economy state object `S`** — the full economy state (GDP, agents, tasks, escrow, specQ, labor, phase, rewardDist). Use the observatory version as the canonical state.
 

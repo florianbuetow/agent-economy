@@ -2,10 +2,25 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from reputation_service.types import FeedbackRecord
+
+
+class JwsVerifier(Protocol):
+    """Protocol for verifying a JWS token.
+
+    Both the Identity HTTP client (agent operations) and the local platform verifier
+    (platform operations) implement this, so the feedback router can route by signer
+    without depending on either concrete class.
+    """
+
+    async def verify_jws(self, token: str) -> dict[str, Any]:
+        """Return ``{"valid": bool, "agent_id": str, "payload": dict}``."""
+        ...
+
+    async def close(self) -> None: ...
 
 
 class FeedbackStorageInterface(Protocol):

@@ -9,13 +9,14 @@ dependencies = [
     "pydantic>=2.10.0",
     "httpx>=0.28.0",
     "service-commons",
-    "base-agent",
+    "service-clients",
+    "service-auth",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "cryptography>=44.0.0",
-    "pytest>=8.0.0",
+    "cryptography>=48.0.1",
+    "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
     "pytest-asyncio>=0.24.0",
     "pytestarch[visualization]>=2.0.0",
@@ -36,9 +37,24 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv]
+constraint-dependencies = [
+    "gitpython>=3.1.50",
+    "idna>=3.15",
+    "msgpack>=1.2.1",
+    "pillow>=12.2.0",
+    "pip>=26.1.2",
+    "pydantic-settings>=2.14.2",
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.31",
+    "starlette>=1.0.1",
+    "urllib3>=2.7.0",
+]
+
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
-base-agent = { path = "../../agents", editable = true }
+service-clients = { path = "../../libs/service-clients", editable = true }
+service-auth = { path = "../../libs/service-auth", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/reputation_service"]
@@ -100,10 +116,6 @@ files = ["src"]
 module = "tests.*"
 disallow_untyped_defs = false
 
-[[tool.mypy.overrides]]
-module = ["base_agent", "base_agent.*"]
-ignore_missing_imports = true
-
 # === Bandit ===
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
@@ -150,7 +162,7 @@ DEP002 = [
     "uvicorn",
     "pydantic",
     "service-commons",
-    "base-agent",
+    "service-auth",
     "cryptography",
     "pytest",
     "pytest-cov",

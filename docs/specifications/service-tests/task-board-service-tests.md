@@ -19,7 +19,7 @@ All failing responses must be JSON in this format:
 
 ```json
 {
-  "error": "ERROR_CODE",
+  "error": "error_code",
   "message": "Human-readable description",
   "details": {}
 }
@@ -29,33 +29,33 @@ Required status/error mappings:
 
 | Status | Error Code                       | Required When |
 |--------|----------------------------------|---------------|
-| 400    | `INVALID_JSON`                  | Request body is malformed JSON |
-| 400    | `INVALID_JWS`                   | Token field is missing, null, non-string, empty, or not valid three-part compact serialization |
-| 400    | `INVALID_PAYLOAD`               | JWS payload is missing `action`, `action` does not match expected value, or required payload fields are missing |
-| 400    | `TOKEN_MISMATCH`                | `task_id` or `amount`/`reward` mismatch between `task_token` and `escrow_token` |
-| 400    | `INVALID_TASK_ID`               | `task_id` does not match `t-<uuid4>` format |
-| 400    | `INVALID_REWARD`                | Reward is not a positive integer |
-| 400    | `INVALID_DEADLINE`              | Any deadline value is not a positive integer |
-| 400    | `SELF_BID`                      | Poster attempts to bid on their own task |
-| 400    | `NO_FILE`                       | No file part in multipart upload request |
-| 400    | `NO_ASSETS`                     | Worker submits deliverable with no assets uploaded |
-| 400    | `INVALID_REASON`                | Dispute reason is empty or exceeds 10,000 characters |
-| 400    | `INVALID_WORKER_PCT`            | `worker_pct` is not an integer 0–100 |
-| 402    | `INSUFFICIENT_FUNDS`            | Central Bank reports insufficient funds for escrow lock |
-| 403    | `FORBIDDEN`                     | JWS signature is invalid, signer does not match required agent, or signer is not the platform agent |
-| 404    | `TASK_NOT_FOUND`                | Referenced `task_id` does not exist |
-| 404    | `BID_NOT_FOUND`                 | Referenced `bid_id` does not exist for this task |
-| 404    | `ASSET_NOT_FOUND`               | Referenced `asset_id` does not exist for this task |
-| 405    | `METHOD_NOT_ALLOWED`            | Unsupported HTTP method on a defined route |
-| 409    | `TASK_ALREADY_EXISTS`           | A task with this `task_id` already exists |
-| 409    | `INVALID_STATUS`                | Task is in wrong status for the requested operation |
-| 409    | `BID_ALREADY_EXISTS`            | This agent already bid on this task |
-| 409    | `TOO_MANY_ASSETS`               | Max assets per task reached |
-| 413    | `PAYLOAD_TOO_LARGE`             | Request body exceeds configured max body size |
-| 413    | `FILE_TOO_LARGE`                | Uploaded file exceeds configured max file size |
-| 415    | `UNSUPPORTED_MEDIA_TYPE`        | Wrong `Content-Type` (expected `application/json` or `multipart/form-data` depending on endpoint) |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE`  | Identity service is unreachable, times out, or returns unexpected response |
-| 502    | `CENTRAL_BANK_UNAVAILABLE`      | Central Bank is unreachable, times out, or escrow operation failed |
+| 400    | `invalid_json`                  | Request body is malformed JSON |
+| 400    | `invalid_jws`                   | Token field is missing, null, non-string, empty, or not valid three-part compact serialization |
+| 400    | `invalid_payload`               | JWS payload is missing `action`, `action` does not match expected value, or required payload fields are missing |
+| 400    | `token_mismatch`                | `task_id` or `amount`/`reward` mismatch between `task_token` and `escrow_token` |
+| 400    | `invalid_task_id`               | `task_id` does not match `t-<uuid4>` format |
+| 400    | `invalid_reward`                | Reward is not a positive integer |
+| 400    | `invalid_deadline`              | Any deadline value is not a positive integer |
+| 400    | `self_bid`                      | Poster attempts to bid on their own task |
+| 400    | `no_file`                       | No file part in multipart upload request |
+| 400    | `no_assets`                     | Worker submits deliverable with no assets uploaded |
+| 400    | `invalid_reason`                | Dispute reason is empty or exceeds 10,000 characters |
+| 400    | `invalid_worker_pct`            | `worker_pct` is not an integer 0–100 |
+| 402    | `insufficient_funds`            | Central Bank reports insufficient funds for escrow lock |
+| 403    | `forbidden`                     | JWS signature is invalid, signer does not match required agent, or signer is not the platform agent |
+| 404    | `task_not_found`                | Referenced `task_id` does not exist |
+| 404    | `bid_not_found`                 | Referenced `bid_id` does not exist for this task |
+| 404    | `asset_not_found`               | Referenced `asset_id` does not exist for this task |
+| 405    | `method_not_allowed`            | Unsupported HTTP method on a defined route |
+| 409    | `task_already_exists`           | A task with this `task_id` already exists |
+| 409    | `invalid_status`                | Task is in wrong status for the requested operation |
+| 409    | `bid_already_exists`            | This agent already bid on this task |
+| 409    | `too_many_assets`               | Max assets per task reached |
+| 413    | `payload_too_large`             | Request body exceeds configured max body size |
+| 413    | `file_too_large`                | Uploaded file exceeds configured max file size |
+| 415    | `unsupported_media_type`        | Wrong `Content-Type` (expected `application/json` or `multipart/form-data` depending on endpoint) |
+| 502    | `identity_service_unavailable`  | Identity service is unreachable, times out, or returns unexpected response |
+| 502    | `central_bank_unavailable`      | Central Bank is unreachable, times out, or escrow operation failed |
 
 ---
 
@@ -105,7 +105,7 @@ Required status/error mappings:
 **Action:** Attempt to create another task with the same `task_id`.
 **Expected:**
 - `409 Conflict`
-- `error = TASK_ALREADY_EXISTS`
+- `error = task_already_exists`
 
 ### TC-03 `task_id` format validation
 
@@ -114,22 +114,22 @@ Required status/error mappings:
 - `"a-550e8400-e29b-41d4-a716-446655440000"` (agent ID prefix)
 - `"t-invalid"`
 - `""` (empty string)
-**Expected:** `400`, `error = INVALID_TASK_ID` for each.
+**Expected:** `400`, `error = invalid_task_id` for each.
 
 ### TC-04 Missing `task_token`
 
 **Action:** `POST /tasks` with body `{"escrow_token": "<valid>"}`.
-**Expected:** `400`, `error = INVALID_JWS`
+**Expected:** `400`, `error = invalid_jws`
 
 ### TC-05 Missing `escrow_token`
 
 **Action:** `POST /tasks` with body `{"task_token": "<valid>"}`.
-**Expected:** `400`, `error = INVALID_JWS`
+**Expected:** `400`, `error = invalid_jws`
 
 ### TC-06 Both tokens missing
 
 **Action:** `POST /tasks` with body `{}`.
-**Expected:** `400`, `error = INVALID_JWS`
+**Expected:** `400`, `error = invalid_jws`
 
 ### TC-07 `task_token` is malformed JWS
 
@@ -139,37 +139,37 @@ Required status/error mappings:
 - `12345` (not a string)
 - `null`
 - `""` (empty string)
-**Expected:** `400`, `error = INVALID_JWS` for each.
+**Expected:** `400`, `error = invalid_jws` for each.
 
 ### TC-08 Wrong `action` in `task_token`
 
 **Setup:** Register `agent_alice`.
 **Action:** Sign `task_token` with `action: "submit_bid"` instead of `"create_task"`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### TC-09 Missing required fields in `task_token` payload
 
 **Setup:** Register `agent_alice`.
 **Action:** Omit each of `task_id`, `poster_id`, `title`, `spec`, `reward`, `bidding_deadline_seconds`, `deadline_seconds`, `review_deadline_seconds` from the `task_token` payload in separate requests.
-**Expected:** `400`, `error = INVALID_PAYLOAD` for each.
+**Expected:** `400`, `error = invalid_payload` for each.
 
 ### TC-10 Signer does not match `poster_id` in `task_token`
 
 **Setup:** Register `agent_alice` and `agent_bob`.
 **Action:** Alice signs a `task_token` with `poster_id: bob.id` (impersonation attempt).
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### TC-11 `task_id` mismatch between tokens
 
 **Setup:** Register `agent_alice`.
 **Action:** Sign `task_token` with `task_id: "t-aaa..."` and `escrow_token` with `task_id: "t-bbb..."`.
-**Expected:** `400`, `error = TOKEN_MISMATCH`
+**Expected:** `400`, `error = token_mismatch`
 
 ### TC-12 `reward`/`amount` mismatch between tokens
 
 **Setup:** Register `agent_alice`.
 **Action:** Sign `task_token` with `reward: 100` and `escrow_token` with `amount: 50`.
-**Expected:** `400`, `error = TOKEN_MISMATCH`
+**Expected:** `400`, `error = token_mismatch`
 
 ### TC-13 Invalid reward values
 
@@ -179,7 +179,7 @@ Required status/error mappings:
 - `1.5` (float)
 - `"one hundred"` (string)
 - `null`
-**Expected:** `400`, `error = INVALID_REWARD` for each.
+**Expected:** `400`, `error = invalid_reward` for each.
 
 ### TC-14a Invalid `bidding_deadline_seconds` values
 
@@ -188,7 +188,7 @@ Required status/error mappings:
 - `-3600`
 - `1.5` (float)
 - `"one hour"` (string)
-**Expected:** `400`, `error = INVALID_DEADLINE` for each.
+**Expected:** `400`, `error = invalid_deadline` for each.
 
 ### TC-14b Invalid `deadline_seconds` values
 
@@ -197,7 +197,7 @@ Required status/error mappings:
 - `-3600`
 - `1.5` (float)
 - `"one hour"` (string)
-**Expected:** `400`, `error = INVALID_DEADLINE` for each.
+**Expected:** `400`, `error = invalid_deadline` for each.
 
 ### TC-14c Invalid `review_deadline_seconds` values
 
@@ -206,14 +206,14 @@ Required status/error mappings:
 - `-3600`
 - `1.5` (float)
 - `"one hour"` (string)
-**Expected:** `400`, `error = INVALID_DEADLINE` for each.
+**Expected:** `400`, `error = invalid_deadline` for each.
 
 ### TC-15 Title validation
 
 **Action:** Submit task creation with these `title` values:
 - `""` (empty string)
 - String of 201 characters (one over limit)
-**Expected:** `400`, `error = INVALID_PAYLOAD` for each.
+**Expected:** `400`, `error = invalid_payload` for each.
 
 ### TC-16 Title at exactly max length is accepted
 
@@ -225,7 +225,7 @@ Required status/error mappings:
 **Action:** Submit task creation with these `spec` values:
 - `""` (empty string)
 - String of 10,001 characters (one over limit)
-**Expected:** `400`, `error = INVALID_PAYLOAD` for each.
+**Expected:** `400`, `error = invalid_payload` for each.
 
 ### TC-18 Spec at exactly max length is accepted
 
@@ -236,31 +236,31 @@ Required status/error mappings:
 
 **Setup:** Register `agent_alice` with insufficient balance.
 **Action:** Attempt to create a task with `reward: 10000` (exceeds balance).
-**Expected:** `402`, `error = INSUFFICIENT_FUNDS`
+**Expected:** `402`, `error = insufficient_funds`
 
 ### TC-20 Tampered `task_token`
 
 **Setup:** Register `agent_alice`. Construct a valid `task_token`, then alter the payload after signing.
 **Action:** `POST /tasks` with the tampered `task_token`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### TC-21 `task_token` signed by unregistered agent
 
 **Setup:** Generate a keypair that is NOT registered in the Identity service.
 **Action:** Sign a `task_token` with the unregistered keypair.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### TC-22 Identity service unavailable during task creation
 
 **Setup:** Configure Task Board to point to an Identity service that is not running.
 **Action:** `POST /tasks` with valid-looking tokens.
-**Expected:** `502`, `error = IDENTITY_SERVICE_UNAVAILABLE`
+**Expected:** `502`, `error = identity_service_unavailable`
 
 ### TC-23 Central Bank unavailable during escrow lock
 
 **Setup:** Register `agent_alice`. Configure Task Board to point to a Central Bank that is not running.
 **Action:** `POST /tasks` with valid tokens (Identity mock succeeds, Central Bank unreachable).
-**Expected:** `502`, `error = CENTRAL_BANK_UNAVAILABLE`
+**Expected:** `502`, `error = central_bank_unavailable`
 
 ### TC-24 Mass-assignment resistance (extra fields in `task_token`)
 
@@ -276,17 +276,17 @@ Required status/error mappings:
 ### TC-25 Malformed JSON body
 
 **Action:** Send truncated/invalid JSON to `POST /tasks`.
-**Expected:** `400`, `error = INVALID_JSON`
+**Expected:** `400`, `error = invalid_json`
 
 ### TC-26 Wrong content type
 
 **Action:** `Content-Type: text/plain` with JSON-looking body.
-**Expected:** `415`, `error = UNSUPPORTED_MEDIA_TYPE`
+**Expected:** `415`, `error = unsupported_media_type`
 
 ### TC-27 Oversized request body
 
 **Action:** Send a body exceeding `request.max_body_size`.
-**Expected:** `413`, `error = PAYLOAD_TOO_LARGE`
+**Expected:** `413`, `error = payload_too_large`
 
 ### TC-28 Escrow rollback on database failure
 
@@ -312,7 +312,7 @@ Required status/error mappings:
 ### TQ-02 Get non-existent task
 
 **Action:** `GET /tasks/t-00000000-0000-0000-0000-000000000000`
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### TQ-03 Malformed task ID in path
 
@@ -324,7 +324,7 @@ Required status/error mappings:
 ### TQ-04 SQL injection in task ID path
 
 **Action:** `GET /tasks/' OR '1'='1`
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### TQ-05 List tasks (empty system)
 
@@ -411,47 +411,47 @@ Required status/error mappings:
 
 **Setup:** Alice creates a task. Register `agent_bob`.
 **Action:** Bob attempts to cancel: `jws(bob, {action: "cancel_task", task_id, poster_id: bob.id})`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### CAN-03 Impersonation: Bob signs with `poster_id: alice.id`
 
 **Setup:** Alice creates a task. Register `agent_bob`.
 **Action:** `jws(bob, {action: "cancel_task", task_id, poster_id: alice.id})`.
-**Expected:** `403`, `error = FORBIDDEN` (signer `bob` != `poster_id` `alice`)
+**Expected:** `403`, `error = forbidden` (signer `bob` != `poster_id` `alice`)
 
 ### CAN-04 Cannot cancel non-OPEN task
 
 **Setup:** Create a task and accept a bid (ACCEPTED status).
 **Action:** Poster attempts to cancel.
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### CAN-05 Cancel non-existent task
 
 **Action:** `POST /tasks/t-00000000-0000-0000-0000-000000000000/cancel` with valid JWS.
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### CAN-06 Wrong `action` in cancel token
 
 **Setup:** Alice creates a task.
 **Action:** `jws(alice, {action: "approve_task", task_id, poster_id: alice.id})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### CAN-07 Central Bank unavailable during escrow release on cancel
 
 **Setup:** Alice creates a task. Configure Central Bank mock to return error on release.
 **Action:** Poster cancels.
-**Expected:** `502`, `error = CENTRAL_BANK_UNAVAILABLE`
+**Expected:** `502`, `error = central_bank_unavailable`
 
 ### CAN-08 Malformed token on cancel
 
 **Action:** `POST /tasks/{task_id}/cancel` with `{"token": "not-a-jws"}`.
-**Expected:** `400`, `error = INVALID_JWS`
+**Expected:** `400`, `error = invalid_jws`
 
 ### CAN-09 `task_id` in payload must match URL path
 
 **Setup:** Alice creates task_1 and task_2.
 **Action:** `POST /tasks/{task_1}/cancel` with `jws(alice, {action: "cancel_task", task_id: task_2, poster_id: alice.id})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ---
 
@@ -481,48 +481,48 @@ Required status/error mappings:
 
 **Setup:** Alice creates a task.
 **Action:** Alice bids on her own task: `jws(alice, {action: "submit_bid", task_id, bidder_id: alice.id, proposal: "..."})`.
-**Expected:** `400`, `error = SELF_BID`
+**Expected:** `400`, `error = self_bid`
 
 ### BID-04 Duplicate bid is rejected
 
 **Setup:** Alice creates a task. Bob bids.
 **Action:** Bob bids again on the same task.
-**Expected:** `409`, `error = BID_ALREADY_EXISTS`
+**Expected:** `409`, `error = bid_already_exists`
 
 ### BID-05 Bid on non-OPEN task is rejected
 
 **Setup:** Create a task, accept a bid (ACCEPTED status).
 **Action:** Carol bids.
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### BID-06 Bid on non-existent task
 
 **Action:** `POST /tasks/t-00000000-0000-0000-0000-000000000000/bids` with valid JWS.
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### BID-07 Signer does not match `bidder_id`
 
 **Setup:** Alice creates a task. Register `agent_bob` and `agent_carol`.
 **Action:** Bob signs a bid with `bidder_id: carol.id` (impersonation).
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### BID-08 Wrong `action` in bid token
 
 **Setup:** Alice creates a task. Register `agent_bob`.
 **Action:** `jws(bob, {action: "create_task", task_id, bidder_id: bob.id, proposal: "..."})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### BID-09 Missing `proposal` field
 
 **Setup:** Alice creates a task. Register `agent_bob`.
 **Action:** `jws(bob, {action: "submit_bid", task_id, bidder_id: bob.id})` — no `proposal` field.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### BID-10 Empty proposal
 
 **Setup:** Alice creates a task. Register `agent_bob`.
 **Action:** Submit bid with `proposal: ""`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### BID-11 Proposal at max length (10,000 characters)
 
@@ -534,13 +534,13 @@ Required status/error mappings:
 
 **Setup:** Alice creates a task. Register `agent_bob`.
 **Action:** Submit bid with proposal of 10,001 characters.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### BID-13 `task_id` in payload must match URL path
 
 **Setup:** Alice creates task_1 and task_2. Register `agent_bob`.
 **Action:** `POST /tasks/{task_1}/bids` with `jws(bob, {action: "submit_bid", task_id: task_2, bidder_id: bob.id, proposal: "..."})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### BID-14 Concurrent duplicate bid race is safe
 
@@ -548,12 +548,12 @@ Required status/error mappings:
 **Action:** Send both simultaneously.
 **Expected:**
 - Exactly one `201 Created`
-- Exactly one `409 Conflict` with `BID_ALREADY_EXISTS`
+- Exactly one `409 Conflict` with `bid_already_exists`
 
 ### BID-15 Malformed token on bid
 
 **Action:** `POST /tasks/{task_id}/bids` with `{"token": ""}`.
-**Expected:** `400`, `error = INVALID_JWS`
+**Expected:** `400`, `error = invalid_jws`
 
 ---
 
@@ -572,13 +572,13 @@ Required status/error mappings:
 
 **Setup:** Alice creates a task. Bob bids.
 **Action:** `GET /tasks/{task_id}/bids` with `Authorization: Bearer <jws(bob, {action: "list_bids", task_id, poster_id: bob.id})>`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### BL-03 No auth header during OPEN phase returns error
 
 **Setup:** Alice creates a task.
 **Action:** `GET /tasks/{task_id}/bids` with no `Authorization` header.
-**Expected:** `400`, `error = INVALID_JWS`
+**Expected:** `400`, `error = invalid_jws`
 
 ### BL-04 Bids are public after acceptance
 
@@ -609,7 +609,7 @@ Required status/error mappings:
 ### BL-08 List bids for non-existent task
 
 **Action:** `GET /tasks/t-00000000-0000-0000-0000-000000000000/bids`
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ---
 
@@ -631,48 +631,48 @@ Required status/error mappings:
 
 **Setup:** Alice creates a task. Bob bids. Register `agent_carol`.
 **Action:** Carol attempts to accept: `jws(carol, {action: "accept_bid", task_id, bid_id, poster_id: carol.id})`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### BA-03 Accept non-existent bid
 
 **Setup:** Alice creates a task.
 **Action:** `POST /tasks/{task_id}/bids/bid-00000000-0000-0000-0000-000000000000/accept` with valid poster JWS.
-**Expected:** `404`, `error = BID_NOT_FOUND`
+**Expected:** `404`, `error = bid_not_found`
 
 ### BA-04 Cannot accept bid on non-OPEN task
 
 **Setup:** Alice creates a task. Bob bids. Alice accepts. Carol had also bid.
 **Action:** Alice attempts to accept Carol's bid (task is already ACCEPTED).
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### BA-05 Accept bid on non-existent task
 
 **Action:** `POST /tasks/t-00000000-0000-0000-0000-000000000000/bids/bid-xxx/accept` with valid JWS.
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### BA-06 Wrong `action` in accept token
 
 **Setup:** Alice creates a task. Bob bids.
 **Action:** `jws(alice, {action: "cancel_task", task_id, bid_id, poster_id: alice.id})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### BA-07 Impersonation on accept
 
 **Setup:** Alice creates a task. Bob bids. Register `agent_carol`.
 **Action:** Carol signs JWS with `poster_id: alice.id`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### BA-08 `bid_id` in payload must match URL path
 
 **Setup:** Alice creates a task. Bob and Carol both bid.
 **Action:** `POST /tasks/{task_id}/bids/{bob_bid_id}/accept` with JWS containing `bid_id: carol_bid_id`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### BA-09 `task_id` in payload must match URL path
 
 **Setup:** Alice creates task_1 and task_2. Bob bids on task_1.
 **Action:** `POST /tasks/{task_1}/bids/{bid_id}/accept` with JWS containing `task_id: task_2`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### BA-10 Accepting a bid updates `bid_count` correctly
 
@@ -704,37 +704,37 @@ Required status/error mappings:
 
 **Setup:** Create a task, accept Bob. Register `agent_carol`.
 **Action:** Carol attempts to upload: `Authorization: Bearer <jws(carol, {action: "upload_asset", task_id, worker_id: carol.id})>`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### AU-03 Poster cannot upload
 
 **Setup:** Alice creates a task, accepts Bob.
 **Action:** Alice attempts to upload: `Authorization: Bearer <jws(alice, {action: "upload_asset", task_id, worker_id: alice.id})>`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### AU-04 Cannot upload to non-ACCEPTED task
 
 **Setup:** Create a task (OPEN status, no bid accepted yet).
 **Action:** Worker attempts to upload.
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### AU-05 File exceeds max size
 
 **Setup:** Create a task, accept Bob. Configure `assets.max_file_size` to a small value.
 **Action:** Upload a file exceeding the limit.
-**Expected:** `413`, `error = FILE_TOO_LARGE`
+**Expected:** `413`, `error = file_too_large`
 
 ### AU-06 Max files per task exceeded
 
 **Setup:** Create a task, accept Bob. Configure `assets.max_files_per_task` to 2. Upload 2 files.
 **Action:** Upload a third file.
-**Expected:** `409`, `error = TOO_MANY_ASSETS`
+**Expected:** `409`, `error = too_many_assets`
 
 ### AU-07 No file part in request
 
 **Setup:** Create a task, accept Bob.
 **Action:** `POST /tasks/{task_id}/assets` with `Authorization` header but no `file` part in multipart.
-**Expected:** `400`, `error = NO_FILE`
+**Expected:** `400`, `error = no_file`
 
 ### AU-08 Multiple uploads accumulate
 
@@ -747,19 +747,19 @@ Required status/error mappings:
 ### AU-09 Upload to non-existent task
 
 **Action:** `POST /tasks/t-00000000-0000-0000-0000-000000000000/assets` with valid JWS and file.
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### AU-10 Wrong `action` in upload token
 
 **Setup:** Create a task, accept Bob.
 **Action:** `Authorization: Bearer <jws(bob, {action: "submit_bid", task_id, worker_id: bob.id})>`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### AU-11 Impersonation on upload
 
 **Setup:** Create a task, accept Bob. Register `agent_carol`.
 **Action:** Carol signs JWS with `worker_id: bob.id`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ---
 
@@ -797,14 +797,14 @@ Required status/error mappings:
 
 **Setup:** Create a task.
 **Action:** `GET /tasks/{task_id}/assets/asset-00000000-0000-0000-0000-000000000000`
-**Expected:** `404`, `error = ASSET_NOT_FOUND`
+**Expected:** `404`, `error = asset_not_found`
 
 ### AR-05 Asset endpoints for non-existent task
 
 **Action:**
 - `GET /tasks/t-00000000-0000-0000-0000-000000000000/assets`
 - `GET /tasks/t-00000000-0000-0000-0000-000000000000/assets/asset-xxx`
-**Expected:** `404`, `error = TASK_NOT_FOUND` for both.
+**Expected:** `404`, `error = task_not_found` for both.
 
 ### AR-06 Asset endpoints require no authentication
 
@@ -830,48 +830,48 @@ Required status/error mappings:
 
 **Setup:** Create a task, accept Bob. Bob uploads assets. Register `agent_carol`.
 **Action:** Carol submits: `jws(carol, {action: "submit_deliverable", task_id, worker_id: carol.id})`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### SUB-03 Poster cannot submit
 
 **Setup:** Alice creates a task, accepts Bob. Bob uploads assets.
 **Action:** Alice submits: `jws(alice, {action: "submit_deliverable", task_id, worker_id: alice.id})`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### SUB-04 Cannot submit without assets
 
 **Setup:** Create a task, accept Bob. No assets uploaded.
 **Action:** Bob submits.
-**Expected:** `400`, `error = NO_ASSETS`
+**Expected:** `400`, `error = no_assets`
 
 ### SUB-05 Cannot submit from non-ACCEPTED status
 
 **Setup:** Create a task (OPEN, no bid accepted).
 **Action:** Worker attempts to submit.
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### SUB-06 Cannot submit from SUBMITTED status (double submit)
 
 **Setup:** Create a task, accept Bob. Bob uploads assets and submits.
 **Action:** Bob submits again.
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### SUB-07 Wrong `action` in submit token
 
 **Setup:** Create a task, accept Bob. Bob uploads assets.
 **Action:** `jws(bob, {action: "upload_asset", task_id, worker_id: bob.id})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### SUB-08 Submit on non-existent task
 
 **Action:** `POST /tasks/t-00000000-0000-0000-0000-000000000000/submit` with valid JWS.
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### SUB-09 `task_id` in payload must match URL path
 
 **Setup:** Alice creates task_1 and task_2. Bob bids on task_1 and is accepted. Bob uploads an asset to task_1.
 **Action:** `POST /tasks/{task_1}/submit` with `jws(bob, {action: "submit_deliverable", task_id: task_2, worker_id: bob.id})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ---
 
@@ -891,48 +891,48 @@ Required status/error mappings:
 
 **Setup:** Full lifecycle to SUBMITTED. Register `agent_carol`.
 **Action:** Carol approves: `jws(carol, {action: "approve_task", task_id, poster_id: carol.id})`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### APP-03 Worker cannot approve
 
 **Setup:** Full lifecycle to SUBMITTED.
 **Action:** Bob approves: `jws(bob, {action: "approve_task", task_id, poster_id: bob.id})`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### APP-04 Cannot approve non-SUBMITTED task
 
 **Setup:** Create a task (OPEN status).
 **Action:** Poster approves.
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### APP-05 Cannot approve already-approved task
 
 **Setup:** Full lifecycle to APPROVED.
 **Action:** Poster approves again.
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### APP-06 Wrong `action` in approve token
 
 **Setup:** Full lifecycle to SUBMITTED.
 **Action:** `jws(alice, {action: "dispute_task", task_id, poster_id: alice.id})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### APP-07 Central Bank unavailable during escrow release on approve
 
 **Setup:** Full lifecycle to SUBMITTED. Configure Central Bank mock to return error on release.
 **Action:** Poster approves.
-**Expected:** `502`, `error = CENTRAL_BANK_UNAVAILABLE`
+**Expected:** `502`, `error = central_bank_unavailable`
 
 ### APP-08 Approve on non-existent task
 
 **Action:** `POST /tasks/t-00000000-0000-0000-0000-000000000000/approve` with valid JWS.
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### APP-09 `task_id` in payload must match URL path
 
 **Setup:** Full lifecycle to SUBMITTED on task_1. Alice also creates task_2.
 **Action:** `POST /tasks/{task_1}/approve` with `jws(alice, {action: "approve_task", task_id: task_2, poster_id: alice.id})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ---
 
@@ -952,31 +952,31 @@ Required status/error mappings:
 
 **Setup:** Full lifecycle to SUBMITTED. Register `agent_carol`.
 **Action:** Carol disputes: `jws(carol, {action: "dispute_task", task_id, poster_id: carol.id, reason: "..."})`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### DIS-03 Worker cannot dispute
 
 **Setup:** Full lifecycle to SUBMITTED.
 **Action:** Bob disputes: `jws(bob, {action: "dispute_task", task_id, poster_id: bob.id, reason: "..."})`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### DIS-04 Cannot dispute non-SUBMITTED task
 
 **Setup:** Create a task (OPEN status).
 **Action:** Poster disputes.
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### DIS-05 Empty dispute reason
 
 **Setup:** Full lifecycle to SUBMITTED.
 **Action:** Dispute with `reason: ""`.
-**Expected:** `400`, `error = INVALID_REASON`
+**Expected:** `400`, `error = invalid_reason`
 
 ### DIS-06 Dispute reason exceeding max length
 
 **Setup:** Full lifecycle to SUBMITTED.
 **Action:** Dispute with `reason` of 10,001 characters.
-**Expected:** `400`, `error = INVALID_REASON`
+**Expected:** `400`, `error = invalid_reason`
 
 ### DIS-07 Dispute reason at exactly max length (10,000 characters)
 
@@ -988,18 +988,18 @@ Required status/error mappings:
 
 **Setup:** Full lifecycle to SUBMITTED.
 **Action:** `jws(alice, {action: "approve_task", task_id, poster_id: alice.id, reason: "..."})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### DIS-09 Dispute on non-existent task
 
 **Action:** `POST /tasks/t-00000000-0000-0000-0000-000000000000/dispute` with valid JWS.
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### DIS-10 `task_id` in payload must match URL path
 
 **Setup:** Full lifecycle to SUBMITTED on task_1. Alice also creates task_2.
 **Action:** `POST /tasks/{task_1}/dispute` with `jws(alice, {action: "dispute_task", task_id: task_2, poster_id: alice.id, reason: "Mismatch test"})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ---
 
@@ -1021,13 +1021,13 @@ Required status/error mappings:
 
 **Setup:** Full lifecycle to DISPUTED. Register `agent_alice`.
 **Action:** Alice attempts: `jws(alice, {action: "record_ruling", task_id, ruling_id: "rul-xxx", worker_pct: 50, ruling_summary: "..."})`.
-**Expected:** `403`, `error = FORBIDDEN`
+**Expected:** `403`, `error = forbidden`
 
 ### RUL-03 Cannot rule on non-DISPUTED task
 
 **Setup:** Full lifecycle to SUBMITTED (not disputed).
 **Action:** Platform records ruling.
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### RUL-04 `worker_pct` boundary: 0 (full poster win)
 
@@ -1050,48 +1050,48 @@ Required status/error mappings:
 - `50.5` (float)
 - `"fifty"` (string)
 - `null`
-**Expected:** `400`, `error = INVALID_WORKER_PCT` for each.
+**Expected:** `400`, `error = invalid_worker_pct` for each.
 
 ### RUL-07 Missing required fields in ruling payload
 
 **Setup:** Full lifecycle to DISPUTED.
 **Action:** Omit each of `ruling_id`, `worker_pct`, `ruling_summary` in separate requests.
-**Expected:** `400`, `error = INVALID_PAYLOAD` for each.
+**Expected:** `400`, `error = invalid_payload` for each.
 
 ### RUL-08 Empty `ruling_summary`
 
 **Setup:** Full lifecycle to DISPUTED.
 **Action:** Ruling with `ruling_summary: ""`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### RUL-09 Empty `ruling_id`
 
 **Setup:** Full lifecycle to DISPUTED.
 **Action:** Ruling with `ruling_id: ""`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### RUL-10 Wrong `action` in ruling token
 
 **Setup:** Full lifecycle to DISPUTED.
 **Action:** `jws(platform_agent, {action: "approve_task", task_id, ...})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ### RUL-11 Ruling on non-existent task
 
 **Action:** `POST /tasks/t-00000000-0000-0000-0000-000000000000/ruling` with valid platform JWS.
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### RUL-12 Cannot rule twice
 
 **Setup:** Full lifecycle to RULED.
 **Action:** Platform records another ruling.
-**Expected:** `409`, `error = INVALID_STATUS`
+**Expected:** `409`, `error = invalid_status`
 
 ### RUL-13 `task_id` in payload must match URL path
 
 **Setup:** Full lifecycle to DISPUTED on task_1. Alice also creates task_2.
 **Action:** `POST /tasks/{task_1}/ruling` with `jws(platform_agent, {action: "record_ruling", task_id: task_2, ruling_id: "rul-<uuid4>", worker_pct: 50, ruling_summary: "Mismatch test"})`.
-**Expected:** `400`, `error = INVALID_PAYLOAD`
+**Expected:** `400`, `error = invalid_payload`
 
 ---
 
@@ -1162,7 +1162,7 @@ Required status/error mappings:
 
 **Setup:** Alice creates a task with `bidding_deadline_seconds: 1`.
 **Action:** Wait 2 seconds. Bob attempts to bid.
-**Expected:** `409`, `error = INVALID_STATUS` (task is expired, not open).
+**Expected:** `409`, `error = invalid_status` (task is expired, not open).
 
 ### LIFE-08 Concurrent deadline expiration is safe
 
@@ -1175,13 +1175,13 @@ Required status/error mappings:
 ### LIFE-09 Terminal states block all mutations
 
 **Action:** For each terminal state (CANCELLED, APPROVED, RULED, EXPIRED), attempt:
-- Cancel (expect `409 INVALID_STATUS`)
-- Submit bid (expect `409 INVALID_STATUS`)
-- Submit deliverable (expect `409 INVALID_STATUS`)
-- Approve (expect `409 INVALID_STATUS`)
-- Dispute (expect `409 INVALID_STATUS`)
-- Record ruling (expect `409 INVALID_STATUS`)
-**Expected:** All attempts return `409`, `error = INVALID_STATUS`.
+- Cancel (expect `409 invalid_status`)
+- Submit bid (expect `409 invalid_status`)
+- Submit deliverable (expect `409 invalid_status`)
+- Approve (expect `409 invalid_status`)
+- Dispute (expect `409 invalid_status`)
+- Record ruling (expect `409 invalid_status`)
+**Expected:** All attempts return `409`, `error = invalid_status`.
 
 ### LIFE-10 Deadline evaluation does not affect tasks in terminal states
 
@@ -1195,22 +1195,22 @@ Required status/error mappings:
 
 **Setup:** Create a task, accept Bob (ACCEPTED status).
 **Action:**
-- Cancel attempt: `409 INVALID_STATUS`
-- Bid attempt: `409 INVALID_STATUS`
-- Approve attempt: `409 INVALID_STATUS`
-- Dispute attempt: `409 INVALID_STATUS`
-- Ruling attempt: `409 INVALID_STATUS`
+- Cancel attempt: `409 invalid_status`
+- Bid attempt: `409 invalid_status`
+- Approve attempt: `409 invalid_status`
+- Dispute attempt: `409 invalid_status`
+- Ruling attempt: `409 invalid_status`
 **Expected:** Only upload and submit are valid in ACCEPTED status. All others rejected.
 
 ### LIFE-12 Operations on SUBMITTED task only (not ACCEPTED, not OPEN)
 
 **Setup:** Full lifecycle to SUBMITTED.
 **Action:**
-- Cancel attempt: `409 INVALID_STATUS`
-- Bid attempt: `409 INVALID_STATUS`
-- Upload attempt: `409 INVALID_STATUS`
-- Submit attempt: `409 INVALID_STATUS`
-- Ruling attempt: `409 INVALID_STATUS`
+- Cancel attempt: `409 invalid_status`
+- Bid attempt: `409 invalid_status`
+- Upload attempt: `409 invalid_status`
+- Submit attempt: `409 invalid_status`
+- Ruling attempt: `409 invalid_status`
 **Expected:** Only approve and dispute are valid in SUBMITTED status. All others rejected.
 
 ---
@@ -1265,7 +1265,7 @@ Required status/error mappings:
 - `POST /tasks/{id}/dispute` — `GET`, `PUT`, `DELETE` → `405`
 - `POST /tasks/{id}/ruling` — `GET`, `PUT`, `DELETE` → `405`
 - `GET /health` — `POST`, `PUT`, `DELETE` → `405`
-**Expected:** `405`, `error = METHOD_NOT_ALLOWED` for each.
+**Expected:** `405`, `error = method_not_allowed` for each.
 
 ---
 
@@ -1276,60 +1276,60 @@ These tests verify that errors are returned in the documented precedence order w
 ### PREC-01 Content-Type checked before token validation
 
 **Action:** `POST /tasks` with `Content-Type: text/plain` and body `{"task_token": "invalid"}`.
-**Expected:** `415`, `error = UNSUPPORTED_MEDIA_TYPE` (NOT `400 INVALID_JWS`)
+**Expected:** `415`, `error = unsupported_media_type` (NOT `400 invalid_jws`)
 
 ### PREC-02 Body size checked before token validation
 
 **Action:** `POST /tasks` with `Content-Type: application/json` and a body exceeding `request.max_body_size`.
-**Expected:** `413`, `error = PAYLOAD_TOO_LARGE` (NOT `400 INVALID_JWS`)
+**Expected:** `413`, `error = payload_too_large` (NOT `400 invalid_jws`)
 
 ### PREC-03 JSON parsing checked before token validation
 
 **Action:** `POST /tasks` with `Content-Type: application/json` and body `{not json`.
-**Expected:** `400`, `error = INVALID_JSON` (NOT `400 INVALID_JWS`)
+**Expected:** `400`, `error = invalid_json` (NOT `400 invalid_jws`)
 
 ### PREC-04 Token validation checked before payload validation
 
 **Action:** `POST /tasks/{id}/cancel` with `{"token": 12345}`.
-**Expected:** `400`, `error = INVALID_JWS` (NOT `400 INVALID_PAYLOAD`)
+**Expected:** `400`, `error = invalid_jws` (NOT `400 invalid_payload`)
 
 ### PREC-05 Identity service checked before payload validation
 
 **Setup:** Configure Task Board to point to a non-running Identity service.
 **Action:** `POST /tasks/{id}/cancel` with a syntactically valid JWS.
-**Expected:** `502`, `error = IDENTITY_SERVICE_UNAVAILABLE` (NOT `400 INVALID_PAYLOAD`)
+**Expected:** `502`, `error = identity_service_unavailable` (NOT `400 invalid_payload`)
 
 ### PREC-06 Signature validity checked before payload content
 
 **Setup:** Register `agent_alice`. Create a tampered JWS with `action: "wrong_action"`.
 **Action:** `POST /tasks/{id}/cancel` with the tampered JWS (invalid signature AND wrong action).
-**Expected:** `403`, `error = FORBIDDEN` (NOT `400 INVALID_PAYLOAD`)
+**Expected:** `403`, `error = forbidden` (NOT `400 invalid_payload`)
 
 ### PREC-07 Payload `action` checked before signer matching
 
 **Setup:** Register `agent_alice` and `agent_bob`. Alice creates a task.
 **Action:** Bob sends cancel with `jws(bob, {action: "submit_bid", task_id, poster_id: alice.id})` (wrong action AND signer mismatch for poster operations).
-**Expected:** `400`, `error = INVALID_PAYLOAD` (NOT `403 FORBIDDEN`)
+**Expected:** `400`, `error = invalid_payload` (NOT `403 forbidden`)
 
 ### PREC-08 Task lookup checked before role-dependent signer matching
 
 **Setup:** Register `agent_alice` and `agent_bob`.
 **Action:** Bob cancels non-existent task: `jws(bob, {action: "cancel_task", task_id: "t-00000000-0000-0000-0000-999999999999", poster_id: bob.id})`.
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
-Signer-role matching (step 9: "is this signer the task's poster?") requires loading the task record. Since the task does not exist, `TASK_NOT_FOUND` fires first. The signer's signature validity was already confirmed at step 6.
+Signer-role matching (step 9: "is this signer the task's poster?") requires loading the task record. Since the task does not exist, `task_not_found` fires first. The signer's signature validity was already confirmed at step 6.
 
 ### PREC-09 Task status checked before domain validation
 
 **Setup:** Create a task and approve it (APPROVED, terminal).
 **Action:** Poster disputes: `jws(alice, {action: "dispute_task", task_id, poster_id: alice.id, reason: ""})` (wrong status AND empty reason).
-**Expected:** `409`, `error = INVALID_STATUS` (NOT `400 INVALID_REASON`)
+**Expected:** `409`, `error = invalid_status` (NOT `400 invalid_reason`)
 
 ### PREC-10 Token mismatch checked before Central Bank errors
 
 **Setup:** Register `agent_alice`. Configure Central Bank to be unavailable.
 **Action:** `POST /tasks` with mismatched `task_id` between tokens.
-**Expected:** `400`, `error = TOKEN_MISMATCH` (NOT `502 CENTRAL_BANK_UNAVAILABLE`)
+**Expected:** `400`, `error = token_mismatch` (NOT `502 central_bank_unavailable`)
 
 ---
 
@@ -1345,7 +1345,7 @@ Signer-role matching (step 9: "is this signer the task's poster?") requires load
 
 ### SEC-02 No internal error leakage
 
-**Action:** Trigger representative failures (`INVALID_JSON`, `FORBIDDEN`, `TASK_NOT_FOUND`, `INVALID_STATUS`, `CENTRAL_BANK_UNAVAILABLE`).
+**Action:** Trigger representative failures (`invalid_json`, `forbidden`, `task_not_found`, `invalid_status`, `central_bank_unavailable`).
 **Expected:** `message` never includes stack traces, SQL fragments, file paths, private key material, internal service URLs, or driver internals.
 
 ### SEC-03 Task IDs are opaque and client-generated format
@@ -1372,7 +1372,7 @@ Signer-role matching (step 9: "is this signer the task's poster?") requires load
 
 **Setup:** Register `agent_alice` and `agent_bob`. Alice creates a task. Bob submits a bid (captures bid JWS token).
 **Action:** Replay Bob's bid JWS against `POST /tasks/{task_id}/submit`.
-**Expected:** `400`, `error = INVALID_PAYLOAD` (action is `"submit_bid"`, expected `"submit_deliverable"`)
+**Expected:** `400`, `error = invalid_payload` (action is `"submit_bid"`, expected `"submit_deliverable"`)
 
 ### SEC-08 SQL injection in path parameters
 
@@ -1390,7 +1390,7 @@ Signer-role matching (step 9: "is this signer the task's poster?") requires load
 - `GET /tasks/{valid_task_id}/assets/../../etc/passwd`
 - `GET /tasks/{valid_task_id}/assets/../../../config.yaml`
 **Expected:**
-- `404`, `error = ASSET_NOT_FOUND`
+- `404`, `error = asset_not_found`
 - No file content leaked from outside the asset store
 
 ---

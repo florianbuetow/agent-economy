@@ -9,7 +9,8 @@ from service_commons.exceptions import ServiceError
 from task_board_service.logging import get_logger
 
 if TYPE_CHECKING:
-    from task_board_service.clients.central_bank_client import CentralBankClient
+    from service_clients.bank import BankClient
+
     from task_board_service.services.protocol import TaskStorageInterface
 
 
@@ -18,7 +19,7 @@ class EscrowCoordinator:
 
     def __init__(
         self,
-        central_bank_client: CentralBankClient,
+        central_bank_client: BankClient,
         store: TaskStorageInterface,
     ) -> None:
         self._central_bank_client = central_bank_client
