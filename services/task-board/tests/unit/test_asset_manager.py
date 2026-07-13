@@ -11,7 +11,7 @@ import pytest
 from service_commons.exceptions import ServiceError
 
 from task_board_service.services.asset_manager import AssetManager
-from task_board_service.services.task_store import TaskStore
+from tests.fakes.in_memory_task_store import InMemoryTaskStore as TaskStore
 
 if TYPE_CHECKING:
     from pathlib import Path

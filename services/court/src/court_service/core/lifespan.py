@@ -94,7 +94,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         timeout_seconds=settings.db_gateway.timeout_seconds,
     )
     state.store = store
-    orchestrator = RulingOrchestrator(store=store)
+    orchestrator = RulingOrchestrator(
+        store=store,
+        feedback_extremely_satisfied_cutoff=settings.disputes.feedback_extremely_satisfied_cutoff,
+        feedback_satisfied_cutoff=settings.disputes.feedback_satisfied_cutoff,
+        feedback_comment_max_length=settings.disputes.feedback_comment_max_length,
+    )
     state.dispute_service = DisputeService(store=store, orchestrator=orchestrator)
 
     # Instantiate the platform agent from the agent config.

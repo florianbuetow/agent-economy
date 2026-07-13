@@ -345,3 +345,7 @@ Defects and scope gaps discovered while executing the 2026-07-09 refactoring pla
 #### Scenario: T-107 UI Playwright suite has test-ordering state leakage
 - **WHEN** the full `services/ui/tests/e2e` Playwright suite runs together (`pytest tests/e2e -m e2e`, all files)
 - **THEN** every test passes regardless of ordering: today 11-13 failures appear in `test_task_lifecycle.py`/`test_observatory.py` from cross-test state leakage (phase strip reads "Settle" early, worker_pct/ruling mismatches, off-by-one reward bucket) — reproduced on the unmodified baseline 2026-07-13 (WP-08), pre-existing; the suite had never been run as a whole (wired to nothing). Fix belongs with WP-13's suite wiring (T-072/F-3 area)
+
+#### Scenario: T-108 drop the click PYSEC ignore once semgrep unpins
+- **WHEN** semgrep releases a version whose click requirement admits >=8.3.3
+- **THEN** the `--ignore-vuln PYSEC-2026-2132` flag (added 2026-07-13 to every service justfile's code-audit because semgrep 1.169.0 still pins `click~=8.1.8`, making the advisory's fix unreachable in the dev envs) is removed and click upgraded

@@ -22,17 +22,6 @@ async def execute_query(
     return list(await cursor.fetchall())
 
 
-async def execute_query_one(
-    db: aiosqlite.Connection,
-    sql: str,
-    params: tuple[Any, ...],
-) -> aiosqlite.Row | None:
-    """Execute a read-only query and return first row or None."""
-    db.row_factory = aiosqlite.Row
-    cursor = await db.execute(sql, params)
-    return await cursor.fetchone()
-
-
 async def execute_scalar(
     db: aiosqlite.Connection,
     sql: str,

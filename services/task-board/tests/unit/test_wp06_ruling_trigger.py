@@ -17,7 +17,7 @@ import httpx
 import pytest
 
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
-from task_board_service.services.in_memory_task_store import InMemoryTaskStore
+from tests.fakes.in_memory_task_store import InMemoryTaskStore
 
 
 def _now() -> datetime:

@@ -41,13 +41,6 @@ class LoggingConfig(BaseModel):
     directory: str
 
 
-class DatabaseConfig(BaseModel):
-    """Database configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    path: str
-
-
 class PlatformConfig(BaseModel):
     """Platform agent configuration."""
 
@@ -75,6 +68,11 @@ class DisputesConfig(BaseModel):
     rebuttal_deadline_seconds: int
     max_claim_length: int
     max_rebuttal_length: int
+    # WP-11 (exception #11): feedback cutoffs and comment cap de-hardcoded off
+    # RulingOrchestrator's ruling->feedback-rating mapping.
+    feedback_extremely_satisfied_cutoff: int
+    feedback_satisfied_cutoff: int
+    feedback_comment_max_length: int
 
 
 class JudgeConfig(BaseModel):
@@ -142,7 +140,6 @@ class Settings(BaseModel):
     service: ServiceConfig
     server: ServerConfig
     logging: LoggingConfig
-    database: DatabaseConfig
     platform: PlatformConfig
     disputes: DisputesConfig
     judges: JudgesConfig

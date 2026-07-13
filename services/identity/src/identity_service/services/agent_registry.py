@@ -56,13 +56,11 @@ class AgentRegistry:
     def __init__(
         self,
         store: IdentityStorageInterface,
-        algorithm: str,
         public_key_prefix: str,
         public_key_bytes: int,
         signature_bytes: int,
     ) -> None:
         self._store = store
-        self._algorithm = algorithm
         self._public_key_prefix = public_key_prefix
         self._public_key_bytes = public_key_bytes
         self._signature_bytes = signature_bytes

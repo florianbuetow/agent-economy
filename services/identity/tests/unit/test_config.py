@@ -21,10 +21,7 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
-database:
-  path: "data/test.db"
 crypto:
-  algorithm: "ed25519"
   public_key_prefix: "ed25519:"
   public_key_bytes: 32
   signature_bytes: 64
@@ -40,7 +37,6 @@ request:
 
     assert isinstance(settings, Settings)
     assert settings.service.name == "identity"
-    assert settings.database.path == "data/test.db"
     assert settings.crypto.public_key_bytes == 32
     assert settings.request.max_body_size == 1572864
 
@@ -62,10 +58,7 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
-database:
-  path: "data/test.db"
 crypto:
-  algorithm: "ed25519"
   public_key_prefix: "ed25519:"
   public_key_bytes: 32
   signature_bytes: 64

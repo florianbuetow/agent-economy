@@ -19,12 +19,14 @@ def _settings_with(mock_worker_pct: int, max_deliverable_bytes: int) -> Settings
         service={"name": "court", "version": "0.1.0"},
         server={"host": "127.0.0.1", "port": 8005, "log_level": "info"},
         logging={"level": "WARNING", "directory": "data/logs"},
-        database={"path": "data/court.db"},
         platform=PlatformConfig(agent_id="a-platform"),
         disputes={
             "rebuttal_deadline_seconds": 86400,
             "max_claim_length": 10000,
             "max_rebuttal_length": 10000,
+            "feedback_extremely_satisfied_cutoff": 80,
+            "feedback_satisfied_cutoff": 40,
+            "feedback_comment_max_length": 256,
         },
         judges=JudgesConfig(
             panel_size=1,

@@ -9,7 +9,7 @@ import pytest
 from freezegun import freeze_time
 
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
-from task_board_service.services.task_store import TaskStore
+from tests.fakes.in_memory_task_store import InMemoryTaskStore as TaskStore
 
 
 def _task_data(

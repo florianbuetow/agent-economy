@@ -11,9 +11,9 @@ if TYPE_CHECKING:
 
     from service_auth import PlatformSigner
     from service_auth.platform import PlatformAgent
+    from service_clients.bank import BankClient
     from service_clients.identity import IdentityClient
 
-    from task_board_service.clients.central_bank_client import CentralBankClient
     from task_board_service.services.asset_manager import AssetManager
     from task_board_service.services.escrow_coordinator import EscrowCoordinator
     from task_board_service.services.protocol import TaskStorageInterface
@@ -27,7 +27,7 @@ class AppState:
 
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     task_manager: TaskManager | None = None
-    central_bank_client: CentralBankClient | None = None
+    central_bank_client: BankClient | None = None
     platform_signer: PlatformSigner | None = None
     platform_agent: PlatformAgent | None = None
     identity_client: IdentityClient | None = None

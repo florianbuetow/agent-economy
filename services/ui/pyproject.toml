@@ -12,7 +12,6 @@ dependencies = [
     "service-auth",
     "aiosqlite>=0.20.0",
     "sse-starlette>=2.2.1",
-    "pyjwt>=2.13.0",
 ]
 
 [project.optional-dependencies]
@@ -170,7 +169,6 @@ extend_exclude = [".venv", "tests"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = [
-    "pyjwt",
     "uvicorn",
     "pytest",
     "pytest-cov",

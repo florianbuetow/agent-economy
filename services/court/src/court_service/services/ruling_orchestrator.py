@@ -92,8 +92,17 @@ class DeliverableFetcher:
 class RulingOrchestrator:
     """Orchestrates judge evaluation and ruling side effects."""
 
-    def __init__(self, store: DisputeStorageInterface) -> None:
+    def __init__(
+        self,
+        store: DisputeStorageInterface,
+        feedback_extremely_satisfied_cutoff: int,
+        feedback_satisfied_cutoff: int,
+        feedback_comment_max_length: int,
+    ) -> None:
         self._store = store
+        self._extremely_satisfied_cutoff = feedback_extremely_satisfied_cutoff
+        self._satisfied_cutoff = feedback_satisfied_cutoff
+        self._comment_max_length = feedback_comment_max_length
 
     @staticmethod
     def _normalize_deliverables(value: object) -> list[str]:
@@ -144,19 +153,17 @@ class RulingOrchestrator:
             voted_at=voted_at,
         )
 
-    @staticmethod
-    def _delivery_rating(worker_pct: int) -> str:
-        if worker_pct >= 80:
+    def _delivery_rating(self, worker_pct: int) -> str:
+        if worker_pct >= self._extremely_satisfied_cutoff:
             return "extremely_satisfied"
-        if worker_pct >= 40:
+        if worker_pct >= self._satisfied_cutoff:
             return "satisfied"
         return "dissatisfied"
 
-    @staticmethod
-    def _spec_rating(worker_pct: int) -> str:
-        if worker_pct >= 80:
+    def _spec_rating(self, worker_pct: int) -> str:
+        if worker_pct >= self._extremely_satisfied_cutoff:
             return "dissatisfied"
-        if worker_pct >= 40:
+        if worker_pct >= self._satisfied_cutoff:
             return "satisfied"
         return "extremely_satisfied"
 
@@ -250,8 +257,6 @@ class RulingOrchestrator:
         ruling_summary = "\n\n".join(v.reasoning for v in votes)
         return median_worker_pct, ruling_summary
 
-    _MAX_FEEDBACK_COMMENT_LENGTH = 256
-
     async def _record_feedback(
         self,
         platform_agent: PlatformAgent,
@@ -260,7 +265,7 @@ class RulingOrchestrator:
         ruling_summary: str,
     ) -> None:
         platform_agent_id = platform_agent.agent_id or ""
-        comment = ruling_summary[: self._MAX_FEEDBACK_COMMENT_LENGTH]
+        comment = ruling_summary[: self._comment_max_length]
 
         spec_feedback_payload: dict[str, object] = {
             "action": "submit_feedback",

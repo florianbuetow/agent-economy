@@ -116,19 +116,6 @@ class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, Court
         """
         return await self._http.request(method, url, **kwargs)
 
-    def get_tools(self) -> list[Any]:
-        """Return all @tool-decorated methods for use with Strands Agent.
-
-        Returns:
-            List of tool-decorated methods. Empty list if Strands is not installed.
-        """
-        tools: list[Any] = []
-        for attr_name in dir(self):
-            attr = getattr(self, attr_name, None)
-            if callable(attr) and hasattr(attr, "tool_definition"):
-                tools.append(attr)
-        return tools
-
     def validate_certificate(self, token: str) -> dict[str, object]:
         """Validate that a JWS token (certificate) was signed with this agent's private key.
 

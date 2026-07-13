@@ -117,18 +117,6 @@ def require_action(payload: dict[str, Any], expected_action: str) -> None:
         )
 
 
-def require_platform_signer(payload: dict[str, Any], platform_agent_id: str) -> None:
-    """Validate that signer agent_id matches platform agent."""
-    agent_id = payload.get("agent_id")
-    if not isinstance(agent_id, str) or agent_id != platform_agent_id:
-        raise ServiceError(
-            "forbidden",
-            "Only the platform agent can perform this operation",
-            403,
-            {},
-        )
-
-
 def require_non_empty_string(data: dict[str, Any], field: str) -> str:
     """Extract required non-empty string field."""
     value = data.get(field)

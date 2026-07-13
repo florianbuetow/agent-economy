@@ -94,7 +94,8 @@ class DbReader:
     def get_transactions(self, account_id: str) -> list[dict[str, Any]]:
         """Get transaction history for an account."""
         cursor = self._db.execute(
-            "SELECT tx_id, account_id, type, amount, balance_after, reference, timestamp "
+            "SELECT tx_id, account_id, type, amount, balance_after, reference, timestamp, "
+            "event_id "
             "FROM bank_transactions WHERE account_id = ? ORDER BY timestamp, tx_id",
             (account_id,),
         )
@@ -107,6 +108,7 @@ class DbReader:
                 "balance_after": row[4],
                 "reference": row[5],
                 "timestamp": row[6],
+                "event_id": row[7],
             }
             for row in cursor.fetchall()
         ]

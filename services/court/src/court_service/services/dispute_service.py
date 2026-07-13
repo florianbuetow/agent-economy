@@ -39,6 +39,12 @@ class DisputeService:
                 raise TypeError(msg)
             orchestrator_arg = kwargs.pop("orchestrator")
 
+        feedback_extremely_satisfied_cutoff = kwargs.pop(
+            "feedback_extremely_satisfied_cutoff", None
+        )
+        feedback_satisfied_cutoff = kwargs.pop("feedback_satisfied_cutoff", None)
+        feedback_comment_max_length = kwargs.pop("feedback_comment_max_length", None)
+
         if len(kwargs) > 0:
             unknown = ", ".join(sorted(kwargs))
             msg = f"Unexpected keyword argument(s): {unknown}"
@@ -46,7 +52,22 @@ class DisputeService:
 
         self._store = store
         if orchestrator_arg is None:
-            self._orchestrator = RulingOrchestrator(store)
+            if (
+                not isinstance(feedback_extremely_satisfied_cutoff, int)
+                or not isinstance(feedback_satisfied_cutoff, int)
+                or not isinstance(feedback_comment_max_length, int)
+            ):
+                msg = (
+                    "feedback_extremely_satisfied_cutoff, feedback_satisfied_cutoff, and "
+                    "feedback_comment_max_length are required when orchestrator is not provided"
+                )
+                raise TypeError(msg)
+            self._orchestrator = RulingOrchestrator(
+                store,
+                feedback_extremely_satisfied_cutoff=feedback_extremely_satisfied_cutoff,
+                feedback_satisfied_cutoff=feedback_satisfied_cutoff,
+                feedback_comment_max_length=feedback_comment_max_length,
+            )
         elif isinstance(orchestrator_arg, RulingOrchestrator):
             self._orchestrator = orchestrator_arg
         else:

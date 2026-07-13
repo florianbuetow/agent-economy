@@ -9,7 +9,6 @@ dependencies = [
     "starlette>=1.0.1",
     "pydantic>=2.10.0",
     "service-commons",
-    "pyjwt>=2.13.0",
 ]
 
 [project.optional-dependencies]
@@ -156,7 +155,6 @@ extend_exclude = [".venv", "tests"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = [
-    "pyjwt",
     "uvicorn",
     "pytest",
     "pytest-cov",

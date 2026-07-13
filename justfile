@@ -30,6 +30,15 @@
 #      E.g. printf "\033[31m✗ ci failed: tests exited with errors\033[0m\n"
 # =============================================================================
 
+# --- Service ports (single source; used via {{port_name}} interpolation below) ---
+port_identity := "8001"
+port_central_bank := "8002"
+port_task_board := "8003"
+port_reputation := "8004"
+port_court := "8005"
+port_db_gateway := "8007"
+port_ui := "8008"
+
 # Default recipe: show help
 _default:
     @just help
@@ -124,7 +133,6 @@ check:
     check_tool "curl"    curl    "--version"
     check_tool "jq"      jq      "--version"
     check_tool "lsof"    lsof    "-v"
-    check_tool "bd"      bd      "--version"
     check_tool "just"    just    "--version"
 
     printf "\n"
@@ -236,8 +244,8 @@ start-all:
 
     # Tier 1: DB Gateway first (creates economy.db needed by UI)
     printf "Starting tier 1 (DB Gateway)...\n"
-    cd services/db-gateway && uv run uvicorn db_gateway_service.app:create_app --factory --host 127.0.0.1 --port 8007 &
-    wait_for_health "DB Gateway" 8007
+    cd services/db-gateway && uv run uvicorn db_gateway_service.app:create_app --factory --host 127.0.0.1 --port {{port_db_gateway}} &
+    wait_for_health "DB Gateway" {{port_db_gateway}}
 
     # Tier 2: Identity first. It is the leaf service that central-bank,
     # task-board, reputation, and court each register their platform agent
@@ -246,26 +254,26 @@ start-all:
     # had bound its socket, raising httpx.ConnectError and aborting that
     # service's lifespan ("Application startup failed. Exiting.").
     printf "Starting tier 2 (Identity)...\n"
-    cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host 127.0.0.1 --port 8001 &
-    if ! wait_for_health "Identity" 8001; then
+    cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host 127.0.0.1 --port {{port_identity}} &
+    if ! wait_for_health "Identity" {{port_identity}}; then
         printf "\033[0;31m✗ Identity did not become healthy; aborting startup\033[0m\n"
         exit 1
     fi
     # Fully-online gate: confirm the registry actually serves reads, not just
     # that the port is bound. Dependents will POST /agents/register, so assert
     # GET /agents answers before launching them.
-    if ! curl -s --connect-timeout 1 "http://localhost:8001/agents" | grep -q '"agents"'; then
+    if ! curl -s --connect-timeout 1 "http://localhost:{{port_identity}}/agents" | grep -q '"agents"'; then
         printf "\033[0;31m✗ Identity health OK but /agents not serving; aborting startup\033[0m\n"
         exit 1
     fi
-    printf "\033[0;32m✓ Identity registry fully online (port 8001)\033[0m\n"
+    printf "\033[0;32m✓ Identity registry fully online (port {{port_identity}})\033[0m\n"
 
     # Tier 3: economy services in parallel. Identity is healthy, so
     # platform-agent registration can no longer race.
     printf "Starting tier 3 (economy services)...\n"
-    cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 127.0.0.1 --port 8004 &
-    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 127.0.0.1 --port 8002 &
-    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 127.0.0.1 --port 8003 &
+    cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 127.0.0.1 --port {{port_reputation}} &
+    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 127.0.0.1 --port {{port_central_bank}} &
+    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 127.0.0.1 --port {{port_task_board}} &
     (
         cd services/court
         if [ -f .env ]; then
@@ -273,24 +281,24 @@ start-all:
             . .env
             set +a
         fi
-        uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port 8005
+        uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port {{port_court}}
     ) &
 
     # Wait for the rest in dependency order
-    wait_for_health "Central Bank" 8002
-    wait_for_health "Task Board" 8003
-    wait_for_health "Reputation" 8004
-    wait_for_health "Court" 8005
+    wait_for_health "Central Bank" {{port_central_bank}}
+    wait_for_health "Task Board" {{port_task_board}}
+    wait_for_health "Reputation" {{port_reputation}}
+    wait_for_health "Court" {{port_court}}
 
     # Tier 4: UI last. Its UserAgent mints the platform treasury against the
     # Central Bank during startup, so the bank must be healthy first.
     printf "Starting tier 4 (UI)...\n"
-    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host 127.0.0.1 --port 8008 &
-    wait_for_health "UI" 8008
+    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host 127.0.0.1 --port {{port_ui}} &
+    wait_for_health "UI" {{port_ui}}
 
     printf "\n"
     printf "\033[0;32m✓ All services started\033[0m\n"
-    printf "\033[0;32m  UI Service: http://localhost:8008\033[0m\n"
+    printf "\033[0;32m  UI Service: http://localhost:{{port_ui}}\033[0m\n"
     printf "\n"
 
 # Stop identity service
@@ -465,13 +473,13 @@ status:
         fi
     }
 
-    check_service "Identity"     8001
-    check_service "Central Bank" 8002
-    check_service "Task Board"   8003
-    check_service "Reputation"   8004
-    check_service "Court"        8005
-    check_service "DB Gateway"   8007
-    check_service "UI"           8008
+    check_service "Identity"     {{port_identity}}
+    check_service "Central Bank" {{port_central_bank}}
+    check_service "Task Board"   {{port_task_board}}
+    check_service "Reputation"   {{port_reputation}}
+    check_service "Court"        {{port_court}}
+    check_service "DB Gateway"   {{port_db_gateway}}
+    check_service "UI"           {{port_ui}}
 
     printf "\n"
 
@@ -521,7 +529,7 @@ demo:
     printf "\n"
 
     # Check if any services are already running and stop them
-    ports=(8001 8002 8003 8004 8005 8007 8008)
+    ports=({{port_identity}} {{port_central_bank}} {{port_task_board}} {{port_reputation}} {{port_court}} {{port_db_gateway}} {{port_ui}})
     running=0
     for port in "${ports[@]}"; do
         if lsof -ti :"$port" -sTCP:LISTEN >/dev/null 2>&1; then
@@ -546,9 +554,9 @@ demo:
     # Open UI in browser so user can watch the replay live
     printf "Opening UI in browser...\n"
     if command -v open >/dev/null 2>&1; then
-        open "http://localhost:8008"
+        open "http://localhost:{{port_ui}}"
     elif command -v xdg-open >/dev/null 2>&1; then
-        xdg-open "http://localhost:8008"
+        xdg-open "http://localhost:{{port_ui}}"
     fi
     sleep 1
 
@@ -561,7 +569,7 @@ demo:
 
     printf "\n"
     if [ $exit_code -eq 0 ]; then
-        printf "\033[0;32m✓ Demo complete — UI at http://localhost:8008\033[0m\n"
+        printf "\033[0;32m✓ Demo complete — UI at http://localhost:{{port_ui}}\033[0m\n"
     else
         printf "\033[0;31m✗ Demo failed (exit code: %d)\033[0m\n" "$exit_code"
     fi
@@ -580,7 +588,7 @@ demo-scale:
     printf "\n"
 
     # Check if any services are already running and stop them
-    ports=(8001 8002 8003 8004 8005 8007 8008)
+    ports=({{port_identity}} {{port_central_bank}} {{port_task_board}} {{port_reputation}} {{port_court}} {{port_db_gateway}} {{port_ui}})
     running=0
     for port in "${ports[@]}"; do
         if lsof -ti :"$port" -sTCP:LISTEN >/dev/null 2>&1; then
@@ -605,9 +613,9 @@ demo-scale:
     # Open UI in browser so user can watch the replay live
     printf "Opening UI in browser...\n"
     if command -v open >/dev/null 2>&1; then
-        open "http://localhost:8008"
+        open "http://localhost:{{port_ui}}"
     elif command -v xdg-open >/dev/null 2>&1; then
-        xdg-open "http://localhost:8008"
+        xdg-open "http://localhost:{{port_ui}}"
     fi
     sleep 1
 
@@ -620,7 +628,7 @@ demo-scale:
 
     printf "\n"
     if [ $exit_code -eq 0 ]; then
-        printf "\033[0;32m✓ Demo complete — UI at http://localhost:8008\033[0m\n"
+        printf "\033[0;32m✓ Demo complete — UI at http://localhost:{{port_ui}}\033[0m\n"
     else
         printf "\033[0;31m✗ Demo failed (exit code: %d)\033[0m\n" "$exit_code"
     fi
@@ -738,34 +746,41 @@ ci:
     printf "\033[0;34m--- Phase 0: Project structure ---\033[0m\n"
     cd "$root" && just test-project-structure
 
-    # Phase 1: Per-service CI (format, lint, types, security, deps, spell, semgrep, audit, tests, pyright)
-    printf "\033[0;34m--- Phase 1: Service CI ---\033[0m\n"
+    # Phase 1: Libs CI (format, lint, types, security, spell, unit tests)
+    printf "\033[0;34m--- Phase 1: Libs CI ---\033[0m\n"
+    libs=(service-commons service-clients service-auth)
+    for lib in "${libs[@]}"; do
+        cd "$root/libs/$lib" && just ci
+    done
+
+    # Phase 2: Per-service CI (format, lint, types, security, deps, spell, semgrep, audit, tests, pyright)
+    printf "\033[0;34m--- Phase 2: Service CI ---\033[0m\n"
     services=(identity central-bank task-board reputation court db-gateway ui)
     for svc in "${services[@]}"; do
         cd "$root/services/$svc" && just ci
     done
 
-    # Phase 2: Agents CI (format, lint, types, security, spell, unit tests)
-    printf "\033[0;34m--- Phase 2: Agents CI ---\033[0m\n"
+    # Phase 3: Agents CI (format, lint, types, security, spell, unit tests)
+    printf "\033[0;34m--- Phase 3: Agents CI ---\033[0m\n"
     cd "$root/agents" && just ci
 
-    # Phase 3: Tools CI (format, lint, types, security, spell, unit tests)
-    printf "\033[0;34m--- Phase 3: Tools CI ---\033[0m\n"
+    # Phase 4: Tools CI (format, lint, types, security, spell, unit tests)
+    printf "\033[0;34m--- Phase 4: Tools CI ---\033[0m\n"
     cd "$root/tools" && just ci
 
-    # Phase 4: Cross-service integration tests (DB Gateway writes, offline gateway)
-    printf "\033[0;34m--- Phase 4: Cross-service integration tests ---\033[0m\n"
+    # Phase 5: Cross-service integration tests (DB Gateway writes, offline gateway)
+    printf "\033[0;34m--- Phase 5: Cross-service integration tests ---\033[0m\n"
     cd "$root"
     PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
         pytest "$root/tests/integration/" -v --tb=short
 
-    # Phase 5: E2E tests (restarts services, runs full lifecycle tests)
-    printf "\033[0;34m--- Phase 5: E2E tests ---\033[0m\n"
+    # Phase 6: E2E tests (restarts services, runs full lifecycle tests)
+    printf "\033[0;34m--- Phase 6: E2E tests ---\033[0m\n"
     cd "$root"
     just test-e2e
 
     printf "\n"
-    printf "\033[0;32m✓ Full CI passed (services + agents + tools + integration + e2e)\033[0m\n"
+    printf "\033[0;32m✓ Full CI passed (libs + services + agents + tools + integration + e2e)\033[0m\n"
     printf "\n"
 
 # Run ALL CI checks quietly
@@ -780,35 +795,43 @@ ci-quiet:
     printf "\033[0;34m--- Phase 0: Project structure ---\033[0m\n"
     cd "$root" && just test-project-structure
 
-    # Phase 1: Per-service CI
-    printf "\033[0;34m--- Phase 1: Service CI ---\033[0m\n"
+    # Phase 1: Libs CI
+    printf "\033[0;34m--- Phase 1: Libs CI ---\033[0m\n"
+    libs=(service-commons service-clients service-auth)
+    for lib in "${libs[@]}"; do
+        printf "Checking %s...\n" "$lib"
+        cd "$root/libs/$lib" && just ci-quiet
+    done
+
+    # Phase 2: Per-service CI
+    printf "\033[0;34m--- Phase 2: Service CI ---\033[0m\n"
     services=(identity central-bank task-board reputation court db-gateway ui)
     for svc in "${services[@]}"; do
         printf "Checking %s...\n" "$svc"
         cd "$root/services/$svc" && just ci-quiet
     done
 
-    # Phase 2: Agents CI
-    printf "\033[0;34m--- Phase 2: Agents CI ---\033[0m\n"
+    # Phase 3: Agents CI
+    printf "\033[0;34m--- Phase 3: Agents CI ---\033[0m\n"
     cd "$root/agents" && just ci-quiet
 
-    # Phase 3: Tools CI
-    printf "\033[0;34m--- Phase 3: Tools CI ---\033[0m\n"
+    # Phase 4: Tools CI
+    printf "\033[0;34m--- Phase 4: Tools CI ---\033[0m\n"
     cd "$root/tools" && just ci-quiet
 
-    # Phase 4: Cross-service integration tests
-    printf "\033[0;34m--- Phase 4: Cross-service integration tests ---\033[0m\n"
+    # Phase 5: Cross-service integration tests
+    printf "\033[0;34m--- Phase 5: Cross-service integration tests ---\033[0m\n"
     cd "$root"
     PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
         pytest "$root/tests/integration/" -v --tb=short
 
-    # Phase 5: E2E tests
-    printf "\033[0;34m--- Phase 5: E2E tests ---\033[0m\n"
+    # Phase 6: E2E tests
+    printf "\033[0;34m--- Phase 6: E2E tests ---\033[0m\n"
     cd "$root"
     just test-e2e
 
     printf "\n"
-    printf "\033[0;32m✓ Full CI passed (services + agents + tools + integration + e2e)\033[0m\n"
+    printf "\033[0;32m✓ Full CI passed (libs + services + agents + tools + integration + e2e)\033[0m\n"
     printf "\n"
 
 # CI hook for Claude Code — blocks git commit if CI fails

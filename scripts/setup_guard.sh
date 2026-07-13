@@ -14,7 +14,7 @@ guard create dependencies
 guard create docs
 
 # Per-service collections: source, per-test-type, and all-tests aggregate
-for svc in identity central-bank task-board reputation court; do
+for svc in identity central-bank task-board reputation court db-gateway ui; do
   guard create "${svc}-service"
   guard create "${svc}-tests"
   for test_type in unit integration performance acceptance; do
@@ -33,7 +33,6 @@ guard add file .guardfile
 
 guard update project-root add ./.gitignore
 guard update project-root add ./AGENTS.md
-guard update project-root add ./DELEGATE.md
 
 # =============================================================================
 # ci-config — linting, static analysis, type checking, quality tools
@@ -93,7 +92,7 @@ done
 # Per-service: source code + test collections
 # =============================================================================
 
-for svc in identity central-bank task-board reputation court; do
+for svc in identity central-bank task-board reputation court db-gateway ui; do
   svc_dir="./services/${svc}"
 
   # Source code

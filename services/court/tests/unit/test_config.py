@@ -29,8 +29,6 @@ server:
 logging:
   level: "WARNING"
   directory: "data/logs"
-database:
-  path: "{tmp_path / "test.db"}"
 platform:
   agent_id: "a-platform"
 request:
@@ -39,6 +37,9 @@ disputes:
   rebuttal_deadline_seconds: 86400
   max_claim_length: 10000
   max_rebuttal_length: 10000
+  feedback_extremely_satisfied_cutoff: 80
+  feedback_satisfied_cutoff: 40
+  feedback_comment_max_length: 256
 judges:
   panel_size: {panel_size}
   mock_worker_pct: 50

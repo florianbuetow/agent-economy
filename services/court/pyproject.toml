@@ -14,7 +14,6 @@ dependencies = [
     "litellm>=1.83.10",
     "service-commons",
     "service-auth",
-    "pyjwt>=2.13.0",
 ]
 
 [project.optional-dependencies]
@@ -162,7 +161,6 @@ extend_exclude = [".venv", "tests"]
 [tool.deptry.per_rule_ignores]
 DEP002 = [
     "fastapi",
-    "pyjwt",
     "uvicorn",
     "pydantic",
     "service-commons",

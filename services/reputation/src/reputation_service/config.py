@@ -72,13 +72,6 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
-class DatabaseConfig(BaseModel):
-    """Database configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    path: str
-
-
 class FeedbackConfig(BaseModel):
     """Feedback submission configuration."""
 
@@ -110,7 +103,6 @@ class Settings(BaseModel):
     platform: PlatformConfig
     identity: IdentityConfig | None = None
     request: RequestConfig
-    database: DatabaseConfig
     feedback: FeedbackConfig
     db_gateway: DbGatewayConfig
 

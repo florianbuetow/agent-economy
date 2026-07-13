@@ -26,9 +26,6 @@ identity:
 request:
   max_body_size: 1048576  # 1MB
 
-database:
-  path: "data/reputation.db"
-
 feedback:
   reveal_timeout_seconds: 86400  # 24 hours
   max_comment_length: 256

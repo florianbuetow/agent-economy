@@ -43,10 +43,8 @@ class _NoDeliverableFetcher:
         return []
 
 
-def _valid_config(tmp_path: Any, db_path: str | None = None) -> str:
+def _valid_config(tmp_path: Any) -> str:
     """Write a valid court config.yaml and return its path."""
-    if db_path is None:
-        db_path = str(tmp_path / "test.db")
     config_content = f"""\
 service:
   name: "court"
@@ -58,8 +56,6 @@ server:
 logging:
   level: "WARNING"
   directory: "data/logs"
-database:
-  path: "{db_path}"
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
 request:
@@ -68,6 +64,9 @@ disputes:
   rebuttal_deadline_seconds: 86400
   max_claim_length: 10000
   max_rebuttal_length: 10000
+  feedback_extremely_satisfied_cutoff: 80
+  feedback_satisfied_cutoff: 40
+  feedback_comment_max_length: 256
 judges:
   panel_size: 1
   mock_worker_pct: 50
