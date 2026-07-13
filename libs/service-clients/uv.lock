@@ -767,10 +767,21 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.0" },
+    { name = "codespell", marker = "extra == 'dev'", specifier = ">=2.3.0" },
+    { name = "deptry", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13.0" },
     { name = "pydantic", specifier = ">=2.10.0" },
+    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.390" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "pyyaml", specifier = ">=6.0.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
+    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.0" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "starlette"

@@ -12,10 +12,10 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 from service_auth import PlatformSigner
 from service_auth.factory import AgentFactory
+from service_clients.bank import BankClient
 from service_clients.identity import IdentityClient
 from service_commons.config import load_yaml_config
 
-from task_board_service.clients.central_bank_client import CentralBankClient
 from task_board_service.config import get_config_path, get_settings
 from task_board_service.core.state import init_app_state
 from task_board_service.logging import get_logger, setup_logging
@@ -133,8 +133,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     )
     state.platform_signer = platform_signer
 
-    # Initialize CentralBankClient (HTTP client for escrow operations)
-    central_bank_client = CentralBankClient(
+    # Initialize BankClient (HTTP client for escrow operations)
+    central_bank_client = BankClient(
         base_url=settings.central_bank.base_url,
         escrow_lock_path=settings.central_bank.escrow_lock_path,
         escrow_release_path=settings.central_bank.escrow_release_path,
@@ -145,11 +145,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.central_bank_client = central_bank_client
 
     # Initialize TaskManager (all business logic)
+    # db_gateway configuration is required — enforced by Pydantic (Settings.db_gateway
+    # is a required field, WP-11); startup fails fast on a missing section without a
+    # runtime guard here.
     store: TaskStorageInterface
-    if settings.db_gateway is None:
-        msg = "db_gateway configuration is required"
-        raise RuntimeError(msg)
-
     store = TaskDbClient(
         base_url=settings.db_gateway.url,
         timeout_seconds=settings.db_gateway.timeout_seconds,

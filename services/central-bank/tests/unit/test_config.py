@@ -23,8 +23,6 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
-database:
-  path: "data/central-bank.db"
 identity:
   base_url: "http://localhost:8001"
   get_agent_path: "/agents"
@@ -48,7 +46,6 @@ db_gateway:
     assert isinstance(settings, Settings)
     assert settings.service.name == "central-bank"
     assert settings.server.port == 8002
-    assert settings.database.path == "data/central-bank.db"
     assert settings.identity.base_url == "http://localhost:8001"
     assert settings.identity.verify_jws_path == "/agents/verify-jws"
     assert settings.db_gateway.url == "http://localhost:8007"
@@ -72,8 +69,6 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
-database:
-  path: "data/central-bank.db"
 identity:
   base_url: "http://localhost:8001"
   get_agent_path: "/agents"

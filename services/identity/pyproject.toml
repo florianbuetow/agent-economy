@@ -12,7 +12,6 @@ dependencies = [
     "service-clients",
     "cryptography>=48.0.1",
     "joserfc>=1.6.7",
-    "pyjwt>=2.13.0",
 ]
 
 [project.optional-dependencies]
@@ -157,7 +156,6 @@ extend_exclude = [".venv", "tests"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = [
-    "pyjwt",
     "uvicorn",
     "pytest",
     "pytest-cov",

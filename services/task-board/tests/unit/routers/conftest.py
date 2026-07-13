@@ -138,14 +138,7 @@ platform:
   agent_id: "{PLATFORM_AGENT_ID}"
 request:
   max_body_size: 1048576
-deadlines:
-  default_bidding_seconds: 3600
-  default_execution_seconds: 86400
-  default_review_seconds: 86400
 limits:
-  max_title_length: 200
-  max_spec_length: 10000
-  max_reason_length: 2000
   max_file_size: 10485760
   max_assets_per_task: 20
 db_gateway:

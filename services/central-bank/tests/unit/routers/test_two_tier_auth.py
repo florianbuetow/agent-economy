@@ -61,7 +61,7 @@ def _real_platform_agent() -> tuple[PlatformAgent, Ed25519PrivateKey]:
     return agent, private_key
 
 
-def _write_config(tmp_path: Any, db_path: str) -> str:
+def _write_config(tmp_path: Any) -> str:
     config_content = f"""
 service:
   name: "central-bank"
@@ -73,8 +73,6 @@ server:
 logging:
   level: "WARNING"
   directory: "data/logs"
-database:
-  path: "{db_path}"
 identity:
   base_url: "{DEAD_IDENTITY_URL}"
   get_agent_path: "/agents"
@@ -100,7 +98,7 @@ async def _make_client(
 ) -> tuple[AsyncClient, Any, Ed25519PrivateKey, Any]:
     """Start an in-process app with a real platform agent and the given identity client."""
     db_path = str(tmp_path / "test.db")
-    config_path = _write_config(tmp_path, db_path)
+    config_path = _write_config(tmp_path)
     os.environ["CONFIG_PATH"] = config_path
 
     clear_settings_cache()

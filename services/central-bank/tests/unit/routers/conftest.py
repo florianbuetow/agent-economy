@@ -109,7 +109,7 @@ def agent_keypair():
 async def app(tmp_path):
     """Create a test app with a temporary database and mocked Identity client."""
     db_path = tmp_path / "test.db"
-    config_content = f"""
+    config_content = """
 service:
   name: "central-bank"
   version: "0.1.0"
@@ -120,8 +120,6 @@ server:
 logging:
   level: "WARNING"
   directory: "data/logs"
-database:
-  path: "{db_path}"
 identity:
   base_url: "http://localhost:8001"
   get_agent_path: "/agents"

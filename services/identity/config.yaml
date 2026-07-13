@@ -14,11 +14,7 @@ logging:
   level: "INFO"
   directory: "data/logs"
 
-database:
-  path: "data/identity.db"
-
 crypto:
-  algorithm: "ed25519"
   public_key_prefix: "ed25519:"
   public_key_bytes: 32
   signature_bytes: 64

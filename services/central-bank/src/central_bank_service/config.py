@@ -48,13 +48,6 @@ class LoggingConfig(BaseModel):
     directory: str
 
 
-class DatabaseConfig(BaseModel):
-    """Database configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    path: str
-
-
 class IdentityConfig(BaseModel):
     """Identity service connection configuration."""
 
@@ -103,7 +96,6 @@ class Settings(BaseModel):
     service: ServiceConfig
     server: ServerConfig
     logging: LoggingConfig
-    database: DatabaseConfig
     identity: IdentityConfig
     platform: PlatformConfig
     request: RequestConfig

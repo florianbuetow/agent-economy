@@ -123,6 +123,9 @@ ci:
     printf "\033[0;34m=== Running CI for Tools ===\033[0m\n"
     printf "\n"
 
+    printf "\033[0;34m--- Init ---\033[0m\n"
+    uv sync --all-extras
+
     printf "\033[0;34m--- Formatting ---\033[0m\n"
     uv run ruff format --check src/ tests/
 
@@ -151,6 +154,7 @@ ci-quiet:
     set -euo pipefail
     printf "Checking tools...\n"
 
+    uv sync --all-extras > /dev/null 2>&1
     uv run ruff format --check src/ tests/ > /dev/null 2>&1
     uv run ruff check src/ tests/ > /dev/null 2>&1
     uv run mypy src/ > /dev/null 2>&1

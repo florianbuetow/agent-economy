@@ -4,7 +4,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from task_board_service.services.task_store import DuplicateBidError, TaskStore
+from task_board_service.services.errors import DuplicateBidError
+from tests.fakes.in_memory_task_store import InMemoryTaskStore as TaskStore
 
 
 def _task_data(task_id: str, status: str = "open") -> dict[str, object]:

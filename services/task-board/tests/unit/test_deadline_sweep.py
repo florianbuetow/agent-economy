@@ -21,7 +21,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
-from task_board_service.services.task_store import TaskStore
+from tests.fakes.in_memory_task_store import InMemoryTaskStore as TaskStore
 
 
 def _iso(dt: datetime) -> str:

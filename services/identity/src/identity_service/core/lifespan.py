@@ -43,7 +43,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # Initialize agent registry with gateway-backed store.
     state.registry = AgentRegistry(
         store=store,
-        algorithm=settings.crypto.algorithm,
         public_key_prefix=settings.crypto.public_key_prefix,
         public_key_bytes=settings.crypto.public_key_bytes,
         signature_bytes=settings.crypto.signature_bytes,

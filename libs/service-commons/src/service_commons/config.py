@@ -6,15 +6,15 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from pydantic import BaseModel, ValidationError
 
-ModelT = TypeVar("ModelT", bound=BaseModel)
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class ConfigurationError(Exception):
@@ -112,7 +112,7 @@ def get_config_path(
     return Path(config_path_str)
 
 
-def load_settings(
+def load_settings[ModelT: BaseModel](
     settings_model: type[ModelT],
     yaml_config: dict[str, Any],
 ) -> ModelT:
@@ -139,7 +139,7 @@ def load_settings(
         ) from e
 
 
-def create_settings_loader(
+def create_settings_loader[ModelT: BaseModel](
     settings_model: type[ModelT],
     get_config_path_fn: Callable[[], Path],
 ) -> tuple[Callable[[], ModelT], Callable[[], None]]:

@@ -15,7 +15,6 @@ dependencies = [
     "aiofiles>=24.0.0",
     "python-multipart>=0.0.31",
     "starlette>=1.0.1",
-    "pyjwt>=2.13.0",
 ]
 
 [project.optional-dependencies]
@@ -169,7 +168,6 @@ extend_exclude = [".venv", "tests"]
 [tool.deptry.per_rule_ignores]
 DEP002 = [
     "fastapi",
-    "pyjwt",
     "uvicorn",
     "pydantic",
     "service-commons",

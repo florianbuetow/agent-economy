@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from court_service.services.dispute_store import DisputeStore
+from tests.fakes.in_memory_dispute_store import InMemoryDisputeStore as DisputeStore
 
 
 @pytest.mark.unit

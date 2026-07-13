@@ -263,7 +263,10 @@ code-spell:
 code-audit:
     @echo ""
     @printf "\033[0;34m=== Scanning Dependencies for Vulnerabilities ===\033[0m\n"
-    @uv run pip-audit
+    @# PYSEC-2026-2132 (click 8.1.8): fix is click>=8.3.3, unreachable while semgrep
+    @# pins click~=8.1.8 (verified vs semgrep 1.169.0). Dev-only tool; tracked as T-108 —
+    @# remove the ignore when semgrep unpins.
+    @uv run pip-audit --ignore-vuln PYSEC-2026-2132
     @echo ""
     @printf "\033[0;32m✓ No known vulnerabilities found\033[0m\n"
     @echo ""

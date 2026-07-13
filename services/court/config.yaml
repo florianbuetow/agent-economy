@@ -14,9 +14,6 @@ logging:
   level: "INFO"
   directory: "data/logs"
 
-database:
-  path: "data/court.db"
-
 platform:
   agent_config_path: "../../agents/config.yaml"
 
@@ -24,6 +21,11 @@ disputes:
   rebuttal_deadline_seconds: 86400
   max_claim_length: 10000
   max_rebuttal_length: 10000
+  # Ruling feedback-rating cutoffs (worker_pct >= this -> the given rating)
+  # and the feedback comment cap, threaded into RulingOrchestrator (WP-11).
+  feedback_extremely_satisfied_cutoff: 80
+  feedback_satisfied_cutoff: 40
+  feedback_comment_max_length: 256
 
 judges:
   panel_size: 1

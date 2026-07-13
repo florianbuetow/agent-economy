@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from reputation_service.config import clear_settings_cache, get_settings
+from reputation_service.config import clear_settings_cache
 from reputation_service.core.state import get_app_state, reset_app_state
 from tests.fakes.sqlite_feedback_store import SqliteFeedbackStore
 
@@ -31,18 +31,31 @@ def _clear_caches() -> None:
 
 
 @pytest.fixture(autouse=True)
-def _patch_persistence_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Align persistence helpers with gateway-config + fake-store test pattern."""
+def _patch_persistence_helpers(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Align persistence helpers with gateway-config + fake-store test pattern.
+
+    The fake SqliteFeedbackStore's path used to be read back off
+    ``settings.database.path`` — but reputation reads no local database.path
+    in production (GAP-C8/exception #15: it talks to the DB Gateway), so that
+    field no longer exists on Settings. The path each test wants is already
+    passed explicitly to ``_write_config``; ``db_path_holder`` carries it from
+    there to ``_make_client_with_fake_store`` instead. Tests that build their
+    own config.yaml directly (bypassing ``_write_config`` — e.g. the CFG-0x
+    db_gateway fail-fast tests) never inspect the fake store's persisted
+    state, so the default path here is never actually read.
+    """
     if persistence_tests is None:
         return
 
     original_write_config = persistence_tests._write_config
+    db_path_holder: dict[str, str] = {"path": str(tmp_path / "unused.db")}
 
     def _write_config_with_gateway(
         tmp_path: Path,
         db_path: str,
         reveal_timeout: int = 86400,
     ) -> str:
+        db_path_holder["path"] = db_path
         config_path = original_write_config(tmp_path, db_path, reveal_timeout)
         config_file = Path(config_path)
         content = config_file.read_text()
@@ -64,7 +77,7 @@ db_gateway:
             ) as client,
         ):
             state = get_app_state()
-            state.feedback_store = SqliteFeedbackStore(db_path=get_settings().database.path)
+            state.feedback_store = SqliteFeedbackStore(db_path=db_path_holder["path"])
             yield client
 
     monkeypatch.setattr(persistence_tests, "_write_config", _write_config_with_gateway)

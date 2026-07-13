@@ -9,8 +9,8 @@ import pytest
 from service_commons.exceptions import ServiceError
 
 from court_service.judges.base import MockJudge
-from court_service.services.dispute_store import DisputeStore
 from court_service.services.ruling_orchestrator import RulingOrchestrator
+from tests.fakes.in_memory_dispute_store import InMemoryDisputeStore as DisputeStore
 
 
 def _make_mock_platform_agent(agent_id: str = "agent-platform") -> MagicMock:
@@ -38,7 +38,12 @@ async def test_execute_ruling_with_mock_judges(tmp_path) -> None:
     store.update_rebuttal(dispute["dispute_id"], "Rebuttal text")
     store.set_status(dispute["dispute_id"], "rebuttal_submitted")
 
-    orchestrator = RulingOrchestrator(store=store)
+    orchestrator = RulingOrchestrator(
+        store=store,
+        feedback_extremely_satisfied_cutoff=80,
+        feedback_satisfied_cutoff=40,
+        feedback_comment_max_length=256,
+    )
     judges = [
         MockJudge(judge_id="judge-1", fixed_worker_pct=60, reasoning="Vote one"),
         MockJudge(judge_id="judge-2", fixed_worker_pct=70, reasoning="Vote two"),
@@ -69,7 +74,12 @@ async def test_execute_ruling_with_mock_judges(tmp_path) -> None:
 async def test_validate_ruling_preconditions_dispute_not_found(tmp_path) -> None:
     """execute_ruling() fails when dispute_id does not exist."""
     store = DisputeStore(db_path=str(tmp_path / "court.db"))
-    orchestrator = RulingOrchestrator(store=store)
+    orchestrator = RulingOrchestrator(
+        store=store,
+        feedback_extremely_satisfied_cutoff=80,
+        feedback_satisfied_cutoff=40,
+        feedback_comment_max_length=256,
+    )
     platform_agent = _make_mock_platform_agent()
 
     with pytest.raises(ServiceError) as exc:
@@ -97,7 +107,12 @@ async def test_validate_ruling_preconditions_wrong_status(tmp_path) -> None:
         rebuttal_deadline=datetime.now(UTC).isoformat(),
     )
     store.set_status(str(dispute["dispute_id"]), "filed")
-    orchestrator = RulingOrchestrator(store=store)
+    orchestrator = RulingOrchestrator(
+        store=store,
+        feedback_extremely_satisfied_cutoff=80,
+        feedback_satisfied_cutoff=40,
+        feedback_comment_max_length=256,
+    )
     platform_agent = _make_mock_platform_agent()
 
     with pytest.raises(ServiceError) as exc:
@@ -131,17 +146,29 @@ def test_normalize_vote_clamps_worker_pct() -> None:
     assert default_vote.voted_at != ""
 
 
+def _make_orchestrator_for_rating_tests() -> RulingOrchestrator:
+    """Build a RulingOrchestrator with the configured 80/40 cutoffs (WP-11, exception #11)."""
+    return RulingOrchestrator(
+        store=MagicMock(),
+        feedback_extremely_satisfied_cutoff=80,
+        feedback_satisfied_cutoff=40,
+        feedback_comment_max_length=256,
+    )
+
+
 @pytest.mark.unit
 def test_delivery_rating_mapping() -> None:
     """_delivery_rating() maps worker_pct to expected rating."""
-    assert RulingOrchestrator._delivery_rating(80) == "extremely_satisfied"
-    assert RulingOrchestrator._delivery_rating(40) == "satisfied"
-    assert RulingOrchestrator._delivery_rating(39) == "dissatisfied"
+    orchestrator = _make_orchestrator_for_rating_tests()
+    assert orchestrator._delivery_rating(80) == "extremely_satisfied"
+    assert orchestrator._delivery_rating(40) == "satisfied"
+    assert orchestrator._delivery_rating(39) == "dissatisfied"
 
 
 @pytest.mark.unit
 def test_spec_rating_mapping() -> None:
     """_spec_rating() maps worker_pct to expected rating."""
-    assert RulingOrchestrator._spec_rating(80) == "dissatisfied"
-    assert RulingOrchestrator._spec_rating(40) == "satisfied"
-    assert RulingOrchestrator._spec_rating(39) == "extremely_satisfied"
+    orchestrator = _make_orchestrator_for_rating_tests()
+    assert orchestrator._spec_rating(80) == "dissatisfied"
+    assert orchestrator._spec_rating(40) == "satisfied"
+    assert orchestrator._spec_rating(39) == "extremely_satisfied"

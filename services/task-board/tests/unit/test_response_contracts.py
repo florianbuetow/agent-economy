@@ -31,7 +31,8 @@ from task_board_service.schemas import (
 
 # create_app() only reads settings.service/.request to build the FastAPI
 # instance and register routers — it never runs lifespan() — so a minimal
-# config (no platform/central_bank/db_gateway/etc.) is enough here.
+# config is enough here. db_gateway is included only because it is now a
+# required Settings field (WP-11), not because create_app() reads it.
 _MINIMAL_CONFIG = """\
 service:
   name: "task-board"
@@ -55,6 +56,9 @@ platform:
   agent_id: "a-platform-test-id"
 request:
   max_body_size: 1048576
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
 """
 
 
