@@ -14,6 +14,7 @@ import asyncio
 import sys
 from pathlib import Path
 
+from demo_replay.config import load_platform_settings
 from demo_replay.engine import ReplayEngine, load_scenario
 
 
@@ -49,7 +50,8 @@ def main() -> None:
     if args.delay is not None:
         scenario["default_delay"] = args.delay
 
-    engine = ReplayEngine(scenario)
+    config = load_platform_settings()
+    engine = ReplayEngine(scenario, config)
     asyncio.run(engine.run())
 
 

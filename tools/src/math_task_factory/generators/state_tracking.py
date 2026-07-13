@@ -41,9 +41,7 @@ def gen_warehouse_inventory(rng: random.Random) -> MathTask:
                 # Not enough to transfer; receive instead
                 amount = rng.randint(50, 300)
                 stock[dst] += amount
-                ops_text.append(
-                    f"Receive a shipment of {amount} units on {dst}."
-                )
+                ops_text.append(f"Receive a shipment of {amount} units on {dst}.")
                 continue
             amount = rng.randint(20, max_transfer)
             stock[src] -= amount
@@ -59,7 +57,7 @@ def gen_warehouse_inventory(rng: random.Random) -> MathTask:
         answer = stock[target]
         question = f"How many units are on {target}?"
 
-    ops_numbered = "\n".join(f"  {i+1}. {o}" for i, o in enumerate(ops_text))
+    ops_numbered = "\n".join(f"  {i + 1}. {o}" for i, o in enumerate(ops_text))
     return MathTask(
         title="Warehouse inventory tracking",
         spec=f"""TASK: A warehouse has {num_floors} floors with initial inventory:
@@ -116,10 +114,7 @@ def gen_bank_transactions(rng: random.Random) -> MathTask:
             rate_pct = rng.choice([2, 3, 5, 8, 10])
             interest_amount = balance[acct] * rate_pct // 100
             balance[acct] += interest_amount
-            ops_text.append(
-                f"Apply {rate_pct}% interest to {acct} "
-                f"(integer division, round down)."
-            )
+            ops_text.append(f"Apply {rate_pct}% interest to {acct} (integer division, round down).")
         else:
             src, dst = rng.sample(accounts, 2)
             max_transfer = min(1500, balance[src])
@@ -136,7 +131,7 @@ def gen_bank_transactions(rng: random.Random) -> MathTask:
 
     target = rng.choice(accounts)
     answer = balance[target]
-    ops_numbered = "\n".join(f"  {i+1}. {o}" for i, o in enumerate(ops_text))
+    ops_numbered = "\n".join(f"  {i + 1}. {o}" for i, o in enumerate(ops_text))
 
     return MathTask(
         title="Bank account transactions",
@@ -164,8 +159,12 @@ def gen_production_pipeline(rng: random.Random) -> MathTask:
     current = raw_input
 
     stages: list[str] = []
-    stage_names = ["Stage 1 (Cutting)", "Stage 2 (Assembly)", "Stage 3 (Quality Check)",
-                   "Stage 4 (Finishing)"]
+    stage_names = [
+        "Stage 1 (Cutting)",
+        "Stage 2 (Assembly)",
+        "Stage 3 (Quality Check)",
+        "Stage 4 (Finishing)",
+    ]
 
     for i in range(num_stages):
         yield_pct = rng.choice([80, 85, 88, 90, 92, 95])
@@ -179,7 +178,7 @@ def gen_production_pipeline(rng: random.Random) -> MathTask:
         )
         current = after_defects
 
-    stages_text = "\n".join(f"  {i+1}. {s}" for i, s in enumerate(stages))
+    stages_text = "\n".join(f"  {i + 1}. {s}" for i, s in enumerate(stages))
     return MathTask(
         title="Production pipeline output",
         spec=f"""TASK: A factory starts with {raw_input} raw units and processes them

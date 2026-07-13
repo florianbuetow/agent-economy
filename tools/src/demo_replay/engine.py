@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import yaml
@@ -14,7 +14,14 @@ from rich.panel import Panel
 from demo_replay import clients
 from demo_replay.wallet import DemoAgent
 
+if TYPE_CHECKING:
+    from demo_replay.config import PlatformConfig
+
 console = Console()
+
+
+class UnknownActionError(ValueError):
+    """Raised when a scenario step names an action the engine cannot dispatch."""
 
 
 def load_scenario(path: Path) -> dict[str, Any]:
@@ -33,8 +40,9 @@ def load_scenario(path: Path) -> dict[str, Any]:
 class ReplayEngine:
     """Execute a demo scenario against live services."""
 
-    def __init__(self, scenario: dict[str, Any]) -> None:
+    def __init__(self, scenario: dict[str, Any], config: PlatformConfig) -> None:
         self.scenario = scenario
+        self._config = config
         self.default_delay: float = float(scenario.get("default_delay", 2.0))
         self.agents: dict[str, DemoAgent] = {}
         self.platform: DemoAgent | None = None
@@ -82,28 +90,22 @@ class ReplayEngine:
         async with httpx.AsyncClient(timeout=30.0) as http:
             # Register platform agent first
             console.print("[dim]Registering platform agent...[/dim]")
-            await clients.register_agent(http, self.platform)
-            console.print(
-                f"  [green]Platform registered:[/green] {self.platform.agent_id}"
-            )
+            await clients.register_agent(http, self.platform, self._config.identity_url)
+            console.print(f"  [green]Platform registered:[/green] {self.platform.agent_id}")
 
             total = len(self.scenario["steps"])
             for i, step in enumerate(self.scenario["steps"], 1):
                 action = step["action"]
                 delay = float(step.get("delay", self.default_delay))
 
-                console.print(
-                    f"\n[bold][{i}/{total}][/bold] [yellow]{action}[/yellow]"
-                )
+                console.print(f"\n[bold][{i}/{total}][/bold] [yellow]{action}[/yellow]")
                 await self._execute_step(http, step)
                 console.print(f"  [dim]waiting {delay}s...[/dim]")
                 await asyncio.sleep(delay)
 
         console.print(Panel("[bold green]Demo complete![/bold green]"))
 
-    async def _execute_step(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _execute_step(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         """Dispatch a single step to the appropriate handler."""
         action = step["action"]
         match action:
@@ -133,46 +135,37 @@ class ReplayEngine:
                 await self._do_trigger_ruling(http, step)
             case "feedback":
                 await self._do_feedback(http, step)
-            case "reveal_feedback":
-                await self._do_reveal_feedback(http, step)
             case _:
-                console.print(f"  [red]Unknown action: {action}[/red]")
+                msg = f"Unknown scenario action: {action!r}"
+                raise UnknownActionError(msg)
 
-    async def _do_register(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_register(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         handle = step["agent"]
         agent = self.agents[handle]
-        result = await clients.register_agent(http, agent)
-        console.print(
-            f"  [green]Registered {agent.name}[/green] -> {result['agent_id']}"
-        )
+        result = await clients.register_agent(http, agent, self._config.identity_url)
+        console.print(f"  [green]Registered {agent.name}[/green] -> {result['agent_id']}")
 
         # Also create bank account via platform agent
         assert self.platform is not None
         assert agent.agent_id is not None
-        await clients.create_account(http, self.platform, agent.agent_id)
+        await clients.create_account(http, self.platform, agent.agent_id, self._config.bank_url)
         console.print(f"  [green]Bank account created[/green] for {agent.name}")
 
-    async def _do_fund(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_fund(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         handle = step["agent"]
         amount = int(step["amount"])
         agent = self.agents[handle]
         assert self.platform is not None
         assert agent.agent_id is not None
         result = await clients.credit_account(
-            http, self.platform, agent.agent_id, amount
+            http, self.platform, agent.agent_id, amount, self._config.bank_url
         )
         console.print(
             f"  [green]Funded {agent.name}[/green] +{amount} coins"
             f" (balance: {result.get('balance_after', '?')})"
         )
 
-    async def _do_post_task(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_post_task(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         poster_handle = step["poster"]
         poster = self.agents[poster_handle]
         result = await clients.post_task(
@@ -181,6 +174,7 @@ class ReplayEngine:
             title=step["title"],
             spec=step.get("spec", step["title"]),
             reward=int(step["reward"]),
+            task_board_url=self._config.task_board_url,
         )
         task_id = result["task_id"]
         self._latest_task[poster_handle] = task_id
@@ -188,12 +182,10 @@ class ReplayEngine:
             self._refs[step["ref"]] = task_id
         console.print(
             f"  [green]Task posted:[/green]"
-            f" \"{step['title']}\" for {step['reward']} coins -> {task_id}"
+            f' "{step["title"]}" for {step["reward"]} coins -> {task_id}'
         )
 
-    async def _do_bid(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_bid(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         bidder_handle = step["bidder"]
         bidder = self.agents[bidder_handle]
         # Resolve task: check task_ref, then poster, then any latest task
@@ -205,24 +197,23 @@ class ReplayEngine:
             # Find most recent task from any poster
             task_id = list(self._latest_task.values())[-1]
         amount = int(step["amount"])
-        result = await clients.submit_bid(http, bidder, task_id, amount)
+        result = await clients.submit_bid(
+            http, bidder, task_id, amount, self._config.task_board_url
+        )
         bid_id = result.get("bid_id", "?")
         self._bids.setdefault(task_id, []).append(result)
         console.print(
-            f"  [green]{bidder.name} bid {amount} coins[/green]"
-            f" on task -> bid_id={bid_id}"
+            f"  [green]{bidder.name} bid {amount} coins[/green] on task -> bid_id={bid_id}"
         )
 
-    async def _do_accept_bid(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_accept_bid(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         poster_handle = step["poster"]
         poster = self.agents[poster_handle]
         bidder_handle = step["bidder"]
         task_id = self._resolve_task_id(step, poster_handle)
 
         # Find the bid_id for this bidder
-        bids = await clients.list_bids(http, poster, task_id)
+        bids = await clients.list_bids(http, poster, task_id, self._config.task_board_url)
         bidder = self.agents[bidder_handle]
         bid_id: str | None = None
         for bid in bids:
@@ -233,67 +224,56 @@ class ReplayEngine:
             console.print(f"  [red]No bid found from {bidder_handle}[/red]")
             return
 
-        await clients.accept_bid(http, poster, task_id, bid_id)
+        await clients.accept_bid(http, poster, task_id, bid_id, self._config.task_board_url)
         # Track which task this worker is assigned to
         self._worker_task[bidder_handle] = task_id
         console.print(
-            f"  [green]{poster.name} accepted {bidder.name}'s bid[/green]"
-            " -> contract formed"
+            f"  [green]{poster.name} accepted {bidder.name}'s bid[/green] -> contract formed"
         )
 
-    async def _do_upload_asset(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_upload_asset(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         worker_handle = step["worker"]
         worker = self.agents[worker_handle]
         task_id = self._resolve_task_id(step, worker_handle)
         filename = step.get("filename", "deliverable.txt")
         content_str = step.get("content", "Demo deliverable content")
         content = content_str.encode() if isinstance(content_str, str) else content_str
-        await clients.upload_asset(http, worker, task_id, filename, content)
+        await clients.upload_asset(
+            http, worker, task_id, filename, content, self._config.task_board_url
+        )
         console.print(f"  [green]{worker.name} uploaded[/green] '{filename}'")
 
-    async def _do_submit_deliverable(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_submit_deliverable(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         worker_handle = step["worker"]
         worker = self.agents[worker_handle]
         task_id = self._resolve_task_id(step, worker_handle)
-        await clients.submit_deliverable(http, worker, task_id)
-        console.print(
-            f"  [green]{worker.name} submitted deliverables[/green] for review"
-        )
+        await clients.submit_deliverable(http, worker, task_id, self._config.task_board_url)
+        console.print(f"  [green]{worker.name} submitted deliverables[/green] for review")
 
-    async def _do_approve(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_approve(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         poster_handle = step["poster"]
         poster = self.agents[poster_handle]
         task_id = self._resolve_task_id(step, poster_handle)
-        await clients.approve_task(http, poster, task_id)
-        console.print(
-            f"  [green]{poster.name} approved task[/green] -> payout released!"
-        )
+        await clients.approve_task(http, poster, task_id, self._config.task_board_url)
+        console.print(f"  [green]{poster.name} approved task[/green] -> payout released!")
 
-    async def _do_dispute(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_dispute(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         poster_handle = step["poster"]
         poster = self.agents[poster_handle]
         task_id = self._resolve_task_id(step, poster_handle)
         reason = step.get("reason", "Deliverable does not meet specification")
-        result = await clients.dispute_task(http, poster, task_id, reason)
+        result = await clients.dispute_task(
+            http, poster, task_id, reason, self._config.task_board_url
+        )
         dispute_id = result.get("dispute_id")
         if isinstance(dispute_id, str) and dispute_id:
             self._disputes[task_id] = dispute_id
-        console.print(
-            f"  [green]{poster.name} disputed task:[/green] \"{reason}\""
-        )
+        console.print(f'  [green]{poster.name} disputed task:[/green] "{reason}"')
 
     async def _resolve_dispute_id(self, http: httpx.AsyncClient, task_id: str) -> str:
         if task_id in self._disputes:
             return self._disputes[task_id]
-        disputes = await clients.list_disputes(http, task_id=task_id)
+        disputes = await clients.list_disputes(http, self._config.court_url, task_id=task_id)
         if not disputes:
             msg = f"No Court dispute found for task {task_id}"
             raise ValueError(msg)
@@ -301,14 +281,12 @@ class ReplayEngine:
         self._disputes[task_id] = dispute_id
         return dispute_id
 
-    async def _do_file_claim(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_file_claim(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         assert self.platform is not None
         poster_handle = step["poster"]
         poster = self.agents[poster_handle]
         task_id = self._resolve_task_id(step, poster_handle)
-        task = await clients.get_task(http, task_id)
+        task = await clients.get_task(http, task_id, self._config.task_board_url)
         respondent_id = task.get("worker_id")
         if not isinstance(respondent_id, str) or respondent_id == "":
             worker_handle = step.get("worker")
@@ -327,25 +305,29 @@ class ReplayEngine:
             respondent_id=respondent_id,
             claim=str(claim),
             escrow_id=str(task["escrow_id"]),
+            court_url=self._config.court_url,
         )
         dispute_id = str(result["dispute_id"])
         self._disputes[task_id] = dispute_id
         console.print(f"  [green]Court claim filed:[/green] {dispute_id}")
 
-    async def _do_submit_rebuttal(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_submit_rebuttal(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         worker_handle = step["worker"]
         worker = self.agents[worker_handle]
         task_id = self._resolve_task_id(step, worker_handle)
         dispute_id = await self._resolve_dispute_id(http, task_id)
         rebuttal = step.get("rebuttal", "The deliverable meets the specification.")
-        await clients.submit_rebuttal(http, worker, task_id, dispute_id, str(rebuttal))
+        await clients.submit_rebuttal(
+            http,
+            worker,
+            task_id,
+            dispute_id,
+            str(rebuttal),
+            self._config.task_board_url,
+        )
         console.print(f"  [green]{worker.name} submitted rebuttal[/green] -> {dispute_id}")
 
-    async def _do_trigger_ruling(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_trigger_ruling(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         assert self.platform is not None
         agent_handle = step.get("agent") or step.get("poster") or step.get("worker")
         if not isinstance(agent_handle, str):
@@ -353,15 +335,15 @@ class ReplayEngine:
             raise ValueError(msg)
         task_id = self._resolve_task_id(step, agent_handle)
         dispute_id = await self._resolve_dispute_id(http, task_id)
-        result = await clients.trigger_ruling(http, self.platform, dispute_id)
+        result = await clients.trigger_ruling(
+            http, self.platform, dispute_id, self._config.court_url
+        )
         console.print(
             f"  [green]Court ruled[/green] dispute={dispute_id}"
             f" worker_pct={result.get('worker_pct', '?')}"
         )
 
-    async def _do_feedback(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
+    async def _do_feedback(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         agent_handle = step["agent"]
         agent = self.agents[agent_handle]
         task_id = self._resolve_task_id(step, agent_handle)
@@ -381,23 +363,12 @@ class ReplayEngine:
             agent,
             task_id=task_id,
             to_agent_id=to_agent_id,
-            role=step["role"],
             category=step["category"],
             rating=step["rating"],
             comment=step.get("comment", ""),
+            reputation_url=self._config.reputation_url,
         )
         console.print(
             f"  [green]{agent.name} submitted {step['category']} feedback[/green]"
             f" ({step['rating']})"
-        )
-
-    async def _do_reveal_feedback(
-        self, http: httpx.AsyncClient, step: dict[str, Any]
-    ) -> None:
-        agent_handle = step["agent"]
-        agent = self.agents[agent_handle]
-        task_id = self._resolve_task_id(step, agent_handle)
-        await clients.reveal_feedback(http, agent, task_id)
-        console.print(
-            f"  [green]{agent.name} revealed feedback[/green] for task"
         )
