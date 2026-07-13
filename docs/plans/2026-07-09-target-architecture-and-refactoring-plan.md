@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-09 · **Last updated:** 2026-07-10
 **Status:** ACTIVE and **self-contained — executable end-to-end from §5.-1 with no further input.** The analysis (§1–§4) is complete and the hotfix track (§5.0, H-1…H-7) has shipped and is verified. Appendix B records which review feedback was accepted and which rejected. All §9 questions were ratified 2026-07-10 per Step E1 (decision records in `docs/plans/2026-07-10-q*-decision.md`); no decision is outstanding.
-**Execution progress (updated 2026-07-13):** E1 `a59d1a7` · WP-01 `fa8bbe4` · WP-02 `8fcae08` · WP-03 `0abfe7f`+`7a346a8` · WP-15 `dd6957f` · WP-06 `6aba0e2` · WP-05 `722b494` · WP-04 `2fd507e` — all CI-gated and pushed. **Both P0 gaps closed** (autonomous acceptance + autonomous rulings, each proven by a live e2e). Remaining open: WP-07 (E2 position 6), WP-08, WP-09, WP-10, WP-11 (now also holds: task-board BankClient swap, task-board T-034 strictness, court cutoffs/cap de-hardcode, `require_platform_signer` deletion, DbReader `get_transactions` event_id gap, dead `Gateway*Store` aliases), WP-12, WP-13, WP-14. §8 item 2's full proof still needs T-102 (WP-09).
+**Execution progress (updated 2026-07-13):** E1 `a59d1a7` · WP-01 `fa8bbe4` · WP-02 `8fcae08` · WP-03 `0abfe7f`+`7a346a8` · WP-15 `dd6957f` · WP-06 `6aba0e2` · WP-05 `722b494` · WP-04 `2fd507e` · WP-07 `45729a6` · WP-08 `57fcc57` — all CI-gated and pushed. **Both P0 gaps closed; every behavior work package through E2 position 7 is done.** Remaining open: WP-09 (agent runtime/demo, incl. T-102), WP-10 (Q-6 Docker descope + Q-7 env ADR + Q-14 hosted CI), WP-11 (hygiene; inherited items: task-board BankClient swap, task-board T-034 strictness, court cutoffs/cap de-hardcode, `require_platform_signer` deletion, T-105 event_id read gap, dead `Gateway*Store` aliases), WP-12 (docs/spec sweep incl. §2.4 operator-genesis delta), WP-13 (test debt incl. T-104/T-107), WP-14 (product tail).
 **Method:** 17 parallel audit agents (per-service code audits, doc/spec extraction, repo-wide wiring maps) + orchestrator validation of every load-bearing claim against source, later extended by an adversarial Codex review of this document. Evidence cited as `path:line` (code) or `path § heading` (docs). No claim without a citation. UNVERIFIED items are labeled. Every shipped fix was mutation-checked (remove the guard, the test must fail), and no existing assertion was changed without a ratified-decision exception recorded in §5.0.
 **Supersedes:** `docs/plans/2026-06-12-completion-inventory.md` (folds in its findings, re-verified against the 2026-07-09 codebase).
 
@@ -318,13 +318,13 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | ~~GAP-A3~~ | Deadlines evaluated only lazily on reads; nothing transitioned unread tasks | §2.5 ▲ | P1 | **DONE** `722b494` (WP-05: config-driven background sweep over all non-terminal statuses; CAS-safe vs concurrent lazy evaluation) |
 | ~~GAP-A4~~ | Ruling side-effects non-atomic; retry hit `invalid_status` on re-record | §2.6 recoverable-retry contract | P1 | **DONE** `6aba0e2` (deterministic ruling_id; TB re-record→200; feedback 409→success; crash-window convergence test) |
 | ~~GAP-A5~~ | Production sealed-feedback reveal was a TOCTOU read-then-write; the reveal policy now lives inside the gateway's `BEGIN IMMEDIATE` (reverse lookup + both rows flipped + `feedback.revealed` emitted). `force_visible` stays a caller policy flag; "a reverse pair exists" is a fact the gateway derives. | §2.7 atomic reveal | P1 | **DONE** `478153e` (two-connection concurrency probe) |
-| GAP-A6 | Court-generated feedback semantics muddy: `force_visible` requires `from_agent_id`=platform to pass signer-match (`routers/feedback.py:175-196`); zero tests exercise the path | §2.7 court feedback | P2 | WP-07 |
+| ~~GAP-A6~~ | Court-generated feedback semantics had zero tests | §2.7 court feedback | P2 | **DONE** `45729a6` (WP-07: 4 semantics tests incl. non-interference with sealed pairs; all guards mutation-checked; T-106 filed for the stored `role` column) |
 | ~~GAP-A7~~ | Worker recorded review-poll timeout as full APPROVED earnings | §2.9 TIMEOUT outcome | P2 | **DONE** `95fe63e` (T-016; `TaskOutcome.TIMEOUT` had to be added — only `BID_TIMEOUT` existed) |
 | ~~GAP-A8~~ | Rebuttal deadline computed and stored but enforced by nobody | §2.6 window | P2 | **DONE** `6aba0e2` (409 `dispute_not_ready`; exceptions #6/#7) |
 | ~~GAP-A9~~ | Judges never saw deliverable **content** (verified: `get_task` carries only asset metadata) | §2.6 + vision "judges can access everything" | P2 | **DONE** `6aba0e2` (court fetches asset bytes up to required `judges.max_deliverable_bytes` into the judge context) |
 | ~~GAP-A10~~ | Bank store divergences (tx types, prefixed refs, missing poster==payer guard, wrong worker_pct code, zero-amount split legs) | §2.4 settlement | P2 | **DONE** `2fd507e` (in-memory stores aligned; shared contract suite runs against BOTH stores via in-process gateway) |
 | ~~GAP-A11~~ | Economy phase emitted `idle` for an empty economy vs required `stalled`. (The `stable` dispute-ceiling half was **withdrawn**, not implemented — see the §5.0 correction: the spec's phase table leaves combinations uncovered, so the residual stays `stable`.) | §2.8 phases | P2 | **DONE** `9f506c9` (T-046) — decides `tickets.md#T-001` |
-| GAP-A12 | UNVERIFIED residuals from the June inventory: labor bucket `51_to_100` excluding 100; frontend trend string `growing` vs API `increasing`; `title_too_long` custom code | §2.8/§2.5 | P2 | WP-08/WP-05 (T-047/048/037) — re-verify then fix |
+| ~~GAP-A12~~ | June-inventory residuals — all three verified REAL and fixed | §2.8/§2.5 | P2 | **DONE** `722b494` (title code, exception #9) + `57fcc57` (bucket includes 100; frontend accepts `increasing`) |
 | GAP-A13 | Demo integrity: `scale.yaml` leaves a dispute unresolved; demo `reveal_feedback` posts to an endpoint absent from the Reputation API surface (`clients.py:414`); demo/base-SDK feedback contracts drifted | §2.9 honest demos | P2 | WP-09 (verify first) |
 | ~~GAP-A14~~ | Bank auth precedence inverted on credit/release/split (403 before payload validation) | auth-spec precedence | P2 | **DONE** `0abfe7f` (decode-first ordering: payload errors beat 403) |
 | GAP-A15 | **No autonomous component ever accepts a bid** (found 2026-07-10 while auditing T-035's blast radius). The only callers of `accept_bid` are `tools/src/demo_replay/engine.py:236` (the scripted demo) and the UI proxy (`ui_service/routers/proxy.py:42`, i.e. a human clicking). `agents/src/task_feeder/` posts and reviews but has no acceptance path, and `MathWorkerLoop` simply waits in its post-bid phase until poll exhaustion records `BID_TIMEOUT`. So `just start-feeder` + `just start-mathbot` cannot move a task past `open`. Together with GAP-A1 (nothing triggers rulings) this means **the autonomous economy has two missing drivers**, and §8's definition-of-done item 2 is unreachable until both are closed. Before T-035 the stranded task also held its escrow forever; it now expires and refunds the poster, which is an improvement but not a substitute for acceptance. | §2.9: feeder accepts a winning bid | **P0** (blocks the autonomous-economy claim) | **DONE** `dd6957f` (WP-15: feeder acceptance loop per Q-16 — lowest bid after the window/quorum, reputation tie-break; live e2e observed red then green; GAP-A15 row kept verbose for history) |
@@ -334,7 +334,7 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | ID | Gap | Target | Sev | Closes via |
 |---|---|---|---|---|
 | ~~GAP-B1~~ | CB/TB/Reputation verified **platform ops** via Identity HTTP; only Court was local | §2.3 two-tier model | P1 | **DONE** `0abfe7f` (WP-03: credit/release/split, record_ruling, force_visible verify locally; one accepted deviation: create_account, see §5.0) |
-| GAP-B2 | UI proxy = unauthenticated platform-privileged write console; UserAgent shares the platform key and mints/spends the treasury | §2.3/§2.8 | P1 | WP-08 Q-2,Q-3 |
+| ~~GAP-B2~~ | UI proxy was a platform-privileged write console sharing the platform key and minting the treasury | §2.3/§2.8 | P1 | **DONE** `57fcc57` (dedicated `operator` identity; UserAgent no longer extends PlatformAgent; startup mint deleted per exception #10; genesis = `just provision`; 127.0.0.1 posture documented per Q-3) |
 | ~~GAP-B3~~ | `_tampered` test-helper marker branch inside production signature validation | clean prod code | P2 | **DONE** `0abfe7f` (markers deleted; test tamper helpers do faithful Ed25519 verification; exception #4) |
 | ~~GAP-B4~~ | Court asserted platform identity by crypto only; `kid == platform.agent_id` check absent | spec/code align | P3 | **DONE** `6aba0e2` (kid assertion + rebuttal-party match, mutation-checked; dead `require_platform_signer` deletion → WP-11; spec side → WP-12) |
 | GAP-B5 | No replay/freshness protection in any JWS (no nonce/`iat`/`exp`); blunted by idempotency+state checks but unstated | explicit posture | P2 | Q-10 → WP-03 or docs |
@@ -347,7 +347,7 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 
 | ID | Gap | Target | Sev | Closes via |
 |---|---|---|---|---|
-| GAP-C1 | UI opens the gateway's SQLite file directly (read-only); semgrep carries a silent `ui_service` exception to the no-direct-sql rule | §2.2 read rule | P1 | WP-08 Q-4 |
+| ~~GAP-C1~~ | UI's direct read-only SQLite was a silent exception | §2.2 read rule | P1 | **DONE** `57fcc57` (Q-4 ratified keep: semgrep exception annotated with the decision record; `mode=ro` architecture test) |
 | ~~GAP-C2~~ **DONE** `230e090` | `DELETE /court/rulings/{id}`: no transaction, no event (`db_writer.py:1407-1414`); `POST /court/claims/{id}/status`: event optional (`:1237-1240`) — both violate "every write includes an event" | §2.2 events | P1 | WP-04 (T-042) |
 | ~~GAP-C3~~ | Idempotent replays returned `event_id: 0` / `balance_after: 0` sentinels | real values | P2 | **DONE** `230e090` (T-043; the emitting `event_id` is now persisted on `bank_transactions`/`bank_escrow`) |
 | ~~GAP-C4~~ | Schema init failures silently suppressed (`contextlib.suppress(sqlite3.OperationalError)`) | fail-fast | P2 | **DONE** `230e090` (the suppression was hiding that `schema.sql` is not re-runnable) |
@@ -382,7 +382,7 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | ~~GAP-E7~~ | Court-unavailable during dispute/rebuttal → raw 500; `/rebuttal` skipped the validation middleware | 502 mapping + full middleware | P2 | **DONE** `722b494` (502 `court_unavailable` with state unchanged; `/rebuttal` added to `_JSON_VALIDATION_ENDPOINTS`; full route audit clean) |
 | GAP-E8 | Dead dependencies/surface: `strands-agents` (no imports), `pyjwt` ×3 services + gateway, `require_platform_signer`, `execute_query_one`, `ProxyTaskResponse`, `TaskOutcome.BID_REJECTED`, `auto_approve_on_error`, agent-side `lock_escrow`/`release_escrow`/`split_escrow`, `PuppetMaster`/`PuppetAgent`, roster `type` field | removed | P3 | WP-09/WP-11 |
 | GAP-E9 | Convention drift: identity hand-rolls exception handlers instead of the commons factory; router-layer validation helpers; UI `events.py` bypasses the `DbConn` dependency; duplicated auth preamble across all routers (F-19) | shared `authorize_and_load` + commons handlers | P3 | WP-11 |
-| GAP-E10 | UI `list_agents` N+1 (~10 queries/agent, Python-side sort+paginate); GDP history loops 2 queries per bucket | SQL-side aggregation | P2 | WP-08 |
+| ~~GAP-E10~~ | UI `list_agents` N+1; GDP history 2 queries per point | SQL-side aggregation | P2 | **DONE** `57fcc57` (single aggregated JOIN, ≤6 calls guard; bucketed GROUP BY, ≤4 calls guard; behavior-preserving on all 60 existing assertions) |
 | GAP-E11 | `tools/demo_replay`: hardcoded URLs, no config file, zero tests; `math_task_factory` reaches into private attrs | config-driven + tested | P3 | WP-09 |
 | ~~GAP-E13~~ | Task-board `bid_count` was never incremented on the gateway path (found by the WP-15 e2e) | store parity | P2 | **DONE** `2fd507e` (incremented in the same transaction as the bid insert; rejected duplicates roll back cleanly) |
 | GAP-E12 | **Whitelist normalizers silently drop new columns in production only.** `TaskDbClient._normalize_task` (`task_db_client.py:102`) rebuilds every gateway response from its `_TASK_COLUMNS` tuple, so a column present in the database but missing from that tuple vanishes on the production read path while router unit tests — which inject an in-memory fake store — stay green. `dispute_id` was exactly this case: omitting it would have made `get_task` return `dispute_id=None` and every legitimate rebuttal fail with 409, with no failing test anywhere. Audit for the same pattern in the other services' `*_db_client.py` normalizers. | schema-pinned whitelists | P2 | **DONE** `91b649b` (task-board) + `2fd507e` (identity/central-bank/reputation/court audited & pinned; real bug found+fixed: reputation dropped the persisted `role` column on reads) |
@@ -591,12 +591,12 @@ Per service, in this order (test-first: for each platform op, a failing integrat
 6. Remove the process-wide `ServiceError.__init__` monkeypatch (`court_service/__init__.py:10-32`) — fix the legacy 3-arg call sites instead.
 7. Judge ops documentation (mock vs LM Studio vs hosted) lands with WP-12 (T-041) once Q-13 answers.
 
-### WP-07 — Reputation integrity (M) — closes GAP-A5/A6 + VIS-09
+### WP-07 — Reputation integrity (M) — closes GAP-A5/A6 + VIS-09 — ✅ DONE `45729a6` (2026-07-13; GAP-A5 was H-7)
 1. **Atomic reveal server-side**: gateway `POST /reputation/feedback` performs the reverse-pair lookup + dual `visible=1` UPDATE inside its `BEGIN IMMEDIATE` (mutual-reveal policy moves out of the client); `FeedbackDbClient` drops its read-then-write. Failing test first: interleaved mutual submissions against the in-process gateway must both end visible (currently can both stay sealed).
 2. Court/platform feedback: spec + tests for the `force_visible` path (platform-signed, `from`=platform, immediate visibility, category semantics per §2.7); today it has zero tests.
 3. VIS-09: add an injectable clock seam (mirror `ui_service.services.database._clock`) + failing test for the 24h lazy reveal.
 
-### WP-08 — UI & operator (L) — closes GAP-A11/A12/B2/C1/E10 + T-046/047/048/049/093/095 Q-2/Q-3/Q-4 for items 4–6
+### WP-08 — UI & operator (L) — closes GAP-A11/A12/B2/C1/E10 + T-046/047/048/049/093/095 Q-2/Q-3/Q-4 for items 4–6 — ✅ DONE `57fcc57` (2026-07-13; GAP-A11/T-046 was H-3; exception #10 + operator-genesis contract delta in §5.0; T-107 filed)
 1. Phase fix (unblocked; decides `tickets.md#T-001`): `compute_economy_phase` emits `stalled` when no recent tasks (`metrics.py:653`) and restores the dispute<15% ceiling on `stable` (`metrics.py:658`). The already-written e2e `test_x01…` becomes the failing test that turns green.
 2. Verify-then-fix the June residuals: reward bucket includes 100 (T-047), frontend accepts `increasing` (T-048).
 3. Enforce `request.max_body_size` (wire the commons middleware) — today declared, never enforced.
@@ -688,8 +688,8 @@ DONE = verified in code · PARTIAL = code or doc half landed · OPEN = not done 
 | T-042/043 | gateway event pairing / replay values | **DONE** `230e090` | `delete_ruling` txn+event; claim-status event mandatory; `event_id` persisted on bank rows |
 | T-044/045 | gateway spec + concurrency test | **OPEN** | → WP-12/13 (spec must also record the `DELETE` body) |
 | T-046 | stalled phase | **DONE** `9f506c9` | closes `tickets.md#T-001` (`10a9285`); stable-ceiling half withdrawn as unspecifiable |
-| T-047/048 | bucket 100 / trend string | UNVERIFIED | → WP-08 verify-first |
-| T-049 | proxy spec'd+tested | **OPEN** | → WP-08 + WP-12 |
+| T-047/048 | bucket 100 / trend string | **DONE** `57fcc57` | both verified real, fixed failing-first |
+| T-049 | proxy spec'd+tested | **DONE (test side)** `57fcc57` | every /proxy/* route live-tested signing as operator; spec side → WP-12 |
 | T-050/051 | identity verify-jws/persistence spec | OPEN (doc) | → WP-12 |
 | T-060–T-065 | docs sweep | **OPEN** (all verified stale ✅V) | → WP-12 |
 | T-070/071/072/073/074/075 | test debt | T-074 largely DONE (semgrep + per-service `test_db_client_isolation`, with the silent ui exception); T-073 PARTIAL (auto-approve e2e exists; cancellation-refund absent); rest **OPEN** | → WP-13 |
@@ -699,7 +699,8 @@ DONE = verified in code · PARTIAL = code or doc half landed · OPEN = not done 
 | T-084 | semgrep rule audit | PARTIAL (rules updated `5f514c1`; no-default-values FP status unverified) | → WP-11 |
 | T-085 | gateway health logging | UNVERIFIED | → WP-11 verify |
 | T-090 | salary | **DECIDED-DEFERRED** (R8); doc claims still to purge | → WP-12 |
-| T-091/093/094/095 | product tail | T-095 PARTIAL (badge metric removed `535c48b`); rest OPEN | → WP-08/WP-14 |
+| T-093/095 | quarterly page / agent+leaderboard views | **DONE** `57fcc57` | vanilla JS + 10 Playwright e2e tests |
+| T-091/094 | arena / landing animation | OPEN | → WP-14 |
 | T-092 | vision open questions recorded | **DONE** `a59d1a7` — all 16 §9 questions ratified as decision records (`docs/plans/2026-07-10-q*-decision.md`, Step E1) | closed |
 | T-100 | UI empty-economy phase (migrated tickets.md#T-001) | **DONE** `9f506c9` (code) + `fa8bbe4` (migration) | closed |
 | T-101 | task-board `bid_count` not incremented on gateway path | **DONE** `2fd507e` | feeder's `list_bids` workaround now redundant (harmless) |
