@@ -70,6 +70,7 @@ help:
     @printf "  \033[0;37mjust start-mathbot    \033[0;34m Start math worker agent (requires services + LM Studio)\033[0m\n"
     @printf "  \033[0;37mjust stop-mathbot     \033[0;34m Stop math worker agent\033[0m\n"
     @printf "  \033[0;37mjust fund-feeder <amount>\033[0;34m Fund the feeder agent with initial coins\033[0m\n"
+    @printf "  \033[0;37mjust provision        \033[0;34m Provision the treasury (idempotent; run once after first start-all)\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
     @printf "  \033[0;37mjust logs             \033[0;34m Tail all service logs (color-coded)\033[0m\n"
     @echo ""
@@ -411,6 +412,26 @@ fund-feeder amount:
         printf "\033[0;32m✓ Feeder agent funded successfully\033[0m\n"
     else
         printf "\033[0;31m✗ Failed to fund feeder agent\033[0m\n"
+        exit 1
+    fi
+    printf "\n"
+
+# Provision the treasury (idempotent genesis for the UI operator account).
+# Q-9 decision: `just start-all` does NOT auto-mint the treasury any more —
+# run this once after the first `just start-all` (and again any time you
+# need to confirm/re-assert genesis; re-running is a safe no-op).
+provision:
+    #!/usr/bin/env bash
+    printf "\n"
+    printf "\033[0;34m=== Provisioning Treasury ===\033[0m\n"
+    printf "\n"
+    cd agents && uv run python -m treasury_provision_cli
+    exit_code=$?
+    printf "\n"
+    if [ $exit_code -eq 0 ]; then
+        printf "\033[0;32m✓ Treasury provisioned successfully\033[0m\n"
+    else
+        printf "\033[0;31m✗ Failed to provision treasury\033[0m\n"
         exit 1
     fi
     printf "\n"

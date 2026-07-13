@@ -19,6 +19,7 @@ BANK_URL = "http://localhost:8002"
 TASK_BOARD_URL = "http://localhost:8003"
 REPUTATION_URL = "http://localhost:8004"
 COURT_URL = "http://localhost:8005"
+UI_URL = "http://localhost:8008"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -64,6 +65,20 @@ def _require_court_service() -> None:
         response.raise_for_status()
     except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError) as exc:
         pytest.exit(f"Court service not running at {COURT_URL}: {exc}", returncode=1)
+
+
+@pytest.fixture(scope="session")
+def _require_ui_service() -> None:
+    """Not autouse: only WP-08's proxy-route tests hit the UI service, so this
+
+    is opt-in (via ``pytestmark = pytest.mark.usefixtures(...)``) rather than
+    a blanket precondition for every test in this directory.
+    """
+    try:
+        response = httpx.get(f"{UI_URL}/health", timeout=3.0)
+        response.raise_for_status()
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError) as exc:
+        pytest.exit(f"UI service not running at {UI_URL}: {exc}", returncode=1)
 
 
 @pytest.fixture()

@@ -138,13 +138,14 @@
 
   /**
    * Canonical task-creation-trend -> visual mapping. The trend vocabulary
-   * ('growing'/'declining'/'stable') is defined ONLY here; every consumer
-   * (landing.js, observatory.js) reads its arrow/up/color from this.
+   * ('increasing'/'decreasing'/'stable', matching the API's economy_phase.
+   * task_creation_trend) is defined ONLY here; every consumer (landing.js,
+   * observatory.js) reads its arrow/up/color from this.
    * Returns { arrow, up, color }.
    */
   function trendVisual(trend) {
-    if (trend === 'growing') return { arrow: '↑', up: true, color: 'var(--green)' };
-    if (trend === 'declining') return { arrow: '↓', up: false, color: 'var(--red)' };
+    if (trend === 'increasing') return { arrow: '↑', up: true, color: 'var(--green)' };
+    if (trend === 'decreasing') return { arrow: '↓', up: false, color: 'var(--red)' };
     return { arrow: '→', up: null, color: 'var(--amber)' };
   }
 

@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiosqlite
-import httpx
 from service_auth import AgentFactory
 
 from ui_service.config import get_settings
@@ -15,40 +14,9 @@ from ui_service.core.state import init_app_state
 from ui_service.logging import get_logger, setup_logging
 
 if TYPE_CHECKING:
-    import logging
     from collections.abc import AsyncIterator
 
     from fastapi import FastAPI
-
-
-async def _fund_platform_treasury(
-    factory: AgentFactory,
-    treasury_id: str,
-    balance: int,
-    logger: logging.Logger,
-) -> None:
-    """Mint the shared platform/user-agent treasury account.
-
-    The user agent shares the platform identity (authorized to mint its own
-    balance), so a UI-posted task can lock escrow from this account. Without
-    it, escrow_lock fails with account_not_found — surfaced to the UI as a
-    misleading 404 on POST /tasks.
-    """
-    platform_agent = factory.platform_agent()
-    # Carry the already-registered identity so the signed token's JWS kid verifies.
-    platform_agent.agent_id = treasury_id
-    try:
-        await platform_agent.create_account(agent_id=treasury_id, initial_balance=balance)
-        logger.info(
-            "Platform treasury funded",
-            extra={"agent_id": treasury_id, "balance": balance},
-        )
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code != 409:  # 409: account already exists
-            raise
-        logger.info("Platform treasury account already exists", extra={"agent_id": treasury_id})
-    finally:
-        await platform_agent.close()
 
 
 @asynccontextmanager
@@ -75,14 +43,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             extra={"path": settings.database.path, "error": str(exc)},
         )
 
-    # Initialize UserAgent for UI-driven task operations
-    factory: AgentFactory | None = None
+    # Initialize UserAgent for UI-driven task operations. Genesis funding is
+    # NOT this service's concern (Q-9): treasury provisioning is an explicit,
+    # idempotent bootstrap step (`just provision`, agents/src/treasury_provision_cli)
+    # that runs independently of UI startup — a zero-balance operator here is
+    # a normal, non-error state.
     try:
         config_path = Path(settings.user_agent.agent_config_path)
         if not config_path.is_absolute():
             config_path = Path.cwd() / config_path
         factory = AgentFactory(config_path=config_path.resolve())
-        user_agent = factory.user_agent()
+        user_agent = factory.user_agent(settings.user_agent.handle)
         await user_agent.register()
         state.user_agent = user_agent
         logger.info(
@@ -94,24 +65,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             "UserAgent initialization failed — proxy endpoints will be unavailable",
             extra={"error": str(exc)},
         )
-
-    # Mint the platform treasury so UI-driven task posting can lock escrow.
-    # Kept separate from registration: a funding failure disables only task
-    # posting, not the dashboard or the rest of the proxy.
-    agent = state.user_agent
-    if factory is not None and agent is not None and agent.agent_id is not None:
-        try:
-            await _fund_platform_treasury(
-                factory,
-                agent.agent_id,
-                settings.user_agent.treasury_balance,
-                logger,
-            )
-        except Exception as exc:
-            logger.error(
-                "Platform treasury funding failed — task posting may be unavailable",
-                extra={"error": str(exc)},
-            )
 
     logger.info(
         "Service starting",

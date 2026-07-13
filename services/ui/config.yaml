@@ -5,6 +5,14 @@ service:
   name: "ui"
   version: "0.1.0"
 
+# SECURITY POSTURE (Q-3 decision:
+# docs/plans/2026-07-10-q3-proxy-exposure-decision.md): server.host below
+# (127.0.0.1-only) IS the security boundary for /api/proxy/* — those routes
+# are unauthenticated and, combined with the operator identity (Q-2), can
+# spend the operator's funds. There is no auth layer beyond this bind
+# address; do not change `host` to 0.0.0.0 or front this service with a
+# reverse proxy without first adding the config-driven shared-secret header
+# the decision record calls for.
 server:
   host: "127.0.0.1"
   port: 8008
@@ -30,7 +38,15 @@ request:
 
 user_agent:
   agent_config_path: "../../agents/config.yaml"
-  # Treasury balance minted for the shared platform/user-agent account on
-  # startup so UI-driven task posting can lock escrow. The user agent shares
-  # the platform identity, which is authorized to mint its own balance.
-  treasury_balance: 1000000
+  # Roster handle the UI's UserAgent signs proxy actions as (Q-2 decision:
+  # docs/plans/2026-07-10-q2-operator-identity-decision.md). A distinct
+  # economic identity from "platform" — the platform key is reserved for
+  # notary operations (contract co-signing, platform-signed service calls);
+  # every /api/proxy/* action is attributed to this operator identity.
+  #
+  # Genesis funding for this account is NOT the UI's concern (Q-9 decision:
+  # docs/plans/2026-07-10-q9-treasury-bootstrap-decision.md, frozen-test
+  # exception #10). UI startup never mints; a zero-balance operator at
+  # startup is normal. Run `just provision` once (idempotent,
+  # agents/src/treasury_provision_cli) to fund the operator's account.
+  handle: "operator"

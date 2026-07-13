@@ -51,7 +51,7 @@ class _StubAgentFactory:
     def __init__(self, config_path: Path) -> None:
         self._config_path = config_path
 
-    def user_agent(self) -> _StubUserAgent:
+    def user_agent(self, handle: str) -> _StubUserAgent:  # noqa: ARG002
         return _StubUserAgent()
 
 
