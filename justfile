@@ -74,13 +74,6 @@ help:
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
     @printf "  \033[0;37mjust logs             \033[0;34m Tail all service logs (color-coded)\033[0m\n"
     @echo ""
-    @printf "\033[1;33mDocker\033[0m\n"
-    @printf "  \033[0;37mjust docker-up        \033[0;34m Start all services\033[0m\n"
-    @printf "  \033[0;37mjust docker-up-dev    \033[0;34m Start all services with hot reload\033[0m\n"
-    @printf "  \033[0;37mjust docker-down      \033[0;34m Stop all services\033[0m\n"
-    @printf "  \033[0;37mjust docker-logs      \033[0;34m View logs (optionally: just docker-logs <service>)\033[0m\n"
-    @printf "  \033[0;37mjust docker-build     \033[0;34m Rebuild all Docker images from scratch\033[0m\n"
-    @echo ""
     @printf "\033[1;33mTask Generation\033[0m\n"
     @printf "  \033[0;37mjust generate-tasks    \033[0;34m Generate math tasks to data/math_tasks.jsonl\033[0m\n"
     @echo ""
@@ -128,7 +121,6 @@ check:
 
     check_tool "uv"     uv     "--version"
     check_tool "python"  python3 "--version"
-    check_tool "docker"  docker  "--version"
     check_tool "curl"    curl    "--version"
     check_tool "jq"      jq      "--version"
     check_tool "lsof"    lsof    "-v"
@@ -274,7 +266,15 @@ start-all:
     cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 127.0.0.1 --port 8004 &
     cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 127.0.0.1 --port 8002 &
     cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 127.0.0.1 --port 8003 &
-    cd services/court && set -a && [ -f .env ] && . .env && set +a && uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port 8005 &
+    (
+        cd services/court
+        if [ -f .env ]; then
+            set -a
+            . .env
+            set +a
+        fi
+        uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port 8005
+    ) &
 
     # Wait for the rest in dependency order
     wait_for_health "Central Bank" 8002
@@ -629,47 +629,6 @@ demo-scale:
     read -r
     just stop-all
     printf "\n"
-
-# --- Docker ---
-
-# Start all services with Docker Compose
-docker-up:
-    @echo ""
-    @printf "\033[0;34m=== Starting All Services (Docker) ===\033[0m\n"
-    docker compose up -d
-    @printf "\033[0;32m✓ Services started\033[0m\n"
-    @echo ""
-
-# Start all services in development mode (with hot reload)
-docker-up-dev:
-    @echo ""
-    @printf "\033[0;34m=== Starting All Services (Docker Dev Mode) ===\033[0m\n"
-    docker compose -f docker-compose.yml -f docker-compose.dev.yml up
-    @echo ""
-
-# Stop all services
-docker-down:
-    @echo ""
-    @printf "\033[0;34m=== Stopping All Services ===\033[0m\n"
-    docker compose down
-    @printf "\033[0;32m✓ Services stopped\033[0m\n"
-    @echo ""
-
-# View Docker logs (optionally for a specific service)
-docker-logs service="":
-    @echo ""
-    docker compose logs -f {{service}}
-    @echo ""
-
-# Build all Docker images (destroys existing images first)
-docker-build:
-    @echo ""
-    @printf "\033[0;34m=== Destroying Existing Docker Images ===\033[0m\n"
-    docker compose down --rmi all --volumes 2>/dev/null || true
-    @printf "\033[0;34m=== Building All Docker Images ===\033[0m\n"
-    docker compose build
-    @printf "\033[0;32m✓ Build complete\033[0m\n"
-    @echo ""
 
 # --- CI & Code Quality ---
 

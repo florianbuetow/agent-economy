@@ -325,7 +325,7 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | ~~GAP-A10~~ | Bank store divergences (tx types, prefixed refs, missing poster==payer guard, wrong worker_pct code, zero-amount split legs) | §2.4 settlement | P2 | **DONE** `2fd507e` (in-memory stores aligned; shared contract suite runs against BOTH stores via in-process gateway) |
 | ~~GAP-A11~~ | Economy phase emitted `idle` for an empty economy vs required `stalled`. (The `stable` dispute-ceiling half was **withdrawn**, not implemented — see the §5.0 correction: the spec's phase table leaves combinations uncovered, so the residual stays `stable`.) | §2.8 phases | P2 | **DONE** `9f506c9` (T-046) — decides `tickets.md#T-001` |
 | ~~GAP-A12~~ | June-inventory residuals — all three verified REAL and fixed | §2.8/§2.5 | P2 | **DONE** `722b494` (title code, exception #9) + `57fcc57` (bucket includes 100; frontend accepts `increasing`) |
-| GAP-A13 | Demo integrity: `scale.yaml` leaves a dispute unresolved; demo `reveal_feedback` posts to an endpoint absent from the Reputation API surface (`clients.py:414`); demo/base-SDK feedback contracts drifted | §2.9 honest demos | P2 | WP-09 (verify first) |
+| ~~GAP-A13~~ | Demo integrity: dangling dispute, phantom reveal endpoint, drifted feedback contract | §2.9 honest demos | P2 | **DONE** `ded2a90` (verified: the SDK was right, the demo wrong — `from_agent_id` fixed, dead `reveal_feedback` deleted, dispute resolved, unknown actions hard-error) |
 | ~~GAP-A14~~ | Bank auth precedence inverted on credit/release/split (403 before payload validation) | auth-spec precedence | P2 | **DONE** `0abfe7f` (decode-first ordering: payload errors beat 403) |
 | GAP-A15 | **No autonomous component ever accepts a bid** (found 2026-07-10 while auditing T-035's blast radius). The only callers of `accept_bid` are `tools/src/demo_replay/engine.py:236` (the scripted demo) and the UI proxy (`ui_service/routers/proxy.py:42`, i.e. a human clicking). `agents/src/task_feeder/` posts and reviews but has no acceptance path, and `MathWorkerLoop` simply waits in its post-bid phase until poll exhaustion records `BID_TIMEOUT`. So `just start-feeder` + `just start-mathbot` cannot move a task past `open`. Together with GAP-A1 (nothing triggers rulings) this means **the autonomous economy has two missing drivers**, and §8's definition-of-done item 2 is unreachable until both are closed. Before T-035 the stranded task also held its escrow forever; it now expires and refunds the poster, which is an improvement but not a substitute for acceptance. | §2.9: feeder accepts a winning bid | **P0** (blocks the autonomous-economy claim) | **DONE** `dd6957f` (WP-15: feeder acceptance loop per Q-16 — lowest bid after the window/quorum, reputation tie-break; live e2e observed red then green; GAP-A15 row kept verbose for history) |
 
@@ -380,10 +380,10 @@ Severity: **P0** = the economy loop or money correctness is broken · **P1** = t
 | GAP-E5 | Court monkeypatches `ServiceError.__init__` process-wide (`court_service/__init__.py:10-32`); commons' own `middleware_error_response(details=None)` violates its no-defaults stance | §2.10 | P2 | WP-06 + WP-11 |
 | ~~GAP-E6~~ | Task-board Pydantic response models all dead except Health; `BidResponse.proposal` contradicted the real `amount` field | enforced schemas | P2 | **DONE** `722b494` (models aligned + wired as `response_model`; `/rebuttal` deliberately unwired — it proxies Court's shape) |
 | ~~GAP-E7~~ | Court-unavailable during dispute/rebuttal → raw 500; `/rebuttal` skipped the validation middleware | 502 mapping + full middleware | P2 | **DONE** `722b494` (502 `court_unavailable` with state unchanged; `/rebuttal` added to `_JSON_VALIDATION_ENDPOINTS`; full route audit clean) |
-| GAP-E8 | Dead dependencies/surface: `strands-agents` (no imports), `pyjwt` ×3 services + gateway, `require_platform_signer`, `execute_query_one`, `ProxyTaskResponse`, `TaskOutcome.BID_REJECTED`, `auto_approve_on_error`, agent-side `lock_escrow`/`release_escrow`/`split_escrow`, `PuppetMaster`/`PuppetAgent`, roster `type` field | removed | P3 | WP-09/WP-11 |
+| GAP-E8 | Dead dependencies/surface — agents side **DONE** `ded2a90` (`strands-agents` + 29 transitive gone; `BID_REJECTED`, `PuppetMaster`/`PuppetAgent` deleted; retained by recorded deviation: `auto_approve_on_error` + roster `type` [frozen fixtures] and agent-side escrow methods [they back the e2e negative-authorization tests — deliberate surface, not dead]). Remaining for WP-11: `pyjwt` ×4, `require_platform_signer`, `execute_query_one`, `ProxyTaskResponse`, `BaseAgent.get_tools()` | removed | P3 | WP-09 (agents, done) / WP-11 (services) |
 | GAP-E9 | Convention drift: identity hand-rolls exception handlers instead of the commons factory; router-layer validation helpers; UI `events.py` bypasses the `DbConn` dependency; duplicated auth preamble across all routers (F-19) | shared `authorize_and_load` + commons handlers | P3 | WP-11 |
 | ~~GAP-E10~~ | UI `list_agents` N+1; GDP history 2 queries per point | SQL-side aggregation | P2 | **DONE** `57fcc57` (single aggregated JOIN, ≤6 calls guard; bucketed GROUP BY, ≤4 calls guard; behavior-preserving on all 60 existing assertions) |
-| GAP-E11 | `tools/demo_replay`: hardcoded URLs, no config file, zero tests; `math_task_factory` reaches into private attrs | config-driven + tested | P3 | WP-09 |
+| ~~GAP-E11~~ | `tools/demo_replay`: hardcoded URLs, no config, zero tests | config-driven + tested | P3 | **DONE** `ded2a90` (tools/config.yaml; zero URL defaults; 25 dispatch tests; tools/ has full CI + a root CI phase) |
 | ~~GAP-E13~~ | Task-board `bid_count` was never incremented on the gateway path (found by the WP-15 e2e) | store parity | P2 | **DONE** `2fd507e` (incremented in the same transaction as the bid insert; rejected duplicates roll back cleanly) |
 | GAP-E12 | **Whitelist normalizers silently drop new columns in production only.** `TaskDbClient._normalize_task` (`task_db_client.py:102`) rebuilds every gateway response from its `_TASK_COLUMNS` tuple, so a column present in the database but missing from that tuple vanishes on the production read path while router unit tests — which inject an in-memory fake store — stay green. `dispute_id` was exactly this case: omitting it would have made `get_task` return `dispute_id=None` and every legitimate rebuttal fail with 409, with no failing test anywhere. Audit for the same pattern in the other services' `*_db_client.py` normalizers. | schema-pinned whitelists | P2 | **DONE** `91b649b` (task-board) + `2fd507e` (identity/central-bank/reputation/court audited & pinned; real bug found+fixed: reputation dropped the persisted `role` column on reads) |
 
@@ -607,7 +607,7 @@ Per service, in this order (test-first: for each platform op, a failing integrat
 8. Product views: quarterly-report page (T-093), agent-profile + leaderboard/earnings/satisfaction views (T-095) in vanilla JS against existing endpoints.
 9. Integration tests for every `/proxy/*` route against a live downstream (T-049 test side; spec side WP-12).
 
-### WP-09 — Agent runtime & demo honesty (M) — closes GAP-A7/A13/E8(agents)/E11 + T-016/017/075
+### WP-09 — Agent runtime & demo honesty (M) — closes GAP-A7/A13/E8(agents)/E11 + T-016/017/075/102 — ✅ DONE `ded2a90` (2026-07-13; GAP-A7/T-016 was H-4; §8 item 2 proven; test-e2e now provisions after the wipe)
 1. T-016 (failing unit first): review-poll timeout records `TaskOutcome.TIMEOUT`, no earnings inflation (`math_worker/loop.py:162-171`).
 2. T-017: `MathWorkerLoop` phase-machine unit tests incl. the mutation guard (reverting a status literal to `"BIDDING"` must fail tests).
 3. `just start-mathbot` defaults to the profile/factory path (legacy flat-config path retired or explicitly flagged).
@@ -669,7 +669,7 @@ DONE = verified in code · PARTIAL = code or doc half landed · OPEN = not done 
 | T-014 | semantic lifecycle events | **DONE** | `task_db_client.py:13-21,104-109` status→event map incl. `task.auto_approved` |
 | T-015 | Court in demo | **DONE** (minor: `scale.yaml` dangling dispute → WP-09) | quick/full-lifecycle rebuttal+ruling steps; commit `2f2ef42` |
 | T-016 | timeout ≠ approved | **DONE** `95fe63e` | `TaskOutcome.TIMEOUT` added (only `BID_TIMEOUT` existed); zero payout |
-| T-017 | loop/mixin tests | PARTIAL | some loop tests exist; mutation guard absent → WP-09 |
+| T-017 | loop/mixin tests | **DONE** `ded2a90` | phase-machine suite + uppercase-literal mutation guard observed red/green |
 | T-018 | dispute e2e chain | **DONE** | `agents/tests/e2e/test_disputes.py`, `test_court_rulings.py` |
 | T-020 | snake_case canonical | PARTIAL | code done; all 22 spec files + 3 shell suites still UPPERCASE → WP-12/13 |
 | T-021 | local platform auth | **DONE** `0abfe7f` | platform ops verify locally in CB/TB/reputation (+court since `ddeba66`); create_account deviation recorded in §5.0 |
@@ -692,7 +692,8 @@ DONE = verified in code · PARTIAL = code or doc half landed · OPEN = not done 
 | T-049 | proxy spec'd+tested | **DONE (test side)** `57fcc57` | every /proxy/* route live-tested signing as operator; spec side → WP-12 |
 | T-050/051 | identity verify-jws/persistence spec | OPEN (doc) | → WP-12 |
 | T-060–T-065 | docs sweep | **OPEN** (all verified stale ✅V) | → WP-12 |
-| T-070/071/072/073/074/075 | test debt | T-074 largely DONE (semgrep + per-service `test_db_client_isolation`, with the silent ui exception); T-073 PARTIAL (auto-approve e2e exists; cancellation-refund absent); rest **OPEN** | → WP-13 |
+| T-075 | fund-feeder CLI tests | **DONE** `ded2a90` | 13 tests + 6 for treasury-provision CLI |
+| T-070/071/072/073/074 | test debt | T-074 largely DONE (semgrep + isolation tests; ui exception now explicit per Q-4); T-073 PARTIAL (auto-approve e2e exists; cancellation-refund absent); rest **OPEN** | → WP-13 |
 | T-081 | compose depends_on | OPEN — subsumed by the 6-defect Docker reality | → WP-10 Q-6 |
 | T-082 | client consolidation | **DONE-with-deviation** `2fd507e` | identity+CB async on lib; reputation/court sync by deviation #4 (threadpool-mitigated); task-board swap deferred (BankClient waiting) |
 | T-083 | cleanup | PARTIAL (4.4GB copy + root logs gone; stray `agents/test_api_keys.py`, dead configs remain) | → WP-11 |
@@ -704,7 +705,7 @@ DONE = verified in code · PARTIAL = code or doc half landed · OPEN = not done 
 | T-092 | vision open questions recorded | **DONE** `a59d1a7` — all 16 §9 questions ratified as decision records (`docs/plans/2026-07-10-q*-decision.md`, Step E1) | closed |
 | T-100 | UI empty-economy phase (migrated tickets.md#T-001) | **DONE** `9f506c9` (code) + `fa8bbe4` (migration) | closed |
 | T-101 | task-board `bid_count` not incremented on gateway path | **DONE** `2fd507e` | feeder's `list_bids` workaround now redundant (harmless) |
-| T-102 | deterministic worker path for the §8-item-2 CI proof | **OPEN** (LLMClient hard-wired to AsyncOpenAI) | → WP-09.9 |
+| T-102 | deterministic worker path for the §8-item-2 CI proof | **DONE** `ded2a90` | LLMTransport seam + deterministic e2e transport; **§8 item 2 PROVEN** by `test_unattended_economy.py` (real loops, both branches); also fixed the ReviewLoop phantom-field bug that auto-disputed every real submission |
 
 ---
 
