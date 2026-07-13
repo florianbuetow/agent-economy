@@ -9,7 +9,6 @@ fi
 guard create project-root
 guard create ci-config
 guard create app-config
-guard create docker
 guard create justfiles
 guard create dependencies
 guard create docs
@@ -61,18 +60,6 @@ for subdir in ./services/*/; do
   if [[ -f "$config_file" ]]; then
     guard update app-config add "$config_file"
   fi
-done
-
-# =============================================================================
-# docker — Dockerfiles and docker-compose orchestration
-# =============================================================================
-
-guard update docker add ./docker-compose.yml
-guard update docker add ./docker-compose.dev.yml
-
-fd --type f Dockerfile ./services/ -0 | \
-while IFS= read -r -d '' file; do \
-  guard update docker add "$file"
 done
 
 # =============================================================================

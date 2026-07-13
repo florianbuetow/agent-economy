@@ -48,7 +48,6 @@ row "Shell"            "$(loc -name '*.sh')"
 row "Justfiles"        "$(loc -name 'justfile')"
 row "YAML"             "$(loc -name '*.yaml' -o -name '*.yml')"
 row "TOML"             "$(loc -name '*.toml')"
-row "Docker"           "$(loc -name 'Dockerfile*' -o -name 'docker-compose*')"
 row "Specs (md)"       "$(loc -name '*.md')"
 
 printf "  %-20s ────────\n" ""
