@@ -11,7 +11,7 @@ dependencies = [
     "httpx>=0.28.0",
     "cryptography>=48.0.1",
     "joserfc>=1.6.7",
-    "litellm>=1.83.10",
+    "litellm>=1.96.2",
     "service-commons",
     "service-auth",
 ]
@@ -45,17 +45,22 @@ build-backend = "hatchling.build"
 
 [tool.uv]
 constraint-dependencies = [
-    "aiohttp>=3.14.0",
-    "gitpython>=3.1.50",
+    "aiohttp>=3.14.3",
+    "anyio>=4.14.2",
+    "cryptography>=50.0.0",
+    "gitpython>=3.1.60",
     "idna>=3.15",
+    "fsspec>=2026.6.0",
     "msgpack>=1.2.1",
+    "multidict>=6.9.1",
     "pillow>=12.2.0",
-    "pip>=26.1.2",
+    "pip>=26.2",
     "pydantic-settings>=2.14.2",
     "python-dotenv>=1.2.2",
     "python-multipart>=0.0.31",
     "starlette>=1.0.1",
-    "urllib3>=2.7.0",
+    "pyjwt>=2.15.0",
+    "urllib3>=2.8.0",
 ]
 
 [tool.uv.sources]
