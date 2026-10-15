@@ -211,9 +211,9 @@ async def list_tasks(request: Request) -> JSONResponse:
     state = get_app_state()
     if state.db_reader is None:
         raise ServiceError(
-            error="method_not_allowed",
-            message="Method not allowed",
-            status_code=405,
+            error="service_not_ready",
+            message="DbReader not initialized",
+            status_code=503,
             details={},
         )
 
@@ -223,8 +223,21 @@ async def list_tasks(request: Request) -> JSONResponse:
     worker_id = params.get("worker_id")
     limit_str = params.get("limit")
     offset_str = params.get("offset")
-    limit = int(limit_str) if limit_str is not None else None
-    offset = int(offset_str) if offset_str is not None else None
+
+    limit: int | None = None
+    if limit_str is not None:
+        try:
+            limit = int(limit_str)
+        except ValueError as exc:
+            raise ServiceError("invalid_payload", "limit must be an integer", 400, {}) from exc
+
+    offset: int | None = None
+    if offset_str is not None:
+        try:
+            offset = int(offset_str)
+        except ValueError as exc:
+            raise ServiceError("invalid_payload", "offset must be an integer", 400, {}) from exc
+
     tasks = state.db_reader.list_tasks(status, poster_id, worker_id, limit, offset)
     return JSONResponse(status_code=200, content={"tasks": tasks})
 

@@ -52,7 +52,6 @@ help:
     @echo ""
     @printf "\033[1;33mSetup\033[0m\n"
     @printf "  \033[0;37mjust check            \033[0;34m Check if all required tools are installed\033[0m\n"
-    @printf "  \033[0;37mjust init             \033[0;34m Initialize project (git hooks, tooling)\033[0m\n"
     @printf "  \033[0;37mjust init-all         \033[0;34m Initialize all service environments\033[0m\n"
     @printf "  \033[0;37mjust destroy-all      \033[0;34m Destroy all virtual environments\033[0m\n"
     @printf "  \033[0;37mjust setup-guard      \033[0;34m Set up guard file integrity collections\033[0m\n"
@@ -101,6 +100,8 @@ help:
     @printf "  \033[0;37mjust ci-quiet-hook    \033[0;34m CI hook for Claude Code (blocks git commit if CI fails)\033[0m\n"
     @printf "  \033[0;37mjust format-all       \033[0;34m Auto-format all services\033[0m\n"
     @printf "  \033[0;37mjust test-integration \033[0;34m Run cross-service integration tests\033[0m\n"
+    @printf "  \033[0;37mjust test-integration-all\033[0;34m Run every service's own integration suite (live stack)\033[0m\n"
+    @printf "  \033[0;37mjust test-ui-e2e      \033[0;34m Run UI Playwright e2e suite (self-contained, no live stack)\033[0m\n"
     @printf "  \033[0;37mjust test-e2e         \033[0;34m Run e2e tests (starts/stops services automatically)\033[0m\n"
     @printf "  \033[0;37mjust stats            \033[0;34m Show lines of code across the project\033[0m\n"
     @echo ""
@@ -153,12 +154,6 @@ setup-guard:
     @echo ""
 
 # --- Local Development ---
-
-# Initialize project (git hooks, tooling)
-init:
-    @echo ""
-    bash scripts/init-hooks.sh
-    @echo ""
 
 # Initialize all service environments
 init-all:
@@ -760,27 +755,37 @@ ci:
         cd "$root/services/$svc" && just ci
     done
 
-    # Phase 3: Agents CI (format, lint, types, security, spell, unit tests)
-    printf "\033[0;34m--- Phase 3: Agents CI ---\033[0m\n"
+    # Phase 3: Per-service integration tests (T-071/GAP-F1; live stack, stack-up
+    # pattern from commit 2a907b1)
+    printf "\033[0;34m--- Phase 3: Per-service integration tests ---\033[0m\n"
+    cd "$root" && just test-integration-all
+
+    # Phase 4: Agents CI (format, lint, types, security, spell, unit tests)
+    printf "\033[0;34m--- Phase 4: Agents CI ---\033[0m\n"
     cd "$root/agents" && just ci
 
-    # Phase 4: Tools CI (format, lint, types, security, spell, unit tests)
-    printf "\033[0;34m--- Phase 4: Tools CI ---\033[0m\n"
+    # Phase 5: Tools CI (format, lint, types, security, spell, unit tests)
+    printf "\033[0;34m--- Phase 5: Tools CI ---\033[0m\n"
     cd "$root/tools" && just ci
 
-    # Phase 5: Cross-service integration tests (DB Gateway writes, offline gateway)
-    printf "\033[0;34m--- Phase 5: Cross-service integration tests ---\033[0m\n"
+    # Phase 6: Cross-service integration tests (DB Gateway writes, offline gateway)
+    printf "\033[0;34m--- Phase 6: Cross-service integration tests ---\033[0m\n"
     cd "$root"
     PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
         pytest "$root/tests/integration/" -v --tb=short
 
-    # Phase 6: E2E tests (restarts services, runs full lifecycle tests)
-    printf "\033[0;34m--- Phase 6: E2E tests ---\033[0m\n"
+    # Phase 7: UI Playwright e2e (self-contained; no live stack)
+    printf "\033[0;34m--- Phase 7: UI Playwright e2e ---\033[0m\n"
+    cd "$root"
+    just test-ui-e2e
+
+    # Phase 8: E2E tests (restarts services, runs full lifecycle tests)
+    printf "\033[0;34m--- Phase 8: E2E tests ---\033[0m\n"
     cd "$root"
     just test-e2e
 
     printf "\n"
-    printf "\033[0;32m✓ Full CI passed (libs + services + agents + tools + integration + e2e)\033[0m\n"
+    printf "\033[0;32m✓ Full CI passed (libs + services + agents + tools + integration + ui-e2e + e2e)\033[0m\n"
     printf "\n"
 
 # Run ALL CI checks quietly
@@ -811,27 +816,37 @@ ci-quiet:
         cd "$root/services/$svc" && just ci-quiet
     done
 
-    # Phase 3: Agents CI
-    printf "\033[0;34m--- Phase 3: Agents CI ---\033[0m\n"
+    # Phase 3: Per-service integration tests (T-071/GAP-F1; live stack, stack-up
+    # pattern from commit 2a907b1)
+    printf "\033[0;34m--- Phase 3: Per-service integration tests ---\033[0m\n"
+    cd "$root" && just test-integration-all
+
+    # Phase 4: Agents CI
+    printf "\033[0;34m--- Phase 4: Agents CI ---\033[0m\n"
     cd "$root/agents" && just ci-quiet
 
-    # Phase 4: Tools CI
-    printf "\033[0;34m--- Phase 4: Tools CI ---\033[0m\n"
+    # Phase 5: Tools CI
+    printf "\033[0;34m--- Phase 5: Tools CI ---\033[0m\n"
     cd "$root/tools" && just ci-quiet
 
-    # Phase 5: Cross-service integration tests
-    printf "\033[0;34m--- Phase 5: Cross-service integration tests ---\033[0m\n"
+    # Phase 6: Cross-service integration tests
+    printf "\033[0;34m--- Phase 6: Cross-service integration tests ---\033[0m\n"
     cd "$root"
     PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
         pytest "$root/tests/integration/" -v --tb=short
 
-    # Phase 6: E2E tests
-    printf "\033[0;34m--- Phase 6: E2E tests ---\033[0m\n"
+    # Phase 7: UI Playwright e2e (self-contained; no live stack)
+    printf "\033[0;34m--- Phase 7: UI Playwright e2e ---\033[0m\n"
+    cd "$root"
+    just test-ui-e2e
+
+    # Phase 8: E2E tests
+    printf "\033[0;34m--- Phase 8: E2E tests ---\033[0m\n"
     cd "$root"
     just test-e2e
 
     printf "\n"
-    printf "\033[0;32m✓ Full CI passed (libs + services + agents + tools + integration + e2e)\033[0m\n"
+    printf "\033[0;32m✓ Full CI passed (libs + services + agents + tools + integration + ui-e2e + e2e)\033[0m\n"
     printf "\n"
 
 # CI hook for Claude Code — blocks git commit if CI fails
@@ -850,6 +865,80 @@ test-integration:
         pytest "$root/tests/integration/" -v --tb=short
     printf "\n"
     printf "\033[0;32m✓ Cross-service integration tests passed\033[0m\n"
+    printf "\n"
+
+# Run every service's own tests/integration/ suite against a live, freshly-wiped
+# stack (T-071/GAP-F1) — stack-up pattern from commit 2a907b1. Most per-service
+# suites are self-contained (in-process gateway or their own live gateway
+# thread); db-gateway's needs an actually-running gateway process, hence the
+# shared stack.
+test-integration-all:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    root="$(pwd)"
+    printf "\n"
+    printf "\033[0;34m=== Running Per-Service Integration Tests ===\033[0m\n"
+    printf "\n"
+
+    cleanup() {
+        printf "\033[0;34m--- Stopping all services ---\033[0m\n"
+        cd "$root" && just stop-all
+    }
+    trap cleanup EXIT
+
+    printf "\033[0;34m--- Stopping all services ---\033[0m\n"
+    just stop-all
+
+    printf "\033[0;34m--- Wiping service databases ---\033[0m\n"
+    for svc in services/*/; do
+        rm -f "$svc"data/*.db "$svc"data/*.db-wal "$svc"data/*.db-shm
+    done
+
+    printf "\033[0;34m--- Starting all services ---\033[0m\n"
+    just start-all
+
+    fail=0
+    services=(identity central-bank task-board reputation court db-gateway ui)
+    for svc in "${services[@]}"; do
+        printf "\033[0;34m--- %s ---\033[0m\n" "$svc"
+        cd "$root/services/$svc" && just test-integration || fail=1
+        cd "$root"
+    done
+
+    printf "\n"
+    if [ "$fail" -ne 0 ]; then
+        printf "\033[0;31m✗ Some per-service integration suites failed\033[0m\n"
+        exit 1
+    fi
+    printf "\033[0;32m✓ Per-service integration tests passed\033[0m\n"
+    printf "\n"
+
+# Run the UI service's Playwright E2E suite (browser-based; fully self-contained
+# — its own conftest spins up a temp DB + a UI server subprocess on a random
+# port, so it needs no live stack and does not call start-all/stop-all)
+test-ui-e2e:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "\n"
+    printf "\033[0;34m=== Running UI Playwright E2E Tests ===\033[0m\n"
+    printf "\n"
+
+    root="$(pwd)"
+    cd "$root/services/ui"
+
+    # Fail fast and explicitly if the Chromium browser binary isn't installed —
+    # never silently download-and-continue mid-CI-run. One-time prerequisite:
+    #   cd services/ui && uv run playwright install chromium
+    if ! uv run python -c "import os, sys; from playwright.sync_api import sync_playwright; pw = sync_playwright().start(); ok = os.path.exists(pw.chromium.executable_path); pw.stop(); sys.exit(0 if ok else 1)"; then
+        printf "\033[0;31m✗ Playwright Chromium browser is not installed.\033[0m\n"
+        printf "\033[0;31m  Run once: cd services/ui && uv run playwright install chromium\033[0m\n"
+        exit 1
+    fi
+
+    uv run pytest tests/e2e -v --tb=short
+
+    printf "\n"
+    printf "\033[0;32m✓ UI Playwright E2E tests passed\033[0m\n"
     printf "\n"
 
 # Run e2e tests (restarts all services with clean data, then runs tests)

@@ -150,6 +150,77 @@ def e2e_server(
         proc.wait(timeout=5)
 
 
+# Tables in child-to-parent FK order, safe to DELETE-then-reinsert every test.
+# (foreign_keys is turned OFF for the delete pass regardless, but keeping the
+# order correct documents the real dependency graph from schema.sql.)
+_MUTABLE_SEED_TABLES = (
+    "events",
+    "court_rulings",
+    "court_rebuttals",
+    "court_claims",
+    "reputation_feedback",
+    "board_assets",
+    "board_bids",
+    "board_tasks",
+    "bank_escrow",
+    "bank_transactions",
+    "bank_accounts",
+    "identity_agents",
+)
+
+
+@pytest.fixture(autouse=True)
+def e2e_reset_seed_data(e2e_db_path: Path) -> None:
+    """Reset the shared E2E database to pristine seed state before every test.
+
+    T-107 root cause: ``e2e_db_path``/``e2e_server`` below are session-scoped
+    (one seeded SQLite DB, one uvicorn process, shared across the whole
+    ~270-test session) so we don't pay browser+server startup cost per test.
+    Only the browser context/page are function-scoped. Many tests mutate
+    shared rows through a writable connection (``advance_task_status``,
+    ``add_bid``, ``insert_event``, ``create_escrow``, ``add_feedback``, ad
+    hoc ``board_tasks`` inserts in test_observatory.py) or implicitly assume
+    an untouched seed (exact counts/totals). Without a reset, one test's
+    mutation becomes a later test's "pristine" starting condition:
+    test_landing.py permanently moving t-task-e3 to 'approved' shifted
+    test_observatory.py's O30 GDP bucket counts; the growing event volume
+    from accumulated mutations also widened the window during which
+    task.js's SSE catch-up (``connectTaskSSE`` always replays from
+    ``event_id=0`` — see data/web/assets/task.js) could race a test's
+    manual phase-strip navigation and silently reset it back to the task's
+    current phase, producing the "assert 'Settle' == 'Contract'"-style
+    failures in test_task_lifecycle.py that only appeared in full-suite runs.
+
+    Fix approach (DB reset, not self-isolation): truncate every mutable seed
+    table and re-run the exact same seed functions the session fixtures use,
+    via a *separate* connection to the same WAL-mode DB file the running
+    server already has open read-only. In WAL mode a fresh statement on a
+    separate connection sees the latest committed writer state without
+    restarting the server, so this is safe and — empirically, an
+    add/delete of a few hundred rows — cheap enough to run before all ~270
+    tests without a meaningful runtime hit. This also makes the extended
+    seed data (agents/tasks used by test_landing.py, test_observatory.py,
+    test_task_lifecycle.py, test_infrastructure.py) deterministically
+    present from the very first test, instead of depending on whichever
+    test file's ad hoc ``_ensure_extended_seed_data`` happened to run first
+    alphabetically.
+    """
+    from helpers import insert_seed_data  # noqa: PLC0415
+
+    from .fixtures.seed_db import extend_seed_data  # noqa: PLC0415
+
+    conn = sqlite3.connect(str(e2e_db_path))
+    try:
+        conn.execute("PRAGMA foreign_keys = OFF")
+        for table in _MUTABLE_SEED_TABLES:
+            conn.execute(f"DELETE FROM {table}")  # nosec B608 - fixed internal table list
+        conn.commit()
+        insert_seed_data(conn)
+        extend_seed_data(conn)
+    finally:
+        conn.close()
+
+
 @pytest.fixture(scope="session")
 def e2e_playwright() -> Generator[Playwright, None, None]:
     """Launch Playwright for the session."""

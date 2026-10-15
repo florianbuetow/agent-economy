@@ -36,7 +36,6 @@ class RequestValidationMiddleware:
         path = cast("str", scope.get("path", ""))
         if (method, path) not in {
             ("POST", "/agents/register"),
-            ("POST", "/agents/verify"),
             ("POST", "/agents/verify-jws"),
         }:
             await self.app(scope, receive, send)

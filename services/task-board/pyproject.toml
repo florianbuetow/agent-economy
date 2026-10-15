@@ -38,6 +38,10 @@ dev = [
     "joserfc>=1.6.7",
     "cryptography>=48.0.1",
     "freezegun>=1.5.0",
+    # Test-only: builds an in-process DB Gateway for the TaskDbClient side of
+    # the integration suite (T-071). Not a runtime dependency — never imported
+    # from src/.
+    "db-gateway-service",
 ]
 
 [build-system]
@@ -61,6 +65,7 @@ constraint-dependencies = [
 service-commons = { path = "../../libs/service-commons", editable = true }
 service-clients = { path = "../../libs/service-clients", editable = true }
 service-auth = { path = "../../libs/service-auth", editable = true }
+db-gateway-service = { path = "../db-gateway", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/task_board_service"]
@@ -193,4 +198,5 @@ DEP002 = [
     "types-PyYAML",
     "types-aiofiles",
     "freezegun",
+    "db-gateway-service",
 ]

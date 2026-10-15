@@ -1,6 +1,8 @@
 # Agent Task Economy - AI Agent Instructions
 
+
 ## Project Overview
+
 
 Agent Task Economy is a Python microservices project that implements a micro-economy where autonomous agents earn, spend, and compete for work. The system incentivizes precise task specifications through market pressure and dispute mechanics, using LLM-as-a-Judge panels for dispute resolution. The core thesis: AI is moving toward specification-driven development, so specification quality should be a first-class economic signal.
 
@@ -50,36 +52,6 @@ just code-spell       # Check spelling
 just code-semgrep     # Run custom rules
 just code-audit       # Vulnerability scan
 ```
-
-## Testing
-
-- After **every change** to the code, the tests must be executed
-- Always verify the program runs correctly with `just run` after modifications
-- Always run `just test-all` or `just ci-quiet` to verify changes before claiming they work
-- **Tests are acceptance tests — do NOT modify existing test files.** Add new test files to cover new or additional requirements instead.
-- Tests must be marked with `@pytest.mark.unit`, `@pytest.mark.integration`, or `@pytest.mark.performance`
-- **Never claim a task is complete without showing verification output.** Run `just ci-quiet` and include the result in your response before saying "done."
-- Never close a tracker item in the same turn as the last code change -- always verify first.
-- After codex completes, always run `just ci-quiet` independently before reporting success. Never trust codex's self-reported completion.
-- "I believe this works" is not verification. Show the passing output.
-
-### Debugging
-
-- After any test or CI failure, STOP before attempting a fix:
-  1. State the root cause hypothesis in one sentence
-  2. Identify what changed that caused this failure
-  3. Only then propose and implement a fix
-- If the fix fails, form a NEW hypothesis -- do not retry the same approach with minor variations
-- If you've attempted 3 fixes for the same failure without success, step back and re-read the surrounding code for architectural context you may have missed
-- Never suppress errors, skip tests, or add try/except as a "fix" -- these are symptoms, not solutions
-
-### Iterative Development
-
-- During fix-test-fix cycles, use targeted test runs first:
-  - `just test-unit` for the specific service
-  - `uv run pytest tests/unit/test_<module>.py -x` for specific files
-- Run `just ci-quiet` only at checkpoints: after completing a logical unit, before committing, before declaring done
-- If you've run full CI more than 5 times in a session without it passing, stop and diagnose the root cause
 
 ## Architecture
 
@@ -166,6 +138,9 @@ See `docs/service-implementation-guide.md` for detailed file-by-file implementat
 
 ### Key Design Principles
 
+- Do not preserve backward compatibility.
+- Choose the simplest implementation that fully meets the current requirements.
+- Prefer established, well-maintained libraries over custom implementations.
 - Services communicate via HTTP/JSON using `httpx` for async clients
 - All endpoints follow a uniform API structure
 - Health checks: `GET /health` returns `{"status": "ok", "uptime_seconds": ..., "started_at": ...}`

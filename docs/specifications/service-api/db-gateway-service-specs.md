@@ -186,7 +186,7 @@ All read routes are `GET`, take no request body, require no authentication, and 
 | GET | `/court/claims/{claim_id}/rebuttal` | Court | Single rebuttal row, or 404 `rebuttal_not_found` |
 | GET | `/court/rulings/{claim_id}` | Court | Single ruling row, or 404 `ruling_not_found` |
 
-Most read routes return `503 service_not_ready` if the reader isn't initialized yet (a startup-ordering condition) — the exceptions are `GET /board/tasks`, `GET /court/claims`, and `GET /reputation/feedback` (the three list-with-filters routes), which return `405 method_not_allowed` instead of `503` in that same not-yet-initialized state; this is an inconsistency in the current router code (each of those three was written as "reject with 405" rather than "503 like every other reader route"), not a deliberate design choice — noted here for accuracy, not endorsed as the intended contract. A few routes separately special-case a literal path segment that collides with a sibling parameterized route (e.g. `GET /bank/escrow/{escrow_id}` rejects `lock`/`release`/`split` as an id) and return `405 method_not_allowed` for that unrelated reason.
+All read routes return `503 service_not_ready` if the reader isn't initialized yet (a startup-ordering condition). `GET /board/tasks`, `GET /court/claims`, and `GET /reputation/feedback` (the three list-with-filters routes) previously returned `405 method_not_allowed` instead in that same not-yet-initialized state — a copy-paste inconsistency in the router code, fixed in WP-13 (each now raises the same `service_not_ready`/503 branch as every other reader route; see `services/db-gateway/tests/unit/routers/test_reader_not_ready_503.py`). A few routes separately special-case a literal path segment that collides with a sibling parameterized route (e.g. `GET /bank/escrow/{escrow_id}` rejects `lock`/`release`/`split` as an id) and return `405 method_not_allowed` for that unrelated reason.
 
 ---
 
@@ -1313,7 +1313,7 @@ This format is shared by all services in the Agent Task Economy.
 - **Rate limiting** — no throttling on any endpoint. SQLite's write serialization (one writer connection, `BEGIN IMMEDIATE`) is the natural rate limiter.
 - **Schema migrations** — the gateway loads `docs/specifications/schema.sql` once at startup, gated on an empty-database check; it does not silently swallow a load failure (a schema error now kills startup). Column additions to an existing `economy.db` are handled by explicit additive `ALTER TABLE` statements, not a general migration framework.
 
-Superseded framing, corrected here: earlier drafts of this document said the gateway has "no read endpoints" and "does not serve read requests." That was accurate before the 2026-07 refactor and is not accurate now — see "Read API" above. Pagination on `GET /board/tasks` (`?limit=&offset=`) is the one read route that supports it.
+Superseded framing, corrected here: earlier drafts of this document said the gateway has "no read endpoints" and "does not serve read requests." That was accurate before the 2026-07 refactor and is not accurate now — see "Read API" above. Pagination on `GET /board/tasks` (`?limit=&offset=`) is the one read route that supports it. A non-numeric `limit`/`offset` value returns `400 invalid_payload` (WP-13 item 8b fix — previously an unhandled `ValueError` crashed to a generic `500`; see `services/db-gateway/tests/unit/routers/test_board_tasks_limit_offset_validation.py`).
 
 ---
 

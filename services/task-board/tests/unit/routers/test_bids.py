@@ -867,8 +867,9 @@ class TestBidAcceptance:
         assert bid_resp.status_code == 201
         bid_id = bid_resp.json()["bid_id"]
 
-        # Wait for deadline to pass
-        await asyncio.sleep(1.5)
+        # Wait for deadline to pass. T-104: the original 0.5s margin (deadline=1s,
+        # sleep=1.5s) was flaky under CI jitter/GC pauses; widened to a 1.5s margin.
+        await asyncio.sleep(2.5)
 
         # Lazy evaluation expires the task, so acceptance is no longer possible
         response = await accept_bid(client, alice_keypair, alice_agent_id, task_id, bid_id)

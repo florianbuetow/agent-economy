@@ -977,6 +977,11 @@ Required status/error mappings:
 **Action:** `GET /health`
 **Expected:** `database_size_bytes` is greater than 0
 
+### HLTH-05 database_size_bytes includes the -wal and -shm sidecar files, not just the main db file
+**Setup:** Perform enough writes that the `-wal` file exists and is non-empty (WAL mode does not checkpoint after every write).
+**Action:** `GET /health`. Independently stat `economy.db`, `economy.db-wal`, and `economy.db-shm` (when present) on disk and sum their sizes.
+**Expected:** `database_size_bytes` equals the sum of all files that currently exist — a regression to reporting only the main file's size (undercounting recently committed WAL data) must fail this test.
+
 ---
 
 ## Category 16: Event Integrity
@@ -1168,7 +1173,17 @@ Required status/error mappings:
 ### CAS-07 Escrow split with a stale constraint is rejected
 **Setup:** Lock escrow from alice, then release it to bob (status becomes `"released"`).
 **Action:** `POST /bank/escrow/split` with `constraints: {status: "locked"}` on the same `escrow_id`.
-**Expected:** `409`, `error = constraint_violation` (this is on top of, and consistent with, the unconditional `escrow_already_resolved` check the release/split endpoints always perform).
+**Expected:** `409`, `error = escrow_already_resolved` — **adjudicated WP-13** (T-072 sweep):
+`BankWriter.escrow_split`/`escrow_release` call `_load_escrow()` first, which unconditionally
+checks the escrow's current status before any `constraints` handling is ever reached. Within the
+same `BEGIN IMMEDIATE` transaction, if `_load_escrow` sees `status != "locked"` it always raises
+`escrow_already_resolved` first — a `constraints: {status: "locked"}` check on the same row can
+never independently fire `constraint_violation` for this exact scenario, because by the time the
+constrained `UPDATE` would run, the escrow is already known-resolved. This is intentional,
+adjudicated behavior, not a bug: `escrow_already_resolved` is the more informative signal here
+(the resource's terminal state, not merely a precondition mismatch), and the escrow coordinator's
+retry semantics are built around that 409 family. Do not change `bank_writer.py`'s check order to
+force `constraint_violation` to win instead.
 
 ### CAS-08 Bid submission with a cross-table constraint rejects a late bid
 **Setup:** Create a task, then move it to `accepted` (out of `open`).
@@ -1493,7 +1508,7 @@ Service is release-ready only if:
 | Dispute Claims | CLM-01 to CLM-08 | 8 |
 | Rebuttals | REB-01 to REB-09 | 9 |
 | Rulings | RUL-01 to RUL-10 | 10 |
-| Health | HLTH-01 to HLTH-04 | 4 |
+| Health | HLTH-01 to HLTH-05 | 5 |
 | Event Integrity | EVT-01 to EVT-05 | 5 |
 | Atomicity | ATOM-01 to ATOM-05 | 5 |
 | Concurrency | CONC-01 to CONC-03 | 3 |
@@ -1505,11 +1520,11 @@ Service is release-ready only if:
 | Ruling Deletion | RDEL-01 to RDEL-04 | 4 |
 | Task Already Disputed | TDISP-01 to TDISP-02 | 2 |
 | bid_count Materialization | BCNT-01 to BCNT-04 | 4 |
-| **Total** |  | **240** |
+| **Total** |  | **241** |
 
 | Endpoint | Covered By |
 |----------|------------|
-| `GET /health` | HLTH-01 to HLTH-04 |
+| `GET /health` | HLTH-01 to HLTH-05 |
 | `POST /identity/agents` | AGT-01 to AGT-13, CONC-02, EVT-02, EVT-04, SEC-04 |
 | `POST /bank/accounts` | ACCT-01 to ACCT-09, ATOM-01, EVT-05 |
 | `POST /bank/credit` | CR-01 to CR-11, EVT-02, SEC-04, CONC-03 |

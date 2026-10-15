@@ -94,9 +94,9 @@ async def list_feedback(request: Request) -> JSONResponse:
     state = get_app_state()
     if state.db_reader is None:
         raise ServiceError(
-            error="method_not_allowed",
-            message="Method not allowed",
-            status_code=405,
+            error="service_not_ready",
+            message="DbReader not initialized",
+            status_code=503,
             details={},
         )
 

@@ -1,1 +1,242 @@
-"""Integration tests — require running service."""
+"""Integration tests — the real task-board app driven end-to-end against a
+real, live, in-process DB Gateway (the production `TaskDbClient` path,
+T-071/GAP-F1). Unlike tests/unit (InMemoryTaskStore fake), every assertion
+here is checked both through the task-board API and by reading the
+gateway's own SQLite file directly — including the FK-enforced relationships
+(poster/worker -> identity_agents, escrow_id -> bank_escrow) a fake store
+has no concept of.
+"""
+
+from __future__ import annotations
+
+import sqlite3
+import uuid
+from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock
+
+import pytest
+
+from task_board_service.core.state import get_app_state
+from tests.integration.conftest import make_jws_token, register_identity_agent
+
+if TYPE_CHECKING:
+    import httpx
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
+
+
+def _read_one(
+    db_path: str, query: str, params: tuple[object, ...] = ()
+) -> dict[str, object] | None:
+    """Read a single SQLite row as a dict, straight from the gateway's own file."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(query, params).fetchone()
+        return dict(row) if row is not None else None
+    finally:
+        conn.close()
+
+
+async def _seed_funded_escrow(
+    gateway_client: httpx.AsyncClient,
+    *,
+    payer_id: str,
+    amount: int,
+    task_id: str,
+    escrow_id: str,
+) -> None:
+    """Seed the real gateway rows a task creation's FKs require: an identity
+    agent, a funded bank account, and a locked bank_escrow row — everything
+    the mocked BankClient's escrow_lock() would have produced against a real
+    Central Bank, so board_tasks.escrow_id resolves against a real row."""
+    await register_identity_agent(gateway_client, payer_id)
+    resp = await gateway_client.post(
+        "/bank/accounts",
+        json={
+            "account_id": payer_id,
+            "created_at": "2026-03-01T09:00:00Z",
+            "balance": amount,
+            "event": {
+                "event_source": "central-bank",
+                "event_type": "account.created",
+                "timestamp": "2026-03-01T09:00:00Z",
+                "agent_id": payer_id,
+                "summary": f"Created account for {payer_id}",
+                "payload": "{}",
+            },
+            "initial_credit": {
+                "tx_id": f"tx-{uuid.uuid4()}",
+                "amount": amount,
+                "reference": "initial_balance",
+                "timestamp": "2026-03-01T09:00:00Z",
+            },
+        },
+    )
+    assert resp.status_code == 201, resp.text
+
+    resp = await gateway_client.post(
+        "/bank/escrow/lock",
+        json={
+            "escrow_id": escrow_id,
+            "payer_account_id": payer_id,
+            "amount": amount,
+            "task_id": task_id,
+            "created_at": "2026-03-01T09:00:01Z",
+            "tx_id": f"tx-{uuid.uuid4()}",
+            "event": {
+                "event_source": "central-bank",
+                "event_type": "escrow.locked",
+                "timestamp": "2026-03-01T09:00:01Z",
+                "agent_id": payer_id,
+                "summary": f"Escrow locked for {task_id}",
+                "payload": "{}",
+            },
+        },
+    )
+    assert resp.status_code == 201, resp.text
+
+
+def _mock_escrow_lock_returns(escrow_id: str) -> None:
+    """Point the mocked BankClient's escrow_lock() at a specific, pre-seeded
+    escrow_id so board_tasks.escrow_id resolves against a real bank_escrow row."""
+    state = get_app_state()
+    state.central_bank_client.escrow_lock = AsyncMock(
+        return_value={"escrow_id": escrow_id, "status": "locked"}
+    )
+    if state.escrow_coordinator is not None:
+        state.escrow_coordinator._central_bank_client = state.central_bank_client
+
+
+class TestTaskLifecycleGatewayBacked:
+    async def test_full_lifecycle_persists_through_real_gateway(
+        self,
+        client: httpx.AsyncClient,
+        gateway_client: httpx.AsyncClient,
+        poster_keypair: tuple[Ed25519PrivateKey, str],
+        worker_keypair: tuple[Ed25519PrivateKey, str],
+        gateway_db_path: str,
+    ) -> None:
+        """Create -> bid -> accept -> submit -> approve, verified against the
+        real gateway-backed TaskDbClient at every step."""
+        poster_id = "a-poster-integration"
+        worker_id = "a-worker-integration"
+        task_id = f"t-{uuid.uuid4()}"
+        escrow_id = f"esc-{uuid.uuid4()}"
+
+        await register_identity_agent(gateway_client, worker_id)
+        await _seed_funded_escrow(
+            gateway_client, payer_id=poster_id, amount=100, task_id=task_id, escrow_id=escrow_id
+        )
+        _mock_escrow_lock_returns(escrow_id)
+
+        task_payload = {
+            "action": "create_task",
+            "task_id": task_id,
+            "poster_id": poster_id,
+            "title": "Integration test task",
+            "spec": "Prove the real gateway-backed path end to end",
+            "reward": 100,
+            "bidding_deadline_seconds": 3600,
+            "execution_deadline_seconds": 86400,
+            "review_deadline_seconds": 86400,
+        }
+        task_token = make_jws_token(poster_keypair[0], poster_id, task_payload)
+        escrow_payload = {
+            "action": "escrow_lock",
+            "task_id": task_id,
+            "agent_id": poster_id,
+            "amount": 100,
+        }
+        escrow_token = make_jws_token(poster_keypair[0], poster_id, escrow_payload)
+        create_resp = await client.post(
+            "/tasks", json={"task_token": task_token, "escrow_token": escrow_token}
+        )
+        assert create_resp.status_code == 201, create_resp.text
+
+        row = _read_one(
+            gateway_db_path,
+            "SELECT poster_id, escrow_id, status FROM board_tasks WHERE task_id = ?",
+            (task_id,),
+        )
+        assert row is not None
+        assert row["poster_id"] == poster_id
+        assert row["escrow_id"] == escrow_id
+        assert row["status"] == "open"
+
+        bid_payload = {
+            "action": "submit_bid",
+            "task_id": task_id,
+            "bidder_id": worker_id,
+            "amount": 90,
+        }
+        bid_token = make_jws_token(worker_keypair[0], worker_id, bid_payload)
+        bid_resp = await client.post(f"/tasks/{task_id}/bids", json={"token": bid_token})
+        assert bid_resp.status_code == 201, bid_resp.text
+        bid_id = bid_resp.json()["bid_id"]
+
+        bid_row = _read_one(
+            gateway_db_path,
+            "SELECT bidder_id, amount FROM board_bids WHERE bid_id = ?",
+            (bid_id,),
+        )
+        assert bid_row is not None
+        assert bid_row["bidder_id"] == worker_id
+
+        accept_payload = {
+            "action": "accept_bid",
+            "task_id": task_id,
+            "bid_id": bid_id,
+            "poster_id": poster_id,
+        }
+        accept_token = make_jws_token(poster_keypair[0], poster_id, accept_payload)
+        accept_resp = await client.post(
+            f"/tasks/{task_id}/bids/{bid_id}/accept", json={"token": accept_token}
+        )
+        assert accept_resp.status_code == 200, accept_resp.text
+
+        accepted_row = _read_one(
+            gateway_db_path,
+            "SELECT worker_id, status FROM board_tasks WHERE task_id = ?",
+            (task_id,),
+        )
+        assert accepted_row is not None
+        assert accepted_row["worker_id"] == worker_id
+        assert accepted_row["status"] == "accepted"
+
+        upload_payload = {"action": "upload_asset", "task_id": task_id}
+        upload_token = make_jws_token(worker_keypair[0], worker_id, upload_payload)
+        upload_resp = await client.post(
+            f"/tasks/{task_id}/assets",
+            headers={"Authorization": f"Bearer {upload_token}"},
+            files={"file": ("deliverable.txt", b"the deliverable content", "text/plain")},
+        )
+        assert upload_resp.status_code == 201, upload_resp.text
+
+        submit_payload = {
+            "action": "submit_deliverable",
+            "task_id": task_id,
+            "worker_id": worker_id,
+        }
+        submit_token = make_jws_token(worker_keypair[0], worker_id, submit_payload)
+        submit_resp = await client.post(f"/tasks/{task_id}/submit", json={"token": submit_token})
+        assert submit_resp.status_code == 200, submit_resp.text
+
+        approve_payload = {
+            "action": "approve_task",
+            "task_id": task_id,
+            "poster_id": poster_id,
+        }
+        approve_token = make_jws_token(poster_keypair[0], poster_id, approve_payload)
+        approve_resp = await client.post(f"/tasks/{task_id}/approve", json={"token": approve_token})
+        assert approve_resp.status_code == 200, approve_resp.text
+
+        final_row = _read_one(
+            gateway_db_path,
+            "SELECT status, approved_at FROM board_tasks WHERE task_id = ?",
+            (task_id,),
+        )
+        assert final_row is not None
+        assert final_row["status"] == "approved"
+        assert final_row["approved_at"] is not None
