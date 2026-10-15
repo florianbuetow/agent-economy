@@ -1,0 +1,59 @@
+# Completion execution view
+
+All items OPEN. Detailed scope, red/green proof and release gates are in the root master plan. Canonical requirements/status remain in the OpenSpec completion backlog/change. No implementation is authorized by a checkbox alone.
+
+- [ ] T-110 / MP-01: Write and observe failing acceptance tests — Isolate runtime and establish the current baseline
+- [ ] T-111 / MP-01: Implement, verify, review and deliver — Isolate runtime and establish the current baseline
+- [ ] T-112 / MP-02: Write and observe failing acceptance tests — Enforce persistence authority and the local browser boundary
+- [ ] T-113 / MP-02: Implement, verify, review and deliver — Enforce persistence authority and the local browser boundary
+- [ ] T-114 / MP-03: Write and observe failing acceptance tests — Make identities durable and token validation consistent
+- [ ] T-115 / MP-03: Implement, verify, review and deliver — Make identities durable and token validation consistent
+- [ ] T-116 / MP-04: Write and observe failing acceptance tests — Give financial operations durable replay receipts
+- [ ] T-117 / MP-04: Implement, verify, review and deliver — Give financial operations durable replay receipts
+- [ ] T-118 / MP-05: Write and observe failing acceptance tests — Make task posting and compensation recoverable
+- [ ] T-119 / MP-05: Implement, verify, review and deliver — Make task posting and compensation recoverable
+- [ ] T-120 / MP-06: Write and observe failing acceptance tests — Version the schema and enforce financial invariants
+- [ ] T-121 / MP-06: Implement, verify, review and deliver — Version the schema and enforce financial invariants
+- [ ] T-122 / MP-07: Write and observe failing acceptance tests — Make all task transitions atomic and cutoff-aware
+- [ ] T-123 / MP-07: Implement, verify, review and deliver — Make all task transitions atomic and cutoff-aware
+- [ ] T-124 / MP-08: Write and observe failing acceptance tests — Recover pending effects independently of task status
+- [ ] T-125 / MP-08: Implement, verify, review and deliver — Recover pending effects independently of task status
+- [ ] T-126 / MP-09: Write and observe failing acceptance tests — Make task inputs and deliverables safe, immutable evidence
+- [ ] T-127 / MP-09: Implement, verify, review and deliver — Make task inputs and deliverables safe, immutable evidence
+- [ ] T-128 / MP-10: Write and observe failing acceptance tests — Persist one ruling and resume its delivery
+- [ ] T-129 / MP-10: Implement, verify, review and deliver — Persist one ruling and resume its delivery
+- [ ] T-130 / MP-11: Write and observe failing acceptance tests — Define complete judge evidence and robust prompt/output contracts
+- [ ] T-131 / MP-11: Implement, verify, review and deliver — Define complete judge evidence and robust prompt/output contracts
+- [ ] T-132 / MP-12: Write and observe failing acceptance tests — Close sealed-data leaks across public projections
+- [ ] T-133 / MP-12: Implement, verify, review and deliver — Close sealed-data leaks across public projections
+- [ ] T-134 / MP-13: Write and observe failing acceptance tests — Authorize feedback and make reveal durable
+- [ ] T-135 / MP-13: Implement, verify, review and deliver — Authorize feedback and make reveal durable
+- [ ] T-136 / MP-14: Write and observe failing acceptance tests — Expose trustworthy specification and delivery scores
+- [ ] T-137 / MP-14: Implement, verify, review and deliver — Expose trustworthy specification and delivery scores
+- [ ] T-138 / MP-15: Write and observe failing acceptance tests — Complete the human operator journey
+- [ ] T-139 / MP-15: Implement, verify, review and deliver — Complete the human operator journey
+- [ ] T-140 / MP-16: Write and observe failing acceptance tests — Make external-agent participation a supported interface
+- [ ] T-141 / MP-16: Implement, verify, review and deliver — Make external-agent participation a supported interface
+- [ ] T-142 / MP-17: Write and observe failing acceptance tests — Recover worker commitments after restart
+- [ ] T-143 / MP-17: Implement, verify, review and deliver — Recover worker commitments after restart
+- [ ] T-144 / MP-18: Write and observe failing acceptance tests — Persist feeder review and acceptance policy
+- [ ] T-145 / MP-18: Implement, verify, review and deliver — Persist feeder review and acceptance policy
+- [ ] T-146 / MP-19: Write and observe failing acceptance tests — Make observatory state, metrics and reconnects accurate
+- [ ] T-147 / MP-19: Implement, verify, review and deliver — Make observatory state, metrics and reconnects accurate
+- [ ] T-148 / MP-20: Write and observe failing acceptance tests — Tighten service contracts and remove unsafe blocking/fallbacks
+- [ ] T-149 / MP-20: Implement, verify, review and deliver — Tighten service contracts and remove unsafe blocking/fallbacks
+- [ ] T-150 / MP-21: Write and observe failing acceptance tests — Provide reliable startup, health, backup and recovery operations
+- [ ] T-151 / MP-21: Implement, verify, review and deliver — Provide reliable startup, health, backup and recovery operations
+- [ ] T-152 / MP-22: Write and observe failing acceptance tests — Turn CI into an honest failure/concurrency gate
+- [ ] T-153 / MP-22: Implement, verify, review and deliver — Turn CI into an honest failure/concurrency gate
+- [ ] T-154 / MP-23: Write and observe failing acceptance tests — Prove the complete human and autonomous platform journeys
+- [ ] T-155 / MP-23: Implement, verify, review and deliver — Prove the complete human and autonomous platform journeys
+- [ ] T-156 / MP-24: Write and observe failing acceptance tests — Complete the economic mechanisms and non-math example
+- [ ] T-157 / MP-24: Implement, verify, review and deliver — Complete the economic mechanisms and non-math example
+- [ ] T-158 / MP-25: Write and observe failing acceptance tests — Validate the real judge system against the core thesis
+- [ ] T-159 / MP-25: Implement, verify, review and deliver — Validate the real judge system against the core thesis
+- [ ] T-160 / MP-26: Write and observe failing acceptance tests — Reconcile specifications, backlog and release evidence
+- [ ] T-161 / MP-26: Implement, verify, review and deliver — Reconcile specifications, backlog and release evidence
+- [ ] T-162 / Q-M1: Record accepted decision and worked examples — Court evidence admissibility and artifact privacy
+- [ ] T-163 / Q-M2: Record accepted decision and worked examples — Post-v1 price-forming economics
+- [ ] T-164 / Q-M3: Record accepted decision and worked examples — Independent quality dimensions and score formula
