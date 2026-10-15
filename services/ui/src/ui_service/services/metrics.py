@@ -198,6 +198,7 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
     """Compute task metrics."""
     now = utc_now()
     since_24h = to_iso(now - timedelta(hours=24))
+    since_48h = to_iso(now - timedelta(hours=48))
 
     total_created = int(await execute_scalar(db, "SELECT COUNT(*) FROM board_tasks", ()) or 0)
     completed_all_time = int(
@@ -270,9 +271,17 @@ async def compute_tasks(db: aiosqlite.Connection) -> dict[str, Any]:
         )
         or 0
     )
-    delta_open = float(new_open)
+    prev_new_open = int(
+        await execute_scalar(
+            db,
+            "SELECT COUNT(*) FROM board_tasks WHERE status = ? "
+            "AND created_at >= ? AND created_at < ?",
+            (TaskStatus.OPEN, since_48h, since_24h),
+        )
+        or 0
+    )
+    delta_open = _pct_change(float(new_open), float(prev_new_open))
 
-    since_48h = to_iso(now - timedelta(hours=48))
     prev_completed_24h = int(
         await execute_scalar(
             db,

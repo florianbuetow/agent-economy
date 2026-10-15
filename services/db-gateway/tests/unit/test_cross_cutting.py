@@ -718,18 +718,23 @@ class TestHTTPMisuse:
 
     def test_wrong_method_on_defined_routes(self, app_with_writer: TestClient) -> None:
         """HTTP-01: Wrong method on defined routes returns 405."""
+        # GET /board/tasks, GET /reputation/feedback, and GET /court/claims are
+        # real list-read endpoints (Category 22) and are deliberately excluded
+        # here, same as GET /identity/agents above them in the spec — sending
+        # GET to those exact paths hits the real reader route, not a 405
+        # wrong-method rejection (WP-13 item 8: they used to incorrectly
+        # return 405 for an unrelated reason — an uninitialized reader — which
+        # this list conflated with genuine method misuse; see
+        # test_reader_not_ready_503.py for that scenario).
         post_only_routes = [
             "/bank/accounts",
             "/bank/credit",
             "/bank/escrow/lock",
             "/bank/escrow/release",
             "/bank/escrow/split",
-            "/board/tasks",
             "/board/bids",
             "/board/tasks/t-fake/status",
             "/board/assets",
-            "/reputation/feedback",
-            "/court/claims",
             "/court/rebuttals",
             "/court/rulings",
         ]

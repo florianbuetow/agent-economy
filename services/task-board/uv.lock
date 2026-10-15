@@ -523,6 +523,43 @@ wheels = [
 ]
 
 [[package]]
+name = "db-gateway-service"
+version = "0.1.0"
+source = { editable = "../db-gateway" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "service-commons" },
+    { name = "starlette" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.0" },
+    { name = "codespell", marker = "extra == 'dev'", specifier = ">=2.3.0" },
+    { name = "deptry", marker = "extra == 'dev'", specifier = ">=0.21.0" },
+    { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13.0" },
+    { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7.0" },
+    { name = "pydantic", specifier = ">=2.10.0" },
+    { name = "pygount", marker = "extra == 'dev'", specifier = ">=1.8.0" },
+    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.390" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.3" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
+    { name = "pytestarch", extras = ["visualization"], marker = "extra == 'dev'", specifier = ">=2.0.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
+    { name = "semgrep", marker = "extra == 'dev'", specifier = ">=1.99.0" },
+    { name = "service-commons", editable = "../../libs/service-commons" },
+    { name = "starlette", specifier = ">=1.0.1" },
+    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.0" },
+    { name = "uvicorn", specifier = ">=0.34.0" },
+]
+provides-extras = ["dev"]
+
+[[package]]
 name = "defusedxml"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2327,6 +2364,7 @@ dev = [
     { name = "bandit" },
     { name = "codespell" },
     { name = "cryptography" },
+    { name = "db-gateway-service" },
     { name = "deptry" },
     { name = "freezegun" },
     { name = "httpx" },
@@ -2352,6 +2390,7 @@ requires-dist = [
     { name = "codespell", marker = "extra == 'dev'", specifier = ">=2.3.0" },
     { name = "cryptography", specifier = ">=48.0.1" },
     { name = "cryptography", marker = "extra == 'dev'", specifier = ">=48.0.1" },
+    { name = "db-gateway-service", marker = "extra == 'dev'", editable = "../db-gateway" },
     { name = "deptry", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "freezegun", marker = "extra == 'dev'", specifier = ">=1.5.0" },

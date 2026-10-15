@@ -143,15 +143,18 @@ def get_settings() -> Settings:
     """Load and validate settings from YAML config."""
     config_path = get_config_path()
     yaml_config = load_yaml_config(config_path)
-    default_user_agent = _load_default_user_agent_config()
     user_agent_config = yaml_config.get("user_agent")
     if isinstance(user_agent_config, dict):
-        # Backfill keys missing from a partial user_agent block with the
-        # canonical values from the service config.yaml.
+        # Backfill keys missing from a partial user_agent block (exception #10,
+        # WP-08) with the canonical values from the service config.yaml. This
+        # only fires when the section is present but incomplete — an entirely
+        # absent user_agent section is NOT backfilled: it falls straight
+        # through to load_settings() below, which fails fast (Settings.user_agent
+        # is a required field with no default), per this module's own contract
+        # ("ZERO defaults... missing fields cause immediate startup failure").
+        default_user_agent = _load_default_user_agent_config()
         for key, value in default_user_agent.items():
             user_agent_config.setdefault(key, value)
-    else:
-        yaml_config["user_agent"] = default_user_agent
     return load_settings(Settings, yaml_config)
 
 

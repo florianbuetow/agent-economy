@@ -66,12 +66,24 @@ def _open_create_mode(task_page: TaskPage, e2e_page: Page) -> None:
 
 
 def _open_task_view(task_page: TaskPage, e2e_page: Page, task_id: str) -> None:
-    """Open task page for a task_id and wait for panel to render."""
+    """Open task page for a task_id and wait for panel + event feed to settle.
+
+    The initial ``#phase-content`` render (from ``refreshTaskData``) and the
+    right-side event feed panel (from the separate ``loadHistoricalEvents``
+    fetch, plus the SSE catch-up replay described on
+    ``TaskPage.click_phase``) populate asynchronously and independently.
+    Waiting only for ``#phase-content`` can return before the feed panel —
+    or the SSE catch-up — has settled, which previously caused both empty
+    event-feed reads (T63-T65) and phase-strip clicks made right after
+    ``_open_task_view`` to race a still-draining replay (see
+    ``TaskPage.click_phase`` for the mechanism).
+    """
     task_page.navigate(task_id=task_id)
     e2e_page.wait_for_function(
         "document.querySelector('#phase-content') && "
         "document.querySelector('#phase-content').textContent.trim().length > 0",
     )
+    task_page.wait_for_feed_to_settle()
 
 
 def _active_phase(e2e_page: Page) -> int:

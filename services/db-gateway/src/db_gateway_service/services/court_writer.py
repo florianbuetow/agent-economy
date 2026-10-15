@@ -164,6 +164,16 @@ class CourtWriter:
             }
         except ServiceError:
             raise
+        except sqlite3.IntegrityError as exc:
+            db.rollback()
+            if is_foreign_key_violation(exc):
+                raise ServiceError(
+                    "foreign_key_violation",
+                    "Foreign key constraint failed",
+                    409,
+                    {},
+                ) from exc
+            raise
         except Exception:
             db.rollback()
             raise

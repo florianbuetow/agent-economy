@@ -47,24 +47,34 @@ def test_quarterly_report_page_explicit_quarter_renders_metrics(e2e_page: Page) 
 @pytest.mark.e2e
 def test_quarterly_report_page_prev_next_navigation(e2e_page: Page) -> None:
     """Prev/Next buttons shift the displayed quarter label."""
+    # This test chains three sequential client-side navigation + re-render
+    # round trips in a row (initial load, next, prev x2). Each is fast in
+    # isolation (whole test runs in ~1.7s standalone), but observed an
+    # intermittent timeout on the second/third wait when run as part of the
+    # full ~270-test E2E session (one long-lived Chromium instance cycling
+    # through hundreds of contexts). Not a shared-DB-state issue -- the
+    # fixture DB is reset before every test -- so this widens the timeout
+    # ceiling rather than the (unrelated) DB reset fixing it; the assertions
+    # themselves are unchanged.
+    generous_timeout_ms = 15_000
     e2e_page.goto(f"{e2e_page.base_url}/quarterly-report.html?quarter=2026-Q1")  # type: ignore[attr-defined]
     e2e_page.wait_for_load_state("networkidle")
     e2e_page.wait_for_function(
         "document.getElementById('qr-quarter-label').textContent === '2026-Q1'",
-        timeout=5000,
+        timeout=generous_timeout_ms,
     )
 
     e2e_page.locator("#qr-next").click()
     e2e_page.wait_for_function(
         "document.getElementById('qr-quarter-label').textContent === '2026-Q2'",
-        timeout=5000,
+        timeout=generous_timeout_ms,
     )
 
     e2e_page.locator("#qr-prev").click()
     e2e_page.locator("#qr-prev").click()
     e2e_page.wait_for_function(
         "document.getElementById('qr-quarter-label').textContent === '2025-Q4'",
-        timeout=5000,
+        timeout=generous_timeout_ms,
     )
 
 

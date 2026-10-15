@@ -394,16 +394,18 @@ Sends `SYSTEM_PROMPT` + `EVALUATION_TEMPLATE.format(...)` to `litellm.acompletio
 
 ### Prompt Content — verified, not assumed
 
-`court_service/judges/prompts.py` today contains:
-
-```python
-SYSTEM_PROMPT = """You are an impartial dispute-resolution judge for software-delivery tasks.
-Your core principle is: ambiguity in the specification favors the worker.
-Return a worker payout percentage (0-100) and concise reasoning.
-Respond with valid JSON only."""
-```
-
-This is a **one-sentence restatement of the core principle**, not an expanded operational rubric. `docs/plans/2026-07-10-q13-judge-panel-decision.md` ratified "an explicit 'vague spec' rubric is written into the judge system prompt" as part of the Q-13 decision — **that expansion has not landed**. There is no worked-example list, no criteria for what counts as "ambiguous," and no scoring guidance beyond the single sentence above. Document this as-is; do not describe a rubric that does not exist in the file.
+`court_service/judges/prompts.py`'s `SYSTEM_PROMPT` carries the one-sentence core principle
+("ambiguity in the specification favors the worker") plus a structured vagueness rubric
+(T-109, closing the Q-13 gap this section used to document): five concrete criteria for
+what makes a specification vague (missing acceptance criteria, undefined edge cases,
+subjective-only quality language, missing format/output requirements, self-contradictory
+requirements), and scoring guidance mapping each case to a `worker_pct` range (70-100 when
+the claim rests on a rubric gap the worker resolved reasonably, 0-30 when the spec was
+clear and unmet, 30-70 when both a genuine ambiguity and a genuine shortfall are present).
+The judge's reasoning is required to name which criterion applied. See the file itself for
+the exact wording — `services/court/tests/unit/test_vagueness_rubric.py` asserts the
+rubric's structured content reaches the actual prompt `LLMJudge` sends to litellm, not just
+that it's defined in `prompts.py`.
 
 ### Panel Evaluation
 

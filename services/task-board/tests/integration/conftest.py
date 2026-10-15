@@ -1,1 +1,387 @@
-"""Integration test fixtures — require running services."""
+"""Integration test fixtures — the real service app, backed by a real,
+live, in-process DB Gateway.
+
+Task-board's production `TaskDbClient` uses a synchronous `httpx.Client`
+(client consolidation to the shared async `GatewayClient` was deferred —
+see plan §5 WP-04 deviation notes), so it cannot be redirected at an
+in-process ASGI app via `httpx.ASGITransport` the way identity's
+`AgentDbClient` and central-bank's `LedgerDbClient` are (that transport only
+implements the async request interface). Instead, this suite boots a real
+DB Gateway ASGI app under `uvicorn` on a random local port, backed by a
+fresh temp SQLite file per test — a genuine live server, but fully isolated
+and torn down after each test, no dependency on the shared dev stack.
+
+Central Bank, Identity, and the platform agent stay mocked here (as in
+tests/unit) — cross-service wiring with live services is covered by the
+root cross-service and e2e suites, not this per-service integration layer.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import base64
+import json
+import os
+import socket
+import tempfile
+import threading
+import uuid
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
+import pytest
+import uvicorn
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from db_gateway_service.app import create_app as create_gateway_app
+from db_gateway_service.config import clear_settings_cache as clear_gateway_settings_cache
+from db_gateway_service.core.state import init_app_state as init_gateway_state
+from db_gateway_service.core.state import reset_app_state as reset_gateway_state
+from db_gateway_service.services.db_reader import DbReader
+from db_gateway_service.services.db_writer import DbWriter
+from httpx import ASGITransport, AsyncClient
+from joserfc import jws
+from joserfc.jwk import OKPKey
+
+from task_board_service.app import create_app
+from task_board_service.config import clear_settings_cache
+from task_board_service.core.lifespan import lifespan
+from task_board_service.core.state import get_app_state, reset_app_state
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from fastapi import FastAPI
+
+PLATFORM_AGENT_ID = "a-platform-test-id"
+
+_SCHEMA_PATH = Path(__file__).resolve().parents[4] / "docs" / "specifications" / "schema.sql"
+
+
+def _free_port() -> int:
+    """Bind to port 0 to get an OS-assigned free local port, then release it."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
+def _generate_keypair() -> tuple[Ed25519PrivateKey, str]:
+    """Generate an Ed25519 keypair, returning (private_key, formatted_public_key)."""
+    private_key = Ed25519PrivateKey.generate()
+    pub_bytes = private_key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+    public_key = f"ed25519:{base64.b64encode(pub_bytes).decode()}"
+    return private_key, public_key
+
+
+def make_jws_token(private_key: Ed25519PrivateKey, agent_id: str, payload: dict[str, Any]) -> str:
+    """Create a JWS compact token signed by the given private key."""
+    raw_private = private_key.private_bytes_raw()
+    raw_public = private_key.public_key().public_bytes_raw()
+    jwk_dict = {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "d": base64.urlsafe_b64encode(raw_private).rstrip(b"=").decode(),
+        "x": base64.urlsafe_b64encode(raw_public).rstrip(b"=").decode(),
+    }
+    key = OKPKey.import_key(jwk_dict)
+    protected = {"alg": "EdDSA", "kid": agent_id}
+    payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
+    return jws.serialize_compact(protected, payload_bytes, key, algorithms=["EdDSA"])
+
+
+def _write_gateway_config(db_path: str) -> str:
+    """Write a temp db-gateway config.yaml pointing at an isolated SQLite file."""
+    content = f"""
+service:
+  name: "db-gateway-task-board-integration-test"
+  version: "0.1.0"
+
+server:
+  host: "127.0.0.1"
+  port: 18031
+  log_level: "warning"
+
+logging:
+  level: "WARNING"
+  directory: "data/logs"
+  format: "json"
+
+database:
+  path: "{db_path}"
+  schema_path: "{_SCHEMA_PATH}"
+  busy_timeout_ms: 5000
+  journal_mode: "wal"
+
+request:
+  max_body_size: 1048576
+"""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write(content)
+        return f.name
+
+
+class _LiveGateway:
+    """A real DB Gateway ASGI app served by uvicorn on a random local port,
+    started/stopped around a single test."""
+
+    def __init__(self, base_url: str, server: uvicorn.Server, thread: threading.Thread) -> None:
+        self.base_url = base_url
+        self._server = server
+        self._thread = thread
+
+    def stop(self) -> None:
+        self._server.should_exit = True
+        self._thread.join(timeout=5)
+
+
+async def _start_live_gateway(db_path: str) -> tuple[_LiveGateway, DbWriter]:
+    """Build and serve a real DB Gateway ASGI app, on its own thread with its
+    own event loop, against a fresh SQLite file.
+
+    A same-loop `asyncio.create_task(server.serve())` would deadlock:
+    TaskDbClient makes *synchronous* (blocking) httpx calls from inside an
+    async route handler, so a server sharing the test's event loop could
+    never get scheduled to answer its own client's request. Running the
+    server on a separate OS thread (its own loop) — same trick a real,
+    separate service process gets for free — avoids that entirely.
+    `check_same_thread=False` on the gateway's sqlite3 connection (GAP-C7
+    era) makes sharing the DbWriter across threads safe.
+    """
+    config_path = _write_gateway_config(db_path)
+    reset_gateway_state()
+    state = init_gateway_state()
+    writer = DbWriter(
+        db_path=db_path,
+        busy_timeout_ms=5000,
+        journal_mode="wal",
+        schema_sql=_SCHEMA_PATH.read_text(),
+    )
+    state.db_writer = writer
+    state.db_reader = DbReader(db=writer.connection)
+
+    with patch.dict("os.environ", {"CONFIG_PATH": config_path}):
+        clear_gateway_settings_cache()
+        gateway_app = create_gateway_app()
+    # See services/identity/tests/integration/conftest.py for why the gateway's
+    # settings cache is deliberately NOT cleared again here.
+    Path(config_path).unlink(missing_ok=True)
+
+    port = _free_port()
+    base_url = f"http://127.0.0.1:{port}"
+    config = uvicorn.Config(gateway_app, host="127.0.0.1", port=port, log_level="warning")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=lambda: asyncio.run(server.serve()), daemon=True)
+    thread.start()
+
+    async with httpx.AsyncClient() as probe:
+        for _ in range(100):
+            if server.started:
+                try:
+                    resp = await probe.get(f"{base_url}/health", timeout=0.5)
+                    if resp.status_code == 200:
+                        break
+                except httpx.HTTPError:
+                    pass
+            await asyncio.sleep(0.05)
+        else:
+            msg = "In-process DB Gateway did not become ready in time"
+            raise RuntimeError(msg)
+
+    return _LiveGateway(base_url, server, thread), writer
+
+
+@pytest.fixture
+def gateway_db_path(tmp_path: Path) -> str:
+    """Path to the SQLite file backing the in-process DB Gateway for this test."""
+    return str(tmp_path / "gateway.db")
+
+
+@pytest.fixture
+async def _gateway(gateway_db_path: str) -> AsyncIterator[_LiveGateway]:
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+    yield live_gateway
+    live_gateway.stop()
+    writer.close()
+    reset_gateway_state()
+
+
+@pytest.fixture
+async def gateway_client(_gateway: _LiveGateway) -> AsyncIterator[httpx.AsyncClient]:
+    """A client onto the live DB Gateway backing this test's task-board
+    `state.store` — used to set up identity_agents rows the FK on
+    board_tasks/bids etc. requires."""
+    async with httpx.AsyncClient(base_url=_gateway.base_url) as c:
+        yield c
+
+
+async def register_identity_agent(gateway_client: httpx.AsyncClient, agent_id: str) -> None:
+    """Register `agent_id` as a real identity_agents row on the live gateway."""
+    response = await gateway_client.post(
+        "/identity/agents",
+        json={
+            "agent_id": agent_id,
+            "name": agent_id,
+            "public_key": f"ed25519:{uuid.uuid4()}",
+            "registered_at": "2026-03-01T09:00:00Z",
+            "event": {
+                "event_source": "identity",
+                "event_type": "agent.registered",
+                "timestamp": "2026-03-01T09:00:00Z",
+                "agent_id": agent_id,
+                "summary": f"{agent_id} registered",
+                "payload": "{}",
+            },
+        },
+    )
+    assert response.status_code == 201, response.text
+
+
+@pytest.fixture
+def platform_keypair() -> tuple[Ed25519PrivateKey, str]:
+    """Generate a platform keypair."""
+    return _generate_keypair()
+
+
+@pytest.fixture
+def poster_keypair() -> tuple[Ed25519PrivateKey, str]:
+    """Generate a poster keypair."""
+    return _generate_keypair()
+
+
+@pytest.fixture
+def worker_keypair() -> tuple[Ed25519PrivateKey, str]:
+    """Generate a worker keypair."""
+    return _generate_keypair()
+
+
+@pytest.fixture
+async def app(tmp_path: Path, _gateway: _LiveGateway) -> AsyncIterator[FastAPI]:
+    """Real task-board app; its production TaskDbClient talks to a real, live,
+    fully-isolated in-process DB Gateway instead of the InMemoryTaskStore fake
+    unit tests use. Central Bank/Identity/platform-agent stay mocked."""
+    db_path = tmp_path / "test.db"
+    config_content = f"""
+service:
+  name: "task-board"
+  version: "0.1.0"
+server:
+  host: "127.0.0.1"
+  port: 8003
+  log_level: "info"
+logging:
+  level: "WARNING"
+  directory: "data/logs"
+database:
+  path: "{db_path}"
+identity:
+  base_url: "http://localhost:8001"
+  verify_jws_path: "/agents/verify-jws"
+central_bank:
+  base_url: "http://localhost:8002"
+  escrow_lock_path: "/escrow/lock"
+  escrow_release_path: "/escrow/release"
+  escrow_split_path: "/escrow/split"
+  timeout_seconds: 10
+platform:
+  agent_id: "{PLATFORM_AGENT_ID}"
+request:
+  max_body_size: 1048576
+limits:
+  max_file_size: 10485760
+  max_assets_per_task: 20
+db_gateway:
+  url: "{_gateway.base_url}"
+  timeout_seconds: 10
+deadline_evaluation:
+  evaluation_interval_seconds: 3600
+"""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(config_content)
+    old_config = os.environ.get("CONFIG_PATH")
+    os.environ["CONFIG_PATH"] = str(config_path)
+
+    clear_settings_cache()
+    reset_app_state()
+
+    test_app = create_app()
+    async with lifespan(test_app):
+        state = get_app_state()
+
+        mock_platform = MagicMock()
+        mock_platform.agent_id = PLATFORM_AGENT_ID
+        mock_platform.validate_certificate = MagicMock(side_effect=_decode_jws_payload)
+        mock_platform.file_claim = AsyncMock(
+            return_value={"dispute_id": "disp-1", "status": "rebuttal_pending"}
+        )
+        mock_platform.close = AsyncMock()
+        state.platform_agent = mock_platform
+
+        mock_bank = AsyncMock()
+        mock_bank.close = AsyncMock()
+        mock_bank.escrow_lock = AsyncMock(
+            return_value={"escrow_id": f"esc-{uuid.uuid4()}", "status": "locked"}
+        )
+        mock_bank.escrow_release = AsyncMock(return_value={"status": "released"})
+        mock_bank.escrow_split = AsyncMock(return_value={"status": "split"})
+        state.central_bank_client = mock_bank
+
+        mock_identity = AsyncMock()
+        mock_identity.close = AsyncMock()
+        mock_identity.verify_jws = AsyncMock(side_effect=_make_delegating_verify_jws(state))
+        state.identity_client = mock_identity
+
+        if state.task_manager is not None:
+            state.task_manager._central_bank_client = mock_bank
+        if state.token_validator is not None:
+            state.token_validator._platform_agent = mock_platform
+            state.token_validator._identity_client = mock_identity
+        if state.escrow_coordinator is not None:
+            state.escrow_coordinator._central_bank_client = mock_bank
+
+        yield test_app
+
+    reset_app_state()
+    clear_settings_cache()
+    if old_config is None:
+        os.environ.pop("CONFIG_PATH", None)
+    else:
+        os.environ["CONFIG_PATH"] = old_config
+
+
+def _decode_jws_payload(token: str) -> dict[str, Any]:
+    """Decode the base64url payload from a compact JWS token, unverified — the
+    mock platform agent stands in for real signature verification here."""
+    parts = token.split(".")
+    payload_b64 = parts[1]
+    padded = payload_b64 + "=" * (-len(payload_b64) % 4)
+    return json.loads(base64.urlsafe_b64decode(padded))
+
+
+def _make_delegating_verify_jws(state_ref: Any) -> Any:
+    """A verify_jws mock that delegates to platform_agent.validate_certificate,
+    mirroring tests/unit/routers/conftest.py's identity-client mock."""
+
+    async def _delegating_verify_jws(token: str) -> dict[str, Any]:
+        header_b64 = token.split(".", maxsplit=1)[0]
+        padded_header = header_b64 + "=" * (-len(header_b64) % 4)
+        header = json.loads(base64.urlsafe_b64decode(padded_header))
+        agent_id = header.get("kid", "")
+
+        try:
+            payload = state_ref.platform_agent.validate_certificate(token)
+        except (InvalidSignature, ValueError):
+            return {"valid": False, "reason": "signature mismatch"}
+        return {"valid": True, "agent_id": agent_id, "payload": payload}
+
+    return _delegating_verify_jws
+
+
+@pytest.fixture
+async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
+    """Create an async HTTP client for the test app."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c

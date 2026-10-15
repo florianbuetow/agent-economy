@@ -7,7 +7,6 @@ import json
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from joserfc import jws as jws_module
 from joserfc.errors import BadSignatureError
@@ -87,68 +86,6 @@ class AgentRegistry:
                 409,
                 {},
             ) from exc
-
-    async def verify_signature(
-        self,
-        agent_id: str,
-        payload_b64: str,
-        signature_b64: str,
-    ) -> dict[str, object]:
-        """
-        Verify an Ed25519 signature for a given agent.
-
-        Returns {"valid": True, "agent_id": ...} or {"valid": False, "reason": ...}.
-
-        Raises:
-            ServiceError: AGENT_NOT_FOUND, INVALID_BASE64, INVALID_SIGNATURE_LENGTH
-        """
-        agent = await self.get_agent(agent_id)
-        if agent is None:
-            raise ServiceError("agent_not_found", "Agent not found", 404, {})
-
-        # Decode base64 payload
-        try:
-            payload_bytes = base64.b64decode(payload_b64, validate=True)
-        except Exception as exc:
-            raise ServiceError(
-                "invalid_base64",
-                "payload is not valid base64",
-                400,
-                {},
-            ) from exc
-
-        # Decode base64 signature
-        try:
-            sig_bytes = base64.b64decode(signature_b64, validate=True)
-        except Exception as exc:
-            raise ServiceError(
-                "invalid_base64",
-                "signature is not valid base64",
-                400,
-                {},
-            ) from exc
-
-        # Validate signature length
-        if len(sig_bytes) != self._signature_bytes:
-            raise ServiceError(
-                "invalid_signature_length",
-                f"Signature must be exactly {self._signature_bytes} bytes",
-                400,
-                {},
-            )
-
-        # Extract raw public key bytes from stored key
-        public_key_str: str = agent["public_key"]
-        key_b64 = public_key_str.split(":", 1)[1]
-        key_bytes = base64.b64decode(key_b64)
-
-        # Verify Ed25519 signature
-        try:
-            public_key_obj = Ed25519PublicKey.from_public_bytes(key_bytes)
-            public_key_obj.verify(sig_bytes, payload_bytes)
-            return {"valid": True, "agent_id": agent_id}
-        except InvalidSignature:
-            return {"valid": False, "reason": "signature mismatch"}
 
     async def verify_jws(self, token: str) -> dict[str, object]:
         """
