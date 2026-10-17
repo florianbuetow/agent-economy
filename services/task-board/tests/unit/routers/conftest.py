@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import uuid
 from typing import TYPE_CHECKING, Any
@@ -11,6 +13,7 @@ import pytest
 import yaml
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from httpx import ASGITransport, AsyncClient
+from service_auth.financial_identity import operation_id_for
 from service_auth.jws import JwsAdmissionError, VerifiedJws
 from service_auth.platform import PlatformAgent
 from service_auth.signing import generate_keypair as provision_keypair
@@ -92,6 +95,69 @@ def make_task_id() -> str:
 def make_bid_id() -> str:
     """Generate a unique bid ID."""
     return f"bid-{uuid.uuid4()}"
+
+
+def _native_lock_response(escrow_token: str) -> dict[str, object]:
+    """Return the native receipt for the exact signed task-lock intent."""
+    verified = verify_compact_jws(escrow_token)
+    payload = verified.payload
+    operation_id = payload["operation_id"]
+    task_id = payload["task_id"]
+    poster_id = payload["agent_id"]
+    amount = payload["amount"]
+    assert isinstance(operation_id, str)
+    assert isinstance(task_id, str)
+    assert isinstance(poster_id, str)
+    assert type(amount) is int
+    canonical_request = {
+        "request_version": 1,
+        "operation_kind": "escrow_lock",
+        "payer_account_id": poster_id,
+        "task_id": task_id,
+        "amount": amount,
+    }
+    escrow_id = f"esc-{uuid.uuid4()}"
+    committed_at = "2026-10-16T00:00:00Z"
+    return {
+        "outcome": "native_receipt",
+        "receipt": {
+            "receipt_version": 1,
+            "operation_id": operation_id,
+            "operation_kind": "escrow_lock",
+            "request_sha256": hashlib.sha256(
+                json.dumps(
+                    canonical_request,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode()
+            ).hexdigest(),
+            "source_reference": task_id,
+            "committed_at": committed_at,
+            "event_id": 1,
+            "escrow_id": escrow_id,
+            "result": {"escrow_status_at_commit": "locked"},
+            "legs": [
+                {
+                    "role": "payer",
+                    "account_id": poster_id,
+                    "direction": "debit",
+                    "amount": amount,
+                    "transaction_id": f"tx-{uuid.uuid4()}",
+                    "balance_after": 0,
+                }
+            ],
+        },
+        "current_escrow": {
+            "escrow_id": escrow_id,
+            "payer_account_id": poster_id,
+            "task_id": task_id,
+            "amount": amount,
+            "status": "locked",
+            "created_at": committed_at,
+            "resolved_at": None,
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -232,9 +298,7 @@ deadline_evaluation:
         # Mock Central Bank client — default: escrow operations succeed
         mock_bank = AsyncMock()
         mock_bank.close = AsyncMock()
-        mock_bank.escrow_lock = AsyncMock(
-            return_value={"escrow_id": f"esc-{uuid.uuid4()}", "status": "locked"}
-        )
+        mock_bank.escrow_lock = AsyncMock(side_effect=_native_lock_response)
         mock_bank.escrow_release = AsyncMock(return_value={"status": "released"})
         mock_bank.escrow_split = AsyncMock(return_value={"status": "split"})
         state.central_bank_client = mock_bank
@@ -453,11 +517,17 @@ async def create_task(
     }
     task_token = make_jws_token(private_key, poster_id, task_payload)
 
+    lock_operation_id = (
+        f"op-{uuid.uuid4()}"
+        if task_id == ""
+        else operation_id_for("task-lock", (task_id, poster_id))
+    )
     escrow_payload = {
         "action": "escrow_lock",
         "task_id": task_id,
         "agent_id": poster_id,
         "amount": reward,
+        "operation_id": lock_operation_id,
     }
     escrow_token = make_jws_token(private_key, poster_id, escrow_payload)
 

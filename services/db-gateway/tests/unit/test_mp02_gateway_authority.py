@@ -50,13 +50,14 @@ def _seed_domain_graph(client: TestClient) -> dict[str, str]:
         client.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": poster,
                 "balance": 500,
                 "created_at": "2026-02-28T10:01:00Z",
                 "initial_credit": {
                     "tx_id": f"tx-{uuid4()}",
                     "amount": 500,
-                    "reference": "authority-fixture",
+                    "reference": "initial_balance",
                     "timestamp": "2026-02-28T10:01:00Z",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
@@ -68,6 +69,7 @@ def _seed_domain_graph(client: TestClient) -> dict[str, str]:
         client.post(
             "/bank/escrow/lock",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": escrow_id,
                 "payer_account_id": poster,
                 "amount": 100,
@@ -110,6 +112,7 @@ def _write_case(domain: str, graph: dict[str, str]) -> tuple[str, dict[str, Any]
         return (
             "/bank/credit",
             {
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": graph["poster"],
                 "amount": 5,

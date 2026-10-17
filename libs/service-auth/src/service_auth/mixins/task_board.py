@@ -5,6 +5,8 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from service_auth.financial_identity import operation_id_for
+
 if TYPE_CHECKING:
     import httpx
 
@@ -39,13 +41,16 @@ class TaskBoardMixin:
         review_deadline_seconds: int,
     ) -> dict[str, Any]:
         """Post a new task to the Task Board."""
+        poster_id = self.agent_id
+        if poster_id is None:
+            raise RuntimeError("Agent must be registered before signing")
         url = f"{self.config.task_board_url}/tasks"
         task_id = f"t-{uuid.uuid4()}"
         task_token = self._sign_jws(
             {
                 "action": "create_task",
                 "task_id": task_id,
-                "poster_id": self.agent_id,
+                "poster_id": poster_id,
                 "title": title,
                 "spec": spec,
                 "reward": reward,
@@ -59,9 +64,10 @@ class TaskBoardMixin:
         escrow_token = self._sign_jws(
             {
                 "action": "escrow_lock",
+                "operation_id": operation_id_for("task-lock", (task_id, poster_id)),
                 "task_id": task_id,
                 "amount": reward,
-                "agent_id": self.agent_id,
+                "agent_id": poster_id,
             },
             audience="central-bank",
             resource="POST /escrow/lock",

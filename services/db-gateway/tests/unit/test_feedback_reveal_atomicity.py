@@ -40,18 +40,7 @@ def _seed_agent(conn: sqlite3.Connection, agent_id: str, name: str) -> None:
     )
 
 
-def _seed_task(conn: sqlite3.Connection, task_id: str, poster_id: str) -> None:
-    escrow_id = f"esc-{uuid4()}"
-    conn.execute(
-        "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?, ?, ?)",
-        (poster_id, 500, "2026-02-28T10:00:00Z"),
-    )
-    conn.execute(
-        "INSERT INTO bank_escrow "
-        "(escrow_id, payer_account_id, amount, task_id, status, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (escrow_id, poster_id, 100, task_id, "locked", "2026-02-28T10:10:00Z"),
-    )
+def _seed_task(conn: sqlite3.Connection, task_id: str, poster_id: str, escrow_id: str) -> None:
     conn.execute(
         "INSERT INTO board_tasks "
         "(task_id, poster_id, title, spec, reward, status, bidding_deadline_seconds, "
@@ -88,7 +77,48 @@ class _Fixture:
         _seed_agent(conn, self.alice, "Alice")
         _seed_agent(conn, self.bob, "Bob")
         _seed_agent(conn, self.carol, "Carol")
-        _seed_task(conn, self.task_id, self.alice)
+        conn.commit()
+        conn.close()
+        escrow_id = f"esc-{uuid4()}"
+        writer = DbWriter(
+            db_path=db_path,
+            busy_timeout_ms=BUSY_TIMEOUT_MS,
+            journal_mode=JOURNAL_MODE,
+            schema_sql=None,
+        )
+        writer.create_account(
+            {
+                "operation_id": f"op-{uuid4()}",
+                "account_id": self.alice,
+                "balance": 500,
+                "created_at": "2026-02-28T10:00:00Z",
+                "initial_credit": {
+                    "tx_id": f"tx-{uuid4()}",
+                    "amount": 500,
+                    "reference": "initial_balance",
+                    "timestamp": "2026-02-28T10:00:00Z",
+                },
+                "event": make_event(source="bank", event_type="account.created"),
+            }
+        )
+        writer.escrow_lock(
+            {
+                "operation_id": f"op-{uuid4()}",
+                "escrow_id": escrow_id,
+                "payer_account_id": self.alice,
+                "amount": 100,
+                "task_id": self.task_id,
+                "created_at": "2026-02-28T10:10:00Z",
+                "tx_id": f"tx-{uuid4()}",
+                "event": make_event(
+                    source="bank", event_type="escrow.locked", task_id=self.task_id
+                ),
+            }
+        )
+        writer.close()
+        conn = sqlite3.connect(db_path)
+        conn.execute("PRAGMA foreign_keys=ON")
+        _seed_task(conn, self.task_id, self.alice, escrow_id)
         conn.commit()
         conn.close()
 

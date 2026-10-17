@@ -40,16 +40,35 @@ async def _create_account(
     platform_keypair: tuple[Ed25519PrivateKey, str],
     agent_id: str,
     initial_balance: int,
+    operation_id: str | None,
 ) -> None:
     # bank_accounts.account_id FKs to identity_agents.agent_id in the real schema.
     await register_identity_agent(gateway_client, agent_id)
-    token = make_jws_token(
-        platform_keypair[0],
-        PLATFORM_AGENT_ID,
-        {"action": "create_account", "agent_id": agent_id, "initial_balance": initial_balance},
-    )
+    payload: dict[str, object] = {
+        "action": "create_account",
+        "agent_id": agent_id,
+        "initial_balance": initial_balance,
+    }
+    if operation_id is not None:
+        payload["operation_id"] = operation_id
+    token = make_jws_token(platform_keypair[0], PLATFORM_AGENT_ID, payload)
     response = await client.post("/accounts", json={"token": token})
     assert response.status_code == 201, response.text
+    body = response.json()
+    if operation_id is None:
+        assert body["account_id"] == agent_id
+        assert body["balance"] == 0
+    else:
+        receipt = body["receipt"]
+        assert body["outcome"] == "native_receipt"
+        assert body["current_escrow"] is None
+        assert receipt["operation_id"] == operation_id
+        assert receipt["operation_kind"] == "account_issuance"
+        assert receipt["result"] == {
+            "account_id": agent_id,
+            "issued_amount": initial_balance,
+            "balance_after": initial_balance,
+        }
 
 
 class TestAccountLifecycleGatewayBacked:
@@ -60,7 +79,14 @@ class TestAccountLifecycleGatewayBacked:
         platform_keypair: tuple[Ed25519PrivateKey, str],
         gateway_db_path: str,
     ) -> None:
-        await _create_account(client, gateway_client, platform_keypair, "a-payer", 100)
+        await _create_account(
+            client,
+            gateway_client,
+            platform_keypair,
+            "a-payer",
+            100,
+            "op-00000000-0000-4000-8000-000000000301",
+        )
 
         row = _read_one(
             gateway_db_path,
@@ -78,15 +104,32 @@ class TestAccountLifecycleGatewayBacked:
         agent_keypair: tuple[Ed25519PrivateKey, str],
         gateway_db_path: str,
     ) -> None:
-        await _create_account(client, gateway_client, platform_keypair, "a-payer", 0)
+        await _create_account(client, gateway_client, platform_keypair, "a-payer", 0, None)
 
+        credit_operation_id = "op-00000000-0000-4000-8000-000000000302"
         token = make_jws_token(
             platform_keypair[0],
             PLATFORM_AGENT_ID,
-            {"action": "credit", "account_id": "a-payer", "amount": 50, "reference": "seed"},
+            {
+                "action": "credit",
+                "operation_id": credit_operation_id,
+                "account_id": "a-payer",
+                "amount": 50,
+                "reference": "seed",
+            },
         )
         response = await client.post("/accounts/a-payer/credit", json={"token": token})
         assert response.status_code == 200, response.text
+        receipt = response.json()["receipt"]
+        assert receipt["operation_id"] == credit_operation_id
+        assert receipt["operation_kind"] == "credit"
+        assert receipt["result"] == {
+            "account_id": "a-payer",
+            "amount": 50,
+            "balance_after": 50,
+            "reference": "seed",
+        }
+        assert receipt["legs"][0]["amount"] == 50
 
         row = _read_one(
             gateway_db_path,
@@ -117,14 +160,23 @@ class TestEscrowLifecycleGatewayBacked:
     ) -> None:
         """Escrow lock (agent-signed) then release (platform-signed) round-trips
         through the real gateway-backed ledger, moving real SQLite balances."""
-        await _create_account(client, gateway_client, platform_keypair, "a-poster", 100)
-        await _create_account(client, gateway_client, platform_keypair, "a-worker", 0)
+        await _create_account(
+            client,
+            gateway_client,
+            platform_keypair,
+            "a-poster",
+            100,
+            "op-00000000-0000-4000-8000-000000000303",
+        )
+        await _create_account(client, gateway_client, platform_keypair, "a-worker", 0, None)
 
+        lock_operation_id = "op-00000000-0000-4000-8000-000000000304"
         lock_token = make_jws_token(
             agent_keypair[0],
             "a-poster",
             {
                 "action": "escrow_lock",
+                "operation_id": lock_operation_id,
                 "agent_id": "a-poster",
                 "amount": 40,
                 "task_id": "t-integration-1",
@@ -132,7 +184,13 @@ class TestEscrowLifecycleGatewayBacked:
         )
         lock_resp = await client.post("/escrow/lock", json={"token": lock_token})
         assert lock_resp.status_code == 201, lock_resp.text
-        escrow_id = lock_resp.json()["escrow_id"]
+        lock_body = lock_resp.json()
+        lock_receipt = lock_body["receipt"]
+        assert lock_body["outcome"] == "native_receipt"
+        assert lock_receipt["operation_id"] == lock_operation_id
+        assert lock_receipt["result"] == {"escrow_status_at_commit": "locked"}
+        assert lock_body["current_escrow"]["status"] == "locked"
+        escrow_id = lock_receipt["escrow_id"]
 
         poster_row = _read_one(
             gateway_db_path,
@@ -142,11 +200,15 @@ class TestEscrowLifecycleGatewayBacked:
         assert poster_row is not None
         assert poster_row["balance"] == 60
 
+        release_operation_id = "op-00000000-0000-4000-8000-000000000305"
+        source_reference = "task:t-integration-1:approved"
         release_token = make_jws_token(
             platform_keypair[0],
             PLATFORM_AGENT_ID,
             {
                 "action": "escrow_release",
+                "operation_id": release_operation_id,
+                "source_reference": source_reference,
                 "escrow_id": escrow_id,
                 "recipient_account_id": "a-worker",
             },
@@ -155,6 +217,13 @@ class TestEscrowLifecycleGatewayBacked:
             f"/escrow/{escrow_id}/release", json={"token": release_token}
         )
         assert release_resp.status_code == 200, release_resp.text
+        release_body = release_resp.json()
+        release_receipt = release_body["receipt"]
+        assert release_body["outcome"] == "native_receipt"
+        assert release_receipt["operation_id"] == release_operation_id
+        assert release_receipt["source_reference"] == source_reference
+        assert release_receipt["result"] == {"escrow_status_at_commit": "released"}
+        assert release_body["current_escrow"]["status"] == "released"
 
         worker_row = _read_one(
             gateway_db_path,

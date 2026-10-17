@@ -9,9 +9,9 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from service_auth.financial_responses import parse_native_financial_envelope
 from service_commons.exceptions import ServiceError
 
-from central_bank_service.financial_responses import parse_native_financial_envelope
 from central_bank_service.services.ledger_db_client import LedgerDbClient
 
 pytestmark = pytest.mark.unit

@@ -8,6 +8,7 @@ import os
 import time
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 from cryptography.exceptions import InvalidSignature
@@ -28,6 +29,11 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 PLATFORM_AGENT_ID = "a-platform-test-id"
+
+
+def make_operation_id() -> str:
+    """Allocate one explicit caller-owned financial intent for a test action."""
+    return f"op-{uuid4()}"
 
 
 async def _register_platform_agent(agent: PlatformAgent) -> None:

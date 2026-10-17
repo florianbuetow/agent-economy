@@ -16,6 +16,14 @@ legs, and a zero-value recipient need not have a Bank account. Lock replay retai
 receipt while truthfully projecting settled status. These baseline proofs do not close T-116 or
 replace separate issuance, concurrency, migration/history and atomic rollback coverage.
 
+The SDK and shared Bank client must reject native success bodies whose operation identity, kind,
+canonical hash, source, result, ordered legs or current projection do not match the submitted
+command. Required identity and timestamp text is nonempty valid UTF-8; receipt version and event
+identity are strict integers. Zero split legs retain null transaction and balance fields. The
+funding commands must fail before success output or logs on invalid receipts and close clients.
+Zero-account creation validates the current account projection while permitting a positive current
+balance after a concurrent credit. Financial route logs use the immutable receipt and leg facts.
+
 ## Purpose
 
 This document is the release-gate test specification for the Central Bank Service.

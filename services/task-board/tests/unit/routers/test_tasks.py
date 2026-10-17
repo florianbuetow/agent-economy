@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 from task_board_service.core.state import get_app_state
 from tests.helpers import make_jws_token, tamper_jws
@@ -125,6 +126,7 @@ class TestTaskCreation:
             "task_id": task_id,
             "agent_id": alice_agent_id,
             "amount": 100,
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
         }
         escrow_token = make_jws_token(private_key, alice_agent_id, escrow_payload)
 
@@ -187,6 +189,7 @@ class TestTaskCreation:
             "task_id": task_id,
             "agent_id": alice_agent_id,
             "amount": 100,
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
         }
         escrow_token = make_jws_token(private_key, alice_agent_id, escrow_payload)
 
@@ -818,6 +821,7 @@ class TestTaskCreation:
             "task_id": task_id,
             "agent_id": alice_agent_id,
             "amount": 100,
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
         }
         escrow_token = make_jws_token(private_key, alice_agent_id, escrow_payload)
 

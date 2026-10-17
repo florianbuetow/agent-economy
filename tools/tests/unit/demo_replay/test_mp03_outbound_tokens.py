@@ -6,6 +6,7 @@ import json
 
 import httpx
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 from demo_replay.clients import create_account, post_task
 from demo_replay.wallet import DemoAgent
@@ -19,6 +20,15 @@ async def test_demo_bank_and_two_token_task_post_contexts() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
+        if request.url.path == "/accounts":
+            return httpx.Response(
+                201,
+                json={
+                    "account_id": "a-worker",
+                    "balance": 0,
+                    "created_at": "2026-10-17T14:00:00Z",
+                },
+            )
         return httpx.Response(201, json={"task_id": "task"})
 
     platform = DemoAgent.create("platform", "Platform", 45)
@@ -43,6 +53,10 @@ async def test_demo_bank_and_two_token_task_post_contexts() -> None:
     )
     assert task.payload["action"] == "create_task"
     assert escrow.payload["action"] == "escrow_lock"
+    assert escrow.payload["operation_id"] == operation_id_for(
+        "task-lock",
+        (str(task.payload["task_id"]), "a-poster"),
+    )
 
 
 @pytest.mark.unit

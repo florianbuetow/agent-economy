@@ -42,6 +42,7 @@ def _setup_funded_account(client: TestClient, name: str = "Test", balance: int =
     client.post(
         "/bank/accounts",
         json={
+            "operation_id": f"op-{uuid4()}",
             "account_id": aid,
             "balance": balance,
             "created_at": "2026-02-28T10:00:00Z",
@@ -63,6 +64,7 @@ def _create_task(client: TestClient, poster_id: str) -> str:
     client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": eid,
             "payer_account_id": poster_id,
             "amount": 100,

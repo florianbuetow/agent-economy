@@ -49,13 +49,14 @@ def _create_funded_account(
     tx_id = f"tx-{uuid4()}"
     db_writer.create_account(
         {
+            "operation_id": f"op-{uuid4()}",
             "account_id": agent_id,
             "balance": balance,
             "created_at": "2026-02-28T10:00:00Z",
             "initial_credit": {
                 "tx_id": tx_id,
                 "amount": balance,
-                "reference": "initial",
+                "reference": "initial_balance",
                 "timestamp": "2026-02-28T10:00:00Z",
             },
             "event": make_event(source="bank", event_type="account.created"),
@@ -86,6 +87,7 @@ def _lock_escrow(
     tid = task_id if task_id is not None else f"t-{uuid4()}"
     db_writer.escrow_lock(
         {
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": esc_id,
             "payer_account_id": payer_id,
             "amount": amount,
@@ -227,6 +229,7 @@ class TestEventIntegrity:
         resp2 = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": aid,
                 "amount": 500,
@@ -236,7 +239,7 @@ class TestEventIntegrity:
             },
         )
         assert resp2.status_code == 200
-        eid2 = resp2.json()["event_id"]
+        eid2 = resp2.json()["receipt"]["event_id"]
 
         # Query events table directly
         row1 = db_writer._db.execute(
@@ -274,32 +277,34 @@ class TestEventIntegrity:
         app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": poster_id,
                 "balance": 500,
                 "created_at": "2026-02-28T10:00:00Z",
                 "initial_credit": {
                     "tx_id": f"tx-{uuid4()}",
                     "amount": 500,
-                    "reference": "initial",
+                    "reference": "initial_balance",
                     "timestamp": "2026-02-28T10:00:00Z",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
             },
         )
         esc_id = f"esc-{uuid4()}"
+        task_id = f"t-{uuid4()}"
         app_with_writer.post(
             "/bank/escrow/lock",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": esc_id,
                 "payer_account_id": poster_id,
                 "amount": 100,
-                "task_id": f"t-{uuid4()}",
+                "task_id": task_id,
                 "created_at": "2026-02-28T10:01:00Z",
                 "tx_id": f"tx-{uuid4()}",
                 "event": make_event(source="bank", event_type="escrow.locked"),
             },
         )
-        task_id = f"t-{uuid4()}"
         resp = app_with_writer.post(
             "/board/tasks",
             json={
@@ -433,6 +438,7 @@ class TestAtomicity:
         with pytest.raises(ServiceError) as exc_info:
             db_writer.escrow_lock(
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "escrow_id": f"esc-{uuid4()}",
                     "payer_account_id": aid,
                     "amount": 50,
@@ -462,13 +468,14 @@ class TestAtomicity:
         with pytest.raises(ServiceError) as exc_info:
             db_writer.escrow_release(
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "escrow_id": esc_id,
                     "recipient_account_id": f"a-{uuid4()}",
+                    "source_reference": f"release-{task_id}",
                     "tx_id": f"tx-{uuid4()}",
                     "resolved_at": "2026-02-28T12:00:00Z",
                     "event": make_event(source="bank", event_type="escrow.released"),
-                },
-                None,
+                }
             )
         assert exc_info.value.error == "account_not_found"
 
@@ -497,23 +504,23 @@ class TestAtomicity:
         tx_before = _count_rows(db_writer._db, "bank_transactions")
         events_before = _count_rows(db_writer._db, "events")
 
-        # Attempt split with amounts that don't sum to escrow (100)
+        # Attempt split with an invalid percentage.
         with pytest.raises(ServiceError) as exc_info:
             db_writer.escrow_split(
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "escrow_id": esc_id,
                     "worker_account_id": worker_id,
                     "poster_account_id": aid,
-                    "worker_amount": 60,
-                    "poster_amount": 60,
+                    "worker_pct": 101,
+                    "source_reference": f"split-{task_id}",
                     "worker_tx_id": f"tx-{uuid4()}",
                     "poster_tx_id": f"tx-{uuid4()}",
                     "resolved_at": "2026-02-28T12:00:00Z",
                     "event": make_event(source="bank", event_type="escrow.split"),
-                },
-                None,
+                }
             )
-        assert exc_info.value.error == "amount_mismatch"
+        assert exc_info.value.error == "invalid_financial_request"
 
         # Escrow still locked
         row = db_writer._db.execute(
@@ -592,13 +599,14 @@ class TestConcurrency:
         app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": 100,
                 "created_at": "2026-02-28T10:00:00Z",
                 "initial_credit": {
                     "tx_id": f"tx-{uuid4()}",
                     "amount": 100,
-                    "reference": "initial",
+                    "reference": "initial_balance",
                     "timestamp": "2026-02-28T10:00:00Z",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
@@ -609,6 +617,7 @@ class TestConcurrency:
             resp = app_with_writer.post(
                 "/bank/escrow/lock",
                 json={
+                    "operation_id": f"op-{uuid4()}",
                     "escrow_id": f"esc-{uuid4()}",
                     "payer_account_id": aid,
                     "amount": 60,
@@ -682,6 +691,7 @@ class TestConcurrency:
         tx_id = f"tx-{uuid4()}"
         ref = f"salary_{uuid4()}"
         body = {
+            "operation_id": f"op-{uuid4()}",
             "tx_id": tx_id,
             "account_id": aid,
             "amount": 500,
@@ -702,9 +712,10 @@ class TestConcurrency:
         for status_code, _ in results:
             assert status_code == 200
 
-        # Both should return the same tx_id and balance_after
+        # Both return the exact immutable receipt.
         bodies = [r[1] for r in results]
-        assert bodies[0]["balance_after"] == bodies[1]["balance_after"]
+        assert bodies[0]["receipt"] == bodies[1]["receipt"]
+        assert bodies[0]["receipt"]["result"]["balance_after"] == 500
 
 
 # ===================================================================
@@ -848,6 +859,7 @@ class TestSecurity:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": f"a-{uuid4()}",
                 "amount": 100,
@@ -918,6 +930,7 @@ class TestSecurity:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": f"a-{uuid4()}",
                 "amount": 100,
@@ -959,13 +972,14 @@ class TestSecurity:
         app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": 10,
                 "created_at": "2026-02-28T10:00:00Z",
                 "initial_credit": {
                     "tx_id": f"tx-{uuid4()}",
                     "amount": 10,
-                    "reference": "initial",
+                    "reference": "initial_balance",
                     "timestamp": "2026-02-28T10:00:00Z",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
@@ -974,6 +988,7 @@ class TestSecurity:
         resp = app_with_writer.post(
             "/bank/escrow/lock",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": f"esc-{uuid4()}",
                 "payer_account_id": aid,
                 "amount": 100,
@@ -1011,13 +1026,14 @@ class TestSecurity:
         resp = app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": 500,
                 "created_at": "2026-02-28T10:00:00Z",
                 "initial_credit": {
                     "tx_id": f"tx-{uuid4()}",
                     "amount": 500,
-                    "reference": "initial",
+                    "reference": "initial_balance",
                     "timestamp": "2026-02-28T10:00:00Z",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
@@ -1025,15 +1041,16 @@ class TestSecurity:
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["account_id"] == aid
-        assert isinstance(data["event_id"], int)
-        assert data["event_id"] > 0
+        assert data["receipt"]["result"]["account_id"] == aid
+        assert isinstance(data["receipt"]["event_id"], int)
+        assert data["receipt"]["event_id"] > 0
 
         # Credit
         tx_id = f"tx-{uuid4()}"
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": tx_id,
                 "account_id": aid,
                 "amount": 100,
@@ -1044,10 +1061,10 @@ class TestSecurity:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["tx_id"] == tx_id
-        assert isinstance(data["event_id"], int)
-        assert data["event_id"] > 0
-        assert isinstance(data["balance_after"], int)
+        assert data["receipt"]["legs"][0]["transaction_id"] == tx_id
+        assert isinstance(data["receipt"]["event_id"], int)
+        assert data["receipt"]["event_id"] > 0
+        assert isinstance(data["receipt"]["result"]["balance_after"], int)
 
     def test_sql_injection_strings_in_id_fields(self, app_with_writer: TestClient) -> None:
         """SEC-04: SQL injection strings in ID fields don't cause injection."""
@@ -1072,6 +1089,7 @@ class TestSecurity:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": "'; DROP TABLE bank_accounts;--",
                 "amount": 100,
@@ -1121,6 +1139,7 @@ class TestSecurity:
                 "POST",
                 "/bank/credit",
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "tx_id": f"tx-{uuid4()}",
                     "account_id": f"a-{uuid4()}",
                     "amount": 100,
@@ -1154,6 +1173,7 @@ class TestSecurity:
                 "POST",
                 "/bank/credit",
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "tx_id": f"tx-{uuid4()}",
                     "account_id": f"a-{uuid4()}",
                     "amount": -5,

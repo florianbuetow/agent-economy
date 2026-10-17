@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 import httpx
@@ -11,6 +12,55 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from service_auth.config import AgentConfig
 from service_auth.jws import TokenPolicy, parse_jws
 from service_auth.platform import PlatformAgent
+
+_CREDIT_OPERATION_ID = "op-00000000-0000-4000-8000-000000000061"
+
+
+def _credit_response() -> dict[str, object]:
+    canonical_request = {
+        "request_version": 1,
+        "operation_kind": "credit",
+        "account_id": "acct-1",
+        "amount": 9,
+        "reference": "ref",
+    }
+    return {
+        "outcome": "native_receipt",
+        "receipt": {
+            "receipt_version": 1,
+            "operation_id": _CREDIT_OPERATION_ID,
+            "operation_kind": "credit",
+            "request_sha256": hashlib.sha256(
+                json.dumps(
+                    canonical_request,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode()
+            ).hexdigest(),
+            "source_reference": "ref",
+            "committed_at": "2026-10-17T14:00:00Z",
+            "event_id": 1,
+            "escrow_id": None,
+            "result": {
+                "account_id": "acct-1",
+                "amount": 9,
+                "balance_after": 9,
+                "reference": "ref",
+            },
+            "legs": [
+                {
+                    "role": "account",
+                    "account_id": "acct-1",
+                    "direction": "credit",
+                    "amount": 9,
+                    "transaction_id": "tx-credit",
+                    "balance_after": 9,
+                }
+            ],
+        },
+        "current_escrow": None,
+    }
 
 
 def _platform() -> PlatformAgent:
@@ -48,17 +98,29 @@ async def test_platform_bank_court_reputation_and_task_board_tokens() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
-        return httpx.Response(200, json={})
+        body = _credit_response() if request.url.path.endswith("/credit") else {}
+        return httpx.Response(200, json=body)
 
     agent = _platform()
     await agent._http.aclose()
     agent._http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     calls = [
         (
-            agent.credit_account("acct-1", 9, "ref"),
+            agent.credit_account(
+                "acct-1",
+                9,
+                "ref",
+                operation_id=_CREDIT_OPERATION_ID,
+            ),
             "central-bank",
             "POST /accounts/acct-1/credit",
-            {"action": "credit", "account_id": "acct-1", "amount": 9, "reference": "ref"},
+            {
+                "action": "credit",
+                "operation_id": _CREDIT_OPERATION_ID,
+                "account_id": "acct-1",
+                "amount": 9,
+                "reference": "ref",
+            },
         ),
         (
             agent.file_claim("task-1", "claimant", "worker", "claim", "esc-1"),

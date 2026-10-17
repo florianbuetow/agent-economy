@@ -4,10 +4,15 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from service_auth.financial_responses import (
+    FinancialLeg,
+    NativeFinancialEnvelope,
+    NativeReceipt,
+    validate_operation_id,
+)
 from service_commons.exceptions import ServiceError
 
 from central_bank_service.core.state import get_app_state
-from central_bank_service.financial_responses import validate_operation_id
 from central_bank_service.logging import get_logger
 from central_bank_service.monetary import require_positive_money, require_worker_percentage
 from central_bank_service.routers.helpers import (
@@ -17,6 +22,21 @@ from central_bank_service.routers.helpers import (
 )
 
 router = APIRouter()
+
+
+def _native_escrow_result(
+    value: dict[str, object],
+    expected_kind: str,
+    expected_roles: tuple[str, ...],
+) -> tuple[NativeReceipt, tuple[FinancialLeg, ...]]:
+    envelope = NativeFinancialEnvelope.model_validate(value)
+    receipt = envelope.receipt
+    if receipt.operation_kind != expected_kind or receipt.escrow_id is None:
+        raise RuntimeError("Ledger returned an unexpected native escrow receipt")
+    legs = tuple(receipt.legs)
+    if tuple(leg.role for leg in legs) != expected_roles:
+        raise RuntimeError("Ledger returned unexpected native escrow legs")
+    return receipt, legs
 
 
 def _required_payload_string(payload: dict[str, object], field: str) -> str:
@@ -101,13 +121,16 @@ async def escrow_lock(request: Request) -> JSONResponse:
 
     result = await state.ledger.escrow_lock(agent_id, amount, task_id, operation_id)
 
+    receipt, legs = _native_escrow_result(result, "escrow_lock", ("payer",))
+    payer_leg = legs[0]
     get_logger(__name__).info(
         "Escrow locked",
         extra={
-            "escrow_id": result.get("escrow_id"),
-            "payer_account_id": agent_id,
-            "amount": amount,
-            "task_id": task_id,
+            "escrow_id": receipt.escrow_id,
+            "payer_account_id": payer_leg.account_id,
+            "amount": payer_leg.amount,
+            "task_id": receipt.source_reference,
+            "operation_id": receipt.operation_id,
         },
     )
     return JSONResponse(status_code=201, content=result)
@@ -181,12 +204,16 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
         source_reference,
     )
 
+    receipt, legs = _native_escrow_result(result, "escrow_release", ("recipient",))
+    recipient_leg = legs[0]
     get_logger(__name__).info(
         "Escrow released",
         extra={
-            "escrow_id": escrow_id,
-            "recipient_account_id": recipient_account_id,
-            "amount": result.get("amount"),
+            "escrow_id": receipt.escrow_id,
+            "recipient_account_id": recipient_leg.account_id,
+            "amount": recipient_leg.amount,
+            "operation_id": receipt.operation_id,
+            "source_reference": receipt.source_reference,
         },
     )
     return result
@@ -275,15 +302,19 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
         source_reference,
     )
 
+    receipt, legs = _native_escrow_result(result, "escrow_split", ("worker", "poster"))
+    worker_leg, poster_leg = legs
     get_logger(__name__).info(
         "Escrow split",
         extra={
-            "escrow_id": escrow_id,
-            "worker_account_id": worker_account_id,
-            "poster_account_id": poster_account_id,
-            "worker_pct": worker_pct,
-            "worker_amount": result.get("worker_amount"),
-            "poster_amount": result.get("poster_amount"),
+            "escrow_id": receipt.escrow_id,
+            "worker_account_id": worker_leg.account_id,
+            "poster_account_id": poster_leg.account_id,
+            "worker_pct": receipt.result["worker_pct"],
+            "worker_amount": worker_leg.amount,
+            "poster_amount": poster_leg.amount,
+            "operation_id": receipt.operation_id,
+            "source_reference": receipt.source_reference,
         },
     )
     return result

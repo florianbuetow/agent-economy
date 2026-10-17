@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock
@@ -18,6 +20,73 @@ from central_bank_service.services.ledger_db_client import LedgerDbClient
 
 def _store() -> InMemoryLedgerStore:
     return InMemoryLedgerStore(db_path=f"mp06-bank-{uuid4()}")
+
+
+def _operation_id() -> str:
+    return f"op-{uuid4()}"
+
+
+def _receipt(envelope: dict[str, object]) -> dict[str, object]:
+    receipt = envelope["receipt"]
+    assert isinstance(receipt, dict)
+    return receipt
+
+
+def _projection(envelope: dict[str, object]) -> dict[str, object]:
+    projection = envelope["current_escrow"]
+    assert isinstance(projection, dict)
+    return projection
+
+
+def _native_lock_envelope(operation_id: str, status: object) -> dict[str, object]:
+    canonical_request = {
+        "request_version": 1,
+        "operation_kind": "escrow_lock",
+        "payer_account_id": "a-payer",
+        "task_id": "t-replay",
+        "amount": 10,
+    }
+    request_sha256 = hashlib.sha256(
+        json.dumps(
+            canonical_request,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode()
+    ).hexdigest()
+    return {
+        "outcome": "native_receipt",
+        "receipt": {
+            "receipt_version": 1,
+            "operation_id": operation_id,
+            "operation_kind": "escrow_lock",
+            "request_sha256": request_sha256,
+            "source_reference": "t-replay",
+            "committed_at": "2026-10-16T10:00:00Z",
+            "event_id": 1,
+            "escrow_id": "esc-original",
+            "result": {"escrow_status_at_commit": "locked"},
+            "legs": [
+                {
+                    "role": "payer",
+                    "account_id": "a-payer",
+                    "direction": "debit",
+                    "amount": 10,
+                    "transaction_id": "tx-lock",
+                    "balance_after": 90,
+                }
+            ],
+        },
+        "current_escrow": {
+            "escrow_id": "esc-original",
+            "payer_account_id": "a-payer",
+            "task_id": "t-replay",
+            "amount": 10,
+            "status": status,
+            "created_at": "2026-10-16T10:00:00Z",
+            "resolved_at": None if status == "locked" else "2026-10-16T11:00:00Z",
+        },
+    }
 
 
 def _client_with_gateway(**methods: Any) -> LedgerDbClient:
@@ -46,19 +115,19 @@ def test_in_memory_store_rejects_boolean_money_without_state_change() -> None:
     store = _store()
 
     with pytest.raises(ServiceError) as create_error:
-        store.create_account("a-bool", True)
+        store.create_account("a-bool", True, None)
 
     _assert_service_error(create_error, error="invalid_amount", status_code=400)
     assert store.count_accounts() == 0
 
-    store.create_account("a-payer", 10)
+    store.create_account("a-payer", 10, _operation_id())
     before_account = store.get_account("a-payer")
     before_transactions = store.get_transactions("a-payer")
 
     with pytest.raises(ServiceError) as credit_error:
-        store.credit("a-payer", True, "bool-credit")
+        store.credit("a-payer", True, "bool-credit", _operation_id())
     with pytest.raises(ServiceError) as lock_error:
-        store.escrow_lock("a-payer", True, "t-bool-lock")
+        store.escrow_lock("a-payer", True, "t-bool-lock", _operation_id())
 
     _assert_service_error(credit_error, error="invalid_amount", status_code=400)
     _assert_service_error(lock_error, error="invalid_amount", status_code=400)
@@ -79,11 +148,11 @@ async def test_db_client_rejects_boolean_money_before_gateway_call() -> None:
     )
 
     with pytest.raises(ServiceError) as create_error:
-        await client.create_account("a-bool", True)
+        await client.create_account("a-bool", True, None)
     with pytest.raises(ServiceError) as credit_error:
-        await client.credit("a-bool", True, "bool-credit")
+        await client.credit("a-bool", True, "bool-credit", _operation_id())
     with pytest.raises(ServiceError) as lock_error:
-        await client.escrow_lock("a-bool", True, "t-bool-lock")
+        await client.escrow_lock("a-bool", True, "t-bool-lock", _operation_id())
 
     _assert_service_error(create_error, error="invalid_amount", status_code=400)
     _assert_service_error(credit_error, error="invalid_amount", status_code=400)
@@ -96,10 +165,10 @@ async def test_db_client_rejects_boolean_money_before_gateway_call() -> None:
 @pytest.mark.unit
 def test_in_memory_total_escrowed_can_exceed_one_stored_integer() -> None:
     store = _store()
-    store.create_account("a-first", SQLITE_MAX_INTEGER)
-    store.create_account("a-second", SQLITE_MAX_INTEGER)
-    store.escrow_lock("a-first", SQLITE_MAX_INTEGER, "t-first")
-    store.escrow_lock("a-second", SQLITE_MAX_INTEGER, "t-second")
+    store.create_account("a-first", SQLITE_MAX_INTEGER, _operation_id())
+    store.create_account("a-second", SQLITE_MAX_INTEGER, _operation_id())
+    store.escrow_lock("a-first", SQLITE_MAX_INTEGER, "t-first", _operation_id())
+    store.escrow_lock("a-second", SQLITE_MAX_INTEGER, "t-second", _operation_id())
 
     assert store.total_escrowed() == SQLITE_MAX_INTEGER * 2
 
@@ -107,12 +176,12 @@ def test_in_memory_total_escrowed_can_exceed_one_stored_integer() -> None:
 @pytest.mark.unit
 def test_in_memory_credit_overflow_is_atomic() -> None:
     store = _store()
-    store.create_account("a-recipient", SQLITE_MAX_INTEGER)
+    store.create_account("a-recipient", SQLITE_MAX_INTEGER, _operation_id())
     before_account = store.get_account("a-recipient")
     before_transactions = store.get_transactions("a-recipient")
 
     with pytest.raises(ServiceError) as exc_info:
-        store.credit("a-recipient", 1, "overflow")
+        store.credit("a-recipient", 1, "overflow", _operation_id())
 
     _assert_service_error(exc_info, error="amount_out_of_range", status_code=409)
     assert store.get_account("a-recipient") == before_account
@@ -122,14 +191,19 @@ def test_in_memory_credit_overflow_is_atomic() -> None:
 @pytest.mark.unit
 def test_in_memory_release_overflow_keeps_escrow_locked() -> None:
     store = _store()
-    store.create_account("a-payer", 1)
-    store.create_account("a-recipient", SQLITE_MAX_INTEGER)
-    escrow = store.escrow_lock("a-payer", 1, "t-release-overflow")
-    escrow_id = str(escrow["escrow_id"])
+    store.create_account("a-payer", 1, _operation_id())
+    store.create_account("a-recipient", SQLITE_MAX_INTEGER, _operation_id())
+    escrow = store.escrow_lock("a-payer", 1, "t-release-overflow", _operation_id())
+    escrow_id = str(_receipt(escrow)["escrow_id"])
     before_transactions = store.get_transactions("a-recipient")
 
     with pytest.raises(ServiceError) as exc_info:
-        store.escrow_release(escrow_id, "a-recipient")
+        store.escrow_release(
+            escrow_id,
+            "a-recipient",
+            _operation_id(),
+            "task:t-release-overflow:approved",
+        )
 
     _assert_service_error(exc_info, error="amount_out_of_range", status_code=409)
     assert store.get_account("a-recipient")["balance"] == SQLITE_MAX_INTEGER
@@ -140,14 +214,21 @@ def test_in_memory_release_overflow_keeps_escrow_locked() -> None:
 @pytest.mark.unit
 def test_in_memory_split_prechecks_all_legs_before_mutation() -> None:
     store = _store()
-    store.create_account("a-poster", 2)
-    escrow = store.escrow_lock("a-poster", 2, "t-split-overflow")
-    escrow_id = str(escrow["escrow_id"])
+    store.create_account("a-poster", 2, _operation_id())
+    escrow = store.escrow_lock("a-poster", 2, "t-split-overflow", _operation_id())
+    escrow_id = str(_receipt(escrow)["escrow_id"])
     store._state.accounts["a-poster"]["balance"] = SQLITE_MAX_INTEGER
     before_transactions = store.get_transactions("a-poster")
 
     with pytest.raises(ServiceError) as exc_info:
-        store.escrow_split(escrow_id, "a-poster", 50, "a-poster")
+        store.escrow_split(
+            escrow_id,
+            "a-poster",
+            50,
+            "a-poster",
+            _operation_id(),
+            "task:t-split-overflow:ruling:r-one",
+        )
 
     _assert_service_error(exc_info, error="amount_out_of_range", status_code=409)
     assert store.get_account("a-poster")["balance"] == SQLITE_MAX_INTEGER
@@ -161,23 +242,37 @@ def test_in_memory_lock_replay_after_settlement_returns_actual_status(
     settlement: str,
 ) -> None:
     store = _store()
-    store.create_account("a-payer", 100)
-    store.create_account("a-worker", 0)
-    first = store.escrow_lock("a-payer", 40, f"t-{settlement}")
-    escrow_id = str(first["escrow_id"])
+    store.create_account("a-payer", 100, _operation_id())
+    store.create_account("a-worker", 0, None)
+    lock_operation_id = _operation_id()
+    first = store.escrow_lock("a-payer", 40, f"t-{settlement}", lock_operation_id)
+    escrow_id = str(_receipt(first)["escrow_id"])
     if settlement == "release":
-        store.escrow_release(escrow_id, "a-worker")
+        store.escrow_release(
+            escrow_id,
+            "a-worker",
+            _operation_id(),
+            "task:t-release:approved",
+        )
         expected_status = "released"
     else:
-        store.escrow_split(escrow_id, "a-worker", 50, "a-payer")
+        store.escrow_split(
+            escrow_id,
+            "a-worker",
+            50,
+            "a-payer",
+            _operation_id(),
+            "task:t-split:ruling:r-one",
+        )
         expected_status = "split"
     payer_before = store.get_account("a-payer")
     transactions_before = store.get_transactions("a-payer")
 
-    replay = store.escrow_lock("a-payer", 40, f"t-{settlement}")
+    replay = store.escrow_lock("a-payer", 40, f"t-{settlement}", lock_operation_id)
 
-    assert replay["escrow_id"] == escrow_id
-    assert replay["status"] == expected_status
+    assert _receipt(replay) == _receipt(first)
+    assert _receipt(replay)["escrow_id"] == escrow_id
+    assert _projection(replay)["status"] == expected_status
     assert store.get_account("a-payer") == payer_before
     assert store.get_transactions("a-payer") == transactions_before
 
@@ -185,26 +280,29 @@ def test_in_memory_lock_replay_after_settlement_returns_actual_status(
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_db_client_lock_uses_gateway_replay_status() -> None:
+    operation_id = _operation_id()
     gateway_lock = AsyncMock(
-        return_value={"escrow_id": "esc-original", "status": "released"},
+        return_value=_native_lock_envelope(operation_id, "released"),
     )
     client = _client_with_gateway(escrow_lock=gateway_lock)
 
-    result = await client.escrow_lock("a-payer", 10, "t-replay")
+    result = await client.escrow_lock("a-payer", 10, "t-replay", operation_id)
 
-    assert result["escrow_id"] == "esc-original"
-    assert result["status"] == "released"
+    assert _receipt(result)["escrow_id"] == "esc-original"
+    assert _receipt(result)["operation_id"] == operation_id
+    assert _projection(result)["status"] == "released"
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 @pytest.mark.parametrize("status", [None, True, "unknown"])
 async def test_db_client_lock_rejects_missing_or_invalid_gateway_status(status: object) -> None:
-    gateway_lock = AsyncMock(return_value={"escrow_id": "esc-original", "status": status})
+    operation_id = _operation_id()
+    gateway_lock = AsyncMock(return_value=_native_lock_envelope(operation_id, status))
     client = _client_with_gateway(escrow_lock=gateway_lock)
 
-    with pytest.raises(RuntimeError, match="invalid status"):
-        await client.escrow_lock("a-payer", 10, "t-invalid-status")
+    with pytest.raises(RuntimeError, match="invalid native financial envelope"):
+        await client.escrow_lock("a-payer", 10, "t-replay", operation_id)
 
 
 @pytest.mark.unit
@@ -216,7 +314,7 @@ async def test_db_client_preserves_gateway_balance_overflow_conflict(
     overflow = ServiceError("amount_out_of_range", "Balance exceeds SQLite INTEGER range", 409, {})
     if operation == "credit":
         client = _client_with_gateway(credit_account=AsyncMock(side_effect=overflow))
-        call = client.credit("a-recipient", 1, "overflow")
+        call = client.credit("a-recipient", 1, "overflow", _operation_id())
     elif operation == "release":
         client = _client_with_gateway(
             get_escrow=AsyncMock(
@@ -229,7 +327,12 @@ async def test_db_client_preserves_gateway_balance_overflow_conflict(
             ),
             escrow_release=AsyncMock(side_effect=overflow),
         )
-        call = client.escrow_release("esc-1", "a-recipient")
+        call = client.escrow_release(
+            "esc-1",
+            "a-recipient",
+            _operation_id(),
+            "task:t-overflow:approved",
+        )
     else:
         client = _client_with_gateway(
             get_escrow=AsyncMock(
@@ -242,7 +345,14 @@ async def test_db_client_preserves_gateway_balance_overflow_conflict(
             ),
             escrow_split=AsyncMock(side_effect=overflow),
         )
-        call = client.escrow_split("esc-1", "a-worker", 50, "a-poster")
+        call = client.escrow_split(
+            "esc-1",
+            "a-worker",
+            50,
+            "a-poster",
+            _operation_id(),
+            "task:t-overflow:ruling:r-one",
+        )
 
     with pytest.raises(ServiceError) as exc_info:
         await call

@@ -248,7 +248,7 @@ The Court evaluates the dispute and calls back the Task Board's `POST /tasks/{ta
 - `worker_pct == 100` → full escrow release to the **worker** (`POST /escrow/{escrow_id}/release`)
 - otherwise → escrow split (`POST /escrow/{escrow_id}/split`); the Central Bank computes the worker's share as `floor(amount × worker_pct / 100)` and the poster receives the remainder
 
-Re-recording an already-ruled task with the **same** `ruling_id` is idempotent: it returns `200` with the stored outcome and does **not** settle escrow again (a Court retry after a partial failure cannot double-pay).
+Re-recording an already-ruled task with the same `ruling_id`, strict integer `worker_pct`, and exact `ruling_summary` is idempotent: it returns `200` with the stored outcome and does not settle escrow again. Changed financial or textual terms under the same ruling identity return `409 ruling_conflict` without effects.
 
 ---
 
@@ -1040,10 +1040,10 @@ Record a Court ruling. This is a **platform-signed** operation called by the Cou
 3. `ruling_summary` must be a non-empty string
 4. `worker_pct` must be present
 5. Signer must be the platform agent (`settings.platform.agent_id`)
-6. Task must be in DISPUTED status — **except** the idempotent-retry case below, which is checked first
+6. Task must be in DISPUTED status, or already RULED with the same ruling identity for retry validation below
 7. `worker_pct` must be an integer 0–100
 
-**Idempotent retry:** if the task is already `ruled` **and** its stored `ruling_id` equals the payload's `ruling_id`, the endpoint returns `200` with the stored task unchanged — escrow is not settled a second time. This lets the Court safely retry `record_ruling` after a partial failure without double-paying. A ruling on an already-`ruled` task with a **different** `ruling_id` is not idempotent and falls through to the ordinary `409 invalid_status` check.
+**Idempotent retry:** if the task is already `ruled` and its stored `ruling_id` equals the payload's `ruling_id`, validate `worker_pct` as a strict integer from 0 through 100 before comparing both it and `ruling_summary` with the stored values. An exact match returns `200` with the stored task unchanged and no second settlement. Invalid percentages return `400 invalid_worker_pct`; changed valid percentages or summary text return `409 ruling_conflict`. A different ruling identity retains the ordinary `409 invalid_status` precedence. Every rejected retry leaves the stored ruling and financial effects unchanged.
 
 **Side Effects (new ruling only):**
 - Task Board settles escrow via the Central Bank, per `worker_pct`:
@@ -1068,6 +1068,7 @@ Returns the updated task object with `status: "ruled"`, `ruled_at`, `ruling_id`,
 | 403    | `forbidden`                     | Signer is not the platform agent |
 | 404    | `task_not_found`                | No task with this `task_id` |
 | 409    | `invalid_status`                | Task is not in DISPUTED status |
+| 409    | `ruling_conflict`               | The stored ruling identity is bound to different financial or textual terms |
 
 `record_ruling` cannot return `502 identity_service_unavailable` — it verifies the platform signature **locally** and never calls the Identity service (see the two-tier auth model in the Authentication Specification).
 

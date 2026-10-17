@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
+from service_auth import parse_jws
+from service_auth.financial_responses import parse_native_financial_envelope
 from service_commons.exceptions import ServiceError
 
 from service_clients.base import BaseServiceClient
@@ -55,7 +57,17 @@ class BankClient(BaseServiceClient):
             payload={"token": escrow_token},
         )
         if response.status_code == 201:
-            return self._response_dict(response)
+            response_body = self._response_dict(response)
+            try:
+                operation_id, business_fields = self._lock_expectations(escrow_token)
+                return parse_native_financial_envelope(
+                    response_body,
+                    operation_id,
+                    "escrow_lock",
+                    business_fields,
+                )
+            except (KeyError, TypeError, ValueError, RuntimeError) as exc:
+                raise self._invalid_financial_response() from exc
         if response.status_code == 402:
             raise ServiceError(
                 error="insufficient_funds",
@@ -122,7 +134,16 @@ class BankClient(BaseServiceClient):
         response = await self._post_raw(release_path, payload={"token": signed_token})
 
         if response.status_code == 200:
-            return self._response_dict(response)
+            return self._validated_receipt(
+                self._response_dict(response),
+                operation_id,
+                "escrow_release",
+                {
+                    "escrow_id": escrow_id,
+                    "recipient_account_id": recipient_account_id,
+                    "source_reference": source_reference,
+                },
+            )
         if response.status_code == 404:
             raise self._response_service_error(
                 response,
@@ -207,7 +228,18 @@ class BankClient(BaseServiceClient):
         response = await self._post_raw(split_path, payload={"token": signed_token})
 
         if response.status_code == 200:
-            return self._response_dict(response)
+            return self._validated_receipt(
+                self._response_dict(response),
+                operation_id,
+                "escrow_split",
+                {
+                    "escrow_id": escrow_id,
+                    "worker_account_id": worker_account_id,
+                    "poster_account_id": poster_account_id,
+                    "worker_pct": worker_pct,
+                    "source_reference": source_reference,
+                },
+            )
         if response.status_code == 404:
             raise self._response_service_error(
                 response,
@@ -273,4 +305,57 @@ class BankClient(BaseServiceClient):
             message=str(response_body.get("message", default_message)),
             status_code=response.status_code,
             details=self._coerce_details(response_body.get("details", {})),
+        )
+
+    @staticmethod
+    def _lock_expectations(escrow_token: str) -> tuple[str, dict[str, object]]:
+        """Read the caller's submitted command after Bank reports a successful lock.
+
+        Parsing recovers the exact request semantics for response binding. It does
+        not authenticate or authorize the token; Central Bank owns those decisions.
+        """
+        payload = parse_jws(escrow_token).payload
+        operation_id = payload["operation_id"]
+        payer_account_id = payload["agent_id"]
+        task_id = payload["task_id"]
+        amount = payload["amount"]
+        if (
+            payload["action"] != "escrow_lock"
+            or not isinstance(operation_id, str)
+            or not isinstance(payer_account_id, str)
+            or not isinstance(task_id, str)
+            or type(amount) is not int
+        ):
+            raise ValueError("Successful lock did not correspond to a valid escrow command")
+        return operation_id, {
+            "payer_account_id": payer_account_id,
+            "task_id": task_id,
+            "amount": amount,
+        }
+
+    @classmethod
+    def _validated_receipt(
+        cls,
+        response_body: dict[str, Any],
+        operation_id: str,
+        operation_kind: str,
+        business_fields: dict[str, object],
+    ) -> dict[str, object]:
+        try:
+            return parse_native_financial_envelope(
+                response_body,
+                operation_id,
+                operation_kind,
+                business_fields,
+            )
+        except RuntimeError as exc:
+            raise cls._invalid_financial_response() from exc
+
+    @staticmethod
+    def _invalid_financial_response() -> ServiceError:
+        return ServiceError(
+            error="central_bank_unavailable",
+            message="Central Bank returned an invalid financial response",
+            status_code=502,
+            details={},
         )

@@ -62,6 +62,7 @@ def _register_agent(client: TestClient, name: str) -> str:
 def _create_funded_account(client: TestClient, name: str, balance: int) -> str:
     agent_id = _register_agent(client, name)
     payload = {
+        "operation_id": f"op-{uuid4()}",
         "account_id": agent_id,
         "balance": balance,
         "created_at": "2026-03-01T09:05:00Z",
@@ -84,6 +85,7 @@ def _create_task(client: TestClient, poster_id: str) -> str:
     lock = client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": escrow_id,
             "payer_account_id": poster_id,
             "amount": 100,

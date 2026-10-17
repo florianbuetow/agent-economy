@@ -103,7 +103,9 @@ async def test_sweep_expires_open_task_without_any_api_read(tmp_path) -> None:
     task = store.get_task("t-1")
     assert task is not None
     assert task["status"] == "expired"
-    mock_coordinator.try_release_escrow.assert_awaited_once_with("t-1", "esc-1", "a-poster")
+    mock_coordinator.try_release_escrow.assert_awaited_once_with(
+        "t-1", "expired", "esc-1", "a-poster"
+    )
     store.close()
 
 
@@ -178,7 +180,9 @@ async def test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation(tmp_path
     stored = store.get_task("t-1")
     assert stored is not None
     assert stored["status"] == "expired"
-    mock_coordinator.try_release_escrow.assert_awaited_once_with("t-1", "esc-1", "a-poster")
+    mock_coordinator.try_release_escrow.assert_awaited_once_with(
+        "t-1", "expired", "esc-1", "a-poster"
+    )
     store.close()
 
 

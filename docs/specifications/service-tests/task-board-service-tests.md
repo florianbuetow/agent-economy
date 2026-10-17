@@ -1,5 +1,15 @@
 # Task Board Service — Production Release Test Specification
 
+## MP-04 ruling retry acceptance amendment
+
+A replay of a stored ruling must match its ruling identity, strict integer percentage, and exact
+summary text. An exact replay returns the original ruled task and timestamp without another Bank
+call. Changed valid percentages or summary text under the same identity return `409 ruling_conflict`;
+booleans, null, strings, floats, and out-of-range percentages return `400 invalid_worker_pct`.
+The stored task and all settlement calls remain unchanged after rejection. A different ruling ID
+retains `409 invalid_status` precedence, including when its percentage is invalid. These checks do
+not establish MP-07 atomic lifecycle claims or MP-10 durable Court delivery.
+
 ## Purpose
 
 This document is the release-gate test specification for the Task Board Service.

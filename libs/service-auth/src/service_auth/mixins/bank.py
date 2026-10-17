@@ -4,6 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from service_auth.financial_responses import (
+    parse_account_projection,
+    parse_native_financial_envelope,
+    validate_operation_id,
+)
+
 if TYPE_CHECKING:
     from service_auth.config import AgentConfig
 
@@ -37,6 +43,8 @@ class BankMixin:
         Raises:
             httpx.HTTPStatusError: On failure (e.g., 409 if account already exists).
         """
+        if self.agent_id is None:
+            raise RuntimeError("Agent must be registered before creating an account")
         url = f"{self.config.bank_url}/accounts"
         token = self._sign_jws(
             {
@@ -47,7 +55,8 @@ class BankMixin:
             audience="central-bank",
             resource="POST /accounts",
         )
-        return await self._request("POST", url, json={"token": token})
+        response = await self._request("POST", url, json={"token": token})
+        return parse_account_projection(response, self.agent_id)
 
     async def get_balance(self: _BankClient) -> dict[str, Any]:
         """Get this agent's account balance."""
@@ -76,12 +85,16 @@ class BankMixin:
         response = await self._request("GET", url, headers=headers)
         return cast("list[dict[str, Any]]", response["transactions"])
 
-    async def lock_escrow(self: _BankClient, amount: int, task_id: str) -> dict[str, Any]:
+    async def lock_escrow(
+        self: _BankClient, amount: int, task_id: str, *, operation_id: str
+    ) -> dict[str, Any]:
         """Lock funds in escrow for a task."""
+        validate_operation_id(operation_id)
         url = f"{self.config.bank_url}/escrow/lock"
         token = self._sign_jws(
             {
                 "action": "escrow_lock",
+                "operation_id": operation_id,
                 "agent_id": self.agent_id,
                 "amount": amount,
                 "task_id": task_id,
@@ -89,4 +102,10 @@ class BankMixin:
             audience="central-bank",
             resource="POST /escrow/lock",
         )
-        return await self._request("POST", url, json={"token": token})
+        response = await self._request("POST", url, json={"token": token})
+        return parse_native_financial_envelope(
+            response,
+            operation_id,
+            "escrow_lock",
+            {"payer_account_id": self.agent_id, "task_id": task_id, "amount": amount},
+        )

@@ -68,6 +68,10 @@ Prerequisites: MP-01; coordinate authoritative command schemas with MP-02.
 
 Prerequisites: MP-02 and MP-06.
 
+Current bounded consumer evidence is in `evidence/mp04-receipts/sdk-validation-2026-10-17.md`.
+SDK review is approved; shared-client/Task Board/history integration and the fresh root gate remain
+required before checking tasks 6.2–6.4 or closing T-116/T-117.
+
 - [x] 6.1 [T-116] Inject response loss after Bank commits and replay locks after settlement; verify red behavior for exact versus conflicting requests without depending on task lifecycle claims. Bounded eight-case red proof independently reproduced and approved; see evidence/mp04-receipts/checkpoint.md. T-116/T-117 remain open pending the remaining proof and integrated gate.
 - [ ] 6.2 [T-117] Add stable operation identity, payload hash and durable result receipt to financial commands; verify exact replay returns original identities and changed recipients/amounts/percentages conflict.
 - [ ] 6.3 [T-117] Update Bank API and shared clients to return authoritative receipts; verify opposing direct Bank commands have one winner and zero/partial/full splits conserve money.

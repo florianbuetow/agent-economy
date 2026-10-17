@@ -94,6 +94,7 @@ def _create_funded_account(client: TestClient, *, name: str, balance: int) -> st
     response = client.post(
         "/bank/accounts",
         json={
+            "operation_id": f"op-{uuid4()}",
             "account_id": agent_id,
             "balance": balance,
             "created_at": "2026-03-01T10:05:00Z",
@@ -116,6 +117,7 @@ def _create_task(client: TestClient, *, poster_id: str) -> str:
     lock_response = client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": escrow_id,
             "payer_account_id": poster_id,
             "amount": 100,

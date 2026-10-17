@@ -54,13 +54,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-04 is selected
 - **THEN** the acceptance proof demonstrates the gap: Lost responses after committed release/split and public lock replay after settlement expose duplicated or nonconvergent financial commands.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** OPEN — Bounded native replay and SDK validation red/green proof is verified; historical-operation and remaining integration proof plus the root closure gate remain required. See `openspec/changes/complete-agent-economy/evidence/mp04-receipts/sdk-validation-2026-10-17.md`.
 
 #### Scenario: T-117 Deliver financial operation receipts
 - **WHEN** T-116 is red-proven and the prerequisites are satisfied: MP-02, MP-06
 - **THEN** Exact Bank-operation replay returns the original receipt and ledger/event identities; changed content conflicts; concurrent opposing commands have one financial winner without duplicated movement.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** OPEN — Native persistence, migration, Bank and SDK components have bounded verification; historical outcomes, remaining callers and fresh isolated root CI are unfinished. See `openspec/changes/complete-agent-economy/evidence/mp04-receipts/sdk-validation-2026-10-17.md`.
 
 ### Requirement: MP-05 Recoverable task publication
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-05. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.

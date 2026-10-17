@@ -13,7 +13,7 @@ The headline capability: the economy runs with no demo script and no human in th
 just provision-keys
 just start-all
 just provision
-just fund-feeder <amount>
+just fund-feeder <amount> <operation-id> <reference>
 just start-feeder
 just start-mathbot
 ```
@@ -227,7 +227,7 @@ the profile, expiry boundaries, and error responses.
 ### Run the autonomous agent runtime
 
 ```bash
-just fund-feeder <amount>     # Fund the feeder agent with initial coins
+just fund-feeder <amount> <operation-id> <reference>  # Fund the feeder with an explicit intent
 just start-feeder             # Start the task feeder (posts, accepts bids, auto-reviews)
 just start-mathbot [profile]  # Start a math worker agent (requires LM Studio or another configured provider)
 just stop-feeder

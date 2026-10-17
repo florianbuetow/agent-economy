@@ -106,6 +106,7 @@ class TestDbWriterBank:
         )
         result = db_writer.credit_account(
             {
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": aid,
                 "amount": 500,
@@ -114,16 +115,17 @@ class TestDbWriterBank:
                 "event": make_event(source="bank", event_type="salary.paid"),
             }
         )
-        assert result["tx_id"] is not None
-        assert result["balance_after"] == 500
-        assert isinstance(result["event_id"], int)
-        assert result["event_id"] > 0
+        assert result["receipt"]["legs"][0]["transaction_id"] is not None
+        assert result["receipt"]["result"]["balance_after"] == 500
+        assert isinstance(result["receipt"]["event_id"], int)
+        assert result["receipt"]["event_id"] > 0
 
     def test_credit_account_not_found(self, db_writer: DbWriter) -> None:
         """CR-04 (service layer): Credit non-existent account raises ServiceError."""
         with pytest.raises(ServiceError) as exc_info:
             db_writer.credit_account(
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "tx_id": f"tx-{uuid4()}",
                     "account_id": f"a-{uuid4()}",
                     "amount": 500,
@@ -154,13 +156,14 @@ class TestDbWriterEscrow:
         tx_id = f"tx-{uuid4()}"
         db_writer.create_account(
             {
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": balance,
                 "created_at": "2026-02-28T10:00:00Z",
                 "initial_credit": {
                     "tx_id": tx_id,
                     "amount": balance,
-                    "reference": "initial",
+                    "reference": "initial_balance",
                     "timestamp": "2026-02-28T10:00:00Z",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
@@ -174,6 +177,7 @@ class TestDbWriterEscrow:
         task_id = f"t-{uuid4()}"
         result = db_writer.escrow_lock(
             {
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": f"esc-{uuid4()}",
                 "payer_account_id": aid,
                 "amount": 100,
@@ -183,10 +187,10 @@ class TestDbWriterEscrow:
                 "event": make_event(source="bank", event_type="escrow.locked"),
             }
         )
-        assert result["escrow_id"] is not None
-        assert result["balance_after"] == 400
-        assert isinstance(result["event_id"], int)
-        assert result["event_id"] > 0
+        assert result["receipt"]["escrow_id"] is not None
+        assert result["receipt"]["legs"][0]["balance_after"] == 400
+        assert isinstance(result["receipt"]["event_id"], int)
+        assert result["receipt"]["event_id"] > 0
 
     def test_escrow_lock_insufficient_funds(self, db_writer: DbWriter) -> None:
         """ELOCK-06 (service layer): Insufficient funds raises ServiceError."""
@@ -194,6 +198,7 @@ class TestDbWriterEscrow:
         with pytest.raises(ServiceError) as exc_info:
             db_writer.escrow_lock(
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "escrow_id": f"esc-{uuid4()}",
                     "payer_account_id": aid,
                     "amount": 100,

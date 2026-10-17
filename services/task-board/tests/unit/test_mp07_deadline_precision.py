@@ -118,6 +118,7 @@ async def test_fractional_deadline_expires_at_exact_cutoff() -> None:
     store.update_task.assert_called_once()
     escrow_coordinator.try_release_escrow.assert_awaited_once_with(
         "t-fractional-deadline",
+        "expired",
         "esc-fractional-deadline",
         "a-poster",
     )

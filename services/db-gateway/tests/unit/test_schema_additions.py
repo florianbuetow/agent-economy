@@ -46,6 +46,7 @@ def _create_funded_account(
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance > 0:
+        payload["operation_id"] = f"op-{uuid4()}"
         payload["initial_credit"] = {
             "tx_id": f"tx-{uuid4()}",
             "amount": balance,
@@ -64,6 +65,7 @@ def _create_task(client: TestClient, *, poster_id: str) -> tuple[str, str]:
     lock_response = client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": escrow_id,
             "payer_account_id": poster_id,
             "amount": 100,

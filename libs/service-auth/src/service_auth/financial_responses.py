@@ -1,4 +1,4 @@
-"""Strict validation for authoritative Gateway financial envelopes."""
+"""Shared strict validation for authoritative financial envelopes and projections."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from central_bank_service.monetary import SQLITE_MAX_INTEGER
-
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+SQLITE_MAX_INTEGER = (1 << 63) - 1
 
 
 class _StrictModel(BaseModel):
@@ -21,21 +21,21 @@ class _StrictModel(BaseModel):
 
 class FinancialLeg(_StrictModel):
     role: Literal["account", "payer", "recipient", "worker", "poster"]
-    account_id: str
+    account_id: str = Field(min_length=1)
     direction: Literal["debit", "credit"]
     amount: int
-    transaction_id: str | None
+    transaction_id: str | None = Field(min_length=1)
     balance_after: int | None
 
 
 class EscrowProjection(_StrictModel):
-    escrow_id: str
-    payer_account_id: str
-    task_id: str
+    escrow_id: str = Field(min_length=1)
+    payer_account_id: str = Field(min_length=1)
+    task_id: str = Field(min_length=1)
     amount: int = Field(ge=1, le=SQLITE_MAX_INTEGER)
     status: Literal["locked", "released", "split"]
-    created_at: str
-    resolved_at: str | None
+    created_at: str = Field(min_length=1)
+    resolved_at: str | None = Field(min_length=1)
 
 
 class AccountProjection(_StrictModel):
@@ -45,7 +45,7 @@ class AccountProjection(_StrictModel):
 
 
 class NativeReceipt(_StrictModel):
-    receipt_version: Literal[1]
+    receipt_version: int = Field(ge=1, le=1)
     operation_id: str = Field(
         pattern=r"^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     )
@@ -55,8 +55,8 @@ class NativeReceipt(_StrictModel):
     request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     source_reference: str = Field(min_length=1)
     committed_at: str = Field(min_length=1)
-    event_id: int
-    escrow_id: str | None
+    event_id: int = Field(ge=1)
+    escrow_id: str | None = Field(min_length=1)
     result: dict[str, object]
     legs: list[FinancialLeg]
 

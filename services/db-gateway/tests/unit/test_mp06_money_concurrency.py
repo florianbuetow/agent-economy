@@ -5,6 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from typing import Any
+from uuid import NAMESPACE_URL, uuid5
 
 import pytest
 from service_commons.exceptions import ServiceError
@@ -15,6 +16,10 @@ from db_gateway_service.services.db_writer import DbWriter
 from tests.conftest import make_event
 
 pytestmark = pytest.mark.unit
+
+
+def _op(identity: str) -> str:
+    return f"op-{uuid5(NAMESPACE_URL, f'gateway-money-concurrency:{identity}')}"
 
 
 def _register(writer: DbWriter, agent_id: str) -> None:
@@ -38,10 +43,11 @@ def _account(writer: DbWriter, account_id: str, balance: int) -> None:
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance > 0:
+        data["operation_id"] = _op(f"issuance:{account_id}")
         data["initial_credit"] = {
             "tx_id": f"tx-initial-{account_id}",
             "amount": balance,
-            "reference": "initial",
+            "reference": "initial_balance",
             "timestamp": "2026-10-16T00:00:00Z",
         }
     writer.create_account(data)
@@ -49,6 +55,7 @@ def _account(writer: DbWriter, account_id: str, balance: int) -> None:
 
 def _lock_data(contender: str) -> dict[str, Any]:
     return {
+        "operation_id": _op(f"lock:{contender}"),
         "escrow_id": f"esc-{contender}",
         "payer_account_id": "a-payer",
         "amount": SQLITE_MAX_INTEGER,
@@ -67,8 +74,8 @@ def _run_competing(
     barrier: Barrier,
     contenders: tuple[tuple[DbWriter, str], tuple[DbWriter, str]],
     operation: str,
-) -> list[dict[str, Any] | str]:
-    def attempt(writer: DbWriter, contender: str) -> dict[str, Any] | str:
+) -> list[dict[str, Any] | ServiceError]:
+    def attempt(writer: DbWriter, contender: str) -> dict[str, Any] | ServiceError:
         barrier.wait(timeout=10)
         try:
             if operation == "lock":
@@ -76,30 +83,31 @@ def _run_competing(
             if operation == "release":
                 return writer.escrow_release(
                     {
+                        "operation_id": _op(f"release:{contender}"),
                         "escrow_id": "esc-settle",
                         "recipient_account_id": f"a-worker-{contender}",
+                        "source_reference": f"settlement:{contender}",
                         "tx_id": f"tx-release-{contender}",
                         "resolved_at": "2026-10-16T00:10:00Z",
                         "event": make_event(source="bank", event_type="escrow.released"),
-                    },
-                    None,
+                    }
                 )
             return writer.escrow_split(
                 {
+                    "operation_id": _op(f"split:{contender}"),
                     "escrow_id": "esc-settle",
                     "worker_account_id": f"a-worker-{contender}",
-                    "worker_amount": SQLITE_MAX_INTEGER - 1,
                     "poster_account_id": "a-payer",
-                    "poster_amount": 1,
+                    "worker_pct": 50,
+                    "source_reference": f"settlement:{contender}",
                     "worker_tx_id": f"tx-worker-{contender}",
                     "poster_tx_id": f"tx-poster-{contender}",
                     "resolved_at": "2026-10-16T00:10:00Z",
                     "event": make_event(source="bank", event_type="escrow.split"),
-                },
-                None,
+                }
             )
         except ServiceError as error:
-            return error.error
+            return error
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         futures = [executor.submit(attempt, writer, contender) for writer, contender in contenders]
@@ -124,7 +132,9 @@ def test_competing_maximum_locks_have_one_atomic_winner(
         )
 
         assert sum(isinstance(outcome, dict) for outcome in outcomes) == 1
-        assert outcomes.count("insufficient_funds") == 1
+        errors = [outcome for outcome in outcomes if isinstance(outcome, ServiceError)]
+        assert len(errors) == 1
+        assert errors[0].error == "insufficient_funds"
         account = db_writer.connection.execute(
             "SELECT balance, typeof(balance) FROM bank_accounts WHERE account_id = 'a-payer'"
         ).fetchone()
@@ -193,7 +203,12 @@ def test_competing_maximum_settlements_have_one_atomic_winner(
         )
 
         assert sum(isinstance(outcome, dict) for outcome in outcomes) == 1
-        assert outcomes.count("escrow_already_resolved") == 1
+        receipts = [outcome for outcome in outcomes if isinstance(outcome, dict)]
+        errors = [outcome for outcome in outcomes if isinstance(outcome, ServiceError)]
+        assert len(receipts) == 1
+        assert len(errors) == 1
+        assert errors[0].error == "financial_operation_already_committed"
+        assert errors[0].details["winning_operation_id"] == receipts[0]["receipt"]["operation_id"]
         escrow = db_writer.connection.execute(
             "SELECT amount, typeof(amount), status, resolved_at FROM bank_escrow "
             "WHERE escrow_id = 'esc-settle'"
@@ -229,8 +244,8 @@ def test_competing_maximum_settlements_have_one_atomic_winner(
                 {"tx-worker-right", "tx-poster-right"},
             )
             assert sorted(row[2] for row in release_transactions) == [
-                1,
-                SQLITE_MAX_INTEGER - 1,
+                SQLITE_MAX_INTEGER * 50 // 100,
+                SQLITE_MAX_INTEGER - (SQLITE_MAX_INTEGER * 50 // 100),
             ]
             assert all(row[3] == "integer" and row[5] == "integer" for row in release_transactions)
             assert all(row[6] == "esc-settle" for row in release_transactions)

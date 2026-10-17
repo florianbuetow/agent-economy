@@ -1,13 +1,17 @@
-"""In-memory ledger storage used for local tests and fallback mode."""
+"""Thread-safe in-memory ledger used by focused storage tests."""
 
 from __future__ import annotations
 
+import copy
+import hashlib
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from threading import RLock
 from typing import Any, ClassVar
 
+from service_auth.financial_responses import validate_operation_id
 from service_commons.exceptions import ServiceError
 
 from central_bank_service.logging import get_logger
@@ -22,17 +26,66 @@ _logger = get_logger(__name__)
 
 
 @dataclass
+class _StoredReceipt:
+    operation_kind: str
+    request_sha256: str
+    receipt: dict[str, object]
+
+
+@dataclass
 class _DatabaseState:
     lock: RLock = field(default_factory=RLock)
     accounts: dict[str, dict[str, Any]] = field(default_factory=dict)
     transactions: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
-    credit_refs: dict[tuple[str, str], dict[str, Any]] = field(default_factory=dict)
+    credit_owners: dict[tuple[str, str], str] = field(default_factory=dict)
     escrows: dict[str, dict[str, Any]] = field(default_factory=dict)
-    locked_escrow_by_task: dict[tuple[str, str], str] = field(default_factory=dict)
+    escrow_owners_by_task: dict[tuple[str, str], str] = field(default_factory=dict)
+    settlement_owners: dict[str, str] = field(default_factory=dict)
+    receipts: dict[str, _StoredReceipt] = field(default_factory=dict)
+    next_event_id: int = 1
+
+
+def _require_text(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ServiceError(
+            "invalid_financial_request",
+            f"{field_name} must be a nonempty string",
+            400,
+            {},
+        )
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ServiceError(
+            "invalid_financial_request",
+            f"{field_name} must contain valid UTF-8 text",
+            400,
+            {},
+        ) from exc
+    return value
+
+
+def _require_operation_id(value: object) -> str:
+    try:
+        return validate_operation_id(value)
+    except ValueError as exc:
+        raise ServiceError("invalid_operation_id", str(exc), 400, {}) from exc
+
+
+def _request_hash(operation_kind: str, fields: dict[str, object]) -> str:
+    payload = {"request_version": 1, "operation_kind": operation_kind, **fields}
+    canonical = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 class InMemoryLedgerStore:
-    """Thread-safe in-memory ledger with deterministic idempotency checks."""
+    """Keep the Gateway receipt contract available to isolated storage tests."""
 
     _DATABASES: ClassVar[dict[str, _DatabaseState]] = {}
     _DATABASES_LOCK: ClassVar[RLock] = RLock()
@@ -44,22 +97,133 @@ class InMemoryLedgerStore:
                 self._DATABASES[db_path] = _DatabaseState()
             self._state = self._DATABASES[db_path]
 
-    def _now(self) -> str:
+    @staticmethod
+    def _now() -> str:
         return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
-    def _new_tx_id(self) -> str:
+    @staticmethod
+    def _new_tx_id() -> str:
         return f"tx-{uuid.uuid4()}"
 
-    def _new_escrow_id(self) -> str:
+    @staticmethod
+    def _new_escrow_id() -> str:
         return f"esc-{uuid.uuid4()}"
 
     def _append_tx(self, account_id: str, tx: dict[str, Any]) -> None:
         self._state.transactions.setdefault(account_id, []).append(tx)
 
-    def create_account(self, account_id: str, initial_balance: int) -> dict[str, object]:
-        initial_balance = require_nonnegative_money(initial_balance, "initial_balance")
+    def _projection(self, escrow_id: str) -> dict[str, object]:
+        escrow = self._state.escrows[escrow_id]
+        return {
+            "escrow_id": str(escrow["escrow_id"]),
+            "payer_account_id": str(escrow["payer_account_id"]),
+            "task_id": str(escrow["task_id"]),
+            "amount": int(escrow["amount"]),
+            "status": str(escrow["status"]),
+            "created_at": str(escrow["created_at"]),
+            "resolved_at": (None if escrow["resolved_at"] is None else str(escrow["resolved_at"])),
+        }
 
+    def _envelope(self, receipt: dict[str, object]) -> dict[str, object]:
+        escrow_id = receipt["escrow_id"]
+        current_escrow = None if escrow_id is None else self._projection(str(escrow_id))
+        return copy.deepcopy(
+            {
+                "outcome": "native_receipt",
+                "receipt": receipt,
+                "current_escrow": current_escrow,
+            }
+        )
+
+    def _replay(
+        self,
+        operation_id: str,
+        operation_kind: str,
+        request_sha256: str,
+    ) -> dict[str, object] | None:
+        stored = self._state.receipts.get(operation_id)
+        if stored is None:
+            return None
+        if stored.operation_kind != operation_kind or stored.request_sha256 != request_sha256:
+            raise ServiceError(
+                "operation_id_conflict",
+                "Operation ID is already bound to a different financial command",
+                409,
+                {"winning_operation_id": operation_id},
+            )
+        return self._envelope(stored.receipt)
+
+    def _record_receipt(
+        self,
+        operation_id: str,
+        operation_kind: str,
+        request_sha256: str,
+        source_reference: str,
+        committed_at: str,
+        escrow_id: str | None,
+        result: dict[str, object],
+        legs: list[dict[str, object]],
+    ) -> dict[str, object]:
+        event_id = self._state.next_event_id
+        self._state.next_event_id += 1
+        receipt: dict[str, object] = {
+            "receipt_version": 1,
+            "operation_id": operation_id,
+            "operation_kind": operation_kind,
+            "request_sha256": request_sha256,
+            "source_reference": source_reference,
+            "committed_at": committed_at,
+            "event_id": event_id,
+            "escrow_id": escrow_id,
+            "result": result,
+            "legs": legs,
+        }
+        self._state.receipts[operation_id] = _StoredReceipt(
+            operation_kind=operation_kind,
+            request_sha256=request_sha256,
+            receipt=copy.deepcopy(receipt),
+        )
+        return self._envelope(receipt)
+
+    @staticmethod
+    def _ownership_conflict(winning_operation_id: str) -> ServiceError:
+        return ServiceError(
+            "financial_operation_already_committed",
+            "A different operation already owns this financial effect",
+            409,
+            {"winning_operation_id": winning_operation_id},
+        )
+
+    def create_account(
+        self,
+        account_id: str,
+        initial_balance: int,
+        operation_id: str | None,
+    ) -> dict[str, object]:
+        account_id = _require_text(account_id, "account_id")
+        initial_balance = require_nonnegative_money(initial_balance, "initial_balance")
+        if initial_balance == 0:
+            if operation_id is not None:
+                raise ServiceError(
+                    "invalid_operation_id",
+                    "Zero-balance account creation must not carry operation_id",
+                    400,
+                    {},
+                )
+        else:
+            operation_id = _require_operation_id(operation_id)
+
+        fields: dict[str, object] = {
+            "account_id": account_id,
+            "amount": initial_balance,
+            "reference": "initial_balance",
+        }
+        request_sha256 = _request_hash("account_issuance", fields)
         with self._state.lock:
+            if operation_id is not None:
+                replay = self._replay(operation_id, "account_issuance", request_sha256)
+                if replay is not None:
+                    return replay
             if account_id in self._state.accounts:
                 raise ServiceError(
                     "account_exists",
@@ -75,35 +239,71 @@ class InMemoryLedgerStore:
                 "created_at": created_at,
             }
             self._state.transactions.setdefault(account_id, [])
-            tx_id: str | None = None
+            if initial_balance == 0:
+                _logger.info(
+                    "audit",
+                    extra={
+                        "operation": "create_account",
+                        "account_id": account_id,
+                        "initial_balance": initial_balance,
+                        "reference": "initial_balance",
+                    },
+                )
+                return {
+                    "account_id": account_id,
+                    "balance": initial_balance,
+                    "created_at": created_at,
+                }
 
-            if initial_balance > 0:
-                tx = {
-                    "tx_id": self._new_tx_id(),
+            if operation_id is None:
+                raise RuntimeError("Validated positive issuance lost its operation identity")
+            tx_id = self._new_tx_id()
+            self._append_tx(
+                account_id,
+                {
+                    "tx_id": tx_id,
                     "type": "credit",
                     "amount": initial_balance,
                     "balance_after": initial_balance,
                     "reference": "initial_balance",
                     "timestamp": created_at,
-                }
-                self._append_tx(account_id, tx)
-                tx_id = str(tx["tx_id"])
-
-            result: dict[str, object] = {
-                "account_id": account_id,
-                "balance": initial_balance,
-                "created_at": created_at,
-            }
-            audit_extra: dict[str, object] = {
-                "operation": "create_account",
-                "account_id": account_id,
-                "initial_balance": initial_balance,
-                "reference": "initial_balance",
-            }
-            if tx_id is not None:
-                audit_extra["tx_id"] = tx_id
-            _logger.info("audit", extra=audit_extra)
-            return result
+                },
+            )
+            envelope = self._record_receipt(
+                operation_id,
+                "account_issuance",
+                request_sha256,
+                "initial_balance",
+                created_at,
+                None,
+                {
+                    "account_id": account_id,
+                    "issued_amount": initial_balance,
+                    "balance_after": initial_balance,
+                },
+                [
+                    {
+                        "role": "account",
+                        "account_id": account_id,
+                        "direction": "credit",
+                        "amount": initial_balance,
+                        "transaction_id": tx_id,
+                        "balance_after": initial_balance,
+                    }
+                ],
+            )
+            _logger.info(
+                "audit",
+                extra={
+                    "operation": "create_account",
+                    "account_id": account_id,
+                    "initial_balance": initial_balance,
+                    "reference": "initial_balance",
+                    "operation_id": operation_id,
+                    "tx_id": tx_id,
+                },
+            )
+            return envelope
 
     def get_account(self, account_id: str) -> dict[str, object] | None:
         with self._state.lock:
@@ -116,42 +316,75 @@ class InMemoryLedgerStore:
                 "created_at": str(account["created_at"]),
             }
 
-    def credit(self, account_id: str, amount: int, reference: str) -> dict[str, object]:
+    def credit(
+        self,
+        account_id: str,
+        amount: int,
+        reference: str,
+        operation_id: str,
+    ) -> dict[str, object]:
+        account_id = _require_text(account_id, "account_id")
         amount = require_positive_money(amount, "amount")
+        reference = _require_text(reference, "reference")
+        operation_id = _require_operation_id(operation_id)
+        fields: dict[str, object] = {
+            "account_id": account_id,
+            "amount": amount,
+            "reference": reference,
+        }
+        request_sha256 = _request_hash("credit", fields)
 
         with self._state.lock:
+            replay = self._replay(operation_id, "credit", request_sha256)
+            if replay is not None:
+                return replay
+            winning_operation_id = self._state.credit_owners.get((account_id, reference))
+            if winning_operation_id is not None:
+                raise self._ownership_conflict(winning_operation_id)
             account = self._state.accounts.get(account_id)
             if account is None:
                 raise ServiceError("account_not_found", "Account not found", 404, {})
 
-            key = (account_id, reference)
-            existing = self._state.credit_refs.get(key)
-            if existing is not None:
-                if int(existing["amount"]) != amount:
-                    raise ServiceError(
-                        "payload_mismatch",
-                        "Duplicate credit reference used with a different amount",
-                        400,
-                        {},
-                    )
-                return {
-                    "tx_id": str(existing["tx_id"]),
-                    "balance_after": int(existing["balance_after"]),
-                }
-
             new_balance = checked_balance_add(int(account["balance"]), amount)
+            committed_at = self._now()
+            tx_id = self._new_tx_id()
             account["balance"] = new_balance
-            tx = {
-                "tx_id": self._new_tx_id(),
-                "type": "credit",
-                "amount": amount,
-                "balance_after": new_balance,
-                "reference": reference,
-                "timestamp": self._now(),
-            }
-            self._append_tx(account_id, tx)
-            self._state.credit_refs[key] = tx
-            result: dict[str, object] = {"tx_id": str(tx["tx_id"]), "balance_after": new_balance}
+            self._append_tx(
+                account_id,
+                {
+                    "tx_id": tx_id,
+                    "type": "credit",
+                    "amount": amount,
+                    "balance_after": new_balance,
+                    "reference": reference,
+                    "timestamp": committed_at,
+                },
+            )
+            self._state.credit_owners[(account_id, reference)] = operation_id
+            envelope = self._record_receipt(
+                operation_id,
+                "credit",
+                request_sha256,
+                reference,
+                committed_at,
+                None,
+                {
+                    "account_id": account_id,
+                    "amount": amount,
+                    "balance_after": new_balance,
+                    "reference": reference,
+                },
+                [
+                    {
+                        "role": "account",
+                        "account_id": account_id,
+                        "direction": "credit",
+                        "amount": amount,
+                        "transaction_id": tx_id,
+                        "balance_after": new_balance,
+                    }
+                ],
+            )
             _logger.info(
                 "audit",
                 extra={
@@ -159,78 +392,98 @@ class InMemoryLedgerStore:
                     "account_id": account_id,
                     "amount": amount,
                     "reference": reference,
-                    "tx_id": str(tx["tx_id"]),
+                    "operation_id": operation_id,
+                    "tx_id": tx_id,
                 },
             )
-            return result
+            return envelope
 
     def get_transactions(self, account_id: str) -> list[dict[str, object]]:
         with self._state.lock:
             if account_id not in self._state.accounts:
                 raise ServiceError("account_not_found", "Account not found", 404, {})
-            items = self._state.transactions.get(account_id, [])
-            return [dict(item) for item in items]
+            return copy.deepcopy(self._state.transactions.get(account_id, []))
 
-    def escrow_lock(self, payer_account_id: str, amount: int, task_id: str) -> dict[str, object]:
+    def escrow_lock(
+        self,
+        payer_account_id: str,
+        amount: int,
+        task_id: str,
+        operation_id: str,
+    ) -> dict[str, object]:
+        payer_account_id = _require_text(payer_account_id, "payer_account_id")
         amount = require_positive_money(amount, "amount")
+        task_id = _require_text(task_id, "task_id")
+        operation_id = _require_operation_id(operation_id)
+        fields: dict[str, object] = {
+            "payer_account_id": payer_account_id,
+            "task_id": task_id,
+            "amount": amount,
+        }
+        request_sha256 = _request_hash("escrow_lock", fields)
 
         with self._state.lock:
+            replay = self._replay(operation_id, "escrow_lock", request_sha256)
+            if replay is not None:
+                return replay
+            key = (payer_account_id, task_id)
+            existing_escrow_id = self._state.escrow_owners_by_task.get(key)
+            if existing_escrow_id is not None:
+                winner = str(self._state.escrows[existing_escrow_id]["operation_id"])
+                raise self._ownership_conflict(winner)
             payer = self._state.accounts.get(payer_account_id)
             if payer is None:
                 raise ServiceError("account_not_found", "Account not found", 404, {})
-
-            key = (payer_account_id, task_id)
-            existing_escrow_id = self._state.locked_escrow_by_task.get(key)
-            if existing_escrow_id is not None:
-                existing = self._state.escrows[existing_escrow_id]
-                if int(existing["amount"]) != amount:
-                    raise ServiceError(
-                        "escrow_already_locked",
-                        "Escrow already locked for this task",
-                        409,
-                        {},
-                    )
-                return {
-                    "escrow_id": str(existing["escrow_id"]),
-                    "amount": int(existing["amount"]),
-                    "task_id": str(existing["task_id"]),
-                    "status": str(existing["status"]),
-                }
-
             current_balance = int(payer["balance"])
             if current_balance < amount:
                 raise ServiceError("insufficient_funds", "Insufficient funds", 402, {})
 
-            payer["balance"] = current_balance - amount
+            committed_at = self._now()
             escrow_id = self._new_escrow_id()
-            escrow = {
+            tx_id = self._new_tx_id()
+            new_balance = current_balance - amount
+            payer["balance"] = new_balance
+            self._state.escrows[escrow_id] = {
                 "escrow_id": escrow_id,
                 "payer_account_id": payer_account_id,
                 "amount": amount,
                 "task_id": task_id,
                 "status": "locked",
-                "created_at": self._now(),
+                "created_at": committed_at,
                 "resolved_at": None,
+                "operation_id": operation_id,
             }
-            self._state.escrows[escrow_id] = escrow
-            self._state.locked_escrow_by_task[key] = escrow_id
-
-            debit_tx = {
-                "tx_id": self._new_tx_id(),
-                "type": "escrow_lock",
-                "amount": amount,
-                "balance_after": int(payer["balance"]),
-                "reference": task_id,
-                "timestamp": self._now(),
-            }
-            self._append_tx(payer_account_id, debit_tx)
-
-            result: dict[str, object] = {
-                "escrow_id": escrow_id,
-                "amount": amount,
-                "task_id": task_id,
-                "status": "locked",
-            }
+            self._state.escrow_owners_by_task[key] = escrow_id
+            self._append_tx(
+                payer_account_id,
+                {
+                    "tx_id": tx_id,
+                    "type": "escrow_lock",
+                    "amount": amount,
+                    "balance_after": new_balance,
+                    "reference": task_id,
+                    "timestamp": committed_at,
+                },
+            )
+            envelope = self._record_receipt(
+                operation_id,
+                "escrow_lock",
+                request_sha256,
+                task_id,
+                committed_at,
+                escrow_id,
+                {"escrow_status_at_commit": "locked"},
+                [
+                    {
+                        "role": "payer",
+                        "account_id": payer_account_id,
+                        "direction": "debit",
+                        "amount": amount,
+                        "transaction_id": tx_id,
+                        "balance_after": new_balance,
+                    }
+                ],
+            )
             _logger.info(
                 "audit",
                 extra={
@@ -239,22 +492,44 @@ class InMemoryLedgerStore:
                     "amount": amount,
                     "task_id": task_id,
                     "escrow_id": escrow_id,
+                    "operation_id": operation_id,
                     "reference": task_id,
-                    "tx_id": str(debit_tx["tx_id"]),
+                    "tx_id": tx_id,
                 },
             )
-            return result
+            return envelope
 
-    def escrow_release(self, escrow_id: str, recipient_account_id: str) -> dict[str, object]:
+    def escrow_release(
+        self,
+        escrow_id: str,
+        recipient_account_id: str,
+        operation_id: str,
+        source_reference: str,
+    ) -> dict[str, object]:
+        escrow_id = _require_text(escrow_id, "escrow_id")
+        recipient_account_id = _require_text(recipient_account_id, "recipient_account_id")
+        operation_id = _require_operation_id(operation_id)
+        source_reference = _require_text(source_reference, "source_reference")
+        fields: dict[str, object] = {
+            "escrow_id": escrow_id,
+            "recipient_account_id": recipient_account_id,
+            "source_reference": source_reference,
+        }
+        request_sha256 = _request_hash("escrow_release", fields)
+
         with self._state.lock:
+            replay = self._replay(operation_id, "escrow_release", request_sha256)
+            if replay is not None:
+                return replay
+            winner = self._state.settlement_owners.get(escrow_id)
+            if winner is not None:
+                raise self._ownership_conflict(winner)
             escrow = self._state.escrows.get(escrow_id)
             if escrow is None:
                 raise ServiceError("escrow_not_found", "Escrow not found", 404, {})
-
             recipient = self._state.accounts.get(recipient_account_id)
             if recipient is None:
                 raise ServiceError("account_not_found", "Recipient account not found", 404, {})
-
             if str(escrow["status"]) != "locked":
                 raise ServiceError(
                     "escrow_already_resolved",
@@ -265,39 +540,56 @@ class InMemoryLedgerStore:
 
             amount = int(escrow["amount"])
             new_balance = checked_balance_add(int(recipient["balance"]), amount)
+            committed_at = self._now()
+            tx_id = self._new_tx_id()
             recipient["balance"] = new_balance
-
-            tx = {
-                "tx_id": self._new_tx_id(),
-                "type": "escrow_release",
-                "amount": amount,
-                "balance_after": new_balance,
-                "reference": escrow_id,
-                "timestamp": self._now(),
-            }
-            self._append_tx(recipient_account_id, tx)
-
+            self._append_tx(
+                recipient_account_id,
+                {
+                    "tx_id": tx_id,
+                    "type": "escrow_release",
+                    "amount": amount,
+                    "balance_after": new_balance,
+                    "reference": escrow_id,
+                    "timestamp": committed_at,
+                },
+            )
             escrow["status"] = "released"
-            escrow["resolved_at"] = self._now()
-
-            result: dict[str, object] = {
-                "escrow_id": escrow_id,
-                "status": "released",
-                "amount": amount,
-                "recipient": recipient_account_id,
-            }
+            escrow["resolved_at"] = committed_at
+            self._state.settlement_owners[escrow_id] = operation_id
+            envelope = self._record_receipt(
+                operation_id,
+                "escrow_release",
+                request_sha256,
+                source_reference,
+                committed_at,
+                escrow_id,
+                {"escrow_status_at_commit": "released"},
+                [
+                    {
+                        "role": "recipient",
+                        "account_id": recipient_account_id,
+                        "direction": "credit",
+                        "amount": amount,
+                        "transaction_id": tx_id,
+                        "balance_after": new_balance,
+                    }
+                ],
+            )
             _logger.info(
                 "audit",
                 extra={
                     "operation": "escrow_release",
                     "escrow_id": escrow_id,
                     "recipient": recipient_account_id,
+                    "source_reference": source_reference,
+                    "operation_id": operation_id,
                     "amount": amount,
                     "reference": escrow_id,
-                    "tx_id": str(tx["tx_id"]),
+                    "tx_id": tx_id,
                 },
             )
-            return result
+            return envelope
 
     def escrow_split(
         self,
@@ -305,14 +597,34 @@ class InMemoryLedgerStore:
         worker_account_id: str,
         worker_pct: int,
         poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
     ) -> dict[str, object]:
+        escrow_id = _require_text(escrow_id, "escrow_id")
+        worker_account_id = _require_text(worker_account_id, "worker_account_id")
         worker_pct = require_worker_percentage(worker_pct)
+        poster_account_id = _require_text(poster_account_id, "poster_account_id")
+        operation_id = _require_operation_id(operation_id)
+        source_reference = _require_text(source_reference, "source_reference")
+        fields: dict[str, object] = {
+            "escrow_id": escrow_id,
+            "worker_account_id": worker_account_id,
+            "poster_account_id": poster_account_id,
+            "worker_pct": worker_pct,
+            "source_reference": source_reference,
+        }
+        request_sha256 = _request_hash("escrow_split", fields)
 
         with self._state.lock:
+            replay = self._replay(operation_id, "escrow_split", request_sha256)
+            if replay is not None:
+                return replay
+            winner = self._state.settlement_owners.get(escrow_id)
+            if winner is not None:
+                raise self._ownership_conflict(winner)
             escrow = self._state.escrows.get(escrow_id)
             if escrow is None:
                 raise ServiceError("escrow_not_found", "Escrow not found", 404, {})
-
             if str(escrow["status"]) != "locked":
                 raise ServiceError(
                     "escrow_already_resolved",
@@ -320,7 +632,6 @@ class InMemoryLedgerStore:
                     409,
                     {},
                 )
-
             if str(escrow["payer_account_id"]) != poster_account_id:
                 raise ServiceError(
                     "payload_mismatch",
@@ -332,7 +643,6 @@ class InMemoryLedgerStore:
             amount = int(escrow["amount"])
             worker_amount = amount * worker_pct // 100
             poster_amount = amount - worker_amount
-
             credit_amounts: dict[str, int] = {}
             if worker_amount > 0:
                 credit_amounts[worker_account_id] = worker_amount
@@ -343,61 +653,29 @@ class InMemoryLedgerStore:
             for account_id, credit_amount in credit_amounts.items():
                 account = self._state.accounts.get(account_id)
                 if account is None:
-                    label = "Worker" if account_id == worker_account_id else "Poster"
-                    raise ServiceError(
-                        "account_not_found",
-                        f"{label} account not found",
-                        404,
-                        {},
-                    )
+                    raise ServiceError("account_not_found", "Account not found", 404, {})
                 checked_balance_add(int(account["balance"]), credit_amount)
 
-            # Zero-amount legs are skipped entirely (no balance no-op write, no tx
-            # row, no existence check) — mirrors the gateway's db_writer.escrow_split.
-            if worker_amount > 0:
-                worker = self._state.accounts[worker_account_id]
-                worker_new_balance = checked_balance_add(int(worker["balance"]), worker_amount)
-                worker["balance"] = worker_new_balance
-                worker_tx = {
-                    "tx_id": self._new_tx_id(),
-                    "type": "escrow_release",
-                    "amount": worker_amount,
-                    "balance_after": worker_new_balance,
-                    "reference": escrow_id,
-                    "timestamp": self._now(),
-                }
-                self._append_tx(worker_account_id, worker_tx)
-                worker_tx_id = str(worker_tx["tx_id"])
-            else:
-                worker_tx_id = None
-
-            if poster_amount > 0:
-                poster = self._state.accounts[poster_account_id]
-                poster_new_balance = checked_balance_add(int(poster["balance"]), poster_amount)
-                poster["balance"] = poster_new_balance
-                poster_tx = {
-                    "tx_id": self._new_tx_id(),
-                    "type": "escrow_release",
-                    "amount": poster_amount,
-                    "balance_after": poster_new_balance,
-                    "reference": escrow_id,
-                    "timestamp": self._now(),
-                }
-                self._append_tx(poster_account_id, poster_tx)
-                poster_tx_id = str(poster_tx["tx_id"])
-            else:
-                poster_tx_id = None
-
+            committed_at = self._now()
+            worker_leg = self._credit_split_leg(
+                "worker", worker_account_id, worker_amount, escrow_id, committed_at
+            )
+            poster_leg = self._credit_split_leg(
+                "poster", poster_account_id, poster_amount, escrow_id, committed_at
+            )
             escrow["status"] = "split"
-            escrow["resolved_at"] = self._now()
-
-            result: dict[str, object] = {
-                "escrow_id": escrow_id,
-                "status": "split",
-                "worker_amount": worker_amount,
-                "poster_amount": poster_amount,
-                "worker_pct": worker_pct,
-            }
+            escrow["resolved_at"] = committed_at
+            self._state.settlement_owners[escrow_id] = operation_id
+            envelope = self._record_receipt(
+                operation_id,
+                "escrow_split",
+                request_sha256,
+                source_reference,
+                committed_at,
+                escrow_id,
+                {"escrow_status_at_commit": "split", "worker_pct": worker_pct},
+                [worker_leg, poster_leg],
+            )
             _logger.info(
                 "audit",
                 extra={
@@ -405,14 +683,58 @@ class InMemoryLedgerStore:
                     "escrow_id": escrow_id,
                     "worker_account_id": worker_account_id,
                     "poster_account_id": poster_account_id,
+                    "worker_pct": worker_pct,
                     "worker_amount": worker_amount,
                     "poster_amount": poster_amount,
+                    "source_reference": source_reference,
+                    "operation_id": operation_id,
                     "reference": escrow_id,
-                    "worker_tx_id": worker_tx_id,
-                    "poster_tx_id": poster_tx_id,
+                    "worker_tx_id": worker_leg["transaction_id"],
+                    "poster_tx_id": poster_leg["transaction_id"],
                 },
             )
-            return result
+            return envelope
+
+    def _credit_split_leg(
+        self,
+        role: str,
+        account_id: str,
+        amount: int,
+        escrow_id: str,
+        committed_at: str,
+    ) -> dict[str, object]:
+        if amount == 0:
+            return {
+                "role": role,
+                "account_id": account_id,
+                "direction": "credit",
+                "amount": 0,
+                "transaction_id": None,
+                "balance_after": None,
+            }
+        account = self._state.accounts[account_id]
+        new_balance = checked_balance_add(int(account["balance"]), amount)
+        tx_id = self._new_tx_id()
+        account["balance"] = new_balance
+        self._append_tx(
+            account_id,
+            {
+                "tx_id": tx_id,
+                "type": "escrow_release",
+                "amount": amount,
+                "balance_after": new_balance,
+                "reference": escrow_id,
+                "timestamp": committed_at,
+            },
+        )
+        return {
+            "role": role,
+            "account_id": account_id,
+            "direction": "credit",
+            "amount": amount,
+            "transaction_id": tx_id,
+            "balance_after": new_balance,
+        }
 
     def count_accounts(self) -> int:
         with self._state.lock:
@@ -420,11 +742,14 @@ class InMemoryLedgerStore:
 
     def total_escrowed(self) -> int:
         with self._state.lock:
-            total = 0
-            for escrow in self._state.escrows.values():
-                if str(escrow["status"]) == "locked":
-                    total += int(escrow["amount"])
-            return total
+            return sum(
+                int(escrow["amount"])
+                for escrow in self._state.escrows.values()
+                if str(escrow["status"]) == "locked"
+            )
 
     def close(self) -> None:
-        """No-op close for compatibility with previous store API."""
+        """Keep API parity with persistent stores that own resources."""
+
+
+__all__ = ["InMemoryLedgerStore"]

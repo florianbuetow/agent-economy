@@ -59,6 +59,7 @@ def _setup_funded_account(
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance > 0:
+        data["operation_id"] = f"op-{uuid4()}"
         data["initial_credit"] = {
             "tx_id": f"tx-{uuid4()}",
             "amount": balance,
@@ -80,6 +81,7 @@ def _lock_escrow(
     client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": eid,
             "payer_account_id": payer_id,
             "amount": amount,
