@@ -760,6 +760,41 @@ def _audit_cutover(
         )
 
 
+def legacy_marker_set_attested(connection: sqlite3.Connection) -> bool:
+    """Verify only the frozen marker aggregate against its cutover tuple."""
+    transaction_markers = tuple(
+        {
+            "tx_id": row[0],
+            "observed_kind": row[1],
+            "observed_fact_sha256": row[2],
+        }
+        for row in connection.execute(
+            "SELECT tx_id, observed_kind, observed_fact_sha256 "
+            "FROM bank_legacy_transaction_observations ORDER BY tx_id"
+        ).fetchall()
+    )
+    escrow_markers = tuple(
+        {
+            "escrow_id": row[0],
+            "observed_status": row[1],
+            "lock_fact_sha256": row[2],
+            "resolution_fact_sha256": row[3],
+        }
+        for row in connection.execute(
+            "SELECT escrow_id, observed_status, lock_fact_sha256, resolution_fact_sha256 "
+            "FROM bank_legacy_escrow_observations ORDER BY escrow_id"
+        ).fetchall()
+    )
+    findings: list[ReceiptAuditFinding] = []
+    _audit_cutover(connection, transaction_markers, escrow_markers, findings)
+    return not findings
+
+
+def financial_fact_sha256(value: object) -> str:
+    """Hash one historical fact with the migration/audit canonical encoding."""
+    return _hash_json(value)
+
+
 def _audit_orphan_legs(
     connection: sqlite3.Connection,
     findings: list[ReceiptAuditFinding],
@@ -891,4 +926,6 @@ __all__ = [
     "ReceiptAuditFinding",
     "ReceiptOwnershipAuditResult",
     "audit_receipt_ownership",
+    "financial_fact_sha256",
+    "legacy_marker_set_attested",
 ]

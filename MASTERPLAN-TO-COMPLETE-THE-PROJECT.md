@@ -1144,11 +1144,12 @@ The arrows are dependencies, not permission handoffs. MP-20's response schemas s
 
 **Tickets:** T-116 → T-117. **Priority:** P0. **Depends on:** MP-02, MP-06. **Owner:** Bank/gateway. **Findings:** F-M02, F-M08; foundation for F-L01–F-L04.
 
-Implementation checkpoint 2026-10-17: native persistence/migration and Bank/in-memory receipt
-components have bounded passing evidence; SDK receipt validation is independently approved with
-105 focused tests. Shared-client and Task Board integration, history outcomes, remaining callers
-and fresh root CI are still required. No package closure follows from these component results.
-See `openspec/changes/complete-agent-economy/evidence/mp04-receipts/sdk-validation-2026-10-17.md`.
+Implementation checkpoint 2026-10-17: native and historical receipt persistence/validation,
+Bank/in-memory storage, shared clients and funding/demo consumers have bounded independent approval.
+Parent runs pass 24 public Bank tests and 26 cross-service tests. Root16 passed component gates with
+929 unchanged source/config hashes, then exposed two integration fixtures, now repaired and reviewed.
+Live-agent caller reconciliation and a fresh root closure gate remain required. Evidence
+limitations remain explicit. See `openspec/changes/complete-agent-economy/evidence/mp04-receipts/history-checkpoint-2026-10-17.md`.
 
 - [x] **Red proof:** drop the successful response after release/split commit, then retry; replay a lock after settlement; replay with altered parties/amount. Demonstrate non-convergence or second debit. The bounded eight-case public Bank/Gateway baseline was independently reproduced and approved on 2026-10-16; remaining identity, history, concurrency and rollback proofs stay separately required before their implementation (see `openspec/changes/complete-agent-economy/evidence/mp04-receipts/checkpoint.md`).
 - [ ] **Implement:** stable operation ID plus canonical request hash and durable result for lock/release/split and issuance where needed. Atomically store receipt, escrow status, ledger legs and event. Exact replay returns the original successful result; changed content conflicts. Retain lifetime uniqueness of a task's escrow.

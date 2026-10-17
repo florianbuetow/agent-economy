@@ -17,7 +17,7 @@ import httpx
 from service_auth.financial_identity import operation_id_for
 from service_auth.financial_responses import (
     parse_account_projection,
-    parse_native_financial_envelope,
+    parse_financial_envelope,
 )
 
 from demo_replay.wallet import DemoAgent
@@ -107,7 +107,7 @@ async def credit_account(
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
-    return parse_native_financial_envelope(
+    return parse_financial_envelope(
         resp.json(),
         operation_id,
         "credit",

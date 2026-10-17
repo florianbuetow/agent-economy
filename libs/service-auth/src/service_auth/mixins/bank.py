@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from service_auth.financial_responses import (
     parse_account_projection,
-    parse_native_financial_envelope,
+    parse_financial_envelope,
     validate_operation_id,
 )
 
@@ -103,7 +103,7 @@ class BankMixin:
             resource="POST /escrow/lock",
         )
         response = await self._request("POST", url, json={"token": token})
-        return parse_native_financial_envelope(
+        return parse_financial_envelope(
             response,
             operation_id,
             "escrow_lock",

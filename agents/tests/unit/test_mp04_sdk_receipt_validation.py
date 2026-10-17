@@ -472,16 +472,37 @@ async def test_base_agent_lock_rejects_paired_empty_generated_escrow_identity(
         await _base_lock_call(sample_config, monkeypatch, response)
 
 
-@pytest.mark.parametrize("field", ["payer_account_id", "task_id", "created_at"])
-async def test_platform_release_rejects_empty_required_projection_text(
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    [("payer_account_id", ""), ("task_id", ""), ("created_at", None)],
+)
+async def test_platform_release_rejects_invalid_required_projection_fields(
     sample_config: AgentConfig,
     monkeypatch: pytest.MonkeyPatch,
     field: str,
+    replacement: object,
 ) -> None:
-    response = _corrupt(_release_response(), ("current_escrow", field), "")
+    response = _corrupt(_release_response(), ("current_escrow", field), replacement)
 
     with pytest.raises(RuntimeError):
         await _platform_call(sample_config, monkeypatch, "release", response)
+
+
+@pytest.mark.parametrize(
+    ("operation", "response"),
+    [("release", _release_response()), ("split", _split_response(40))],
+)
+async def test_native_settlement_preserves_empty_historical_creation_time(
+    sample_config: AgentConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+    response: dict[str, Any],
+) -> None:
+    historical_projection = _corrupt(response, ("current_escrow", "created_at"), "")
+    assert (
+        await _platform_call(sample_config, monkeypatch, operation, historical_projection)
+        == historical_projection
+    )
 
 
 @pytest.mark.parametrize("operation", ["terminal_lock", "release"])
