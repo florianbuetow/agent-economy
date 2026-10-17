@@ -2,16 +2,23 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
+from cryptography.hazmat.primitives import serialization
 from service_commons.config import get_config_path as resolve_config_path
 
 from service_auth.agent import BaseAgent
-from service_auth.config import AgentConfig
+from service_auth.config import AgentConfig, _FileSettings
+from service_auth.jws import TokenPolicy
 from service_auth.platform import PlatformAgent
-from service_auth.signing import generate_keypair, load_private_key, load_public_key
+from service_auth.signing import adopt_keypair_permissions, generate_keypair, load_keypair
 from service_auth.user_agent import UserAgent
+
+if TYPE_CHECKING:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 
 class AgentFactory:
@@ -43,19 +50,20 @@ class AgentFactory:
             msg = f"Invalid config file: {config_path}"
             raise ValueError(msg)
 
+        file_settings = _FileSettings(**raw)
         self._config_path = config_path
 
         # Resolve keys directory
         if keys_dir is not None:
             self._keys_dir = keys_dir.resolve()
         else:
-            cfg_keys_dir = Path(raw["data"]["keys_dir"])
+            cfg_keys_dir = Path(file_settings.data.keys_dir)
             if not cfg_keys_dir.is_absolute():
                 cfg_keys_dir = config_path.parent / cfg_keys_dir
             self._keys_dir = cfg_keys_dir.resolve()
 
         # Load roster
-        roster_path = Path(raw["data"]["roster_path"])
+        roster_path = Path(file_settings.data.roster_path)
         if not roster_path.is_absolute():
             roster_path = config_path.parent / roster_path
         roster_raw = yaml.safe_load(roster_path.read_text())
@@ -65,19 +73,49 @@ class AgentFactory:
         self._roster: dict[str, dict[str, str]] = roster_raw["agents"]
 
         # Store service URLs
-        self._identity_url: str = raw["platform"]["identity_url"]
-        self._bank_url: str = raw["platform"]["bank_url"]
-        self._task_board_url: str = raw["platform"]["task_board_url"]
-        self._reputation_url: str = raw["platform"]["reputation_url"]
-        self._court_url: str = raw["platform"]["court_url"]
-
-        # Token lifetime for signed JWS tokens. When a config omits the signing
-        # section, tokens are issued without expiry (legacy). Production configs
-        # (agents/config.yaml) provide ``signing.token_ttl_seconds`` explicitly.
-        signing_section = raw.get("signing")
-        self._token_ttl_seconds: int | None = (
-            signing_section["token_ttl_seconds"] if signing_section is not None else None
+        self._identity_url = file_settings.platform.identity_url
+        self._bank_url = file_settings.platform.bank_url
+        self._task_board_url = file_settings.platform.task_board_url
+        self._reputation_url = file_settings.platform.reputation_url
+        self._court_url = file_settings.platform.court_url
+        self._token_ttl_seconds = file_settings.signing.token_ttl_seconds
+        self._token_policy = TokenPolicy(
+            max_lifetime_seconds=file_settings.signing.max_lifetime_seconds,
+            clock_skew_seconds=file_settings.signing.clock_skew_seconds,
         )
+
+    def provision_configured_keys(self) -> dict[str, str]:
+        """Explicitly provision every configured roster handle."""
+        return {
+            handle: self._public_fingerprint(generate_keypair(handle, self._keys_dir)[1])
+            for handle in sorted(self._roster)
+        }
+
+    def configured_key_targets(self) -> dict[str, Path]:
+        """Return canonical public-key targets for the configured economic roster."""
+        return {handle: self._keys_dir / f"{handle}.pub" for handle in sorted(self._roster)}
+
+    def check_configured_keys(self) -> dict[str, str]:
+        """Validate every configured roster handle without changing key material."""
+        return {
+            handle: self._public_fingerprint(load_keypair(handle, self._keys_dir)[1])
+            for handle in sorted(self._roster)
+        }
+
+    def adopt_configured_key_permissions(self) -> dict[str, str]:
+        """Explicitly harden permissions for every valid configured legacy pair."""
+        return {
+            handle: self._public_fingerprint(adopt_keypair_permissions(handle, self._keys_dir)[1])
+            for handle in sorted(self._roster)
+        }
+
+    @staticmethod
+    def _public_fingerprint(public_key: Ed25519PublicKey) -> str:
+        raw_public = public_key.public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+        return hashlib.sha256(raw_public).hexdigest()
 
     def _load_config(self, handle: str) -> AgentConfig:
         """Load an AgentConfig for the given roster handle."""
@@ -87,13 +125,7 @@ class AgentFactory:
 
         entry = self._roster[handle]
 
-        private_path = self._keys_dir / f"{handle}.key"
-        public_path = self._keys_dir / f"{handle}.pub"
-        if private_path.exists() and public_path.exists():
-            private_key = load_private_key(private_path)
-            public_key = load_public_key(public_path)
-        else:
-            private_key, public_key = generate_keypair(handle, self._keys_dir)
+        private_key, public_key = load_keypair(handle, self._keys_dir)
 
         return AgentConfig(
             name=entry["name"],
@@ -105,6 +137,7 @@ class AgentFactory:
             reputation_url=self._reputation_url,
             court_url=self._court_url,
             token_ttl_seconds=self._token_ttl_seconds,
+            token_policy=self._token_policy,
         )
 
     def create_agent(self, handle: str) -> BaseAgent:

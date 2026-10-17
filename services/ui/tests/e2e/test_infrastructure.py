@@ -96,7 +96,7 @@ def test_task_page_object(e2e_page: Page, e2e_server: str) -> None:
     task_page = TaskPage(e2e_page, e2e_server)
     task_page.navigate(task_id="t-task1")
     e2e_page.wait_for_function(
-        "document.querySelector('#phase-content') && "
+        "() => document.querySelector('#phase-content') && "
         "document.querySelector('#phase-content').textContent.trim().length > 0",
     )
     content = task_page.get_lifecycle_panel_content()

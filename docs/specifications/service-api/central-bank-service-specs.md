@@ -1,12 +1,23 @@
 # Central Bank Service — API Specification
 
+## MP-04 receipt contract amendment (implementation in progress)
+
+The [2026-10-16 financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md)
+defines the required replacement for flat financial responses and reference-only replay below.
+It requires caller-owned operation IDs for positive issuance, credit and every escrow operation,
+explicit settlement source references, immutable receipts with actual ledger/event identities,
+and a separate current escrow projection. Exact native replay is payload-bound; conflicting
+identities return explicit 409 errors. Historical effects receive audited observations, never
+invented native receipts. Zero-balance account creation retains its existing natural identity.
+The amendment is a target contract; T-116/T-117 remain open until implementation and root CI prove it.
+
 ## Purpose
 
 The Central Bank manages accounts, balances, transaction history, and escrow for the Agent Task Economy. It is the financial backbone that other services interact with to move funds. All monetary operations in the economy flow through this service — from account funding to escrow locks, releases, and court-ordered splits. Settlement (releasing or splitting escrow) is orchestrated exclusively by the **Task Board** (R4): on approval, review-timeout auto-approve, cancel/expiry, and after a Court ruling, the Task Board calls this service's escrow endpoints. Court never calls the Central Bank directly. Platform-signed `credit` is also invoked by platform-side tooling (the `fund-feeder` CLI, UI treasury provisioning) outside the task lifecycle.
 
 ## Core Principles
 
-- **Integer coins.** All amounts are whole integers. No fractional coins. This avoids floating-point issues and matches the demo scenarios.
+- **Integer coins.** Individual monetary values are integers from zero through `9223372036854775807`; credits and locks must be positive. Booleans and fractional values are rejected. Aggregate totals use exact Python integers and may exceed one account's representational bound.
 - **No overdraft.** All escrow locks are rejected if the account has insufficient funds. The bank enforces solvency at all times.
 - **Platform is the sole source of new money.** Agents cannot credit their own balance or another agent's balance. They may create their own account (always at zero balance — see `create_account` below) and consent to escrow locks. All non-zero funding (initial balances, salary/rewards, credits) is issued by the platform via `POST /accounts` (with a balance) or `POST /accounts/{id}/credit`.
 - **Two-tier verification model.** Every mutating and read endpoint requires a JWS-signed request, but the verification path differs by operation tier:
@@ -17,6 +28,14 @@ The Central Bank manages accounts, balances, transaction history, and escrow for
 - **Platform as agent.** The platform is not a config-file string — it is whichever agent the service's own `PlatformAgent` instance registers as at startup (loaded from the roster entry named `platform` via `agent_config_path`; see Configuration). There is no configured `platform.agent_id` fallback: if no `PlatformAgent` is registered, platform-authorization checks fail closed with `503 service_not_ready` rather than silently trusting nothing (or worse, an empty-string placeholder).
 - **Balance + transaction log.** Accounts have a `balance` column updated on every transaction. A separate transactions table logs every operation. Both updates happen in a single database transaction on the DB Gateway (`BEGIN IMMEDIATE` … `COMMIT`), atomically. Balance reads are O(1).
 - **Gateway-owned persistence.** The Central Bank does not open the SQLite database itself. Its production storage backend, `LedgerDbClient`, is a thin domain facade over the DB Gateway's HTTP API (`libs/service-clients` `GatewayClient`) — the gateway owns `economy.db` and is the only process that writes to it. An `InMemoryLedgerStore` also exists but is test/fallback infrastructure only; it is never wired into the production lifespan.
+
+MP-06 applies the same strict monetary contract to public routes and both ledger stores. Inputs
+above the signed-64-bit representation return 400 `amount_out_of_range`; a credit or settlement
+that would exceed a recipient balance returns 409 `amount_out_of_range`. The Gateway-backed store
+preserves these codes and statuses rather than converting them to a generic server error or
+`escrow_already_resolved`. In-memory settlement checks all recipient credits, including combined
+same-account shares, before changing balances or ledger rows. A rejected operation has no financial
+side effects. This fixed representation bound does not introduce a monetary supply policy.
 
 ## Service Dependencies
 
@@ -80,7 +99,7 @@ Note: on the DB Gateway, these tables are named `bank_accounts`, `bank_transacti
 | Name                                | Type          | Definition                                                |
 |-------------------------------------|---------------|-----------------------------------------------------------|
 | `ux_credit_reference`               | Unique index  | `(account_id, reference) WHERE type = 'credit'` — enforces credit idempotency |
-| `ux_locked_escrow_task`             | Unique index  | `(payer_account_id, task_id) WHERE status = 'locked'` — one locked escrow per payer per task |
+| `idx_bank_escrow_lifetime`          | Unique index  | `(payer_account_id, task_id)` for all statuses — one lifetime escrow per payer per task |
 | `ix_transactions_account_timestamp_tx_id` | Index   | `(account_id, timestamp, tx_id)` — efficient transaction history queries |
 
 ---
@@ -161,7 +180,7 @@ Create a new account. Two modes, both verified via Identity (see the Accepted De
 9. Create the account with the specified initial balance; if `initial_balance > 0`, log a `credit` transaction with reference `"initial_balance"`.
 10. All database operations happen in a single DB Gateway transaction.
 
-Because step 2 (remote signature verification) runs before steps 4–7 (payload validation), an invalid signature or an unreachable Identity service is reported (`403 forbidden` / `502 identity_service_unavailable`) even for requests whose payload is also malformed. This "verify-first" ordering is the mirror image of `credit`/`escrow_release`/`escrow_split` — see the Authentication Specification's Error Precedence section.
+Because step 2 (remote signature verification) runs before steps 4–7 (payload validation), an invalid signature or an unreachable Identity service is reported (`403 forbidden` / `502 identity_service_unavailable`) even for requests whose domain payload is also malformed. Platform operations likewise authenticate the strict profile before domain validation, but do so locally; see the Authentication Specification's Error Precedence section.
 
 **Response (201 Created):**
 ```json
@@ -180,6 +199,7 @@ Because step 2 (remote signature verification) runs before steps 4–7 (payload 
 | 400    | `invalid_json`                 | Request body is not valid JSON or not a JSON object    |
 | 400    | `invalid_payload`              | JWS payload missing required fields or wrong action    |
 | 400    | `invalid_amount`               | `initial_balance` is not a non-negative integer        |
+| 400    | `amount_out_of_range`           | `initial_balance` exceeds the signed-64-bit limit |
 | 403    | `forbidden`                    | JWS signature verification failed; a non-platform signer named a different agent as `agent_id`; or a non-platform signer requested a non-zero `initial_balance` |
 | 404    | `agent_not_found`              | Agent does not exist in the Identity service            |
 | 409    | `account_exists`               | Account already exists for this agent                   |
@@ -213,15 +233,15 @@ Add funds to an account. Platform-only operation, verified **locally**. Idempote
 }
 ```
 
-**Behavior (in code order — payload validation before signature verification, T-033):**
+**Behavior (MP-03 strict-profile order):**
 1. Parse the request body as JSON; require a string `token` field.
-2. Decode the JWS payload **without verifying its signature** (structural decode only — three dot-separated parts, valid base64url, valid JSON object; malformed structure still fails fast with `400 invalid_jws`).
-3. Validate the decoded payload: `action` must be `"credit"`; if the payload carries an `account_id`, it must match the URL path parameter; `amount` must be a positive integer; `reference` must be a non-null string.
-4. **Only after payload validation passes**, verify the JWS signature locally against the registered `PlatformAgent`'s public key. A signature that fails to verify against the platform's key returns `403 forbidden` — there is no separate "is this the platform" check afterward, because a token that verifies against the platform's own public key can only have been signed by the platform's private key.
-5. Credit the account and log a `credit` transaction.
-6. All database operations happen in a single DB Gateway transaction.
+2. Verify the strict JWS profile, original signature and temporal policy locally. Require the authenticated platform `kid`, audience, concrete resource and `credit` action.
+3. Validate the authenticated domain payload: an optional `account_id` must match the URL, `amount` must be a positive bounded integer excluding booleans, and `reference` must be a non-null string.
+4. Credit the account and log a `credit` transaction atomically through the Gateway.
 
-This means a malformed or non-platform payload is reported as its specific `400` error even when the token is not platform-signed — the payload error is checked and returned before the `403 forbidden` authorization failure would otherwise be raised.
+Invalid signatures or platform identities return `403 forbidden` before malformed domain-field
+errors. Authentic expired or future-issued tokens retain their distinct 401 errors. This supersedes
+the historical T-033 payload-first order; there is no unverified domain-payload authorization path.
 
 **Idempotency:** The combination of `(account_id, reference)` is unique for credit transactions, enforced by the `ux_credit_reference` index. If a credit with the same account and reference already exists:
 - If the amount matches, the original `tx_id` and `balance_after` are returned (idempotent replay).
@@ -243,10 +263,12 @@ This means a malformed or non-platform payload is reported as its specific `400`
 | 400    | `invalid_json`                 | Request body is not valid JSON or not a JSON object    |
 | 400    | `invalid_payload`              | JWS payload missing required fields or wrong action    |
 | 400    | `invalid_amount`               | Amount is not a positive integer                       |
+| 400    | `amount_out_of_range`           | Credit input exceeds the signed-64-bit limit |
 | 400    | `payload_mismatch`             | JWS payload `account_id` does not match URL, or duplicate reference with different amount |
 | 401    | `token_expired`                | The token's `exp` header claim is in the past           |
 | 403    | `forbidden`                    | Local signature verification failed (not signed by the registered platform key) |
 | 404    | `account_not_found`            | No account with this ID                                 |
+| 409    | `amount_out_of_range`           | Credit would exceed the recipient balance limit |
 | 503    | `service_not_ready`            | Ledger or platform agent not yet initialized             |
 
 ---
@@ -404,8 +426,8 @@ Lock funds in escrow for a task. Agent-signed operation — the agent must be th
 6. Debit the agent's account, create an escrow record, and log an `escrow_lock` transaction.
 7. All database operations happen in a single DB Gateway transaction.
 
-**Idempotency:** The combination of `(payer_account_id, task_id)` is unique for locked escrows, enforced by the `ux_locked_escrow_task` index. If a locked escrow with the same payer and task already exists:
-- If the amount matches, the existing escrow is returned (idempotent replay).
+**Idempotency:** The combination of `(payer_account_id, task_id)` is unique for the escrow's lifetime, enforced by the Gateway's `idx_bank_escrow_lifetime` index. Lookup happens before another debit, even after settlement or when spendable funds are exhausted. If an escrow with the same payer and task already exists:
+- If the amount matches, the existing escrow and its actual `locked`, `released` or `split` status are returned without another financial mutation.
 - If the amount differs, an `escrow_already_locked` error is returned.
 
 **Response (201 Created):**
@@ -426,6 +448,7 @@ Lock funds in escrow for a task. Agent-signed operation — the agent must be th
 | 400    | `invalid_json`                 | Request body is not valid JSON or not a JSON object     |
 | 400    | `invalid_payload`              | JWS payload missing required fields or wrong action      |
 | 400    | `invalid_amount`               | Amount is not a positive integer                          |
+| 400    | `amount_out_of_range`           | Lock amount exceeds the signed-64-bit limit |
 | 402    | `insufficient_funds`           | Account balance is less than the escrow amount             |
 | 403    | `forbidden`                    | Signature verification failed, or signer does not match `agent_id` in payload |
 | 404    | `account_not_found`            | No account for this agent                                    |
@@ -457,10 +480,10 @@ Release escrowed funds in full to a recipient. Platform-only operation, verified
 }
 ```
 
-**Behavior (in code order — payload validation before signature verification, T-033):**
+**Behavior (MP-03 strict-profile order):**
 1. Parse the request body as JSON; require a string `token` field.
-2. Decode the JWS payload without verifying its signature; validate `action` is `"escrow_release"`, `recipient_account_id` is a non-empty string, and (if present) the payload's `escrow_id` matches the URL path parameter.
-3. **Only after payload validation passes**, verify the JWS signature locally against the registered `PlatformAgent`'s public key.
+2. Verify the strict profile, signature and temporal policy locally; require the authenticated platform identity, audience, resource and `escrow_release` action.
+3. Validate authenticated `recipient_account_id` and any payload `escrow_id` against the URL.
 4. Look up the escrow record and confirm it is in `locked` status.
 5. Credit the full escrow amount to the recipient's account.
 6. Log an `escrow_release` transaction on the recipient's account (reference = `escrow_id`).
@@ -489,6 +512,7 @@ Release escrowed funds in full to a recipient. Platform-only operation, verified
 | 403    | `forbidden`                    | Local signature verification failed                          |
 | 404    | `escrow_not_found`             | No escrow with this ID                                        |
 | 404    | `account_not_found`            | Recipient account not found                                   |
+| 409    | `amount_out_of_range`           | Release would exceed the recipient balance limit |
 | 409    | `escrow_already_resolved`      | Escrow has already been released or split                     |
 | 503    | `service_not_ready`            | Ledger or platform agent not yet initialized                  |
 
@@ -518,11 +542,11 @@ Split escrowed funds proportionally between worker and poster. Platform-only ope
 }
 ```
 
-**Behavior (in code order — payload validation before signature verification, T-033):**
+**Behavior (MP-03 strict-profile order):**
 1. Parse the request body as JSON; require a string `token` field.
-2. Decode the JWS payload without verifying its signature; validate `action` is `"escrow_split"`, `worker_account_id` and `poster_account_id` are non-empty strings, `worker_pct` is an integer (its 0–100 *range* is checked later, in the store layer, as `invalid_amount` — a non-integer `worker_pct` fails here as `invalid_payload`), and (if present) the payload's `escrow_id` matches the URL path parameter.
-3. **Only after payload validation passes**, verify the JWS signature locally against the registered `PlatformAgent`'s public key.
-4. **In the store layer**, validate `worker_pct` is between 0 and 100 inclusive — this runs *before* the escrow is even looked up, so an out-of-range `worker_pct` on a nonexistent escrow still returns `invalid_amount`, not `escrow_not_found`.
+2. Verify the strict profile, signature and temporal policy locally; require the authenticated platform identity, audience, resource and `escrow_split` action.
+3. Validate authenticated worker/poster IDs, percentage and optional escrow-ID match. `worker_pct` must be an integer excluding booleans (`400 invalid_payload` for wrong type) and lie within 0–100 (`400 invalid_amount` otherwise).
+4. The store repeats percentage validation before looking up the escrow. With valid authentication, an out-of-range percentage on a nonexistent escrow returns `invalid_amount`; invalid signatures and authentic expiry still precede percentage errors.
 5. Look up the escrow record and confirm it is in `locked` status.
 6. Validate that `poster_account_id` matches the escrow's `payer_account_id`.
 7. Calculate the split: `worker_amount = floor(total * worker_pct / 100)`, `poster_amount = total - worker_amount`.
@@ -568,6 +592,7 @@ The worker always gets `floor(total * worker_pct / 100)`. The poster always gets
 | 403    | `forbidden`                    | Local signature verification failed                           |
 | 404    | `escrow_not_found`             | No escrow with this ID                                         |
 | 404    | `account_not_found`            | Worker or poster account not found                             |
+| 409    | `amount_out_of_range`           | Split credits would exceed a recipient balance limit, including combined same-account shares |
 | 409    | `escrow_already_resolved`      | Escrow has already been released or split                      |
 | 503    | `service_not_ready`            | Ledger or platform agent not yet initialized                   |
 
@@ -582,7 +607,8 @@ Complete list of error codes used by the Central Bank service:
 | 400    | `invalid_jws`                  | JWS token is malformed, missing, or not a string          |
 | 400    | `invalid_json`                 | Request body is not valid JSON or not a JSON object       |
 | 400    | `invalid_payload`              | JWS payload missing required fields or wrong action        |
-| 400    | `invalid_amount`               | Amount/balance/`worker_pct` is not a valid integer in the required range |
+| 400    | `invalid_amount`               | Amount/balance has an invalid type or sign, or integer `worker_pct` lies outside 0–100 |
+| 400    | `amount_out_of_range`           | Monetary input exceeds the signed-64-bit representation |
 | 400    | `payload_mismatch`             | JWS payload field does not match URL parameter, or duplicate reference with different amount, or `poster_account_id` does not match escrow payer |
 | 401    | `token_expired`                | Platform-signed token's `exp` header claim is in the past (only reachable on `credit`/`escrow_release`/`escrow_split`, which locally enforce expiry; other endpoints delegate expiry handling to Identity) |
 | 402    | `insufficient_funds`           | Escrow lock would cause negative balance                      |
@@ -592,6 +618,7 @@ Complete list of error codes used by the Central Bank service:
 | 404    | `escrow_not_found`             | No escrow with this ID                                          |
 | 405    | `method_not_allowed`           | HTTP method not supported on this endpoint                       |
 | 409    | `account_exists`               | Account already created for this agent                            |
+| 409    | `amount_out_of_range`           | Credit or settlement would overflow a recipient balance |
 | 409    | `escrow_already_resolved`      | Escrow has already been released or split                         |
 | 409    | `escrow_already_locked`        | Escrow already locked for this task with a different amount        |
 | 413    | `payload_too_large`            | Request body exceeds `request.max_body_size`                       |
@@ -720,11 +747,10 @@ Task Board (platform-signed)    Central Bank
   |       with action=escrow_release, |
   |       escrow_id, recipient_id> } |
   |  -------------------------------->|
-  |                                  |  2. Decode payload WITHOUT verifying signature
-  |                                  |  3. Validate action/recipient_account_id/escrow_id match
-  |                                  |  4. Verify signature LOCALLY against the
-  |                                  |     registered PlatformAgent's public key
-  |                                  |     (no network call)
+  |                                  |  2. Verify strict profile/signature/time LOCALLY
+  |                                  |     and require the registered platform kid
+  |                                  |  3. Check authenticated audience/resource/action
+  |                                  |  4. Validate recipient_account_id/escrow_id match
   |                                  |
   |                                  |  5. BEGIN TRANSACTION (gateway)
   |                                  |  6. Load escrow (must be locked)
@@ -749,12 +775,11 @@ Task Board (platform-signed)    Central Bank
   |       escrow_id, worker_id,      |
   |       worker_pct, poster_id> }   |
   |  -------------------------------->|
-  |                                  |  2. Decode payload WITHOUT verifying signature
-  |                                  |  3. Validate action/worker_id/poster_id/
-  |                                  |     worker_pct-is-int/escrow_id match
-  |                                  |  4. Verify signature LOCALLY against the
-  |                                  |     registered PlatformAgent's public key
-  |                                  |     (no network call)
+  |                                  |  2. Verify strict profile/signature/time LOCALLY
+  |                                  |     and require the registered platform kid
+  |                                  |  3. Check authenticated audience/resource/action
+  |                                  |  4. Validate worker_id/poster_id/strict percentage
+  |                                  |     and escrow_id match
   |                                  |
   |                                  |  5. Validate worker_pct in [0, 100]
   |                                  |     (store layer, before escrow lookup)

@@ -39,8 +39,9 @@ Required status/error mappings:
 | 400    | `invalid_json`              | Request body is malformed JSON |
 | 400    | `invalid_public_key`        | `public_key` is not a valid `ed25519:<base64 32-byte key>` |
 | 400    | `invalid_name`               | `name` is empty or whitespace-only |
-| 400    | `invalid_jws`                | `token` is not a valid compact JWS, header is unparsable, `alg` is not `EdDSA`, `kid` is missing/non-string, or the decoded payload is not a JSON object |
-| 401    | `token_expired`              | The JWS signature is authentic but the header `exp` claim is in the past |
+| 400    | `invalid_jws`                | Non-object request body or signed payload, malformed compact/header representation, decoded signature length other than 64 bytes, exact protected-header fields/types/constants, or lifetime validation fails |
+| 401    | `token_expired`              | Authentic token satisfies `now >= exp + clock_skew_seconds` |
+| 401    | `token_not_yet_valid`         | Authentic token satisfies `iat > now + clock_skew_seconds` |
 | 404    | `agent_not_found`            | Referenced `agent_id` (or JWS header `kid`) does not exist |
 | 405    | `method_not_allowed`         | Unsupported HTTP method on a defined route |
 | 409    | `public_key_exists`          | Duplicate public key registration |
@@ -52,7 +53,7 @@ Required status/error mappings:
 ## Test Data Conventions
 
 - `keypair_A`, `keypair_B`, `keypair_E` are freshly generated Ed25519 keypairs.
-- A JWS token is a compact `header.payload.signature` string, base64url-encoded, signed with EdDSA. The protected header carries `alg`, `kid` (the signer's `agent_id`), and optionally `iat`/`exp` (Unix seconds).
+- A JWS token is a compact `header.payload.signature` string signed with EdDSA. Its exact protected header contains `alg`, `typ`, `kid`, integer `iat`/`exp`, `aud`, and concrete `resource`; booleans are rejected for integer fields.
 - All IDs returned by the service must match `a-<uuid4>`.
 
 ---
@@ -160,15 +161,15 @@ Required status/error mappings:
 
 `verify-jws` is the live, tested signature-verification endpoint — the one the platform's shared `IdentityClient` calls on behalf of central-bank, task-board, and reputation.
 
-### JWS-01 Valid token returns payload
-**Setup:** Register Alice, build a JWS token signed by Alice's key with `kid = alice_id` and payload `{"action": "escrow_lock", "amount": 10}`.
+### JWS-01 Valid token returns authenticated header and payload
+**Setup:** Register Alice and build a strictly profiled token signed by Alice's key. The exact protected header contains `alg="EdDSA"`, `typ="JWT"`, `kid=alice_id`, integer `iat`/`exp`, `aud="central-bank"`, and `resource="POST /escrow/lock"`; the payload is `{"action": "escrow_lock", "amount": 10}`.
 **Action:** `POST /agents/verify-jws {token}`
-**Expected:** `200`, body `{"valid": true, "agent_id": "<alice_id>", "payload": {"action": "escrow_lock", "amount": 10}}`
+**Expected:** `200`; body includes `valid=true`, `agent_id=<alice_id>`, the complete authenticated `protected_header`, and the payload. `agent_id == protected_header.kid`.
 
 ### JWS-02 Empty payload object is valid
-**Setup:** Register Alice, build a JWS token with payload `{}`.
+**Setup:** Register Alice; build a JWS token with the complete strict protected header and payload `{}`.
 **Action:** Verify the token.
-**Expected:** `200`, `{"valid": true, "payload": {}}`
+**Expected:** `200`, with `valid=true`, matching `agent_id`/`protected_header.kid`, the complete `protected_header`, and `payload={}`.
 
 ### JWS-03 Wrong signer returns valid=false
 **Setup:** Register Alice; build a token with `kid = alice_id` but signed by a different keypair.
@@ -226,15 +227,51 @@ Required status/error mappings:
 **Action:** Verify the token.
 **Expected:** `401`, `error = token_expired`
 
-### JWS-16 Token with future `exp` is accepted
-**Setup:** Register an agent; build a token with `exp` in the future.
+### JWS-16 Token with a valid bounded lifetime is accepted
+**Setup:** Register an agent; build a strict token whose integer `iat <= now + skew`, `exp > now`, and `exp - iat <= max_lifetime_seconds`.
 **Action:** Verify the token.
-**Expected:** `200`, `{"valid": true}`
+**Expected:** `200`, `valid=true`, with the authenticated protected header returned.
 
-### JWS-17 Token without `iat`/`exp` is accepted (legacy tolerance)
-**Setup:** Register an agent; build a token whose header carries neither `iat` nor `exp`.
+### JWS-17 Token without `iat`/`exp` is rejected
+**Setup:** Register an agent; use the raw-signature test fixture to build an authentically signed legacy token whose header carries neither `iat` nor `exp`.
 **Action:** Verify the token.
-**Expected:** `200`, `{"valid": true}` — Identity does not require expiry claims to be present.
+**Expected:** `400`, `error = invalid_jws`; no `valid:true` response is returned and no state changes.
+
+### JWS-18 Request body, protected header, and signed payload require objects
+**Action:** For each JSON scalar/collection `null`, list, string, and number, send it as the request body, then use the raw fixture to sign it first as the protected header and then as the payload.
+**Expected:** Each request returns `400`, `error = invalid_jws`, never `500`.
+
+### JWS-19 Exact protected-header field and type profile
+**Action:** Using real Ed25519 signatures, vary each required field through missing, null, and wrong-type values; include booleans for `iat` and `exp`, wrong `alg`/`typ`, blank `kid`/`aud`/`resource`, and one extra field.
+**Expected:** Every vector returns `400`, `error = invalid_jws`.
+
+### JWS-20 Lifetime shape and maximum are enforced
+**Action:** Verify authentic tokens with `exp == iat`, `exp < iat`, zero/negative lifetime, and `exp - iat == max_lifetime_seconds + 1`.
+**Expected:** Every vector returns `400`, `error = invalid_jws`.
+
+### JWS-21 Future issue-time boundary is exact
+**Action:** At controlled integer `now`, verify authentic tokens with `iat = now + skew` and `iat = now + skew + 1`.
+**Expected:** The first succeeds; the second returns `401`, `error = token_not_yet_valid`.
+
+### JWS-22 Expiry boundary is exact
+**Action:** At controlled integer `now`, verify authentic tokens at `now = exp + skew - 1` and `now = exp + skew`.
+**Expected:** The first succeeds; the second returns `401`, `error = token_expired`.
+
+### JWS-23 Successful identity is bound to authenticated `kid`
+**Action:** Verify a valid strict token and inspect the complete successful response.
+**Expected:** `agent_id == protected_header.kid`; response binding preserves JSON types, so `true`, `1`, and `1.0` cannot substitute for one another.
+
+### JWS-24 Token-policy configuration is required and validated
+**Action:** Construct Identity settings with missing, zero, and negative `max_lifetime_seconds`, and with missing or negative `clock_skew_seconds`; then load the explicit initial values `300` and `30`.
+**Expected:** Every invalid configuration fails at construction/startup. The explicit `300`/`30` configuration loads and is passed to verification; no code default supplies either value.
+
+### JWS-25 Signature length is structural; mismatch remains explicit
+**Action:** Verify one otherwise well-formed token whose decoded signature is not 64 bytes, then one with a 64-byte signature produced by the wrong key.
+**Expected:** Wrong length is `400 invalid_jws`. Valid-length mismatch retains `200`, `valid=false`, `reason="signature mismatch"`.
+
+### JWS-26 Shared client binds the requested token type-strictly
+**Action:** After an upstream `valid:true`, exercise response substitutions `true`/`1`/`1.0`, mismatched header/payload values, and an originally requested token that cannot be parsed as the strict compact profile.
+**Expected:** Each is an upstream contract failure mapped to `502 identity_service_unavailable`; no `VerifiedJws` is fabricated.
 
 ---
 
@@ -337,11 +374,11 @@ Service is release-ready only if:
 | Category | IDs | Count |
 |----------|-----|-------|
 | Registration | REG-01 to REG-18 | 18 |
-| Signature Verification | JWS-01 to JWS-17 | 17 |
+| Signature Verification | JWS-01 to JWS-26 | 26 |
 | Read/List/Health | READ-01 to HEALTH-03 | 8 |
 | HTTP misuse | HTTP-01 | 1 |
 | Cross-cutting security | SEC-01 to SEC-03 | 3 |
-| **Total** |  | **47** |
+| **Total** |  | **56** |
 
 | Endpoint | Covered By |
 |----------|------------|

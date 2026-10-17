@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import UTC, datetime
 from typing import Any
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from joserfc import jws
-from joserfc.jwk import OKPKey
+from service_auth.jws import InvalidPayloadError, VerifiedJws, create_jws, parse_jws
 
 # Registry of signer public keys by ``kid``, populated by ``make_jws_token``. It lets the
 # router-test verifiers perform faithful Ed25519 verification (accept genuinely-signed
@@ -23,29 +23,26 @@ def _b64url_decode(segment: str) -> bytes:
     return base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4))
 
 
-def verify_compact_jws(token: str) -> dict[str, Any]:
+def _b64url_encode(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode()
+
+
+def verify_compact_jws(token: str) -> VerifiedJws:
     """Faithfully verify a compact JWS against the registered key for its ``kid``.
 
     Returns the decoded payload; raises ``InvalidSignature`` if the token is malformed,
     the signer is unknown, or the signature does not match the signing input. Mirrors the
     contract of ``PlatformAgent.validate_certificate`` for use as a test double.
     """
-    parts = token.split(".")
-    if len(parts) != 3:
-        raise InvalidSignature("malformed compact JWS")
-    header_b64, payload_b64, sig_b64 = parts
-    try:
-        header = json.loads(_b64url_decode(header_b64))
-    except (ValueError, json.JSONDecodeError) as exc:
-        raise InvalidSignature("invalid JWS header") from exc
-    kid = header.get("kid") if isinstance(header, dict) else None
-    public_key = _PUBLIC_KEYS.get(kid) if isinstance(kid, str) else None
+    parsed = parse_jws(token)
+    public_key = _PUBLIC_KEYS.get(parsed.header.kid)
     if public_key is None:
         raise InvalidSignature("unknown signer")
-    signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
-    public_key.verify(_b64url_decode(sig_b64), signing_input)
-    decoded: dict[str, Any] = json.loads(_b64url_decode(payload_b64))
-    return decoded
+    public_key.verify(parsed.signature, parsed.signing_input)
+    action = parsed.payload.get("action")
+    if not isinstance(action, str) or not action:
+        raise InvalidPayloadError("Invalid JWS payload action")
+    return VerifiedJws(header=parsed.header, payload=parsed.payload)
 
 
 def generate_keypair() -> tuple[Ed25519PrivateKey, str]:
@@ -60,33 +57,90 @@ def make_jws_token(
     private_key: Ed25519PrivateKey,
     agent_id: str,
     payload: dict[str, Any],
+    *,
+    audience: str = "task-board",
+    resource: str | None = None,
 ) -> str:
     """Create a real JWS compact token signed by the given key."""
-    raw_private = private_key.private_bytes_raw()
-    raw_public = private_key.public_key().public_bytes_raw()
-    jwk_dict = {
-        "kty": "OKP",
-        "crv": "Ed25519",
-        "d": base64.urlsafe_b64encode(raw_private).rstrip(b"=").decode(),
-        "x": base64.urlsafe_b64encode(raw_public).rstrip(b"=").decode(),
-    }
-    key = OKPKey.import_key(jwk_dict)
-    protected = {"alg": "EdDSA", "kid": agent_id}
-    payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
     _PUBLIC_KEYS[agent_id] = private_key.public_key()
-    return jws.serialize_compact(protected, payload_bytes, key, algorithms=["EdDSA"])
-
-
-def make_fake_jws(payload: dict[str, Any], kid: str = "a-test-agent") -> str:
-    """Build a structurally valid but unsigned JWS (for format-only tests)."""
-    header = (
-        base64.urlsafe_b64encode(json.dumps({"alg": "EdDSA", "kid": kid}).encode())
-        .rstrip(b"=")
-        .decode()
+    return create_jws(
+        payload,
+        private_key,
+        kid=agent_id,
+        audience=audience,
+        resource=resource or _default_resource(payload),
+        token_ttl_seconds=60,
     )
-    body = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
-    signature = base64.urlsafe_b64encode(b"fake-signature").rstrip(b"=").decode()
-    return f"{header}.{body}.{signature}"
+
+
+def _default_resource(payload: dict[str, Any]) -> str:
+    action = payload.get("action")
+    task_id = payload.get("task_id")
+    resources = {
+        "create_task": "POST /tasks",
+        "submit_bid": f"POST /tasks/{task_id}/bids",
+        "list_bids": f"GET /tasks/{task_id}/bids",
+        "accept_bid": f"POST /tasks/{task_id}/bids/{payload.get('bid_id')}/accept",
+        "upload_asset": f"POST /tasks/{task_id}/assets",
+        "submit_deliverable": f"POST /tasks/{task_id}/submit",
+        "approve_task": f"POST /tasks/{task_id}/approve",
+        "dispute_task": f"POST /tasks/{task_id}/dispute",
+        "submit_rebuttal": f"POST /tasks/{task_id}/rebuttal",
+        "cancel_task": f"POST /tasks/{task_id}/cancel",
+        "record_ruling": f"POST /tasks/{task_id}/ruling",
+        "escrow_lock": "POST /escrow/lock",
+    }
+    resource = resources.get(action)
+    if resource is None or "None" in resource:
+        raise ValueError(f"Test token requires explicit resource for action {action!r}")
+    return resource
+
+
+def make_profile_jws_with_unchecked_payload(
+    private_key: Ed25519PrivateKey,
+    agent_id: str,
+    payload: dict[str, Any],
+    *,
+    resource: str,
+    audience: str = "task-board",
+) -> str:
+    """Sign a malformed payload under an otherwise strict protected header."""
+    issued_at = int(datetime.now(UTC).timestamp())
+    header = {
+        "alg": "EdDSA",
+        "typ": "JWT",
+        "kid": agent_id,
+        "iat": issued_at,
+        "exp": issued_at + 60,
+        "aud": audience,
+        "resource": resource,
+    }
+    header_segment = _b64url_encode(
+        json.dumps(header, sort_keys=True, separators=(",", ":")).encode()
+    )
+    payload_segment = _b64url_encode(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    )
+    signing_input = f"{header_segment}.{payload_segment}".encode()
+    _PUBLIC_KEYS[agent_id] = private_key.public_key()
+    return f"{header_segment}.{payload_segment}.{_b64url_encode(private_key.sign(signing_input))}"
+
+
+def make_fake_jws(
+    payload: dict[str, Any],
+    kid: str = "a-test-agent",
+    *,
+    resource: str | None = None,
+) -> str:
+    """Build a structurally valid but unsigned JWS (for format-only tests)."""
+    return tamper_jws(
+        make_jws_token(
+            Ed25519PrivateKey.generate(),
+            kid,
+            payload,
+            resource=resource,
+        )
+    )
 
 
 def tamper_jws(token: str) -> str:

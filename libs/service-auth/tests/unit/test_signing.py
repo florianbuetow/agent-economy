@@ -14,7 +14,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
 )
 
-from service_auth import signing
+from service_auth import jws
+from service_auth.jws import InvalidJwsError, TokenPolicy
 from service_auth.signing import (
     PlatformSigner,
     TokenExpiredError,
@@ -25,6 +26,9 @@ from service_auth.signing import (
     public_key_to_b64,
     verify_jws,
 )
+
+POLICY = TokenPolicy(max_lifetime_seconds=300, clock_skew_seconds=0)
+CONTEXT = {"audience": "central-bank", "resource": "POST /escrow/esc-1/release"}
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -55,28 +59,45 @@ class TestSignVerify:
     def test_sign_and_verify_roundtrip(self) -> None:
         private_key = Ed25519PrivateKey.generate()
         payload = {"action": "escrow_release", "escrow_id": "esc-1", "amount": 50}
-        token = create_jws(payload, private_key, kid="a-1")
+        token = create_jws(payload, private_key, kid="a-1", token_ttl_seconds=300, **CONTEXT)
 
-        result = verify_jws(token, private_key.public_key())
-        assert result == payload
+        result = verify_jws(token, private_key.public_key(), policy=POLICY)
+        assert result.payload == payload
 
     def test_verify_rejects_wrong_key(self) -> None:
         private_key = Ed25519PrivateKey.generate()
         wrong_public = Ed25519PrivateKey.generate().public_key()
-        token = create_jws({"action": "test"}, private_key, kid="a-1")
+        token = create_jws(
+            {"action": "test"}, private_key, kid="a-1", token_ttl_seconds=300, **CONTEXT
+        )
 
         with pytest.raises(InvalidSignature):
-            verify_jws(token, wrong_public)
+            verify_jws(token, wrong_public, policy=POLICY)
 
     def test_malformed_token_raises_value_error(self) -> None:
         public_key = Ed25519PrivateKey.generate().public_key()
         with pytest.raises(ValueError, match="Invalid JWS"):
-            verify_jws("only.two", public_key)
+            verify_jws("only.two", public_key, policy=POLICY)
 
-    def test_canonicalization_is_key_order_independent(self) -> None:
+    def test_canonicalization_is_key_order_independent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(jws, "_clock", lambda: datetime(2026, 1, 1, tzinfo=UTC))
         private_key = Ed25519PrivateKey.generate()
-        token_a = create_jws({"b": 2, "a": 1}, private_key, kid="a-1")
-        token_b = create_jws({"a": 1, "b": 2}, private_key, kid="a-1")
+        token_a = create_jws(
+            {"action": "test", "b": 2, "a": 1},
+            private_key,
+            kid="a-1",
+            token_ttl_seconds=300,
+            **CONTEXT,
+        )
+        token_b = create_jws(
+            {"a": 1, "b": 2, "action": "test"},
+            private_key,
+            kid="a-1",
+            token_ttl_seconds=300,
+            **CONTEXT,
+        )
         # sort_keys canonicalization makes the two payload orderings identical.
         assert token_a == token_b
 
@@ -85,29 +106,38 @@ class TestSignVerify:
 class TestTamperRejection:
     def test_rejects_tampered_payload(self) -> None:
         private_key = Ed25519PrivateKey.generate()
-        token = create_jws({"action": "test", "amount": 1}, private_key, kid="a-1")
+        token = create_jws(
+            {"action": "test", "amount": 1},
+            private_key,
+            kid="a-1",
+            token_ttl_seconds=300,
+            **CONTEXT,
+        )
         header_b64, payload_b64, sig_b64 = token.split(".")
-        tampered = f"{header_b64}.{payload_b64}xy.{sig_b64}"
+        changed_payload = _decode_segment(payload_b64)
+        changed_payload["amount"] = 2
+        changed_b64 = (
+            base64.urlsafe_b64encode(json.dumps(changed_payload).encode()).rstrip(b"=").decode()
+        )
+        tampered = f"{header_b64}.{changed_b64}.{sig_b64}"
 
         with pytest.raises(InvalidSignature):
-            verify_jws(tampered, private_key.public_key())
+            verify_jws(tampered, private_key.public_key(), policy=POLICY)
 
     def test_rejects_tampered_header(self) -> None:
         private_key = Ed25519PrivateKey.generate()
-        token = create_jws({"action": "test"}, private_key, kid="a-1")
-        _header_b64, payload_b64, sig_b64 = token.split(".")
-        # Forge a header claiming a different kid.
-        forged = (
-            base64.urlsafe_b64encode(
-                json.dumps({"alg": "EdDSA", "typ": "JWT", "kid": "a-imposter"}).encode()
-            )
-            .rstrip(b"=")
-            .decode()
+        token = create_jws(
+            {"action": "test"}, private_key, kid="a-1", token_ttl_seconds=300, **CONTEXT
         )
+        header_b64, payload_b64, sig_b64 = token.split(".")
+        # Preserve the strict profile while changing the signed identity.
+        header = _decode_segment(header_b64)
+        header["kid"] = "a-imposter"
+        forged = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
         tampered = f"{forged}.{payload_b64}.{sig_b64}"
 
         with pytest.raises(InvalidSignature):
-            verify_jws(tampered, private_key.public_key())
+            verify_jws(tampered, private_key.public_key(), policy=POLICY)
 
 
 @pytest.mark.unit
@@ -115,7 +145,7 @@ class TestExpiryHeaderClaims:
     def test_ttl_stamps_iat_exp_into_header_not_payload(self) -> None:
         private_key = Ed25519PrivateKey.generate()
         payload = {"action": "credit", "amount": 100}
-        token = create_jws(payload, private_key, kid="a-1", token_ttl_seconds=300)
+        token = create_jws(payload, private_key, kid="a-1", token_ttl_seconds=300, **CONTEXT)
 
         header_b64, payload_b64, _ = token.split(".")
         header = _decode_segment(header_b64)
@@ -126,60 +156,81 @@ class TestExpiryHeaderClaims:
         assert "iat" not in decoded_payload
         assert decoded_payload == payload
 
-    def test_legacy_token_without_exp_is_accepted(self) -> None:
+    def test_legacy_token_without_exp_is_rejected(self) -> None:
         private_key = Ed25519PrivateKey.generate()
-        token = create_jws({"action": "test"}, private_key, kid="a-1")
-        header = _decode_segment(token.split(".")[0])
-        assert "exp" not in header
-
-        result = verify_jws(token, private_key.public_key())
-        assert result["action"] == "test"
+        header = {
+            "alg": "EdDSA",
+            "typ": "JWT",
+            "kid": "a-1",
+            "iat": 1,
+            "aud": "central-bank",
+            "resource": "POST /escrow/esc-1/release",
+        }
+        first = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        second = base64.urlsafe_b64encode(b'{"action":"test"}').rstrip(b"=").decode()
+        signature = (
+            base64.urlsafe_b64encode(private_key.sign(f"{first}.{second}".encode()))
+            .rstrip(b"=")
+            .decode()
+        )
+        token = f"{first}.{second}.{signature}"
+        assert "exp" not in _decode_segment(first)
+        with pytest.raises(InvalidJwsError) as caught:
+            verify_jws(token, private_key.public_key(), policy=POLICY)
+        assert caught.value.status_code == 400
+        assert caught.value.error_code == "invalid_jws"
 
     @pytest.mark.usefixtures("reset_clock")
     def test_expired_token_is_rejected(self) -> None:
         private_key = Ed25519PrivateKey.generate()
-        signing._clock = lambda: datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
-        token = create_jws({"action": "test"}, private_key, kid="a-1", token_ttl_seconds=60)
+        jws._clock = lambda: datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
+        token = create_jws(
+            {"action": "test"}, private_key, kid="a-1", token_ttl_seconds=60, **CONTEXT
+        )
 
         # Advance the clock past the 60s lifetime.
-        signing._clock = lambda: datetime(2026, 1, 1, 12, 5, 0, tzinfo=UTC)
+        jws._clock = lambda: datetime(2026, 1, 1, 12, 5, 0, tzinfo=UTC)
         with pytest.raises(TokenExpiredError):
-            verify_jws(token, private_key.public_key())
+            verify_jws(token, private_key.public_key(), policy=POLICY)
 
     @pytest.mark.usefixtures("reset_clock")
     def test_unexpired_token_is_accepted(self) -> None:
         private_key = Ed25519PrivateKey.generate()
-        signing._clock = lambda: datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
-        token = create_jws({"action": "test"}, private_key, kid="a-1", token_ttl_seconds=300)
+        jws._clock = lambda: datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
+        token = create_jws(
+            {"action": "test"}, private_key, kid="a-1", token_ttl_seconds=300, **CONTEXT
+        )
 
-        signing._clock = lambda: datetime(2026, 1, 1, 12, 2, 0, tzinfo=UTC)
-        result = verify_jws(token, private_key.public_key())
-        assert result["action"] == "test"
+        jws._clock = lambda: datetime(2026, 1, 1, 12, 2, 0, tzinfo=UTC)
+        result = verify_jws(token, private_key.public_key(), policy=POLICY)
+        assert result.payload["action"] == "test"
 
 
 @pytest.mark.unit
-class TestCrossCanonicalizationCompatibility:
-    """The lib's verify must accept tokens from both pre-WP-02 signers."""
+class TestLegacyProfileRejection:
+    """Captured pre-profile tokens lack required claims and must be rejected."""
 
     def _public_key(self, fixtures: dict[str, object]) -> Ed25519PublicKey:
         raw = base64.b64decode(str(fixtures["public_key_b64_raw"]))
         return Ed25519PublicKey.from_public_bytes(raw)
 
-    def test_accepts_base_agent_old_canonicalization(
-        self, old_signer_tokens: dict[str, object]
-    ) -> None:
+    def test_rejects_base_agent_old_profile(self, old_signer_tokens: dict[str, object]) -> None:
         public_key = self._public_key(old_signer_tokens)
         token = str(old_signer_tokens["base_agent_old_token"])
-        result = verify_jws(token, public_key)
-        assert result == old_signer_tokens["payload"]
+        with pytest.raises(InvalidJwsError) as caught:
+            verify_jws(token, public_key, policy=POLICY)
+        assert caught.value.status_code == 400
+        assert caught.value.error_code == "invalid_jws"
 
-    def test_accepts_platform_signer_canonicalization(
+    def test_rejects_platform_signer_old_profile(
         self, old_signer_tokens: dict[str, object]
     ) -> None:
         public_key = self._public_key(old_signer_tokens)
         token = str(old_signer_tokens["platform_signer_token"])
-        result = verify_jws(token, public_key)
-        assert result == old_signer_tokens["payload"]
+        with pytest.raises(InvalidJwsError) as caught:
+            verify_jws(token, public_key, policy=POLICY)
+        assert caught.value.status_code == 400
+        assert caught.value.error_code == "invalid_jws"
 
 
 @pytest.mark.unit
@@ -191,22 +242,20 @@ class TestPlatformSigner:
             private_key_path=str(tmp_path / "platform.key"),
             token_ttl_seconds=300,
         )
-        token = signer.sign({"action": "escrow_release", "escrow_id": "esc-1"})
+        token = signer.sign({"action": "escrow_release", "escrow_id": "esc-1"}, **CONTEXT)
 
         header = _decode_segment(token.split(".")[0])
         assert header["kid"] == "a-platform"
         assert "exp" in header
-        result = verify_jws(token, public_key)
-        assert result["action"] == "escrow_release"
+        result = verify_jws(token, public_key, policy=POLICY)
+        assert result.payload["action"] == "escrow_release"
         assert public_key_to_b64(private_key.public_key()) == public_key_to_b64(public_key)
 
-    def test_legacy_signer_omits_exp(self, tmp_path: Path) -> None:
+    def test_legacy_signer_without_lifetime_is_rejected(self, tmp_path: Path) -> None:
         generate_keypair("platform", tmp_path)
-        signer = PlatformSigner(
-            platform_agent_id="a-platform",
-            private_key_path=str(tmp_path / "platform.key"),
-            token_ttl_seconds=None,
-        )
-        token = signer.sign({"action": "escrow_release", "escrow_id": "esc-1"})
-        header = _decode_segment(token.split(".")[0])
-        assert "exp" not in header
+        with pytest.raises(ValueError, match="positive integer"):
+            PlatformSigner(
+                platform_agent_id="a-platform",
+                private_key_path=str(tmp_path / "platform.key"),
+                token_ttl_seconds=None,  # type: ignore[arg-type]
+            )

@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
+import httpx  # noqa: TC002 - runtime test signer annotation
 import pytest
 
 from court_service.services.dispute_db_client import DisputeDbClient
@@ -46,6 +47,12 @@ _NON_COLUMN_PREFIXES = ("FOREIGN KEY", "CHECK", "PRIMARY KEY", "UNIQUE")
 _CLAIMS_REDUNDANT = frozenset({"claim_id"})
 _REBUTTALS_REDUNDANT = frozenset({"rebuttal_id", "claim_id", "agent_id"})
 _RULINGS_REDUNDANT = frozenset({"ruling_id", "claim_id", "task_id"})
+
+
+class _TestSigner:
+    def sign_request(self, request: httpx.Request, *, action: str) -> httpx.Request:
+        request.headers["Authorization"] = f"Bearer {action}"
+        return request
 
 
 def _schema_columns(table: str) -> set[str]:
@@ -76,7 +83,11 @@ def _mock_response(status_code: int, json_data: Any = None) -> MagicMock:
 
 @pytest.fixture
 def client() -> DisputeDbClient:
-    return DisputeDbClient(base_url="http://gateway.invalid", timeout_seconds=1)
+    return DisputeDbClient(
+        base_url="http://gateway.invalid",
+        timeout_seconds=1,
+        signer=_TestSigner(),  # type: ignore[arg-type]
+    )
 
 
 @pytest.mark.unit
@@ -146,7 +157,8 @@ class TestComposeDisputeCoversEveryNonRedundantColumn:
         }
         task = {"escrow_id": "esc-1"}
 
-        def _get(path: str, **_kwargs: object) -> MagicMock:
+        def _send(request: httpx.Request, **_kwargs: object) -> MagicMock:
+            path = request.url.path
             if path == f"/court/claims/{dispute_id}":
                 return _mock_response(200, claim)
             if path == f"/court/claims/{dispute_id}/rebuttal":
@@ -157,7 +169,7 @@ class TestComposeDisputeCoversEveryNonRedundantColumn:
                 return _mock_response(200, task)
             return _mock_response(404)
 
-        client._client.get = MagicMock(side_effect=_get)
+        client._client.send = MagicMock(side_effect=_send)
 
         dispute = client.get_dispute(dispute_id)
 
@@ -212,7 +224,8 @@ class TestComposeDisputeCoversEveryNonRedundantColumn:
             "filed_at": "2026-03-01T09:00:00Z",
         }
 
-        def _get(path: str, **_kwargs: object) -> MagicMock:
+        def _send(request: httpx.Request, **_kwargs: object) -> MagicMock:
+            path = request.url.path
             if path == f"/court/claims/{dispute_id}":
                 return _mock_response(200, claim)
             if path in (
@@ -224,7 +237,7 @@ class TestComposeDisputeCoversEveryNonRedundantColumn:
                 return _mock_response(200, {"escrow_id": "esc-2"})
             return _mock_response(404)
 
-        client._client.get = MagicMock(side_effect=_get)
+        client._client.send = MagicMock(side_effect=_send)
 
         dispute = client.get_dispute(dispute_id)
 

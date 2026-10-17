@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+from service_auth.financial_identity import operation_id_for
+from service_auth.jws import parse_jws
 from service_commons.exceptions import ServiceError
 
 from task_board_service.services.errors import DuplicateTaskError
@@ -22,10 +24,69 @@ from task_board_service.services.task_helpers import (
     task_to_response,
     task_to_summary,
 )
-from task_board_service.services.token_validator import decode_base64url_json
 
 if TYPE_CHECKING:
     from task_board_service.services.task_manager import TaskManager
+
+
+def _invalid_lock_response() -> ServiceError:
+    return ServiceError(
+        "central_bank_unavailable",
+        "Central Bank returned an invalid escrow lock receipt",
+        502,
+        {},
+    )
+
+
+def new_lock_escrow_id(
+    envelope: dict[str, Any],
+    *,
+    operation_id: str,
+    task_id: str,
+    poster_id: str,
+    reward: int,
+) -> str:
+    """Return the escrow ID only for a matching, currently locked native receipt."""
+    receipt = envelope.get("receipt")
+    current = envelope.get("current_escrow")
+    if envelope.get("outcome") != "native_receipt":
+        raise _invalid_lock_response()
+    if not isinstance(receipt, dict) or not isinstance(current, dict):
+        raise _invalid_lock_response()
+    result = receipt.get("result")
+    legs = receipt.get("legs")
+    if not isinstance(result, dict) or not isinstance(legs, list) or len(legs) != 1:
+        raise _invalid_lock_response()
+    leg = legs[0]
+    if not isinstance(leg, dict):
+        raise _invalid_lock_response()
+    escrow_id = receipt.get("escrow_id")
+    if not isinstance(escrow_id, str) or escrow_id == "":
+        raise _invalid_lock_response()
+    valid_receipt = (
+        receipt.get("receipt_version") == 1
+        and receipt.get("operation_id") == operation_id
+        and receipt.get("operation_kind") == "escrow_lock"
+        and receipt.get("source_reference") == task_id
+        and result.get("escrow_status_at_commit") == "locked"
+        and leg.get("role") == "payer"
+        and leg.get("account_id") == poster_id
+        and leg.get("direction") == "debit"
+        and leg.get("amount") == reward
+        and not isinstance(leg.get("amount"), bool)
+    )
+    valid_current = (
+        current.get("escrow_id") == escrow_id
+        and current.get("payer_account_id") == poster_id
+        and current.get("task_id") == task_id
+        and current.get("amount") == reward
+        and not isinstance(current.get("amount"), bool)
+        and current.get("status") == "locked"
+        and current.get("resolved_at") is None
+    )
+    if not valid_receipt or not valid_current:
+        raise _invalid_lock_response()
+    return escrow_id
 
 
 class TaskCreationCoordinator:
@@ -49,7 +110,11 @@ class TaskCreationCoordinator:
         """
         manager = self._manager
         # Steps 4-7a: Verify task_token via Identity service, validate action
-        payload = await manager.token_validator.validate_jws_token(task_token, "create_task")
+        payload = await manager.token_validator.validate_jws_token(
+            task_token,
+            "create_task",
+            expected_resource="POST /tasks",
+        )
         signer_id: str = payload["_signer_id"]
 
         # Step 7b: Validate required fields in task_token payload
@@ -171,16 +236,17 @@ class TaskCreationCoordinator:
 
         # Step 8: Cross-validate escrow_token payload (decoded without sig verification)
         escrow_payload = manager.token_validator.decode_escrow_token_payload(escrow_token)
-        escrow_header = decode_base64url_json(escrow_token.split(".", maxsplit=1)[0], "header")
+        escrow_header = parse_jws(escrow_token).header
 
         escrow_task_id = escrow_payload.get("task_id")
         escrow_amount = escrow_payload.get("amount")
+        escrow_operation_id = escrow_payload.get("operation_id")
 
         # Missing fields in escrow payload means cross-validation cannot proceed
-        if escrow_task_id is None or escrow_amount is None:
+        if escrow_task_id is None or escrow_amount is None or escrow_operation_id is None:
             raise ServiceError(
                 "token_mismatch",
-                "Escrow token payload must include task_id and amount",
+                "Escrow token payload must include task_id, amount, and operation_id",
                 400,
                 {},
             )
@@ -201,8 +267,17 @@ class TaskCreationCoordinator:
                 {},
             )
 
-        escrow_signer_id = escrow_header.get("kid")
-        if not isinstance(escrow_signer_id, str) or escrow_signer_id != signer_id:
+        expected_operation_id = operation_id_for("task-lock", (task_id, poster_id))
+        if escrow_operation_id != expected_operation_id:
+            raise ServiceError(
+                "token_mismatch",
+                "escrow operation_id does not match the task posting intent",
+                400,
+                {},
+            )
+
+        escrow_signer_id = escrow_header.kid
+        if escrow_signer_id != signer_id:
             raise ServiceError(
                 "token_mismatch",
                 "escrow signer does not match task signer",
@@ -252,7 +327,13 @@ class TaskCreationCoordinator:
                 502,
                 {},
             ) from exc
-        escrow_id: str = escrow_result["escrow_id"]
+        escrow_id = new_lock_escrow_id(
+            escrow_result,
+            operation_id=expected_operation_id,
+            task_id=task_id,
+            poster_id=poster_id,
+            reward=reward_int,
+        )
 
         # Insert task into DB
         created_at = now_iso()
@@ -291,7 +372,12 @@ class TaskCreationCoordinator:
             # DB insert failed (e.g., race condition on duplicate task_id)
             # Rollback escrow: release back to poster
             try:
-                await manager.escrow_coordinator.release_escrow(escrow_id, poster_id)
+                await manager.escrow_coordinator.release_task_escrow(
+                    task_id,
+                    "posting_compensation",
+                    escrow_id,
+                    poster_id,
+                )
             except ServiceError:
                 manager.logger.error(
                     "Failed to release escrow during rollback",
@@ -366,7 +452,11 @@ class TaskCreationCoordinator:
         """
         manager = self._manager
         # Steps 4-7a: Verify JWS, validate action
-        payload = await manager.token_validator.validate_jws_token(token, "cancel_task")
+        payload = await manager.token_validator.validate_jws_token(
+            token,
+            "cancel_task",
+            expected_resource=f"POST /tasks/{task_id}/cancel",
+        )
         signer_id: str = payload["_signer_id"]
 
         # Step 7b: Validate task_id in payload
@@ -411,7 +501,12 @@ class TaskCreationCoordinator:
             raise ServiceError("forbidden", "Only the poster can cancel this task", 403, {})
 
         # Step 13: Release escrow to poster
-        await manager.escrow_coordinator.release_escrow(task["escrow_id"], task["poster_id"])
+        await manager.escrow_coordinator.release_task_escrow(
+            task_id,
+            "cancelled",
+            task["escrow_id"],
+            task["poster_id"],
+        )
 
         # Update task status
         cancelled_at = now_iso()

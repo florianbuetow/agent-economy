@@ -16,6 +16,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from httpx import ASGITransport, AsyncClient
 from service_auth.config import AgentConfig
+from service_auth.jws import TokenPolicy
 from service_auth.platform import PlatformAgent
 from service_auth.signing import create_jws
 from service_clients.identity import IdentityClient
@@ -42,7 +43,8 @@ def _real_platform_agent() -> tuple[PlatformAgent, Ed25519PrivateKey]:
         task_board_url="http://localhost:8003",
         reputation_url="http://localhost:8004",
         court_url="http://localhost:8005",
-        token_ttl_seconds=None,
+        token_ttl_seconds=60,
+        token_policy=TokenPolicy(max_lifetime_seconds=60, clock_skew_seconds=0),
     )
     agent = PlatformAgent(config)
     agent.agent_id = PLATFORM_ID
@@ -86,7 +88,14 @@ async def test_platform_feedback_succeeds_when_identity_down(platform_client: An
         "rating": "satisfied",
         "comment": "Court ruling feedback",
     }
-    token = create_jws(payload, private_key, kid=PLATFORM_ID)
+    token = create_jws(
+        payload,
+        private_key,
+        kid=PLATFORM_ID,
+        audience="reputation",
+        resource="POST /feedback",
+        token_ttl_seconds=60,
+    )
     resp = await client.post("/feedback", json={"token": token})
 
     assert resp.status_code == 201
@@ -111,7 +120,14 @@ async def test_agent_feedback_fails_cleanly_when_identity_down(platform_client: 
         "rating": "satisfied",
         "comment": "nice",
     }
-    token = create_jws(payload, agent_key, kid="a-alice")
+    token = create_jws(
+        payload,
+        agent_key,
+        kid="a-alice",
+        audience="reputation",
+        resource="POST /feedback",
+        token_ttl_seconds=60,
+    )
     resp = await client.post("/feedback", json={"token": token})
 
     assert resp.status_code == 502

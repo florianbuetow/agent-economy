@@ -43,7 +43,9 @@ class TestCourtMixinRebuttals:
                 "respondent_id": "a-worker",
                 "claim": "Incomplete delivery",
                 "escrow_id": "esc-1",
-            }
+            },
+            audience="court",
+            resource="POST /disputes/file",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -74,7 +76,9 @@ class TestCourtMixinRebuttals:
                 "action": "submit_rebuttal",
                 "dispute_id": "disp-1",
                 "rebuttal": "The work meets the spec.",
-            }
+            },
+            audience="court",
+            resource="POST /disputes/disp-1/rebuttal",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -115,7 +119,9 @@ class TestCourtMixinRebuttals:
             {
                 "action": "trigger_ruling",
                 "dispute_id": "disp-1",
-            }
+            },
+            audience="court",
+            resource="POST /disputes/disp-1/rule",
         )
         agent._request.assert_awaited_once_with(
             "POST",

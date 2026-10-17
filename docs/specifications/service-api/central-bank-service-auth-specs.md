@@ -61,17 +61,23 @@ All JWS tokens follow the compact serialization format (RFC 7515): `header.paylo
 {
   "alg": "EdDSA",
   "typ": "JWT",
-  "kid": "<agent_id>"
+  "kid": "<agent_id>",
+  "iat": 1792051200,
+  "exp": 1792051500,
+  "aud": "central-bank",
+  "resource": "POST /accounts/<concrete-account-id>/credit"
 }
 ```
 
-- `alg` must be `"EdDSA"` (Ed25519); `typ` is always `"JWT"`.
-- `kid` is the signer's agent ID (e.g., `"a-alice-uuid"` for agent operations, or the platform's registered `agent_id` for platform operations). `kid` is informational for local platform verification — see "How Local Platform Verification Determines the Signer" below.
-- When the signer is configured with a token lifetime (`signing.token_ttl_seconds` in `agents/config.yaml`; production's platform signer uses 300 seconds), the header additionally carries `iat` and `exp` (Unix timestamps). Tokens without `iat`/`exp` are accepted indefinitely (legacy tolerance) — full replay protection (nonces) is out of scope.
+- The header has exactly `alg`, `typ`, `kid`, `iat`, `exp`, `aud`, and `resource`; extra or missing fields are `400 invalid_jws`.
+- `alg` and `typ` are exact strings `"EdDSA"` and `"JWT"`; `kid`, `aud`, and `resource` are non-blank strings.
+- `iat` and `exp` are JSON integers excluding booleans. `exp > iat`, and `exp - iat` cannot exceed the required positive configured maximum lifetime.
+- `aud` must equal Central Bank's configured `service.name`. `resource` must equal the concrete uppercase `METHOD /path` currently handled, with no host or query string.
+- Local platform admission requires authenticated `kid == platform_agent.agent_id`. Tokens without `iat`/`exp` are rejected as `400 invalid_jws`.
 
 ### JWS Payload
 
-Every JWS payload must include an `action` field that identifies the operation. This prevents cross-operation token replay — a token signed for `"escrow_lock"` cannot be used for `"get_balance"`.
+Every JWS payload remains the existing domain object and must include a string `action` field. `aud` and `resource` are protected-header fields, not payload fields; similarly named domain fields grant no authority. The receiver compares the authenticated header context and payload action with route-owned expectations before any ledger effect.
 
 ### Action Values
 
@@ -133,7 +139,7 @@ Client                         Central Bank                    Identity Service
   |                                  |     { token: "..." }           |
   |                                  |  ------------------------------>|
   |                                  |                                | 5. Verify signature
-  |                                  |  6. { valid, agent_id, payload}|
+  |                                  |  6. Validated VerifiedJws       |
   |                                  |  <------------------------------|
   |                                  |  7. Ownership/impersonation    |
   |                                  |     check (endpoint-specific;  |
@@ -158,21 +164,15 @@ as platform signer)               PlatformAgent)
   |     Ed25519 private key          |
   |  3. POST body token              |
   |  -------------------------------->
-  |                                  |  4. Decode payload segment WITHOUT
-  |                                  |     verifying the signature
-  |                                  |  5. Validate payload shape
-  |                                  |     (action, required fields,
-  |                                  |     URL-parameter matches) — 400s
-  |                                  |     here happen BEFORE step 6
-  |                                  |  6. Verify signature locally:
+  |                                  |  4. Verify the strict profile,
+  |                                  |     signature, and lifetime locally:
   |                                  |     PlatformAgent.validate_certificate(
   |                                  |       token)
-  |                                  |     — checks the Ed25519 signature
-  |                                  |     against the registered platform
-  |                                  |     public key only. Success alone
-  |                                  |     proves the signer is the platform;
-  |                                  |     there is no separate identity
-  |                                  |     lookup by kid.
+  |                                  |     — returns typed VerifiedJws
+  |                                  |  5. Require authenticated kid to
+  |                                  |     equal platform_agent.agent_id
+  |                                  |  6. Check aud, concrete resource,
+  |                                  |     action, and domain fields
   |                                  |  7. Execute operation
   | 8. Response                      |
   |  <--------------------------------
@@ -182,15 +182,16 @@ The Central Bank performs cryptographic verification locally for platform ops us
 
 ### How Local Platform Verification Determines the Signer
 
-`PlatformAgent.validate_certificate(token)` calls `verify_jws(token, self._public_key)` — it verifies the Ed25519 signature against the **service's own registered platform public key**, not a `kid`-indexed lookup across many agents' keys. A successful verification is therefore already proof the token was signed by the platform's private key; the router code does not additionally compare the `kid` header (or any returned identity) against a configured platform id for `credit`/`escrow_release`/`escrow_split`. This differs from `create_account`, `escrow_lock`, `get_balance`, and `get_transactions`, where Identity returns the *actual verified signer's* `agent_id` (which could be any registered agent), and the Central Bank must explicitly compare it against the account/agent named in the request.
+Local verification returns `VerifiedJws(header, payload)` after checking the original compact bytes. Verification against the provisioned public key proves key possession; authorization separately requires the authenticated `header.kid` to equal `platform_agent.agent_id`. Agent-signed routes receive the same typed result through the shared Identity client and require Identity's `agent_id` to match `header.kid`.
 
 ---
 
 ## Payload Validation Rules
 
-The Central Bank validates the following payload shape rules. **The order relative to signature verification differs by tier — see Error Precedence.**
+The Central Bank validates these domain payload rules after authenticating the strict JWS profile.
+Transport and ownership-check ordering varies by route; see Error Precedence.
 
-1. **Action must match the endpoint.** Each endpoint expects a specific `action` value (see Action Values table). A mismatched action returns `invalid_payload`.
+1. **Action must be a string and match the endpoint.** Missing, null, non-string, or mismatched action returns `invalid_payload`.
 
 2. **Required payload fields must be present.** Each action has required fields:
    - `create_account`: `agent_id`, `initial_balance`
@@ -200,6 +201,10 @@ The Central Bank validates the following payload shape rules. **The order relati
    - `escrow_lock`: `agent_id`, `amount`, `task_id`
    - `escrow_release`: `recipient_account_id` (and optionally `escrow_id`)
    - `escrow_split`: `worker_account_id`, `worker_pct`, `poster_account_id` (and optionally `escrow_id`)
+
+   `get_balance` and `get_transactions` therefore permit an action-only payload;
+   the concrete account subject is already bound by the protected resource path.
+   No second payload field is required or invented.
 
 3. **Payload fields must match URL parameters.** When a payload contains a field that also appears in the URL path, they must match:
    - `account_id` in the payload must match `{account_id}` in the URL (for credit, get_balance, get_transactions)
@@ -217,7 +222,7 @@ The Central Bank validates the following payload shape rules. **The order relati
 
 ### Platform Operations (`credit`, `escrow_release`, `escrow_split`)
 
-1. **Signer must be the platform agent.** Enforced implicitly: local verification only succeeds for tokens signed with the platform's private key (see "How Local Platform Verification Determines the Signer" above). There is no separate ownership check beyond the certificate verification itself.
+1. **Signer must be the platform agent.** Local verification checks the provisioned key and requires authenticated `kid == platform_agent.agent_id`, plus the expected audience, concrete resource and action. Key possession alone does not replace the authenticated identity/context checks.
 2. **No ownership checks on the target resource.** Platform operations do not check whether the signer "owns" the target account/escrow. The platform has global privileges.
 
 ### Agent Operations — Escrow Lock
@@ -236,10 +241,11 @@ Authentication-related errors used by the Central Bank service:
 
 | Status | Code | When |
 |--------|------|------|
-| 400 | `invalid_jws` | JWS token is malformed, missing, empty, or not a string |
-| 400 | `invalid_payload` | JWS payload is missing `action`, `action` does not match the expected value for this endpoint, or required payload fields are missing |
+| 400 | `invalid_jws` | Non-object request body or signed payload, token transport/compact/header form, decoded signature length other than 64 bytes, exact header fields/types/constants, or lifetime bound is invalid |
+| 400 | `invalid_payload` | Action is missing/non-string, authenticated `aud`/concrete `resource`/action does not match, or required domain fields are missing |
 | 400 | `payload_mismatch` | JWS payload field does not match URL parameter (e.g., `account_id` or `escrow_id` mismatch), or duplicate credit reference with a different amount |
-| 401 | `token_expired` | Local platform verification found the token's header `exp` claim in the past (`credit`, `escrow_release`, `escrow_split` only) |
+| 401 | `token_expired` | Authentic token satisfies `now >= exp + clock_skew_seconds` |
+| 401 | `token_not_yet_valid` | Authentic token satisfies `iat > now + clock_skew_seconds` |
 | 403 | `forbidden` | JWS signature verification failed (Identity says `valid: false`, or local certificate verification failed), signer does not match the required agent/account, or a non-platform signer attempted a platform-only action on `create_account` |
 | 502 | `identity_service_unavailable` | Cannot reach the Identity service for JWS verification or agent lookup (agent-signed ops and `create_account` only) |
 | 503 | `service_not_ready` | The ledger, Identity client, or the platform agent has not finished initializing |
@@ -256,16 +262,16 @@ All errors follow the standard error envelope:
 
 ### Error Precedence
 
-**The order is not uniform across endpoints** — it differs by verification tier, and the task board plan (WP-03/T-033) deliberately inverted it for the local-verification tier only:
+Transport and request-envelope validation remains route-specific. Once a token is extracted, every tier authenticates the strict profile before relying on header or payload contents:
 
-**Platform-signed tier — `credit`, `escrow_release`, `escrow_split` (payload validation BEFORE signature verification):**
+**Platform-signed tier — `credit`, `escrow_release`, `escrow_split`:**
 
 1. `415 unsupported_media_type` — wrong Content-Type
 2. `413 payload_too_large` — body exceeds `request.max_body_size`
 3. `400 invalid_json` — malformed JSON body
-4. `400 invalid_jws` — missing/malformed `token` field, or a token that is not a well-formed three-part JWS
-5. `400 invalid_payload` / `400 payload_mismatch` / `400 invalid_amount` — payload shape and cross-field validation, performed on the **unverified, decoded** payload
-6. `401 token_expired` / `403 forbidden` — local certificate verification (signature invalid, or the token has expired)
+4. Strict local verification: `400 invalid_jws`, `401 token_expired`, `401 token_not_yet_valid`, or `403 forbidden`
+5. `400 invalid_payload` — authenticated audience, resource, or action mismatch
+6. `400 payload_mismatch` / `400 invalid_amount` — authenticated domain payload validation
 7. Domain-specific errors (`account_not_found`, `escrow_not_found`, `escrow_already_resolved`, …)
 
 **Agent-signed tier — `create_account`, `escrow_lock`, `get_balance`, `get_transactions` (signature verification BEFORE most payload validation):**
@@ -273,16 +279,16 @@ All errors follow the standard error envelope:
 1. `415 unsupported_media_type` / `413 payload_too_large` (POST endpoints only)
 2. `400 invalid_json` (POST endpoints only)
 3. `400 invalid_jws` — missing/malformed `token` field (POST), or missing/malformed Bearer token (GET)
-4. `403 forbidden` / `502 identity_service_unavailable` — remote verification via Identity's `POST /agents/verify-jws`
+4. Identity result: `400 invalid_jws`, `401 token_expired`, `401 token_not_yet_valid`, `403 forbidden`, or `502 identity_service_unavailable`
 5. `403 forbidden` — ownership/impersonation check (`get_balance`/`get_transactions`: verified signer must equal the URL's `account_id`; `escrow_lock`: verified signer must equal the payload's `agent_id`, checked after the `action`/field-presence checks for that endpoint; `create_account`: verified signer must equal the payload's `agent_id` for self-service, checked after the `action`/`agent_id`-presence checks)
 6. `400 invalid_payload` / `400 payload_mismatch` / `400 invalid_amount` — remaining payload validation
 7. Domain-specific errors (`account_not_found`, `agent_not_found`, `account_exists`, `insufficient_funds`, `escrow_already_locked`, …)
 
-Concretely: on `get_balance`/`get_transactions`, a wrong-owner request returns `403 forbidden` even when its `action` field is also wrong — the ownership check runs before the action check. On `credit`/`escrow_release`/`escrow_split`, the reverse holds: a malformed payload from a non-platform signer returns its specific `400` code, never `403`.
+No route uses an unverified payload-only decode as an authentication or authorization result. Domain-validation ordering after authenticated context is otherwise unchanged.
 
 ### Notes on Error Mapping
 
-- **Invalid signature** returns `403 forbidden`. There is no `401` in this system for signature failures — there is no challenge-response mechanism (no `WWW-Authenticate` header). The one exception is `401 token_expired`, used specifically for a locally-verified platform token whose `exp` claim has passed; this is a distinct condition from an invalid signature.
+- **Invalid signature** and a local platform `kid` mismatch return `403 forbidden`. Authentic expiry and future issue time use their distinct `401` errors on both verification tiers.
 - **Signer mismatch** also returns `403 forbidden` with a different message. The token is cryptographically valid, but the signer is not authorized for the operation. Both cases use the same status code but carry different `message` text for debugging.
 - **Identity service down or misbehaving** returns `502 identity_service_unavailable`. This applies only to agent-signed operations and `create_account`'s Identity dependency (both the JWS verification call and the `GET /agents/{agent_id}` existence check). It never applies to `credit`, `escrow_release`, or `escrow_split` — those do not call Identity at all.
 - **Uninitialized dependencies** return `503 service_not_ready` — the ledger, Identity client, or platform agent has not finished starting up (or, for `GET /health`, the DB Gateway backing the ledger is unreachable).
@@ -317,6 +323,8 @@ platform:
 
 - `platform.agent_config_path`: Path (resolved relative to this service's own config directory, unless absolute) to the shared `agents/config.yaml`. At startup, `service_auth.factory.AgentFactory(config_path=...)` loads the `platform` roster entry's Ed25519 keypair from the configured `keys_dir`, constructs a `PlatformAgent`, registers it with Identity (`await platform_agent.register()`), and stores it as the service's `state.platform_agent`. **There is no `platform.agent_id`, `platform.public_key_path`, or `platform.private_key_path` field in this service's own config** — those were a superseded placeholder shape; the platform's identity and keys always come from the registration described above. If `agent_config_path` is empty or absent, `state.platform_agent` stays `None` and every platform-op authorization check and `get_platform_agent_id()` call fails closed with `503 service_not_ready` — there is no configured fallback identity.
 
+Token configuration is required and explicit: signer TTL 300 seconds, admission maximum 300 seconds, and clock skew 30 seconds initially. TTL and maximum lifetime must be positive; skew must be nonnegative. Configuration construction fails instead of selecting a no-expiry mode.
+
 ---
 
 ## Infrastructure
@@ -326,13 +334,13 @@ platform:
 The service initializes an `IdentityClient` during startup (in `core/lifespan.py`) using the `identity` config section. The client is stored in `AppState` and closed on shutdown.
 
 The `IdentityClient` (from `libs/service-clients`) provides:
-- `verify_jws(token: str) -> dict[str, Any]` — calls `POST /agents/verify-jws` on the Identity service. On success (`200` with `valid: true`), returns the full response body: `{"valid": true, "agent_id": "...", "payload": {...}}`. A connection failure or timeout raises `ServiceError("identity_service_unavailable", ..., 502)`. A non-200, non-connection-failure response propagates Identity's own error envelope (its `error`/`message`/`details`/status code) as-is.
+- `verify_jws(token: str) -> VerifiedJws` — calls `POST /agents/verify-jws`, then type-strictly binds the complete `valid:true` response to the originally requested token. JSON `true`, `1`, and `1.0` are distinct. An invalid requested token, inconsistent `agent_id`/`protected_header.kid`, substituted value/type, missing field, or non-object payload is `502 identity_service_unavailable`; it never fabricates a payload-only success.
 - `get_agent(agent_id: str) -> dict[str, Any] | None` — calls `GET /agents/{agent_id}` on the Identity service; returns `None` on a `404` (the router turns this into `ServiceError("agent_not_found", ..., 404)`), or raises `ServiceError("identity_service_unavailable", ..., 502)` on connection failure or timeout.
 - `close()` — closes the underlying `httpx.AsyncClient`. Called during lifespan shutdown.
 
 ### PlatformAgent
 
-Loaded at startup via `AgentFactory(config_path=...).platform_agent()` (see Configuration above). Provides `validate_certificate(token: str) -> dict[str, object]`, which verifies the Ed25519 signature against the agent's own public key and returns the decoded payload; it raises `cryptography.exceptions.InvalidSignature` or `ValueError` on a bad signature/malformed token (mapped to `403 forbidden`), and `service_auth.signing.TokenExpiredError` if the header's `exp` claim has passed (mapped to `401 token_expired`).
+Loaded at startup via `AgentFactory(config_path=...).platform_agent()` (see Configuration above). Local verification accepts an explicit required `TokenPolicy` and returns `VerifiedJws`, including the authenticated header. The adapter applies the uniform error mapping and checks the registered platform `kid`, audience, concrete resource, and action before any ledger effect. It performs no Identity HTTP round trip.
 
 ### Dependencies
 
@@ -362,8 +370,8 @@ Caller                           Central Bank                    Identity Servic
   |                                  |     { "token": "eyJ..." }      |
   |                                  |  ------------------------------>|
   |                                  |                                | 5. Verify signature
-  |                                  |  6. { valid: true,             |
-  |                                  |       agent_id: signer }       |
+  |                                  |  6. { valid: true, agent_id,   |
+  |                                  |       protected_header, payload }|
   |                                  |  <------------------------------|
   |                                  |                                |
   |                                  |  7. is_platform = signer ==    |
@@ -400,8 +408,8 @@ Agent                           Central Bank                    Identity Service
   |                                  |     { "token": "eyJ..." }      |
   |                                  |  ------------------------------>|
   |                                  |                                | 5. Verify signature
-  |                                  |  6. { valid: true,             |
-  |                                  |       agent_id: agent }        |
+  |                                  |  6. { valid: true, agent_id,   |
+  |                                  |       protected_header, payload }|
   |                                  |  <------------------------------|
   |                                  |                                |
   |                                  |  7. Assert signer == agent_id  |
@@ -429,8 +437,8 @@ Agent                           Central Bank                    Identity Service
   |                                  |     { "token": "eyJ..." }      |
   |                                  |  ------------------------------>|
   |                                  |                                | 5. Verify signature
-  |                                  |  6. { valid: true,             |
-  |                                  |       agent_id: agent }        |
+  |                                  |  6. { valid: true, agent_id,   |
+  |                                  |       protected_header, payload }|
   |                                  |  <------------------------------|
   |                                  |                                |
   |                                  |  7. Assert signer == account_id|
@@ -449,11 +457,10 @@ Task Board                      Central Bank                    Identity Service
   |  POST /accounts/{id}/credit      |                                |
   |  { "token": "<platform JWS>" } |                                |
   |  -------------------------------->                                | (unreachable)
-  |                                  |  Decode payload (no Identity   |
-  |                                  |  call) → validate shape →      |
-  |                                  |  verify signature LOCALLY      |
-  |                                  |  against registered            |
-  |                                  |  PlatformAgent's public key    |
+  |                                  |  Strict local verification     |
+  |                                  |  -> VerifiedJws; require       |
+  |                                  |  platform kid and exact        |
+  |                                  |  aud/resource/action           |
   |                                  |                                |
   |  200 { tx_id, balance_after }    |                                |
   |  <--------------------------------                                |
@@ -489,8 +496,8 @@ Mallory                         Central Bank                    Identity Service
   |  -------------------------------->                                |
   |                                  |  POST /agents/verify-jws       |
   |                                  |  ------------------------------>|
-  |                                  |  { valid: true,                |
-  |                                  |    agent_id: mallory }         |
+  |                                  |  { valid: true, agent_id,      |
+  |                                  |    protected_header, payload } |
   |                                  |  <------------------------------|
   |                                  |                                |
   |                                  |  mallory != alice -> 403       |
@@ -530,7 +537,7 @@ However, same-operation replay is possible. This is mitigated by:
 - **Escrow lock uniqueness:** `(payer_account_id, task_id)` is unique for locked escrows. A replayed escrow lock token with the same payer and task returns the existing escrow (idempotent) or fails if the amount differs (`409 escrow_already_locked`).
 - **Credit idempotency:** `(account_id, reference)` is unique for credit transactions. A replayed credit token with the same account and reference returns the original result (idempotent) or fails if the amount differs (`400 payload_mismatch`).
 - **Escrow release/split status checks:** Escrow must be in `locked` status. Once released or split, a replayed token gets `409 escrow_already_resolved`.
-- **Expiry (platform-signed tier only):** production platform tokens carry a 300-second `exp` (`agents/config.yaml` `signing.token_ttl_seconds`), enforced locally on `credit`/`escrow_release`/`escrow_split`. Agent-signed tokens and tokens from a signer without a configured TTL carry no `exp` and are accepted indefinitely.
+- **Strict lifetime on both tiers:** every production token has required `iat`/`exp`; the initial signer TTL and admission maximum are 300 seconds with 30 seconds skew. No signer or verifier has a no-expiry mode.
 
 Full replay protection (nonces) beyond the above is out of scope, consistent with the Identity service design.
 

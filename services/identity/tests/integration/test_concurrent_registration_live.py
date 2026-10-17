@@ -28,6 +28,7 @@ import httpx
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from service_auth.signing import generate_keypair
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -88,8 +89,21 @@ database:
   schema_path: "{SCHEMA_PATH}"
   busy_timeout_ms: 5000
   journal_mode: "wal"
+recovery:
+  maintenance_lock_path: "{log_dir / "maintenance.lock"}"
+  backup_root: "{log_dir / "backups"}"
 request:
   max_body_size: 1048576
+auth:
+  audience: "db-gateway"
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 0
+  trusted_callers:
+    gateway-identity:
+      public_key_path: "{log_dir / "gateway-identity.pub"}"
+      capabilities:
+        - "gateway.identity.read"
+        - "gateway.identity.write"
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, dir=str(log_dir)) as f:
         f.write(content)
@@ -114,9 +128,17 @@ crypto:
   signature_bytes: 64
 request:
   max_body_size: 1572864
+token_validation:
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 30
 db_gateway:
   url: "http://127.0.0.1:{GATEWAY_PORT}"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-identity"
+    private_key_path: "gateway-identity.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, dir=str(log_dir)) as f:
         f.write(content)
@@ -133,9 +155,12 @@ def live_identity(tmp_path: Path) -> Iterator[str]:
     test outright rather than skipping (tests must pass or fail)."""
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
+    generate_keypair("gateway-identity", log_dir)
     db_path = tmp_path / "economy.db"
 
     gateway_config = _write_gateway_config(db_path, log_dir)
+    gateway_log_path = log_dir / "db-gateway.log"
+    gateway_log = gateway_log_path.open("wb")
     gateway_proc = subprocess.Popen(
         [
             "uv",
@@ -150,15 +175,20 @@ def live_identity(tmp_path: Path) -> Iterator[str]:
         ],
         cwd=str(DB_GATEWAY_DIR),
         env={**os.environ, "CONFIG_PATH": str(gateway_config)},
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=gateway_log,
+        stderr=subprocess.STDOUT,
     )
     try:
-        assert _wait_until(lambda: not _free_port_is(GATEWAY_PORT), timeout=15.0), (
-            "scratch DB Gateway did not become healthy"
-        )
+        if not _wait_until(lambda: not _free_port_is(GATEWAY_PORT), timeout=15.0):
+            gateway_log.flush()
+            pytest.fail(
+                "scratch DB Gateway did not become healthy:\n"
+                + gateway_log_path.read_text(errors="replace")
+            )
 
         identity_config = _write_identity_config(log_dir)
+        identity_log_path = log_dir / "identity.log"
+        identity_log = identity_log_path.open("wb")
         identity_proc = subprocess.Popen(
             [
                 "uv",
@@ -173,18 +203,23 @@ def live_identity(tmp_path: Path) -> Iterator[str]:
             ],
             cwd=str(IDENTITY_DIR),
             env={**os.environ, "CONFIG_PATH": str(identity_config)},
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=identity_log,
+            stderr=subprocess.STDOUT,
         )
         try:
-            assert _wait_until(lambda: not _free_port_is(IDENTITY_PORT), timeout=15.0), (
-                "scratch Identity service did not become healthy"
-            )
+            if not _wait_until(lambda: not _free_port_is(IDENTITY_PORT), timeout=15.0):
+                identity_log.flush()
+                pytest.fail(
+                    "scratch Identity service did not become healthy:\n"
+                    + identity_log_path.read_text(errors="replace")
+                )
             yield f"http://127.0.0.1:{IDENTITY_PORT}"
         finally:
             _stop(identity_proc)
+            identity_log.close()
     finally:
         _stop(gateway_proc)
+        gateway_log.close()
 
 
 def _keypair_public_key() -> str:

@@ -109,6 +109,14 @@ frontend:
   web_root: "{tmp_path / "web"}"
 request:
   max_body_size: 1572864
+recovery:
+  maintenance_lock_path: "{tmp_path / "maintenance.lock"}"
+browser_security:
+  allowed_hosts: ["127.0.0.1"]
+  allowed_origins: ["http://127.0.0.1:8008"]
+  csrf_header_name: "X-ATE-CSRF"
+  csrf_header_value: "local-operator"
+  content_security_policy: "default-src 'self'; script-src 'self'; object-src 'none'"
 user_agent:
 {user_agent_block}""",
     )

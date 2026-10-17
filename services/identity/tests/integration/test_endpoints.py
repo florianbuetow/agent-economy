@@ -10,15 +10,13 @@ the gateway's own SQLite file directly.
 from __future__ import annotations
 
 import base64
-import json
 import sqlite3
 from typing import TYPE_CHECKING
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from joserfc import jws
-from joserfc.jwk import OKPKey
+from service_auth.jws import create_jws
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -163,18 +161,14 @@ class TestVerifyJwsGatewayBacked:
         )
         agent_id = reg.json()["agent_id"]
 
-        raw_private = private_key.private_bytes_raw()
-        raw_public = private_key.public_key().public_bytes_raw()
-        jwk_dict = {
-            "kty": "OKP",
-            "crv": "Ed25519",
-            "d": base64.urlsafe_b64encode(raw_private).rstrip(b"=").decode(),
-            "x": base64.urlsafe_b64encode(raw_public).rstrip(b"=").decode(),
-        }
-        key = OKPKey.import_key(jwk_dict)
-        protected = {"alg": "EdDSA", "kid": agent_id}
-        payload_bytes = json.dumps({"hello": "world"}, separators=(",", ":")).encode()
-        token = jws.serialize_compact(protected, payload_bytes, key, algorithms=["EdDSA"])
+        token = create_jws(
+            {"action": "test", "hello": "world"},
+            private_key,
+            kid=agent_id,
+            audience="identity-test",
+            resource="POST /agents/verify-jws",
+            token_ttl_seconds=300,
+        )
 
         response = await client.post("/agents/verify-jws", json={"token": token})
         assert response.status_code == 200

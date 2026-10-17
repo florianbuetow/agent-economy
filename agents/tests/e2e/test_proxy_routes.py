@@ -20,6 +20,7 @@ asserts the resulting ``poster_id``/``worker_id`` against both identities.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -34,8 +35,10 @@ if TYPE_CHECKING:
 
 pytestmark = [pytest.mark.e2e, pytest.mark.usefixtures("_require_ui_service")]
 
-CONFIG_PATH = Path(__file__).resolve().parents[2] / "config.yaml"
-UI_BASE_URL = "http://localhost:8008"
+CONFIG_PATH = Path(
+    os.environ.get("AGENT_CONFIG_PATH", str(Path(__file__).resolve().parents[2] / "config.yaml"))
+)
+UI_BASE_URL = os.environ.get("UI_URL", "http://localhost:8008")
 
 
 def _task_payload(title: str, reward: int = 50) -> dict[str, object]:
@@ -65,6 +68,11 @@ async def operator_agent_id(platform_agent: PlatformAgent) -> str:  # noqa: ARG0
 @pytest.fixture()
 async def proxy_client():
     async with httpx.AsyncClient(base_url=UI_BASE_URL, timeout=10.0) as client:
+        browser_config = await client.get("/api/proxy/browser-config")
+        assert browser_config.status_code == 200, browser_config.text
+        marker = browser_config.json()
+        client.headers["Origin"] = str(client.base_url).rstrip("/")
+        client.headers[marker["csrf_header_name"]] = marker["csrf_header_value"]
         yield client
 
 

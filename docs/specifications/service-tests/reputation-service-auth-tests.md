@@ -18,20 +18,22 @@ These tests require:
 
 1. A real `PlatformAgent` (Ed25519 keypair) for the local Tier-2 verification path — `PlatformAgent.validate_certificate(token)` verifies a JWS token against the platform's **own** public key (a purely local, no-network Ed25519 check; "certificate" here is the code's name for the JWS token, not a distinct format).
 2. Agents with known Ed25519 keypairs for Tier-1 (agent-signed) tokens.
-3. For Tier 1: either a real Identity service (integration) or a mock `IdentityClient`/`verify_jws` whose success/failure contract matches the real client (`tests/helpers.py::inject_mock_identity`; `tests/unit/routers/test_identity_error_remapping.py` pins that contract explicitly).
+3. Authentication-conformance cases use a real Identity endpoint and actual Ed25519 verification. Domain-only tests may inject a verifier returning a complete typed `VerifiedJws`, but those tests are not authentication evidence.
 4. For the Identity-down proof (AUTH-15/16 below): a real `PlatformAgent` plus a real `IdentityClient` pointed at an unreachable port — not a mock — so the test proves actual network-failure behavior, not a mock's assumption about it.
 
 ---
 
 ## Required API Error Contract (Auth Error Codes)
 
-These error codes are added by the authentication layer, on top of the business-logic codes in `reputation-service-tests.md`. All codes are snake_case (verified against `routers/feedback.py`, `services/platform_identity_client.py`, `libs/service-clients/src/service_clients/base.py`).
+These required error codes supplement the business-logic codes in `reputation-service-tests.md`. All codes are snake_case. The MP-03 additions remain pending implementation verification.
 
 | Status | Error Code                       | Required When                                                |
 |--------|-----------------------------------|--------------------------------------------------------------|
-| 400    | `invalid_jws`                    | `token` field is missing, null, non-string, empty, malformed (not a three-part compact serialization), or verification succeeded but the header carried no `kid` |
-| 400    | `invalid_payload`                | JWS payload is not a JSON object, is missing `action`, `action` is not `"submit_feedback"`, or `from_agent_id` is missing from the payload |
-| 403    | `forbidden`                      | JWS signature verification failed (tampered, unknown/unregistered signer, expired token), or the verified signer does not match `from_agent_id` in the payload |
+| 400    | `invalid_jws`                    | Non-object request body or signed payload, malformed compact/header form, decoded signature length other than 64 bytes, exact header profile, or lifetime bound is invalid |
+| 400    | `invalid_payload`                | Action is missing/non-string, authenticated audience/resource/action mismatches, or required feedback fields are missing |
+| 401    | `token_expired`                  | Authentic token satisfies `now >= exp + clock_skew_seconds` |
+| 401    | `token_not_yet_valid`             | Authentic token satisfies `iat > now + clock_skew_seconds` |
+| 403    | `forbidden`                      | Signature verification, registered platform `kid`, or signer/`from_agent_id` authorization fails |
 | 502    | `identity_service_unavailable`   | Tier-1 (agent-op) verification could not reach Identity — connection failure, timeout, or a malformed/incomplete 200 response. Never produced by Tier-2 (platform) verification, which makes no network call. |
 
 All failing responses must use the standard error envelope:
@@ -50,7 +52,8 @@ All failing responses must use the standard error envelope:
 
 - `agent_alice`, `agent_bob`, `agent_carol` are agents with known Ed25519 public/private keypairs.
 - `platform_agent` is the service's own configured `PlatformAgent`, with a known keypair, registered agent id `platform.agent_id`.
-- `jws(signer, payload)` denotes a compact JWS serialization (`libs/service-auth/src/service_auth/signing.py::create_jws`) with header `{"alg": "EdDSA", "typ": "JWT", "kid": "<signer.agent_id>"}` (plus `iat`/`exp` when `token_ttl_seconds` is configured), canonical payload (`json.dumps(sort_keys=True, separators=(",", ":"))`), and a genuine Ed25519 signature.
+- `jws(signer, payload)` denotes a genuine Ed25519 compact JWS with exact protected header `{alg,typ,kid,iat,exp,aud="reputation",resource="POST /feedback"}` and the existing action/domain payload. All policy values are explicit.
+- `raw_jws(header, payload, key)` exists only for real-signed malformed-profile vectors. Domain-only verifier mocks return a complete typed `VerifiedJws(header, payload)` and are not authentication proof.
 - `tampered_jws(signer, payload)` denotes a JWS where the payload has been altered after signing (signature mismatch).
 - Agent IDs use the format `a-<uuid4>`.
 - Task IDs use the format `t-<uuid4>`.
@@ -135,9 +138,39 @@ All failing responses must use the standard error envelope:
 **Setup:** Create `agent_alice` with a known keypair and a configured `token_ttl_seconds` so `iat`/`exp` are stamped into the header. Freeze the signing clock, sign a token, then advance a verification-time clock past `exp`.
 **Action:** `POST /feedback` with the expired token.
 **Expected:**
-- `403 Forbidden`
-- `error = forbidden`
-- (Verified against `service_auth.signing.TokenExpiredError`, which both `IdentityClient`'s backing verifier and `PlatformJwsVerifier` map to `valid: False` → `403`, the same as a bad signature — not a distinct error code.)
+- `401 Unauthorized`
+- `error = token_expired`
+- No feedback row is created or revealed.
+
+### MP03-REP-01 Strict header types and lifetime bounds
+
+**Action:** Send real-signed tokens with a non-object signed payload, missing/extra header fields, wrong types including boolean `iat`/`exp`, decoded signature length other than 64 bytes, `exp <= iat`, and lifetime above the configured maximum. Also send a non-object JSON request body.
+**Expected:** Each returns `400 invalid_jws`; no feedback row is created.
+
+### MP03-REP-02 Exact future and expiry boundaries
+
+**Action:** At controlled time, test `iat = now + skew`, `iat = now + skew + 1`, `now = exp + skew - 1`, and `now = exp + skew` through both the Identity-backed agent tier and real local platform adapter.
+**Expected:** Boundary-within-skew cases succeed; the next future second is `401 token_not_yet_valid`; the exact expiry boundary is `401 token_expired`.
+
+### MP03-REP-03 Audience, method/resource, action, and local `kid`
+
+**Action:** Send authentic tokens with wrong audience, wrong method, wrong path, missing/wrong-type/wrong-value action, payload fields named `aud`/`resource` that disagree with the protected header, and a platform-key signature carrying another registered `kid`.
+**Expected:** Context mismatches are `400 invalid_payload`; wrong local `kid` is `403 forbidden`; all have zero feedback effect.
+
+### MP03-REP-04 Malformed Identity success is unavailable
+
+**Action:** Make Identity return HTTP 200/`valid:true` with missing `protected_header`, non-object payload, `agent_id != protected_header.kid`, a `true`/`1`/`1.0` substitution, or success for an invalid originally requested token.
+**Expected:** Each is `502 identity_service_unavailable`; no payload is fabricated and no feedback is created.
+
+### MP03-REP-05 Shared, Identity, and local-adapter conformance
+
+**Action:** Run the same real-signed success and failure vectors through shared verification, real Identity HTTP verification where applicable, and Reputation's real local platform adapter.
+**Expected:** Success returns the same typed `VerifiedJws`; failures use the uniform mapping. Local platform vectors make zero Identity HTTP calls.
+
+### MP03-REP-06 Authentication configuration fails closed
+
+**Action:** Load settings with missing Identity configuration, missing/zero/negative TTL or admission maximum, or negative skew; then load explicit initial `300/300/30` values.
+**Expected:** Invalid settings fail at startup. The valid settings preserve the remote agent tier and local platform tier without fallback.
 
 ---
 
@@ -270,13 +303,12 @@ Order verified against `routers/feedback.py::submit_feedback_endpoint` and `core
 - `error = invalid_jws`
 - (NOT `403 forbidden`, NOT `400 invalid_payload`)
 
-### PREC-05 Verification checked before payload-shape / kid-presence checks
+### PREC-05 Strict profile precedes signature result; signature precedes action
 
-**Action:** `POST /feedback` with a token whose signature does not verify (any tier).
+**Action:** First send a token missing `kid`; then send a complete strict-profile token with a valid-length signature that does not verify.
 **Expected:**
-- `403 Forbidden`
-- `error = forbidden`
-- (NOT `400 invalid_jws` for a missing `kid`, NOT `400 invalid_payload`) — verification runs first; the missing-`kid` check only applies to tokens that *passed* verification but returned an empty `agent_id`.
+- Missing `kid` is `400 invalid_jws`.
+- Valid-length signature mismatch is `403 forbidden`, before action or signer/domain checks.
 
 ### PREC-06 Payload `action` checked before signer matching
 
@@ -501,6 +533,7 @@ Authentication is release-ready only if:
 | Category | IDs | Count |
 |----------|-----|-------|
 | JWS Token Validation | AUTH-01 to AUTH-08b | 9 |
+| MP-03 strict-profile conformance | MP03-REP-01 to MP03-REP-06 | 6 |
 | JWS Payload Validation | AUTH-09 to AUTH-11 | 3 |
 | Authorization (Signer Matching) | AUTH-12 to AUTH-14 | 3 |
 | GET Endpoints Remain Public | PUB-01 to PUB-04 | 4 |
@@ -509,11 +542,11 @@ Authentication is release-ready only if:
 | Two-Tier Auth — Identity Outage | AUTH-15 to AUTH-16 | 2 |
 | `force_visible` Semantics | AUTH-17 to AUTH-20 | 4 |
 | Cross-Cutting Security | SEC-AUTH-01 to SEC-AUTH-03 | 3 |
-| **Total** | | **44** |
+| **Total** | | **50** |
 
 | Endpoint | Covered By |
 |----------|------------|
-| `POST /feedback` | AUTH-01 to AUTH-20, PREC-01 to PREC-07, VJWS-01 to VJWS-09, SEC-AUTH-01 to SEC-AUTH-03 |
+| `POST /feedback` | AUTH-01 to AUTH-20, MP03-REP-01 to MP03-REP-06, PREC-01 to PREC-07, VJWS-01 to VJWS-09, SEC-AUTH-01 to SEC-AUTH-03 |
 | `GET /feedback/{feedback_id}` | PUB-01 |
 | `GET /feedback/task/{task_id}` | PUB-02, VJWS-07, AUTH-19, AUTH-20 |
 | `GET /feedback/agent/{agent_id}` | PUB-03 |

@@ -23,7 +23,7 @@ def test_quarterly_report_page_loads_current_quarter(e2e_page: Page) -> None:
 
     assert e2e_page.title() != ""
     e2e_page.wait_for_function(
-        "document.getElementById('qr-quarter-label').textContent !== '—'",
+        "() => document.getElementById('qr-quarter-label').textContent !== '—'",
         timeout=5000,
     )
     label = e2e_page.locator("#qr-quarter-label").text_content()
@@ -60,20 +60,20 @@ def test_quarterly_report_page_prev_next_navigation(e2e_page: Page) -> None:
     e2e_page.goto(f"{e2e_page.base_url}/quarterly-report.html?quarter=2026-Q1")  # type: ignore[attr-defined]
     e2e_page.wait_for_load_state("networkidle")
     e2e_page.wait_for_function(
-        "document.getElementById('qr-quarter-label').textContent === '2026-Q1'",
+        "() => document.getElementById('qr-quarter-label').textContent === '2026-Q1'",
         timeout=generous_timeout_ms,
     )
 
     e2e_page.locator("#qr-next").click()
     e2e_page.wait_for_function(
-        "document.getElementById('qr-quarter-label').textContent === '2026-Q2'",
+        "() => document.getElementById('qr-quarter-label').textContent === '2026-Q2'",
         timeout=generous_timeout_ms,
     )
 
     e2e_page.locator("#qr-prev").click()
     e2e_page.locator("#qr-prev").click()
     e2e_page.wait_for_function(
-        "document.getElementById('qr-quarter-label').textContent === '2025-Q4'",
+        "() => document.getElementById('qr-quarter-label').textContent === '2025-Q4'",
         timeout=generous_timeout_ms,
     )
 

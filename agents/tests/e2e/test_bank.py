@@ -70,7 +70,9 @@ async def test_escrow_lock_insufficient_funds(
                 "agent_id": agent.agent_id,
                 "amount": 100,
                 "task_id": "t-insufficient",
-            }
+            },
+            audience="central-bank",
+            resource="POST /escrow/lock",
         )
         response = await agent._request_raw(
             "POST",

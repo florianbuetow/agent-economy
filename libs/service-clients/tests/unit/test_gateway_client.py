@@ -21,8 +21,19 @@ from service_clients.gateway import GatewayClient
 Handler = Callable[[httpx.Request], httpx.Response]
 
 
+class _TestSigner:
+    def sign_request(self, request: httpx.Request, *, action: str) -> httpx.Request:
+        assert action.startswith("gateway.")
+        request.headers["Authorization"] = "Bearer test"
+        return request
+
+
 def _client(handler: Handler) -> GatewayClient:
-    client = GatewayClient(base_url="http://gateway.invalid", timeout_seconds=1)
+    client = GatewayClient(
+        base_url="http://gateway.invalid",
+        timeout_seconds=1,
+        signer=_TestSigner(),  # type: ignore[arg-type]
+    )
     client._client = httpx.AsyncClient(
         transport=httpx.MockTransport(handler),
         base_url="http://gateway.invalid",

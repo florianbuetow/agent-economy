@@ -16,6 +16,7 @@ class LedgerStorageInterface(Protocol):
         self,
         account_id: str,
         initial_balance: int,
+        operation_id: str | None,
     ) -> dict[str, object]: ...
 
     async def get_account(self, account_id: str) -> dict[str, object] | None: ...
@@ -25,6 +26,7 @@ class LedgerStorageInterface(Protocol):
         account_id: str,
         amount: int,
         reference: str,
+        operation_id: str,
     ) -> dict[str, object]: ...
 
     async def get_transactions(self, account_id: str) -> list[dict[str, object]]: ...
@@ -34,12 +36,15 @@ class LedgerStorageInterface(Protocol):
         payer_account_id: str,
         amount: int,
         task_id: str,
+        operation_id: str,
     ) -> dict[str, object]: ...
 
     async def escrow_release(
         self,
         escrow_id: str,
         recipient_account_id: str,
+        operation_id: str,
+        source_reference: str,
     ) -> dict[str, object]: ...
 
     async def escrow_split(
@@ -48,6 +53,8 @@ class LedgerStorageInterface(Protocol):
         worker_account_id: str,
         worker_pct: int,
         poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
     ) -> dict[str, object]: ...
 
     async def count_accounts(self) -> int: ...

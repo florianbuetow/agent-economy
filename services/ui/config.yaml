@@ -7,12 +7,11 @@ service:
 
 # SECURITY POSTURE (Q-3 decision:
 # docs/plans/2026-07-10-q3-proxy-exposure-decision.md): server.host below
-# (127.0.0.1-only) IS the security boundary for /api/proxy/* — those routes
-# are unauthenticated and, combined with the operator identity (Q-2), can
-# spend the operator's funds. There is no auth layer beyond this bind
-# address; do not change `host` to 0.0.0.0 or front this service with a
-# reverse proxy without first adding the config-driven shared-secret header
-# the decision record calls for.
+# remains loopback-only. MP-02 additionally requires an allowed Host, a
+# loopback client and an exact same-origin Origin plus custom marker for
+# writes. The marker is not a secret or user authentication. These routes
+# spend the operator's funds (Q-2); no public authenticated deployment mode
+# exists, so non-loopback binding is rejected and forwarding is unsupported.
 server:
   host: "127.0.0.1"
   port: 8008
@@ -35,6 +34,24 @@ frontend:
 
 request:
   max_body_size: 1572864
+
+recovery:
+  maintenance_lock_path: "../../data/maintenance.lock"
+
+browser_security:
+  allowed_hosts:
+    - "127.0.0.1"
+    - "localhost"
+    - "[::1]"
+  allowed_origins:
+    - "http://127.0.0.1:8008"
+    - "http://localhost:8008"
+    - "http://[::1]:8008"
+  # Non-secret marker: cross-origin HTML forms cannot set this header. It is
+  # browser CSRF defense for the local operator workflow, not authentication.
+  csrf_header_name: "X-ATE-CSRF"
+  csrf_header_value: "local-operator"
+  content_security_policy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 
 user_agent:
   agent_config_path: "../../agents/config.yaml"

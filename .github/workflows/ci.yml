@@ -30,13 +30,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq lsof
 
       # services/ui/tests/unit/test_trend_visual_js.py (pytest.mark.unit) drives a
-      # headless Chromium via playwright.sync_api; no just recipe installs the browser
-      # binary today, so it must happen before `just ci-quiet` reaches the ui service.
+      # headless Chromium via playwright.sync_api. Install explicitly; the same
+      # launch preflight used by local unit/CI recipes verifies readiness here.
       - name: Install Playwright Chromium for the ui unit suite
         run: |
           cd services/ui
           uv sync --all-extras
           uv run playwright install --with-deps chromium
+          just test-prerequisites
 
       - name: Run full CI (just ci-quiet)
         run: just ci-quiet

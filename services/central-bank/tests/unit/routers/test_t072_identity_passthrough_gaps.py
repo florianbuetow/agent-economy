@@ -83,14 +83,17 @@ class TestOwnershipPrecedesPayloadValidation:
     """BEARER-11."""
 
     async def test_wrong_owner_reported_even_with_malformed_payload(self, client, agent_keypair):
-        """BEARER-11: the ownership check (verified signer == URL account_id) runs
-        before the action-payload check on GET /accounts/{id} — a wrong owner AND a
-        bogus action both apply, but 403 forbidden wins."""
+        """BEARER-11: strict receiver context rejects the wrong action before ownership."""
         private_key, _ = agent_keypair
-        token = make_jws_token(private_key, "a-alice", {"action": "not_a_real_action"})
+        token = make_jws_token(
+            private_key,
+            "a-alice",
+            {"action": "not_a_real_action"},
+            resource="GET /accounts/a-bob",
+        )
         response = await client.get(
             "/accounts/a-bob",
             headers={"Authorization": f"Bearer {token}"},
         )
-        assert response.status_code == 403
-        assert response.json()["error"] == "forbidden"
+        assert response.status_code == 400
+        assert response.json()["error"] == "invalid_payload"

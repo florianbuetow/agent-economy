@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from service_auth.jws import VerifiedJws, parse_identity_verification_response
+from service_commons.exceptions import ServiceError
+
 from service_clients.base import BaseServiceClient
 
 
@@ -36,10 +39,18 @@ class IdentityClient(BaseServiceClient):
             return None
         return response
 
-    async def verify_jws(self, token: str) -> dict[str, Any]:
+    async def verify_jws(self, token: str) -> VerifiedJws:
         """Verify a JWS token via Identity."""
-        return await self._post(
-            self._verify_jws_path,
-            payload={"token": token},
-            expected_status=200,
-        )
+        response = await self._post_raw(self._verify_jws_path, payload={"token": token})
+        if response.status_code != 200:
+            raise self._status_error(self._verify_jws_path, response)
+        try:
+            body = response.json()
+            return parse_identity_verification_response(body, token)
+        except (ValueError, RecursionError) as exc:
+            raise ServiceError(
+                error="identity_service_unavailable",
+                message="Identity service returned an invalid verification response",
+                status_code=502,
+                details={},
+            ) from exc

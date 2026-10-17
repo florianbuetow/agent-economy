@@ -58,7 +58,9 @@ async def _drive_dispute_to_ruling(
                 "respondent_id": worker.agent_id,
                 "claim": "Does not meet spec",
                 "escrow_id": disputed_task["escrow_id"],
-            }
+            },
+            audience="court",
+            resource="POST /disputes/file",
         )
         file_resp = await platform_agent._request_raw(
             "POST",
@@ -76,7 +78,9 @@ async def _drive_dispute_to_ruling(
             "action": "submit_rebuttal",
             "dispute_id": dispute_id,
             "rebuttal": "Work meets specification.",
-        }
+        },
+        audience="court",
+        resource=f"POST /disputes/{dispute_id}/rebuttal",
     )
     await platform_agent._request_raw(
         "POST",
@@ -85,7 +89,11 @@ async def _drive_dispute_to_ruling(
     )
 
     # Ruling
-    ruling_token = platform_agent._sign_jws({"action": "trigger_ruling", "dispute_id": dispute_id})
+    ruling_token = platform_agent._sign_jws(
+        {"action": "trigger_ruling", "dispute_id": dispute_id},
+        audience="court",
+        resource=f"POST /disputes/{dispute_id}/rule",
+    )
     ruling_resp = await platform_agent._request_raw(
         "POST",
         f"{platform_agent.config.court_url}/disputes/{dispute_id}/rule",
@@ -187,7 +195,9 @@ async def test_insufficient_funds_cannot_post_task(make_funded_agent) -> None:
                         "bidding_deadline_seconds": 3600,
                         "execution_deadline_seconds": 7200,
                         "review_deadline_seconds": 3600,
-                    }
+                    },
+                    audience="task-board",
+                    resource="POST /tasks",
                 ),
                 "escrow_token": agent._sign_jws(
                     {
@@ -195,7 +205,9 @@ async def test_insufficient_funds_cannot_post_task(make_funded_agent) -> None:
                         "agent_id": agent.agent_id,
                         "amount": 500,
                         "task_id": "t-insufficient-funds-test",
-                    }
+                    },
+                    audience="central-bank",
+                    resource="POST /escrow/lock",
                 ),
             },
         )

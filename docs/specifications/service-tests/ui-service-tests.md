@@ -35,11 +35,15 @@ Required status/error mappings:
 | 400 | `invalid_parameter` | A query parameter has an invalid type or value (limit, before/after, window, resolution, sort_by, quarter format) |
 | 400 | `invalid_status` | `status` query filter on `/api/tasks` is not a canonical lowercase status |
 | 400 | `invalid_quarter` | `quarter` does not match `YYYY-QN`, N in 1–4 |
+| 400 | `invalid_host` | Host is absent, duplicated, malformed or not explicitly allowed |
+| 403 | `non_loopback_client` | A non-loopback client attempts proxy access |
+| 403 | `forbidden_origin` | Origin is duplicated, disallowed, missing on a mutation or mismatched with the request authority |
+| 403 | `csrf_failed` | The custom browser marker is absent, wrong or duplicated on a mutation |
 | 403 / 404 | `agent_not_found` | Referenced `agent_id` does not exist (404) |
 | 404 | `task_not_found` | Referenced `task_id` does not exist |
 | 404 | `no_data` | No economy data exists for the requested quarter |
 | 405 | `method_not_allowed` | Unsupported HTTP method on a defined route |
-| 413 | `payload_too_large` | JSON-bodied proxy request exceeds `request.max_body_size` |
+| 413 | `payload_too_large` | Any mutating request body exceeds `request.max_body_size`, including bodyless actions |
 | 415 | `unsupported_media_type` | `Content-Type` is not `application/json` on a JSON-bodied proxy route |
 | 502 | `task_creation_failed` / `bid_acceptance_failed` / `task_approval_failed` / `dispute_filing_failed` | The operator's downstream Task Board call fails |
 | 503 | `database_unavailable` | The read-only DB connection was never established |
@@ -58,6 +62,16 @@ Required status/error mappings:
 - Timestamps are ISO 8601 UTC with a `Z` suffix.
 - The injectable clock seam (`ui_service/services/database.py: _clock`) is used to freeze "now"
   for any test asserting a specific trend/window boundary.
+- MP-02 valid fixtures supply explicit local browser policy, local Host and matching Origin
+  plus marker for writes. Negative authority cases remove or corrupt those inputs explicitly.
+  The existing economy proxy E2E fixture obtains the marker from the live configuration route;
+  its operator identity, lifecycle and payout assertions are unchanged. This recorded setup
+  reconciliation replaces the former bind-only SEC-02 contract without adding public login.
+- MP-02 browser polling uses explicit function predicates under the required no-eval CSP.
+  Root attempt 9 proved that Playwright's string-expression polling uses eval (168 failures).
+  Wrapping each existing expression in `() =>` preserves its exact condition and every
+  original assertion; function predicates already in use remain unchanged. Browser contexts
+  must not bypass CSP, and the policy must not allow unsafe-eval to accommodate the test harness.
 
 ---
 
@@ -404,11 +418,40 @@ flags it anywhere else it might appear.
 **Assertion:** The live `services/ui/config.yaml` has `server.host == "127.0.0.1"`.
 **Expected:** Holds; a change to `"0.0.0.0"` or any non-loopback address fails this guard.
 
-### SEC-02 No shared-secret header is required or checked
-**Assertion:** `/api/proxy/*` routes accept requests with no additional auth header.
-**Expected:** A `POST /api/proxy/tasks` with a valid body and no auth header of any kind
-succeeds (given a valid UserAgent) — documenting, not silently fixing, the current
-unauthenticated posture.
+### SEC-02 Local writes require browser authority
+**Action:** Issue a valid create or bodyless accept/approve request with one allowed Host,
+one exact matching Origin and one configured marker from a loopback client.
+**Expected:** The existing operator behavior executes. No secret, session or mint authority is
+introduced. Omitted, duplicate, malformed or mismatched admission values receive the exact
+error above before any operator call; include forged local headers from non-loopback clients.
+
+### SEC-03 Browser configuration is explicit and constrained
+**Expected:** Missing browser_security, non-loopback bind/host/origin, wildcard authorities,
+invalid ports, userinfo/path/query/fragment components and invalid header values fail startup.
+`GET /api/proxy/browser-config` exposes only the non-secret marker fields under proxy admission.
+Valid local reads and writes receive the configured CSP and nosniff response headers.
+
+### SEC-04 Stored content stays literal in real Chromium
+**Setup:** Seed harmless markup markers into stored names, titles, comments and event summaries
+in an isolated database. Exercise landing, task, agent, quarterly and observatory views.
+**Expected:** Literal strings are visible, no marker elements exist, and no marker event handler
+executes. Task/bid identifiers remain single text/attribute values and single encoded request
+segments; quarterly no-data labels remain literal. No active-content previews or inline handlers
+are introduced. The shared proxy helper rejects forbidden targets before any fetch and preserves
+the method, body, content type and configured marker for a valid same-origin write.
+
+### SEC-05 Bodyless actions still enforce byte limits
+**Action:** Send more than the configured body limit to accept/approve with valid browser headers.
+**Expected:** `413 payload_too_large`, zero operator calls. An exactly bounded body reaches the
+handler unchanged. JSON content type remains unnecessary on empty bodyless actions.
+
+### SEC-06 Frontend fallback and asset mounts remain contained
+**Setup:** Use a temporary frontend root, ordinary page/index files and a marker file outside it.
+**Action:** Request encoded traversal and absolute paths, a symlinked page, a symlinked index
+through an unknown route, and an asset directory symlink to the outside marker's directory.
+**Expected:** Every escape returns 404 without the marker. A regular page and ordinary unknown
+route index fallback still return 200 with the expected local content. No ordinary file or key
+is read for the test.
 
 ---
 
@@ -442,6 +485,38 @@ credited by this flow (it mints on demand elsewhere and carries no seeded balanc
 
 ## Category 15: Configuration
 
+### MP-00 fixture-only reconciliation
+Tests that describe a UI configuration as valid must provide the required `user_agent`
+section explicitly, including an isolated `agent_config_path` and test-only `handle`. Startup
+tests must stub agent construction and registration so configuration, health, and logging
+assertions never register a real operator or depend on a live economy. Temporary `CONFIG_PATH`
+overrides, cached settings, and application state must be restored when setup or an assertion
+fails as well as when it succeeds.
+
+This reconciliation changes test inputs and dependency seams only. The production
+`Settings.user_agent` field remains required, a fully absent section still fails fast, and the
+documented partial-section backfill remains a separate compatibility contract.
+
+The same fixture-only rule applies to in-process integration tests. Their shared seeded-database
+configuration and any test-specific YAML must provide isolated operator settings and stub the
+startup registration boundary. A safe startup stub is only the initial app state: proxy tests
+remain free to replace `state.user_agent` with `None` or their own fake to exercise unavailable
+and write-path behavior. Integration fixtures must keep database, web, log, agent-config and
+environment resources temporary and restore settings and application state on every exit path.
+The integration fixture reconciliation applies to these exact sources:
+`tests/integration/conftest.py`, `tests/integration/test_health.py`,
+`tests/integration/test_economy_phase_stalled.py`, and
+`tests/integration/test_request_body_size_limit.py`.
+
+The Playwright observatory fixture is isolated in the same way. It provisions a disposable
+`e2e-operator` roster entry and keypair under its session temp directory, uses unreachable
+fixture-only service URLs, and patches registration only inside the spawned UI test process.
+The real `AgentFactory` and key loader still run, while no repository key or live Identity
+service is used. Startup retains child output, reports early child exit with that log, and
+always reaps the owned process on setup, yield, or teardown failure. This browser fixture is
+read-projection coverage; the separate full-service journey remains the real registration and
+write-path proof.
+
 ### CFG-01 Missing required config field fails startup
 **Setup:** `config.yaml` with any one of `server`, `database`, `sse`, `frontend`, `request`,
 `user_agent` sections omitted.
@@ -453,3 +528,32 @@ credited by this flow (it mints on demand elsewhere and carries no seeded balanc
 **Expected:** `Settings.user_agent.handle` is backfilled from the agents package's own
 `config.yaml` `user_agent` section and is a non-empty string; there is no `treasury_balance`
 attribute anywhere on `Settings.user_agent`.
+
+### CFG-03 Extra fields fail for the intended cause
+**Setup:** An otherwise complete valid configuration, including both required `user_agent`
+fields, contains an unsupported `service.extra_field`.
+**Expected:** Settings loading fails with validation output identifying `extra_field` as an
+extra input; the test cannot pass because an unrelated required section is absent.
+
+## MP-12 sealed projection acceptance
+
+- Public open-task drilldown exposes only aggregate bid count, never bid entries or identifying
+  details. Post-open drilldown uses canonical integer amounts and preserves bidder names, visible
+  quality and timestamps. Actor-specific details come only from the signed poster proxy.
+- Poster proxy preserves authoritative rejection, returns `private, no-store`, and enriches rows only
+  after Task Board authorization. Unauthorized readers receive no bidder details.
+- Observers with a nonzero public bid count see the Bid phase and sealed-count copy. They never
+  request poster details. Authorized posters retain names, quality, offered amounts and acceptance
+  controls. Existing bid-rendering cases use a poster fixture for those details; observer controls
+  continue asserting no acceptance buttons and no bid records.
+- Authorization/server/network/malformed-response failures are visible, keep the aggregate count and
+  expose no acceptance control. An empty detail list must not masquerade as a successful response.
+- Seeded legacy events and actual newly produced events pass through history, initial/resumed SSE,
+  actor-filtered history and agent feeds. Open-bid participation is absent from actor-specific results
+  before pagination; after the task leaves open, even a losing bidder's attribution is recoverable.
+- Sealed feedback has no effect on public quality projections or sorting. Direct visibility fixtures
+  prove projection behavior only; real mutual/timeout reveal remains a separate MP-13 gate.
+
+The old `proposal` drilldown assertion is superseded by canonical integer `amount`. Existing names,
+quality, timestamps, bid rendering and acceptance assertions remain meaningful for an authorized
+poster and must not be removed simply to make sealed observer responses pass.

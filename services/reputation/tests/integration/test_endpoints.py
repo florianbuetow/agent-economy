@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -53,6 +54,12 @@ def _inject_mock(payload: dict[str, object] | None = None, agent_id: str = ALICE
     _ = agent_id
     state = get_app_state()
     state.platform_agent = make_mock_platform_agent(verify_payload=payload)
+    identity_client = AsyncMock()
+    identity_client.close = AsyncMock()
+    identity_client.verify_jws = AsyncMock(
+        side_effect=state.platform_agent.validate_certificate,
+    )
+    state.identity_client = identity_client
 
 
 @pytest.mark.integration

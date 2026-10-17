@@ -63,6 +63,12 @@ constraint-dependencies = [
     "urllib3>=2.8.0",
 ]
 
+# Semgrep 1.181.0 pins vulnerable mcp==1.29.0. Keep Semgrep on the patched
+# 1.x API line until upstream relaxes its exact pin.
+override-dependencies = [
+    { package = { name = "semgrep", version = "1.181.0" }, dependencies = ["mcp==1.30.0"] },
+]
+
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
 service-auth = { path = "../../libs/service-auth", editable = true }

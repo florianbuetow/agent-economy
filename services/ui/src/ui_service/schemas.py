@@ -300,9 +300,15 @@ class BidItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
     bid_id: str
     bidder: BidderInfo
-    proposal: str
+    amount: int
     submitted_at: str
     accepted: bool
+
+
+class OperatorBidListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    task_id: str
+    bids: list[BidItem]
 
 
 class AssetItem(BaseModel):
@@ -372,6 +378,7 @@ class TaskDrilldownResponse(BaseModel):
     spec: str
     reward: int
     status: str
+    bid_count: int
     deadlines: TaskDeadlines
     timestamps: TaskTimestamps
     bids: list[BidItem]

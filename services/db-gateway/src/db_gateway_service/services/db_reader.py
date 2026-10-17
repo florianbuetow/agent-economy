@@ -120,12 +120,12 @@ class DbReader:
         return int(row[0]) if row else 0
 
     def total_escrowed(self) -> int:
-        """Sum of all locked escrow amounts."""
-        cursor = self._db.execute(
-            "SELECT COALESCE(SUM(amount), 0) FROM bank_escrow WHERE status = 'locked'"
-        )
-        row = cursor.fetchone()
-        return int(row[0]) if row else 0
+        """Sum locked integer amounts without limiting the aggregate to SQLite's range."""
+        cursor = self._db.execute("SELECT amount FROM bank_escrow WHERE status = 'locked'")
+        total = 0
+        for row in cursor:
+            total += row[0]
+        return total
 
     def get_escrow(self, escrow_id: str) -> dict[str, Any] | None:
         """Get an escrow record by ID."""

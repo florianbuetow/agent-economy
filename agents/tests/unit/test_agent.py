@@ -32,12 +32,16 @@ class TestBaseAgentSigning:
 
     def test_sign_jws_produces_token(self, sample_config: AgentConfig) -> None:
         agent = BaseAgent(config=sample_config)
-        token = agent._sign_jws({"action": "test"})
+        agent.agent_id = "a-test"
+        token = agent._sign_jws({"action": "test"}, audience="task-board", resource="POST /tasks")
         assert token.count(".") == 2
 
     def test_auth_header_format(self, sample_config: AgentConfig) -> None:
         agent = BaseAgent(config=sample_config)
-        header = agent._auth_header({"action": "test"})
+        agent.agent_id = "a-test"
+        header = agent._auth_header(
+            {"action": "test"}, audience="task-board", resource="GET /tasks"
+        )
         assert "Authorization" in header
         assert header["Authorization"].startswith("Bearer ")
 

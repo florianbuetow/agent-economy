@@ -10,6 +10,9 @@ from unittest.mock import MagicMock
 import pytest
 from cryptography.exceptions import InvalidSignature
 from httpx import ASGITransport, AsyncClient
+from service_auth.jws import JwsProtectedHeader, VerifiedJws
+from service_auth.platform import PlatformAgent
+from service_auth.signing import generate_keypair
 
 from court_service.app import create_app
 from court_service.config import clear_settings_cache
@@ -26,6 +29,7 @@ from tests.helpers import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    from pathlib import Path
 
     from fastapi import FastAPI
 
@@ -35,6 +39,38 @@ CLAIMANT_ID = "a-claimant-test-id"
 RESPONDENT_ID = "a-respondent-test-id"
 
 
+async def _register_platform_agent(agent: PlatformAgent) -> None:
+    """Register a fixture platform identity without an external Identity service."""
+    agent.agent_id = PLATFORM_AGENT_ID
+
+
+def _write_agent_config(tmp_path: Path) -> Path:
+    """Provision a disposable platform identity for load-only startup."""
+    keys_dir = tmp_path / "keys"
+    generate_keypair("platform", keys_dir)
+    roster_path = tmp_path / "roster.yaml"
+    roster_path.write_text('agents:\n  platform:\n    name: "Platform"\n')
+    config_path = tmp_path / "agents.yaml"
+    config_path.write_text(
+        f"""\
+platform:
+  identity_url: "http://localhost:8001"
+  bank_url: "http://localhost:8002"
+  task_board_url: "http://localhost:8003"
+  reputation_url: "http://localhost:8004"
+  court_url: "http://localhost:8005"
+data:
+  keys_dir: "{keys_dir}"
+  roster_path: "{roster_path}"
+signing:
+  token_ttl_seconds: 60
+  max_lifetime_seconds: 60
+  clock_skew_seconds: 0
+""",
+    )
+    return config_path
+
+
 class _NoDeliverableFetcher:
     """Default deliverable fetcher for router tests: no on-platform assets."""
 
@@ -42,9 +78,14 @@ class _NoDeliverableFetcher:
         _ = task_id
         return []
 
+    async def close(self) -> None:
+        """Match the production fetcher lifecycle interface."""
+
 
 def _valid_config(tmp_path: Any) -> str:
     """Write a valid court config.yaml and return its path."""
+    agent_config_path = _write_agent_config(tmp_path)
+    generate_keypair("gateway-court", tmp_path)
     config_content = f"""\
 service:
   name: "court"
@@ -58,6 +99,7 @@ logging:
   directory: "data/logs"
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
+  agent_config_path: "{agent_config_path}"
 request:
   max_body_size: 1048576
 disputes:
@@ -78,6 +120,11 @@ judges:
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-court"
+    private_key_path: "gateway-court.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -85,17 +132,19 @@ db_gateway:
 
 
 @pytest.fixture
-async def app(tmp_path: Any) -> AsyncIterator[FastAPI]:
+async def app(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[FastAPI]:
     """Create a test app with mocked external services."""
     config_path = _valid_config(tmp_path)
     os.environ["CONFIG_PATH"] = config_path
 
     clear_settings_cache()
     reset_app_state()
+    monkeypatch.setattr(PlatformAgent, "register", _register_platform_agent)
 
     test_app = create_app()
     async with test_app.router.lifespan_context(test_app):
         state = get_app_state()
+        await state.platform_agent.close()
         fake_store = InMemoryDisputeStore(db_path=str(tmp_path / "test.db"))
         state.store = fake_store
         if state.dispute_service is not None:
@@ -117,7 +166,7 @@ async def app(tmp_path: Any) -> AsyncIterator[FastAPI]:
 async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
     """Create an async HTTP client for the test app."""
     async with AsyncClient(
-        transport=ASGITransport(app=app),
+        transport=ASGITransport(app=app, raise_app_exceptions=False),
         base_url="http://test",
     ) as c:
         yield c
@@ -169,15 +218,22 @@ def ruling_payload(dispute_id: str, **overrides: Any) -> dict[str, Any]:
     return base
 
 
-def token_body(payload: dict[str, Any], kid: str = PLATFORM_AGENT_ID) -> dict[str, str]:
+def token_body(
+    payload: dict[str, Any],
+    kid: str = PLATFORM_AGENT_ID,
+    *,
+    resource: str | None = None,
+) -> dict[str, str]:
     """Wrap a payload into a {token: ...} body."""
-    return {"token": make_jws_token(payload, kid=kid)}
+    return {"token": make_jws_token(payload, kid=kid, resource=resource)}
 
 
 def inject_identity_verify(
     agent_id: str,
     payload: dict[str, Any],
     valid: bool = True,
+    *,
+    resource: str | None = None,
 ) -> None:
     """Configure the mock platform agent for token verification.
 
@@ -189,7 +245,27 @@ def inject_identity_verify(
     if agent_id != PLATFORM_AGENT_ID or not valid:
         state.platform_agent.validate_certificate = MagicMock(side_effect=InvalidSignature())
     else:
-        state.platform_agent.validate_certificate = MagicMock(return_value=payload)
+        state.platform_agent.validate_certificate = MagicMock(
+            return_value=VerifiedJws(
+                header=JwsProtectedHeader(
+                    alg="EdDSA",
+                    typ="JWT",
+                    kid=agent_id,
+                    iat=1,
+                    exp=2,
+                    aud="court",
+                    resource=resource
+                    or (
+                        f"POST /disputes/{payload['dispute_id']}/rebuttal"
+                        if payload.get("action") == "submit_rebuttal"
+                        else f"POST /disputes/{payload['dispute_id']}/rule"
+                        if payload.get("action") == "trigger_ruling"
+                        else "POST /disputes/file"
+                    ),
+                ),
+                payload=payload,
+            )
+        )
 
 
 def inject_identity_error(error: Exception) -> None:

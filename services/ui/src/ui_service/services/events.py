@@ -8,6 +8,13 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from ui_service.services.database import execute_query
+from ui_service.services.public_events import (
+    BID_SUBMITTED,
+    FEEDBACK_SUBMITTED,
+    PUBLIC_BID_STATUSES,
+    project_public_event,
+)
+from ui_service.taxonomy import sql_placeholders
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -30,46 +37,40 @@ async def get_events(
     params: list[object] = []
 
     if before is not None:
-        conditions.append("event_id < ?")
+        conditions.append("e.event_id < ?")
         params.append(before)
     if after is not None:
-        conditions.append("event_id > ?")
+        conditions.append("e.event_id > ?")
         params.append(after)
     if source is not None:
-        conditions.append("event_source = ?")
+        conditions.append("e.event_source = ?")
         params.append(source)
     if event_type is not None:
-        conditions.append("event_type = ?")
+        conditions.append("e.event_type = ?")
         params.append(event_type)
     if agent_id is not None:
-        conditions.append("agent_id = ?")
-        params.append(agent_id)
+        conditions.append(
+            "e.agent_id = ? AND e.event_type != ? AND "
+            f"(e.event_type != ? OR t.status IN ({sql_placeholders(PUBLIC_BID_STATUSES)}))"
+        )
+        params.extend((agent_id, FEEDBACK_SUBMITTED, BID_SUBMITTED, *PUBLIC_BID_STATUSES))
     if task_id is not None:
-        conditions.append("task_id = ?")
+        conditions.append("e.task_id = ?")
         params.append(task_id)
 
     where = " AND ".join(conditions) if conditions else "1=1"
-    sql = f"SELECT * FROM events WHERE {where} ORDER BY event_id DESC LIMIT ?"  # nosec B608
+    sql = (
+        "SELECT e.*, t.status AS task_status FROM events e "
+        "LEFT JOIN board_tasks t ON t.task_id = e.task_id "
+        f"WHERE {where} ORDER BY e.event_id DESC LIMIT ?"  # nosec B608
+    )
     params.append(limit + 1)
 
     rows = await execute_query(db, sql, tuple(params))
     has_more = len(rows) > limit
     rows = rows[:limit]
 
-    events: list[dict[str, Any]] = []
-    for row in rows:
-        events.append(
-            {
-                "event_id": row["event_id"],
-                "event_source": row["event_source"],
-                "event_type": row["event_type"],
-                "timestamp": row["timestamp"],
-                "task_id": row["task_id"],
-                "agent_id": row["agent_id"],
-                "summary": row["summary"],
-                "payload": json.loads(row["payload"]) if row["payload"] else {},
-            }
-        )
+    events = [project_public_event(row) for row in rows]
 
     return events, has_more
 
@@ -91,22 +92,15 @@ async def stream_events(
     while True:
         rows = await execute_query(
             db,
-            "SELECT * FROM events WHERE event_id > ? ORDER BY event_id ASC LIMIT ?",
+            "SELECT e.*, t.status AS task_status FROM events e "
+            "LEFT JOIN board_tasks t ON t.task_id = e.task_id "
+            "WHERE e.event_id > ? ORDER BY e.event_id ASC LIMIT ?",
             (cursor, batch_size),
         )
 
         if rows:
             for row in rows:
-                event_data = {
-                    "event_id": row["event_id"],
-                    "event_source": row["event_source"],
-                    "event_type": row["event_type"],
-                    "timestamp": row["timestamp"],
-                    "task_id": row["task_id"],
-                    "agent_id": row["agent_id"],
-                    "summary": row["summary"],
-                    "payload": json.loads(row["payload"]) if row["payload"] else {},
-                }
+                event_data = project_public_event(row)
                 yield {
                     "event": "economy_event",
                     "data": json.dumps(event_data),

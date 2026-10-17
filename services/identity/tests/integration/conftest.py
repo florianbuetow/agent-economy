@@ -26,6 +26,7 @@ from db_gateway_service.core.state import reset_app_state as reset_gateway_state
 from db_gateway_service.services.db_reader import DbReader
 from db_gateway_service.services.db_writer import DbWriter
 from httpx import ASGITransport, AsyncClient
+from service_auth.signing import generate_keypair
 
 from identity_service.app import create_app
 from identity_service.config import clear_settings_cache, get_settings
@@ -65,8 +66,22 @@ database:
   busy_timeout_ms: 5000
   journal_mode: "wal"
 
+recovery:
+  maintenance_lock_path: "{Path(db_path).parent / "maintenance.lock"}"
+  backup_root: "{Path(db_path).parent / "backups"}"
+
 request:
   max_body_size: 1048576
+auth:
+  audience: "db-gateway"
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 0
+  trusted_callers:
+    gateway-identity:
+      public_key_path: "{Path(db_path).parent / "gateway-identity.pub"}"
+      capabilities:
+        - "gateway.identity.read"
+        - "gateway.identity.write"
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(content)
@@ -75,6 +90,7 @@ request:
 
 async def _build_gateway_app(db_path: str) -> tuple[FastAPI, DbWriter]:
     """Build a real, in-process DB Gateway ASGI app against a fresh SQLite file."""
+    generate_keypair("gateway-identity", Path(db_path).parent)
     config_path = _write_gateway_config(db_path)
     reset_gateway_state()
     state = init_gateway_state()
@@ -130,9 +146,17 @@ crypto:
   signature_bytes: 64
 request:
   max_body_size: 1572864
+token_validation:
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 30
 db_gateway:
   url: "http://gateway-test"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-identity"
+    private_key_path: "gateway-identity.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)

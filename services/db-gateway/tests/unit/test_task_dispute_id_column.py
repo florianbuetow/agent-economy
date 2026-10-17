@@ -1,12 +1,14 @@
-"""board_tasks.dispute_id column: migration, writes, and reads (GAP-B9)."""
+"""board_tasks.dispute_id: strict schema admission, writes, and reads (MP-06/GAP-B9)."""
 
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import pytest
+from service_commons.exceptions import ServiceError
 
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.services.db_reader import DbReader
@@ -148,26 +150,35 @@ def _create_task(client: TestClient, *, poster_id: str) -> str:
 
 
 @pytest.mark.unit
-class TestDisputeIdMigration:
-    """An existing database must gain board_tasks.dispute_id on startup."""
+class TestDisputeIdSchemaAdmission:
+    """Partial old tables are preserved; only complete current schemas start."""
 
-    def test_migration_adds_dispute_id_to_existing_database(
+    def test_partial_old_table_is_rejected_without_adding_dispute_id(
         self, tmp_db_path: str, schema_sql: str
     ) -> None:
         _create_old_shape_board_tasks(tmp_db_path)
         assert "dispute_id" not in _board_task_columns(tmp_db_path)
+        before = Path(tmp_db_path).read_bytes()
 
-        _init_writer(tmp_db_path, schema_sql)
+        with pytest.raises(ServiceError, match="incomplete or unknown"):
+            _init_writer(tmp_db_path, schema_sql)
 
-        assert "dispute_id" in _board_task_columns(tmp_db_path)
+        assert "dispute_id" not in _board_task_columns(tmp_db_path)
+        assert Path(tmp_db_path).read_bytes() == before
 
-    def test_migration_is_idempotent(self, tmp_db_path: str, schema_sql: str) -> None:
+    def test_repeated_partial_admission_does_not_modify_columns(
+        self, tmp_db_path: str, schema_sql: str
+    ) -> None:
         _create_old_shape_board_tasks(tmp_db_path)
+        before = Path(tmp_db_path).read_bytes()
+        columns = _board_task_columns(tmp_db_path)
 
-        _init_writer(tmp_db_path, schema_sql)
-        _init_writer(tmp_db_path, schema_sql)
+        for _attempt in range(2):
+            with pytest.raises(ServiceError, match="incomplete or unknown"):
+                _init_writer(tmp_db_path, schema_sql)
 
-        assert _board_task_columns(tmp_db_path).count("dispute_id") == 1
+        assert _board_task_columns(tmp_db_path) == columns
+        assert Path(tmp_db_path).read_bytes() == before
 
     def test_fresh_database_has_dispute_id(self, tmp_db_path: str, schema_sql: str) -> None:
         _init_writer(tmp_db_path, schema_sql)

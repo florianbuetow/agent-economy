@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from demo_replay.config import PlatformConfig, load_platform_settings
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 VALID_CONFIG_YAML = """\
 platform:
@@ -19,6 +16,8 @@ platform:
   task_board_url: "http://localhost:8003"
   reputation_url: "http://localhost:8004"
   court_url: "http://localhost:8005"
+  platform_key_path: "keys/platform.key"
+  token_ttl_seconds: 300
 """
 
 
@@ -37,6 +36,8 @@ class TestPlatformConfig:
             task_board_url="http://localhost:8003",
             reputation_url="http://localhost:8004",
             court_url="http://localhost:8005",
+            platform_key_path=Path("keys/platform.key"),
+            token_ttl_seconds=300,
         )
         assert config.identity_url == "http://localhost:8001"
         assert config.court_url == "http://localhost:8005"
@@ -49,6 +50,8 @@ class TestPlatformConfig:
                 task_board_url="http://localhost:8003",
                 reputation_url="http://localhost:8004",
                 court_url="http://localhost:8005",
+                platform_key_path=Path("keys/platform.key"),
+                token_ttl_seconds=300,
                 unknown_field="oops",  # type: ignore[call-arg]
             )
 
@@ -59,7 +62,22 @@ class TestPlatformConfig:
                 bank_url="http://localhost:8002",
                 task_board_url="http://localhost:8003",
                 reputation_url="http://localhost:8004",
+                platform_key_path=Path("keys/platform.key"),
+                token_ttl_seconds=300,
             )  # type: ignore[call-arg]
+
+    @pytest.mark.parametrize("invalid_ttl", [None, True, 0, -1])
+    def test_rejects_invalid_token_ttl(self, invalid_ttl: object) -> None:
+        with pytest.raises(ValidationError, match="token_ttl_seconds"):
+            PlatformConfig(
+                identity_url="http://localhost:8001",
+                bank_url="http://localhost:8002",
+                task_board_url="http://localhost:8003",
+                reputation_url="http://localhost:8004",
+                court_url="http://localhost:8005",
+                platform_key_path=Path("keys/platform.key"),
+                token_ttl_seconds=invalid_ttl,  # type: ignore[arg-type]
+            )
 
 
 @pytest.mark.unit

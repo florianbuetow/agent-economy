@@ -65,7 +65,11 @@ class AssetManager:
         12b. too_many_assets
         """
         # Steps 4-7a: Verify JWS, validate action
-        payload = await self._token_validator.validate_jws_token(token, "upload_asset")
+        payload = await self._token_validator.validate_jws_token(
+            token,
+            "upload_asset",
+            expected_resource=f"POST /tasks/{task_id}/assets",
+        )
         signer_id: str = payload["_signer_id"]
 
         # Step 7b: Validate required fields

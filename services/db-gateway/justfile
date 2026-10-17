@@ -292,8 +292,12 @@ test:
     @printf "\033[0;32m✓ All tests passed\033[0m\n"
     @echo ""
 
+# Check service-specific test prerequisites without installing anything
+test-prerequisites:
+    @if [ "{{SERVICE_NAME}}" = "ui_service" ]; then uv run python ../../scripts/check_ui_browser.py --timeout-ms 30000; fi
+
 # Run unit tests only (fast, isolated)
-test-unit:
+test-unit: test-prerequisites
     @echo ""
     @printf "\033[0;34m=== Running Unit Tests ===\033[0m\n"
     @uv run pytest tests/unit -m unit -v
@@ -318,7 +322,7 @@ test-integration:
     exit $rc
 
 # Run unit tests with coverage report and threshold check
-test-coverage: init
+test-coverage: init test-prerequisites
     @echo ""
     @printf "\033[0;34m=== Running Unit Tests with Coverage ===\033[0m\n"
     @uv run pytest tests/ -v \
@@ -349,7 +353,7 @@ ci:
     printf "\033[0;34m=== Running CI Checks for {{DISPLAY_NAME}} Service ===\033[0m\n"
     printf "\n"
     just init
-    just code-format
+    just test-prerequisites
     just code-style
     just code-typecheck
     just code-security
@@ -388,8 +392,8 @@ ci-quiet:
     just init > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Init failed\033[0m\n"; cat $TMPFILE; exit 1; }
     printf "\033[0;32m✓ Init passed\033[0m\n"
 
-    just code-format > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Code-format failed\033[0m\n"; cat $TMPFILE; exit 1; }
-    printf "\033[0;32m✓ Code-format passed\033[0m\n"
+    just test-prerequisites > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Test prerequisites failed\033[0m\n"; cat $TMPFILE; exit 1; }
+    printf "\033[0;32m✓ Test prerequisites passed\033[0m\n"
 
     just code-style > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Code-style failed\033[0m\n"; cat $TMPFILE; exit 1; }
     printf "\033[0;32m✓ Code-style passed\033[0m\n"

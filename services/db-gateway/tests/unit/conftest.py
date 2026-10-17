@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import contextlib
 import os
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
+from service_auth.gateway import GatewayRequestSigner, GatewaySignerConfig
+from service_auth.signing import generate_keypair
 
 from db_gateway_service.config import clear_settings_cache
 from db_gateway_service.core.state import init_app_state, reset_app_state
@@ -41,31 +42,86 @@ def db_writer(initialized_db: str) -> Iterator[DbWriter]:
 
 
 @pytest.fixture
-def app_with_writer(db_writer: DbWriter) -> Iterator[TestClient]:
+def gateway_test_signers(tmp_path: Path) -> dict[str, GatewayRequestSigner]:
+    """Provision distinct ephemeral service credentials for router tests."""
+    return _create_gateway_keys(tmp_path)
+
+
+@pytest.fixture
+def app_with_writer(
+    db_writer: DbWriter,
+    gateway_test_signers: dict[str, GatewayRequestSigner],
+    tmp_path: Path,
+) -> Iterator[TestClient]:
     """Create a FastAPI test client with a real DbWriter."""
-    state = init_app_state()
-    state.db_writer = db_writer
+    config_path = tmp_path / "config.yaml"
+    _create_test_config(db_writer._db_path, config_path)
 
     from db_gateway_service.app import create_app
 
-    # Override settings to avoid needing config.yaml
-    os.environ["CONFIG_PATH"] = _create_test_config(db_writer._db_path)
+    os.environ["CONFIG_PATH"] = str(config_path)
     clear_settings_cache()
-
     app = create_app()
-    with TestClient(app) as client:
-        # Re-inject the db_writer since lifespan creates a new one
+    with _GatewayTestClient(app, gateway_auth=_GatewayTestAuth(gateway_test_signers)) as client:
         state = init_app_state()
         state.db_writer = db_writer
         yield client
 
     if "CONFIG_PATH" in os.environ:
-        config_path = os.environ.pop("CONFIG_PATH")
-        with contextlib.suppress(OSError):
-            Path(config_path).unlink()
+        os.environ.pop("CONFIG_PATH")
 
 
-def _create_test_config(db_path: str) -> str:
+class _GatewayTestAuth(httpx.Auth):
+    """Give legacy domain tests explicit least-privilege service credentials."""
+
+    def __init__(self, signers: dict[str, GatewayRequestSigner]) -> None:
+        self._signers = signers
+
+    def auth_flow(self, request: httpx.Request) -> Iterator[httpx.Request]:
+        domain = request.url.path.split("/", maxsplit=2)[1]
+        if domain == "health" and request.method == "GET" and not request.url.query:
+            yield request
+            return
+        if domain == "health":
+            domain = "identity"
+        signer = self._signers[domain]
+        access = "read" if request.method == "GET" else "write"
+        yield signer.sign_request(request, action=f"gateway.{domain}.{access}")
+
+
+class _GatewayTestClient(TestClient):
+    """Apply explicit service auth while preserving per-request auth overrides."""
+
+    def __init__(self, app: object, *, gateway_auth: httpx.Auth) -> None:
+        super().__init__(app)  # type: ignore[arg-type]
+        self._auth = gateway_auth
+
+
+def _create_gateway_keys(config_dir: Path) -> dict[str, GatewayRequestSigner]:
+    """Provision distinct ephemeral service credentials for router tests."""
+    handles = {
+        "identity": "gateway-identity",
+        "bank": "gateway-central-bank",
+        "board": "gateway-task-board",
+        "reputation": "gateway-reputation",
+        "court": "gateway-court",
+    }
+    signers: dict[str, GatewayRequestSigner] = {}
+    for domain, handle in handles.items():
+        generate_keypair(handle, config_dir)
+        signers[domain] = GatewayRequestSigner(
+            GatewaySignerConfig(
+                kid=handle,
+                private_key_path=Path(f"{handle}.key"),
+                audience="db-gateway",
+                token_ttl_seconds=30,
+            ),
+            config_dir=config_dir,
+        )
+    return signers
+
+
+def _create_test_config(db_path: str, config_path: Path) -> None:
     """Write a temporary config.yaml for testing."""
     config_content = f"""
 service:
@@ -90,7 +146,30 @@ database:
 
 request:
   max_body_size: 1048576
+
+recovery:
+  maintenance_lock_path: "maintenance.lock"
+  backup_root: "backups"
+
+auth:
+  audience: "db-gateway"
+  max_lifetime_seconds: 30
+  clock_skew_seconds: 0
+  trusted_callers:
+    gateway-identity:
+      public_key_path: "gateway-identity.pub"
+      capabilities: ["gateway.identity.read", "gateway.identity.write"]
+    gateway-central-bank:
+      public_key_path: "gateway-central-bank.pub"
+      capabilities: ["gateway.bank.read", "gateway.bank.write"]
+    gateway-task-board:
+      public_key_path: "gateway-task-board.pub"
+      capabilities: ["gateway.board.read", "gateway.board.write"]
+    gateway-reputation:
+      public_key_path: "gateway-reputation.pub"
+      capabilities: ["gateway.reputation.read", "gateway.reputation.write"]
+    gateway-court:
+      public_key_path: "gateway-court.pub"
+      capabilities: ["gateway.court.read", "gateway.court.write", "gateway.board.task.read"]
 """
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-        f.write(config_content)
-        return f.name
+    config_path.write_text(config_content)

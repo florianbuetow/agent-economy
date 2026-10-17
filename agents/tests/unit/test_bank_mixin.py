@@ -32,7 +32,11 @@ class TestGetBalance:
         result = await agent.get_balance()
 
         assert result == balance_response
-        agent._auth_header.assert_called_once_with({"action": "get_balance", "account_id": "a-123"})
+        agent._auth_header.assert_called_once_with(
+            {"action": "get_balance", "account_id": "a-123"},
+            audience="central-bank",
+            resource="GET /accounts/a-123",
+        )
         agent._request.assert_awaited_once_with(
             "GET",
             f"{sample_config.bank_url}/accounts/a-123",
@@ -68,7 +72,9 @@ class TestGetTransactions:
 
         assert result == transactions_response["transactions"]
         agent._auth_header.assert_called_once_with(
-            {"action": "get_transactions", "account_id": "a-123"}
+            {"action": "get_transactions", "account_id": "a-123"},
+            audience="central-bank",
+            resource="GET /accounts/a-123/transactions",
         )
         agent._request.assert_awaited_once_with(
             "GET",
@@ -103,7 +109,9 @@ class TestLockEscrow:
                 "agent_id": "a-123",
                 "amount": 10,
                 "task_id": "T-123",
-            }
+            },
+            audience="central-bank",
+            resource="POST /escrow/lock",
         )
         agent._request.assert_awaited_once_with(
             "POST",

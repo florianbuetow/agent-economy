@@ -123,7 +123,9 @@ class TestCancelTask:
 
         assert result == cancel_response
         agent._sign_jws.assert_called_once_with(
-            {"action": "cancel_task", "task_id": "t-1", "poster_id": "a-poster"}
+            {"action": "cancel_task", "task_id": "t-1", "poster_id": "a-poster"},
+            audience="task-board",
+            resource="POST /tasks/t-1/cancel",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -153,7 +155,9 @@ class TestSubmitBid:
                 "task_id": "t-1",
                 "bidder_id": "a-bidder",
                 "amount": 4500,
-            }
+            },
+            audience="task-board",
+            resource="POST /tasks/t-1/bids",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -182,7 +186,9 @@ class TestListBids:
 
         assert result == bids_response["bids"]
         agent._auth_header.assert_called_once_with(
-            {"action": "list_bids", "task_id": "t-1", "poster_id": "a-poster"}
+            {"action": "list_bids", "task_id": "t-1", "poster_id": "a-poster"},
+            audience="task-board",
+            resource="GET /tasks/t-1/bids",
         )
         agent._request.assert_awaited_once_with(
             "GET",
@@ -212,7 +218,9 @@ class TestAcceptBid:
                 "task_id": "t-1",
                 "bid_id": "bid-1",
                 "poster_id": "a-poster",
-            }
+            },
+            audience="task-board",
+            resource="POST /tasks/t-1/bids/bid-1/accept",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -237,7 +245,11 @@ class TestUploadAsset:
         result = await agent.upload_asset("t-1", "out.txt", b"file content")
 
         assert result == asset_response
-        agent._auth_header.assert_called_once_with({"action": "upload_asset", "task_id": "t-1"})
+        agent._auth_header.assert_called_once_with(
+            {"action": "upload_asset", "task_id": "t-1"},
+            audience="task-board",
+            resource="POST /tasks/t-1/assets",
+        )
         agent._request.assert_awaited_once_with(
             "POST",
             f"{sample_config.task_board_url}/tasks/t-1/assets",
@@ -266,7 +278,9 @@ class TestSubmitDeliverable:
                 "action": "submit_deliverable",
                 "task_id": "t-1",
                 "worker_id": "a-worker",
-            }
+            },
+            audience="task-board",
+            resource="POST /tasks/t-1/submit",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -291,7 +305,9 @@ class TestApproveTask:
 
         assert result == approve_response
         agent._sign_jws.assert_called_once_with(
-            {"action": "approve_task", "task_id": "t-1", "poster_id": "a-poster"}
+            {"action": "approve_task", "task_id": "t-1", "poster_id": "a-poster"},
+            audience="task-board",
+            resource="POST /tasks/t-1/approve",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -321,7 +337,9 @@ class TestDisputeTask:
                 "task_id": "t-1",
                 "poster_id": "a-poster",
                 "reason": "Incomplete work",
-            }
+            },
+            audience="task-board",
+            resource="POST /tasks/t-1/dispute",
         )
         agent._request.assert_awaited_once_with(
             "POST",

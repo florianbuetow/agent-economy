@@ -39,14 +39,18 @@ def _agent_payload(agent_id: str, public_key: str) -> dict[str, object]:
     }
 
 
-def _register_over_own_connection(gateway_url: str, payload: dict[str, object]) -> int:
+def _register_over_own_connection(
+    gateway_url: str,
+    payload: dict[str, object],
+    gateway_auth: httpx.Auth,
+) -> int:
     """Open a brand-new httpx.Client (its own TCP connection) and register.
 
     A shared client's connection pool can serialize or reuse a socket across
     "concurrent" calls; a fresh client per call guarantees each request rides
     its own connection, matching what N real, independent callers would do.
     """
-    with httpx.Client(base_url=gateway_url, timeout=10.0) as client:
+    with httpx.Client(base_url=gateway_url, timeout=10.0, auth=gateway_auth) as client:
         response = client.post("/identity/agents", json=payload)
         return response.status_code
 
@@ -56,13 +60,17 @@ class TestTrueMultiConnectionConcurrency:
     """T-045: exactly one 201 among concurrently-racing distinct agents
     claiming the same public_key, each over its own live connection."""
 
-    def test_exactly_one_201_among_five_racing_distinct_agents(self, gateway_url: str) -> None:
+    def test_exactly_one_201_among_five_racing_distinct_agents(
+        self,
+        gateway_url: str,
+        gateway_auth: httpx.Auth,
+    ) -> None:
         shared_public_key = f"ed25519:{uuid.uuid4()}"
         payloads = [_agent_payload(f"a-conc-{uuid.uuid4()}", shared_public_key) for _ in range(5)]
 
         with ThreadPoolExecutor(max_workers=len(payloads)) as pool:
             futures = [
-                pool.submit(_register_over_own_connection, gateway_url, payload)
+                pool.submit(_register_over_own_connection, gateway_url, payload, gateway_auth)
                 for payload in payloads
             ]
             results = [f.result() for f in as_completed(futures)]
@@ -71,7 +79,11 @@ class TestTrueMultiConnectionConcurrency:
             f"expected exactly one 201 and four 409s, got {sorted(results)}"
         )
 
-    def test_winner_is_readable_and_no_duplicate_rows_exist(self, gateway_url: str) -> None:
+    def test_winner_is_readable_and_no_duplicate_rows_exist(
+        self,
+        gateway_url: str,
+        gateway_auth: httpx.Auth,
+    ) -> None:
         """The single winning agent_id is the one actually persisted; the
         losers never made it into identity_agents at all."""
         shared_public_key = f"ed25519:{uuid.uuid4()}"
@@ -80,7 +92,12 @@ class TestTrueMultiConnectionConcurrency:
 
         with ThreadPoolExecutor(max_workers=len(payloads)) as pool:
             futures = {
-                pool.submit(_register_over_own_connection, gateway_url, payload): aid
+                pool.submit(
+                    _register_over_own_connection,
+                    gateway_url,
+                    payload,
+                    gateway_auth,
+                ): aid
                 for payload, aid in zip(payloads, agent_ids, strict=True)
             }
             winners = [futures[f] for f in as_completed(futures) if f.result() == 201]
@@ -88,7 +105,7 @@ class TestTrueMultiConnectionConcurrency:
         assert len(winners) == 1
         winner_id = winners[0]
 
-        with httpx.Client(base_url=gateway_url, timeout=10.0) as client:
+        with httpx.Client(base_url=gateway_url, timeout=10.0, auth=gateway_auth) as client:
             resp = client.get(f"/identity/agents/{winner_id}")
             assert resp.status_code == 200
             assert resp.json()["public_key"] == shared_public_key

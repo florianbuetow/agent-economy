@@ -6,7 +6,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from db_gateway_service.config import get_settings
+from service_commons.maintenance_lock import MaintenanceLockMode, hold_maintenance_lock
+
+from db_gateway_service.config import get_settings, resolve_recovery_path
 from db_gateway_service.core.state import init_app_state
 from db_gateway_service.logging import get_logger, setup_logging
 from db_gateway_service.services.db_reader import DbReader
@@ -21,49 +23,49 @@ if TYPE_CHECKING:
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Manage application lifecycle."""
-    # === STARTUP ===
     settings = get_settings()
+    lock_path = resolve_recovery_path(settings.recovery.maintenance_lock_path)
 
-    setup_logging(settings.logging.level, settings.service.name, settings.logging.directory)
-    logger = get_logger(__name__)
+    with hold_maintenance_lock(
+        lock_path,
+        mode=MaintenanceLockMode.SHARED,
+        blocking=False,
+    ):
+        setup_logging(settings.logging.level, settings.service.name, settings.logging.directory)
+        logger = get_logger(__name__)
+        state = init_app_state()
+        db_writer: DbWriter | None = None
+        try:
+            db_path = settings.database.path
+            Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-    state = init_app_state()
+            schema_path = Path(settings.database.schema_path)
+            schema_sql = schema_path.read_text()
 
-    # Ensure database directory exists
-    db_path = settings.database.path
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+            db_writer = DbWriter(
+                db_path=db_path,
+                busy_timeout_ms=settings.database.busy_timeout_ms,
+                journal_mode=settings.database.journal_mode,
+                schema_sql=schema_sql,
+            )
+            state.db_writer = db_writer
+            state.db_reader = DbReader(db=db_writer.connection)
 
-    # Initialize the schema from the SQL file
-    schema_path = Path(settings.database.schema_path)
-    schema_sql: str | None = None
-    if schema_path.exists():
-        schema_sql = schema_path.read_text()
+            logger.info(
+                "Service starting",
+                extra={
+                    "service": settings.service.name,
+                    "version": settings.service.version,
+                    "port": settings.server.port,
+                    "database": db_path,
+                },
+            )
 
-    # Initialize database writer
-    state.db_writer = DbWriter(
-        db_path=db_path,
-        busy_timeout_ms=settings.database.busy_timeout_ms,
-        journal_mode=settings.database.journal_mode,
-        schema_sql=schema_sql,
-    )
-    # GAP-C5: DbReader shares the writer's single connection through the public
-    # `connection` accessor, not a private-attribute reach-in. See
-    # DbWriter.connection for the single-writer/no-await-in-transaction invariant
-    # this relies on.
-    state.db_reader = DbReader(db=state.db_writer.connection)
-
-    logger.info(
-        "Service starting",
-        extra={
-            "service": settings.service.name,
-            "version": settings.service.version,
-            "port": settings.server.port,
-            "database": db_path,
-        },
-    )
-
-    yield  # Application runs here
-
-    # === SHUTDOWN ===
-    logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
-    state.db_writer.close()
+            yield
+        finally:
+            if db_writer is not None:
+                logger.info(
+                    "Service shutting down",
+                    extra={"uptime_seconds": state.uptime_seconds},
+                )
+                db_writer.close()

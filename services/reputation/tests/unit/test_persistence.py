@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import os
 from typing import TYPE_CHECKING, Any
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -99,6 +100,12 @@ def _inject_mock_identity(payload: dict[str, object], kid: str) -> None:
     _ = kid
     state = get_app_state()
     state.platform_agent = make_mock_platform_agent(verify_payload=payload)
+    identity_client = AsyncMock()
+    identity_client.close = AsyncMock()
+    identity_client.verify_jws = AsyncMock(
+        side_effect=state.platform_agent.validate_certificate,
+    )
+    state.identity_client = identity_client
 
 
 async def _make_client(app: FastAPI) -> AsyncIterator[AsyncClient]:
@@ -183,6 +190,11 @@ feedback:
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-reputation"
+    private_key_path: "gateway-reputation.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)

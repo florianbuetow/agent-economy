@@ -88,7 +88,7 @@ async def _load_bids(
     """Load all bids for a task with bidder delivery-quality counts."""
     bid_rows = await execute_fetchall(
         db,
-        "SELECT bb.bid_id, bb.bidder_id, ia.name, bb.proposal, bb.submitted_at "
+        "SELECT bb.bid_id, bb.bidder_id, ia.name, bb.amount, bb.submitted_at "
         "FROM board_bids bb "
         "JOIN identity_agents ia ON ia.agent_id = bb.bidder_id "
         "WHERE bb.task_id = ? "
@@ -98,7 +98,7 @@ async def _load_bids(
 
     bids = []
     for br in bid_rows:
-        bid_id, bidder_id, bidder_name, proposal, bid_submitted_at = br
+        bid_id, bidder_id, bidder_name, amount, bid_submitted_at = br
         dq = await _delivery_quality(db, bidder_id)
         bids.append(
             {
@@ -108,12 +108,39 @@ async def _load_bids(
                     "name": bidder_name,
                     "delivery_quality": dq,
                 },
-                "proposal": proposal,
+                "amount": int(amount),
                 "submitted_at": bid_submitted_at,
                 "accepted": bid_id == accepted_bid_id,
             }
         )
     return bids
+
+
+async def enrich_authorized_bids(
+    db: aiosqlite.Connection,
+    bids: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Attach public identity and visible delivery quality to authorized bids."""
+    enriched: list[dict[str, Any]] = []
+    for bid in bids:
+        bidder_id = str(bid["bidder_id"])
+        bidder_name = await _resolve_agent_name(db, bidder_id)
+        if not isinstance(bidder_name, str):
+            raise ValueError(f"Bidder '{bidder_id}' has no public identity projection")
+        enriched.append(
+            {
+                "bid_id": str(bid["bid_id"]),
+                "bidder": {
+                    "agent_id": bidder_id,
+                    "name": bidder_name,
+                    "delivery_quality": await _delivery_quality(db, bidder_id),
+                },
+                "amount": int(bid["amount"]),
+                "submitted_at": str(bid["submitted_at"]),
+                "accepted": False,
+            }
+        )
+    return enriched
 
 
 async def _load_assets(db: aiosqlite.Connection, task_id: str) -> list[dict[str, Any]]:
@@ -250,7 +277,15 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
     # 2-7. Load related records (poster, worker, bids, assets, feedback, dispute)
     poster_name = await _resolve_agent_name(db, poster_id)
     worker = await _load_worker(db, worker_id)
-    bids = await _load_bids(db, task_id, accepted_bid_id)
+    bid_count = int(
+        await execute_scalar(
+            db,
+            "SELECT COUNT(*) FROM board_bids WHERE task_id = ?",
+            (task_id,),
+        )
+        or 0
+    )
+    bids = [] if status == TaskStatus.OPEN else await _load_bids(db, task_id, accepted_bid_id)
     assets = await _load_assets(db, task_id)
     feedback = await _load_feedback(db, task_id)
     dispute = await _load_dispute(db, task_id)
@@ -263,6 +298,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
         "spec": spec,
         "reward": reward,
         "status": status,
+        "bid_count": bid_count,
         "deadlines": {
             "bidding_deadline": bidding_deadline,
             "execution_deadline": execution_deadline,

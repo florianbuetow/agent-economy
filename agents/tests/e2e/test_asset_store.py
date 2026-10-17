@@ -131,7 +131,9 @@ async def test_submit_without_assets_rejected(make_funded_agent) -> None:
                         "action": "submit_deliverable",
                         "task_id": task["task_id"],
                         "worker_id": worker.agent_id,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/submit",
                 )
             },
         )

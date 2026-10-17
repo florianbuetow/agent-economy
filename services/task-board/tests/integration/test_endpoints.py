@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sqlite3
 import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
@@ -23,7 +24,19 @@ if TYPE_CHECKING:
     import httpx
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+    from tests.integration.conftest import _LiveGateway
+
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
+
+
+async def test_embedded_gateway_holds_only_its_disposable_maintenance_lock(
+    _gateway: _LiveGateway,
+    gateway_db_path: str,
+) -> None:
+    expected = Path(gateway_db_path).parent / "maintenance.lock"
+
+    assert _gateway.maintenance_lock_path == expected
+    assert expected.is_file()
 
 
 def _read_one(

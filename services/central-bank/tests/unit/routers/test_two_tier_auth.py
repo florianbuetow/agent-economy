@@ -23,8 +23,9 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from httpx import ASGITransport, AsyncClient
 from service_auth.config import AgentConfig
+from service_auth.jws import JwsProtectedHeader, TokenPolicy, VerifiedJws
 from service_auth.platform import PlatformAgent
-from service_auth.signing import create_jws
+from service_auth.signing import create_jws, generate_keypair
 from service_clients.identity import IdentityClient
 
 from central_bank_service.app import create_app
@@ -35,10 +36,43 @@ from tests.fakes.in_memory_ledger_store import InMemoryLedgerStore
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    from pathlib import Path
 
 # A localhost port that refuses connections — verification that reaches Identity dies.
 DEAD_IDENTITY_URL = "http://127.0.0.1:1"
 PLATFORM_ID = "a-platform-real"
+
+
+async def _register_fixture_platform(agent: PlatformAgent) -> None:
+    """Register a disposable platform identity without network I/O."""
+    agent.agent_id = PLATFORM_ID
+
+
+def _write_agent_config(tmp_path: Path) -> Path:
+    """Provision the platform pair required by load-only startup."""
+    keys_dir = tmp_path / "keys"
+    generate_keypair("platform", keys_dir)
+    roster_path = tmp_path / "roster.yaml"
+    roster_path.write_text('agents:\n  platform:\n    name: "Platform"\n')
+    config_path = tmp_path / "agents.yaml"
+    config_path.write_text(
+        f"""\
+platform:
+  identity_url: "{DEAD_IDENTITY_URL}"
+  bank_url: "http://localhost:8002"
+  task_board_url: "http://localhost:8003"
+  reputation_url: "http://localhost:8004"
+  court_url: "http://localhost:8005"
+data:
+  keys_dir: "{keys_dir}"
+  roster_path: "{roster_path}"
+signing:
+  token_ttl_seconds: 60
+  max_lifetime_seconds: 60
+  clock_skew_seconds: 0
+""",
+    )
+    return config_path
 
 
 def _real_platform_agent() -> tuple[PlatformAgent, Ed25519PrivateKey]:
@@ -54,7 +88,8 @@ def _real_platform_agent() -> tuple[PlatformAgent, Ed25519PrivateKey]:
         task_board_url="http://localhost:8003",
         reputation_url="http://localhost:8004",
         court_url="http://localhost:8005",
-        token_ttl_seconds=None,
+        token_ttl_seconds=60,
+        token_policy=TokenPolicy(max_lifetime_seconds=60, clock_skew_seconds=0),
     )
     agent = PlatformAgent(config)
     agent.agent_id = PLATFORM_ID
@@ -62,6 +97,8 @@ def _real_platform_agent() -> tuple[PlatformAgent, Ed25519PrivateKey]:
 
 
 def _write_config(tmp_path: Any) -> str:
+    agent_config_path = _write_agent_config(tmp_path)
+    generate_keypair("gateway-central-bank", tmp_path)
     config_content = f"""
 service:
   name: "central-bank"
@@ -79,12 +116,17 @@ identity:
   verify_jws_path: "/agents/verify-jws"
   timeout_seconds: 1
 platform:
-  agent_config_path: ""
+  agent_config_path: "{agent_config_path}"
 request:
   max_body_size: 1048576
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-central-bank"
+    private_key_path: "gateway-central-bank.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -128,8 +170,12 @@ async def _teardown(client: AsyncClient, manager: Any) -> None:
 
 
 @pytest.fixture
-async def identity_down(tmp_path: Any) -> AsyncIterator[tuple[AsyncClient, Any, Ed25519PrivateKey]]:
+async def identity_down(
+    tmp_path: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> AsyncIterator[tuple[AsyncClient, Any, Ed25519PrivateKey]]:
     """App whose Identity client is a real client pointed at a dead port."""
+    monkeypatch.setattr(PlatformAgent, "register", _register_fixture_platform)
     identity_client = IdentityClient(
         base_url=DEAD_IDENTITY_URL,
         get_agent_path="/agents",
@@ -148,6 +194,7 @@ async def identity_down(tmp_path: Any) -> AsyncIterator[tuple[AsyncClient, Any, 
 @pytest.fixture
 async def identity_up_nonplatform(
     tmp_path: Any,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncIterator[tuple[AsyncClient, Any]]:
     """App whose Identity client verifies a token as a *non-platform* agent.
 
@@ -156,8 +203,21 @@ async def identity_up_nonplatform(
     raises 403 before validating the payload.
     """
 
-    async def _verify_jws(_token: str) -> dict[str, Any]:
-        return {"valid": True, "agent_id": "a-eve", "payload": {}}
+    monkeypatch.setattr(PlatformAgent, "register", _register_fixture_platform)
+
+    async def _verify_jws(_token: str) -> VerifiedJws:
+        return VerifiedJws(
+            header=JwsProtectedHeader(
+                alg="EdDSA",
+                typ="JWT",
+                kid="a-eve",
+                iat=1,
+                exp=2,
+                aud="central-bank",
+                resource="POST /accounts/a-worker/credit",
+            ),
+            payload={"action": "credit", "account_id": "a-worker", "amount": 10},
+        )
 
     identity_client = AsyncMock()
     identity_client.verify_jws = AsyncMock(side_effect=_verify_jws)
@@ -181,6 +241,9 @@ async def test_platform_credit_succeeds_when_identity_down(identity_down: Any) -
         {"action": "credit", "account_id": "a-worker", "amount": 50, "reference": "r-1"},
         private_key,
         kid=PLATFORM_ID,
+        audience="central-bank",
+        resource="POST /accounts/a-worker/credit",
+        token_ttl_seconds=60,
     )
     resp = await client.post("/accounts/a-worker/credit", json={"token": token})
 
@@ -201,6 +264,9 @@ async def test_platform_release_succeeds_when_identity_down(identity_down: Any) 
         {"action": "escrow_release", "escrow_id": escrow_id, "recipient_account_id": "a-worker"},
         private_key,
         kid=PLATFORM_ID,
+        audience="central-bank",
+        resource=f"POST /escrow/{escrow_id}/release",
+        token_ttl_seconds=60,
     )
     resp = await client.post(f"/escrow/{escrow_id}/release", json={"token": token})
 
@@ -228,6 +294,9 @@ async def test_platform_split_succeeds_when_identity_down(identity_down: Any) ->
         },
         private_key,
         kid=PLATFORM_ID,
+        audience="central-bank",
+        resource=f"POST /escrow/{escrow_id}/split",
+        token_ttl_seconds=60,
     )
     resp = await client.post(f"/escrow/{escrow_id}/split", json={"token": token})
 
@@ -247,6 +316,9 @@ async def test_agent_escrow_lock_fails_cleanly_when_identity_down(identity_down:
         {"action": "escrow_lock", "agent_id": "a-alice", "amount": 10, "task_id": "t-9"},
         agent_key,
         kid="a-alice",
+        audience="central-bank",
+        resource="POST /escrow/lock",
+        token_ttl_seconds=60,
     )
     resp = await client.post("/escrow/lock", json={"token": token})
 
@@ -255,9 +327,10 @@ async def test_agent_escrow_lock_fails_cleanly_when_identity_down(identity_down:
 
 
 @pytest.mark.unit
-async def test_credit_malformed_payload_beats_forbidden(identity_up_nonplatform: Any) -> None:
-    """T-033: a malformed credit payload returns the payload error, not 403, even for a
-    non-platform signer."""
+async def test_credit_invalid_signature_precedes_domain_payload(
+    identity_up_nonplatform: Any,
+) -> None:
+    """A non-platform signature is forbidden before domain-field validation."""
     client, state = identity_up_nonplatform
     await state.ledger.create_account("a-worker", 0)
 
@@ -267,11 +340,14 @@ async def test_credit_malformed_payload_beats_forbidden(identity_up_nonplatform:
         {"action": "credit", "account_id": "a-worker", "amount": 10},
         non_platform_key,
         kid="a-eve",
+        audience="central-bank",
+        resource="POST /accounts/a-worker/credit",
+        token_ttl_seconds=60,
     )
     resp = await client.post("/accounts/a-worker/credit", json={"token": token})
 
-    assert resp.status_code == 400
-    assert resp.json()["error"] == "invalid_payload"
+    assert resp.status_code == 403
+    assert resp.json()["error"] == "forbidden"
 
 
 @pytest.mark.unit
@@ -285,6 +361,9 @@ async def test_credit_wellformed_nonplatform_is_forbidden(identity_down: Any) ->
         {"action": "credit", "account_id": "a-worker", "amount": 10, "reference": "r-2"},
         non_platform_key,
         kid="a-eve",
+        audience="central-bank",
+        resource="POST /accounts/a-worker/credit",
+        token_ttl_seconds=60,
     )
     resp = await client.post("/accounts/a-worker/credit", json={"token": token})
 

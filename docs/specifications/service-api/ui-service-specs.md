@@ -41,15 +41,12 @@ The service has two roles:
   browser actions and makes operator activity attributable in the economy." The platform key is
   reserved for notary operations only (contract co-signing, platform-signed service calls); it no
   longer backs the UI's proxy routes.
-- **`/api/proxy/*` is unauthenticated.** There is no API key, session, or shared secret on these
-  routes. The security boundary is the server bind address. Per the ratified Q-3 decision
-  (`docs/plans/2026-07-10-q3-proxy-exposure-decision.md`): **"Document 127.0.0.1-only as the
-  security boundary now; add a shared-secret header only if the UI is ever exposed beyond
-  localhost."** `config.yaml`'s `server.host: "127.0.0.1"` is that boundary, guarded by
-  `tests/unit/test_exposure_posture.py`. **As-built today: no shared-secret header exists.** This
-  is not an oversight to be silently fixed here — it is the accepted posture for the current
-  local-single-user deployment, with the header explicitly deferred until non-loopback exposure
-  is ever proposed.
+- **The operator proxy is local-only.** Q-3's single-operator scope remains, with MP-02
+  enforcing an allowed Host on every request, a loopback client on every proxy route, and
+  an exact same-origin Origin plus custom request marker on every proxy mutation. The marker
+  is public browser CSRF defense, not a secret, login or user authentication token. Configuration
+  rejects non-loopback binding; forwarding/public deployment has no supported authentication
+  mode. Browser rendering treats stored content as text and uses a restrictive CSP.
 - **Startup performs no minting.** The UI process does not create the treasury balance. Treasury
   genesis (1,000,000 coins) is provisioned by the `just provision` bootstrap step
   (`agents/src/treasury_provision_cli`) to the **operator** account, independent of whether the UI
@@ -118,14 +115,17 @@ startup-mint code (frozen-test exception #10).
 
 ## Write Path — Operator Proxy (`/api/proxy/*`)
 
-Every route below is unauthenticated at the HTTP layer (see Core Principles) and is executed by
-the `operator` `UserAgent`, which signs the underlying Task Board request with its own Ed25519
-key. If the `UserAgent` failed to initialize at startup (e.g. Identity unreachable), every proxy
-route returns `503 user_agent_unavailable`.
+All routes below enforce the local browser admission contract. Economic actions use the
+`operator` `UserAgent`, which signs the underlying Task Board request with its own Ed25519
+key. If the `UserAgent` failed to initialize at startup (e.g. Identity unreachable), economic
+proxy routes return `503 user_agent_unavailable`. The browser configuration route does not
+need an initialized operator.
 
 | Method | Path | Request body | Behavior |
 |---|---|---|---|
+| `GET` | `/api/proxy/browser-config` | — | Returns required `csrf_header_name` and `csrf_header_value`; neither is secret. |
 | `GET` | `/api/proxy/identity` | — | Returns `{"agent_id": "<operator's agent_id>"}`. `503 user_agent_not_registered` if the UserAgent has no `agent_id` yet. |
+| `GET` | `/api/proxy/tasks/{task_id}/bids` | — | Delegates to the operator's signed public `UserAgent.list_bids` contract. Task Board authorizes poster access to open bids; preserve its 403 rejection. Return canonical amounts and enrich authorized rows with public bidder identity and visible quality. Responses are `Cache-Control: private, no-store`. |
 | `POST` | `/api/proxy/tasks` | `{title, spec, reward, bidding_deadline_seconds, execution_deadline_seconds, review_deadline_seconds}` | Posts a new task as the operator (two-token create + escrow lock, per Task Board contract). `502 task_creation_failed` on downstream failure. |
 | `POST` | `/api/proxy/tasks/{task_id}/bids/{bid_id}/accept` | — | Accepts a bid on `task_id` as the operator (poster). `502 bid_acceptance_failed` on downstream failure. |
 | `POST` | `/api/proxy/tasks/{task_id}/approve` | — | Approves a submitted task as the operator (poster). `502 task_approval_failed` on downstream failure. |
@@ -137,13 +137,31 @@ three deadline-seconds fields `> 0`) and `FileDisputeRequest` (`reason` 1–5,00
 submitting work, uploading assets, or rebutting a dispute — the operator only exercises the
 poster-side actions listed above; worker-side flows belong to the agent runtime, not the UI.
 
-**Request validation on the two JSON-bodied proxy routes** (`POST /api/proxy/tasks` and
-`POST /api/proxy/tasks/{task_id}/dispute`) is enforced by `RequestValidationMiddleware`
-(`ui_service/core/middleware.py`), ahead of FastAPI routing:
-- `415 unsupported_media_type` if `Content-Type` is not `application/json`.
-- `413 payload_too_large` if the body exceeds `request.max_body_size` (1,572,864 bytes), checked
-  incrementally as the body streams in.
-The bid-accept and approve routes carry no body and are not subject to this middleware.
+**Browser admission precedes operator effects and body processing.** Exactly one syntactically
+valid Host must identify an explicitly allowed local hostname/IP. Every `/api/proxy` request
+must originate from a loopback client. Any supplied Origin must be unique and allowlisted.
+POST/PUT/PATCH/DELETE additionally require one Origin matching the current Host, scheme and
+effective port, and exactly one configured custom marker header/value. Missing or duplicate
+inputs fail closed. Forwarded headers do not grant authority.
+
+`GET /api/proxy/browser-config` supplies the marker for the shipped `ATE.proxyFetch` helper.
+The helper validates same-origin proxy write targets before fetching configuration or sending
+the marker. Other origins, embedded credentials, fragments and non-mutating methods are rejected.
+
+**Request validation** bounds actual streamed bytes on all mutating requests, including
+bodyless accept/approve actions (`413 payload_too_large` above `request.max_body_size`, currently
+1,572,864 bytes). The two JSON-bodied create/dispute routes additionally require
+`Content-Type: application/json` (`415 unsupported_media_type`). Empty bodyless actions do not
+require JSON content type. Accepted bytes are replayed unchanged to routing.
+
+The required `browser_security` configuration declares `allowed_hosts`, `allowed_origins`,
+`csrf_header_name`, `csrf_header_value` and `content_security_policy` without defaults. Hosts
+and origins must be local; header values must be printable ASCII. Successful normal responses
+carry the configured CSP and `X-Content-Type-Options: nosniff`. The shipped CSP permits only
+same-origin scripts/connections, denies objects/framing/base changes, and retains inline CSS
+needed by existing charts. Stored names, titles, comments, summaries and identifiers use the
+shared HTML encoder; identifier URL segments are encoded. Uploaded active content is never
+embedded or previewed in the operator origin.
 
 ## Economy Metrics
 
@@ -209,7 +227,15 @@ Query param: `window` (only `"24h"` is valid today — `400 invalid_parameter` o
 | `GET` | `/api/tasks` | Paginated, filterable by `status` (must be a canonical lowercase status — `400 invalid_status` otherwise). |
 | `GET` | `/api/tasks/-/competitive` | Open (or `status`-filtered) tasks ranked by bid count, `limit` 1–20. |
 | `GET` | `/api/tasks/-/uncontested` | Open tasks with zero bids older than `min_age_minutes`. |
-| `GET` | `/api/tasks/{task_id}` | Full drilldown: poster/worker, deadlines, timestamps, bids, assets, feedback, dispute (rebuttal + ruling if present). `404 task_not_found`. |
+| `GET` | `/api/tasks/{task_id}` | Actor-independent drilldown: poster/worker, deadlines, timestamps, aggregate `bid_count`, status-permitted bids, assets, visible feedback and dispute. Open tasks expose no bid entries; after the open phase, bids include canonical integer `amount`, public bidder identity and visible quality. `404 task_not_found`. |
+
+The public bid count is independent of permission to read bid details. An observer sees the Bid
+phase and a sealed-count message when offers exist, without bidder identities, amounts or private
+proposal text. The configured poster loads details through the authorized proxy and retains bidder
+display names, visible delivery-quality information, timestamps and exact offered amounts. The
+browser must not replace authorization, transport or malformed-response failures with an empty bid
+list: preserve the public count, show a visible failure and withhold acceptance controls until valid
+authorized details are available.
 
 ## Events
 
@@ -217,6 +243,19 @@ Query param: `window` (only `"24h"` is valid today — `400 invalid_parameter` o
 |---|---|---|
 | `GET` | `/api/events` | Reverse-chronological, cursor-paginated (`before`/`after`), filterable by `source`/`type`/`agent_id`/`task_id`. `limit` clamped to ≤200; non-integer `limit`/`before`/`after` → `400 invalid_parameter`. |
 | `GET` | `/api/events/stream` | Server-Sent Events. Polls at `sse.poll_interval_seconds`, emits keep-alive comments every `sse.keepalive_interval_seconds`, delivers up to `sse.batch_size` events per cycle. Resumable via `?last_event_id=`. |
+
+MP-12 requires one public event projection for history, initial/resumed SSE and agent feeds. Legacy
+and new open-bid events hide actor, bid identity, amount, proposal and identifying free text; unknown
+task states fail closed. Agent filters and agent-specific feeds exclude sealed bid membership before
+pagination and `has_more`, so a filtered result cannot reveal participation. Once the task leaves the
+open phase, legitimate bidder attribution may be shown. Private stored actor metadata must survive
+this transition; stripping it permanently from new events would lose losing bidders' public history.
+
+`feedback.submitted` never exposes sealed category, rating, comment or identifying free text through
+these public event surfaces. Generic occurrence/count information is allowed. Revealed feedback and
+its separate reveal event govern later quality projections; sealed rows must not affect public
+quality totals, sorting, profiles, quarterly reports or sparklines. This projection contract does not
+replace MP-13's durable reveal-service and timeout requirements.
 
 ## Quarterly Report
 
@@ -242,6 +281,10 @@ All five pages exist today as real server-rendered-static HTML + vanilla JS unde
 Static assets are mounted at `/assets`; any unmatched path falls back to `index.html`
 (SPA-style routing) or a bare 404 if no `web_root` is configured (`ui_service/app.py:
 _mount_frontend`).
+
+Decoded page requests, the fallback index and the asset mount must resolve within the configured
+frontend root. Traversal, absolute paths and symlinks that escape that root return 404 without
+serving the external file. Ordinary unknown paths inside the root retain the index fallback.
 
 ## Health
 
@@ -289,4 +332,5 @@ above): `database_unavailable` (503), `invalid_parameter` (400), `invalid_status
 `user_agent_unavailable` (503), `user_agent_not_registered` (503), `task_creation_failed` (502),
 `bid_acceptance_failed` (502), `task_approval_failed` (502), `dispute_filing_failed` (502),
 `unsupported_media_type` (415), `payload_too_large` (413), `method_not_allowed` (405),
+`invalid_host` (400), `non_loopback_client` (403), `forbidden_origin` (403), `csrf_failed` (403),
 `http_error` (varies), `internal_error` (500).

@@ -9,9 +9,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import asyncio
 
-    from service_auth import PlatformSigner
     from service_auth.platform import PlatformAgent
-    from service_clients.bank import BankClient
+    from service_clients.bank import BankClient, TokenSigner
     from service_clients.identity import IdentityClient
 
     from task_board_service.services.asset_manager import AssetManager
@@ -28,7 +27,7 @@ class AppState:
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     task_manager: TaskManager | None = None
     central_bank_client: BankClient | None = None
-    platform_signer: PlatformSigner | None = None
+    platform_signer: TokenSigner | None = None
     platform_agent: PlatformAgent | None = None
     identity_client: IdentityClient | None = None
     escrow_coordinator: EscrowCoordinator | None = None

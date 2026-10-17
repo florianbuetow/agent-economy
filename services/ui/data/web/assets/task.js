@@ -8,6 +8,8 @@
     taskId: null,
     task: null,            // Full drilldown from GET /api/tasks/{task_id}
     myAgentId: null,
+    bidLoadStatus: 'idle', // 'idle' | 'loading' | 'ready' | 'error'
+    bidLoadError: '',
     currentPhase: 0,
     maxPhase: 0,
     sseSource: null
@@ -19,7 +21,7 @@
   function taskStatusToPhase(task) {
     if (!task) return 0;
     var s = task.status;
-    var bidCount = task.bids ? task.bids.length : 0;
+    var bidCount = Number.isInteger(task.bid_count) ? task.bid_count : (task.bids ? task.bids.length : 0);
     var assetCount = task.assets ? task.assets.length : 0;
 
     if (s === 'open' && bidCount === 0) return 0;
@@ -105,8 +107,8 @@
     return escrowBar(task) +
       '<div class="card">' +
       '<div class="card-header">' +
-        '<span class="card-label">Task ' + task.task_id.slice(0, 12) + '</span>' +
-        '<span style="font-size:9px;color:var(--text-dim)">Posted by ' + task.poster.name + '</span>' +
+        '<span class="card-label">Task ' + esc(task.task_id.slice(0, 12)) + '</span>' +
+        '<span style="font-size:9px;color:var(--text-dim)">Posted by ' + esc(task.poster.name) + '</span>' +
       '</div>' +
       '<div class="card-body">' +
         '<div class="task-detail-row"><span class="task-detail-key">Title</span><span class="task-detail-val">' + esc(task.title) + '</span></div>' +
@@ -119,26 +121,36 @@
 
   function renderBidPhase(task) {
     var bids = task.bids || [];
+    var bidCount = Number.isInteger(task.bid_count) ? task.bid_count : bids.length;
     var isMyTask = task.poster.agent_id === state.myAgentId;
     var html = escrowBar(task) +
       '<div class="card"><div class="card-header">' +
-      '<span class="card-label">Bids on ' + task.task_id.slice(0, 12) + '</span>' +
-      '<span style="font-size:9px;color:var(--text-dim)">' + bids.length + ' bid' + (bids.length !== 1 ? 's' : '') + ' received</span>' +
+      '<span class="card-label">Bids on ' + esc(task.task_id.slice(0, 12)) + '</span>' +
+      '<span style="font-size:9px;color:var(--text-dim)">' + bidCount + ' bid' + (bidCount !== 1 ? 's' : '') + ' received</span>' +
       '</div><div class="card-body no-pad">';
+    if (bids.length === 0 && isMyTask && state.bidLoadStatus === 'loading') {
+      html += '<div class="bid-load-status" style="padding:14px;text-align:center;color:var(--text-dim)">Loading authorized bid details...</div>';
+    } else if (bids.length === 0 && isMyTask && state.bidLoadStatus === 'error') {
+      html += '<div class="bid-load-error" style="padding:14px;text-align:center;color:var(--red)">Bid details are unavailable. Retry by refreshing this task.</div>';
+    } else if (bids.length === 0 && bidCount > 0) {
+      html += '<div class="bid-sealed" style="padding:14px;text-align:center;color:var(--text-dim)">Bid details are sealed to the poster.</div>';
+    }
     bids.forEach(function(b) {
-      var color = ATE.agentColor(b.bidder.agent_id);
-      var initials = b.bidder.name.slice(0, 2).toUpperCase();
-      var dq = b.bidder.delivery_quality;
-      var total = (dq.extremely_satisfied || 0) + (dq.satisfied || 0) + (dq.dissatisfied || 0);
+      var bidder = b.bidder || { agent_id: b.bidder_id, name: b.bidder_id };
+      var color = ATE.agentColor(bidder.agent_id);
+      var initials = bidder.name.slice(0, 2).toUpperCase();
+      var dq = bidder.delivery_quality;
+      var total = dq ? (dq.extremely_satisfied || 0) + (dq.satisfied || 0) + (dq.dissatisfied || 0) : 0;
       var qualPct = total > 0 ? Math.round(((dq.extremely_satisfied || 0) + (dq.satisfied || 0)) / total * 100) : 0;
+      var bidMeta = dq ? 'Quality: ' + qualPct + '%' : 'Poster-authorized sealed offer';
       html += '<div class="bid-row" style="animation:slide-in .3s ease-out">' +
-        '<div class="bid-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + initials + '</div>' +
-        '<div class="bid-info"><div class="bid-name">' + esc(b.bidder.name) + '</div>' +
-        '<div class="bid-meta">Quality: ' + qualPct + '% &middot; ' + esc(b.proposal.slice(0, 60)) + '</div></div>' +
-        '<div class="bid-amount" style="color:var(--green)">' + task.reward + ' &copy;</div>' +
+        '<div class="bid-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + esc(initials) + '</div>' +
+        '<div class="bid-info"><div class="bid-name">' + esc(bidder.name) + '</div>' +
+        '<div class="bid-meta">' + esc(bidMeta) + '</div></div>' +
+        '<div class="bid-amount" style="color:var(--green)">' + b.amount + ' &copy;</div>' +
         '<div class="bid-actions">';
       if (isMyTask && !b.accepted && task.status === 'open') {
-        html += '<button class="btn btn-green btn-accept-bid" data-bid-id="' + b.bid_id + '">Accept</button>';
+        html += '<button class="btn btn-green btn-accept-bid" data-bid-id="' + ATE.escapeHTML(b.bid_id) + '">Accept</button>';
       }
       html += '</div></div>';
     });
@@ -155,7 +167,7 @@
         '<span class="card-label" style="color:var(--green)">&#129309; Contract Signed</span>' +
         '<span style="font-size:9px;color:var(--green)">Platform co-signed</span>' +
       '</div><div class="card-body">' +
-        '<div class="task-detail-row"><span class="task-detail-key">Task</span><span class="task-detail-val">' + task.task_id.slice(0, 12) + ' &mdash; ' + esc(task.title) + '</span></div>' +
+        '<div class="task-detail-row"><span class="task-detail-key">Task</span><span class="task-detail-val">' + esc(task.task_id.slice(0, 12)) + ' &mdash; ' + esc(task.title) + '</span></div>' +
         '<div class="task-detail-row"><span class="task-detail-key">Poster</span><span class="task-detail-val" style="color:var(--cyan)">' + esc(task.poster.name) + '</span></div>' +
         '<div class="task-detail-row"><span class="task-detail-key">Worker</span><span class="task-detail-val" style="color:' + workerColor + '">' + esc(worker.name) + '</span></div>' +
         '<div class="task-detail-row"><span class="task-detail-key">Reward</span><span class="task-detail-val" style="color:var(--green)">' + task.reward + ' &copy;</span></div>' +
@@ -238,7 +250,7 @@
       '<div class="ruling-card" style="animation:scale-in .5s ease-out">' +
       '<div class="ruling-header">' +
         '<span class="gavel">&#9878;&#65039;</span>' +
-        '<span class="ruling-title">Court Ruling &mdash; ' + task.task_id.slice(0, 12) + '</span>' +
+        '<span class="ruling-title">Court Ruling &mdash; ' + esc(task.task_id.slice(0, 12)) + '</span>' +
       '</div><div class="ruling-body">' +
         '<div class="ruling-scores">' +
           '<div class="ruling-score"><div class="ruling-score-label">Worker Payout</div>' +
@@ -290,10 +302,7 @@
 
   // ── Utility ────────────────────────────────────────────────
   function esc(str) {
-    if (!str) return '';
-    var div = document.createElement('div');
-    div.appendChild(document.createTextNode(String(str)));
-    return div.innerHTML;
+    return str ? ATE.escapeHTML(str) : '';
   }
 
   // ── Phase strip rendering ──────────────────────────────────
@@ -393,7 +402,7 @@
       errEl.textContent = '';
 
       try {
-        var resp = await fetch('/api/proxy/tasks', {
+        var resp = await ATE.proxyFetch('/api/proxy/tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -435,7 +444,7 @@
         var bidId = this.getAttribute('data-bid-id');
         this.disabled = true;
         try {
-          await fetch('/api/proxy/tasks/' + state.taskId + '/bids/' + bidId + '/accept', { method: 'POST' });
+          await ATE.proxyFetch('/api/proxy/tasks/' + encodeURIComponent(state.taskId) + '/bids/' + encodeURIComponent(bidId) + '/accept', { method: 'POST' });
           await refreshTaskData(state.taskId);
         } catch (e) {
           console.error('Accept bid failed:', e);
@@ -450,7 +459,7 @@
       approveBtn.addEventListener('click', async function() {
         this.disabled = true;
         try {
-          await fetch('/api/proxy/tasks/' + state.taskId + '/approve', { method: 'POST' });
+          await ATE.proxyFetch('/api/proxy/tasks/' + encodeURIComponent(state.taskId) + '/approve', { method: 'POST' });
           await refreshTaskData(state.taskId);
         } catch (e) {
           console.error('Approve failed:', e);
@@ -478,7 +487,7 @@
         this.disabled = true;
         errEl.textContent = '';
         try {
-          var resp = await fetch('/api/proxy/tasks/' + state.taskId + '/dispute', {
+          var resp = await ATE.proxyFetch('/api/proxy/tasks/' + encodeURIComponent(state.taskId) + '/dispute', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ reason: reason })
@@ -497,13 +506,39 @@
   }
 
   // ── Data fetching ──────────────────────────────────────────
+  async function loadAuthorizedOpenBids(task) {
+    if (task.status !== 'open' || task.poster.agent_id !== state.myAgentId) return;
+    try {
+      var response = await fetch('/api/proxy/tasks/' + encodeURIComponent(task.task_id) + '/bids');
+      if (!response.ok) throw new Error('Authorized bid request failed');
+      var data = await response.json();
+      if (data.task_id !== task.task_id || !Array.isArray(data.bids)) {
+        throw new Error('Authorized bid response is malformed');
+      }
+      task.bids = data.bids;
+      state.bidLoadStatus = 'ready';
+      state.bidLoadError = '';
+    } catch (error) {
+      task.bids = [];
+      state.bidLoadStatus = 'error';
+      state.bidLoadError = error instanceof Error ? error.message : 'Authorized bid request failed';
+    }
+  }
+
   async function refreshTaskData(taskId) {
     try {
-      var resp = await fetch('/api/tasks/' + taskId);
+      var resp = await fetch('/api/tasks/' + encodeURIComponent(taskId));
       if (resp.ok) {
         state.task = await resp.json();
         var newPhase = taskStatusToPhase(state.task);
         state.currentPhase = newPhase;
+        state.bidLoadStatus = 'idle';
+        state.bidLoadError = '';
+        if (state.task.status === 'open' && state.task.poster.agent_id === state.myAgentId) {
+          state.bidLoadStatus = 'loading';
+          updateView();
+          await loadAuthorizedOpenBids(state.task);
+        }
         updateView();
       }
     } catch (e) {
@@ -533,7 +568,7 @@
     var div = document.createElement('div');
     div.className = 'feed-item';
     div.innerHTML = '<span class="feed-badge ' + feed.badge + '">' + feed.type + '</span>' +
-      '<span class="feed-text">' + feed.text + '</span>' +
+      '<span class="feed-text">' + esc(feed.text) + '</span>' +
       '<span class="feed-time">' + timeStr + '</span>';
     scroll.insertBefore(div, scroll.firstChild);
   }

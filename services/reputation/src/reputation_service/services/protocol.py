@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
+    from service_auth.jws import VerifiedJws
+
     from reputation_service.types import FeedbackRecord
 
 
@@ -16,9 +18,7 @@ class JwsVerifier(Protocol):
     without depending on either concrete class.
     """
 
-    async def verify_jws(self, token: str) -> dict[str, Any]:
-        """Return ``{"valid": bool, "agent_id": str, "payload": dict}``."""
-        ...
+    async def verify_jws(self, token: str) -> VerifiedJws: ...
 
     async def close(self) -> None: ...
 

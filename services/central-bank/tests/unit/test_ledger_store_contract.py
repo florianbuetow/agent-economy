@@ -38,6 +38,8 @@ from db_gateway_service.core.state import init_app_state, reset_app_state
 from db_gateway_service.services.db_reader import DbReader
 from db_gateway_service.services.db_writer import DbWriter
 from httpx import ASGITransport, AsyncClient
+from service_auth.gateway import GatewayRequestSigner, GatewaySignerConfig
+from service_auth.signing import generate_keypair
 from service_commons.exceptions import ServiceError
 
 from central_bank_service.services.in_memory_ledger_store import InMemoryLedgerStore
@@ -49,6 +51,7 @@ if TYPE_CHECKING:
 _SCHEMA_PATH = Path(__file__).resolve().parents[4] / "docs" / "specifications" / "schema.sql"
 
 LedgerStore = InMemoryLedgerStore | LedgerDbClient
+_IDENTITY_SIGNERS: dict[int, GatewayRequestSigner] = {}
 
 pytestmark = pytest.mark.asyncio
 
@@ -62,7 +65,7 @@ async def _await_maybe(value: Any) -> Any:
     return value
 
 
-def _write_gateway_config(db_path: str) -> str:
+def _write_gateway_config(db_path: str, key_dir: Path) -> str:
     """Write a temp db-gateway config.yaml pointing at an isolated SQLite file."""
     content = f"""
 service:
@@ -87,6 +90,26 @@ database:
 
 request:
   max_body_size: 1048576
+
+recovery:
+  maintenance_lock_path: "{key_dir / "maintenance.lock"}"
+  backup_root: "{key_dir / "backups"}"
+
+auth:
+  audience: "db-gateway"
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 0
+  trusted_callers:
+    gateway-identity:
+      public_key_path: "{key_dir / "gateway-identity.pub"}"
+      capabilities:
+        - "gateway.identity.read"
+        - "gateway.identity.write"
+    gateway-central-bank:
+      public_key_path: "{key_dir / "gateway-central-bank.pub"}"
+      capabilities:
+        - "gateway.bank.read"
+        - "gateway.bank.write"
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(content)
@@ -102,7 +125,10 @@ async def _gateway_backed_client(db_path: str) -> AsyncIterator[LedgerDbClient]:
     no live-stack dependency — and briefly point CONFIG_PATH at a throwaway
     gateway config only while create_app() reads its own settings.
     """
-    config_path = _write_gateway_config(db_path)
+    key_dir = Path(db_path).parent
+    generate_keypair("gateway-identity", key_dir)
+    generate_keypair("gateway-central-bank", key_dir)
+    config_path = _write_gateway_config(db_path, key_dir)
     reset_app_state()
     state = init_app_state()
     writer = DbWriter(
@@ -119,7 +145,30 @@ async def _gateway_backed_client(db_path: str) -> AsyncIterator[LedgerDbClient]:
         app = create_app()
     clear_settings_cache()
 
-    client = LedgerDbClient(base_url="http://gateway-test", timeout_seconds=5)
+    bank_signer = GatewayRequestSigner(
+        GatewaySignerConfig(
+            kid="gateway-central-bank",
+            private_key_path=Path("gateway-central-bank.key"),
+            audience="db-gateway",
+            token_ttl_seconds=300,
+        ),
+        config_dir=key_dir,
+    )
+    identity_signer = GatewayRequestSigner(
+        GatewaySignerConfig(
+            kid="gateway-identity",
+            private_key_path=Path("gateway-identity.key"),
+            audience="db-gateway",
+            token_ttl_seconds=300,
+        ),
+        config_dir=key_dir,
+    )
+    client = LedgerDbClient(
+        base_url="http://gateway-test",
+        timeout_seconds=5,
+        signer=bank_signer,
+    )
+    _IDENTITY_SIGNERS[id(client)] = identity_signer
     await client._gateway.close()
     client._gateway._client = AsyncClient(
         transport=ASGITransport(app=app), base_url="http://gateway-test"
@@ -127,6 +176,7 @@ async def _gateway_backed_client(db_path: str) -> AsyncIterator[LedgerDbClient]:
     try:
         yield client
     finally:
+        _IDENTITY_SIGNERS.pop(id(client), None)
         await client.close()
         writer.close()
         reset_app_state()
@@ -163,7 +213,8 @@ async def _fund(store: LedgerStore, account_id: str, balance: int) -> None:
 
 
 async def _register_agent(client: LedgerDbClient, agent_id: str) -> None:
-    response = await client._gateway.connection.post(
+    request = client._gateway.connection.build_request(
+        "POST",
         "/identity/agents",
         json={
             "agent_id": agent_id,
@@ -179,6 +230,12 @@ async def _register_agent(client: LedgerDbClient, agent_id: str) -> None:
                 "payload": "{}",
             },
         },
+    )
+    response = await client._gateway.connection.send(
+        _IDENTITY_SIGNERS[id(client)].sign_request(
+            request,
+            action="gateway.identity.write",
+        )
     )
     assert response.status_code == 201, response.text
 

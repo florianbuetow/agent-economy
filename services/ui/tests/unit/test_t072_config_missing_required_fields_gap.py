@@ -32,6 +32,15 @@ _FULL_CONFIG_SECTIONS = {
     ),
     "frontend": 'frontend:\n  web_root: "data/web"\n',
     "request": "request:\n  max_body_size: 1572864\n",
+    "recovery": "recovery:\n  maintenance_lock_path: maintenance.lock\n",
+    "browser_security": (
+        "browser_security:\n"
+        '  allowed_hosts: ["127.0.0.1"]\n'
+        '  allowed_origins: ["http://127.0.0.1:8008"]\n'
+        '  csrf_header_name: "X-ATE-CSRF"\n'
+        '  csrf_header_value: "local-operator"\n'
+        "  content_security_policy: \"default-src 'self'; script-src 'self'\"\n"
+    ),
     "user_agent": (
         "user_agent:\n"
         '  agent_config_path: "../../agents/config.yaml"\n'
@@ -42,7 +51,16 @@ _FULL_CONFIG_SECTIONS = {
 
 @pytest.mark.parametrize(
     "omitted_section",
-    ["server", "database", "sse", "frontend", "request", "user_agent"],
+    [
+        "server",
+        "database",
+        "sse",
+        "frontend",
+        "request",
+        "recovery",
+        "browser_security",
+        "user_agent",
+    ],
 )
 def test_missing_required_section_fails_startup(tmp_path, omitted_section: str) -> None:
     """CFG-01: omitting server/database/sse/frontend/request/user_agent raises

@@ -15,20 +15,87 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
+
+import httpx
+from service_commons.exceptions import ServiceError
 
 from service_clients.base import BaseServiceClient
+
+if TYPE_CHECKING:
+    from service_auth.gateway import GatewayRequestSigner
 
 
 class GatewayClient(BaseServiceClient):
     """Async HTTP client for DB Gateway endpoints."""
 
-    def __init__(self, base_url: str, timeout_seconds: int) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: int,
+        signer: GatewayRequestSigner,
+    ) -> None:
         super().__init__(
             base_url=base_url,
             timeout_seconds=timeout_seconds,
             service_name="db_gateway",
         )
+        self._signer = signer
+
+    @staticmethod
+    def _action_for(method: str, path: str) -> str:
+        domain = path.lstrip("/").split("/", maxsplit=1)[0]
+        if (
+            domain == "board"
+            and method == "GET"
+            and path.startswith("/board/tasks/")
+            and len(path.split("/")) == 4
+        ):
+            return "gateway.board.task.read"
+        action_domain = {
+            "identity": "identity",
+            "bank": "bank",
+            "reputation": "reputation",
+            "court": "court",
+        }.get(domain)
+        if action_domain is None:
+            msg = f"No Gateway capability action is defined for path {path!r}"
+            raise ValueError(msg)
+        access = "read" if method == "GET" else "write"
+        return f"gateway.{action_domain}.{access}"
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        payload: dict[str, Any] | None,
+    ) -> httpx.Response:
+        """Build, sign, then send the exact request bytes presented to Gateway."""
+        try:
+            request = self._client.build_request(method, path, json=payload)
+            signed_request = self._signer.sign_request(
+                request,
+                action=self._action_for(method, path),
+            )
+            return await self._client.send(signed_request)
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            raise ServiceError(
+                error="db_gateway_unavailable",
+                message="Cannot reach db_gateway",
+                status_code=502,
+                details={"base_url": self._base_url, "path": path},
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise ServiceError(
+                error="db_gateway_unavailable",
+                message="HTTP error from db_gateway",
+                status_code=502,
+                details={
+                    "base_url": self._base_url,
+                    "path": path,
+                    "exception": str(exc),
+                },
+            ) from exc
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
@@ -110,7 +177,7 @@ class GatewayClient(BaseServiceClient):
         agent_id: str | None,
     ) -> dict[str, Any]:
         event: dict[str, Any] = {
-            "event_source": "bank",
+            "event_source": "central-bank",
             "event_type": event_type,
             "timestamp": self._now(),
             "summary": summary,
@@ -129,6 +196,7 @@ class GatewayClient(BaseServiceClient):
         balance: int,
         initial_credit_data: dict[str, Any] | None,
         agent_name: str,
+        operation_id: str | None,
     ) -> dict[str, Any]:
         """POST /bank/accounts. Raises ServiceError(error='account_exists', 409) on conflict."""
         payload: dict[str, Any] = {
@@ -145,6 +213,8 @@ class GatewayClient(BaseServiceClient):
         }
         if initial_credit_data is not None:
             payload["initial_credit"] = initial_credit_data
+        if operation_id is not None:
+            payload["operation_id"] = operation_id
         response = await self._post_raw("/bank/accounts", payload)
         if response.status_code in (200, 201):
             return self._response_dict(response)
@@ -195,9 +265,11 @@ class GatewayClient(BaseServiceClient):
         amount: int,
         reference: str,
         timestamp: str,
+        operation_id: str,
     ) -> dict[str, Any]:
         """POST /bank/credit."""
         payload: dict[str, Any] = {
+            "operation_id": operation_id,
             "tx_id": tx_id,
             "account_id": account_id,
             "amount": amount,
@@ -224,9 +296,11 @@ class GatewayClient(BaseServiceClient):
         task_id: str,
         created_at: str,
         tx_id: str,
+        operation_id: str,
     ) -> dict[str, Any]:
         """POST /bank/escrow/lock."""
         payload: dict[str, Any] = {
+            "operation_id": operation_id,
             "escrow_id": escrow_id,
             "payer_account_id": payer_account_id,
             "amount": amount,
@@ -252,21 +326,22 @@ class GatewayClient(BaseServiceClient):
         recipient_account_id: str,
         tx_id: str,
         resolved_at: str,
-        amount: int,
-        constraints: dict[str, Any] | None = None,
+        source_reference: str,
+        operation_id: str,
     ) -> dict[str, Any]:
         """POST /bank/escrow/release."""
         payload: dict[str, Any] = {
+            "operation_id": operation_id,
             "escrow_id": escrow_id,
             "recipient_account_id": recipient_account_id,
+            "source_reference": source_reference,
             "tx_id": tx_id,
             "resolved_at": resolved_at,
             "event": self._build_bank_event(
                 event_type="escrow.released",
-                summary=f"Released {amount} credits from escrow {escrow_id}",
+                summary=f"Released escrow {escrow_id}",
                 payload={
                     "escrow_id": escrow_id,
-                    "amount": amount,
                     "recipient_id": recipient_account_id,
                     "recipient_name": recipient_account_id,
                 },
@@ -274,8 +349,6 @@ class GatewayClient(BaseServiceClient):
                 agent_id=recipient_account_id,
             ),
         }
-        if constraints is not None:
-            payload["constraints"] = constraints
         response = await self._post_raw("/bank/escrow/release", payload)
         if response.status_code == 200:
             return self._response_dict(response)
@@ -289,34 +362,32 @@ class GatewayClient(BaseServiceClient):
         worker_tx_id: str,
         poster_tx_id: str,
         resolved_at: str,
-        worker_amount: int,
-        poster_amount: int,
-        constraints: dict[str, Any] | None = None,
+        worker_pct: int,
+        source_reference: str,
+        operation_id: str,
     ) -> dict[str, Any]:
         """POST /bank/escrow/split."""
         payload: dict[str, Any] = {
+            "operation_id": operation_id,
             "escrow_id": escrow_id,
             "worker_account_id": worker_account_id,
             "poster_account_id": poster_account_id,
+            "worker_pct": worker_pct,
+            "source_reference": source_reference,
             "worker_tx_id": worker_tx_id,
             "poster_tx_id": poster_tx_id,
             "resolved_at": resolved_at,
-            "worker_amount": worker_amount,
-            "poster_amount": poster_amount,
             "event": self._build_bank_event(
                 event_type="escrow.split",
-                summary=f"Split escrow {escrow_id}: {worker_amount}/{poster_amount}",
+                summary=f"Split escrow {escrow_id} at {worker_pct}% to worker",
                 payload={
                     "escrow_id": escrow_id,
-                    "worker_amount": worker_amount,
-                    "poster_amount": poster_amount,
+                    "worker_pct": worker_pct,
                 },
                 task_id=None,
                 agent_id=worker_account_id,
             ),
         }
-        if constraints is not None:
-            payload["constraints"] = constraints
         response = await self._post_raw("/bank/escrow/split", payload)
         if response.status_code == 200:
             return self._response_dict(response)

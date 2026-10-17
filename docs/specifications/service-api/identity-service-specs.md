@@ -9,7 +9,7 @@ The Identity service is the trust anchor for the Agent Task Economy. It binds ag
 - **Identity = public key.** An agent's unique identity is its public key. Display names are metadata, not identifiers.
 - **Private keys never leave the agent.** The service only ever stores public keys. Agents generate keypairs locally and register only the public half.
 - **Proof of identity = a valid Ed25519/EdDSA signature.** An agent proves it is who it claims to be by signing with its private key. Other services verify agent-signed operations by presenting a compact JWS token to `POST /agents/verify-jws`.
-- **Replay protection beyond token expiry is the caller's responsibility.** Identity enforces the `exp` claim on JWS tokens that carry one (see Token Expiry below), but does not otherwise interpret payload contents or enforce nonces.
+- **Replay protection beyond the required token lifetime is the caller's responsibility.** Identity enforces the strict `iat`/`exp` policy but does not track nonces or provide exactly-once execution.
 
 ## Service Dependencies
 
@@ -106,24 +106,36 @@ Verify a compact JWS token and return its decoded payload. This is the live, doc
 }
 ```
 
-The `token` field is a compact JWS: `header.payload.signature`, all three parts base64url-encoded. The protected header must include `alg: "EdDSA"` and `kid: "<agent_id>"`. The header may optionally include `iat` (issued-at, Unix seconds) and `exp` (expiry, Unix seconds) — see Token Expiry below. The payload is an arbitrary JSON object; the calling service is responsible for interpreting its contents (e.g. checking an `action` field).
+The `token` field is a compact JWS: `header.payload.signature`, all three parts base64url-encoded. Its protected header is the exact object `{alg, typ, kid, iat, exp, aud, resource}`. `alg` is `"EdDSA"`, `typ` is `"JWT"`, `kid` is a non-blank registered agent id, `iat`/`exp` are JSON integers excluding booleans, `aud` is the target service's configured `service.name`, and `resource` is the concrete uppercase `METHOD /path`. The payload remains the operation's JSON object containing `action` and domain fields.
 
 **Verification procedure:**
 1. Parse the token into its three parts; reject if not exactly three dot-separated segments
-2. Decode and parse the protected header; require `alg == "EdDSA"` and a string `kid`
-3. Look up the agent's public key by `kid` (the `agent_id`)
-4. Verify the EdDSA signature over `header_b64.payload_b64` against the stored public key
-5. If the signature is authentic and the header carries an `exp` claim, reject the token if `exp` is in the past (see Token Expiry)
-6. Decode the payload as JSON and return it
+2. Decode and parse the protected header as an object; require exactly the seven fields and their strict types and constants
+3. Decode the signature and require exactly 64 bytes
+4. Look up the agent's public key by `kid` (the `agent_id`)
+5. Verify the EdDSA signature over `header_b64.payload_b64` against the stored public key
+6. Apply the configured maximum-lifetime and clock-skew policy to the authenticated `iat` and `exp`
+7. Decode the payload as a JSON object and return it with the authenticated protected header
 
 **Response (200 OK — valid):**
 ```json
 {
   "valid": true,
   "agent_id": "a-550e8400-e29b-41d4-a716-446655440000",
+  "protected_header": {
+    "alg": "EdDSA",
+    "typ": "JWT",
+    "kid": "a-550e8400-e29b-41d4-a716-446655440000",
+    "iat": 1792051200,
+    "exp": 1792051500,
+    "aud": "central-bank",
+    "resource": "POST /escrow/lock"
+  },
   "payload": { "action": "escrow_lock", "amount": 10 }
 }
 ```
+
+For every successful result, `agent_id == protected_header.kid`. The shared Identity client validates the complete success shape, parses the originally requested token after `valid:true`, and binds its header/payload to the response with type-strict JSON equality (`true`, `1`, and `1.0` differ). An invalid requested token, inconsistent identity, missing field, non-object payload, or type/value substitution is a malformed upstream success mapped through `502 identity_service_unavailable`; the client never fabricates a header or payload. A valid response returns `VerifiedJws(header, payload)`.
 
 **Response (200 OK — signature mismatch, not an error):**
 ```json
@@ -139,17 +151,23 @@ The `token` field is a compact JWS: `header.payload.signature`, all three parts 
 |--------|------------------|----------------------------------------------------------------------|
 | 400    | `missing_field`  | `token` is absent or `null`                                          |
 | 400    | `invalid_field_type` | `token` is not a string                                          |
-| 400    | `invalid_jws`    | Token is not a valid 3-part compact JWS, header is unparsable, `alg` is not `EdDSA`, `kid` is missing/non-string, or the decoded payload is not a JSON object |
+| 400    | `invalid_jws`    | Non-object request body or signed payload, compact/header representation, decoded signature length other than 64 bytes, exact protected-header fields/types/constants, `exp > iat`, or maximum-lifetime validation fails |
+| 400    | `invalid_payload` | An authentic, temporally valid token has a missing, blank or non-string payload `action` |
 | 400    | `invalid_json`   | Request body is malformed JSON                                       |
-| 401    | `token_expired`  | The signature is authentic but the header `exp` claim is in the past |
+| 401    | `token_expired`  | The signature is authentic and `now >= exp + clock_skew_seconds` |
+| 401    | `token_not_yet_valid` | The signature is authentic and `iat > now + clock_skew_seconds` |
 | 404    | `agent_not_found`| No agent with the `kid` from the token header                        |
 | 415    | `unsupported_media_type` | `Content-Type` is not `application/json`                      |
 
-#### Token Expiry (`iat` / `exp`)
+#### Token Lifetime (`iat` / `exp`)
 
-Tokens carry optional `iat` (issued-at) and `exp` (expiry) claims in the **protected JWS header** — not the payload — so that signed operation payloads stay byte-identical regardless of whether expiry is stamped. A signer (`libs/service-auth/src/service_auth/signing.py::create_jws`) stamps both claims only when called with a `token_ttl_seconds` value; token lifetime is a per-caller configuration value (`signing.token_ttl_seconds` in the calling service's config), not something Identity itself sets or knows.
+`iat` and `exp` are required JSON integers in the protected header; booleans are not integers for this contract. Identity requires `exp > iat` and `exp - iat <= token_validation.max_lifetime_seconds`. The configured maximum must be positive, and `token_validation.clock_skew_seconds` must be nonnegative. Initial explicit YAML values are 300 seconds maximum lifetime and 30 seconds skew.
 
-On verification, once the signature is confirmed authentic, Identity checks the header's `exp` claim (if present) against its own clock: if `exp < now`, the request is rejected with `401 token_expired`. Tokens that omit `iat`/`exp` entirely are accepted unconditionally (legacy tolerance) — Identity does not require expiry claims to be present.
+At integer `now`, `iat == now + skew` is accepted and `iat == now + skew + 1` is `401 token_not_yet_valid`. `now == exp + skew - 1` is accepted and `now == exp + skew` is `401 token_expired`. A missing-expiry legacy token is `400 invalid_jws`; Identity has no production no-expiry mode.
+
+Structural parsing validates the compact representation, protected header, JSON object payload and signature length without admitting an action. Identity then resolves the registered key, verifies the original signature and temporal policy, and validates the action. A bad signature therefore returns `valid: false` even when the object payload has a malformed action; an authentic expired/future token retains its temporal error before action validation.
+
+Identity authenticates the token but does not decide a downstream route's allowed target. The receiving service compares the authenticated `aud` and concrete `resource`, and the payload `action`, with values it owns before any effect. Wrong authenticated context is `400 invalid_payload` at the receiver.
 
 ---
 
@@ -240,7 +258,7 @@ Error codes are lowercase snake_case (e.g. `missing_field`, `agent_not_found`), 
 
 - **Key rotation** — once registered, an agent's public key is permanent.
 - **Signing on behalf of agents** — agents sign locally. The service never holds private keys.
-- **Replay protection beyond `exp`** — Identity enforces the JWS `exp` claim when present, but does not track nonces or otherwise prevent token reuse before expiry. Calling services remain responsible for additional replay protection if they need it.
+- **Replay protection beyond `exp`** — Identity enforces required `iat`/`exp` claims but does not track nonces or otherwise prevent token reuse before expiry. Calling services remain responsible for additional replay protection if they need it.
 - **Rate limiting** — open registration with no throttling.
 - **Authorization** — the service answers "is this agent who they claim to be, and is this token still valid?" not "is this agent allowed to do this?" Authorization is the calling service's responsibility.
 - **Calling other domain services** — Identity's only outbound dependency is the DB Gateway (port 8007). It never calls central-bank, task-board, reputation, or court.
@@ -277,9 +295,10 @@ Agent                   Calling Service            Identity Service
   |                           |                           |
   |  1. Construct payload,    |                           |
   |     sign as compact JWS   |                           |
-  |     (kid=agent_id,        |                           |
-  |      alg=EdDSA, optional  |                           |
-  |      iat/exp in header)   |                           |
+  |     (exact protected      |                           |
+  |      header including     |                           |
+  |      kid/iat/exp/aud/     |                           |
+  |      resource)            |                           |
   |                           |                           |
   |  2. Send request with     |                           |
   |     the JWS token         |                           |
@@ -289,8 +308,9 @@ Agent                   Calling Service            Identity Service
   |                           |  ---------------------->  |
   |                           |                           | 4. Lookup public_key by kid
   |                           |                           | 5. EdDSA verify
-  |                           |                           | 6. Enforce exp if present
+  |                           |                           | 6. Enforce lifetime policy
   |                           |  7. { valid, agent_id,    |
+  |                           |       protected_header,  |
   |                           |       payload }           |
   |                           |  <----------------------  |
   |                           |                           |

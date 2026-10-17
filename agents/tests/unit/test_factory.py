@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from service_auth.signing import generate_keypair
 
 from base_agent.agent import BaseAgent
 from base_agent.factory import AgentFactory
@@ -14,6 +15,12 @@ from base_agent.platform import PlatformAgent
 @pytest.fixture()
 def config_path() -> Path:
     return Path(__file__).resolve().parents[2] / "config.yaml"
+
+
+@pytest.fixture(autouse=True)
+def provision_test_keys(tmp_path: Path) -> None:
+    generate_keypair("alice", tmp_path)
+    generate_keypair("platform", tmp_path)
 
 
 @pytest.mark.unit

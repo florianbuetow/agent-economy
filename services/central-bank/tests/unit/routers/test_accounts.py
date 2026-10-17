@@ -186,6 +186,7 @@ class TestCreditAccount:
             private_key,
             PLATFORM_AGENT_ID,
             {"action": "credit", "amount": 10, "reference": "test"},
+            resource="POST /accounts/a-nonexistent/credit",
         )
         response = await client.post(
             "/accounts/a-nonexistent/credit",
@@ -230,7 +231,12 @@ class TestGetBalance:
         """Agent cannot read another agent's balance."""
 
         agent_key, _ = agent_keypair
-        token = make_jws_token(agent_key, "a-eve", {"action": "get_balance"})
+        token = make_jws_token(
+            agent_key,
+            "a-eve",
+            {"action": "get_balance"},
+            resource="GET /accounts/a-alice",
+        )
         response = await client.get(
             "/accounts/a-alice",
             headers={"Authorization": f"Bearer {token}"},

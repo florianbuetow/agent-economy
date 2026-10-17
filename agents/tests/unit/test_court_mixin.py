@@ -45,7 +45,9 @@ class TestFileClaim:
                 "respondent_id": "a-worker",
                 "claim": "Incomplete delivery",
                 "escrow_id": "esc-1",
-            }
+            },
+            audience="court",
+            resource="POST /disputes/file",
         )
         agent._request.assert_awaited_once_with(
             "POST",

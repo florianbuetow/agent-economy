@@ -72,7 +72,7 @@ class DeadlineEvaluator:
             return None
         base_dt = datetime.fromisoformat(base_timestamp.replace("Z", "+00:00"))
         deadline_dt = base_dt + timedelta(seconds=seconds)
-        return deadline_dt.isoformat(timespec="seconds").replace("+00:00", "Z")
+        return deadline_dt.isoformat(timespec="auto").replace("+00:00", "Z")
 
     async def evaluate_deadline(self, task: dict[str, Any]) -> dict[str, Any]:
         """
@@ -115,7 +115,10 @@ class DeadlineEvaluator:
                         task["expired_at"] = expired_at
                         task["escrow_pending"] = 1
                         await self._escrow_coordinator.try_release_escrow(
-                            task["task_id"], task["escrow_id"], task["poster_id"]
+                            task["task_id"],
+                            "expired",
+                            task["escrow_id"],
+                            task["poster_id"],
                         )
                         # Re-read to get final escrow_pending state
                         refreshed = self._store.get_task(task["task_id"])
@@ -141,7 +144,10 @@ class DeadlineEvaluator:
                         task["expired_at"] = expired_at
                         task["escrow_pending"] = 1
                         await self._escrow_coordinator.try_release_escrow(
-                            task["task_id"], task["escrow_id"], task["poster_id"]
+                            task["task_id"],
+                            "expired",
+                            task["escrow_id"],
+                            task["poster_id"],
                         )
                         refreshed = self._store.get_task(task["task_id"])
                         if refreshed is not None:
@@ -167,6 +173,7 @@ class DeadlineEvaluator:
                         task["escrow_pending"] = 1
                         await self._escrow_coordinator.try_release_escrow(
                             task["task_id"],
+                            "approved",
                             task["escrow_id"],
                             task["worker_id"],
                         )

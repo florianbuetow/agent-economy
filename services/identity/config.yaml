@@ -22,6 +22,15 @@ crypto:
 request:
   max_body_size: 1572864
 
+token_validation:
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 30
+
 db_gateway:
   url: "http://127.0.0.1:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-identity"
+    private_key_path: "../../data/keys/gateway-identity.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300

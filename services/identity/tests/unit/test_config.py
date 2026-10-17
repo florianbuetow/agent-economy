@@ -27,6 +27,9 @@ crypto:
   signature_bytes: 64
 request:
   max_body_size: 1572864
+token_validation:
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 30
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -64,6 +67,9 @@ crypto:
   signature_bytes: 64
 request:
   max_body_size: 1572864
+token_validation:
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 30
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)

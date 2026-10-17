@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from service_auth import signing
+from service_auth import jws
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -24,9 +24,9 @@ def old_signer_tokens() -> dict[str, object]:
 
 @pytest.fixture()
 def reset_clock() -> Iterator[None]:
-    """Restore the signing module clock seam after a test overrides it."""
-    original = signing._clock
+    """Restore the JWS module clock seam after a test overrides it."""
+    original = jws._clock
     try:
         yield
     finally:
-        signing._clock = original
+        jws._clock = original

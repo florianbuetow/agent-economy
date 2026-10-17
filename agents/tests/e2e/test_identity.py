@@ -27,8 +27,13 @@ class TestIdentityE2E:
             agent_ids = [a["agent_id"] for a in agents]
             assert agent.agent_id in agent_ids
 
-            token = agent._sign_jws({"action": "test", "agent_id": agent.agent_id})
+            token = agent._sign_jws(
+                {"action": "test", "agent_id": agent.agent_id},
+                audience="identity",
+                resource="POST /agents/verify-jws",
+            )
             verify_result = await agent.verify_jws(token)
-            assert verify_result["valid"] is True
+            assert verify_result.header.kid == agent.agent_id
+            assert verify_result.payload["action"] == "test"
         finally:
             await agent.close()

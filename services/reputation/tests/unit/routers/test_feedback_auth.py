@@ -20,8 +20,13 @@ from typing import TYPE_CHECKING
 import pytest
 from cryptography.exceptions import InvalidSignature
 
+from reputation_service.core.exceptions import ServiceError
 from reputation_service.core.state import get_app_state
-from tests.helpers import make_jws_token, make_mock_platform_agent
+from tests.helpers import (
+    make_jws_token,
+    make_mock_platform_agent,
+    make_profile_jws_with_unchecked_payload,
+)
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -65,6 +70,14 @@ def _inject_mock_ok(
         payload = _feedback_payload()
     _ = agent_id
     state = get_app_state()
+    if not isinstance(payload.get("action"), str) or not payload.get("action"):
+        state.identity_client.verify_jws.side_effect = ServiceError(
+            "invalid_payload",
+            "Identity rejected malformed payload action",
+            400,
+            {},
+        )
+        return
     state.platform_agent = make_mock_platform_agent(verify_payload=payload)
 
 
@@ -207,7 +220,8 @@ class TestJWSPayloadValidation:
         payload = _feedback_payload()
         del payload["action"]
         _inject_mock_ok(payload)
-        response = await client.post("/feedback", json=_token_body(payload))
+        token = make_profile_jws_with_unchecked_payload(payload, kid=ALICE_ID)
+        response = await client.post("/feedback", json={"token": token})
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
 
@@ -223,7 +237,8 @@ class TestJWSPayloadValidation:
         """AUTH-11: action is null returns 400 invalid_payload."""
         payload = _feedback_payload(action=None)
         _inject_mock_ok(payload)
-        response = await client.post("/feedback", json=_token_body(payload))
+        token = make_profile_jws_with_unchecked_payload(payload, kid=ALICE_ID)
+        response = await client.post("/feedback", json={"token": token})
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
 

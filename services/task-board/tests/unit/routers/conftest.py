@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-import base64
-import json
 import os
 import uuid
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+import yaml
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
 from httpx import ASGITransport, AsyncClient
+from service_auth.jws import JwsAdmissionError, VerifiedJws
+from service_auth.platform import PlatformAgent
+from service_auth.signing import generate_keypair as provision_keypair
 from service_commons.exceptions import ServiceError
 
 from task_board_service.app import create_app
@@ -34,6 +36,44 @@ PLATFORM_AGENT_ID = "a-platform-test-id"
 ALICE_AGENT_ID = "a-alice-uuid"
 BOB_AGENT_ID = "a-bob-uuid"
 CAROL_AGENT_ID = "a-carol-uuid"
+
+
+def _write_platform_agent_config(tmp_path: Path) -> Path:
+    keys_dir = tmp_path / "agent-keys"
+    provision_keypair("platform", keys_dir)
+    roster_path = tmp_path / "roster.yaml"
+    roster_path.write_text(
+        yaml.safe_dump({"agents": {"platform": {"name": "Platform", "type": "platform"}}})
+    )
+    agent_config_path = tmp_path / "agents.yaml"
+    agent_config_path.write_text(
+        yaml.safe_dump(
+            {
+                "platform": {
+                    "identity_url": "http://localhost:8001",
+                    "bank_url": "http://localhost:8002",
+                    "task_board_url": "http://localhost:8003",
+                    "reputation_url": "http://localhost:8004",
+                    "court_url": "http://localhost:8005",
+                },
+                "data": {
+                    "keys_dir": str(keys_dir),
+                    "roster_path": str(roster_path),
+                },
+                "signing": {
+                    "token_ttl_seconds": 300,
+                    "max_lifetime_seconds": 300,
+                    "clock_skew_seconds": 0,
+                },
+            }
+        )
+    )
+    return agent_config_path
+
+
+async def _register_test_platform(agent: PlatformAgent) -> dict[str, str]:
+    agent.agent_id = PLATFORM_AGENT_ID
+    return {"agent_id": PLATFORM_AGENT_ID}
 
 
 # ---------------------------------------------------------------------------
@@ -109,9 +149,11 @@ def carol_agent_id() -> str:
 # App + client fixtures
 # ---------------------------------------------------------------------------
 @pytest.fixture
-async def app(tmp_path: Path) -> AsyncIterator[Any]:
+async def app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Any]:
     """Create a test app with temp database and mocked external services."""
     db_path = tmp_path / "test.db"
+    provision_keypair("gateway-task-board", tmp_path)
+    agent_config_path = _write_platform_agent_config(tmp_path)
     config_content = f"""\
 service:
   name: "task-board"
@@ -127,7 +169,9 @@ database:
   path: "{db_path}"
 identity:
   base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
   verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -136,14 +180,22 @@ central_bank:
   timeout_seconds: 10
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
+  agent_config_path: "{agent_config_path}"
 request:
   max_body_size: 1048576
+recovery:
+  maintenance_lock_path: "maintenance.lock"
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-task-board"
+    private_key_path: "gateway-task-board.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 deadline_evaluation:
   evaluation_interval_seconds: 3600
 """
@@ -155,6 +207,7 @@ deadline_evaluation:
 
     clear_settings_cache()
     reset_app_state()
+    monkeypatch.setattr(PlatformAgent, "register", _register_test_platform)
 
     test_app = create_app()
     async with lifespan(test_app):
@@ -336,17 +389,24 @@ def _make_delegating_verify_jws(state_ref: Any) -> Any:
     to simulate what the real IdentityClient would do.
     """
 
-    async def _delegating_verify_jws(token: str) -> dict[str, Any]:
-        parts = token.split(".")
-        header_b64 = parts[0]
-        padded_header = header_b64 + "=" * (-len(header_b64) % 4)
-        header = json.loads(base64.urlsafe_b64decode(padded_header))
-        agent_id = header.get("kid", "")
-
+    async def _delegating_verify_jws(token: str) -> VerifiedJws:
         try:
-            payload = state_ref.platform_agent.validate_certificate(token)
-        except (_InvalidSignature, ValueError):
-            return {"valid": False, "reason": "signature mismatch"}
+            verified = state_ref.platform_agent.validate_certificate(token)
+            action = verified.payload.get("action")
+            if not isinstance(action, str) or not action:
+                raise ServiceError(
+                    "invalid_payload",
+                    "Identity rejected malformed payload action",
+                    400,
+                    {},
+                )
+            return verified
+        except _InvalidSignature:
+            raise
+        except JwsAdmissionError as exc:
+            raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
+        except ServiceError:
+            raise
         except Exception as exc:
             raise ServiceError(
                 "identity_service_unavailable",
@@ -354,8 +414,6 @@ def _make_delegating_verify_jws(state_ref: Any) -> Any:
                 502,
                 {},
             ) from exc
-
-        return {"valid": True, "agent_id": agent_id, "payload": payload}
 
     return _delegating_verify_jws
 

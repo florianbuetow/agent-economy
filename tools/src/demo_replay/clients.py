@@ -66,7 +66,9 @@ async def create_account(
     """Create a bank account for an agent (platform-signed)."""
     url = f"{bank_url}/accounts"
     token = platform.sign_jws(
-        {"action": "create_account", "agent_id": agent_id, "initial_balance": 0}
+        {"action": "create_account", "agent_id": agent_id, "initial_balance": 0},
+        audience="central-bank",
+        resource="POST /accounts",
     )
     resp = await client.post(url, json={"token": token})
     if resp.status_code == 409:
@@ -91,7 +93,9 @@ async def credit_account(
             "account_id": account_id,
             "amount": amount,
             "reference": reference,
-        }
+        },
+        audience="central-bank",
+        resource=f"POST /accounts/{account_id}/credit",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -123,7 +127,9 @@ async def post_task(
             "bidding_deadline_seconds": bidding_deadline_seconds,
             "execution_deadline_seconds": execution_deadline_seconds,
             "review_deadline_seconds": review_deadline_seconds,
-        }
+        },
+        audience="task-board",
+        resource="POST /tasks",
     )
     escrow_token = poster.sign_jws(
         {
@@ -131,7 +137,9 @@ async def post_task(
             "task_id": task_id,
             "amount": reward,
             "agent_id": poster.agent_id,
-        }
+        },
+        audience="central-bank",
+        resource="POST /escrow/lock",
     )
     resp = await client.post(url, json={"task_token": task_token, "escrow_token": escrow_token})
     resp.raise_for_status()
@@ -153,7 +161,9 @@ async def submit_bid(
             "task_id": task_id,
             "bidder_id": bidder.agent_id,
             "amount": amount,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/bids",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -173,7 +183,9 @@ async def list_bids(
             "action": "list_bids",
             "task_id": task_id,
             "poster_id": poster.agent_id,
-        }
+        },
+        audience="task-board",
+        resource=f"GET /tasks/{task_id}/bids",
     )
     resp = await client.get(url, headers=headers)
     resp.raise_for_status()
@@ -197,7 +209,9 @@ async def accept_bid(
             "task_id": task_id,
             "bid_id": bid_id,
             "poster_id": poster.agent_id,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/bids/{bid_id}/accept",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -226,7 +240,11 @@ async def upload_asset(
 ) -> dict[str, Any]:
     """Upload a file asset for a task."""
     url = f"{task_board_url}/tasks/{task_id}/assets"
-    headers = worker.auth_header({"action": "upload_asset", "task_id": task_id})
+    headers = worker.auth_header(
+        {"action": "upload_asset", "task_id": task_id},
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/assets",
+    )
     resp = await client.post(url, headers=headers, files={"file": (filename, content)})
     resp.raise_for_status()
     return resp.json()  # type: ignore[no-any-return]
@@ -245,7 +263,9 @@ async def submit_deliverable(
             "action": "submit_deliverable",
             "task_id": task_id,
             "worker_id": worker.agent_id,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/submit",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -265,7 +285,9 @@ async def approve_task(
             "action": "approve_task",
             "task_id": task_id,
             "poster_id": poster.agent_id,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/approve",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -287,7 +309,9 @@ async def dispute_task(
             "task_id": task_id,
             "poster_id": poster.agent_id,
             "reason": reason,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/dispute",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -330,7 +354,9 @@ async def file_claim(
             "respondent_id": respondent_id,
             "claim": claim,
             "escrow_id": escrow_id,
-        }
+        },
+        audience="court",
+        resource="POST /disputes/file",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -354,7 +380,9 @@ async def submit_rebuttal(
             "dispute_id": dispute_id,
             "worker_id": worker.agent_id,
             "rebuttal": rebuttal,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/rebuttal",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -369,7 +397,11 @@ async def trigger_ruling(
 ) -> dict[str, Any]:
     """Trigger a Court ruling with a platform-signed token."""
     url = f"{court_url}/disputes/{dispute_id}/rule"
-    token = platform.sign_jws({"action": "trigger_ruling", "dispute_id": dispute_id})
+    token = platform.sign_jws(
+        {"action": "trigger_ruling", "dispute_id": dispute_id},
+        audience="court",
+        resource=f"POST /disputes/{dispute_id}/rule",
+    )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
     return resp.json()  # type: ignore[no-any-return]
@@ -405,7 +437,9 @@ async def submit_feedback(
             "category": category,
             "rating": rating,
             "comment": comment,
-        }
+        },
+        audience="reputation",
+        resource="POST /feedback",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()

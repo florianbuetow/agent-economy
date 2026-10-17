@@ -12,9 +12,11 @@ class _BankClient(Protocol):
     config: AgentConfig
     agent_id: str | None
 
-    def _sign_jws(self, payload: dict[str, object]) -> str: ...
+    def _sign_jws(self, payload: dict[str, object], *, audience: str, resource: str) -> str: ...
 
-    def _auth_header(self, payload: dict[str, object]) -> dict[str, str]: ...
+    def _auth_header(
+        self, payload: dict[str, object], *, audience: str, resource: str
+    ) -> dict[str, str]: ...
 
     async def _request(self, method: str, url: str, **kwargs: Any) -> dict[str, Any]: ...
 
@@ -41,7 +43,9 @@ class BankMixin:
                 "action": "create_account",
                 "agent_id": self.agent_id,
                 "initial_balance": 0,
-            }
+            },
+            audience="central-bank",
+            resource="POST /accounts",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -52,7 +56,9 @@ class BankMixin:
             {
                 "action": "get_balance",
                 "account_id": self.agent_id,
-            }
+            },
+            audience="central-bank",
+            resource=f"GET /accounts/{self.agent_id}",
         )
         return await self._request("GET", url, headers=headers)
 
@@ -63,7 +69,9 @@ class BankMixin:
             {
                 "action": "get_transactions",
                 "account_id": self.agent_id,
-            }
+            },
+            audience="central-bank",
+            resource=f"GET /accounts/{self.agent_id}/transactions",
         )
         response = await self._request("GET", url, headers=headers)
         return cast("list[dict[str, Any]]", response["transactions"])
@@ -77,6 +85,8 @@ class BankMixin:
                 "agent_id": self.agent_id,
                 "amount": amount,
                 "task_id": task_id,
-            }
+            },
+            audience="central-bank",
+            resource="POST /escrow/lock",
         )
         return await self._request("POST", url, json={"token": token})

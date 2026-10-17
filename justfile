@@ -58,6 +58,9 @@ help:
     @echo ""
     @printf "\033[1;33mLocal Development\033[0m\n"
     @printf "  \033[0;37mjust start-all        \033[0;34m Start all services in background\033[0m\n"
+    @printf "  \033[0;37mjust provision-keys   \033[0;34m Explicitly provision configured local agent keys\033[0m\n"
+    @printf "  \033[0;37mjust check-keys       \033[0;34m Validate configured local agent keys without changes\033[0m\n"
+    @printf "  \033[0;37mjust adopt-key-permissions\033[0;34m Explicitly harden valid legacy private keys to 0600\033[0m\n"
     @printf "  \033[0;37mjust start-identity   \033[0;34m Start identity service locally\033[0m\n"
     @printf "  \033[0;37mjust start-bank       \033[0;34m Start central bank service locally\033[0m\n"
     @printf "  \033[0;37mjust start-taskboard  \033[0;34m Start task board service locally\033[0m\n"
@@ -219,6 +222,14 @@ start-all:
     printf "\n"
     printf "\033[0;34m=== Starting All Services (Background) ===\033[0m\n"
     printf "\n"
+
+    if ! (cd agents && uv run python -m key_provision_cli check \
+        --gateway-config ../services/db-gateway/config.yaml); then
+        printf "\033[0;31m✗ Key preflight failed before service startup.\033[0m\n"
+        printf "Run 'just provision-keys' for an empty key store.\n"
+        printf "For valid legacy 0644 keys, run 'just adopt-key-permissions' explicitly.\n"
+        exit 1
+    fi
 
     wait_for_health() {
         local name=$1
@@ -438,6 +449,30 @@ provision:
         exit 1
     fi
     printf "\n"
+
+# Explicitly provision every handle in the configured local roster.
+provision-keys:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd agents
+    uv run python -m key_provision_cli provision \
+        --gateway-config ../services/db-gateway/config.yaml
+
+# Validate every configured local keypair without changing key material.
+check-keys:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd agents
+    uv run python -m key_provision_cli check \
+        --gateway-config ../services/db-gateway/config.yaml
+
+# Explicit one-time adoption for valid legacy private keys with permissive modes.
+adopt-key-permissions:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd agents
+    uv run python -m key_provision_cli adopt-permissions \
+        --gateway-config ../services/db-gateway/config.yaml
 
 # Check health status of all services
 status:
@@ -686,21 +721,20 @@ test-project-structure:
 # Run tests for all services
 test-all:
     #!/usr/bin/env bash
-    set -uo pipefail
+    set -euo pipefail
     root="$(pwd)"
     printf "\n"
     printf "\033[0;34m=== Running All Tests ===\033[0m\n"
     printf "\n"
+    uv run --directory "$root/services/db-gateway" \
+        "$root/scripts/isolated_test_runtime.py" -- \
+        just _test-all-suites
 
-    # Some per-service integration tests (db-gateway) hit a live service over
-    # HTTP, so bring the full stack up first and guarantee teardown.
-    cleanup() {
-        printf "\033[0;34m--- Stopping all services ---\033[0m\n"
-        cd "$root" && just stop-all
-    }
-    trap cleanup EXIT
-    cd "$root" && just start-all
-
+[private]
+_test-all-suites:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    root="$(pwd)"
     fail=0
     for svc in identity central-bank task-board reputation court db-gateway ui; do
         printf "\033[0;34m--- %s ---\033[0m\n" "$svc"
@@ -768,11 +802,11 @@ ci:
     printf "\033[0;34m--- Phase 5: Tools CI ---\033[0m\n"
     cd "$root/tools" && just ci
 
-    # Phase 6: Cross-service integration tests (DB Gateway writes, offline gateway)
-    printf "\033[0;34m--- Phase 6: Cross-service integration tests ---\033[0m\n"
+    # Phase 6: Cross-service and isolated-runtime acceptance tests
+    printf "\033[0;34m--- Phase 6: Cross-service and runtime integration tests ---\033[0m\n"
     cd "$root"
-    PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
-        pytest "$root/tests/integration/" -v --tb=short
+    PYTHONPATH="$root:$root/tests" uv run --directory "$root/services/db-gateway" \
+        pytest "$root/tests/integration/" "$root/tests/runtime/" -v --tb=short
 
     # Phase 7: UI Playwright e2e (self-contained; no live stack)
     printf "\033[0;34m--- Phase 7: UI Playwright e2e ---\033[0m\n"
@@ -829,11 +863,11 @@ ci-quiet:
     printf "\033[0;34m--- Phase 5: Tools CI ---\033[0m\n"
     cd "$root/tools" && just ci-quiet
 
-    # Phase 6: Cross-service integration tests
-    printf "\033[0;34m--- Phase 6: Cross-service integration tests ---\033[0m\n"
+    # Phase 6: Cross-service and isolated-runtime acceptance tests
+    printf "\033[0;34m--- Phase 6: Cross-service and runtime integration tests ---\033[0m\n"
     cd "$root"
-    PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
-        pytest "$root/tests/integration/" -v --tb=short
+    PYTHONPATH="$root:$root/tests" uv run --directory "$root/services/db-gateway" \
+        pytest "$root/tests/integration/" "$root/tests/runtime/" -v --tb=short
 
     # Phase 7: UI Playwright e2e (self-contained; no live stack)
     printf "\033[0;34m--- Phase 7: UI Playwright e2e ---\033[0m\n"
@@ -853,7 +887,7 @@ ci-quiet:
 ci-quiet-hook:
     @bash scripts/ci-quiet-hook.sh
 
-# Run cross-service integration tests (DB Gateway writes, offline gateway)
+# Run cross-service integration and isolated-runtime acceptance tests
 test-integration:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -861,42 +895,31 @@ test-integration:
     printf "\n"
     printf "\033[0;34m=== Running Cross-Service Integration Tests ===\033[0m\n"
     printf "\n"
-    PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
-        pytest "$root/tests/integration/" -v --tb=short
+    PYTHONPATH="$root:$root/tests" uv run --directory "$root/services/db-gateway" \
+        pytest "$root/tests/integration/" "$root/tests/runtime/" -v --tb=short
     printf "\n"
     printf "\033[0;32m✓ Cross-service integration tests passed\033[0m\n"
     printf "\n"
 
-# Run every service's own tests/integration/ suite against a live, freshly-wiped
-# stack (T-071/GAP-F1) — stack-up pattern from commit 2a907b1. Most per-service
-# suites are self-contained (in-process gateway or their own live gateway
-# thread); db-gateway's needs an actually-running gateway process, hence the
-# shared stack.
+# Run every service's tests/integration/ suite against a disposable live stack.
+# Most suites are self-contained; DB Gateway's suite consumes the generated
+# DB_GATEWAY_URL from this run.
 test-integration-all:
     #!/usr/bin/env bash
-    set -uo pipefail
+    set -euo pipefail
     root="$(pwd)"
     printf "\n"
     printf "\033[0;34m=== Running Per-Service Integration Tests ===\033[0m\n"
     printf "\n"
+    uv run --directory "$root/services/db-gateway" \
+        "$root/scripts/isolated_test_runtime.py" -- \
+        just _test-integration-suites
 
-    cleanup() {
-        printf "\033[0;34m--- Stopping all services ---\033[0m\n"
-        cd "$root" && just stop-all
-    }
-    trap cleanup EXIT
-
-    printf "\033[0;34m--- Stopping all services ---\033[0m\n"
-    just stop-all
-
-    printf "\033[0;34m--- Wiping service databases ---\033[0m\n"
-    for svc in services/*/; do
-        rm -f "$svc"data/*.db "$svc"data/*.db-wal "$svc"data/*.db-shm
-    done
-
-    printf "\033[0;34m--- Starting all services ---\033[0m\n"
-    just start-all
-
+[private]
+_test-integration-suites:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    root="$(pwd)"
     fail=0
     services=(identity central-bank task-board reputation court db-gateway ui)
     for svc in "${services[@]}"; do
@@ -926,14 +949,7 @@ test-ui-e2e:
     root="$(pwd)"
     cd "$root/services/ui"
 
-    # Fail fast and explicitly if the Chromium browser binary isn't installed —
-    # never silently download-and-continue mid-CI-run. One-time prerequisite:
-    #   cd services/ui && uv run playwright install chromium
-    if ! uv run python -c "import os, sys; from playwright.sync_api import sync_playwright; pw = sync_playwright().start(); ok = os.path.exists(pw.chromium.executable_path); pw.stop(); sys.exit(0 if ok else 1)"; then
-        printf "\033[0;31m✗ Playwright Chromium browser is not installed.\033[0m\n"
-        printf "\033[0;31m  Run once: cd services/ui && uv run playwright install chromium\033[0m\n"
-        exit 1
-    fi
+    just test-prerequisites
 
     uv run pytest tests/e2e -v --tb=short
 
@@ -941,53 +957,21 @@ test-ui-e2e:
     printf "\033[0;32m✓ UI Playwright E2E tests passed\033[0m\n"
     printf "\n"
 
-# Run e2e tests (restarts all services with clean data, then runs tests)
+# Run e2e tests against a disposable isolated stack, then tear down only that stack.
 test-e2e:
     #!/usr/bin/env bash
-    set -uo pipefail
+    set -euo pipefail
     printf "\n"
     printf "\033[0;34m=== Running E2E Tests ===\033[0m\n"
     printf "\n"
 
     root="$(pwd)"
-
-    cleanup() {
-        printf "\n"
-        printf "\033[0;34m--- Stopping all services ---\033[0m\n"
-        cd "$root" && just stop-all
-    }
-    trap cleanup EXIT
-
-    printf "\033[0;34m--- Stopping all services ---\033[0m\n"
-    just stop-all
-
-    printf "\033[0;34m--- Wiping service databases ---\033[0m\n"
-    for svc in services/*/; do
-        rm -f "$svc"data/*.db "$svc"data/*.db-wal "$svc"data/*.db-shm
-    done
-    printf "\033[0;32m✓ Service databases wiped\033[0m\n"
-
-    printf "\033[0;34m--- Starting all services ---\033[0m\n"
-    just start-all
-
-    # A wiped database has no operator/treasury; genesis is an explicit,
-    # idempotent bootstrap step (Q-9), so the e2e environment must provision
-    # itself before the suites run.
-    printf "\033[0;34m--- Provisioning treasury (idempotent) ---\033[0m\n"
-    just provision
-
-    printf "\033[0;34m--- Running e2e tests ---\033[0m\n"
-    test_exit=0
-    cd agents && just test-e2e || test_exit=$?
-
+    uv run --directory "$root/services/db-gateway" \
+        "$root/scripts/isolated_test_runtime.py" --provision -- \
+        just --justfile "$root/agents/justfile" --working-directory "$root/agents" test-e2e
     printf "\n"
-    if [ "$test_exit" -eq 0 ]; then
-        printf "\033[0;32m✓ E2E tests passed\033[0m\n"
-    else
-        printf "\033[0;31m✗ E2E tests failed (exit code: %d)\033[0m\n" "$test_exit"
-    fi
+    printf "\033[0;32m✓ E2E tests passed\033[0m\n"
     printf "\n"
-    exit "$test_exit"
 
 # Show lines of code across the project
 stats:

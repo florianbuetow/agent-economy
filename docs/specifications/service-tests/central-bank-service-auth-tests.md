@@ -30,10 +30,11 @@ These error codes are added by the authentication feature. Existing error codes 
 
 | Status | Error Code                      | Required When                                                |
 |--------|-----------------------------------|--------------------------------------------------------------|
-| 400    | `invalid_jws`                    | `token` field is missing, null, non-string, empty, or malformed (not a three-part compact serialization); or Bearer header is missing, lacks the `Bearer ` prefix, or contains an empty/malformed token |
-| 400    | `invalid_payload`                | JWS payload is missing `action`, `action` does not match the expected value for the endpoint, or required payload fields are missing |
+| 400    | `invalid_jws`                    | Non-object request body or signed payload, malformed compact/header form, decoded signature length other than 64 bytes, exact header profile, or lifetime bound is invalid |
+| 400    | `invalid_payload`                | Action is missing/non-string, authenticated audience/resource/action mismatches, or required domain fields are missing |
 | 400    | `payload_mismatch`               | JWS payload field does not match URL parameter (e.g., `account_id` in payload does not match `{account_id}` in URL, or `escrow_id` in payload does not match `{escrow_id}` in URL) |
-| 401    | `token_expired`                  | Local platform verification (`credit`, `escrow_release`, `escrow_split` only) found the token's header `exp` claim in the past |
+| 401    | `token_expired`                  | Authentic local or Identity-verified token satisfies `now >= exp + clock_skew_seconds` |
+| 401    | `token_not_yet_valid`             | Authentic local or Identity-verified token satisfies `iat > now + clock_skew_seconds` |
 | 403    | `forbidden`                      | JWS signature verification failed (tampered, unknown agent, or — for platform ops — not signed by the registered platform key), signer is not authorized for the operation, or agent is accessing another agent's account/funds |
 | 502    | `identity_service_unavailable`   | Identity is unreachable during an agent-signed verification call or `create_account`'s agent-existence check (never on `credit`/`escrow_release`/`escrow_split`) |
 | 503    | `service_not_ready`              | The ledger, Identity client, or platform agent has not finished initializing |
@@ -54,7 +55,8 @@ All failing responses must use the standard error envelope:
 
 - `platform_agent` is the registered platform agent with a known Ed25519 keypair, instantiated locally as the service's `PlatformAgent`.
 - `agent_alice`, `agent_bob` are agents with known Ed25519 public/private keypairs, resolvable via Identity's `verify-jws` for agent-signed operations.
-- `jws(signer, payload)` denotes a JWS compact serialization (RFC 7515, EdDSA/Ed25519) with header `{"alg":"EdDSA","typ":"JWT","kid":"<signer.agent_id>"}`, the given JSON payload, and a valid Ed25519 signature. When a test needs an expiring token, `jws_with_ttl(signer, payload, ttl_seconds)` additionally stamps `iat`/`exp` into the header.
+- `jws(signer, payload)` is concise scenario notation for a real Ed25519 compact JWS with exact header `{alg,typ,kid,iat,exp,aud,resource}` and the existing action/domain payload. The fixture call must still receive the endpoint's audience and concrete resource explicitly; the notation does not authorize signer defaults. Happy fixtures always use explicit valid policy values.
+- `raw_jws(header, payload, key)` exists only for negative malformed-profile vectors and still creates a real signature. Authentication tests never prove security with a verifier mock. Domain-only mocks must return a complete typed `VerifiedJws(header, payload)` and are not token-conformance evidence.
 - `tampered_jws(signer, payload)` denotes a JWS where the payload has been altered after signing (signature mismatch).
 - Agent IDs use the format `a-<uuid4>`.
 - Account IDs are the same as agent IDs.
@@ -216,7 +218,7 @@ All failing responses must use the standard error envelope:
 **Action:** `POST /accounts` with `Content-Type: application/json` and body `[{"token": "eyJ..."}]`.
 **Expected:**
 - `400 Bad Request`
-- `error = invalid_json`
+- `error = invalid_jws`
 
 ### AUTH-19 Self-service create-account is verified via Identity, not locally
 
@@ -319,31 +321,31 @@ All failing responses must use the standard error envelope:
 
 ## Category 3: Error Precedence (Two-Tier Ordering)
 
-The platform-signed tier (`credit`, `escrow_release`, `escrow_split`) checks payload shape **before** signature verification (T-033/GAP-A14 precedence fix). The agent-signed tier (`create_account`, `escrow_lock`, `get_balance`, `get_transactions`) checks signature verification **before** most payload validation — the pre-T-033 ordering, left unchanged for this tier because the fix was scoped to the newly-local platform-op checks.
+Both tiers authenticate the strict profile before relying on protected-header or payload contents. Existing ownership and domain-validation precedence applies only after a typed `VerifiedJws` exists.
 
-### PREC-01 Malformed credit payload from a non-platform signer returns the payload error, not 403
+### PREC-01 Malformed credit payload from a non-platform signer fails authentication first
 
 **Setup:** `agent_alice` (a regular, non-platform agent) is known. Create a zero-balance account for a worker.
 **Action:** `POST /accounts/{worker}/credit` with `jws(alice, {action: "credit", account_id: worker, amount: 10})` — `reference` is missing (malformed payload) AND the signer is not the platform.
 **Expected:**
-- `400 Bad Request`
-- `error = invalid_payload` — NOT `403 forbidden`. Payload validation runs before the local platform-signature check.
+- `403 Forbidden`
+- `error = forbidden`; no payload-only validation result is used and balance is unchanged.
 
-### PREC-02 Malformed escrow-release payload from a non-platform signer returns the payload error, not 403
+### PREC-02 Malformed escrow-release payload from a non-platform signer fails authentication first
 
 **Setup:** `agent_alice` is known. An escrow exists.
 **Action:** `POST /escrow/{escrow_id}/release` with `jws(alice, {action: "escrow_release"})` — `recipient_account_id` is missing AND the signer is not the platform.
 **Expected:**
-- `400 Bad Request`
-- `error = invalid_payload`
+- `403 Forbidden`
+- `error = forbidden`; escrow remains unchanged.
 
-### PREC-03 Malformed escrow-split payload from a non-platform signer returns the payload error, not 403
+### PREC-03 Malformed escrow-split payload from a non-platform signer fails authentication first
 
 **Setup:** `agent_alice` is known. An escrow exists.
 **Action:** `POST /escrow/{escrow_id}/split` with `jws(alice, {action: "escrow_split", worker_account_id: bob.agent_id})` — `poster_account_id` and `worker_pct` are missing AND the signer is not the platform.
 **Expected:**
-- `400 Bad Request`
-- `error = invalid_payload`
+- `403 Forbidden`
+- `error = forbidden`; escrow remains unchanged.
 
 ### PREC-04 Well-formed but non-platform-signed credit is 403, not a payload error
 
@@ -410,7 +412,7 @@ These tests are the operational core of the two-tier model: platform ops must ke
 
 ---
 
-## Category 5: Token Expiry (Platform-Signed Tier Only)
+## Category 5: Strict Token Lifetime and Context
 
 ### EXP-01 Expired platform token is rejected on credit
 
@@ -420,12 +422,53 @@ These tests are the operational core of the two-tier model: platform ops must ke
 - `401 Unauthorized`
 - `error = token_expired`
 
-### EXP-02 Non-expiring token (no `exp` claim) is accepted regardless of age
+### EXP-02 Non-expiring legacy token is rejected with no ledger effect
 
-**Setup:** `platform_agent` signs a credit token with no TTL configured (legacy tolerance — no `iat`/`exp` in the header).
-**Action:** `POST /accounts/{account_id}/credit` with the token, sent well after it was signed.
+**Setup:** Use the raw-signature fixture to create an authentically platform-signed credit token with no `iat`/`exp`; record balance and transactions.
+**Action:** `POST /accounts/{account_id}/credit` with the legacy token.
 **Expected:**
-- `200 OK` — a token without an `exp` claim never expires.
+- `400 Bad Request`, `error = invalid_jws`
+- Balance and transaction history are unchanged.
+
+### MP03-CB-01 Strict types, exact fields, and maximum lifetime
+
+**Action:** Send real-signed local credit tokens covering non-object signed payload, missing/extra header fields, wrong types (including boolean `iat`/`exp`), decoded signature length other than 64 bytes, `exp <= iat`, and lifetime one second above the configured maximum.
+**Expected:** Each returns `400 invalid_jws`; balance and transactions remain unchanged.
+
+### MP03-CB-02 Exact future and expiry boundaries
+
+**Action:** With controlled time, send tokens at `iat = now + skew`, `iat = now + skew + 1`, `now = exp + skew - 1`, and `now = exp + skew`.
+**Expected:** The equality-within-skew cases succeed; the next future second is `401 token_not_yet_valid`; the exact expiry boundary is `401 token_expired`. Rejected requests have zero effect.
+
+### MP03-CB-03 Wrong audience, method/path resource, and action
+
+**Action:** Send authentic tokens with wrong `aud`, wrong HTTP method in `resource`, wrong concrete path or path id, missing/wrong-type/wrong-value action, and payload fields named `aud`/`resource` that disagree with the protected header.
+**Expected:** Each returns `400 invalid_payload`; zero ledger effect.
+
+### MP03-CB-04 Correct platform signature with wrong `kid`
+
+**Action:** Sign a valid credit token with the platform key but place another registered identity in the protected `kid`.
+**Expected:** `403 forbidden`; zero ledger effect.
+
+### MP03-CB-05 Malformed Identity success is unavailable
+
+**Action:** For an agent-signed route, make Identity return HTTP 200/`valid:true` while omitting `protected_header`, returning a non-object payload, making `agent_id != protected_header.kid`, substituting `true`/`1`/`1.0`, or claiming success for an invalid originally requested token.
+**Expected:** Each returns `502 identity_service_unavailable`; the shared client does not fabricate a payload and the ledger is unchanged.
+
+### MP03-CB-06 Shared, Identity, and local-adapter conformance
+
+**Action:** Run the same real-signed valid, malformed, future, expired, wrong-context, bad-signature, and wrong-platform-`kid` vectors through shared verification, real Identity HTTP verification where applicable, and Central Bank's real local platform adapter.
+**Expected:** All applicable paths return the same typed `VerifiedJws` on success and the uniform error mapping on failure. No local platform vector makes an Identity HTTP call.
+
+### MP03-CB-07 Official signer and policy configuration are strict
+
+**Action:** Construct official agent/platform signers with missing, zero, and negative TTL; construct admission policy with missing/zero/negative maximum or negative skew; then load explicit initial `300/300/30` signer-TTL/admission-maximum/skew values.
+**Expected:** Invalid configurations fail eagerly. The valid configuration signs all seven exact header fields, its TTL is no greater than Identity's maximum, and its token is accepted by the intended route.
+
+### MP03-CB-08 Route-bound reads accept action-only payloads
+
+**Action:** Request balance and transaction history with strict tokens whose payload contains only the matching string action; bind the concrete account in the protected `resource` path.
+**Expected:** Both authentication checks succeed without inventing an `account_id` or other second payload field. Authorization still uses authenticated `kid` and the concrete route subject.
 
 ---
 
@@ -463,8 +506,9 @@ Authentication is release-ready only if:
 | Error Precedence | PREC-01 to PREC-06 | 6 |
 | Identity-Outage Resilience | RESIL-01 to RESIL-04 | 4 |
 | Token Expiry | EXP-01 to EXP-02 | 2 |
+| MP-03 strict-profile conformance | MP03-CB-01 to MP03-CB-08 | 8 |
 | Public Endpoints | PUB-01 | 1 |
-| **Total** | | **43** |
+| **Total** | | **51** |
 
 | Endpoint | Covered By |
 |----------|------------|

@@ -14,7 +14,6 @@ from court_service.core.state import get_app_state
 from court_service.routers.validation import (
     extract_jws_token,
     parse_json_body,
-    require_action,
     require_non_empty_string,
     verify_platform_token,
 )
@@ -76,9 +75,14 @@ async def file_dispute(request: Request) -> JSONResponse:
 
     data = parse_json_body(await request.body())
     token = extract_jws_token(data, field="token")
-    payload = verify_platform_token(token, state.platform_agent)
-
-    require_action(payload, "file_dispute")
+    verified = verify_platform_token(
+        token,
+        state.platform_agent,
+        audience="court",
+        resource="POST /disputes/file",
+        allowed_action="file_dispute",
+    )
+    payload = verified.payload
 
     task_id = require_non_empty_string(payload, "task_id")
     claimant_id = require_non_empty_string(payload, "claimant_id")
@@ -129,9 +133,14 @@ async def submit_rebuttal(dispute_id: str, request: Request) -> JSONResponse:
 
     data = parse_json_body(await request.body())
     token = extract_jws_token(data, field="token")
-    payload = verify_platform_token(token, state.platform_agent)
-
-    require_action(payload, "submit_rebuttal")
+    verified = verify_platform_token(
+        token,
+        state.platform_agent,
+        audience="court",
+        resource=f"POST /disputes/{dispute_id}/rebuttal",
+        allowed_action="submit_rebuttal",
+    )
+    payload = verified.payload
 
     payload_dispute_id = require_non_empty_string(payload, "dispute_id")
     if payload_dispute_id != dispute_id:
@@ -192,9 +201,14 @@ async def trigger_ruling(dispute_id: str, request: Request) -> JSONResponse:
 
     data = parse_json_body(await request.body())
     token = extract_jws_token(data, field="token")
-    payload = verify_platform_token(token, state.platform_agent)
-
-    require_action(payload, "trigger_ruling")
+    verified = verify_platform_token(
+        token,
+        state.platform_agent,
+        audience="court",
+        resource=f"POST /disputes/{dispute_id}/rule",
+        allowed_action="trigger_ruling",
+    )
+    payload = verified.payload
 
     payload_dispute_id = require_non_empty_string(payload, "dispute_id")
     if payload_dispute_id != dispute_id:

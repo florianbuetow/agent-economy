@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from task_board_service.core.state import get_app_state
-from tests.helpers import make_jws_token, tamper_jws
+from tests.helpers import make_jws_token, make_profile_jws_with_unchecked_payload, tamper_jws
 from tests.unit.routers.conftest import (
     create_task,
     make_task_id,
@@ -136,10 +136,11 @@ class TestBodyTokenEdgeCases:
         task_id = make_task_id()
         private_key = alice_keypair[0]
         # Payload has no "action" field
-        token = make_jws_token(
+        token = make_profile_jws_with_unchecked_payload(
             private_key,
             alice_agent_id,
             {"task_id": task_id, "poster_id": alice_agent_id},
+            resource=f"POST /tasks/{task_id}/cancel",
         )
 
         resp = await client.post(
@@ -161,10 +162,11 @@ class TestBodyTokenEdgeCases:
         task_id = make_task_id()
         private_key = platform_keypair[0]
         # Payload has no "action" field
-        token = make_jws_token(
+        token = make_profile_jws_with_unchecked_payload(
             private_key,
             platform_agent_id,
             {"task_id": task_id, "worker_pct": 50, "ruling_summary": "Test ruling"},
+            resource=f"POST /tasks/{task_id}/ruling",
         )
 
         resp = await client.post(
@@ -867,6 +869,7 @@ class TestTokenReplay:
                 "claim": "Test claim",
                 "escrow_id": "esc-xxx",
             },
+            resource=f"POST /tasks/{task_id}/ruling",
         )
 
         resp = await client.post(
@@ -899,6 +902,7 @@ class TestTokenReplay:
                 "category": "spec_quality",
                 "rating": "satisfied",
             },
+            resource=f"POST /tasks/{task_id}/approve",
         )
 
         resp = await client.post(
@@ -931,10 +935,11 @@ class TestAuthSecurity:
         )
 
         # Trigger invalid_payload (missing action)
-        token_no_action = make_jws_token(
+        token_no_action = make_profile_jws_with_unchecked_payload(
             private_key,
             alice_agent_id,
             {"task_id": task_id, "poster_id": alice_agent_id},
+            resource=f"POST /tasks/{task_id}/cancel",
         )
         resp_invalid_payload = await client.post(
             f"/tasks/{task_id}/cancel",
@@ -1063,6 +1068,7 @@ class TestAuthSecurity:
             private_key,
             platform_agent_id,
             {"action": "create_account", "agent_id": platform_agent_id},
+            resource="POST /tasks",
         )
 
         resp = await client.post(

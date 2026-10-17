@@ -69,15 +69,19 @@ def load_yaml_config(config_path: Path) -> dict[str, Any]:
             f"Create the file or set CONFIG_PATH environment variable."
         )
 
+    return parse_yaml_config_bytes(config_path.read_bytes(), source=str(config_path))
+
+
+def parse_yaml_config_bytes(content: bytes, *, source: str) -> dict[str, Any]:
+    """Parse already-read configuration bytes without reopening an evidence file."""
     try:
-        with config_path.open() as f:
-            config = yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        raise ConfigurationError(f"Invalid YAML in {config_path}: {e}") from e
+        config = yaml.safe_load(content)
+    except (yaml.YAMLError, UnicodeError) as e:
+        raise ConfigurationError(f"Invalid YAML in {source}: {e}") from e
 
     if config is None:
         raise ConfigurationError(
-            f"Configuration file is empty: {config_path}\n"
+            f"Configuration file is empty: {source}\n"
             f"All configuration values must be explicitly specified."
         )
 
