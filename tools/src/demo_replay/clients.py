@@ -14,6 +14,11 @@ import uuid
 from typing import Any
 
 import httpx
+from service_auth.financial_identity import operation_id_for
+from service_auth.financial_responses import (
+    parse_account_projection,
+    parse_native_financial_envelope,
+)
 
 from demo_replay.wallet import DemoAgent
 
@@ -62,7 +67,7 @@ async def create_account(
     platform: DemoAgent,
     agent_id: str,
     bank_url: str,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Create a bank account for an agent (platform-signed)."""
     url = f"{bank_url}/accounts"
     token = platform.sign_jws(
@@ -74,7 +79,7 @@ async def create_account(
     if resp.status_code == 409:
         return {"status": "already_exists"}
     resp.raise_for_status()
-    return resp.json()  # type: ignore[no-any-return]
+    return parse_account_projection(resp.json(), agent_id)
 
 
 async def credit_account(
@@ -83,13 +88,16 @@ async def credit_account(
     account_id: str,
     amount: int,
     bank_url: str,
-) -> dict[str, Any]:
+    *,
+    operation_id: str,
+    reference: str,
+) -> dict[str, object]:
     """Credit funds to an agent's account (platform-signed)."""
     url = f"{bank_url}/accounts/{account_id}/credit"
-    reference = f"demo_fund_{uuid.uuid4().hex[:8]}"
     token = platform.sign_jws(
         {
             "action": "credit",
+            "operation_id": operation_id,
             "account_id": account_id,
             "amount": amount,
             "reference": reference,
@@ -99,7 +107,12 @@ async def credit_account(
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
-    return resp.json()  # type: ignore[no-any-return]
+    return parse_native_financial_envelope(
+        resp.json(),
+        operation_id,
+        "credit",
+        {"account_id": account_id, "amount": amount, "reference": reference},
+    )
 
 
 async def post_task(
@@ -114,13 +127,18 @@ async def post_task(
     review_deadline_seconds: int = 3600,
 ) -> dict[str, Any]:
     """Post a new task to the Task Board. Returns response including task_id."""
+    poster_id = poster.agent_id
+    if poster_id is None:
+        msg = f"Agent '{poster.handle}' must be registered before posting a task"
+        raise RuntimeError(msg)
     url = f"{task_board_url}/tasks"
     task_id = f"t-{uuid.uuid4()}"
+    escrow_operation_id = operation_id_for("task-lock", (task_id, poster_id))
     task_token = poster.sign_jws(
         {
             "action": "create_task",
             "task_id": task_id,
-            "poster_id": poster.agent_id,
+            "poster_id": poster_id,
             "title": title,
             "spec": spec,
             "reward": reward,
@@ -134,9 +152,10 @@ async def post_task(
     escrow_token = poster.sign_jws(
         {
             "action": "escrow_lock",
+            "operation_id": escrow_operation_id,
             "task_id": task_id,
             "amount": reward,
-            "agent_id": poster.agent_id,
+            "agent_id": poster_id,
         },
         audience="central-bank",
         resource="POST /escrow/lock",

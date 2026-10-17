@@ -12,7 +12,7 @@ The functional boundary is a real human and external-agent economy that survives
 
 The core economic rule remains: ambiguity in an accepted task specification favors the worker. The immutable accepted specification, inputs, deliverables, claim, rebuttal, ruling, settlement, reputation updates, events, and UI projections must describe the same operation and evidence versions.
 
-The current workspace is the existing `refactor` workspace. This proposal creates no delivery branch and performs no Git history operations. During this planning request, no commits or pushes are permitted from 08:00 through 18:00 Europe/Amsterdam.
+The current workspace is the existing `refactor` workspace. Do not switch branches, merge, rebase or cherry-pick. Commits and pushes are allowed all day on Saturday and Sunday; weekdays prohibit both from 08:00 inclusive until 18:00 exclusive Europe/Amsterdam. Verify the actual local date and time immediately before committing or pushing. These permissions supersede the original blanket prohibition.
 
 ## Goals / Non-Goals
 

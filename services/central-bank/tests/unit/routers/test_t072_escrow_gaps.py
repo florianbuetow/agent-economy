@@ -12,7 +12,7 @@ import pytest
 
 from central_bank_service.core.state import get_app_state
 
-from .conftest import PLATFORM_AGENT_ID, make_jws_token
+from .conftest import PLATFORM_AGENT_ID, make_jws_token, make_operation_id
 
 
 def _setup_identity_mock(state: Any) -> None:
@@ -26,23 +26,41 @@ async def _create_funded_account(
     client: Any, platform_keypair: Any, account_id: str, balance: int
 ) -> None:
     private_key, _ = platform_keypair
+    payload: dict[str, object] = {
+        "action": "create_account",
+        "agent_id": account_id,
+        "initial_balance": balance,
+    }
+    if balance > 0:
+        payload["operation_id"] = make_operation_id()
     token = make_jws_token(
         private_key,
         PLATFORM_AGENT_ID,
-        {"action": "create_account", "agent_id": account_id, "initial_balance": balance},
+        payload,
     )
     resp = await client.post("/accounts", json={"token": token})
     assert resp.status_code == 201
 
 
 async def _lock(
-    client: Any, agent_keypair: Any, agent_id: str, amount: int, task_id: str
+    client: Any,
+    agent_keypair: Any,
+    agent_id: str,
+    amount: int,
+    task_id: str,
+    operation_id: str,
 ) -> dict[str, Any]:
     private_key, _ = agent_keypair
     token = make_jws_token(
         private_key,
         agent_id,
-        {"action": "escrow_lock", "agent_id": agent_id, "amount": amount, "task_id": task_id},
+        {
+            "action": "escrow_lock",
+            "agent_id": agent_id,
+            "amount": amount,
+            "task_id": task_id,
+            "operation_id": operation_id,
+        },
     )
     resp = await client.post("/escrow/lock", json={"token": token})
     assert resp.status_code == 201, resp.text
@@ -61,7 +79,13 @@ class TestEscrowLockScenarios:
         token = make_jws_token(
             private_key,
             "a-ghost",
-            {"action": "escrow_lock", "agent_id": "a-ghost", "amount": 10, "task_id": "T-003"},
+            {
+                "action": "escrow_lock",
+                "agent_id": "a-ghost",
+                "amount": 10,
+                "task_id": "T-003",
+                "operation_id": make_operation_id(),
+            },
         )
         response = await client.post("/escrow/lock", json={"token": token})
         assert response.status_code == 404
@@ -75,29 +99,38 @@ class TestEscrowLockScenarios:
         state = get_app_state()
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-payer", 100)
-        first = await _lock(client, agent_keypair, "a-payer", 30, "T-005")
-        second = await _lock(client, agent_keypair, "a-payer", 30, "T-005")
-        assert second["escrow_id"] == first["escrow_id"]
+        operation_id = make_operation_id()
+        first = await _lock(client, agent_keypair, "a-payer", 30, "T-005", operation_id)
+        second = await _lock(client, agent_keypair, "a-payer", 30, "T-005", operation_id)
+        assert second["receipt"] == first["receipt"]
+        assert second["receipt"]["escrow_id"] == first["receipt"]["escrow_id"]
 
-    async def test_duplicate_task_id_different_amount_returns_conflict(
+    async def test_duplicate_task_id_different_amount_reports_winning_operation(
         self, client, platform_keypair, agent_keypair
     ):
-        """ESC-08: locking the same task_id with a different amount returns 409
-        escrow_already_locked."""
+        """ESC-08: another operation cannot claim an already-owned task lock."""
         state = get_app_state()
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-payer", 100)
-        await _lock(client, agent_keypair, "a-payer", 30, "T-006")
+        winner = make_operation_id()
+        await _lock(client, agent_keypair, "a-payer", 30, "T-006", winner)
 
         private_key, _ = agent_keypair
         token = make_jws_token(
             private_key,
             "a-payer",
-            {"action": "escrow_lock", "agent_id": "a-payer", "amount": 50, "task_id": "T-006"},
+            {
+                "action": "escrow_lock",
+                "agent_id": "a-payer",
+                "amount": 50,
+                "task_id": "T-006",
+                "operation_id": make_operation_id(),
+            },
         )
         response = await client.post("/escrow/lock", json={"token": token})
         assert response.status_code == 409
-        assert response.json()["error"] == "escrow_already_locked"
+        assert response.json()["error"] == "financial_operation_already_committed"
+        assert response.json()["details"] == {"winning_operation_id": winner}
 
     async def test_zero_amount_returns_invalid_amount(self, client, agent_keypair):
         """ESC-09: zero escrow lock amount is rejected."""
@@ -170,7 +203,7 @@ class TestEscrowReleaseScenarios:
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-payer", 100)
         await _create_funded_account(client, platform_keypair, "a-worker", 0)
-        locked = await _lock(client, agent_keypair, "a-payer", 50, "T-rel-02")
+        locked = await _lock(client, agent_keypair, "a-payer", 50, "T-rel-02", make_operation_id())
 
         platform_key, _ = platform_keypair
         release_token = make_jws_token(
@@ -178,12 +211,14 @@ class TestEscrowReleaseScenarios:
             PLATFORM_AGENT_ID,
             {
                 "action": "escrow_release",
-                "escrow_id": locked["escrow_id"],
+                "escrow_id": locked["receipt"]["escrow_id"],
                 "recipient_account_id": "a-worker",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-rel-02:approved",
             },
         )
         release_resp = await client.post(
-            f"/escrow/{locked['escrow_id']}/release", json={"token": release_token}
+            f"/escrow/{locked['receipt']['escrow_id']}/release", json={"token": release_token}
         )
         assert release_resp.status_code == 200
 
@@ -203,7 +238,7 @@ class TestEscrowReleaseScenarios:
         state = get_app_state()
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-payer", 100)
-        locked = await _lock(client, agent_keypair, "a-payer", 30, "T-200")
+        locked = await _lock(client, agent_keypair, "a-payer", 30, "T-200", make_operation_id())
 
         platform_key, _ = platform_keypair
         release_token = make_jws_token(
@@ -211,12 +246,14 @@ class TestEscrowReleaseScenarios:
             PLATFORM_AGENT_ID,
             {
                 "action": "escrow_release",
-                "escrow_id": locked["escrow_id"],
+                "escrow_id": locked["receipt"]["escrow_id"],
                 "recipient_account_id": "a-nonexistent-uuid",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-200:approved",
             },
         )
         response = await client.post(
-            f"/escrow/{locked['escrow_id']}/release", json={"token": release_token}
+            f"/escrow/{locked['receipt']['escrow_id']}/release", json={"token": release_token}
         )
         assert response.status_code == 404
         assert response.json()["error"] == "account_not_found"
@@ -228,16 +265,21 @@ class TestEscrowReleaseScenarios:
         state = get_app_state()
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-payer", 100)
-        locked = await _lock(client, agent_keypair, "a-payer", 30, "T-201")
+        locked = await _lock(client, agent_keypair, "a-payer", 30, "T-201", make_operation_id())
 
         platform_key, _ = platform_keypair
         release_token = make_jws_token(
             platform_key,
             PLATFORM_AGENT_ID,
-            {"action": "escrow_release", "escrow_id": locked["escrow_id"]},
+            {
+                "action": "escrow_release",
+                "escrow_id": locked["receipt"]["escrow_id"],
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-201:approved",
+            },
         )
         response = await client.post(
-            f"/escrow/{locked['escrow_id']}/release", json={"token": release_token}
+            f"/escrow/{locked['receipt']['escrow_id']}/release", json={"token": release_token}
         )
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
@@ -250,7 +292,14 @@ class TestEscrowReleaseScenarios:
         validation runs before the local platform-signature check."""
         private_key, _ = agent_keypair
         token = make_jws_token(
-            private_key, "a-eve", {"action": "escrow_release", "escrow_id": "esc-whatever"}
+            private_key,
+            "a-eve",
+            {
+                "action": "escrow_release",
+                "escrow_id": "esc-whatever",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-whatever:approved",
+            },
         )
         response = await client.post("/escrow/esc-whatever/release", json={"token": token})
         assert response.status_code == 400
@@ -270,6 +319,8 @@ class TestEscrowSplitScenarios:
         worker_account_id: str,
         worker_pct: int,
         poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
     ) -> Any:
         private_key, _ = platform_keypair
         token = make_jws_token(
@@ -281,6 +332,8 @@ class TestEscrowSplitScenarios:
                 "worker_account_id": worker_account_id,
                 "worker_pct": worker_pct,
                 "poster_account_id": poster_account_id,
+                "operation_id": operation_id,
+                "source_reference": source_reference,
             },
         )
         return await client.post(f"/escrow/{escrow_id}/split", json={"token": token})
@@ -291,16 +344,27 @@ class TestEscrowSplitScenarios:
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-poster", 1000)
         await _create_funded_account(client, platform_keypair, "a-worker", 0)
-        locked = await _lock(client, agent_keypair, "a-poster", 500, "T-300")
+        locked = await _lock(client, agent_keypair, "a-poster", 500, "T-300", make_operation_id())
 
         response = await self._split(
-            client, platform_keypair, locked["escrow_id"], "a-worker", 50, "a-poster"
+            client,
+            platform_keypair,
+            locked["receipt"]["escrow_id"],
+            "a-worker",
+            50,
+            "a-poster",
+            make_operation_id(),
+            "task:T-300:ruling:r-one",
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "split"
-        assert data["worker_amount"] == 250
-        assert data["poster_amount"] == 250
+        assert data["receipt"]["result"] == {
+            "escrow_status_at_commit": "split",
+            "worker_pct": 50,
+        }
+        assert data["receipt"]["legs"][0]["amount"] == 250
+        assert data["receipt"]["legs"][1]["amount"] == 250
+        assert data["current_escrow"]["status"] == "split"
 
     async def test_uneven_80_20_split_floor_math(self, client, platform_keypair, agent_keypair):
         """SPL-02: an 80/20 split uses floor math (400/100 from a 500 escrow)."""
@@ -308,15 +372,22 @@ class TestEscrowSplitScenarios:
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-poster", 1000)
         await _create_funded_account(client, platform_keypair, "a-worker", 0)
-        locked = await _lock(client, agent_keypair, "a-poster", 500, "T-301")
+        locked = await _lock(client, agent_keypair, "a-poster", 500, "T-301", make_operation_id())
 
         response = await self._split(
-            client, platform_keypair, locked["escrow_id"], "a-worker", 80, "a-poster"
+            client,
+            platform_keypair,
+            locked["receipt"]["escrow_id"],
+            "a-worker",
+            80,
+            "a-poster",
+            make_operation_id(),
+            "task:T-301:ruling:r-one",
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["worker_amount"] == 400
-        assert data["poster_amount"] == 100
+        assert data["receipt"]["legs"][0]["amount"] == 400
+        assert data["receipt"]["legs"][1]["amount"] == 100
 
     async def test_worker_gets_all_100_0_split(self, client, platform_keypair, agent_keypair):
         """SPL-03: worker_pct=100 gives the worker the entire escrow amount."""
@@ -324,15 +395,23 @@ class TestEscrowSplitScenarios:
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-poster", 1000)
         await _create_funded_account(client, platform_keypair, "a-worker", 0)
-        locked = await _lock(client, agent_keypair, "a-poster", 100, "T-302")
+        locked = await _lock(client, agent_keypair, "a-poster", 100, "T-302", make_operation_id())
 
         response = await self._split(
-            client, platform_keypair, locked["escrow_id"], "a-worker", 100, "a-poster"
+            client,
+            platform_keypair,
+            locked["receipt"]["escrow_id"],
+            "a-worker",
+            100,
+            "a-poster",
+            make_operation_id(),
+            "task:T-302:ruling:r-one",
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["worker_amount"] == 100
-        assert data["poster_amount"] == 0
+        assert data["receipt"]["legs"][0]["amount"] == 100
+        assert data["receipt"]["legs"][1]["amount"] == 0
+        assert data["receipt"]["legs"][1]["transaction_id"] is None
 
     async def test_odd_amount_floor_rounding(self, client, platform_keypair, agent_keypair):
         """SPL-05: floor(101 * 33 / 100) = 33, remainder 68 goes to the poster."""
@@ -340,15 +419,22 @@ class TestEscrowSplitScenarios:
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-poster", 1000)
         await _create_funded_account(client, platform_keypair, "a-worker", 0)
-        locked = await _lock(client, agent_keypair, "a-poster", 101, "T-303")
+        locked = await _lock(client, agent_keypair, "a-poster", 101, "T-303", make_operation_id())
 
         response = await self._split(
-            client, platform_keypair, locked["escrow_id"], "a-worker", 33, "a-poster"
+            client,
+            platform_keypair,
+            locked["receipt"]["escrow_id"],
+            "a-worker",
+            33,
+            "a-poster",
+            make_operation_id(),
+            "task:T-303:ruling:r-one",
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["worker_amount"] == 33
-        assert data["poster_amount"] == 68
+        assert data["receipt"]["legs"][0]["amount"] == 33
+        assert data["receipt"]["legs"][1]["amount"] == 68
 
     async def test_both_balances_updated_after_split(self, client, platform_keypair, agent_keypair):
         """SPL-06: both poster and worker balances update correctly after a split."""
@@ -356,10 +442,17 @@ class TestEscrowSplitScenarios:
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-poster", 200)
         await _create_funded_account(client, platform_keypair, "a-worker", 10)
-        locked = await _lock(client, agent_keypair, "a-poster", 100, "T-304")
+        locked = await _lock(client, agent_keypair, "a-poster", 100, "T-304", make_operation_id())
 
         response = await self._split(
-            client, platform_keypair, locked["escrow_id"], "a-worker", 60, "a-poster"
+            client,
+            platform_keypair,
+            locked["receipt"]["escrow_id"],
+            "a-worker",
+            60,
+            "a-poster",
+            make_operation_id(),
+            "task:T-304:ruling:r-one",
         )
         assert response.status_code == 200
 
@@ -383,40 +476,59 @@ class TestEscrowSplitScenarios:
     async def test_escrow_not_found(self, client, platform_keypair):
         """SPL-09: splitting a nonexistent escrow returns 404 escrow_not_found."""
         response = await self._split(
-            client, platform_keypair, "esc-nonexistent-uuid", "a-worker", 50, "a-poster"
+            client,
+            platform_keypair,
+            "esc-nonexistent-uuid",
+            "a-worker",
+            50,
+            "a-poster",
+            make_operation_id(),
+            "task:T-missing:ruling:r-one",
         )
         assert response.status_code == 404
         assert response.json()["error"] == "escrow_not_found"
 
-    async def test_already_resolved_escrow(self, client, platform_keypair, agent_keypair):
-        """SPL-10: splitting an already-released escrow returns 409
-        escrow_already_resolved."""
+    async def test_competing_split_reports_winning_release(
+        self, client, platform_keypair, agent_keypair
+    ):
+        """SPL-10: a split cannot replace the release that owns settlement."""
         state = get_app_state()
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-poster", 100)
         await _create_funded_account(client, platform_keypair, "a-worker", 0)
-        locked = await _lock(client, agent_keypair, "a-poster", 50, "T-305")
+        locked = await _lock(client, agent_keypair, "a-poster", 50, "T-305", make_operation_id())
 
         platform_key, _ = platform_keypair
+        winning_operation_id = make_operation_id()
         release_token = make_jws_token(
             platform_key,
             PLATFORM_AGENT_ID,
             {
                 "action": "escrow_release",
-                "escrow_id": locked["escrow_id"],
+                "escrow_id": locked["receipt"]["escrow_id"],
                 "recipient_account_id": "a-worker",
+                "operation_id": winning_operation_id,
+                "source_reference": "task:T-305:approved",
             },
         )
         release_resp = await client.post(
-            f"/escrow/{locked['escrow_id']}/release", json={"token": release_token}
+            f"/escrow/{locked['receipt']['escrow_id']}/release", json={"token": release_token}
         )
         assert release_resp.status_code == 200
 
         response = await self._split(
-            client, platform_keypair, locked["escrow_id"], "a-worker", 50, "a-poster"
+            client,
+            platform_keypair,
+            locked["receipt"]["escrow_id"],
+            "a-worker",
+            50,
+            "a-poster",
+            make_operation_id(),
+            "task:T-305:ruling:r-one",
         )
         assert response.status_code == 409
-        assert response.json()["error"] == "escrow_already_resolved"
+        assert response.json()["error"] == "financial_operation_already_committed"
+        assert response.json()["details"] == {"winning_operation_id": winning_operation_id}
 
     async def test_worker_pct_below_zero_returns_invalid_amount(
         self, client, platform_keypair, agent_keypair
@@ -426,10 +538,17 @@ class TestEscrowSplitScenarios:
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-poster", 100)
         await _create_funded_account(client, platform_keypair, "a-worker", 0)
-        locked = await _lock(client, agent_keypair, "a-poster", 50, "T-306")
+        locked = await _lock(client, agent_keypair, "a-poster", 50, "T-306", make_operation_id())
 
         response = await self._split(
-            client, platform_keypair, locked["escrow_id"], "a-worker", -1, "a-poster"
+            client,
+            platform_keypair,
+            locked["receipt"]["escrow_id"],
+            "a-worker",
+            -1,
+            "a-poster",
+            make_operation_id(),
+            "task:T-306:ruling:r-one",
         )
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_amount"
@@ -442,10 +561,17 @@ class TestEscrowSplitScenarios:
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-poster", 100)
         await _create_funded_account(client, platform_keypair, "a-worker", 0)
-        locked = await _lock(client, agent_keypair, "a-poster", 50, "T-307")
+        locked = await _lock(client, agent_keypair, "a-poster", 50, "T-307", make_operation_id())
 
         response = await self._split(
-            client, platform_keypair, locked["escrow_id"], "a-worker", 33.5, "a-poster"
+            client,
+            platform_keypair,
+            locked["receipt"]["escrow_id"],
+            "a-worker",
+            33.5,
+            "a-poster",
+            make_operation_id(),
+            "task:T-307:ruling:r-one",
         )
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
@@ -455,15 +581,17 @@ class TestEscrowSplitScenarios:
         state = get_app_state()
         _setup_identity_mock(state)
         await _create_funded_account(client, platform_keypair, "a-poster", 100)
-        locked = await _lock(client, agent_keypair, "a-poster", 50, "T-308")
+        locked = await _lock(client, agent_keypair, "a-poster", 50, "T-308", make_operation_id())
 
         response = await self._split(
             client,
             platform_keypair,
-            locked["escrow_id"],
+            locked["receipt"]["escrow_id"],
             "a-nonexistent-uuid",
             50,
             "a-poster",
+            make_operation_id(),
+            "task:T-308:ruling:r-one",
         )
         assert response.status_code == 404
         assert response.json()["error"] == "account_not_found"
@@ -482,6 +610,8 @@ class TestEscrowSplitScenarios:
                 "action": "escrow_split",
                 "escrow_id": "esc-whatever",
                 "worker_account_id": "a-worker",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-whatever:ruling:r-one",
             },
         )
         response = await client.post("/escrow/esc-whatever/split", json={"token": token})

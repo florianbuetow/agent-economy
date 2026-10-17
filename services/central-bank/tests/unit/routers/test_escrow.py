@@ -9,7 +9,7 @@ import pytest
 
 from central_bank_service.core.state import get_app_state
 
-from .conftest import PLATFORM_AGENT_ID, make_jws_token
+from .conftest import PLATFORM_AGENT_ID, make_jws_token, make_operation_id
 
 
 def _setup_identity_mock(state: Any) -> None:
@@ -27,10 +27,17 @@ async def _create_funded_account(
 ) -> None:
     """Helper to create a funded account via the API."""
     private_key, _ = platform_keypair
+    payload: dict[str, object] = {
+        "action": "create_account",
+        "agent_id": account_id,
+        "initial_balance": balance,
+    }
+    if balance > 0:
+        payload["operation_id"] = make_operation_id()
     token = make_jws_token(
         private_key,
         PLATFORM_AGENT_ID,
-        {"action": "create_account", "agent_id": account_id, "initial_balance": balance},
+        payload,
     )
     resp = await client.post("/accounts", json={"token": token})
     assert resp.status_code == 201
@@ -56,15 +63,18 @@ class TestEscrowLock:
                 "agent_id": "a-payer",
                 "amount": 30,
                 "task_id": "T-001",
+                "operation_id": make_operation_id(),
             },
         )
         response = await client.post("/escrow/lock", json={"token": token})
         assert response.status_code == 201
         data = response.json()
-        assert data["escrow_id"].startswith("esc-")
-        assert data["amount"] == 30
-        assert data["task_id"] == "T-001"
-        assert data["status"] == "locked"
+        assert data["outcome"] == "native_receipt"
+        assert data["receipt"]["escrow_id"].startswith("esc-")
+        assert data["receipt"]["result"] == {"escrow_status_at_commit": "locked"}
+        assert data["current_escrow"]["amount"] == 30
+        assert data["current_escrow"]["task_id"] == "T-001"
+        assert data["current_escrow"]["status"] == "locked"
 
     async def test_escrow_lock_insufficient_funds(self, client, platform_keypair, agent_keypair):
         """Escrow lock with insufficient funds returns 402."""
@@ -82,6 +92,7 @@ class TestEscrowLock:
                 "agent_id": "a-payer",
                 "amount": 100,
                 "task_id": "T-001",
+                "operation_id": make_operation_id(),
             },
         )
         response = await client.post("/escrow/lock", json={"token": token})
@@ -105,6 +116,7 @@ class TestEscrowLock:
                 "agent_id": "a-victim",
                 "amount": 50,
                 "task_id": "T-001",
+                "operation_id": make_operation_id(),
             },
         )
         response = await client.post("/escrow/lock", json={"token": token})
@@ -134,10 +146,11 @@ class TestEscrowRelease:
                 "agent_id": "a-payer",
                 "amount": 30,
                 "task_id": "T-001",
+                "operation_id": make_operation_id(),
             },
         )
         lock_resp = await client.post("/escrow/lock", json={"token": lock_token})
-        escrow_id = lock_resp.json()["escrow_id"]
+        escrow_id = lock_resp.json()["receipt"]["escrow_id"]
 
         # Release as platform
         platform_key, _ = platform_keypair
@@ -148,6 +161,8 @@ class TestEscrowRelease:
                 "action": "escrow_release",
                 "escrow_id": escrow_id,
                 "recipient_account_id": "a-worker",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-001:approved",
             },
         )
         response = await client.post(
@@ -156,12 +171,16 @@ class TestEscrowRelease:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "released"
-        assert data["amount"] == 30
-        assert data["recipient"] == "a-worker"
+        assert data["outcome"] == "native_receipt"
+        assert data["receipt"]["result"] == {"escrow_status_at_commit": "released"}
+        assert data["receipt"]["legs"][0]["account_id"] == "a-worker"
+        assert data["receipt"]["legs"][0]["amount"] == 30
+        assert data["current_escrow"]["status"] == "released"
 
-    async def test_escrow_release_already_resolved(self, client, platform_keypair, agent_keypair):
-        """Releasing already-resolved escrow returns 409."""
+    async def test_competing_release_reports_winning_operation(
+        self, client, platform_keypair, agent_keypair
+    ):
+        """A distinct release intent cannot claim an already-owned settlement."""
         state = get_app_state()
         _setup_identity_mock(state)
 
@@ -177,27 +196,45 @@ class TestEscrowRelease:
                 "agent_id": "a-payer",
                 "amount": 30,
                 "task_id": "T-001",
+                "operation_id": make_operation_id(),
             },
         )
         lock_resp = await client.post("/escrow/lock", json={"token": lock_token})
-        escrow_id = lock_resp.json()["escrow_id"]
+        escrow_id = lock_resp.json()["receipt"]["escrow_id"]
 
         platform_key, _ = platform_keypair
-        release_token = make_jws_token(
+        winning_operation_id = make_operation_id()
+        first_release_token = make_jws_token(
             platform_key,
             PLATFORM_AGENT_ID,
             {
                 "action": "escrow_release",
                 "escrow_id": escrow_id,
                 "recipient_account_id": "a-worker",
+                "operation_id": winning_operation_id,
+                "source_reference": "task:T-001:approved",
             },
         )
-        await client.post(f"/escrow/{escrow_id}/release", json={"token": release_token})
+        await client.post(f"/escrow/{escrow_id}/release", json={"token": first_release_token})
 
-        # Try to release again
-        response = await client.post(f"/escrow/{escrow_id}/release", json={"token": release_token})
+        losing_release_token = make_jws_token(
+            platform_key,
+            PLATFORM_AGENT_ID,
+            {
+                "action": "escrow_release",
+                "escrow_id": escrow_id,
+                "recipient_account_id": "a-worker",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-001:approved",
+            },
+        )
+        response = await client.post(
+            f"/escrow/{escrow_id}/release",
+            json={"token": losing_release_token},
+        )
         assert response.status_code == 409
-        assert response.json()["error"] == "escrow_already_resolved"
+        assert response.json()["error"] == "financial_operation_already_committed"
+        assert response.json()["details"] == {"winning_operation_id": winning_operation_id}
 
     async def test_escrow_not_found(self, client, platform_keypair):
         """Release of non-existent escrow returns 404."""
@@ -212,6 +249,8 @@ class TestEscrowRelease:
                 "action": "escrow_release",
                 "escrow_id": "esc-fake",
                 "recipient_account_id": "a-worker",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-fake:approved",
             },
         )
         response = await client.post(
@@ -244,10 +283,11 @@ class TestEscrowSplit:
                 "agent_id": "a-poster",
                 "amount": 100,
                 "task_id": "T-001",
+                "operation_id": make_operation_id(),
             },
         )
         lock_resp = await client.post("/escrow/lock", json={"token": lock_token})
-        escrow_id = lock_resp.json()["escrow_id"]
+        escrow_id = lock_resp.json()["receipt"]["escrow_id"]
 
         # Split as platform: 40% to worker, 60% back to poster
         platform_key, _ = platform_keypair
@@ -260,6 +300,8 @@ class TestEscrowSplit:
                 "worker_account_id": "a-worker",
                 "worker_pct": 40,
                 "poster_account_id": "a-poster",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-001:ruling:r-one",
             },
         )
         response = await client.post(
@@ -268,6 +310,11 @@ class TestEscrowSplit:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "split"
-        assert data["worker_amount"] == 40
-        assert data["poster_amount"] == 60
+        assert data["outcome"] == "native_receipt"
+        assert data["receipt"]["result"] == {
+            "escrow_status_at_commit": "split",
+            "worker_pct": 40,
+        }
+        assert data["receipt"]["legs"][0]["amount"] == 40
+        assert data["receipt"]["legs"][1]["amount"] == 60
+        assert data["current_escrow"]["status"] == "split"

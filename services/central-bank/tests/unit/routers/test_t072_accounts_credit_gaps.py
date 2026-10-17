@@ -16,7 +16,7 @@ from cryptography.exceptions import InvalidSignature
 
 from central_bank_service.core.state import get_app_state
 
-from .conftest import PLATFORM_AGENT_ID, make_jws_token
+from .conftest import PLATFORM_AGENT_ID, make_jws_token, make_operation_id
 
 
 def _setup_identity_mock_for_platform(
@@ -302,11 +302,12 @@ class TestCreditIdempotencyAndConflict:
                 "account_id": "a-test-agent",
                 "amount": 30,
                 "reference": "bonus_1",
+                "operation_id": make_operation_id(),
             },
         )
         first = await client.post("/accounts/a-test-agent/credit", json={"token": first_token})
         assert first.status_code == 200
-        assert first.json()["balance_after"] == 30
+        assert first.json()["receipt"]["result"]["balance_after"] == 30
 
         second_token = make_jws_token(
             private_key,
@@ -316,16 +317,17 @@ class TestCreditIdempotencyAndConflict:
                 "account_id": "a-test-agent",
                 "amount": 20,
                 "reference": "bonus_2",
+                "operation_id": make_operation_id(),
             },
         )
         second = await client.post("/accounts/a-test-agent/credit", json={"token": second_token})
         assert second.status_code == 200
-        assert second.json()["balance_after"] == 50
+        assert second.json()["receipt"]["result"]["balance_after"] == 50
 
-    async def test_duplicate_reference_different_amount_returns_payload_mismatch(
+    async def test_duplicate_reference_different_amount_reports_winning_operation(
         self, client, platform_keypair
     ):
-        """CR-04: duplicate credit reference with a different amount returns payload_mismatch."""
+        """CR-04: another operation cannot claim an already-owned credit reference."""
         state = get_app_state()
         _setup_identity_mock_for_platform(state)
         private_key, _ = platform_keypair
@@ -337,6 +339,7 @@ class TestCreditIdempotencyAndConflict:
         )
         await client.post("/accounts", json={"token": create_token})
 
+        winning_operation_id = make_operation_id()
         first_token = make_jws_token(
             private_key,
             PLATFORM_AGENT_ID,
@@ -345,6 +348,7 @@ class TestCreditIdempotencyAndConflict:
                 "account_id": "a-test-agent",
                 "amount": 25,
                 "reference": "salary_round_1",
+                "operation_id": winning_operation_id,
             },
         )
         first = await client.post("/accounts/a-test-agent/credit", json={"token": first_token})
@@ -358,11 +362,13 @@ class TestCreditIdempotencyAndConflict:
                 "account_id": "a-test-agent",
                 "amount": 30,
                 "reference": "salary_round_1",
+                "operation_id": make_operation_id(),
             },
         )
         second = await client.post("/accounts/a-test-agent/credit", json={"token": second_token})
-        assert second.status_code == 400
-        assert second.json()["error"] == "payload_mismatch"
+        assert second.status_code == 409
+        assert second.json()["error"] == "financial_operation_already_committed"
+        assert second.json()["details"] == {"winning_operation_id": winning_operation_id}
 
     async def test_idempotent_credit_returns_same_tx_id(self, client, platform_keypair):
         """CR-03: an identical repeated credit request (same reference/amount) through
@@ -383,6 +389,7 @@ class TestCreditIdempotencyAndConflict:
             "account_id": "a-test-agent",
             "amount": 25,
             "reference": "salary_round_1",
+            "operation_id": make_operation_id(),
         }
         first_token = make_jws_token(private_key, PLATFORM_AGENT_ID, credit_payload)
         first = await client.post("/accounts/a-test-agent/credit", json={"token": first_token})
@@ -391,5 +398,9 @@ class TestCreditIdempotencyAndConflict:
         second_token = make_jws_token(private_key, PLATFORM_AGENT_ID, credit_payload)
         second = await client.post("/accounts/a-test-agent/credit", json={"token": second_token})
         assert second.status_code == 200
-        assert second.json()["tx_id"] == first.json()["tx_id"]
-        assert second.json()["balance_after"] == first.json()["balance_after"] == 25
+        assert second.json()["receipt"] == first.json()["receipt"]
+        assert (
+            second.json()["receipt"]["legs"][0]["transaction_id"]
+            == first.json()["receipt"]["legs"][0]["transaction_id"]
+        )
+        assert second.json()["receipt"]["result"]["balance_after"] == 25

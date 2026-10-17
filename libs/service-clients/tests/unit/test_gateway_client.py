@@ -8,6 +8,7 @@ once), then each domain's happy path plus its distinguishing error path (a
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Callable
 from typing import Any
@@ -19,6 +20,14 @@ from service_commons.exceptions import ServiceError
 from service_clients.gateway import GatewayClient
 
 Handler = Callable[[httpx.Request], httpx.Response]
+
+_CREDIT_OPERATION_ID = "op-00000000-0000-4000-8000-000000000021"
+_LOCK_OPERATION_ID = "op-00000000-0000-4000-8000-000000000022"
+_RELEASE_OPERATION_ID = "op-00000000-0000-4000-8000-000000000023"
+_SPLIT_OPERATION_ID = "op-00000000-0000-4000-8000-000000000024"
+_RELEASE_SOURCE_REFERENCE = "task:t-1:approved"
+_SPLIT_SOURCE_REFERENCE = "task:t-1:ruling:ruling-1"
+_COMMITTED_AT = "2026-10-16T10:00:00Z"
 
 
 class _TestSigner:
@@ -43,6 +52,41 @@ def _client(handler: Handler) -> GatewayClient:
 
 def _json_response(status_code: int, body: dict[str, Any]) -> httpx.Response:
     return httpx.Response(status_code, json=body)
+
+
+def _native_receipt(
+    operation_id: str,
+    operation_kind: str,
+    source_reference: str,
+    canonical_request: dict[str, object],
+    result: dict[str, object],
+    legs: list[dict[str, object]],
+    current_escrow: dict[str, object] | None,
+) -> dict[str, Any]:
+    request_sha256 = hashlib.sha256(
+        json.dumps(
+            canonical_request,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode()
+    ).hexdigest()
+    return {
+        "outcome": "native_receipt",
+        "receipt": {
+            "receipt_version": 1,
+            "operation_id": operation_id,
+            "operation_kind": operation_kind,
+            "request_sha256": request_sha256,
+            "source_reference": source_reference,
+            "committed_at": _COMMITTED_AT,
+            "event_id": 1,
+            "escrow_id": None if current_escrow is None else current_escrow["escrow_id"],
+            "result": result,
+            "legs": legs,
+        },
+        "current_escrow": current_escrow,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -150,6 +194,7 @@ class TestBank:
         def handler(request: httpx.Request) -> httpx.Response:
             body = json.loads(request.content)
             assert body["account_id"] == "a-1"
+            assert "operation_id" not in body
             assert body["event"]["event_type"] == "account.created"
             return _json_response(201, {"account_id": "a-1", "event_id": 1})
 
@@ -160,6 +205,7 @@ class TestBank:
             balance=0,
             initial_credit_data=None,
             agent_name="Alice",
+            operation_id=None,
         )
         assert result["account_id"] == "a-1"
 
@@ -177,6 +223,7 @@ class TestBank:
                 balance=0,
                 initial_credit_data=None,
                 agent_name="Alice",
+                operation_id=None,
             )
         assert excinfo.value.error == "account_exists"
 
@@ -232,13 +279,52 @@ class TestBank:
     async def test_credit_account(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
             assert request.url.path == "/bank/credit"
-            return _json_response(200, {"tx_id": "tx-1", "balance_after": 50})
+            body = json.loads(request.content)
+            assert body["operation_id"] == _CREDIT_OPERATION_ID
+            return _json_response(
+                200,
+                _native_receipt(
+                    _CREDIT_OPERATION_ID,
+                    "credit",
+                    "ref",
+                    {
+                        "request_version": 1,
+                        "operation_kind": "credit",
+                        "account_id": "a-1",
+                        "amount": 50,
+                        "reference": "ref",
+                    },
+                    {
+                        "account_id": "a-1",
+                        "amount": 50,
+                        "balance_after": 50,
+                        "reference": "ref",
+                    },
+                    [
+                        {
+                            "role": "account",
+                            "account_id": "a-1",
+                            "direction": "credit",
+                            "amount": 50,
+                            "transaction_id": "tx-1",
+                            "balance_after": 50,
+                        }
+                    ],
+                    None,
+                ),
+            )
 
         client = _client(handler)
         result = await client.credit_account(
-            tx_id="tx-1", account_id="a-1", amount=50, reference="ref", timestamp="now"
+            tx_id="tx-1",
+            account_id="a-1",
+            amount=50,
+            reference="ref",
+            timestamp="now",
+            operation_id=_CREDIT_OPERATION_ID,
         )
-        assert result["balance_after"] == 50
+        assert result["receipt"]["result"]["balance_after"] == 50
+        assert result["current_escrow"] is None
 
     async def test_escrow_lock_insufficient_funds(self) -> None:
         def handler(_request: httpx.Request) -> httpx.Response:
@@ -255,6 +341,7 @@ class TestBank:
                 task_id="t-1",
                 created_at="now",
                 tx_id="tx-1",
+                operation_id=_LOCK_OPERATION_ID,
             )
         assert excinfo.value.error == "insufficient_funds"
         assert excinfo.value.status_code == 402
@@ -262,7 +349,45 @@ class TestBank:
     async def test_escrow_release_success(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
             assert request.url.path == "/bank/escrow/release"
-            return _json_response(200, {"escrow_id": "esc-1", "status": "released"})
+            body = json.loads(request.content)
+            assert body["operation_id"] == _RELEASE_OPERATION_ID
+            assert body["source_reference"] == _RELEASE_SOURCE_REFERENCE
+            assert "amount" not in body
+            return _json_response(
+                200,
+                _native_receipt(
+                    _RELEASE_OPERATION_ID,
+                    "escrow_release",
+                    _RELEASE_SOURCE_REFERENCE,
+                    {
+                        "request_version": 1,
+                        "operation_kind": "escrow_release",
+                        "escrow_id": "esc-1",
+                        "recipient_account_id": "a-2",
+                        "source_reference": _RELEASE_SOURCE_REFERENCE,
+                    },
+                    {"escrow_status_at_commit": "released"},
+                    [
+                        {
+                            "role": "recipient",
+                            "account_id": "a-2",
+                            "direction": "credit",
+                            "amount": 100,
+                            "transaction_id": "tx-1",
+                            "balance_after": 100,
+                        }
+                    ],
+                    {
+                        "escrow_id": "esc-1",
+                        "payer_account_id": "a-1",
+                        "task_id": "t-1",
+                        "amount": 100,
+                        "status": "released",
+                        "created_at": _COMMITTED_AT,
+                        "resolved_at": _COMMITTED_AT,
+                    },
+                ),
+            )
 
         client = _client(handler)
         result = await client.escrow_release(
@@ -270,17 +395,66 @@ class TestBank:
             recipient_account_id="a-2",
             tx_id="tx-1",
             resolved_at="now",
-            amount=100,
+            source_reference=_RELEASE_SOURCE_REFERENCE,
+            operation_id=_RELEASE_OPERATION_ID,
         )
-        assert result["status"] == "released"
+        assert result["receipt"]["result"]["escrow_status_at_commit"] == "released"
+        assert result["current_escrow"]["status"] == "released"
 
     async def test_escrow_split_success(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
             assert request.url.path == "/bank/escrow/split"
             body = json.loads(request.content)
-            assert body["worker_amount"] == 40
-            assert body["poster_amount"] == 60
-            return _json_response(200, {"escrow_id": "esc-1", "status": "split"})
+            assert body["operation_id"] == _SPLIT_OPERATION_ID
+            assert body["source_reference"] == _SPLIT_SOURCE_REFERENCE
+            assert body["worker_pct"] == 40
+            assert "worker_amount" not in body
+            assert "poster_amount" not in body
+            return _json_response(
+                200,
+                _native_receipt(
+                    _SPLIT_OPERATION_ID,
+                    "escrow_split",
+                    _SPLIT_SOURCE_REFERENCE,
+                    {
+                        "request_version": 1,
+                        "operation_kind": "escrow_split",
+                        "escrow_id": "esc-1",
+                        "worker_account_id": "a-worker",
+                        "poster_account_id": "a-poster",
+                        "worker_pct": 40,
+                        "source_reference": _SPLIT_SOURCE_REFERENCE,
+                    },
+                    {"escrow_status_at_commit": "split", "worker_pct": 40},
+                    [
+                        {
+                            "role": "worker",
+                            "account_id": "a-worker",
+                            "direction": "credit",
+                            "amount": 40,
+                            "transaction_id": "tx-w",
+                            "balance_after": 40,
+                        },
+                        {
+                            "role": "poster",
+                            "account_id": "a-poster",
+                            "direction": "credit",
+                            "amount": 60,
+                            "transaction_id": "tx-p",
+                            "balance_after": 60,
+                        },
+                    ],
+                    {
+                        "escrow_id": "esc-1",
+                        "payer_account_id": "a-poster",
+                        "task_id": "t-1",
+                        "amount": 100,
+                        "status": "split",
+                        "created_at": _COMMITTED_AT,
+                        "resolved_at": _COMMITTED_AT,
+                    },
+                ),
+            )
 
         client = _client(handler)
         result = await client.escrow_split(
@@ -290,10 +464,15 @@ class TestBank:
             worker_tx_id="tx-w",
             poster_tx_id="tx-p",
             resolved_at="now",
-            worker_amount=40,
-            poster_amount=60,
+            worker_pct=40,
+            source_reference=_SPLIT_SOURCE_REFERENCE,
+            operation_id=_SPLIT_OPERATION_ID,
         )
-        assert result["status"] == "split"
+        assert result["receipt"]["result"] == {
+            "escrow_status_at_commit": "split",
+            "worker_pct": 40,
+        }
+        assert result["current_escrow"]["status"] == "split"
 
 
 # ---------------------------------------------------------------------------

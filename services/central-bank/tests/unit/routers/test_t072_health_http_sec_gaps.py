@@ -14,7 +14,7 @@ import pytest
 
 from central_bank_service.core.state import get_app_state
 
-from .conftest import PLATFORM_AGENT_ID, make_jws_token
+from .conftest import PLATFORM_AGENT_ID, make_jws_token, make_operation_id
 
 
 def _setup_identity_mock(state: Any) -> None:
@@ -27,21 +27,41 @@ async def _create_account(
     client: Any, platform_keypair: Any, account_id: str, balance: int
 ) -> None:
     private_key, _ = platform_keypair
+    payload: dict[str, object] = {
+        "action": "create_account",
+        "agent_id": account_id,
+        "initial_balance": balance,
+    }
+    if balance > 0:
+        payload["operation_id"] = make_operation_id()
     token = make_jws_token(
         private_key,
         PLATFORM_AGENT_ID,
-        {"action": "create_account", "agent_id": account_id, "initial_balance": balance},
+        payload,
     )
     resp = await client.post("/accounts", json={"token": token})
     assert resp.status_code == 201, resp.text
 
 
-async def _lock(client: Any, agent_keypair: Any, agent_id: str, amount: int, task_id: str) -> Any:
+async def _lock(
+    client: Any,
+    agent_keypair: Any,
+    agent_id: str,
+    amount: int,
+    task_id: str,
+    operation_id: str,
+) -> Any:
     private_key, _ = agent_keypair
     token = make_jws_token(
         private_key,
         agent_id,
-        {"action": "escrow_lock", "agent_id": agent_id, "amount": amount, "task_id": task_id},
+        {
+            "action": "escrow_lock",
+            "agent_id": agent_id,
+            "amount": amount,
+            "task_id": task_id,
+            "operation_id": operation_id,
+        },
     )
     resp = await client.post("/escrow/lock", json={"token": token})
     assert resp.status_code == 201, resp.text
@@ -72,8 +92,8 @@ class TestHealthAccuracy:
         await _create_account(client, platform_keypair, "a-alice", 100)
         await _create_account(client, platform_keypair, "a-bob", 0)
 
-        first = await _lock(client, agent_keypair, "a-alice", 30, "T-h1")
-        await _lock(client, agent_keypair, "a-alice", 20, "T-h2")
+        first = await _lock(client, agent_keypair, "a-alice", 30, "T-h1", make_operation_id())
+        await _lock(client, agent_keypair, "a-alice", 20, "T-h2", make_operation_id())
 
         platform_key, _ = platform_keypair
         release_token = make_jws_token(
@@ -81,12 +101,14 @@ class TestHealthAccuracy:
             PLATFORM_AGENT_ID,
             {
                 "action": "escrow_release",
-                "escrow_id": first["escrow_id"],
+                "escrow_id": first["receipt"]["escrow_id"],
                 "recipient_account_id": "a-bob",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-h1:approved",
             },
         )
         release_resp = await client.post(
-            f"/escrow/{first['escrow_id']}/release", json={"token": release_token}
+            f"/escrow/{first['receipt']['escrow_id']}/release", json={"token": release_token}
         )
         assert release_resp.status_code == 200
 
@@ -183,7 +205,7 @@ class TestErrorEnvelopeConsistency:
         state = get_app_state()
         _setup_identity_mock(state)
         await _create_account(client, platform_keypair, "a-alice", 10)
-        locked = await _lock(client, agent_keypair, "a-alice", 5, "T-sec")
+        locked = await _lock(client, agent_keypair, "a-alice", 5, "T-sec", make_operation_id())
 
         platform_key, _ = platform_keypair
         release_token = make_jws_token(
@@ -191,14 +213,22 @@ class TestErrorEnvelopeConsistency:
             PLATFORM_AGENT_ID,
             {
                 "action": "escrow_release",
-                "escrow_id": locked["escrow_id"],
+                "escrow_id": locked["receipt"]["escrow_id"],
                 "recipient_account_id": "a-alice",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-sec:approved",
             },
         )
         second_lock_token = make_jws_token(
             agent_keypair[0],
             "a-alice",
-            {"action": "escrow_lock", "agent_id": "a-alice", "amount": 999, "task_id": "T-sec2"},
+            {
+                "action": "escrow_lock",
+                "agent_id": "a-alice",
+                "amount": 999,
+                "task_id": "T-sec2",
+                "operation_id": make_operation_id(),
+            },
         )
         responses = [
             await client.post(
@@ -247,14 +277,22 @@ class TestIdFormatting:
                     "account_id": account_id,
                     "amount": 5,
                     "reference": f"r-{uuid4()}",
+                    "operation_id": make_operation_id(),
                 },
             )
             credit_resp = await client.post(
                 f"/accounts/{account_id}/credit", json={"token": credit_token}
             )
             assert credit_resp.status_code == 200
-            assert credit_resp.json()["tx_id"].startswith("tx-")
+            assert credit_resp.json()["receipt"]["legs"][0]["transaction_id"].startswith("tx-")
 
         for account_id in account_ids:
-            locked = await _lock(client, agent_keypair, account_id, 3, f"T-{uuid4()}")
-            assert locked["escrow_id"].startswith("esc-")
+            locked = await _lock(
+                client,
+                agent_keypair,
+                account_id,
+                3,
+                f"T-{uuid4()}",
+                make_operation_id(),
+            )
+            assert locked["receipt"]["escrow_id"].startswith("esc-")

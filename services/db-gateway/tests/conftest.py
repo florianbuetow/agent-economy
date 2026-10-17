@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def schema_sql() -> str:
-    """Load the shared economy.db schema."""
+    """Load the shared economy.db schema used by production configuration."""
     base = Path(__file__).parent.parent.parent.parent
     schema_path = base / "docs" / "specifications" / "schema.sql"
     return schema_path.read_text()

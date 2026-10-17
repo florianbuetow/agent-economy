@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import inspect
 import tempfile
+from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
@@ -54,6 +55,23 @@ LedgerStore = InMemoryLedgerStore | LedgerDbClient
 _IDENTITY_SIGNERS: dict[int, GatewayRequestSigner] = {}
 
 pytestmark = pytest.mark.asyncio
+
+
+def _operation_id() -> str:
+    return f"op-{uuid4()}"
+
+
+def _receipt(envelope: dict[str, object]) -> dict[str, object]:
+    receipt = envelope["receipt"]
+    assert isinstance(receipt, dict)
+    return receipt
+
+
+def _legs(envelope: dict[str, object]) -> list[dict[str, object]]:
+    legs = _receipt(envelope)["legs"]
+    assert isinstance(legs, list)
+    assert all(isinstance(leg, dict) for leg in legs)
+    return legs
 
 
 async def _await_maybe(value: Any) -> Any:
@@ -117,70 +135,64 @@ auth:
 
 
 async def _gateway_backed_client(db_path: str) -> AsyncIterator[LedgerDbClient]:
-    """Yield a LedgerDbClient wired to a fresh in-process DB Gateway ASGI app.
+    """Yield a real Gateway-backed ledger with failure-safe resource cleanup.
 
-    Mirrors tests/integration/gateway_helpers.py's create_gateway_client: build
-    DbWriter/DbReader directly against a temp SQLite file, hand the app an
-    httpx.AsyncClient(transport=ASGITransport(...)) — true in-process async I/O,
-    no live-stack dependency — and briefly point CONFIG_PATH at a throwaway
-    gateway config only while create_app() reads its own settings.
+    CONFIG_PATH remains active for the ASGI client lifetime because exception
+    handlers may read Gateway settings after create_app() has returned.
     """
     key_dir = Path(db_path).parent
     generate_keypair("gateway-identity", key_dir)
     generate_keypair("gateway-central-bank", key_dir)
-    config_path = _write_gateway_config(db_path, key_dir)
-    reset_app_state()
-    state = init_app_state()
-    writer = DbWriter(
-        db_path=db_path,
-        busy_timeout_ms=5000,
-        journal_mode="wal",
-        schema_sql=_SCHEMA_PATH.read_text(),
-    )
-    state.db_writer = writer
-    state.db_reader = DbReader(db=writer.connection)
-
-    with patch.dict("os.environ", {"CONFIG_PATH": config_path}):
+    async with AsyncExitStack() as cleanup:
+        config_path = _write_gateway_config(db_path, key_dir)
+        cleanup.callback(Path(config_path).unlink, missing_ok=True)
+        cleanup.callback(clear_settings_cache)
+        cleanup.callback(reset_app_state)
+        reset_app_state()
+        state = init_app_state()
+        writer = DbWriter(
+            db_path=db_path,
+            busy_timeout_ms=5000,
+            journal_mode="wal",
+            schema_sql=_SCHEMA_PATH.read_text(),
+        )
+        cleanup.callback(writer.close)
+        state.db_writer = writer
+        state.db_reader = DbReader(db=writer.connection)
+        cleanup.enter_context(patch.dict("os.environ", {"CONFIG_PATH": config_path}))
         clear_settings_cache()
         app = create_app()
-    clear_settings_cache()
-
-    bank_signer = GatewayRequestSigner(
-        GatewaySignerConfig(
-            kid="gateway-central-bank",
-            private_key_path=Path("gateway-central-bank.key"),
-            audience="db-gateway",
-            token_ttl_seconds=300,
-        ),
-        config_dir=key_dir,
-    )
-    identity_signer = GatewayRequestSigner(
-        GatewaySignerConfig(
-            kid="gateway-identity",
-            private_key_path=Path("gateway-identity.key"),
-            audience="db-gateway",
-            token_ttl_seconds=300,
-        ),
-        config_dir=key_dir,
-    )
-    client = LedgerDbClient(
-        base_url="http://gateway-test",
-        timeout_seconds=5,
-        signer=bank_signer,
-    )
-    _IDENTITY_SIGNERS[id(client)] = identity_signer
-    await client._gateway.close()
-    client._gateway._client = AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://gateway-test"
-    )
-    try:
+        bank_signer = GatewayRequestSigner(
+            GatewaySignerConfig(
+                kid="gateway-central-bank",
+                private_key_path=Path("gateway-central-bank.key"),
+                audience="db-gateway",
+                token_ttl_seconds=300,
+            ),
+            config_dir=key_dir,
+        )
+        identity_signer = GatewayRequestSigner(
+            GatewaySignerConfig(
+                kid="gateway-identity",
+                private_key_path=Path("gateway-identity.key"),
+                audience="db-gateway",
+                token_ttl_seconds=300,
+            ),
+            config_dir=key_dir,
+        )
+        client = LedgerDbClient(
+            base_url="http://gateway-test",
+            timeout_seconds=5,
+            signer=bank_signer,
+        )
+        cleanup.push_async_callback(client.close)
+        _IDENTITY_SIGNERS[id(client)] = identity_signer
+        cleanup.callback(_IDENTITY_SIGNERS.pop, id(client), None)
+        await client._gateway.close()
+        client._gateway._client = AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://gateway-test"
+        )
         yield client
-    finally:
-        _IDENTITY_SIGNERS.pop(id(client), None)
-        await client.close()
-        writer.close()
-        reset_app_state()
-        Path(config_path).unlink(missing_ok=True)
 
 
 @pytest.fixture(params=["in_memory", "gateway"])
@@ -209,7 +221,8 @@ async def _fund(store: LedgerStore, account_id: str, balance: int) -> None:
     """
     if isinstance(store, LedgerDbClient):
         await _register_agent(store, account_id)
-    await _await_maybe(store.create_account(account_id, balance))
+    operation_id = None if balance == 0 else _operation_id()
+    await _await_maybe(store.create_account(account_id, balance, operation_id))
 
 
 async def _register_agent(client: LedgerDbClient, agent_id: str) -> None:
@@ -262,7 +275,7 @@ class TestEscrowLockTransactionShape:
         task_id = f"t-{uuid4()}"
         await _fund(store, "a-payer", 100)
 
-        await _await_maybe(store.escrow_lock("a-payer", 30, task_id))
+        await _await_maybe(store.escrow_lock("a-payer", 30, task_id, _operation_id()))
 
         txs = await _await_maybe(store.get_transactions("a-payer"))
         tx = _tx_by_reference(txs, task_id)
@@ -284,10 +297,17 @@ class TestEscrowReleaseTransactionShape:
         task_id = f"t-{uuid4()}"
         await _fund(store, "a-payer", 100)
         await _fund(store, "a-worker", 0)
-        locked = await _await_maybe(store.escrow_lock("a-payer", 30, task_id))
-        escrow_id = str(locked["escrow_id"])
+        locked = await _await_maybe(store.escrow_lock("a-payer", 30, task_id, _operation_id()))
+        escrow_id = str(_receipt(locked)["escrow_id"])
 
-        await _await_maybe(store.escrow_release(escrow_id, "a-worker"))
+        await _await_maybe(
+            store.escrow_release(
+                escrow_id,
+                "a-worker",
+                _operation_id(),
+                f"task:{task_id}:approved",
+            )
+        )
 
         txs = await _await_maybe(store.get_transactions("a-worker"))
         tx = _tx_by_reference(txs, escrow_id)
@@ -310,10 +330,19 @@ class TestEscrowSplitTransactionShape:
         task_id = f"t-{uuid4()}"
         await _fund(store, "a-poster", 100)
         await _fund(store, "a-worker", 0)
-        locked = await _await_maybe(store.escrow_lock("a-poster", 100, task_id))
-        escrow_id = str(locked["escrow_id"])
+        locked = await _await_maybe(store.escrow_lock("a-poster", 100, task_id, _operation_id()))
+        escrow_id = str(_receipt(locked)["escrow_id"])
 
-        await _await_maybe(store.escrow_split(escrow_id, "a-worker", 40, "a-poster"))
+        await _await_maybe(
+            store.escrow_split(
+                escrow_id,
+                "a-worker",
+                40,
+                "a-poster",
+                _operation_id(),
+                f"task:{task_id}:ruling:r-contract",
+            )
+        )
 
         worker_txs = await _await_maybe(store.get_transactions("a-worker"))
         worker_tx = _tx_by_reference(worker_txs, escrow_id)
@@ -342,14 +371,26 @@ class TestEscrowSplitTransactionShape:
         task_id = f"t-{uuid4()}"
         await _fund(store, "a-poster", 100)
         await _fund(store, "a-worker", 0)
-        locked = await _await_maybe(store.escrow_lock("a-poster", 100, task_id))
-        escrow_id = str(locked["escrow_id"])
+        locked = await _await_maybe(store.escrow_lock("a-poster", 100, task_id, _operation_id()))
+        escrow_id = str(_receipt(locked)["escrow_id"])
         txs_before = len(await _await_maybe(store.get_transactions("a-worker")))
 
-        result = await _await_maybe(store.escrow_split(escrow_id, "a-worker", 0, "a-poster"))
+        result = await _await_maybe(
+            store.escrow_split(
+                escrow_id,
+                "a-worker",
+                0,
+                "a-poster",
+                _operation_id(),
+                f"task:{task_id}:ruling:r-contract",
+            )
+        )
 
-        assert result["worker_amount"] == 0
-        assert result["poster_amount"] == 100
+        worker_leg, poster_leg = _legs(result)
+        assert worker_leg["amount"] == 0
+        assert worker_leg["transaction_id"] is None
+        assert worker_leg["balance_after"] is None
+        assert poster_leg["amount"] == 100
         txs_after = await _await_maybe(store.get_transactions("a-worker"))
         assert len(txs_after) == txs_before, (
             "a zero-amount split leg must not write a transaction row"
@@ -360,14 +401,26 @@ class TestEscrowSplitTransactionShape:
         task_id = f"t-{uuid4()}"
         await _fund(store, "a-poster", 100)
         await _fund(store, "a-worker", 0)
-        locked = await _await_maybe(store.escrow_lock("a-poster", 100, task_id))
-        escrow_id = str(locked["escrow_id"])
+        locked = await _await_maybe(store.escrow_lock("a-poster", 100, task_id, _operation_id()))
+        escrow_id = str(_receipt(locked)["escrow_id"])
         txs_before = len(await _await_maybe(store.get_transactions("a-poster")))
 
-        result = await _await_maybe(store.escrow_split(escrow_id, "a-worker", 100, "a-poster"))
+        result = await _await_maybe(
+            store.escrow_split(
+                escrow_id,
+                "a-worker",
+                100,
+                "a-poster",
+                _operation_id(),
+                f"task:{task_id}:ruling:r-contract",
+            )
+        )
 
-        assert result["worker_amount"] == 100
-        assert result["poster_amount"] == 0
+        worker_leg, poster_leg = _legs(result)
+        assert worker_leg["amount"] == 100
+        assert poster_leg["amount"] == 0
+        assert poster_leg["transaction_id"] is None
+        assert poster_leg["balance_after"] is None
         txs_after = await _await_maybe(store.get_transactions("a-poster"))
         assert len(txs_after) == txs_before, (
             "a zero-amount split leg must not write a transaction row"
@@ -380,11 +433,20 @@ class TestEscrowSplitTransactionShape:
         await _fund(store, "a-poster", 100)
         await _fund(store, "a-worker", 0)
         await _fund(store, "a-imposter", 0)
-        locked = await _await_maybe(store.escrow_lock("a-poster", 100, task_id))
-        escrow_id = str(locked["escrow_id"])
+        locked = await _await_maybe(store.escrow_lock("a-poster", 100, task_id, _operation_id()))
+        escrow_id = str(_receipt(locked)["escrow_id"])
 
         with pytest.raises(ServiceError) as excinfo:
-            await _await_maybe(store.escrow_split(escrow_id, "a-worker", 40, "a-imposter"))
+            await _await_maybe(
+                store.escrow_split(
+                    escrow_id,
+                    "a-worker",
+                    40,
+                    "a-imposter",
+                    _operation_id(),
+                    f"task:{task_id}:ruling:r-contract",
+                )
+            )
 
         assert excinfo.value.error == "payload_mismatch"
         assert excinfo.value.status_code == 400
@@ -395,11 +457,20 @@ class TestEscrowSplitTransactionShape:
         task_id = f"t-{uuid4()}"
         await _fund(store, "a-poster", 100)
         await _fund(store, "a-worker", 0)
-        locked = await _await_maybe(store.escrow_lock("a-poster", 100, task_id))
-        escrow_id = str(locked["escrow_id"])
+        locked = await _await_maybe(store.escrow_lock("a-poster", 100, task_id, _operation_id()))
+        escrow_id = str(_receipt(locked)["escrow_id"])
 
         with pytest.raises(ServiceError) as excinfo:
-            await _await_maybe(store.escrow_split(escrow_id, "a-worker", 150, "a-poster"))
+            await _await_maybe(
+                store.escrow_split(
+                    escrow_id,
+                    "a-worker",
+                    150,
+                    "a-poster",
+                    _operation_id(),
+                    f"task:{task_id}:ruling:r-contract",
+                )
+            )
 
         assert excinfo.value.error == "invalid_amount"
         assert excinfo.value.status_code == 400

@@ -4,8 +4,8 @@ Q-9 decision (docs/plans/2026-07-10-q9-treasury-bootstrap-decision.md): treasury
 genesis is an explicit bootstrap step, run once via ``just provision`` — never
 minted automatically by any single service's startup. Re-running this command
 is safe: account creation is idempotent (409 on an existing account) and the
-credit itself is idempotent via the Central Bank's replay guard on
-``(account_id, reference)`` — the ``treasury.genesis_reference`` config value.
+credit itself reuses a stable operation identity derived from the operator
+account and explicit ``treasury.genesis_reference`` configuration value.
 
 Usage::
 
@@ -20,6 +20,7 @@ import logging
 import sys
 
 import httpx
+from service_auth.financial_identity import operation_id_for
 
 from base_agent.factory import AgentFactory
 from treasury_provision_cli.config import load_treasury_settings
@@ -48,7 +49,9 @@ async def _provision() -> None:
 
         # Step 2: Ensure the operator has a bank account (idempotent)
         try:
-            await platform.create_account(agent_id=operator_id, initial_balance=0)
+            await platform.create_account(
+                agent_id=operator_id, initial_balance=0, operation_id=None
+            )
             logger.info("Bank account created for operator")
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 409:
@@ -56,16 +59,28 @@ async def _provision() -> None:
             else:
                 raise
 
-        # Step 3: Credit the treasury genesis amount (idempotent via reference)
+        # Step 3: Confirm the same treasury genesis intent on every invocation.
+        operation_id = operation_id_for(
+            "treasury-genesis", (operator_id, settings.genesis_reference)
+        )
         result = await platform.credit_account(
             account_id=operator_id,
             amount=settings.genesis_amount,
             reference=settings.genesis_reference,
+            operation_id=operation_id,
         )
+        receipt = result["receipt"]
+        if (
+            result["outcome"] != "native_receipt"
+            or receipt["operation_id"] != operation_id
+            or receipt["operation_kind"] != "credit"
+        ):
+            raise RuntimeError("Treasury funding returned an unexpected receipt")
         logger.info(
-            "Treasury provisioned (tx_id=%s, balance_after=%s)",
-            result["tx_id"],
-            result["balance_after"],
+            "Treasury funding confirmed (operation_id=%s, tx_id=%s, balance_after=%s)",
+            receipt["operation_id"],
+            receipt["legs"][0]["transaction_id"],
+            receipt["result"]["balance_after"],
         )
 
         # Step 4: Verify balance
@@ -76,6 +91,7 @@ async def _provision() -> None:
         print(f"agent_id={operator_id}")
         print(f"genesis_amount={settings.genesis_amount}")
         print(f"balance={balance}")
+        print(f"operation_id={receipt['operation_id']}")
 
     finally:
         await operator.close()

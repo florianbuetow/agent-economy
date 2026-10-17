@@ -13,6 +13,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from service_auth.agent import BaseAgent
 from service_auth.config import AgentConfig, load_agent_config
+from service_auth.financial_identity import operation_id_for
 from service_auth.jws import TokenPolicy, parse_jws
 from service_auth.signing import generate_keypair
 
@@ -119,6 +120,10 @@ async def test_post_task_emits_separate_context_bound_tokens() -> None:
     assert escrow.header.aud == "central-bank"
     assert escrow.header.resource == "POST /escrow/lock"
     assert escrow.payload["action"] == "escrow_lock"
+    assert escrow.payload["operation_id"] == operation_id_for(
+        "task-lock",
+        (str(task.payload["task_id"]), "a-alice"),
+    )
 
 
 @pytest.mark.unit

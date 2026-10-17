@@ -80,7 +80,7 @@ help:
     @printf "  \033[0;37mjust stop-feeder      \033[0;34m Stop task feeder\033[0m\n"
     @printf "  \033[0;37mjust start-mathbot [profile]\033[0;34m Start math worker agent from a named profile (default: mathbot; requires services + LM Studio)\033[0m\n"
     @printf "  \033[0;37mjust stop-mathbot     \033[0;34m Stop math worker agent\033[0m\n"
-    @printf "  \033[0;37mjust fund-feeder <amount>\033[0;34m Fund the feeder agent with initial coins\033[0m\n"
+    @printf "  \033[0;37mjust fund-feeder <amount> <operation-id> <reference>\033[0;34m Fund the feeder agent\033[0m\n"
     @printf "  \033[0;37mjust provision        \033[0;34m Provision the treasury (idempotent; run once after first start-all)\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
     @printf "  \033[0;37mjust logs             \033[0;34m Tail all service logs (color-coded)\033[0m\n"
@@ -414,12 +414,12 @@ stop-mathbot:
     printf "\n"
 
 # Fund the feeder agent with initial coins
-fund-feeder amount:
+fund-feeder amount operation_id reference:
     #!/usr/bin/env bash
     printf "\n"
     printf "\033[0;34m=== Funding Feeder Agent ===\033[0m\n"
     printf "\n"
-    cd agents && uv run python -m fund_feeder_cli {{amount}}
+    cd agents && uv run python -m fund_feeder_cli {{quote(amount)}} --operation-id {{quote(operation_id)}} --reference {{quote(reference)}}
     exit_code=$?
     printf "\n"
     if [ $exit_code -eq 0 ]; then

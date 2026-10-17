@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from service_auth.financial_responses import (
+    FinancialLeg,
+    NativeFinancialEnvelope,
+    validate_operation_id,
+)
 from service_commons.exceptions import ServiceError
 
 from central_bank_service.core.state import get_app_state
-from central_bank_service.financial_responses import validate_operation_id
 from central_bank_service.logging import get_logger
 from central_bank_service.monetary import require_nonnegative_money, require_positive_money
 from central_bank_service.routers.helpers import (
@@ -19,6 +23,21 @@ from central_bank_service.routers.helpers import (
 )
 
 router = APIRouter()
+
+
+def _native_financial_result(
+    value: dict[str, object],
+    expected_kind: str,
+    expected_role: str,
+) -> tuple[NativeFinancialEnvelope, FinancialLeg]:
+    envelope = NativeFinancialEnvelope.model_validate(value)
+    receipt = envelope.receipt
+    if receipt.operation_kind != expected_kind or len(receipt.legs) != 1:
+        raise RuntimeError("Ledger returned an unexpected native financial receipt")
+    leg = receipt.legs[0]
+    if leg.role != expected_role:
+        raise RuntimeError("Ledger returned an unexpected native financial leg")
+    return envelope, leg
 
 
 def _required_operation_id(payload: dict[str, object]) -> str:
@@ -138,9 +157,20 @@ async def create_account(request: Request) -> JSONResponse:
         )
     result = await state.ledger.create_account(agent_id, initial_balance, operation_id)
 
+    log_context: dict[str, object] = {
+        "account_id": agent_id,
+        "initial_balance": initial_balance,
+    }
+    if operation_id is not None:
+        envelope, leg = _native_financial_result(result, "account_issuance", "account")
+        log_context = {
+            "account_id": leg.account_id,
+            "initial_balance": leg.amount,
+            "operation_id": envelope.receipt.operation_id,
+        }
     get_logger(__name__).info(
         "Account created",
-        extra={"account_id": agent_id, "initial_balance": initial_balance},
+        extra=log_context,
     )
     return JSONResponse(status_code=201, content=result)
 
@@ -205,13 +235,14 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
 
     result = await state.ledger.credit(account_id, amount, reference, operation_id)
 
+    envelope, leg = _native_financial_result(result, "credit", "account")
     get_logger(__name__).info(
         "Account credited",
         extra={
-            "account_id": account_id,
-            "amount": amount,
-            "reference": reference,
-            "operation_id": operation_id,
+            "account_id": leg.account_id,
+            "amount": leg.amount,
+            "reference": envelope.receipt.source_reference,
+            "operation_id": envelope.receipt.operation_id,
         },
     )
     return result

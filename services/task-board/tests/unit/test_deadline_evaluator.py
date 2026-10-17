@@ -108,7 +108,9 @@ async def test_evaluate_deadline_open_no_bids_expired(tmp_path) -> None:
         result = await evaluator.evaluate_deadline(task)
 
     assert result["status"] == "expired"
-    mock_coordinator.try_release_escrow.assert_awaited_once_with("t-1", "esc-1", "a-poster")
+    mock_coordinator.try_release_escrow.assert_awaited_once_with(
+        "t-1", "expired", "esc-1", "a-poster"
+    )
     store.close()
 
 
@@ -153,7 +155,9 @@ async def test_evaluate_deadline_accepted_past_execution(tmp_path) -> None:
         result = await evaluator.evaluate_deadline(task)
 
     assert result["status"] == "expired"
-    mock_coordinator.try_release_escrow.assert_awaited_once_with("t-1", "esc-1", "a-poster")
+    mock_coordinator.try_release_escrow.assert_awaited_once_with(
+        "t-1", "expired", "esc-1", "a-poster"
+    )
     store.close()
 
 
@@ -173,7 +177,9 @@ async def test_evaluate_deadline_submitted_past_review(tmp_path) -> None:
         result = await evaluator.evaluate_deadline(task)
 
     assert result["status"] == "approved"
-    mock_coordinator.try_release_escrow.assert_awaited_once_with("t-1", "esc-1", "a-worker")
+    mock_coordinator.try_release_escrow.assert_awaited_once_with(
+        "t-1", "approved", "esc-1", "a-worker"
+    )
     store.close()
 
 

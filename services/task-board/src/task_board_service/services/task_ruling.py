@@ -383,14 +383,11 @@ class TaskRulingCoordinator:
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
 
-        # Idempotent retry (T-040): re-recording the identical ruling_id on an
-        # already-ruled task converges to the stored outcome without settling escrow
-        # a second time, so a Court retry after a partial failure cannot double-pay.
-        if task["status"] == "ruled" and str(task.get("ruling_id")) == ruling_id:
-            return task_to_response(task)
+        # A stored ruling may be retried only with its original financial and textual terms.
+        is_retry = task["status"] == "ruled" and task.get("ruling_id") == ruling_id
 
-        # Step 11: Check status
-        if task["status"] != "disputed":
+        # Step 11: Preserve status precedence for requests unrelated to the stored ruling.
+        if task["status"] != "disputed" and not is_retry:
             raise ServiceError(
                 "invalid_status",
                 f"Cannot record ruling for task in '{task['status']}' status, must be 'disputed'",
@@ -408,6 +405,16 @@ class TaskRulingCoordinator:
             )
 
         worker_pct_int = int(worker_pct)
+
+        if is_retry:
+            if worker_pct_int != task["worker_pct"] or ruling_summary != task["ruling_summary"]:
+                raise ServiceError(
+                    "ruling_conflict",
+                    "Ruling identity is already bound to different terms",
+                    409,
+                    {"ruling_id": ruling_id},
+                )
+            return task_to_response(task)
 
         # Escrow distribution based on ruling:
         # - 0% => full refund to poster

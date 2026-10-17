@@ -41,6 +41,7 @@ def _create_funded_account(client: TestClient, *, name: str, balance: int) -> st
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance > 0:
+        payload["operation_id"] = f"op-{uuid4()}"
         payload["initial_credit"] = {
             "tx_id": f"tx-{uuid4()}",
             "amount": balance,
@@ -59,6 +60,7 @@ def _create_task(client: TestClient, *, poster_id: str) -> tuple[str, str]:
     lock_response = client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": escrow_id,
             "payer_account_id": poster_id,
             "amount": 100,
@@ -209,10 +211,10 @@ class TestConstraintEnforcement:
         )
         assert response.status_code == 200
 
-    def test_escrow_release_constraint(
+    def test_escrow_release_owns_locked_precondition(
         self, app_with_writer: TestClient, db_writer: DbWriter
     ) -> None:
-        """Escrow release supports row constraints."""
+        """Escrow release applies its locked-state precondition itself."""
         payer_id = _create_funded_account(app_with_writer, name="Payer", balance=500)
         recipient_id = _create_funded_account(app_with_writer, name="Recipient", balance=0)
         task_id, escrow_id = _create_task(app_with_writer, poster_id=payer_id)
@@ -220,16 +222,18 @@ class TestConstraintEnforcement:
         response = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": escrow_id,
                 "recipient_account_id": recipient_id,
+                "source_reference": f"release-{task_id}",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-03-01T09:30:00Z",
-                "constraints": {"status": "locked"},
                 "event": make_event(source="bank", event_type="escrow.released", task_id=task_id),
             },
         )
         assert response.status_code == 200
-        assert response.json()["status"] == "released"
+        assert response.json()["receipt"]["result"]["escrow_status_at_commit"] == "released"
+        assert response.json()["current_escrow"]["status"] == "released"
 
         row = _read_one(
             db_writer,

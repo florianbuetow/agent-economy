@@ -12,7 +12,7 @@ import pytest
 
 from central_bank_service.core.state import get_app_state
 
-from .conftest import PLATFORM_AGENT_ID, make_jws_token
+from .conftest import PLATFORM_AGENT_ID, make_jws_token, make_operation_id
 
 
 def _setup_identity_mock(state: Any, agent_id: str = "a-test-agent") -> None:
@@ -23,10 +23,17 @@ def _setup_identity_mock(state: Any, agent_id: str = "a-test-agent") -> None:
 
 
 async def _create_account(client: Any, private_key: Any, account_id: str, balance: int) -> None:
+    payload: dict[str, object] = {
+        "action": "create_account",
+        "agent_id": account_id,
+        "initial_balance": balance,
+    }
+    if balance > 0:
+        payload["operation_id"] = make_operation_id()
     token = make_jws_token(
         private_key,
         PLATFORM_AGENT_ID,
-        {"action": "create_account", "agent_id": account_id, "initial_balance": balance},
+        payload,
     )
     resp = await client.post("/accounts", json={"token": token})
     assert resp.status_code == 201, resp.text
@@ -104,7 +111,13 @@ class TestBalanceQueryScenarios:
         credit_token = make_jws_token(
             platform_key,
             PLATFORM_AGENT_ID,
-            {"action": "credit", "account_id": "a-alice", "amount": 50, "reference": "bonus"},
+            {
+                "action": "credit",
+                "account_id": "a-alice",
+                "amount": 50,
+                "reference": "bonus",
+                "operation_id": make_operation_id(),
+            },
         )
         credit_resp = await client.post("/accounts/a-alice/credit", json={"token": credit_token})
         assert credit_resp.status_code == 200
@@ -112,7 +125,13 @@ class TestBalanceQueryScenarios:
         lock_token = make_jws_token(
             agent_key,
             "a-alice",
-            {"action": "escrow_lock", "agent_id": "a-alice", "amount": 30, "task_id": "T-001"},
+            {
+                "action": "escrow_lock",
+                "agent_id": "a-alice",
+                "amount": 30,
+                "task_id": "T-001",
+                "operation_id": make_operation_id(),
+            },
         )
         lock_resp = await client.post("/escrow/lock", json={"token": lock_token})
         assert lock_resp.status_code == 201
@@ -160,7 +179,13 @@ class TestTransactionHistoryScenarios:
             credit_token = make_jws_token(
                 platform_key,
                 PLATFORM_AGENT_ID,
-                {"action": "credit", "account_id": "a-alice", "amount": 10, "reference": ref},
+                {
+                    "action": "credit",
+                    "account_id": "a-alice",
+                    "amount": 10,
+                    "reference": ref,
+                    "operation_id": make_operation_id(),
+                },
             )
             resp = await client.post("/accounts/a-alice/credit", json={"token": credit_token})
             assert resp.status_code == 200
@@ -214,10 +239,16 @@ class TestTransactionHistoryScenarios:
         lock_token = make_jws_token(
             agent_key,
             "a-alice",
-            {"action": "escrow_lock", "agent_id": "a-alice", "amount": 30, "task_id": "T-100"},
+            {
+                "action": "escrow_lock",
+                "agent_id": "a-alice",
+                "amount": 30,
+                "task_id": "T-100",
+                "operation_id": make_operation_id(),
+            },
         )
         lock_resp = await client.post("/escrow/lock", json={"token": lock_token})
-        escrow_id = lock_resp.json()["escrow_id"]
+        escrow_id = lock_resp.json()["receipt"]["escrow_id"]
 
         release_token = make_jws_token(
             platform_key,
@@ -226,6 +257,8 @@ class TestTransactionHistoryScenarios:
                 "action": "escrow_release",
                 "escrow_id": escrow_id,
                 "recipient_account_id": "a-alice",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:T-100:approved",
             },
         )
         release_resp = await client.post(

@@ -12,6 +12,7 @@ GAP-C7's "no driver-message substring matching" guard stays meaningful.
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
@@ -37,11 +38,22 @@ class TestNoDriverMessageInspectionAcrossDomains:
     sqlite_errorcode — never by inspecting the driver's raw message text."""
 
     def test_no_write_module_inspects_the_raw_exception_string(self) -> None:
-        offenders = [
-            filename
-            for filename in _WRITE_MODULES
-            if "str(exc)" in (_SERVICES_DIR / filename).read_text()
-        ]
+        offenders: list[str] = []
+        for filename in _WRITE_MODULES:
+            tree = ast.parse((_SERVICES_DIR / filename).read_text())
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ExceptHandler) or node.type is None:
+                    continue
+                exception_name = ast.unparse(node.type)
+                if not exception_name.endswith("IntegrityError"):
+                    continue
+                for child in ast.walk(node):
+                    if (
+                        isinstance(child, ast.Call)
+                        and isinstance(child.func, ast.Name)
+                        and child.func.id == "str"
+                    ):
+                        offenders.append(filename)
         assert offenders == [], (
             f"These modules inspect the raw IntegrityError message text: {offenders}; "
             "classify via exc.sqlite_errorcode instead (SEC-02: the message text "

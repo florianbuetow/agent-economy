@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from service_auth import financial_responses
 from service_commons.exceptions import ServiceError
 
-SQLITE_MAX_INTEGER = (1 << 63) - 1
+SQLITE_MAX_INTEGER = financial_responses.SQLITE_MAX_INTEGER
 
 
 def require_nonnegative_money(value: object, field_name: str) -> int:

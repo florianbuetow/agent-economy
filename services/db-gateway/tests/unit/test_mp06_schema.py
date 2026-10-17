@@ -431,10 +431,10 @@ def test_bootstrap_fault_rolls_back_all_application_objects(
 
 
 @pytest.mark.unit
-def test_existing_current_v1_allows_omitted_schema_sql(tmp_path: Path) -> None:
+def test_existing_current_v2_allows_omitted_schema_sql(tmp_path: Path) -> None:
     path = tmp_path / "current.db"
     connection = _open(path)
-    connection.executescript(load_schema_sql(SchemaState.CURRENT_V1))
+    connection.executescript(load_schema_sql(SchemaState.CURRENT_V2))
     connection.close()
 
     writer = DbWriter(
@@ -444,7 +444,7 @@ def test_existing_current_v1_allows_omitted_schema_sql(tmp_path: Path) -> None:
         schema_sql=None,
     )
     try:
-        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V1
+        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V2
     finally:
         writer.close()
 
@@ -455,7 +455,7 @@ def test_journal_setup_failure_closes_admitted_connection(
 ) -> None:
     path = tmp_path / "journal-failure.db"
     bootstrap = _open(path)
-    bootstrap.executescript(load_schema_sql(SchemaState.CURRENT_V1))
+    bootstrap.executescript(load_schema_sql(SchemaState.CURRENT_V2))
     bootstrap.close()
     opened: list[sqlite3.Connection] = []
     real_connect = sqlite3.connect
@@ -592,7 +592,7 @@ def test_constructor_rejects_invalid_pragma_configuration(
 ) -> None:
     path = tmp_path / "invalid-pragma.db"
     connection = _open(path)
-    connection.executescript(load_schema_sql(SchemaState.CURRENT_V1))
+    connection.executescript(load_schema_sql(SchemaState.CURRENT_V2))
     connection.close()
 
     with pytest.raises(ServiceError, match="database configuration"):
@@ -611,7 +611,7 @@ def test_constructor_verifies_effective_pragma_postconditions(
 ) -> None:
     path = tmp_path / f"ignored-{ignored_pragma}.db"
     connection = _open(path)
-    connection.executescript(load_schema_sql(SchemaState.CURRENT_V1))
+    connection.executescript(load_schema_sql(SchemaState.CURRENT_V2))
     connection.close()
     original_connect = sqlite3.connect
 

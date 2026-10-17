@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -9,7 +10,7 @@ import pytest
 
 from central_bank_service.core.state import get_app_state
 
-from .conftest import PLATFORM_AGENT_ID, make_jws_token
+from .conftest import PLATFORM_AGENT_ID, make_jws_token, make_operation_id
 
 
 def _setup_identity_mock_for_platform(
@@ -37,6 +38,7 @@ class TestCreateAccount:
         _setup_identity_mock_for_platform(state)
 
         private_key, _ = platform_keypair
+        operation_id = make_operation_id()
         token = make_jws_token(
             private_key,
             PLATFORM_AGENT_ID,
@@ -44,15 +46,22 @@ class TestCreateAccount:
                 "action": "create_account",
                 "agent_id": "a-test-agent",
                 "initial_balance": 50,
+                "operation_id": operation_id,
             },
         )
 
         response = await client.post("/accounts", json={"token": token})
         assert response.status_code == 201
         data = response.json()
-        assert data["account_id"] == "a-test-agent"
-        assert data["balance"] == 50
-        assert "created_at" in data
+        assert data["outcome"] == "native_receipt"
+        assert data["receipt"]["operation_id"] == operation_id
+        assert datetime.fromisoformat(data["receipt"]["committed_at"]).tzinfo is not None
+        assert data["receipt"]["result"] == {
+            "account_id": "a-test-agent",
+            "issued_amount": 50,
+            "balance_after": 50,
+        }
+        assert data["current_escrow"] is None
 
     async def test_create_account_zero_balance(self, client, platform_keypair):
         """Account can be created with zero initial balance."""
@@ -80,18 +89,29 @@ class TestCreateAccount:
         _setup_identity_mock_for_platform(state)
 
         private_key, _ = platform_keypair
-        token = make_jws_token(
+        first_token = make_jws_token(
             private_key,
             PLATFORM_AGENT_ID,
             {
                 "action": "create_account",
                 "agent_id": "a-test-agent",
                 "initial_balance": 50,
+                "operation_id": make_operation_id(),
+            },
+        )
+        second_token = make_jws_token(
+            private_key,
+            PLATFORM_AGENT_ID,
+            {
+                "action": "create_account",
+                "agent_id": "a-test-agent",
+                "initial_balance": 50,
+                "operation_id": make_operation_id(),
             },
         )
 
-        await client.post("/accounts", json={"token": token})
-        response = await client.post("/accounts", json={"token": token})
+        await client.post("/accounts", json={"token": first_token})
+        response = await client.post("/accounts", json={"token": second_token})
         assert response.status_code == 409
         assert response.json()["error"] == "account_exists"
 
@@ -152,6 +172,7 @@ class TestCreditAccount:
                 "action": "create_account",
                 "agent_id": "a-test-agent",
                 "initial_balance": 50,
+                "operation_id": make_operation_id(),
             },
         )
         await client.post("/accounts", json={"token": create_token})
@@ -165,6 +186,7 @@ class TestCreditAccount:
                 "account_id": "a-test-agent",
                 "amount": 10,
                 "reference": "salary_round_1",
+                "operation_id": make_operation_id(),
             },
         )
         response = await client.post(
@@ -173,8 +195,10 @@ class TestCreditAccount:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["balance_after"] == 60
-        assert data["tx_id"].startswith("tx-")
+        assert data["outcome"] == "native_receipt"
+        assert data["receipt"]["result"]["balance_after"] == 60
+        assert data["receipt"]["legs"][0]["transaction_id"].startswith("tx-")
+        assert data["current_escrow"] is None
 
     async def test_credit_account_not_found(self, client, platform_keypair):
         """Credit to non-existent account returns 404."""
@@ -185,7 +209,12 @@ class TestCreditAccount:
         token = make_jws_token(
             private_key,
             PLATFORM_AGENT_ID,
-            {"action": "credit", "amount": 10, "reference": "test"},
+            {
+                "action": "credit",
+                "amount": 10,
+                "reference": "test",
+                "operation_id": make_operation_id(),
+            },
             resource="POST /accounts/a-nonexistent/credit",
         )
         response = await client.post(
@@ -213,7 +242,12 @@ class TestGetBalance:
         create_token = make_jws_token(
             platform_key,
             PLATFORM_AGENT_ID,
-            {"action": "create_account", "agent_id": agent_id, "initial_balance": 100},
+            {
+                "action": "create_account",
+                "agent_id": agent_id,
+                "initial_balance": 100,
+                "operation_id": make_operation_id(),
+            },
         )
         await client.post("/accounts", json={"token": create_token})
 
@@ -268,7 +302,12 @@ class TestGetTransactions:
         create_token = make_jws_token(
             platform_key,
             PLATFORM_AGENT_ID,
-            {"action": "create_account", "agent_id": agent_id, "initial_balance": 50},
+            {
+                "action": "create_account",
+                "agent_id": agent_id,
+                "initial_balance": 50,
+                "operation_id": make_operation_id(),
+            },
         )
         await client.post("/accounts", json={"token": create_token})
 

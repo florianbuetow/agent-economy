@@ -6,13 +6,69 @@ config-loading unit tests or the e2e provisioning tests.
 
 from __future__ import annotations
 
+import hashlib
+import json
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 from treasury_provision_cli import __main__ as treasury_main
 from treasury_provision_cli.config import TreasuryConfig
+
+_TREASURY_OPERATION_ID = operation_id_for(
+    "treasury-genesis",
+    ("a-operator", "treasury_genesis"),
+)
+
+
+def _credit_response() -> dict[str, Any]:
+    canonical_request = {
+        "request_version": 1,
+        "operation_kind": "credit",
+        "account_id": "a-operator",
+        "amount": 1000000,
+        "reference": "treasury_genesis",
+    }
+    return {
+        "outcome": "native_receipt",
+        "receipt": {
+            "receipt_version": 1,
+            "operation_id": _TREASURY_OPERATION_ID,
+            "operation_kind": "credit",
+            "request_sha256": hashlib.sha256(
+                json.dumps(
+                    canonical_request,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode()
+            ).hexdigest(),
+            "source_reference": "treasury_genesis",
+            "committed_at": "2026-10-17T14:00:00Z",
+            "event_id": 1,
+            "escrow_id": None,
+            "result": {
+                "account_id": "a-operator",
+                "amount": 1000000,
+                "balance_after": 1000000,
+                "reference": "treasury_genesis",
+            },
+            "legs": [
+                {
+                    "role": "account",
+                    "account_id": "a-operator",
+                    "direction": "credit",
+                    "amount": 1000000,
+                    "transaction_id": "tx-treasury",
+                    "balance_after": 1000000,
+                }
+            ],
+        },
+        "current_escrow": None,
+    }
 
 
 def _http_status_error(status_code: int) -> httpx.HTTPStatusError:
@@ -39,7 +95,7 @@ def _make_factory(operator_agent_id: str | None = "a-operator") -> MagicMock:
     platform = MagicMock()
     platform.register = AsyncMock()
     platform.create_account = AsyncMock(return_value={"account_id": operator_agent_id})
-    platform.credit_account = AsyncMock(return_value={"tx_id": "tx-1", "balance_after": 1000000})
+    platform.credit_account = AsyncMock(return_value=_credit_response())
     platform.close = AsyncMock()
 
     factory = MagicMock()
@@ -79,11 +135,17 @@ class TestProvisionHappyPath:
         operator = factory.create_agent.return_value
         platform.register.assert_awaited_once()
         operator.register.assert_awaited_once()
-        platform.create_account.assert_awaited_once_with(agent_id="a-operator", initial_balance=0)
-        platform.credit_account.assert_awaited_once()
-        assert platform.credit_account.call_args.kwargs["account_id"] == "a-operator"
-        assert platform.credit_account.call_args.kwargs["amount"] == 1000000
-        assert platform.credit_account.call_args.kwargs["reference"] == "treasury_genesis"
+        platform.create_account.assert_awaited_once_with(
+            agent_id="a-operator",
+            initial_balance=0,
+            operation_id=None,
+        )
+        platform.credit_account.assert_awaited_once_with(
+            account_id="a-operator",
+            amount=1000000,
+            reference="treasury_genesis",
+            operation_id=_TREASURY_OPERATION_ID,
+        )
         operator.get_balance.assert_awaited_once()
         operator.close.assert_awaited_once()
         platform.close.assert_awaited_once()
@@ -92,6 +154,7 @@ class TestProvisionHappyPath:
         assert "agent_id=a-operator" in out
         assert "genesis_amount=1000000" in out
         assert "balance=1000000" in out
+        assert f"operation_id={_TREASURY_OPERATION_ID}" in out
 
     @pytest.mark.asyncio
     async def test_existing_account_409_is_tolerated(self) -> None:
@@ -105,7 +168,18 @@ class TestProvisionHappyPath:
         ):
             await treasury_main._provision()
 
-        factory.platform_agent.return_value.credit_account.assert_awaited_once()
+        platform = factory.platform_agent.return_value
+        platform.create_account.assert_awaited_once_with(
+            agent_id="a-operator",
+            initial_balance=0,
+            operation_id=None,
+        )
+        platform.credit_account.assert_awaited_once_with(
+            account_id="a-operator",
+            amount=1000000,
+            reference="treasury_genesis",
+            operation_id=_TREASURY_OPERATION_ID,
+        )
 
     @pytest.mark.asyncio
     async def test_non_409_error_on_create_account_propagates(self) -> None:

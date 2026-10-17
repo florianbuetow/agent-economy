@@ -107,7 +107,7 @@ class TestGetAccountCoversEveryColumn:
             f"return dict: {sorted(missing)}."
         )
 
-    async def test_get_account_drops_unknown_fields(self, client: LedgerDbClient) -> None:
+    async def test_get_account_rejects_unknown_fields(self, client: LedgerDbClient) -> None:
         row = {
             "account_id": "a-1",
             "balance": 100,
@@ -116,10 +116,8 @@ class TestGetAccountCoversEveryColumn:
         }
         client._gateway.connection.send = AsyncMock(return_value=_mock_response(200, row))
 
-        result = await client.get_account("a-1")
-
-        assert result is not None
-        assert "surprise_column" not in result
+        with pytest.raises(RuntimeError, match="invalid account projection"):
+            await client.get_account("a-1")
 
 
 @pytest.mark.unit

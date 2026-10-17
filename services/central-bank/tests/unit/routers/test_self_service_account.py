@@ -9,7 +9,7 @@ import pytest
 
 from central_bank_service.core.state import get_app_state
 
-from .conftest import PLATFORM_AGENT_ID, make_jws_token
+from .conftest import PLATFORM_AGENT_ID, make_jws_token, make_operation_id
 
 
 def _setup_identity_mock_for_agent(
@@ -151,6 +151,7 @@ class TestAgentSelfServiceAccountCreation:
         _setup_identity_mock_for_platform(state, agent_id="a-test-agent")
 
         private_key, _ = platform_keypair
+        operation_id = make_operation_id()
         token = make_jws_token(
             private_key,
             PLATFORM_AGENT_ID,
@@ -158,9 +159,12 @@ class TestAgentSelfServiceAccountCreation:
                 "action": "create_account",
                 "agent_id": "a-test-agent",
                 "initial_balance": 500,
+                "operation_id": operation_id,
             },
         )
 
         response = await client.post("/accounts", json={"token": token})
         assert response.status_code == 201
-        assert response.json()["balance"] == 500
+        assert response.json()["receipt"]["operation_id"] == operation_id
+        assert response.json()["receipt"]["result"]["balance_after"] == 500
+        assert response.json()["current_escrow"] is None

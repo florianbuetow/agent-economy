@@ -6,14 +6,14 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from service_clients.gateway import GatewayClient
-from service_commons.exceptions import ServiceError
-
-from central_bank_service.financial_responses import (
+from service_auth.financial_responses import (
     parse_account_projection,
     parse_native_financial_envelope,
     validate_operation_id,
 )
+from service_clients.gateway import GatewayClient
+from service_commons.exceptions import ServiceError
+
 from central_bank_service.logging import get_logger
 from central_bank_service.monetary import (
     require_nonnegative_money,

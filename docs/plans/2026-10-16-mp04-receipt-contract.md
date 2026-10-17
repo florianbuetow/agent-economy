@@ -51,6 +51,9 @@ no bank-account existence. Do not directly foreign-key their logical account IDs
 
 ## Replay matrix
 
+The concrete historical envelope, attestation checks and preservation rules are specified in
+[historical financial observations](2026-10-17-mp04-historical-observations.md).
+
 | Existing effect | Submitted command | Required result |
 | --- | --- | --- |
 | None | Valid native operation | Atomic effect, event, receipt and legs |
@@ -151,6 +154,16 @@ makes posting intent durable across caller restarts. Neither capability is claim
 Receipt parsing belongs to typed Bank/Gateway contract boundaries; malformed native responses
 are dependency errors, never converted into zero/default balances or generic resolved success.
 
+The SDK uses the same strict native-envelope parser as the Bank's Gateway adapter. The parser
+lives in `service_auth.financial_responses`, alongside the public SDK, using its existing Pydantic
+dependency. The Bank imports that shared parser rather than maintaining a service-local duplicate.
+Every SDK money method binds the receipt hash, source, result, ordered legs and current projection
+to its exact submitted business fields before returning success. Funding commands therefore cannot
+print a success summary from a receipt for another financial effect. Zero-balance account creation
+validates its current account projection; that current balance can legitimately reflect a concurrent
+credit and is not required to remain zero. This extraction preserves existing Bank behavior and is
+covered by the Bank parser/public-contract tests plus independent SDK negative-response proofs.
+
 This is an explicit breaking API reconciliation. Existing tests whose valid requests omit the
 new required fields must supply them; old flat response assertions must inspect the documented
 receipt/result/current projection. Preserve their underlying money, authority, status and event
@@ -176,6 +189,7 @@ same intent instead of silently becoming a second command.
 | --- | --- | --- |
 | SDK task-posting intent | `task-lock`, `(task_id, poster_id)` | The existing task ID |
 | Treasury provisioning | `treasury-genesis`, `(operator_id, configured_genesis_reference)` | The explicit configured genesis reference |
+| Demo funding step | `demo-funding`, `(agent_id, explicit_step_reference)` | The required stable scenario step reference |
 | Task Board approval, including review timeout and pending retry | `task-settlement`, `(task_id, "approved")` | `task:<task_id>:approved` |
 | Task Board bidding/execution expiry and pending retry | `task-settlement`, `(task_id, "expired")` | `task:<task_id>:expired` |
 | Task Board cancellation | `task-settlement`, `(task_id, "cancelled")` | `task:<task_id>:cancelled` |

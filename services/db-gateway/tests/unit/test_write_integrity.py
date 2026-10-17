@@ -16,6 +16,7 @@ from uuid import uuid4
 import pytest
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service.receipt_audit import audit_receipt_ownership
 from db_gateway_service.services.db_writer import DbWriter
 from tests.conftest import make_event
 
@@ -53,6 +54,7 @@ def _create_account(writer: DbWriter, agent_id: str, balance: int) -> None:
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance > 0:
+        data["operation_id"] = f"op-{uuid4()}"
         data["initial_credit"] = {
             "tx_id": f"tx-{uuid4()}",
             "amount": balance,
@@ -66,6 +68,7 @@ def _lock_escrow(writer: DbWriter, payer_id: str, task_id: str, amount: int) -> 
     escrow_id = f"esc-{uuid4()}"
     writer.escrow_lock(
         {
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": escrow_id,
             "payer_account_id": payer_id,
             "amount": amount,
@@ -302,9 +305,16 @@ def _register_body(agent_id: str, public_key: str, event_timestamp: str) -> dict
     }
 
 
-def _credit_body(account_id: str, reference: str, amount: int, now: str) -> dict[str, Any]:
+def _credit_body(
+    account_id: str,
+    reference: str,
+    amount: int,
+    now: str,
+    operation_id: str,
+) -> dict[str, Any]:
     """Mirror central-bank/ledger_db_client.py credit(): fresh tx_id and fresh timestamps."""
     return {
+        "operation_id": operation_id,
         "tx_id": f"tx-{uuid4()}",
         "account_id": account_id,
         "amount": amount,
@@ -314,10 +324,17 @@ def _credit_body(account_id: str, reference: str, amount: int, now: str) -> dict
     }
 
 
-def _escrow_body(payer_account_id: str, task_id: str, amount: int, now: str) -> dict[str, Any]:
+def _escrow_body(
+    payer_account_id: str,
+    task_id: str,
+    amount: int,
+    now: str,
+    operation_id: str,
+) -> dict[str, Any]:
     """Mirror central-bank/ledger_db_client.py escrow_lock(): fresh escrow_id inside the payload."""
     escrow_id = f"esc-{uuid4()}"
     return {
+        "operation_id": operation_id,
         "escrow_id": escrow_id,
         "payer_account_id": payer_account_id,
         "amount": amount,
@@ -367,21 +384,21 @@ class TestIdempotentReplaysReturnRealValues:
     def test_credit_replay_returns_original_event_id_and_balance(self, db_writer: DbWriter) -> None:
         agent_id = _register_agent(db_writer, "Alice")
         _create_account(db_writer, agent_id, balance=100)
+        operation_id = f"op-{uuid4()}"
 
         first = db_writer.credit_account(
-            _credit_body(agent_id, "salary_round_1", 25, now="2026-02-28T10:05:00Z")
+            _credit_body(agent_id, "salary_round_1", 25, "2026-02-28T10:05:00Z", operation_id)
         )
         events_after_first = db_writer.get_total_events()
 
         # Realistic replay: new tx_id, new timestamps, same (account_id, reference, amount).
         replay = db_writer.credit_account(
-            _credit_body(agent_id, "salary_round_1", 25, now="2026-02-28T10:05:09Z")
+            _credit_body(agent_id, "salary_round_1", 25, "2026-02-28T10:05:09Z", operation_id)
         )
 
-        assert first["event_id"] > 0
-        assert first["balance_after"] == 125
-        assert replay["balance_after"] == 125
-        assert replay["event_id"] == first["event_id"]
+        assert first["receipt"]["event_id"] > 0
+        assert first["receipt"]["result"]["balance_after"] == 125
+        assert replay["receipt"] == first["receipt"]
         assert db_writer.get_total_events() == events_after_first
 
     def test_escrow_lock_replay_returns_original_event_id_and_balance(
@@ -390,64 +407,66 @@ class TestIdempotentReplaysReturnRealValues:
         agent_id = _register_agent(db_writer, "Alice")
         _create_account(db_writer, agent_id, balance=100)
         task_id = f"t-{uuid4()}"
+        operation_id = f"op-{uuid4()}"
 
         first = db_writer.escrow_lock(
-            _escrow_body(agent_id, task_id, 30, now="2026-02-28T10:10:00Z")
+            _escrow_body(agent_id, task_id, 30, "2026-02-28T10:10:00Z", operation_id)
         )
         events_after_first = db_writer.get_total_events()
 
         # Realistic replay: new escrow_id (also inside the event payload), new timestamps.
         replay = db_writer.escrow_lock(
-            _escrow_body(agent_id, task_id, 30, now="2026-02-28T10:10:04Z")
+            _escrow_body(agent_id, task_id, 30, "2026-02-28T10:10:04Z", operation_id)
         )
 
-        assert first["event_id"] > 0
-        assert first["balance_after"] == 70
-        assert replay["escrow_id"] == first["escrow_id"]
-        assert replay["balance_after"] == 70
-        assert replay["event_id"] == first["event_id"]
+        assert first["receipt"]["event_id"] > 0
+        assert first["receipt"]["legs"][0]["balance_after"] == 70
+        assert replay["receipt"] == first["receipt"]
+        assert replay["current_escrow"]["status"] == "locked"
         assert db_writer.get_total_events() == events_after_first
 
-    def test_credit_replay_of_legacy_row_returns_none(self, db_writer: DbWriter) -> None:
-        """A row written before the event_id column existed cannot name its event."""
+    def test_tampered_native_credit_is_detected_by_receipt_audit(self, db_writer: DbWriter) -> None:
+        """A post-cutover native row cannot be reclassified as legacy."""
         agent_id = _register_agent(db_writer, "Alice")
         _create_account(db_writer, agent_id, balance=100)
+        operation_id = f"op-{uuid4()}"
         first = db_writer.credit_account(
-            _credit_body(agent_id, "salary_round_1", 25, now="2026-02-28T10:05:00Z")
+            _credit_body(agent_id, "salary_round_1", 25, "2026-02-28T10:05:00Z", operation_id)
         )
         db_writer._db.execute(
             "UPDATE bank_transactions SET event_id = NULL WHERE tx_id = ?",
-            (first["tx_id"],),
+            (first["receipt"]["legs"][0]["transaction_id"],),
         )
         db_writer._db.commit()
 
         replay = db_writer.credit_account(
-            _credit_body(agent_id, "salary_round_1", 25, now="2026-02-28T10:05:09Z")
+            _credit_body(agent_id, "salary_round_1", 25, "2026-02-28T10:05:09Z", operation_id)
         )
 
-        assert replay["event_id"] is None
-        assert replay["balance_after"] == 125
+        assert replay["receipt"] == first["receipt"]
+        assert not audit_receipt_ownership(db_writer.connection).ownership_clean
 
-    def test_escrow_lock_replay_of_legacy_row_returns_none(self, db_writer: DbWriter) -> None:
-        """A row written before the event_id column existed cannot name its event."""
+    def test_tampered_native_lock_is_detected_by_receipt_audit(self, db_writer: DbWriter) -> None:
+        """A post-cutover native escrow cannot be reclassified as legacy."""
         agent_id = _register_agent(db_writer, "Alice")
         _create_account(db_writer, agent_id, balance=100)
         task_id = f"t-{uuid4()}"
+        operation_id = f"op-{uuid4()}"
         first = db_writer.escrow_lock(
-            _escrow_body(agent_id, task_id, 30, now="2026-02-28T10:10:00Z")
+            _escrow_body(agent_id, task_id, 30, "2026-02-28T10:10:00Z", operation_id)
         )
         db_writer._db.execute(
             "UPDATE bank_escrow SET event_id = NULL WHERE escrow_id = ?",
-            (first["escrow_id"],),
+            (first["receipt"]["escrow_id"],),
         )
         db_writer._db.commit()
 
         replay = db_writer.escrow_lock(
-            _escrow_body(agent_id, task_id, 30, now="2026-02-28T10:10:04Z")
+            _escrow_body(agent_id, task_id, 30, "2026-02-28T10:10:04Z", operation_id)
         )
 
-        assert replay["event_id"] is None
-        assert replay["balance_after"] == 70
+        assert replay["receipt"] == first["receipt"]
+        assert not audit_receipt_ownership(db_writer.connection).ownership_clean
 
 
 # ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from typing import TYPE_CHECKING, Any
+from uuid import NAMESPACE_URL, uuid5
 
 import pytest
 from service_commons.exceptions import ServiceError
@@ -19,6 +20,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 pytestmark = pytest.mark.unit
+
+
+def _op(identity: str) -> str:
+    return f"op-{uuid5(NAMESPACE_URL, f'gateway-money-guard:{identity}')}"
 
 
 def _register(writer: DbWriter, agent_id: str) -> None:
@@ -42,10 +47,11 @@ def _account(writer: DbWriter, agent_id: str, balance: int) -> None:
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance:
+        data["operation_id"] = _op(f"issuance:{agent_id}")
         data["initial_credit"] = {
             "tx_id": f"tx-initial-{agent_id}",
             "amount": balance,
-            "reference": "initial",
+            "reference": "initial_balance",
             "timestamp": "2026-10-16T00:00:00Z",
         }
     writer.create_account(data)
@@ -61,6 +67,7 @@ def _lock(
 ) -> dict[str, Any]:
     return writer.escrow_lock(
         {
+            "operation_id": _op(f"lock:{payer}:{task_id}"),
             "escrow_id": escrow_id,
             "payer_account_id": payer,
             "amount": amount,
@@ -112,9 +119,9 @@ def _assert_atomic_error(
     assert not writer.connection.in_transaction
 
 
-@pytest.mark.parametrize("poster_amount", [0, 40])
+@pytest.mark.parametrize("worker_pct", [100, 60])
 def test_split_rejects_nonpayer_poster_even_for_zero_leg(
-    db_writer: DbWriter, poster_amount: int
+    db_writer: DbWriter, worker_pct: int
 ) -> None:
     _account(db_writer, "a-payer", 1000)
     _account(db_writer, "a-worker", 0)
@@ -126,17 +133,17 @@ def test_split_rejects_nonpayer_poster_even_for_zero_leg(
         before,
         lambda: db_writer.escrow_split(
             {
+                "operation_id": _op(f"split:impostor:{worker_pct}"),
                 "escrow_id": "esc-1",
                 "worker_account_id": "a-worker",
-                "worker_amount": 100 - poster_amount,
                 "poster_account_id": "a-impostor",
-                "poster_amount": poster_amount,
+                "worker_pct": worker_pct,
+                "source_reference": "split:impostor",
                 "worker_tx_id": "tx-worker",
                 "poster_tx_id": "tx-poster",
                 "resolved_at": "2026-10-16T00:10:00Z",
                 "event": make_event(source="bank", event_type="escrow.split"),
-            },
-            None,
+            }
         ),
         "payload_mismatch",
     )
@@ -150,13 +157,14 @@ def test_account_rejects_mismatched_initial_issuance(db_writer: DbWriter) -> Non
         before,
         lambda: db_writer.create_account(
             {
+                "operation_id": _op("issuance:mismatch"),
                 "account_id": "a-mismatch",
                 "balance": 100,
                 "created_at": "now",
                 "initial_credit": {
                     "tx_id": "tx-mismatch",
                     "amount": 1,
-                    "reference": "initial",
+                    "reference": "initial_balance",
                     "timestamp": "now",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
@@ -196,6 +204,7 @@ def test_credit_overflow_is_rejected_without_sqlite_real_promotion(db_writer: Db
         before,
         lambda: db_writer.credit_account(
             {
+                "operation_id": _op("credit:overflow"),
                 "tx_id": "tx-overflow",
                 "account_id": "a-max",
                 "amount": 1,
@@ -219,28 +228,29 @@ def test_settled_escrow_lifetime_replay_is_atomic(
     if settlement == "released":
         db_writer.escrow_release(
             {
+                "operation_id": _op("settle:life:released"),
                 "escrow_id": "esc-original",
                 "recipient_account_id": "a-worker",
+                "source_reference": "settle:life:released",
                 "tx_id": "tx-release",
                 "resolved_at": "now",
                 "event": make_event(source="bank", event_type="escrow.released"),
-            },
-            None,
+            }
         )
     else:
         db_writer.escrow_split(
             {
+                "operation_id": _op("settle:life:split"),
                 "escrow_id": "esc-original",
                 "worker_account_id": "a-worker",
-                "worker_amount": 60,
                 "poster_account_id": "a-payer",
-                "poster_amount": 40,
+                "worker_pct": 60,
+                "source_reference": "settle:life:split",
                 "worker_tx_id": "tx-worker",
                 "poster_tx_id": "tx-poster",
                 "resolved_at": "now",
                 "event": make_event(source="bank", event_type="escrow.split"),
-            },
-            None,
+            }
         )
     before = _state(db_writer)
     if replay_amount == 100:
@@ -251,8 +261,9 @@ def test_settled_escrow_lifetime_replay_is_atomic(
             escrow_id="esc-replay",
             amount=100,
         )
-        assert result["escrow_id"] == "esc-original"
-        assert result["status"] == settlement
+        assert result["receipt"]["escrow_id"] == "esc-original"
+        assert result["receipt"]["result"]["escrow_status_at_commit"] == "locked"
+        assert result["current_escrow"]["status"] == settlement
         assert _state(db_writer) == before
     else:
         _assert_atomic_error(
@@ -265,7 +276,7 @@ def test_settled_escrow_lifetime_replay_is_atomic(
                 escrow_id="esc-replay",
                 amount=50,
             ),
-            "escrow_already_locked",
+            "operation_id_conflict",
         )
 
 
@@ -279,13 +290,14 @@ def test_release_recipient_overflow_is_atomic(db_writer: DbWriter) -> None:
         before,
         lambda: db_writer.escrow_release(
             {
+                "operation_id": _op("settle:release-overflow"),
                 "escrow_id": "esc-release",
                 "recipient_account_id": "a-max",
+                "source_reference": "settle:release-overflow",
                 "tx_id": "tx-release-overflow",
                 "resolved_at": "now",
                 "event": make_event(source="bank", event_type="escrow.released"),
-            },
-            None,
+            }
         ),
         "amount_out_of_range",
     )
@@ -296,6 +308,7 @@ def test_split_combined_same_account_overflow_is_atomic(db_writer: DbWriter) -> 
     _lock(db_writer, "a-payer", task_id="t-split", escrow_id="esc-split", amount=100)
     db_writer.credit_account(
         {
+            "operation_id": _op("credit:refill"),
             "tx_id": "tx-refill",
             "account_id": "a-payer",
             "amount": 100,
@@ -310,17 +323,17 @@ def test_split_combined_same_account_overflow_is_atomic(db_writer: DbWriter) -> 
         before,
         lambda: db_writer.escrow_split(
             {
+                "operation_id": _op("split:same-account-overflow"),
                 "escrow_id": "esc-split",
                 "worker_account_id": "a-payer",
-                "worker_amount": 60,
                 "poster_account_id": "a-payer",
-                "poster_amount": 40,
+                "worker_pct": 60,
+                "source_reference": "split:same-account-overflow",
                 "worker_tx_id": "tx-worker",
                 "poster_tx_id": "tx-poster",
                 "resolved_at": "now",
                 "event": make_event(source="bank", event_type="escrow.split"),
-            },
-            None,
+            }
         ),
         "amount_out_of_range",
     )
@@ -333,28 +346,30 @@ def test_matching_issuance_and_same_account_split_at_bound_are_valid(
     _lock(db_writer, "a-payer", task_id="t-valid", escrow_id="esc-valid", amount=100)
     result = db_writer.escrow_split(
         {
+            "operation_id": _op("split:same-account-bound"),
             "escrow_id": "esc-valid",
             "worker_account_id": "a-payer",
-            "worker_amount": 60,
             "poster_account_id": "a-payer",
-            "poster_amount": 40,
+            "worker_pct": 60,
+            "source_reference": "split:same-account-bound",
             "worker_tx_id": "tx-worker-valid",
             "poster_tx_id": "tx-poster-valid",
             "resolved_at": "now",
             "event": make_event(source="bank", event_type="escrow.split"),
-        },
-        None,
+        }
     )
-    assert result["status"] == "split"
+    assert result["receipt"]["result"]["escrow_status_at_commit"] == "split"
     row = db_writer.connection.execute(
         "SELECT balance, typeof(balance) FROM bank_accounts WHERE account_id='a-payer'"
     ).fetchone()
     assert tuple(row) == (SQLITE_MAX_INTEGER, "integer")
 
 
-@pytest.mark.parametrize("operation", ["credit", "lock", "worker", "poster"])
+@pytest.mark.parametrize("operation", ["credit", "lock", "percentage"])
 @pytest.mark.parametrize("amount", [True, 1.5, "1", -1, SQLITE_MAX_INTEGER + 1])
-def test_every_amount_is_validated_at_the_writer_boundary(db_writer, operation, amount):
+def test_every_financial_number_is_validated_at_the_writer_boundary(
+    db_writer: DbWriter, operation: str, amount: object
+) -> None:
     _account(db_writer, "a-payer", 100)
     _account(db_writer, "a-worker", 0)
     _lock(db_writer, "a-payer", task_id="t-guard", escrow_id="esc-guard", amount=40)
@@ -364,6 +379,7 @@ def test_every_amount_is_validated_at_the_writer_boundary(db_writer, operation, 
         if operation == "credit":
             return db_writer.credit_account(
                 {
+                    "operation_id": _op(f"invalid-credit:{amount}"),
                     "tx_id": "tx-invalid",
                     "account_id": "a-payer",
                     "amount": amount,
@@ -374,23 +390,28 @@ def test_every_amount_is_validated_at_the_writer_boundary(db_writer, operation, 
             )
         if operation == "lock":
             return _lock(db_writer, "a-payer", task_id="t-new", escrow_id="esc-new", amount=amount)
-        values = {"worker_amount": 40, "poster_amount": 0}
-        values[f"{operation}_amount"] = amount
         return db_writer.escrow_split(
             {
+                "operation_id": _op(f"invalid-percentage:{amount}"),
                 "escrow_id": "esc-guard",
                 "worker_account_id": "a-worker",
                 "poster_account_id": "a-payer",
+                "worker_pct": amount,
+                "source_reference": "invalid-percentage",
                 "worker_tx_id": "tx-worker",
                 "poster_tx_id": "tx-poster",
                 "resolved_at": "now",
                 "event": make_event(),
-                **values,
-            },
-            None,
+            }
         )
 
-    expected = "amount_out_of_range" if amount == SQLITE_MAX_INTEGER + 1 else "invalid_amount"
+    expected = (
+        "invalid_financial_request"
+        if operation == "percentage"
+        else "amount_out_of_range"
+        if amount == SQLITE_MAX_INTEGER + 1
+        else "invalid_amount"
+    )
     _assert_atomic_error(db_writer, before, attempt, expected)
 
 
@@ -398,6 +419,7 @@ def test_every_amount_is_validated_at_the_writer_boundary(db_writer, operation, 
 def test_initial_credit_exactly_explains_balance(db_writer, balance, initial_amount):
     _register(db_writer, "a-initial")
     data = {
+        "operation_id": _op(f"issuance:invalid:{balance}:{initial_amount}"),
         "account_id": "a-initial",
         "balance": balance,
         "created_at": "now",
@@ -407,7 +429,7 @@ def test_initial_credit_exactly_explains_balance(db_writer, balance, initial_amo
         data["initial_credit"] = {
             "tx_id": "tx-initial",
             "amount": initial_amount,
-            "reference": "initial",
+            "reference": "initial_balance",
             "timestamp": "now",
         }
     expected = (
@@ -420,21 +442,25 @@ def test_initial_credit_exactly_explains_balance(db_writer, balance, initial_amo
     )
 
 
-def test_credit_replay_at_maximum_returns_original_receipt_without_arithmetic(db_writer):
-    _account(db_writer, "a-max", SQLITE_MAX_INTEGER)
+def test_credit_replay_at_maximum_returns_original_receipt_without_arithmetic(
+    db_writer: DbWriter,
+) -> None:
+    _account(db_writer, "a-max", SQLITE_MAX_INTEGER - 1)
+    operation_id = _op("credit:max-replay")
+    request = {
+        "operation_id": operation_id,
+        "tx_id": "tx-max-replay",
+        "account_id": "a-max",
+        "amount": 1,
+        "reference": "max-replay",
+        "timestamp": "now",
+        "event": make_event(),
+    }
+    original = db_writer.credit_account(request)
     before = _state(db_writer)
-    result = db_writer.credit_account(
-        {
-            "tx_id": "tx-retry",
-            "account_id": "a-max",
-            "amount": SQLITE_MAX_INTEGER,
-            "reference": "initial",
-            "timestamp": "later",
-            "event": make_event(),
-        }
-    )
-    assert result["tx_id"] == "tx-initial-a-max"
-    assert result["balance_after"] == SQLITE_MAX_INTEGER
+    result = db_writer.credit_account({**request, "tx_id": "tx-candidate", "timestamp": "later"})
+    assert result["receipt"] == original["receipt"]
+    assert result["receipt"]["result"]["balance_after"] == SQLITE_MAX_INTEGER
     assert _state(db_writer) == before
     assert not db_writer.connection.in_transaction
 
@@ -444,7 +470,7 @@ def test_lock_replay_does_not_require_a_second_spendable_balance(db_writer):
     original = _lock(db_writer, "a-payer", task_id="t-empty", escrow_id="esc-original", amount=100)
     before = _state(db_writer)
     replay = _lock(db_writer, "a-payer", task_id="t-empty", escrow_id="esc-retry", amount=100)
-    assert original["status"] == "locked"
+    assert original["receipt"]["result"]["escrow_status_at_commit"] == "locked"
     assert replay == original
     assert _state(db_writer) == before
     assert not db_writer.connection.in_transaction
@@ -455,6 +481,7 @@ def test_split_rolls_back_first_leg_when_combined_same_account_credit_overflows(
     _lock(db_writer, "a-payer", task_id="t-combined", escrow_id="esc-combined", amount=100)
     db_writer.credit_account(
         {
+            "operation_id": _op("credit:refill-partial"),
             "tx_id": "tx-refill-partial",
             "account_id": "a-payer",
             "amount": 20,
@@ -468,24 +495,24 @@ def test_split_rolls_back_first_leg_when_combined_same_account_credit_overflows(
         _state(db_writer),
         lambda: db_writer.escrow_split(
             {
+                "operation_id": _op("split:combined-overflow"),
                 "escrow_id": "esc-combined",
                 "worker_account_id": "a-payer",
-                "worker_amount": 60,
                 "poster_account_id": "a-payer",
-                "poster_amount": 40,
+                "worker_pct": 60,
+                "source_reference": "split:combined-overflow",
                 "worker_tx_id": "tx-worker",
                 "poster_tx_id": "tx-poster",
                 "resolved_at": "now",
                 "event": make_event(),
-            },
-            None,
+            }
         ),
         "amount_out_of_range",
     )
 
 
-@pytest.mark.parametrize("poster_amount", [0, 40])
-def test_missing_poster_account_keeps_explicit_not_found_error(db_writer, poster_amount):
+@pytest.mark.parametrize("worker_pct", [100, 60])
+def test_nonpayer_poster_is_rejected_before_crediting(db_writer: DbWriter, worker_pct: int) -> None:
     _account(db_writer, "a-payer", 100)
     _account(db_writer, "a-worker", 0)
     _lock(db_writer, "a-payer", task_id="t-missing", escrow_id="esc-missing", amount=100)
@@ -494,19 +521,19 @@ def test_missing_poster_account_keeps_explicit_not_found_error(db_writer, poster
         _state(db_writer),
         lambda: db_writer.escrow_split(
             {
+                "operation_id": _op(f"split:absent-poster:{worker_pct}"),
                 "escrow_id": "esc-missing",
                 "worker_account_id": "a-worker",
-                "worker_amount": 100 - poster_amount,
                 "poster_account_id": "a-absent",
-                "poster_amount": poster_amount,
+                "worker_pct": worker_pct,
+                "source_reference": "split:absent-poster",
                 "worker_tx_id": "tx-worker",
                 "poster_tx_id": "tx-poster",
                 "resolved_at": "now",
                 "event": make_event(),
-            },
-            None,
+            }
         ),
-        "account_not_found",
+        "payload_mismatch",
     )
 
 
@@ -521,6 +548,7 @@ def test_concurrent_credits_at_maximum_have_one_atomic_winner(db_writer, initial
         try:
             return writer.credit_account(
                 {
+                    "operation_id": _op(f"credit:bounded:{reference}"),
                     "tx_id": f"tx-{reference}",
                     "account_id": "a-bounded",
                     "amount": 1,
@@ -576,13 +604,14 @@ def test_escrow_total_and_supply_reconcile_beyond_one_account_integer_bound(db_w
     assert _state(db_writer) == before
     db_writer.escrow_release(
         {
+            "operation_id": _op("settle:large-release"),
             "escrow_id": "esc-large-0",
             "recipient_account_id": "a-large-0",
+            "source_reference": "settle:large-release",
             "tx_id": "tx-large-release",
             "resolved_at": "now",
             "event": make_event(),
-        },
-        None,
+        }
     )
     assert reader.total_escrowed() == SQLITE_MAX_INTEGER
     assert audit_money(db_writer.connection).financially_clean

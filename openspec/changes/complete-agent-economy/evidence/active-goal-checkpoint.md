@@ -1,5 +1,58 @@
 # Active implementation checkpoint
 
+## Current continuation — 2026-10-17 (supersedes historical state below)
+
+Latest verified state: shared SDK parser, shared BankClient response validation, Bank financial
+logging and exact ruling replay have independent approvals. Final parent auth, agents, shared-client
+and Bank component CIs all exited 0. Task Board now also passes parent component CI (session92963,
+exit0, log `/private/tmp/agent-economy-mp04-task-board-parent-ci.log`) after 481 unit tests passed.
+Its six existing-test reconciliations have independent approval. Parent Bank in-process integration
+passed16 (session85546, exit0). Details are in `mp04-receipts/sdk-validation-2026-10-17.md`.
+Parent's 23 new intent/ruling tests pass. Demo financial caller integration is independently approved;
+parent tools CI session4031 exited0 with136 tests (`/private/tmp/agent-economy-mp04-tools-parent-ci.log`).
+The concrete historical contract is now `docs/plans/2026-10-17-mp04-historical-observations.md`.
+It requires cutover-set verification inside the transaction, exclusive ownership, immutable
+historical facts, separate current projections and no fabricated historical identity/hash.
+Historical times may be empty and event IDs may be nonpositive under the admitted v1 contract;
+use separate legacy models and reject unsupported storage without coercion. No schema/migration
+change is planned. `/root/mp04_memory_ledger` now owns NEW Gateway historical observation tests;
+`/root/mp04_client_contracts` owns NEW service-auth legacy consumer tests. Both lanes are tests-only
+and must capture genuine red before implementation. Historical production support is NOT written.
+History implementation, remaining callers, cross-service/live integration and fresh root CI remain
+unfinished. No Git mutations in this continuation. All parent command sessions are terminal.
+
+- The active objective is the full Core and Vision continuation in
+  `/Users/flo/.codex/attachments/e384874c-31cb-47e6-ba87-0d9a0be71ee8/pasted-text-1.txt`.
+  Branch is `refactor`; checkpoint commit `2575872` is work in progress. No push has been performed.
+  Weekends allow commits and pushes all day. Weekdays prohibit both from 08:00 inclusive to
+  18:00 exclusive Europe/Amsterdam. Check the actual time before either action; do not switch
+  branches, merge, rebase, cherry-pick, or use `git -C`.
+- OpenSpec apply reports 37/117 complete and 80 remaining. T-116/T-117 and tasks 6.2–6.4 stay open.
+  Root15 is still the last passing whole-repository gate; no component result replaces that gate.
+- The native Gateway, v2 startup/schema/audit and backup-bound migration components were reviewed
+  and verified. The public Bank adapter strictly validates native receipts. History API outcomes,
+  remaining callers and full integrated validation are still unfinished.
+- The in-memory ledger now produces native receipts through the same public contract. Independent
+  review approved the implementation and expanded overflow/concurrency/replay tests. Parent's
+  combined memory/contract-fixture run passed 56 tests; log:
+  `/private/tmp/agent-economy-mp04-memory-fixture-parent-final.log`.
+- Final parent service-clients component CI passed 96 tests (session 74019, exit 0), log
+  `/private/tmp/agent-economy-mp04-service-clients-parent-final-ci.log`. Gateway component CI session
+  9203 is terminal exit 0; independent review of its test reconciliation approved the repair that
+  restores the production schema fixture. Final parent auth session 76051 exited 0 (216 tests),
+  and agents session 86339 exited 0 (386 passed, three credential skips, 94 E2E deselected).
+- SDK and funding callers carry explicit financial identities and strictly validate receipts.
+  The original false-success HIGH and subsequent strict integer/text findings are resolved with
+  genuine red/green evidence and independent approval. The shared parser lives in service-auth;
+  no dependency was added. The separate BankClient boundary is also implemented and approved.
+- Central Bank existing router/normalization tests were reconciled by the assigned executor:
+  59 failed / 197 passed baseline, then 256 passed. Independent review approved the restored
+  committed-at assertion. Subsequent receipt logging adds six passing cases; final parent Bank CI
+  session 26814 exited 0 (`/private/tmp/agent-economy-mp04-bank-parent-final-ci.log`).
+- Earlier producer fixes have an explicit focused-red evidence gap; do not retroactively label
+  fixture-authoring failures as product reds. Accepted Q-M4 remains poster-specified acceptance
+  windows. Q-M1/Q-M2/Q-M3 and real-provider prerequisites remain unresolved; independent work continues.
+
 ## Commit checkpoint preparation — 2026-10-17
 
 The owner requested a local commit and clarified that weekends are unrestricted. Commits/pushes remain prohibited only on weekdays 08:00–18:00 Europe/Amsterdam. Local time verified Saturday 16:24 CEST; no push was requested. All native agents are terminal; no writer is active. The full goal remains active and incomplete. The fresh `just ci-quiet` run exited 1 in service-clients with 18 failed and 68 passed (old financial client calls); its log is `/private/tmp/agent-economy-commit-ci-20261017.log`; this checkpoint must not be called a completed implementation or a passing release. Current startup and producer slices have since passed independent review; older resume notes below predate those approvals. Remaining financial caller, in-memory contract, history and old-fixture reconciliation still prevent a full completion claim.

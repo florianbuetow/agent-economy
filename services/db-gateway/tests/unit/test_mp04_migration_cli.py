@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from service_commons.recovery_contract import MaintenanceLockIdentityV1, RecoveryInventoryV1
 
 from db_gateway_service import migration
 from db_gateway_service.recovery_cli.__main__ import main
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 pytestmark = pytest.mark.unit
 

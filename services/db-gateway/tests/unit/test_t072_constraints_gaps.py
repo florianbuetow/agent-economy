@@ -59,6 +59,7 @@ def _create_funded_account(client: TestClient, *, name: str, balance: int) -> st
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance > 0:
+        payload["operation_id"] = f"op-{uuid4()}"
         payload["initial_credit"] = {
             "tx_id": f"tx-{uuid4()}",
             "amount": balance,
@@ -76,6 +77,7 @@ def _create_task(client: TestClient, *, poster_id: str) -> tuple[str, str]:
     lock_response = client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": escrow_id,
             "payer_account_id": poster_id,
             "amount": 100,
@@ -248,16 +250,10 @@ class TestCas10RebuttalConstraint:
 
 
 @pytest.mark.unit
-class TestCas07StaleConstraintOnAlreadyResolvedEscrow:
-    """CAS-07: escrow split with a stale `{status: "locked"}` constraint on an
-    already-released escrow. Adjudicated WP-13 (T-072 sweep, see the spec row):
-    `escrow_already_resolved` wins over `constraint_violation` here — the
-    unconditional resolved-check in `_load_escrow()` runs before any
-    `constraints` handling can, for every escrow-lock-consuming endpoint."""
+class TestCas07AlreadyResolvedEscrow:
+    """The financial command owns the locked-state precondition."""
 
-    def test_split_with_stale_locked_constraint_returns_escrow_already_resolved(
-        self, app_with_writer: TestClient
-    ) -> None:
+    def test_opposing_split_returns_true_release_winner(self, app_with_writer: TestClient) -> None:
         poster_id = _create_funded_account(app_with_writer, name="Poster", balance=100)
         worker_id = _create_funded_account(app_with_writer, name="Worker", balance=0)
         task_id, escrow_id = _create_task(app_with_writer, poster_id=poster_id)
@@ -265,8 +261,10 @@ class TestCas07StaleConstraintOnAlreadyResolvedEscrow:
         release_response = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": escrow_id,
                 "recipient_account_id": worker_id,
+                "source_reference": f"release-{task_id}",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-03-01T09:20:00Z",
                 "event": make_event(source="bank", event_type="escrow.released", task_id=task_id),
@@ -277,20 +275,24 @@ class TestCas07StaleConstraintOnAlreadyResolvedEscrow:
         split_response = app_with_writer.post(
             "/bank/escrow/split",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": escrow_id,
                 "worker_account_id": worker_id,
                 "poster_account_id": poster_id,
-                "worker_amount": 60,
-                "poster_amount": 40,
+                "worker_pct": 60,
+                "source_reference": f"split-{task_id}",
                 "worker_tx_id": f"tx-{uuid4()}",
                 "poster_tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-03-01T09:21:00Z",
-                "constraints": {"status": "locked"},
                 "event": make_event(source="bank", event_type="escrow.split", task_id=task_id),
             },
         )
         assert split_response.status_code == 409
-        assert split_response.json()["error"] == "escrow_already_resolved"
+        assert split_response.json()["error"] == "financial_operation_already_committed"
+        assert (
+            split_response.json()["details"]["winning_operation_id"]
+            == release_response.json()["receipt"]["operation_id"]
+        )
 
 
 @pytest.mark.unit

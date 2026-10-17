@@ -10,7 +10,7 @@ from cryptography.exceptions import InvalidSignature
 
 from central_bank_service.core.state import get_app_state
 
-from .conftest import PLATFORM_AGENT_ID, make_jws_token
+from .conftest import PLATFORM_AGENT_ID, make_jws_token, make_operation_id
 
 
 def _setup_identity_mock(state: Any) -> None:
@@ -116,6 +116,8 @@ class TestPayloadMismatch:
                 "action": "escrow_release",
                 "escrow_id": "esc-real",
                 "recipient_account_id": "a-worker",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:t-mismatch:approved",
             },
             resource="POST /escrow/esc-fake/release",
         )
@@ -141,6 +143,8 @@ class TestPayloadMismatch:
                 "worker_account_id": "a-worker",
                 "worker_pct": 50,
                 "poster_account_id": "a-poster",
+                "operation_id": make_operation_id(),
+                "source_reference": "task:t-mismatch:ruling:r-one",
             },
             resource="POST /escrow/esc-fake/split",
         )
@@ -179,7 +183,12 @@ class TestMissingRequiredFields:
         create_token = make_jws_token(
             private_key := platform_keypair[0],
             PLATFORM_AGENT_ID,
-            {"action": "create_account", "agent_id": "a-test", "initial_balance": 100},
+            {
+                "action": "create_account",
+                "agent_id": "a-test",
+                "initial_balance": 100,
+                "operation_id": make_operation_id(),
+            },
         )
         await client.post("/accounts", json={"token": create_token})
 

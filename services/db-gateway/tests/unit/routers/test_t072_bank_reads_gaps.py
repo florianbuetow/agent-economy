@@ -58,6 +58,7 @@ def _create_account(client: TestClient, agent_id: str, balance: int = 0) -> None
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance > 0:
+        data["operation_id"] = f"op-{uuid4()}"
         data["initial_credit"] = {
             "tx_id": f"tx-{uuid4()}",
             "amount": balance,
@@ -88,6 +89,7 @@ def _lock_escrow(
     client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": eid,
             "payer_account_id": payer_id,
             "amount": amount,
@@ -109,6 +111,7 @@ class TestReadOrderedTransactionHistory:
         credit_response = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": aid,
                 "amount": 50,

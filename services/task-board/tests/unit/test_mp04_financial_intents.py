@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+import hashlib
+import json
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -13,6 +14,9 @@ from service_commons.exceptions import ServiceError
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
 from task_board_service.services.task_creation import new_lock_escrow_id
 from tests.fakes.in_memory_task_store import InMemoryTaskStore
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _lock_envelope(
@@ -24,13 +28,24 @@ def _lock_envelope(
 ) -> dict[str, Any]:
     operation_id = operation_id_for("task-lock", (task_id, poster_id))
     escrow_id = "esc-native-lock"
+    canonical_request = {
+        "request_version": 1,
+        "operation_kind": "escrow_lock",
+        "payer_account_id": poster_id,
+        "task_id": task_id,
+        "amount": amount,
+    }
     return {
         "outcome": "native_receipt",
         "receipt": {
             "receipt_version": 1,
             "operation_id": operation_id,
             "operation_kind": "escrow_lock",
-            "request_sha256": "a" * 64,
+            "request_sha256": hashlib.sha256(
+                json.dumps(
+                    canonical_request, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+                ).encode("utf-8")
+            ).hexdigest(),
             "source_reference": task_id,
             "committed_at": "2026-10-16T00:00:00Z",
             "event_id": 7,
@@ -111,6 +126,7 @@ def test_new_task_rejects_non_proof_lock_responses(mutation: str) -> None:
         envelope = {"outcome": "legacy_observation", "escrow_id": "esc-native-lock"}
     elif mutation == "settled":
         envelope["current_escrow"]["status"] = "released"
+        envelope["current_escrow"]["resolved_at"] = "2026-10-16T00:01:00Z"
     elif mutation == "wrong_task":
         envelope["current_escrow"]["task_id"] = "t-other"
     elif mutation == "wrong_payer":

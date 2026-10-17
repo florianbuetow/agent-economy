@@ -44,6 +44,7 @@ def _create_account(client: TestClient, agent_id: str, balance: int = 0) -> None
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance > 0:
+        data["operation_id"] = f"op-{uuid4()}"
         data["initial_credit"] = {
             "tx_id": f"tx-{uuid4()}",
             "amount": balance,
@@ -64,6 +65,7 @@ def _fund_account(
     return client.post(
         "/bank/credit",
         json={
+            "operation_id": f"op-{uuid4()}",
             "tx_id": f"tx-{uuid4()}",
             "account_id": agent_id,
             "amount": amount,
@@ -91,6 +93,7 @@ def _lock_escrow(
     amount: int,
     task_id: str | None = None,
     escrow_id: str | None = None,
+    operation_id: str | None = None,
 ) -> tuple[object, str, str]:
     """Lock escrow and return (response, escrow_id, task_id)."""
     eid = escrow_id or f"esc-{uuid4()}"
@@ -98,6 +101,7 @@ def _lock_escrow(
     resp = client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": operation_id or f"op-{uuid4()}",
             "escrow_id": eid,
             "payer_account_id": payer_id,
             "amount": amount,
@@ -125,6 +129,7 @@ class TestAccountCreation:
         resp = app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": 50,
                 "created_at": "2026-02-28T10:00:00Z",
@@ -139,8 +144,11 @@ class TestAccountCreation:
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["account_id"] == aid
-        assert "event_id" in data
+        assert data["outcome"] == "native_receipt"
+        assert data["receipt"]["result"]["account_id"] == aid
+        assert data["receipt"]["result"]["balance_after"] == 50
+        assert isinstance(data["receipt"]["event_id"], int)
+        assert data["current_escrow"] is None
 
     def test_create_account_zero_balance(self, app_with_writer: TestClient) -> None:
         """ACCT-02: Create account with zero balance (no initial_credit)."""
@@ -183,6 +191,7 @@ class TestAccountCreation:
         resp = app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": 100,
                 "created_at": "2026-02-28T10:00:00Z",
@@ -219,6 +228,7 @@ class TestAccountCreation:
         resp = app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": -1,
                 "created_at": "2026-02-28T10:00:00Z",
@@ -263,6 +273,7 @@ class TestAccountCreation:
         resp = app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": 50,
                 "created_at": "2026-02-28T10:00:00Z",
@@ -276,7 +287,7 @@ class TestAccountCreation:
             },
         )
         assert resp.status_code == 201
-        event_id = resp.json()["event_id"]
+        event_id = resp.json()["receipt"]["event_id"]
 
         # Check account exists
         acct_cursor = db_writer._db.execute(
@@ -308,27 +319,28 @@ class TestCredit:
         resp = _fund_account(app_with_writer, aid, amount=10, reference="salary_round_3")
         assert resp.status_code == 200
         data = resp.json()
-        assert "tx_id" in data
-        assert "balance_after" in data
-        assert "event_id" in data
-        assert data["balance_after"] == 110
+        assert data["outcome"] == "native_receipt"
+        assert data["receipt"]["legs"][0]["transaction_id"] is not None
+        assert data["receipt"]["result"]["balance_after"] == 110
+        assert isinstance(data["receipt"]["event_id"], int)
 
     def test_multiple_credits_accumulate(self, app_with_writer: TestClient) -> None:
         """CR-02: Multiple credits accumulate correctly."""
         aid = _setup_funded_account(app_with_writer, balance=0)
         resp1 = _fund_account(app_with_writer, aid, amount=30, reference="bonus_1")
         assert resp1.status_code == 200
-        assert resp1.json()["balance_after"] == 30
+        assert resp1.json()["receipt"]["result"]["balance_after"] == 30
 
         resp2 = _fund_account(app_with_writer, aid, amount=20, reference="bonus_2")
         assert resp2.status_code == 200
-        assert resp2.json()["balance_after"] == 50
+        assert resp2.json()["receipt"]["result"]["balance_after"] == 50
 
     def test_idempotent_credit_returns_same_tx_id(self, app_with_writer: TestClient) -> None:
         """CR-03: Idempotent credit returns same tx_id."""
         aid = _setup_funded_account(app_with_writer, balance=100)
         tx_id = f"tx-{uuid4()}"
         body = {
+            "operation_id": f"op-{uuid4()}",
             "tx_id": tx_id,
             "account_id": aid,
             "amount": 25,
@@ -339,23 +351,25 @@ class TestCredit:
         resp1 = app_with_writer.post("/bank/credit", json=body)
         assert resp1.status_code == 200
         data1 = resp1.json()
-        original_balance = data1["balance_after"]
+        original_balance = data1["receipt"]["result"]["balance_after"]
 
         resp2 = app_with_writer.post("/bank/credit", json=body)
         assert resp2.status_code == 200
         data2 = resp2.json()
-        assert data2["tx_id"] == data1["tx_id"]
-        assert data2["balance_after"] == original_balance
+        assert data2["receipt"] == data1["receipt"]
+        assert data2["receipt"]["legs"][0]["transaction_id"] == tx_id
+        assert data2["receipt"]["result"]["balance_after"] == original_balance
 
     def test_duplicate_reference_different_amount_rejected(
         self, app_with_writer: TestClient
     ) -> None:
         """CR-04: Duplicate reference with different amount is rejected."""
         aid = _setup_funded_account(app_with_writer, balance=100)
-        _fund_account(app_with_writer, aid, amount=25, reference="salary_round_1")
+        winning = _fund_account(app_with_writer, aid, amount=25, reference="salary_round_1")
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": aid,
                 "amount": 30,
@@ -365,7 +379,11 @@ class TestCredit:
             },
         )
         assert resp.status_code == 409
-        assert resp.json()["error"] == "reference_conflict"
+        assert resp.json()["error"] == "financial_operation_already_committed"
+        assert (
+            resp.json()["details"]["winning_operation_id"]
+            == winning.json()["receipt"]["operation_id"]
+        )
 
     def test_account_not_found(self, app_with_writer: TestClient) -> None:
         """CR-05: Account not found."""
@@ -373,6 +391,7 @@ class TestCredit:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": fake_id,
                 "amount": 10,
@@ -390,6 +409,7 @@ class TestCredit:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": aid,
                 "amount": 0,
@@ -407,6 +427,7 @@ class TestCredit:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": aid,
                 "amount": -10,
@@ -424,6 +445,7 @@ class TestCredit:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": aid,
                 "amount": 10,
@@ -440,6 +462,7 @@ class TestCredit:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": aid,
                 "reference": "test",
@@ -459,6 +482,7 @@ class TestCredit:
         app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": tx_id,
                 "account_id": aid,
                 "amount": 10,
@@ -487,7 +511,7 @@ class TestCredit:
         aid = _setup_funded_account(app_with_writer, balance=100)
         resp = _fund_account(app_with_writer, aid, amount=10)
         assert resp.status_code == 200
-        event_id = resp.json()["event_id"]
+        event_id = resp.json()["receipt"]["event_id"]
 
         cursor = db_writer._db.execute(
             "SELECT event_id FROM events WHERE event_id = ?",
@@ -511,10 +535,11 @@ class TestEscrowLock:
         resp, eid, _tid = _lock_escrow(app_with_writer, aid, amount=30)
         assert resp.status_code == 201
         data = resp.json()
-        assert data["escrow_id"] == eid
-        assert "balance_after" in data
-        assert data["balance_after"] == 70
-        assert "event_id" in data
+        assert data["outcome"] == "native_receipt"
+        assert data["receipt"]["escrow_id"] == eid
+        assert data["receipt"]["legs"][0]["balance_after"] == 70
+        assert isinstance(data["receipt"]["event_id"], int)
+        assert data["current_escrow"]["status"] == "locked"
 
     def test_balance_decreases_by_lock_amount(
         self, app_with_writer: TestClient, db_writer: DbWriter
@@ -606,13 +631,22 @@ class TestEscrowLock:
         eid1 = f"esc-{uuid4()}"
         resp1, _, _ = _lock_escrow(app_with_writer, aid, amount=30, task_id=tid, escrow_id=eid1)
         assert resp1.status_code == 201
+        data1 = resp1.json()
 
         # Second lock with same payer+task+amount but different escrow_id
         eid2 = f"esc-{uuid4()}"
-        resp2, _, _ = _lock_escrow(app_with_writer, aid, amount=30, task_id=tid, escrow_id=eid2)
+        resp2, _, _ = _lock_escrow(
+            app_with_writer,
+            aid,
+            amount=30,
+            task_id=tid,
+            escrow_id=eid2,
+            operation_id=data1["receipt"]["operation_id"],
+        )
         # Should return existing escrow
         data2 = resp2.json()
-        assert data2["escrow_id"] == eid1
+        assert data2["receipt"] == data1["receipt"]
+        assert data2["receipt"]["escrow_id"] == eid1
 
         # Verify balance not double-debited
         cursor = db_writer._db.execute(
@@ -629,10 +663,14 @@ class TestEscrowLock:
         """ELOCK-09: Duplicate (payer, task) with different amount is rejected."""
         aid = _setup_funded_account(app_with_writer, balance=200)
         tid = f"t-{uuid4()}"
-        _lock_escrow(app_with_writer, aid, amount=30, task_id=tid)
+        winning, _eid, _tid = _lock_escrow(app_with_writer, aid, amount=30, task_id=tid)
         resp, _eid, _tid = _lock_escrow(app_with_writer, aid, amount=50, task_id=tid)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "escrow_already_locked"
+        assert resp.json()["error"] == "financial_operation_already_committed"
+        assert (
+            resp.json()["details"]["winning_operation_id"]
+            == winning.json()["receipt"]["operation_id"]
+        )
 
     def test_zero_amount_rejected(self, app_with_writer: TestClient) -> None:
         """ELOCK-10: Zero amount is rejected."""
@@ -640,6 +678,7 @@ class TestEscrowLock:
         resp = app_with_writer.post(
             "/bank/escrow/lock",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": f"esc-{uuid4()}",
                 "payer_account_id": aid,
                 "amount": 0,
@@ -658,6 +697,7 @@ class TestEscrowLock:
         resp = app_with_writer.post(
             "/bank/escrow/lock",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": f"esc-{uuid4()}",
                 "payer_account_id": aid,
                 "amount": -10,
@@ -676,6 +716,7 @@ class TestEscrowLock:
         resp = app_with_writer.post(
             "/bank/escrow/lock",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": f"esc-{uuid4()}",
                 "payer_account_id": aid,
                 "amount": 30,
@@ -693,6 +734,7 @@ class TestEscrowLock:
         resp = app_with_writer.post(
             "/bank/escrow/lock",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": f"esc-{uuid4()}",
                 "payer_account_id": aid,
                 "amount": 30,
@@ -709,7 +751,7 @@ class TestEscrowLock:
         aid = _setup_funded_account(app_with_writer, balance=50)
         resp, _eid, _tid = _lock_escrow(app_with_writer, aid, amount=50)
         assert resp.status_code == 201
-        assert resp.json()["balance_after"] == 0
+        assert resp.json()["receipt"]["legs"][0]["balance_after"] == 0
 
     def test_multiple_escrow_locks_different_tasks(self, app_with_writer: TestClient) -> None:
         """ELOCK-15: Multiple escrow locks for different tasks."""
@@ -720,7 +762,7 @@ class TestEscrowLock:
         resp2, _eid2, _tid2 = _lock_escrow(app_with_writer, aid, amount=20, task_id=tid2)
         assert resp1.status_code == 201
         assert resp2.status_code == 201
-        assert resp2.json()["balance_after"] == 50
+        assert resp2.json()["receipt"]["legs"][0]["balance_after"] == 50
 
 
 # ===========================================================================
@@ -751,8 +793,10 @@ class TestEscrowRelease:
         resp = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": eid,
                 "recipient_account_id": bob,
+                "source_reference": f"release-{eid}",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
@@ -760,27 +804,32 @@ class TestEscrowRelease:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["escrow_id"] == eid
-        assert data["status"] == "released"
-        assert data["amount"] == 50
-        assert data["recipient_account_id"] == bob
-        assert "event_id" in data
+        assert data["outcome"] == "native_receipt"
+        assert data["receipt"]["escrow_id"] == eid
+        assert data["receipt"]["result"]["escrow_status_at_commit"] == "released"
+        assert data["receipt"]["legs"][0]["amount"] == 50
+        assert data["receipt"]["legs"][0]["account_id"] == bob
+        assert isinstance(data["receipt"]["event_id"], int)
+        assert data["current_escrow"]["status"] == "released"
 
     def test_recipient_balance_increases(
         self, app_with_writer: TestClient, db_writer: DbWriter
     ) -> None:
         """EREL-02: Recipient balance increases by escrow amount."""
         _alice, bob, eid = self._setup_escrow(app_with_writer, bob_balance=0, escrow_amount=50)
-        app_with_writer.post(
+        response = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": eid,
                 "recipient_account_id": bob,
+                "source_reference": f"release-{eid}",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
             },
         )
+        assert response.status_code == 200
         cursor = db_writer._db.execute(
             "SELECT balance FROM bank_accounts WHERE account_id = ?",
             (bob,),
@@ -794,16 +843,19 @@ class TestEscrowRelease:
     ) -> None:
         """EREL-03: Release creates escrow_release transaction on recipient."""
         _alice, bob, eid = self._setup_escrow(app_with_writer)
-        app_with_writer.post(
+        response = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": eid,
                 "recipient_account_id": bob,
+                "source_reference": f"release-{eid}",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
             },
         )
+        assert response.status_code == 200
         cursor = db_writer._db.execute(
             "SELECT type, reference, amount "
             "FROM bank_transactions WHERE account_id = ? AND type = 'escrow_release'",
@@ -821,8 +873,10 @@ class TestEscrowRelease:
         app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": eid,
                 "recipient_account_id": bob,
+                "source_reference": f"release-{eid}",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
@@ -843,8 +897,10 @@ class TestEscrowRelease:
         resp = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": f"esc-{uuid4()}",
                 "recipient_account_id": bob,
+                "source_reference": "release-missing-escrow",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
@@ -857,29 +913,38 @@ class TestEscrowRelease:
         """EREL-06: Already resolved escrow."""
         _alice, bob, eid = self._setup_escrow(app_with_writer)
         # First release
-        app_with_writer.post(
+        winning = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": eid,
                 "recipient_account_id": bob,
+                "source_reference": f"release-{eid}",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
             },
         )
+        assert winning.status_code == 200
         # Second release attempt
         resp = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": eid,
                 "recipient_account_id": bob,
+                "source_reference": f"release-{eid}",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:01:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
             },
         )
         assert resp.status_code == 409
-        assert resp.json()["error"] == "escrow_already_resolved"
+        assert resp.json()["error"] == "financial_operation_already_committed"
+        assert (
+            resp.json()["details"]["winning_operation_id"]
+            == winning.json()["receipt"]["operation_id"]
+        )
 
     def test_recipient_account_not_found(self, app_with_writer: TestClient) -> None:
         """EREL-07: Recipient account not found."""
@@ -889,8 +954,10 @@ class TestEscrowRelease:
         resp = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": eid,
                 "recipient_account_id": fake_recipient,
+                "source_reference": f"release-{eid}",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
@@ -904,7 +971,9 @@ class TestEscrowRelease:
         resp = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": f"esc-{uuid4()}",
+                "source_reference": "release-missing-recipient",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
@@ -919,7 +988,9 @@ class TestEscrowRelease:
         resp = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "recipient_account_id": bob,
+                "source_reference": "release-missing-escrow",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
@@ -957,18 +1028,18 @@ class TestEscrowSplit:
         escrow_id: str,
         worker_id: str,
         poster_id: str,
-        worker_amount: int,
-        poster_amount: int,
+        worker_pct: int,
     ) -> object:
         """Execute escrow split."""
         return client.post(
             "/bank/escrow/split",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": escrow_id,
                 "worker_account_id": worker_id,
-                "worker_amount": worker_amount,
                 "poster_account_id": poster_id,
-                "poster_amount": poster_amount,
+                "worker_pct": worker_pct,
+                "source_reference": f"split-{escrow_id}",
                 "worker_tx_id": f"tx-{uuid4()}",
                 "poster_tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
@@ -981,54 +1052,54 @@ class TestEscrowSplit:
         alice, bob, eid = self._setup_split(
             app_with_writer, alice_balance=1000, bob_balance=0, escrow_amount=500
         )
-        resp = self._do_split(app_with_writer, eid, bob, alice, 250, 250)
+        resp = self._do_split(app_with_writer, eid, bob, alice, 50)
         assert resp.status_code == 200
         data = resp.json()
-        assert data["escrow_id"] == eid
-        assert data["status"] == "split"
-        assert data["worker_amount"] == 250
-        assert data["poster_amount"] == 250
-        assert "event_id" in data
+        assert data["receipt"]["escrow_id"] == eid
+        assert data["receipt"]["result"] == {
+            "escrow_status_at_commit": "split",
+            "worker_pct": 50,
+        }
+        assert [leg["amount"] for leg in data["receipt"]["legs"]] == [250, 250]
+        assert isinstance(data["receipt"]["event_id"], int)
+        assert data["current_escrow"]["status"] == "split"
 
     def test_uneven_split(self, app_with_writer: TestClient) -> None:
         """ESPL-02: Uneven split."""
         alice, bob, eid = self._setup_split(
             app_with_writer, alice_balance=1000, bob_balance=0, escrow_amount=100
         )
-        resp = self._do_split(app_with_writer, eid, bob, alice, 70, 30)
+        resp = self._do_split(app_with_writer, eid, bob, alice, 70)
         assert resp.status_code == 200
         data = resp.json()
-        assert data["worker_amount"] == 70
-        assert data["poster_amount"] == 30
+        assert [leg["amount"] for leg in data["receipt"]["legs"]] == [70, 30]
 
     def test_worker_gets_all(self, app_with_writer: TestClient) -> None:
         """ESPL-03: Worker gets all (100/0 split)."""
         alice, bob, eid = self._setup_split(
             app_with_writer, alice_balance=1000, bob_balance=0, escrow_amount=100
         )
-        resp = self._do_split(app_with_writer, eid, bob, alice, 100, 0)
+        resp = self._do_split(app_with_writer, eid, bob, alice, 100)
         assert resp.status_code == 200
         data = resp.json()
-        assert data["worker_amount"] == 100
-        assert data["poster_amount"] == 0
+        assert [leg["amount"] for leg in data["receipt"]["legs"]] == [100, 0]
 
     def test_poster_gets_all(self, app_with_writer: TestClient) -> None:
         """ESPL-04: Poster gets all (0/100 split)."""
         alice, bob, eid = self._setup_split(
             app_with_writer, alice_balance=1000, bob_balance=0, escrow_amount=100
         )
-        resp = self._do_split(app_with_writer, eid, bob, alice, 0, 100)
+        resp = self._do_split(app_with_writer, eid, bob, alice, 0)
         assert resp.status_code == 200
         data = resp.json()
-        assert data["worker_amount"] == 0
-        assert data["poster_amount"] == 100
+        assert [leg["amount"] for leg in data["receipt"]["legs"]] == [0, 100]
 
     def test_both_balances_updated(self, app_with_writer: TestClient, db_writer: DbWriter) -> None:
         """ESPL-05: Both account balances updated correctly after split."""
         alice, bob, eid = self._setup_split(
             app_with_writer, alice_balance=200, bob_balance=10, escrow_amount=100
         )
-        self._do_split(app_with_writer, eid, bob, alice, 60, 40)
+        self._do_split(app_with_writer, eid, bob, alice, 60)
 
         # alice: 200 - 100 (escrow) + 40 (poster share) = 140
         alice_cursor = db_writer._db.execute(
@@ -1055,7 +1126,7 @@ class TestEscrowSplit:
         alice, bob, eid = self._setup_split(
             app_with_writer, alice_balance=1000, bob_balance=0, escrow_amount=100
         )
-        self._do_split(app_with_writer, eid, bob, alice, 60, 40)
+        self._do_split(app_with_writer, eid, bob, alice, 60)
 
         # bob (worker) should have escrow_release
         bob_cursor = db_writer._db.execute(
@@ -1088,7 +1159,7 @@ class TestEscrowSplit:
         alice, bob, eid = self._setup_split(
             app_with_writer, alice_balance=1000, bob_balance=0, escrow_amount=100
         )
-        self._do_split(app_with_writer, eid, bob, alice, 100, 0)
+        self._do_split(app_with_writer, eid, bob, alice, 100)
 
         # alice (poster) should have NO escrow_release with this escrow_id
         cursor = db_writer._db.execute(
@@ -1101,7 +1172,7 @@ class TestEscrowSplit:
     def test_escrow_status_split(self, app_with_writer: TestClient, db_writer: DbWriter) -> None:
         """ESPL-08: Escrow status changes to split."""
         alice, bob, eid = self._setup_split(app_with_writer, escrow_amount=100)
-        self._do_split(app_with_writer, eid, bob, alice, 50, 50)
+        self._do_split(app_with_writer, eid, bob, alice, 50)
 
         cursor = db_writer._db.execute(
             "SELECT status, resolved_at FROM bank_escrow WHERE escrow_id = ?",
@@ -1113,19 +1184,19 @@ class TestEscrowSplit:
         assert row[1] is not None
 
     def test_amount_mismatch(self, app_with_writer: TestClient) -> None:
-        """ESPL-09: Amounts do not sum to escrow amount."""
+        """ESPL-09: Percentage above 100 is rejected."""
         alice, bob, eid = self._setup_split(
             app_with_writer, alice_balance=1000, bob_balance=0, escrow_amount=100
         )
-        resp = self._do_split(app_with_writer, eid, bob, alice, 60, 60)
+        resp = self._do_split(app_with_writer, eid, bob, alice, 101)
         assert resp.status_code == 400
-        assert resp.json()["error"] == "amount_mismatch"
+        assert resp.json()["error"] == "invalid_percentage"
 
     def test_escrow_not_found(self, app_with_writer: TestClient) -> None:
         """ESPL-10: Escrow not found."""
         alice = _setup_funded_account(app_with_writer, balance=100)
         bob = _setup_funded_account(app_with_writer, balance=0)
-        resp = self._do_split(app_with_writer, f"esc-{uuid4()}", bob, alice, 50, 50)
+        resp = self._do_split(app_with_writer, f"esc-{uuid4()}", bob, alice, 50)
         assert resp.status_code == 404
         assert resp.json()["error"] == "escrow_not_found"
 
@@ -1135,67 +1206,75 @@ class TestEscrowSplit:
             app_with_writer, alice_balance=1000, bob_balance=0, escrow_amount=100
         )
         # Release first
-        app_with_writer.post(
+        winning = app_with_writer.post(
             "/bank/escrow/release",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": eid,
                 "recipient_account_id": bob,
+                "source_reference": f"release-{eid}",
                 "tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",
                 "event": make_event(source="bank", event_type="escrow.released"),
             },
         )
+        assert winning.status_code == 200
         # Try to split
-        resp = self._do_split(app_with_writer, eid, bob, alice, 50, 50)
+        resp = self._do_split(app_with_writer, eid, bob, alice, 50)
         assert resp.status_code == 409
-        assert resp.json()["error"] == "escrow_already_resolved"
+        assert resp.json()["error"] == "financial_operation_already_committed"
+        assert (
+            resp.json()["details"]["winning_operation_id"]
+            == winning.json()["receipt"]["operation_id"]
+        )
 
     def test_worker_account_not_found(self, app_with_writer: TestClient) -> None:
         """ESPL-12: Worker account not found."""
         alice = _setup_funded_account(app_with_writer, balance=1000)
         _resp, eid, _tid = _lock_escrow(app_with_writer, alice, amount=100)
         fake_worker = f"a-{uuid4()}"
-        resp = self._do_split(app_with_writer, eid, fake_worker, alice, 60, 40)
+        resp = self._do_split(app_with_writer, eid, fake_worker, alice, 60)
         assert resp.status_code == 404
         assert resp.json()["error"] == "account_not_found"
 
-    def test_poster_account_not_found(self, app_with_writer: TestClient) -> None:
-        """ESPL-13: Poster account not found."""
+    def test_nonpayer_poster_is_rejected(self, app_with_writer: TestClient) -> None:
+        """ESPL-13: The poster must be the escrow payer."""
         alice = _setup_funded_account(app_with_writer, balance=1000)
         bob = _setup_funded_account(app_with_writer, balance=0)
         _resp, eid, _tid = _lock_escrow(app_with_writer, alice, amount=100)
         fake_poster = f"a-{uuid4()}"
-        resp = self._do_split(app_with_writer, eid, bob, fake_poster, 60, 40)
-        assert resp.status_code == 404
-        assert resp.json()["error"] == "account_not_found"
+        resp = self._do_split(app_with_writer, eid, bob, fake_poster, 60)
+        assert resp.status_code == 400
+        assert resp.json()["error"] == "payload_mismatch"
 
-    def test_negative_worker_amount_rejected(self, app_with_writer: TestClient) -> None:
-        """ESPL-14: Negative worker_amount is rejected."""
+    def test_negative_worker_pct_rejected(self, app_with_writer: TestClient) -> None:
+        """ESPL-14: Negative worker_pct is rejected."""
         alice, bob, eid = self._setup_split(
             app_with_writer, alice_balance=1000, bob_balance=0, escrow_amount=100
         )
-        resp = self._do_split(app_with_writer, eid, bob, alice, -10, 110)
+        resp = self._do_split(app_with_writer, eid, bob, alice, -1)
         assert resp.status_code == 400
-        assert resp.json()["error"] == "invalid_amount"
+        assert resp.json()["error"] == "invalid_percentage"
 
-    def test_negative_poster_amount_rejected(self, app_with_writer: TestClient) -> None:
-        """ESPL-15: Negative poster_amount is rejected."""
+    def test_worker_pct_above_100_rejected(self, app_with_writer: TestClient) -> None:
+        """ESPL-15: Percentage above 100 is rejected."""
         alice, bob, eid = self._setup_split(
             app_with_writer, alice_balance=1000, bob_balance=0, escrow_amount=100
         )
-        resp = self._do_split(app_with_writer, eid, bob, alice, 110, -10)
+        resp = self._do_split(app_with_writer, eid, bob, alice, 101)
         assert resp.status_code == 400
-        assert resp.json()["error"] == "invalid_amount"
+        assert resp.json()["error"] == "invalid_percentage"
 
     def test_missing_worker_account_id(self, app_with_writer: TestClient) -> None:
         """ESPL-16: Missing required field: worker_account_id."""
         resp = app_with_writer.post(
             "/bank/escrow/split",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": f"esc-{uuid4()}",
-                "worker_amount": 50,
                 "poster_account_id": f"a-{uuid4()}",
-                "poster_amount": 50,
+                "worker_pct": 50,
+                "source_reference": "split-missing-worker",
                 "worker_tx_id": f"tx-{uuid4()}",
                 "poster_tx_id": f"tx-{uuid4()}",
                 "resolved_at": "2026-02-28T11:00:00Z",

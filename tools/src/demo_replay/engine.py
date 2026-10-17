@@ -10,6 +10,8 @@ import httpx
 import yaml
 from rich.console import Console
 from rich.panel import Panel
+from service_auth.financial_identity import operation_id_for
+from service_auth.financial_responses import NativeFinancialEnvelope
 
 from demo_replay import clients
 from demo_replay.wallet import DemoAgent
@@ -160,15 +162,30 @@ class ReplayEngine:
     async def _do_fund(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         handle = step["agent"]
         amount = int(step["amount"])
+        reference = step.get("reference")
+        if not isinstance(reference, str) or reference == "":
+            msg = "fund step requires a nonempty reference"
+            raise ValueError(msg)
         agent = self.agents[handle]
         assert self.platform is not None
         assert agent.agent_id is not None
+        operation_id = operation_id_for("demo-funding", (agent.agent_id, reference))
         result = await clients.credit_account(
-            http, self.platform, agent.agent_id, amount, self._config.bank_url
+            http,
+            self.platform,
+            agent.agent_id,
+            amount,
+            bank_url=self._config.bank_url,
+            operation_id=operation_id,
+            reference=reference,
         )
+        envelope = NativeFinancialEnvelope.model_validate(result)
+        balance_after = envelope.receipt.result["balance_after"]
+        if type(balance_after) is not int:
+            raise RuntimeError("Funding receipt has an invalid balance_after")
         console.print(
             f"  [green]Funded {agent.name}[/green] +{amount} coins"
-            f" (balance: {result.get('balance_after', '?')})"
+            f" (balance: {balance_after}, operation_id: {envelope.receipt.operation_id})"
         )
 
     async def _do_post_task(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:

@@ -34,6 +34,8 @@ from central_bank_service.core.lifespan import lifespan
 from central_bank_service.core.state import get_app_state, reset_app_state
 from tests.fakes.in_memory_ledger_store import InMemoryLedgerStore
 
+from .conftest import make_operation_id
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from pathlib import Path
@@ -235,10 +237,17 @@ async def identity_up_nonplatform(
 async def test_platform_credit_succeeds_when_identity_down(identity_down: Any) -> None:
     """A platform-signed credit succeeds via local verification while Identity is down."""
     client, state, private_key = identity_down
-    await state.ledger.create_account("a-worker", 0)
+    await state.ledger.create_account("a-worker", 0, None)
 
+    operation_id = make_operation_id()
     token = create_jws(
-        {"action": "credit", "account_id": "a-worker", "amount": 50, "reference": "r-1"},
+        {
+            "action": "credit",
+            "account_id": "a-worker",
+            "amount": 50,
+            "reference": "r-1",
+            "operation_id": operation_id,
+        },
         private_key,
         kid=PLATFORM_ID,
         audience="central-bank",
@@ -248,20 +257,28 @@ async def test_platform_credit_succeeds_when_identity_down(identity_down: Any) -
     resp = await client.post("/accounts/a-worker/credit", json={"token": token})
 
     assert resp.status_code == 200
-    assert resp.json()["balance_after"] == 50
+    assert resp.json()["receipt"]["operation_id"] == operation_id
+    assert resp.json()["receipt"]["result"]["balance_after"] == 50
 
 
 @pytest.mark.unit
 async def test_platform_release_succeeds_when_identity_down(identity_down: Any) -> None:
     """A platform-signed escrow release succeeds via local verification while Identity is down."""
     client, state, private_key = identity_down
-    await state.ledger.create_account("a-payer", 100)
-    await state.ledger.create_account("a-worker", 0)
-    locked = await state.ledger.escrow_lock("a-payer", 40, "t-1")
-    escrow_id = locked["escrow_id"]
+    await state.ledger.create_account("a-payer", 100, make_operation_id())
+    await state.ledger.create_account("a-worker", 0, None)
+    locked = await state.ledger.escrow_lock("a-payer", 40, "t-1", make_operation_id())
+    escrow_id = locked["receipt"]["escrow_id"]
 
+    operation_id = make_operation_id()
     token = create_jws(
-        {"action": "escrow_release", "escrow_id": escrow_id, "recipient_account_id": "a-worker"},
+        {
+            "action": "escrow_release",
+            "escrow_id": escrow_id,
+            "recipient_account_id": "a-worker",
+            "operation_id": operation_id,
+            "source_reference": "task:t-1:approved",
+        },
         private_key,
         kid=PLATFORM_ID,
         audience="central-bank",
@@ -271,19 +288,21 @@ async def test_platform_release_succeeds_when_identity_down(identity_down: Any) 
     resp = await client.post(f"/escrow/{escrow_id}/release", json={"token": token})
 
     assert resp.status_code == 200
-    assert resp.json()["status"] == "released"
-    assert resp.json()["amount"] == 40
+    assert resp.json()["receipt"]["operation_id"] == operation_id
+    assert resp.json()["receipt"]["legs"][0]["amount"] == 40
+    assert resp.json()["current_escrow"]["status"] == "released"
 
 
 @pytest.mark.unit
 async def test_platform_split_succeeds_when_identity_down(identity_down: Any) -> None:
     """A platform-signed escrow split succeeds via local verification while Identity is down."""
     client, state, private_key = identity_down
-    await state.ledger.create_account("a-poster", 100)
-    await state.ledger.create_account("a-worker", 0)
-    locked = await state.ledger.escrow_lock("a-poster", 100, "t-2")
-    escrow_id = locked["escrow_id"]
+    await state.ledger.create_account("a-poster", 100, make_operation_id())
+    await state.ledger.create_account("a-worker", 0, None)
+    locked = await state.ledger.escrow_lock("a-poster", 100, "t-2", make_operation_id())
+    escrow_id = locked["receipt"]["escrow_id"]
 
+    operation_id = make_operation_id()
     token = create_jws(
         {
             "action": "escrow_split",
@@ -291,6 +310,8 @@ async def test_platform_split_succeeds_when_identity_down(identity_down: Any) ->
             "worker_account_id": "a-worker",
             "worker_pct": 40,
             "poster_account_id": "a-poster",
+            "operation_id": operation_id,
+            "source_reference": "task:t-2:ruling:r-one",
         },
         private_key,
         kid=PLATFORM_ID,
@@ -301,19 +322,26 @@ async def test_platform_split_succeeds_when_identity_down(identity_down: Any) ->
     resp = await client.post(f"/escrow/{escrow_id}/split", json={"token": token})
 
     assert resp.status_code == 200
-    assert resp.json()["worker_amount"] == 40
-    assert resp.json()["poster_amount"] == 60
+    assert resp.json()["receipt"]["operation_id"] == operation_id
+    assert resp.json()["receipt"]["legs"][0]["amount"] == 40
+    assert resp.json()["receipt"]["legs"][1]["amount"] == 60
 
 
 @pytest.mark.unit
 async def test_agent_escrow_lock_fails_cleanly_when_identity_down(identity_down: Any) -> None:
     """An agent op still routes via Identity and fails cleanly (502) when Identity is down."""
     client, state, _private_key = identity_down
-    await state.ledger.create_account("a-alice", 100)
+    await state.ledger.create_account("a-alice", 100, make_operation_id())
 
     agent_key = Ed25519PrivateKey.generate()
     token = create_jws(
-        {"action": "escrow_lock", "agent_id": "a-alice", "amount": 10, "task_id": "t-9"},
+        {
+            "action": "escrow_lock",
+            "agent_id": "a-alice",
+            "amount": 10,
+            "task_id": "t-9",
+            "operation_id": make_operation_id(),
+        },
         agent_key,
         kid="a-alice",
         audience="central-bank",
@@ -332,7 +360,7 @@ async def test_credit_invalid_signature_precedes_domain_payload(
 ) -> None:
     """A non-platform signature is forbidden before domain-field validation."""
     client, state = identity_up_nonplatform
-    await state.ledger.create_account("a-worker", 0)
+    await state.ledger.create_account("a-worker", 0, None)
 
     non_platform_key = Ed25519PrivateKey.generate()
     # "reference" missing → malformed payload.
@@ -354,11 +382,17 @@ async def test_credit_invalid_signature_precedes_domain_payload(
 async def test_credit_wellformed_nonplatform_is_forbidden(identity_down: Any) -> None:
     """A well-formed but non-platform-signed credit is rejected with 403 (local verify)."""
     client, state, _private_key = identity_down
-    await state.ledger.create_account("a-worker", 0)
+    await state.ledger.create_account("a-worker", 0, None)
 
     non_platform_key = Ed25519PrivateKey.generate()
     token = create_jws(
-        {"action": "credit", "account_id": "a-worker", "amount": 10, "reference": "r-2"},
+        {
+            "action": "credit",
+            "account_id": "a-worker",
+            "amount": 10,
+            "reference": "r-2",
+            "operation_id": make_operation_id(),
+        },
         non_platform_key,
         kid="a-eve",
         audience="central-bank",

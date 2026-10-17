@@ -33,16 +33,19 @@ steps:
   - action: fund
     agent: alice
     amount: 5000
+    reference: "demo:quick:fund:alice"
     delay: 1.5
 
   - action: fund
     agent: bob
     amount: 1000
+    reference: "demo:quick:fund:bob"
     delay: 1.0
 
   - action: fund
     agent: carol
     amount: 1000
+    reference: "demo:quick:fund:carol"
     delay: 1.5
 
   # ── Act 2: Happy path ────────────────────────────────────

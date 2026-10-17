@@ -19,6 +19,9 @@ from .test_two_tier_auth import PLATFORM_ID, identity_down
 
 __all__ = ["identity_down"]
 
+_OPERATION_ID = "op-00000000-0000-4000-8000-000000000071"
+_SOURCE_REFERENCE = "task:t-boundary:ruling:r-one"
+
 
 def _ledger_result(payload: dict[str, object]) -> AsyncMock:
     ledger = AsyncMock()
@@ -75,6 +78,8 @@ def _ledger_result(payload: dict[str, object]) -> AsyncMock:
                 "worker_account_id": "a-worker",
                 "poster_account_id": "a-poster",
                 "worker_pct": True,
+                "operation_id": _OPERATION_ID,
+                "source_reference": _SOURCE_REFERENCE,
             },
             "invalid_payload",
         ),
@@ -179,6 +184,8 @@ def _split_token(
             "worker_account_id": "a-worker",
             "worker_pct": worker_pct,
             "poster_account_id": "a-poster",
+            "operation_id": _OPERATION_ID,
+            "source_reference": _SOURCE_REFERENCE,
         },
         private_key,
         kid=kid,

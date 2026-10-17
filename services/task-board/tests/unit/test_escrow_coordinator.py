@@ -6,10 +6,19 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
+from service_auth.financial_identity import operation_id_for
 from service_commons.exceptions import ServiceError
 
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
 from tests.fakes.in_memory_task_store import InMemoryTaskStore as TaskStore
+
+_APPROVAL_OPERATION_ID = operation_id_for("task-settlement", ("t-1", "approved"))
+_APPROVAL_SOURCE_REFERENCE = "task:t-1:approved"
+_SPLIT_OPERATION_ID = operation_id_for(
+    "task-settlement",
+    ("t-1", "ruling", "ruling-1"),
+)
+_SPLIT_SOURCE_REFERENCE = "task:t-1:ruling:ruling-1"
 
 
 def _task_data(
@@ -56,11 +65,18 @@ async def test_release_escrow_success(tmp_path) -> None:
     mock_bank = AsyncMock()
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
 
-    await coordinator.release_escrow("esc-1", "a-recipient")
+    await coordinator.release_escrow(
+        "esc-1",
+        "a-recipient",
+        _APPROVAL_OPERATION_ID,
+        _APPROVAL_SOURCE_REFERENCE,
+    )
 
     mock_bank.escrow_release.assert_awaited_once_with(
         escrow_id="esc-1",
         recipient_account_id="a-recipient",
+        operation_id=_APPROVAL_OPERATION_ID,
+        source_reference=_APPROVAL_SOURCE_REFERENCE,
     )
     store.close()
 
@@ -75,7 +91,12 @@ async def test_release_escrow_service_error_propagates(tmp_path) -> None:
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
 
     with pytest.raises(ServiceError) as exc_info:
-        await coordinator.release_escrow("esc-1", "a-recipient")
+        await coordinator.release_escrow(
+            "esc-1",
+            "a-recipient",
+            _APPROVAL_OPERATION_ID,
+            _APPROVAL_SOURCE_REFERENCE,
+        )
 
     assert exc_info.value is expected
     store.close()
@@ -90,7 +111,12 @@ async def test_release_escrow_generic_error_wraps(tmp_path) -> None:
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
 
     with pytest.raises(ServiceError) as exc_info:
-        await coordinator.release_escrow("esc-1", "a-recipient")
+        await coordinator.release_escrow(
+            "esc-1",
+            "a-recipient",
+            _APPROVAL_OPERATION_ID,
+            _APPROVAL_SOURCE_REFERENCE,
+        )
 
     assert exc_info.value.error == "central_bank_unavailable"
     assert exc_info.value.status_code == 502
@@ -104,13 +130,22 @@ async def test_split_escrow_success(tmp_path) -> None:
     mock_bank = AsyncMock()
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
 
-    await coordinator.split_escrow("esc-1", "a-worker", "a-poster", 65)
+    await coordinator.split_escrow(
+        "esc-1",
+        "a-worker",
+        "a-poster",
+        65,
+        _SPLIT_OPERATION_ID,
+        _SPLIT_SOURCE_REFERENCE,
+    )
 
     mock_bank.escrow_split.assert_awaited_once_with(
         escrow_id="esc-1",
         worker_account_id="a-worker",
         poster_account_id="a-poster",
         worker_pct=65,
+        operation_id=_SPLIT_OPERATION_ID,
+        source_reference=_SPLIT_SOURCE_REFERENCE,
     )
     store.close()
 
@@ -125,7 +160,14 @@ async def test_split_escrow_service_error_propagates(tmp_path) -> None:
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
 
     with pytest.raises(ServiceError) as exc_info:
-        await coordinator.split_escrow("esc-1", "a-worker", "a-poster", 65)
+        await coordinator.split_escrow(
+            "esc-1",
+            "a-worker",
+            "a-poster",
+            65,
+            _SPLIT_OPERATION_ID,
+            _SPLIT_SOURCE_REFERENCE,
+        )
 
     assert exc_info.value is expected
     store.close()
@@ -140,7 +182,14 @@ async def test_split_escrow_generic_error_wraps(tmp_path) -> None:
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
 
     with pytest.raises(ServiceError) as exc_info:
-        await coordinator.split_escrow("esc-1", "a-worker", "a-poster", 65)
+        await coordinator.split_escrow(
+            "esc-1",
+            "a-worker",
+            "a-poster",
+            65,
+            _SPLIT_OPERATION_ID,
+            _SPLIT_SOURCE_REFERENCE,
+        )
 
     assert exc_info.value.error == "central_bank_unavailable"
     assert exc_info.value.status_code == 502
@@ -155,7 +204,7 @@ async def test_try_release_escrow_success(tmp_path) -> None:
     mock_bank = AsyncMock()
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
 
-    await coordinator.try_release_escrow("t-1", "esc-1", "a-recipient")
+    await coordinator.try_release_escrow("t-1", "expired", "esc-1", "a-recipient")
 
     updated = store.get_task("t-1")
     assert updated is not None
@@ -174,7 +223,7 @@ async def test_try_release_escrow_failure(tmp_path) -> None:
     )
     coordinator = EscrowCoordinator(central_bank_client=mock_bank, store=store)
 
-    await coordinator.try_release_escrow("t-1", "esc-1", "a-recipient")
+    await coordinator.try_release_escrow("t-1", "expired", "esc-1", "a-recipient")
 
     updated = store.get_task("t-1")
     assert updated is not None
@@ -212,6 +261,8 @@ async def test_retry_pending_escrow_expired_success(tmp_path) -> None:
     mock_bank.escrow_release.assert_awaited_once_with(
         escrow_id="esc-1",
         recipient_account_id="a-poster",
+        operation_id=operation_id_for("task-settlement", ("t-1", "expired")),
+        source_reference="task:t-1:expired",
     )
     assert result["escrow_pending"] == 0
     updated = store.get_task("t-1")
@@ -235,6 +286,8 @@ async def test_retry_pending_escrow_approved_success(tmp_path) -> None:
     mock_bank.escrow_release.assert_awaited_once_with(
         escrow_id="esc-1",
         recipient_account_id="a-worker",
+        operation_id=operation_id_for("task-settlement", ("t-1", "approved")),
+        source_reference="task:t-1:approved",
     )
     assert result["escrow_pending"] == 0
     updated = store.get_task("t-1")
