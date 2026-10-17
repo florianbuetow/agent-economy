@@ -292,6 +292,7 @@ async def seed_task(
     resp = await gateway_client.post(
         "/bank/accounts",
         json={
+            "operation_id": f"op-{uuid.uuid4()}",
             "account_id": poster_id,
             "created_at": "2026-03-01T09:00:00Z",
             "balance": 100,
@@ -316,6 +317,7 @@ async def seed_task(
     resp = await gateway_client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": f"op-{uuid.uuid4()}",
             "escrow_id": escrow_id,
             "payer_account_id": poster_id,
             "amount": 100,

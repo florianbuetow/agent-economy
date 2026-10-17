@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
-import httpx
 import pytest
 import pytest_asyncio
 
 from tests.integration.conftest import read_db, read_one
 from tests.integration.gateway_helpers import create_gateway_client
+
+if TYPE_CHECKING:
+    import httpx
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -34,13 +37,20 @@ def _identity_payload(agent_id: str, name: str) -> dict[str, object]:
 
 
 async def _setup_prerequisite_data(client: httpx.AsyncClient) -> str:
-    for agent_id, name in [("a-poster", "Poster"), ("a-worker", "Worker")]:
-        identity_response = await client.post("/identity/agents", json=_identity_payload(agent_id, name))
+    accounts = [
+        ("a-poster", "Poster", "op-00000000-0000-4000-8000-000000000301"),
+        ("a-worker", "Worker", "op-00000000-0000-4000-8000-000000000302"),
+    ]
+    for agent_id, name, operation_id in accounts:
+        identity_response = await client.post(
+            "/identity/agents", json=_identity_payload(agent_id, name)
+        )
         assert identity_response.status_code == 201
 
         account_response = await client.post(
             "/bank/accounts",
             json={
+                "operation_id": operation_id,
                 "account_id": agent_id,
                 "balance": 5000,
                 "created_at": "2026-03-02T05:30:01Z",
@@ -61,12 +71,18 @@ async def _setup_prerequisite_data(client: httpx.AsyncClient) -> str:
             },
         )
         assert account_response.status_code == 201
+        account_envelope = account_response.json()
+        assert account_envelope["outcome"] == "native_receipt"
+        assert account_envelope["receipt"]["operation_id"] == operation_id
+        assert account_envelope["receipt"]["result"]["balance_after"] == 5000
+        assert account_envelope["current_escrow"] is None
 
     task_id = "t-rep-001"
 
     lock_response = await client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": "op-00000000-0000-4000-8000-000000000303",
             "escrow_id": f"esc-{task_id}",
             "payer_account_id": "a-poster",
             "amount": 200,
@@ -85,6 +101,11 @@ async def _setup_prerequisite_data(client: httpx.AsyncClient) -> str:
         },
     )
     assert lock_response.status_code == 201
+    lock_envelope = lock_response.json()
+    assert lock_envelope["outcome"] == "native_receipt"
+    assert lock_envelope["receipt"]["operation_kind"] == "escrow_lock"
+    assert lock_envelope["receipt"]["source_reference"] == task_id
+    assert lock_envelope["current_escrow"]["status"] == "locked"
 
     task_response = await client.post(
         "/board/tasks",

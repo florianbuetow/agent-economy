@@ -7,7 +7,10 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from service_auth.financial_responses import (
+    LegacyFinancialEnvelope,
+    NativeFinancialEnvelope,
     parse_account_projection,
+    parse_financial_envelope,
     parse_native_financial_envelope,
     validate_operation_id,
 )
@@ -25,6 +28,40 @@ if TYPE_CHECKING:
     from service_auth.gateway import GatewayRequestSigner
 
 _logger = get_logger(__name__)
+
+
+def _log_credit_or_lock(result: dict[str, object]) -> None:
+    """Audit the authoritative outcome without assigning new ownership to history."""
+    if result["outcome"] == "legacy_observation":
+        historical = LegacyFinancialEnvelope.model_validate(result)
+        transaction = historical.observation.transaction
+        _logger.info(
+            "audit",
+            extra={
+                "operation": "legacy_observation",
+                "operation_kind": historical.attempt.operation_kind,
+                "operation_id": None,
+                "attempt_operation_id": historical.attempt.operation_id,
+                "account_id": transaction.account_id,
+                "amount": transaction.amount,
+                "reference": transaction.reference,
+                "tx_id": transaction.tx_id,
+            },
+        )
+        return
+    receipt = NativeFinancialEnvelope.model_validate(result).receipt
+    leg = receipt.legs[0]
+    extra: dict[str, object] = {
+        "operation": receipt.operation_kind,
+        "operation_id": receipt.operation_id,
+        "account_id": leg.account_id,
+        "amount": leg.amount,
+        "reference": receipt.source_reference,
+        "tx_id": leg.transaction_id,
+    }
+    if receipt.operation_kind == "escrow_lock":
+        extra.update(payer_account_id=leg.account_id, task_id=receipt.source_reference)
+    _logger.info("audit", extra=extra)
 
 
 def _require_utf8(value: str, field: str) -> str:
@@ -80,11 +117,15 @@ class LedgerDbClient:
         if exc.error in {
             "amount_out_of_range",
             "financial_operation_already_committed",
+            "historical_settlement_unreplayable",
             "invalid_amount",
             "invalid_financial_request",
             "invalid_operation_id",
+            "legacy_operation_conflict",
             "operation_id_conflict",
             "payload_mismatch",
+            "receipt_ownership_failed",
+            "receipt_ownership_missing",
         }:
             raise ServiceError(exc.error, exc.message, exc.status_code, exc.details) from exc
 
@@ -208,22 +249,13 @@ class LedgerDbClient:
                 ) from exc
             raise self._as_gateway_runtime_error(exc) from exc
 
-        result = parse_native_financial_envelope(
+        result = parse_financial_envelope(
             data,
             operation_id,
             "credit",
             {"account_id": account_id, "amount": amount, "reference": reference},
         )
-        _logger.info(
-            "audit",
-            extra={
-                "operation": "credit",
-                "account_id": account_id,
-                "amount": amount,
-                "reference": reference,
-                "operation_id": operation_id,
-            },
-        )
+        _log_credit_or_lock(result)
         return result
 
     async def get_transactions(self, account_id: str) -> list[dict[str, object]]:
@@ -284,7 +316,7 @@ class LedgerDbClient:
                 raise ServiceError("escrow_already_locked", exc.message, 409, {}) from exc
             raise self._as_gateway_runtime_error(exc) from exc
 
-        result = parse_native_financial_envelope(
+        result = parse_financial_envelope(
             data,
             operation_id,
             "escrow_lock",
@@ -294,18 +326,7 @@ class LedgerDbClient:
                 "amount": amount,
             },
         )
-        _logger.info(
-            "audit",
-            extra={
-                "operation": "escrow_lock",
-                "payer_account_id": payer_account_id,
-                "amount": amount,
-                "task_id": task_id,
-                "operation_id": operation_id,
-                "reference": task_id,
-                "tx_id": tx_id,
-            },
-        )
+        _log_credit_or_lock(result)
         return result
 
     async def escrow_release(

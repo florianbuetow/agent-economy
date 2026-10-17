@@ -11,7 +11,7 @@ import yaml
 from rich.console import Console
 from rich.panel import Panel
 from service_auth.financial_identity import operation_id_for
-from service_auth.financial_responses import NativeFinancialEnvelope
+from service_auth.financial_responses import LegacyFinancialEnvelope, NativeFinancialEnvelope
 
 from demo_replay import clients
 from demo_replay.wallet import DemoAgent
@@ -179,6 +179,14 @@ class ReplayEngine:
             operation_id=operation_id,
             reference=reference,
         )
+        if result["outcome"] == "legacy_observation":
+            legacy = LegacyFinancialEnvelope.model_validate(result)
+            raise RuntimeError(
+                "Demo funding received a historical observation "
+                f"(tx_id={legacy.observation.transaction.tx_id}, "
+                f"observed_fact_sha256={legacy.observation.observed_fact_sha256}); "
+                "no native operation confirmation was created"
+            )
         envelope = NativeFinancialEnvelope.model_validate(result)
         balance_after = envelope.receipt.result["balance_after"]
         if type(balance_after) is not int:

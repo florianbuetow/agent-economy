@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from service_auth.agent import BaseAgent
 from service_auth.financial_responses import (
     parse_account_projection,
+    parse_financial_envelope,
     parse_native_financial_envelope,
     validate_operation_id,
 )
@@ -117,7 +118,7 @@ class PlatformAgent(BaseAgent):
             resource=f"POST /accounts/{account_id}/credit",
         )
         response = await self._request("POST", url, json={"token": token})
-        return parse_native_financial_envelope(
+        return parse_financial_envelope(
             response,
             operation_id,
             "credit",

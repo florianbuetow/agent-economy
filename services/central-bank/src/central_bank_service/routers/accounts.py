@@ -6,6 +6,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from service_auth.financial_responses import (
     FinancialLeg,
+    LegacyCreditObservation,
+    LegacyFinancialEnvelope,
     NativeFinancialEnvelope,
     validate_operation_id,
 )
@@ -23,6 +25,37 @@ from central_bank_service.routers.helpers import (
 )
 
 router = APIRouter()
+
+
+def _log_credit_result(result: dict[str, object]) -> None:
+    if result.get("outcome") == "legacy_observation":
+        envelope = LegacyFinancialEnvelope.model_validate(result)
+        observation = envelope.observation
+        if not isinstance(observation, LegacyCreditObservation):
+            raise RuntimeError("Ledger returned an unexpected historical credit observation")
+        transaction = observation.transaction
+        get_logger(__name__).info(
+            "Historical credit observed",
+            extra={
+                "account_id": transaction.account_id,
+                "amount": transaction.amount,
+                "reference": transaction.reference,
+                "tx_id": transaction.tx_id,
+                "operation_id": None,
+                "attempt_operation_id": envelope.attempt.operation_id,
+            },
+        )
+        return
+    native, leg = _native_financial_result(result, "credit", "account")
+    get_logger(__name__).info(
+        "Account credited",
+        extra={
+            "account_id": leg.account_id,
+            "amount": leg.amount,
+            "reference": native.receipt.source_reference,
+            "operation_id": native.receipt.operation_id,
+        },
+    )
 
 
 def _native_financial_result(
@@ -235,16 +268,7 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
 
     result = await state.ledger.credit(account_id, amount, reference, operation_id)
 
-    envelope, leg = _native_financial_result(result, "credit", "account")
-    get_logger(__name__).info(
-        "Account credited",
-        extra={
-            "account_id": leg.account_id,
-            "amount": leg.amount,
-            "reference": envelope.receipt.source_reference,
-            "operation_id": envelope.receipt.operation_id,
-        },
-    )
+    _log_credit_result(result)
     return result
 
 

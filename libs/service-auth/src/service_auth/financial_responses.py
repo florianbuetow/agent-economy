@@ -34,7 +34,7 @@ class EscrowProjection(_StrictModel):
     task_id: str = Field(min_length=1)
     amount: int = Field(ge=1, le=SQLITE_MAX_INTEGER)
     status: Literal["locked", "released", "split"]
-    created_at: str = Field(min_length=1)
+    created_at: str
     resolved_at: str | None = Field(min_length=1)
 
 
@@ -65,6 +65,79 @@ class NativeFinancialEnvelope(_StrictModel):
     outcome: Literal["native_receipt"]
     receipt: NativeReceipt
     current_escrow: EscrowProjection | None
+
+
+class LegacyAttempt(_StrictModel):
+    operation_id: str = Field(
+        pattern=r"^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    )
+    operation_kind: Literal[
+        "account_issuance", "credit", "escrow_lock", "escrow_release", "escrow_split"
+    ]
+    request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class LegacyTransaction(_StrictModel):
+    tx_id: str = Field(min_length=1)
+    account_id: str = Field(min_length=1)
+    type: Literal["credit", "escrow_lock"]
+    amount: int = Field(ge=1, le=SQLITE_MAX_INTEGER)
+    balance_after: int = Field(ge=0, le=SQLITE_MAX_INTEGER)
+    reference: str = Field(min_length=1)
+    timestamp: str
+    event_id: int | None = Field(ge=-(1 << 63), le=SQLITE_MAX_INTEGER)
+
+
+class LegacyLockFact(_StrictModel):
+    escrow_id: str = Field(min_length=1)
+    payer_account_id: str = Field(min_length=1)
+    amount: int = Field(ge=1, le=SQLITE_MAX_INTEGER)
+    task_id: str = Field(min_length=1)
+    created_at: str
+    event_id: int | None = Field(ge=-(1 << 63), le=SQLITE_MAX_INTEGER)
+
+
+class LegacyResolutionFact(_StrictModel):
+    escrow_id: str = Field(min_length=1)
+    observed_status: Literal["released", "split"]
+    resolved_at: str | None
+    transaction_ids: list[str]
+
+
+class LegacyEscrowProjection(_StrictModel):
+    escrow_id: str = Field(min_length=1)
+    payer_account_id: str = Field(min_length=1)
+    task_id: str = Field(min_length=1)
+    amount: int = Field(ge=1, le=SQLITE_MAX_INTEGER)
+    status: Literal["locked", "released", "split"]
+    created_at: str
+    resolved_at: str | None
+
+
+class LegacyCreditObservation(_StrictModel):
+    operation_id: None
+    observed_kind: Literal["observed_credit"]
+    transaction: LegacyTransaction
+    observed_fact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class LegacyLockObservation(_StrictModel):
+    operation_id: None
+    observed_kind: Literal["observed_escrow_lock"]
+    transaction: LegacyTransaction
+    observed_fact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    escrow_lock: LegacyLockFact
+    observed_status: Literal["locked", "released", "split"]
+    lock_fact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    resolution_fact: LegacyResolutionFact | None
+    resolution_fact_sha256: str | None = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class LegacyFinancialEnvelope(_StrictModel):
+    outcome: Literal["legacy_observation"]
+    attempt: LegacyAttempt
+    observation: LegacyCreditObservation | LegacyLockObservation
+    current_escrow: LegacyEscrowProjection | None
 
 
 _RESULT_KEYS = {
@@ -108,6 +181,139 @@ def _canonical_hash(operation_kind: str, fields: Mapping[str, object]) -> str:
         allow_nan=False,
     ).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+def _fact_hash(value: object) -> str:
+    raw = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def parse_financial_envelope(
+    value: object,
+    expected_operation_id: str,
+    expected_operation_kind: str,
+    expected_business_fields: Mapping[str, object],
+) -> dict[str, object]:
+    """Validate either a native receipt or an attested historical observation."""
+    if isinstance(value, dict) and value.get("outcome") == "legacy_observation":
+        return _parse_historical_financial_envelope(
+            value,
+            expected_operation_id,
+            expected_operation_kind,
+            expected_business_fields,
+        )
+    return parse_native_financial_envelope(
+        value,
+        expected_operation_id,
+        expected_operation_kind,
+        expected_business_fields,
+    )
+
+
+def _parse_historical_financial_envelope(
+    value: object,
+    expected_operation_id: str,
+    expected_operation_kind: str,
+    expected_business_fields: Mapping[str, object],
+) -> dict[str, object]:
+    try:
+        envelope = LegacyFinancialEnvelope.model_validate(value)
+    except ValidationError as exc:
+        raise RuntimeError("Bank returned an invalid historical financial observation") from exc
+    if expected_operation_kind not in {"credit", "escrow_lock"}:
+        raise RuntimeError("Historical observations are unsupported for this financial operation")
+    attempt = envelope.attempt
+    if (
+        attempt.operation_id != expected_operation_id
+        or attempt.operation_kind != expected_operation_kind
+        or attempt.request_sha256
+        != _canonical_hash(expected_operation_kind, expected_business_fields)
+    ):
+        raise RuntimeError("Bank returned a mismatched historical financial attempt")
+    if expected_operation_kind == "credit":
+        _validate_historical_credit(envelope, expected_business_fields)
+    else:
+        _validate_historical_lock(envelope, expected_business_fields)
+    return envelope.model_dump(mode="json")
+
+
+def _validate_historical_credit(
+    envelope: LegacyFinancialEnvelope,
+    fields: Mapping[str, object],
+) -> None:
+    observation = envelope.observation
+    if not isinstance(observation, LegacyCreditObservation):
+        raise RuntimeError("Bank returned the wrong historical observation kind")
+    transaction = observation.transaction
+    valid = (
+        envelope.current_escrow is None
+        and transaction.type == "credit"
+        and transaction.account_id == fields["account_id"]
+        and transaction.amount == fields["amount"]
+        and transaction.reference == fields["reference"]
+        and observation.observed_fact_sha256 == _fact_hash(transaction.model_dump(mode="json"))
+    )
+    if not valid:
+        raise RuntimeError("Bank returned a historical credit inconsistent with the request")
+
+
+def _validate_historical_lock(
+    envelope: LegacyFinancialEnvelope,
+    fields: Mapping[str, object],
+) -> None:
+    observation = envelope.observation
+    current = envelope.current_escrow
+    if not isinstance(observation, LegacyLockObservation) or current is None:
+        raise RuntimeError("Bank returned the wrong historical observation kind")
+    transaction = observation.transaction
+    lock = observation.escrow_lock
+    valid = (
+        transaction.type == "escrow_lock"
+        and transaction.account_id == fields["payer_account_id"]
+        and transaction.account_id == lock.payer_account_id == current.payer_account_id
+        and transaction.amount == fields["amount"]
+        and transaction.amount == lock.amount == current.amount
+        and transaction.reference == fields["task_id"]
+        and transaction.reference == lock.task_id == current.task_id
+        and lock.escrow_id == current.escrow_id
+        and lock.created_at == current.created_at
+        and observation.observed_fact_sha256 == _fact_hash(transaction.model_dump(mode="json"))
+        and observation.lock_fact_sha256 == _fact_hash(lock.model_dump(mode="json"))
+        and _historical_resolution_is_valid(observation, current)
+    )
+    if not valid:
+        raise RuntimeError("Bank returned a historical lock inconsistent with the request")
+
+
+def _historical_resolution_is_valid(
+    observation: LegacyLockObservation,
+    current: LegacyEscrowProjection,
+) -> bool:
+    resolution = observation.resolution_fact
+    resolution_hash = observation.resolution_fact_sha256
+    if observation.observed_status == "locked":
+        return resolution is None and resolution_hash is None
+    if resolution is None or resolution_hash is None:
+        return False
+    transaction_ids = resolution.transaction_ids
+    expected_counts = {1} if observation.observed_status == "released" else {1, 2}
+    return (
+        current.status == observation.observed_status
+        and resolution.escrow_id == observation.escrow_lock.escrow_id
+        and resolution.observed_status == observation.observed_status
+        and resolution.resolved_at == current.resolved_at
+        and all(transaction_ids)
+        and transaction_ids == sorted(transaction_ids)
+        and len(transaction_ids) == len(set(transaction_ids))
+        and len(transaction_ids) in expected_counts
+        and resolution_hash == _fact_hash(resolution.model_dump(mode="json"))
+    )
 
 
 def _strict_result(receipt: NativeReceipt) -> None:
@@ -210,6 +416,7 @@ def _validate_business_semantics(
         valid = (
             terminal_time_valid
             and projection is not None
+            and _valid_utf8_text(projection.created_at, allow_empty=False)
             and receipt.source_reference == fields["task_id"]
             and projection.payer_account_id == fields["payer_account_id"]
             and projection.task_id == fields["task_id"]
@@ -222,6 +429,7 @@ def _validate_business_semantics(
     elif kind == "escrow_release":
         valid = (
             projection is not None
+            and _valid_utf8_text(projection.created_at, allow_empty=True)
             and projection.status == "released"
             and projection.resolved_at is not None
             and receipt.escrow_id == fields["escrow_id"]
@@ -239,6 +447,7 @@ def _validate_business_semantics(
         poster_amount = 0 if projection is None else projection.amount - worker_amount
         valid = (
             projection is not None
+            and _valid_utf8_text(projection.created_at, allow_empty=True)
             and projection.status == "split"
             and projection.resolved_at is not None
             and receipt.escrow_id == fields["escrow_id"]
@@ -255,6 +464,16 @@ def _validate_business_semantics(
         )
     if not valid:
         raise RuntimeError("Gateway returned a receipt inconsistent with the requested command")
+
+
+def _valid_utf8_text(value: str, *, allow_empty: bool) -> bool:
+    if not allow_empty and not value:
+        return False
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
 
 
 def _leg_matches(

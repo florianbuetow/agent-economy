@@ -1,6 +1,55 @@
 # Active implementation checkpoint
 
+## Historical implementation — latest continuation
+
+Read `mp04-receipts/history-checkpoint-2026-10-17.md` for current evidence and limitations.
+The SDK/client/funding, Bank propagation and Gateway history implementation are independently
+approved. Gateway raw-ID and overlapping-lock-transaction ownership HIGHs were repaired after5
+genuine reds; history32 and native/router52 pass. No schema/migration changes. Public native
+settlement over empty historical creation time is repaired and approved; public history8/native13
+pass, agent SDK reconciliation92 passes. Parent combined cross-service26 and Bank integration24
+pass. Supplemental Task Board legacy posting guards pass without inserting/refunding old funds.
+
+**ROOT16 TERMINAL1:** parent session63802 exited1 in per-service integration after every library
+and service component CI passed. Exactly two setup failures omitted operation IDs: Task Board
+integration test_endpoints.py and Court integration/conftest.py. Parent added explicit IDs and
+replaced Task Board's flat lock mock with the actual seeded Gateway receipt. Focused suites2+1
+pass and Ruff/format pass; independent review is pending. Root log:
+`/private/tmp/agent-economy-mp04-root16-ci.log`. Before/after snapshots both contain929 identical
+source/config hashes. Cleanup manifest and fresh signal-0 checks confirm all9 owned groups absent:
+`/private/tmp/agent-economy-mp04-root16-cleanup.json`. Do not poll or restart root16.
+The rest of the root gate (agents/tools/runtime/browser/economy phases) was not reached by this run.
+The two integration fixture repairs are independently approved. The separate economy baseline
+session9986 is terminal1 (70 failed/19 passed/five setup errors), predominantly missing SDK operation
+IDs in old E2E callers. All ten owned groups are absent; log and cleanup are
+`/private/tmp/agent-economy-mp04-economy-baseline.log` and `-cleanup.json`.
+`/root/mp04_client_contracts` owns only agents/tests/e2e reconciliation; those active edits remain
+unverified and must not be included in a reviewed checkpoint yet. **LIVE UI browser run:** parent
+session87724, `/private/tmp/agent-economy-mp04-ui-e2e.log`. Poll the same handle; do not restart it.
+The full goal and MP-04 tickets stay open. A local historical implementation WIP checkpoint is being
+prepared; last existing commit is `96e3922`, with no push. Later notes below are superseded here.
+
 ## Current continuation — 2026-10-17 (supersedes historical state below)
+
+New local WIP checkpoint: `96e3922`, committed Saturday 2026-10-17 at 17:54:17 CEST after verifying
+the weekend permission and local time. It contains the reviewed native integration, contract
+reconciliation and evidence (111 files). No push was performed. The two NEW historical test files
+were deliberately excluded and remain uncommitted; no historical production code is implemented.
+The initial SDK history suite had three positive-case failures and27 rejection controls, reproduced
+by parent session83766 (terminal1) in `/private/tmp/agent-economy-mp04-legacy-sdk-parent-red.log`.
+Independent review found that one positive terminal-release fixture incorrectly listed two release
+transactions; that one failure is NOT valid product-red evidence. The author is correcting it,
+adding a truthful split case, unsupported-kind controls and missing strictness vectors before
+implementation. Keep this initial log historical and use the corrected red evidence when ready.
+The Gateway history suite has15 genuine product reds and one valid-cutover unowned-effect control;
+owner log `/private/tmp/agent-economy-mp04-legacy-observations-red-final.log`. Parent independently
+reproduced15 failures/1 control in session59392 (terminal1), log
+`/private/tmp/agent-economy-mp04-legacy-observations-parent-red.log`. It uses real v0→v1 and
+verified-backup v1→v2 migration and the public DbWriter command boundary, not HTTP. Both new test
+files received review requests: SDK fixture/coverage corrections above, and exact safe conflict
+detail assertions in Gateway tests. The test authors own only those NEW files. Production
+implementation must wait for re-review. Public Bank/Gateway HTTP propagation proof remains
+required afterward.
 
 Latest verified state: shared SDK parser, shared BankClient response validation, Bank financial
 logging and exact ruling replay have independent approvals. Final parent auth, agents, shared-client
@@ -19,7 +68,8 @@ change is planned. `/root/mp04_memory_ledger` now owns NEW Gateway historical ob
 `/root/mp04_client_contracts` owns NEW service-auth legacy consumer tests. Both lanes are tests-only
 and must capture genuine red before implementation. Historical production support is NOT written.
 History implementation, remaining callers, cross-service/live integration and fresh root CI remain
-unfinished. No Git mutations in this continuation. All parent command sessions are terminal.
+unfinished. The local checkpoint is recorded above; nothing was pushed. All parent CI and focused-test
+sessions are terminal. Historical test corrections and their independent re-review are pending.
 
 - The active objective is the full Core and Vision continuation in
   `/Users/flo/.codex/attachments/e384874c-31cb-47e6-ba87-0d9a0be71ee8/pasted-text-1.txt`.

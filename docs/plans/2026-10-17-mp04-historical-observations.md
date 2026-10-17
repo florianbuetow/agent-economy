@@ -69,9 +69,17 @@ history. Global native operation-ID replay/conflict checks still run before natu
 | Valid cutover set, but the selected effect has neither native ownership nor a legacy marker | 500 `receipt_ownership_missing` |
 | Failed cutover/fact verification, overlapping ownership or unsupported historical storage | 500 `receipt_ownership_failed` |
 
-Historical conflicts expose `winning_operation_id: null` plus safe marker facts: observed kind,
-transaction/escrow IDs and their fact hashes, cutover status and nullable resolution hash as
-applicable. They never invent recipients, percentage, source reference or an original request hash.
+Historical conflicts have exact safe detail keys:
+
+| Conflict | Exact detail keys |
+| --- | --- |
+| Changed credit | `winning_operation_id`, `observed_kind`, `tx_id`, `observed_fact_sha256` |
+| Changed lock | `winning_operation_id`, `observed_kind`, `tx_id`, `observed_fact_sha256`, `escrow_id`, `observed_status`, `lock_fact_sha256`, `resolution_fact_sha256` |
+| Historical terminal settlement | `winning_operation_id`, `escrow_id`, `observed_status`, `lock_fact_sha256`, `resolution_fact_sha256` |
+
+`winning_operation_id` is always null in these historical conflicts. Other values are the actual
+safe marker facts, including nullable resolution hash. Do not add recipients, percentage, source
+reference, caller operation identity or an original request hash to these detail objects.
 Observations and conflicts leave accounts, ledger, escrow, events, receipts, legs, markers and
 cutover rows unchanged; candidate IDs prepared by the Bank are discarded.
 
@@ -101,6 +109,8 @@ attestation remains outside the previously documented integrity threat model.
 For historical terminal resolution, require all named release transactions to retain their legacy
 ownership and no native legs. For a historical lock resolved later, require exactly one native
 settlement owner and no historical resolution owner. Both owners or neither is corruption.
+Resolution transaction IDs are sorted and unique. A historical `released` escrow has exactly one
+positive release transaction; a `split` has one or two, according to its nonzero allocations.
 
 ## Preserve admitted historical types
 
@@ -118,6 +128,20 @@ Unsupported raw storage (such as a BLOB time or text event ID) is a corruption r
 boundary, even if an older migration attested it. Do not use `str()`/`int()`, substitute times or
 IDs, widen wire fields to arbitrary objects, or modify the frozen migration to hide the issue.
 Every emitted fact must reproduce its marker hash without normalization.
+
+### New settlements over historical escrows
+
+A native release/split receipt can settle an attested historical lock. Its current projection's
+`created_at` is the original lock creation value, not the new settlement time, so it must preserve
+an admitted empty historical string. The native receipt's `committed_at` and new resolution time
+remain nonempty. A native lock receipt cannot represent historical lock ownership and therefore
+still requires a nonempty creation time. Apply this distinction in native semantic validation;
+do not fabricate a creation time, add an origin flag, or relax identity/monetary rules.
+
+The earlier isolated SDK negative that rejected empty creation time on every release projection
+did not account for this valid mixed historical/native case. Reconcile that case to reject invalid
+types/UTF-8, retain the native-lock empty-time rejection, and add real migrated public settlement
+proof plus direct native release/split controls before implementing the contextual rule.
 
 ## Consumer and proof sequence
 

@@ -6,6 +6,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from service_auth.financial_responses import (
     FinancialLeg,
+    LegacyFinancialEnvelope,
+    LegacyLockObservation,
     NativeFinancialEnvelope,
     NativeReceipt,
     validate_operation_id,
@@ -22,6 +24,38 @@ from central_bank_service.routers.helpers import (
 )
 
 router = APIRouter()
+
+
+def _log_lock_result(result: dict[str, object]) -> None:
+    if result.get("outcome") == "legacy_observation":
+        envelope = LegacyFinancialEnvelope.model_validate(result)
+        observation = envelope.observation
+        if not isinstance(observation, LegacyLockObservation):
+            raise RuntimeError("Ledger returned an unexpected historical lock observation")
+        get_logger(__name__).info(
+            "Historical escrow lock observed",
+            extra={
+                "escrow_id": observation.escrow_lock.escrow_id,
+                "payer_account_id": observation.escrow_lock.payer_account_id,
+                "amount": observation.escrow_lock.amount,
+                "task_id": observation.escrow_lock.task_id,
+                "tx_id": observation.transaction.tx_id,
+                "operation_id": None,
+                "attempt_operation_id": envelope.attempt.operation_id,
+            },
+        )
+        return
+    receipt, legs = _native_escrow_result(result, "escrow_lock", ("payer",))
+    get_logger(__name__).info(
+        "Escrow locked",
+        extra={
+            "escrow_id": receipt.escrow_id,
+            "payer_account_id": legs[0].account_id,
+            "amount": legs[0].amount,
+            "task_id": receipt.source_reference,
+            "operation_id": receipt.operation_id,
+        },
+    )
 
 
 def _native_escrow_result(
@@ -121,18 +155,7 @@ async def escrow_lock(request: Request) -> JSONResponse:
 
     result = await state.ledger.escrow_lock(agent_id, amount, task_id, operation_id)
 
-    receipt, legs = _native_escrow_result(result, "escrow_lock", ("payer",))
-    payer_leg = legs[0]
-    get_logger(__name__).info(
-        "Escrow locked",
-        extra={
-            "escrow_id": receipt.escrow_id,
-            "payer_account_id": payer_leg.account_id,
-            "amount": payer_leg.amount,
-            "task_id": receipt.source_reference,
-            "operation_id": receipt.operation_id,
-        },
-    )
+    _log_lock_result(result)
     return JSONResponse(status_code=201, content=result)
 
 

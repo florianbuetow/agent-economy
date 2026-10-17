@@ -5,7 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol
 
 from service_auth import parse_jws
-from service_auth.financial_responses import parse_native_financial_envelope
+from service_auth.financial_responses import (
+    parse_financial_envelope,
+    parse_native_financial_envelope,
+)
 from service_commons.exceptions import ServiceError
 
 from service_clients.base import BaseServiceClient
@@ -60,7 +63,7 @@ class BankClient(BaseServiceClient):
             response_body = self._response_dict(response)
             try:
                 operation_id, business_fields = self._lock_expectations(escrow_token)
-                return parse_native_financial_envelope(
+                return parse_financial_envelope(
                     response_body,
                     operation_id,
                     "escrow_lock",

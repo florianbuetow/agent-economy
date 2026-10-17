@@ -15,6 +15,7 @@ from db_gateway_service.services.financial_records import (
     missing_ownership,
     ownership_conflict,
 )
+from db_gateway_service.services.legacy_financial_records import LegacyFinancialRecords
 
 if TYPE_CHECKING:
     from db_gateway_service.financial_requests import FinancialRequest
@@ -77,6 +78,7 @@ class BankWriter:
     def __init__(self, writer: DbWriter) -> None:
         self._writer = writer
         self._records = FinancialRecords()
+        self._legacy = LegacyFinancialRecords()
 
     def create_account(self, data: dict[str, Any]) -> dict[str, Any]:
         _validate_initial_issuance(data)
@@ -222,10 +224,15 @@ class BankWriter:
                 return replay
             existing = self._lookup_credit_tx(data["account_id"], data["reference"])
             if existing is not None:
-                winner = self._records.credit_winner(cursor, data["account_id"], data["reference"])
-                if winner is None:
-                    raise missing_ownership("credit", str(existing["tx_id"]))
-                raise ownership_conflict(winner)
+                observation = self._legacy.credit_collision(
+                    cursor,
+                    operation_id,
+                    request,
+                    existing["tx_id"],
+                    amount,
+                )
+                db.rollback()
+                return observation
             self._credit_balance(cursor, data["account_id"], amount)
             event_id = insert_event(cursor, data["event"])
             cursor.execute(
@@ -304,12 +311,15 @@ class BankWriter:
                 return replay
             existing = self._lookup_escrow(data["payer_account_id"], data["task_id"])
             if existing is not None:
-                winner = self._records.lock_winner(
-                    cursor, data["payer_account_id"], data["task_id"]
+                observation = self._legacy.lock_collision(
+                    cursor,
+                    operation_id,
+                    request,
+                    existing["escrow_id"],
+                    amount,
                 )
-                if winner is None:
-                    raise missing_ownership("escrow", str(existing["escrow_id"]))
-                raise ownership_conflict(winner)
+                db.rollback()
+                return observation
             cursor.execute(
                 "UPDATE bank_accounts SET balance = balance - ? "
                 "WHERE account_id = ? AND balance >= ?",
@@ -416,6 +426,7 @@ class BankWriter:
             if replay is not None:
                 db.rollback()
                 return replay
+            self._legacy.admit_settlement(cursor, data["escrow_id"])
             escrow = self._load_escrow_for_settlement(cursor, data["escrow_id"])
             self._credit_balance(cursor, data["recipient_account_id"], escrow["amount"])
             event_id = insert_event(cursor, data["event"])
@@ -491,6 +502,7 @@ class BankWriter:
             if replay is not None:
                 db.rollback()
                 return replay
+            self._legacy.admit_settlement(cursor, data["escrow_id"])
             escrow = self._load_escrow_for_settlement(cursor, data["escrow_id"])
             if data["poster_account_id"] != escrow["payer_account_id"]:
                 raise ServiceError("payload_mismatch", "Poster is not the escrow payer", 400, {})

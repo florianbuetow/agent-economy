@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 from task_board_service.core.state import get_app_state
 from tests.integration.conftest import make_jws_token, register_identity_agent
@@ -59,7 +60,7 @@ async def _seed_funded_escrow(
     amount: int,
     task_id: str,
     escrow_id: str,
-) -> None:
+) -> dict[str, object]:
     """Seed the real gateway rows a task creation's FKs require: an identity
     agent, a funded bank account, and a locked bank_escrow row — everything
     the mocked BankClient's escrow_lock() would have produced against a real
@@ -68,6 +69,7 @@ async def _seed_funded_escrow(
     resp = await gateway_client.post(
         "/bank/accounts",
         json={
+            "operation_id": f"op-{uuid.uuid4()}",
             "account_id": payer_id,
             "created_at": "2026-03-01T09:00:00Z",
             "balance": amount,
@@ -92,6 +94,7 @@ async def _seed_funded_escrow(
     resp = await gateway_client.post(
         "/bank/escrow/lock",
         json={
+            "operation_id": operation_id_for("task-lock", (task_id, payer_id)),
             "escrow_id": escrow_id,
             "payer_account_id": payer_id,
             "amount": amount,
@@ -109,15 +112,16 @@ async def _seed_funded_escrow(
         },
     )
     assert resp.status_code == 201, resp.text
+    result = resp.json()
+    assert isinstance(result, dict)
+    assert result["outcome"] == "native_receipt"
+    return result
 
 
-def _mock_escrow_lock_returns(escrow_id: str) -> None:
-    """Point the mocked BankClient's escrow_lock() at a specific, pre-seeded
-    escrow_id so board_tasks.escrow_id resolves against a real bank_escrow row."""
+def _mock_escrow_lock_returns(envelope: dict[str, object]) -> None:
+    """Return the actual seeded lock receipt from the mocked Bank boundary."""
     state = get_app_state()
-    state.central_bank_client.escrow_lock = AsyncMock(
-        return_value={"escrow_id": escrow_id, "status": "locked"}
-    )
+    state.central_bank_client.escrow_lock = AsyncMock(return_value=envelope)
     if state.escrow_coordinator is not None:
         state.escrow_coordinator._central_bank_client = state.central_bank_client
 
@@ -139,10 +143,10 @@ class TestTaskLifecycleGatewayBacked:
         escrow_id = f"esc-{uuid.uuid4()}"
 
         await register_identity_agent(gateway_client, worker_id)
-        await _seed_funded_escrow(
+        escrow_result = await _seed_funded_escrow(
             gateway_client, payer_id=poster_id, amount=100, task_id=task_id, escrow_id=escrow_id
         )
-        _mock_escrow_lock_returns(escrow_id)
+        _mock_escrow_lock_returns(escrow_result)
 
         task_payload = {
             "action": "create_task",
@@ -158,6 +162,7 @@ class TestTaskLifecycleGatewayBacked:
         task_token = make_jws_token(poster_keypair[0], poster_id, task_payload)
         escrow_payload = {
             "action": "escrow_lock",
+            "operation_id": operation_id_for("task-lock", (task_id, poster_id)),
             "task_id": task_id,
             "agent_id": poster_id,
             "amount": 100,

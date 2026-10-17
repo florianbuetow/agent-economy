@@ -20,6 +20,7 @@ import logging
 import sys
 
 import httpx
+from service_auth.financial_responses import LegacyFinancialEnvelope
 
 from base_agent.factory import AgentFactory
 
@@ -87,6 +88,14 @@ async def _fund(amount: int, operation_id: str, reference: str) -> None:
             reference=reference,
             operation_id=operation_id,
         )
+        if result["outcome"] == "legacy_observation":
+            legacy = LegacyFinancialEnvelope.model_validate(result)
+            raise RuntimeError(
+                "Feeder funding received a historical observation "
+                f"(tx_id={legacy.observation.transaction.tx_id}, "
+                f"observed_fact_sha256={legacy.observation.observed_fact_sha256}); "
+                "no native operation confirmation was created"
+            )
         receipt = result["receipt"]
         if (
             result["outcome"] != "native_receipt"

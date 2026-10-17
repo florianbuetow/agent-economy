@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
-import httpx
 import pytest
 import pytest_asyncio
 
 from tests.integration.conftest import read_db, read_one
 from tests.integration.gateway_helpers import create_gateway_client
+
+if TYPE_CHECKING:
+    import httpx
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -56,6 +59,7 @@ class TestBankGatewayWrites:
         initialized_db: str,
     ) -> None:
         payload = {
+            "operation_id": "op-00000000-0000-4000-8000-000000000001",
             "account_id": "a-alice",
             "balance": 1000,
             "created_at": "2026-03-02T06:23:00Z",
@@ -77,6 +81,27 @@ class TestBankGatewayWrites:
 
         response = await gw_client.post("/bank/accounts", json=payload)
         assert response.status_code == 201
+        envelope = response.json()
+        assert envelope["outcome"] == "native_receipt"
+        assert envelope["receipt"]["operation_id"] == payload["operation_id"]
+        assert envelope["receipt"]["operation_kind"] == "account_issuance"
+        assert envelope["receipt"]["source_reference"] == "initial_balance"
+        assert envelope["receipt"]["result"] == {
+            "account_id": "a-alice",
+            "issued_amount": 1000,
+            "balance_after": 1000,
+        }
+        assert envelope["receipt"]["legs"] == [
+            {
+                "role": "account",
+                "account_id": "a-alice",
+                "direction": "credit",
+                "amount": 1000,
+                "transaction_id": "tx-init-001",
+                "balance_after": 1000,
+            }
+        ]
+        assert envelope["current_escrow"] is None
 
         account = read_one(
             initialized_db,
@@ -125,6 +150,7 @@ class TestBankGatewayWrites:
         credit_response = await gw_client.post(
             "/bank/credit",
             json={
+                "operation_id": "op-00000000-0000-4000-8000-000000000002",
                 "tx_id": "tx-credit-001",
                 "account_id": "a-alice",
                 "amount": 500,
@@ -141,6 +167,21 @@ class TestBankGatewayWrites:
             },
         )
         assert credit_response.status_code == 200
+        credit_envelope = credit_response.json()
+        assert credit_envelope["outcome"] == "native_receipt"
+        assert (
+            credit_envelope["receipt"]["operation_id"] == "op-00000000-0000-4000-8000-000000000002"
+        )
+        assert credit_envelope["receipt"]["operation_kind"] == "credit"
+        assert credit_envelope["receipt"]["source_reference"] == "salary_round_1"
+        assert credit_envelope["receipt"]["result"] == {
+            "account_id": "a-alice",
+            "amount": 500,
+            "balance_after": 500,
+            "reference": "salary_round_1",
+        }
+        assert credit_envelope["receipt"]["legs"][0]["transaction_id"] == "tx-credit-001"
+        assert credit_envelope["current_escrow"] is None
 
         tx = read_one(
             initialized_db,
@@ -184,6 +225,7 @@ class TestBankGatewayWrites:
                 },
             }
             if tx_id is not None:
+                payload["operation_id"] = "op-00000000-0000-4000-8000-000000000003"
                 payload["initial_credit"] = {
                     "tx_id": tx_id,
                     "amount": balance,
@@ -196,6 +238,7 @@ class TestBankGatewayWrites:
         lock_response = await gw_client.post(
             "/bank/escrow/lock",
             json={
+                "operation_id": "op-00000000-0000-4000-8000-000000000004",
                 "escrow_id": "esc-001",
                 "payer_account_id": "a-alice",
                 "amount": 200,
@@ -214,15 +257,23 @@ class TestBankGatewayWrites:
             },
         )
         assert lock_response.status_code == 201
+        lock_envelope = lock_response.json()
+        assert lock_envelope["outcome"] == "native_receipt"
+        assert lock_envelope["receipt"]["operation_kind"] == "escrow_lock"
+        assert lock_envelope["receipt"]["source_reference"] == "t-task-001"
+        assert lock_envelope["receipt"]["result"] == {"escrow_status_at_commit": "locked"}
+        assert lock_envelope["receipt"]["legs"][0]["amount"] == 200
+        assert lock_envelope["current_escrow"]["status"] == "locked"
 
         release_response = await gw_client.post(
             "/bank/escrow/release",
             json={
+                "operation_id": "op-00000000-0000-4000-8000-000000000005",
                 "escrow_id": "esc-001",
                 "recipient_account_id": "a-bob",
+                "source_reference": "task:t-task-001:approved",
                 "tx_id": "tx-escrow-release-001",
                 "resolved_at": "2026-03-02T06:28:00Z",
-                "constraints": {"status": "locked"},
                 "event": {
                     "event_source": "bank",
                     "event_type": "escrow.released",
@@ -233,6 +284,13 @@ class TestBankGatewayWrites:
             },
         )
         assert release_response.status_code == 200
+        release_envelope = release_response.json()
+        assert release_envelope["outcome"] == "native_receipt"
+        assert release_envelope["receipt"]["operation_kind"] == "escrow_release"
+        assert release_envelope["receipt"]["source_reference"] == "task:t-task-001:approved"
+        assert release_envelope["receipt"]["result"] == {"escrow_status_at_commit": "released"}
+        assert release_envelope["receipt"]["legs"][0]["amount"] == 200
+        assert release_envelope["current_escrow"]["status"] == "released"
 
         release_escrow = read_one(
             initialized_db,
@@ -247,6 +305,7 @@ class TestBankGatewayWrites:
         lock_response_2 = await gw_client.post(
             "/bank/escrow/lock",
             json={
+                "operation_id": "op-00000000-0000-4000-8000-000000000006",
                 "escrow_id": "esc-002",
                 "payer_account_id": "a-alice",
                 "amount": 100,
@@ -269,15 +328,15 @@ class TestBankGatewayWrites:
         split_response = await gw_client.post(
             "/bank/escrow/split",
             json={
+                "operation_id": "op-00000000-0000-4000-8000-000000000007",
                 "escrow_id": "esc-002",
                 "worker_account_id": "a-bob",
                 "poster_account_id": "a-alice",
-                "worker_amount": 70,
-                "poster_amount": 30,
+                "worker_pct": 70,
+                "source_reference": "task:t-task-002:ruling:ruling-002",
                 "worker_tx_id": "tx-split-worker-002",
                 "poster_tx_id": "tx-split-poster-002",
                 "resolved_at": "2026-03-02T06:30:00Z",
-                "constraints": {"status": "locked"},
                 "event": {
                     "event_source": "bank",
                     "event_type": "escrow.split",
@@ -290,6 +349,16 @@ class TestBankGatewayWrites:
             },
         )
         assert split_response.status_code == 200
+        split_envelope = split_response.json()
+        assert split_envelope["outcome"] == "native_receipt"
+        assert split_envelope["receipt"]["operation_kind"] == "escrow_split"
+        assert split_envelope["receipt"]["source_reference"] == "task:t-task-002:ruling:ruling-002"
+        assert split_envelope["receipt"]["result"] == {
+            "escrow_status_at_commit": "split",
+            "worker_pct": 70,
+        }
+        assert [leg["amount"] for leg in split_envelope["receipt"]["legs"]] == [70, 30]
+        assert split_envelope["current_escrow"]["status"] == "split"
 
         split_escrow = read_one(
             initialized_db,
