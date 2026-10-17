@@ -1,30 +1,38 @@
 # Database Gateway Service — API Specification
 
-## MP-04 receipt contract amendment (implementation in progress)
+## MP-04 receipt contract amendment
 
 The [2026-10-16 financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md)
-supersedes the financial command and flat-response shapes below. The Bank capability must supply
+defines the implemented financial command and response shapes below. The Bank capability supplies
 explicit operation IDs; settlement adds a stable source reference. Split supplies `worker_pct`,
 and Gateway calculates exact shares from the stored escrow. Caller-provided financial constraints
 and split amounts are removed: Gateway owns the locked-state precondition. Receipt, positive
 ledger legs, event and money mutation commit atomically. Schema v2 requires its own explicit,
 verified-backup-bound migration; v1 and the v0-to-v1 migration remain frozen reference contracts.
 Historical observations must cover precisely the attested cutover set. Missing native receipts
-are corruption, never automatically classified as history. This amendment is not a completion claim.
+are corruption, never automatically classified as history. Implementation and bounded independent
+review are complete; root19 exit0 and the final evidence audit close T-116/T-117.
 
 ## Purpose
 
 The Database Gateway is the persistence layer for the Agent Task Economy. It owns the shared `economy.db` SQLite database and is the only process that writes to it. All other services send structured write requests to the gateway, which executes them atomically within SQLite transactions, and read through the gateway's **blessed read API** — one `GET` route per query the rest of the system actually needs, mirroring the write side's one-endpoint-per-operation design (the single exception is the UI service's direct read-only SQLite connection, see §2.2/Q-4 of the target-architecture plan; that is a documented exception, not a second gateway).
 
-Domain services still own their business rules. They validate agent/user authority and decide state transitions; the gateway separately authenticates each calling service and authorizes its persistence capability before translating the structured request into SQL. What the gateway adds beyond service admission and raw INSERT/UPDATE/SELECT is real state enforcement in the form of optional `constraints` (compare-and-set) on several write endpoints — see "Compare-and-Set Constraints (`constraints`)" below.
+Domain services own agent/user authority and lifecycle decisions. The gateway separately
+authenticates each calling service and authorizes its persistence capability. It also owns the
+implemented financial receipt/replay boundary, exact split calculation, and locked-state settlement
+predicate. Nonfinancial writers may use optional compare-and-set `constraints`; see that section.
 
 ## Core Principles
 
 - **Service capability admission, not agent authorization.** The gateway validates a locally trusted service JWS and a per-route capability before any handler effect. It does not validate economic-agent credentials or independently decide the task/dispute state machine; those decisions remain with the calling service.
-- **Database constraints are the safety net.** Foreign key violations and unique constraint violations are caught (via `sqlite3`'s structured `exc.sqlite_errorcode`, never message-substring matching) and returned as structured errors. The gateway does not duplicate constraint logic in application code beyond the `constraints` mechanism above.
+- **Database constraints are the safety net.** Foreign key and unique violations are caught through
+  SQLite's structured error codes and returned as structured errors. Financial ownership also uses
+  explicit receipt/leg/observation checks in the writer; nonfinancial compare-and-set remains explicit.
 - **Every write includes an event.** Every mutating endpoint accepts an `event` object in the request body. The gateway inserts the domain write and the event row in the same transaction. No write exists without its corresponding event — this now includes `DELETE /court/rulings/{claim_id}` and `POST /court/claims/{claim_id}/status`, both of which require `event` in the body (see their endpoint docs below).
 - **BEGIN IMMEDIATE, single writer, no `await` mid-transaction.** All write transactions use `BEGIN IMMEDIATE` to acquire the write lock upfront. The gateway keeps exactly one SQLite connection (WAL mode, `busy_timeout=5000ms`) for the whole process, shared by every domain writer and the reader; every write method is a plain (non-`async`) `def` that runs `BEGIN IMMEDIATE` through `COMMIT`/`ROLLBACK` to completion without `await`ing anything in between, so no other coroutine's write (or read) can interleave inside an open transaction on the shared connection. This single-writer/no-await invariant is enforced by a static architecture test (`tests/architecture/test_gap_c5_single_writer_invariant.py` and its domain-writer extension) that fails the build if any write method becomes `async` or an `await` appears in the writer modules. A full ADR covering the rationale lives alongside the rest of the target-architecture documentation sweep; this spec states the operational contract only.
-- **Idempotency via UNIQUE constraints.** Each endpoint documents its idempotency behavior. Where the schema defines a UNIQUE constraint, duplicate requests that match all constrained columns are treated as idempotent replays — the gateway returns the existing row, including the **original** `event_id` (and, where relevant, the real `balance_after`) rather than a placeholder. See "Idempotent Replay Values" below for the one caveat (rows written before the `event_id` columns existed).
+- **Explicit replay ownership.** Financial replay is selected by the global operation ID and bound
+  to a canonical business hash; natural-key collisions have separate native and attested historical
+  outcomes. Other endpoint uniqueness behavior remains documented per endpoint.
 - **Domain-specific endpoints.** The gateway exposes one endpoint per operation (e.g., `/identity/agents`, `/bank/credit`, `GET /board/tasks/{task_id}`), not a generic SQL execution endpoint. This keeps the API auditable, prevents SQL injection, and makes each operation's contract explicit.
 - **Blessed read API with least-privilege grants.** Every domain exposes `GET` routes for the queries its owning service needs. Identity, Bank, Task Board, Reputation, and Court receive only their own domain read/write grants. Court additionally receives one narrow `gateway.board.task.read` grant for `GET /board/tasks/{task_id}`; it cannot list tasks, bids, assets, or Board aggregates.
 - **Caller constructs events.** The gateway does not derive event payloads from write data. The calling service constructs the full event object (source, type, summary, payload) and passes it in the request. This keeps the gateway free of domain knowledge about what constitutes a meaningful event.
@@ -97,7 +105,10 @@ Admission mappings are stable: missing, duplicate, or malformed Bearer headers a
 
 ## Data Model
 
-The gateway operates on the unified schema defined in `docs/specifications/schema.sql`. It does not define its own tables. The schema includes:
+The Gateway's current executable schema is
+`services/db-gateway/src/db_gateway_service/schema_resources/current_v2.sql`; MP-04's receipt
+extension is also isolated in `receipt_v2.sql`. `docs/specifications/schema.sql` remains the broad
+domain schema reference. The current schema includes:
 
 | Table                   | Domain     | Primary Key    | Description                                |
 |-------------------------|------------|----------------|--------------------------------------------|
@@ -105,6 +116,11 @@ The gateway operates on the unified schema defined in `docs/specifications/schem
 | `bank_accounts`         | Bank       | `account_id`   | Account balances                           |
 | `bank_transactions`     | Bank       | `tx_id`        | Transaction history                        |
 | `bank_escrow`           | Bank       | `escrow_id`    | Escrow locks and resolutions               |
+| `bank_operation_receipts` | Bank     | `operation_id` | Immutable native financial command receipts |
+| `bank_operation_legs`   | Bank       | `(operation_id, leg_index)` | Ordered debit/credit facts for native receipts |
+| `bank_legacy_transaction_observations` | Bank | `tx_id` | Attested pre-v2 transaction facts |
+| `bank_legacy_escrow_observations` | Bank | `escrow_id` | Attested pre-v2 escrow lock/resolution facts |
+| `bank_receipt_cutover`  | Bank       | singleton      | Marker-set and migration-provenance attestation |
 | `board_tasks`           | Board      | `task_id`      | Task lifecycle records                     |
 | `board_bids`            | Board      | `bid_id`       | Submitted bids                             |
 | `board_assets`          | Board      | `asset_id`     | Uploaded deliverable metadata              |
@@ -114,7 +130,8 @@ The gateway operates on the unified schema defined in `docs/specifications/schem
 | `court_rulings`         | Court      | `ruling_id`    | Judge panel rulings                        |
 | `events`                | Shared     | `event_id`     | Event log (autoincrement, monotonic cursor)|
 
-Refer to `docs/specifications/schema.sql` for full column definitions, foreign keys, indexes, and CHECK constraints.
+Refer to `current_v2.sql` and the linked MP-04 schema-v2 contract for executable financial receipt,
+foreign-key, index, and CHECK constraints.
 
 ### Schema initialization and migration admission
 
@@ -153,13 +170,56 @@ Credit, release and split use conditional additions with `balance <= maximum - a
 if their recipient is the same account, their combined effect must fit. Every rejected operation
 preserves accounts, ledger rows, escrows and events. The split poster must be the stored escrow
 payer even when the poster receives zero; an existing unrelated poster returns 400 `payload_mismatch`.
-A missing poster account retains 404 `account_not_found`.
+A missing poster account returns 404 `account_not_found` only when the poster leg is positive;
+a zero poster leg performs no account-existence check while still requiring the poster ID to equal
+the stored payer.
 
 Credit replay is resolved before another addition, so an exact retry can succeed at the maximum
 balance. Escrow lock identity is lifetime `(payer_account_id, task_id)` uniqueness, including
-released and split escrows. Exact replay returns the existing escrow and event without another
-debit; it does not require sufficient funds for a second lock. Changed amount returns 409
-`escrow_already_locked`. Durable release/split replay receipts remain a separate MP-04 gate.
+released and split escrows. MP-04 adds global caller-owned operation identity and durable receipts
+to these natural keys and to settlements; the exact rules are summarized next.
+
+### Financial receipt and historical-observation contract
+
+The authoritative definitions are the
+[MP-04 receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md),
+[schema v2](../../plans/2026-10-16-mp04-schema-v2.md), and
+[historical-observation contract](../../plans/2026-10-17-mp04-historical-observations.md).
+
+- Positive issuance, credit, lock, release, and split require a canonical caller-owned
+  `operation_id` (`op-<UUID>`). IDs are global across financial kinds. Zero-balance account
+  creation forbids an operation ID and creates no receipt.
+- A native success returns `outcome: "native_receipt"`, the immutable exact receipt, and a fresh
+  `current_escrow` projection (null for issuance/credit). Same-ID exact replay returns the stored
+  transaction, escrow, event, commit time, result, and ordered legs. Candidate IDs supplied for
+  effect rows on a retry never replace winning identities.
+- Each positive leg has its exact transaction ID and balance snapshot. Split always emits ordered
+  worker/poster logical legs. A zero leg has null transaction/balance fields, creates no transaction,
+  and does not require that logical account to exist.
+- Credit and lock retain natural keys `(account_id, reference)` and `(payer_account_id, task_id)`.
+  A different ID cannot alias or rebind an existing native effect. Exact attested pre-v2 credit or
+  lock collisions return a separate `legacy_observation` with null historical operation ownership;
+  they are never represented as a new native success.
+- Release/split require explicit nonempty `source_reference`. Split accepts `worker_pct` in 0..100
+  and computes `worker_amount = floor(escrow.amount * worker_pct / 100)` and the poster remainder.
+  Caller-supplied split amounts and caller-controlled financial `constraints` are invalid fields;
+  the writer owns the locked-state predicate.
+
+The native envelope and its per-kind result/leg rules are defined once in the receipt contract.
+The endpoint sections below state the exact submitted fields and identify the applicable receipt
+kind. Historical observation fields and safe conflict details are defined in the historical contract.
+
+| Existing effect | Submitted command | Gateway result |
+|---|---|---|
+| Native receipt with same ID | Same kind and canonical request | Exact receipt replay, fresh current projection, no mutation |
+| Native receipt with same ID | Changed kind or business request | 409 `operation_id_conflict`, true winning ID |
+| Native credit/lock natural key | Different operation ID | 409 `financial_operation_already_committed`, true winning ID |
+| Attested legacy credit/lock key | Exact observed request | `legacy_observation`, null historical operation ID |
+| Attested legacy credit/lock key | Changed amount | 409 `legacy_operation_conflict`, null winning ID and safe marker facts |
+| Attested legacy terminal escrow | New settlement | 409 `historical_settlement_unreplayable`, no movement or invented identity |
+
+Native opposing settlements have one immutable winner. `escrow_already_resolved` is an error and
+never implies success; only exact operation-ID replay yields the original successful receipt.
 
 ---
 
@@ -199,19 +259,17 @@ The `event_id` is auto-assigned by SQLite (`AUTOINCREMENT`). The response includ
 
 ## Idempotency Rules
 
-Every write endpoint is protected against a duplicate insert by a UNIQUE constraint, but **only
-three endpoints are genuinely idempotent** (look up and return the existing row on a matching
-replay). The other seven UNIQUE-constrained endpoints unconditionally reject *any* collision —
-matching payload or not — with their `*_exists` error; there is no lookup-and-compare path in
-their `sqlite3.IntegrityError` handlers. Do not assume idempotency from "this column has a UNIQUE
-index" — check this table.
+Nonfinancial writers retain their existing unique-key behavior. Financial writers use the MP-04
+operation receipt contract above; do not infer replay semantics from a UNIQUE index alone.
 
 | Endpoint                             | UNIQUE Constraint                                          | On Duplicate (matching)         | On Duplicate (conflicting)       |
 |--------------------------------------|------------------------------------------------------------|---------------------------------|----------------------------------|
 | `POST /identity/agents`              | `identity_agents.public_key`                               | **Idempotent** — returns existing agent | 409 `public_key_exists`  |
-| `POST /bank/accounts`                | `bank_accounts.account_id` (PK)                            | **Not idempotent** — 409 `account_exists` always | 409 `account_exists` |
-| `POST /bank/credit`                  | `idx_bank_tx_idempotent (account_id, reference) WHERE type='credit'` | **Idempotent** — returns existing tx (amount must match; see below) | 409 `reference_conflict` |
-| `POST /bank/escrow/lock`             | `idx_bank_escrow_lifetime (payer_account_id, task_id)` | **Idempotent** — returns existing escrow in any status | 409 `escrow_already_locked` |
+| `POST /bank/accounts` (zero balance) | `bank_accounts.account_id` (PK)                            | 409 `account_exists`; no operation receipt | 409 `account_exists` |
+| `POST /bank/accounts` (positive issuance) | Global receipt ID plus account identity | Same ID/request returns exact native receipt | Changed ID/account identity remains 409; issuance is never a legacy observation |
+| `POST /bank/credit`                  | Global receipt ID plus `(account_id, reference)` natural key | Same ID/request returns exact receipt; attested legacy exact key returns observation | Explicit operation/native-owner/legacy conflict |
+| `POST /bank/escrow/lock`             | Global receipt ID plus lifetime `(payer_account_id, task_id)` | Same ID/request returns exact receipt with current projection; attested legacy exact key returns observation | Explicit operation/native-owner/legacy conflict |
+| `POST /bank/escrow/release` / `split` | Global receipt ID plus one native settlement owner per escrow | Same ID/request returns exact winning receipt | Explicit operation/winner/historical-settlement conflict |
 | `POST /board/tasks`                  | `board_tasks.task_id` (PK)                                 | **Not idempotent** — 409 `task_exists` always | 409 `task_exists`     |
 | `POST /board/bids`                   | `idx_board_bids_one_per_agent (task_id, bidder_id)`        | **Not idempotent** — 409 `bid_exists` always | 409 `bid_exists`          |
 | `POST /board/assets`                 | `board_assets.asset_id` (PK)                               | **Not idempotent** — 409 `asset_exists` always | 409 `asset_exists`      |
@@ -220,37 +278,49 @@ index" — check this table.
 | `POST /court/rebuttals`              | `court_rebuttals.rebuttal_id` (PK)                         | **Not idempotent** — 409 `rebuttal_exists` always | 409 `rebuttal_exists` |
 | `POST /court/rulings`                | `court_rulings.ruling_id` (PK)                             | **Not idempotent** — 409 `ruling_exists` always | 409 `ruling_exists`     |
 
-Only the three rows marked **Idempotent** have a lookup-and-compare path
-(`services/db_gateway_service/services/{identity_writer,bank_writer}.py`); "matching" for those
-three means every field in the replayed request equals the existing row (for credit, specifically
-the `amount`), which is how they distinguish a safe replay from a genuine `reference`/id reuse
-with different data. The other seven writers (`board_writer.py`, `court_writer.py`,
+The Bank rows are governed by canonical financial business requests rather than comparisons of
+generated transport metadata. The nonfinancial idempotent registration row and the other writers
+(`board_writer.py`, `court_writer.py`,
 `reputation_writer.py`) treat every `sqlite3.IntegrityError` on their UNIQUE constraint the same
 way regardless of payload — callers that need replay-safety for task/bid/asset/claim/rebuttal/
 ruling/feedback creation must generate their ID once and not resubmit, or treat the `*_exists`
 409 as "already done" themselves.
 
-For the three idempotent endpoints, the caller generates the ID (e.g. `a-<uuid4>`) or dedup key
-(the credit `reference`, or `(payer_account_id, task_id)` for escrow lock) and passes it in the
-request; if the same key arrives twice with identical data, it is an idempotent replay.
+Financial callers generate one stable `operation_id` for the business intent and reuse it for
+retry. The operation ID is excluded from the canonical business hash; changing business terms
+under it conflicts instead of creating another effect.
 
 `POST /court/claims` has a second UNIQUE-family constraint beyond `claim_id`: `court_claims.task_id` (one claim per task). A `claim_id` collision returns 409 `claim_exists`; a fresh `claim_id` that collides on `task_id` (a second claim filed against an already-disputed task) returns a distinct 409 `task_already_disputed` instead of the misleading `claim_exists` — the gateway distinguishes the two by looking up which row actually collided.
 
 ### Idempotent Replay Values
 
-When a replayed write matches the existing row (see the table above), the gateway returns the row's **real** stored values, not placeholder sentinels:
+When a native financial replay matches, the gateway returns the exact immutable stored receipt and
+its real identities, plus a fresh current escrow projection:
 
-- `event_id` is the `event_id` of the **original** write's event row (looked up via `MIN(event_id)` for the matching agent/event-type on registration replay, or read directly off the existing `bank_transactions`/`bank_escrow` row's `event_id` column for credit/escrow-lock replay) — never `0`.
-- `balance_after` (credit and escrow-lock replay) is the account's actual current balance — never `0`.
-- **Caveat:** `bank_transactions.event_id` and `bank_escrow.event_id` are nullable columns introduced by historical additive migrations. Rows predating those additions can retain `event_id = NULL`, and replay honestly returns `event_id: null`. MP-06 requires a complete supported schema and explicit offline migration; startup no longer repairs partial legacy tables or invents event IDs.
+- Receipt `event_id`, `committed_at`, result, and positive leg transaction/balance fields are those
+  of the original winning command; current account balances do not rewrite receipt snapshots.
+- Lock replay after settlement retains `result.escrow_status_at_commit: "locked"` while
+  `current_escrow.status` reports `released` or `split`.
+- Historical nullable event IDs appear only inside typed legacy observations. They never become
+  native receipt event IDs or invented operation ownership.
 
 ### Compare-and-Set Constraints (`constraints`)
 
-Several write endpoints accept an optional `constraints` object in the request body, sibling to `event`: `{"constraints": {"<column>": <expected_value>, ...}}`. When present, the gateway adds `<column> = <expected_value> AND ...` to the `WHERE` clause of the `UPDATE` (or, for `board/bids` and `board/assets`, checks the condition against the referenced `board_tasks` row before inserting). If the row does not currently match every constrained column, the write is rolled back and the gateway returns **409 `constraint_violation`** with `details: {"table": ..., "constraint": <column>, "expected": ..., "actual": ...}` (or, for the cross-table check used by bid/asset submission, `details: {"table": ..., "conditions": {...}}` with the generic message "Cross-table constraint failed on {table}"). An empty `constraints` object (`{}`) is treated as no constraints. If the target row does not exist at all, the gateway returns the endpoint's normal 404 (e.g. `task_not_found`), not `constraint_violation`.
+Several **nonfinancial** write endpoints accept an optional `constraints` object in the request
+body, sibling to `event`. When present, the gateway applies the documented compare-and-set rule.
+Financial release/split no longer accept caller-controlled constraints; their writer always owns
+and atomically checks the locked-state predicate.
 
-This is genuine compare-and-set state enforcement, not "no business logic" — a caller uses it to express "only apply this update if the row is still in the state I last observed" (e.g., Task Board updating a task's status only `WHERE status = 'open'`, or Central Bank releasing escrow only `WHERE status = 'locked'`) without a separate read-then-write round trip that would race against a concurrent writer.
+This is genuine compare-and-set state enforcement, not "no business logic": a nonfinancial caller
+uses it to express "only apply this update if the row is still in the state I last observed" (for
+example, Task Board updating a task only `WHERE status = 'open'`) without a separate read-then-write
+round trip that would race against a concurrent writer. Financial settlement does not use this
+caller-controlled mechanism; its writer owns the locked-state predicate described above.
 
-Endpoints that accept `constraints`: `POST /bank/escrow/release`, `POST /bank/escrow/split`, `POST /board/bids` (checked against `board_tasks`), `POST /board/tasks/{task_id}/status`, `POST /board/assets` (checked against `board_tasks`), `POST /court/claims/{claim_id}/status`, `POST /court/rebuttals` (checked against `court_claims` when `claim_status_update` is present, or as a bare cross-table check otherwise).
+Endpoints that accept `constraints`: `POST /board/bids` (checked against `board_tasks`),
+`POST /board/tasks/{task_id}/status`, `POST /board/assets` (checked against `board_tasks`),
+`POST /court/claims/{claim_id}/status`, and `POST /court/rebuttals` (checked against
+`court_claims` when `claim_status_update` is present, or as a bare cross-table check otherwise).
 
 ---
 
@@ -383,6 +453,7 @@ Create a bank account with an optional initial credit. Inserts into `bank_accoun
 **Request:**
 ```json
 {
+  "operation_id": "op-00000000-0000-4000-8000-000000000001",
   "account_id": "a-550e8400-e29b-41d4-a716-446655440000",
   "balance": 50,
   "created_at": "2026-02-28T10:00:00Z",
@@ -404,7 +475,12 @@ Create a bank account with an optional initial credit. Inserts into `bank_accoun
 }
 ```
 
-The `initial_credit` field is optional. If `balance` is 0, omit it. If `balance` > 0, `initial_credit` must be provided with the corresponding credit transaction details.
+If `balance` is zero, omit both `initial_credit` and `operation_id`. The response is the natural
+account result `{"account_id": ..., "event_id": ...}`; the Bank then reads and returns the current
+account projection. If `balance` is positive, both fields are required: `operation_id` identifies
+the issuance command and `initial_credit` supplies candidate effect metadata. The immutable
+business request fixes reference `initial_balance`; candidate transaction/event values never alter
+an exact replay's stored identities.
 
 **Transaction:**
 ```sql
@@ -419,7 +495,7 @@ INSERT INTO events (event_source, event_type, timestamp, task_id, agent_id, summ
 COMMIT;
 ```
 
-**Response (201 Created):**
+**Response (201 Created, zero balance):**
 ```json
 {
   "account_id": "a-550e8400-e29b-41d4-a716-446655440000",
@@ -427,19 +503,28 @@ COMMIT;
 }
 ```
 
+**Response (201 Created, positive issuance):** Native receipt envelope with
+`operation_kind: "account_issuance"`, result fields `account_id`, `issued_amount`, and
+`balance_after`, one positive `account` credit leg, and null `current_escrow`, as defined by the
+MP-04 receipt contract.
+
 **Errors:**
 
 | Status | Code                | Description                                              |
 |--------|---------------------|----------------------------------------------------------|
 | 400    | `missing_field`     | Required field missing or empty                          |
 | 400    | `invalid_amount`    | `balance` is negative, or `initial_credit.amount` <= 0   |
+| 400    | `invalid_operation_id` | Operation ID is noncanonical, or zero creation carries one |
+| 409    | `operation_id_conflict` | Same operation ID carries changed kind or canonical business terms |
+| 409    | `financial_operation_already_committed` | Existing native issuance belongs to another operation ID |
 | 409    | `account_exists`    | Account already exists for this agent (PK violation)     |
 | 409    | `foreign_key_violation` | `account_id` does not reference a valid `identity_agents.agent_id` |
 
-**Idempotency:** **Not idempotent.** Unlike credit and escrow-lock, `create_account`'s
-`IntegrityError` handler does not look up the existing row — any `account_id` collision returns
-409 `account_exists` unconditionally, matching payload or not. Callers must not resubmit an
-already-created account.
+**Replay:** Zero-balance creation has no financial operation identity and any account collision is
+409 `account_exists`. Positive issuance supports exact same-ID native receipt replay. A different
+ID for existing native issuance returns `financial_operation_already_committed`; a historical
+`initial_balance` credit is never relabeled as issuance, and other account collisions remain
+`account_exists`.
 
 ---
 
@@ -450,6 +535,7 @@ Credit an account. Inserts a credit transaction, updates the account balance, an
 **Request:**
 ```json
 {
+  "operation_id": "op-00000000-0000-4000-8000-000000000002",
   "tx_id": "tx-550e8400-e29b-41d4-a716-446655440000",
   "account_id": "a-550e8400-e29b-41d4-a716-446655440000",
   "amount": 10,
@@ -481,14 +567,9 @@ INSERT INTO events (event_source, event_type, timestamp, task_id, agent_id, summ
 COMMIT;
 ```
 
-**Response (200 OK):**
-```json
-{
-  "tx_id": "tx-550e8400-e29b-41d4-a716-446655440000",
-  "balance_after": 60,
-  "event_id": 3
-}
-```
+**Response (200 OK):** Native credit receipt envelope, or a typed exact historical credit
+observation. The native receipt result contains `account_id`, `amount`, `balance_after`, and
+`reference`; it has one positive `account` credit leg and null `current_escrow`.
 
 **Errors:**
 
@@ -496,10 +577,16 @@ COMMIT;
 |--------|---------------------|----------------------------------------------------------|
 | 400    | `missing_field`     | Required field missing or empty                          |
 | 400    | `invalid_amount`    | `amount` is not a positive integer                       |
+| 400    | `invalid_operation_id` | Operation ID is noncanonical                           |
 | 404    | `account_not_found` | No account with this `account_id`                        |
-| 409    | `reference_conflict`| Same `(account_id, reference)` exists with different amount |
+| 409    | `operation_id_conflict` | Same ID carries changed kind or canonical request |
+| 409    | `financial_operation_already_committed` | Native natural key belongs to another operation ID |
+| 409    | `legacy_operation_conflict` | Attested historical credit has a different amount |
+| 500    | `receipt_ownership_missing` / `receipt_ownership_failed` | Existing effect has missing, invalid, or ambiguous ownership |
 
-**Idempotency:** The `idx_bank_tx_idempotent` index enforces uniqueness on `(account_id, reference)` for credit transactions. If the same credit is replayed with matching amount, the existing `tx_id` and `balance_after` are returned. If the amount differs, returns 409.
+**Replay:** `(account_id, reference)` remains the natural key, while `operation_id` owns native
+replay. Same ID/request returns the exact stored receipt. A different ID for a native key conflicts;
+an attested legacy key yields an observation only when its amount matches.
 
 ---
 
@@ -510,6 +597,7 @@ Lock funds in escrow. Debits the payer's account, creates an escrow record, logs
 **Request:**
 ```json
 {
+  "operation_id": "op-00000000-0000-4000-8000-000000000003",
   "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
   "payer_account_id": "a-poster-uuid",
   "amount": 100,
@@ -547,15 +635,10 @@ COMMIT;
 
 The `UPDATE ... WHERE balance >= :amount` pattern enforces sufficient funds at the database level. If no row is updated (balance < amount), the gateway rolls back and returns 402. This is a database-level check, not business logic.
 
-**Response (201 Created):**
-```json
-{
-  "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
-  "balance_after": 400,
-  "event_id": 4,
-  "status": "locked"
-}
-```
+**Response (201 Created):** Native lock receipt envelope, or a typed exact historical lock
+observation. The native result is `{"escrow_status_at_commit":"locked"}` with one positive payer
+debit leg and the current escrow projection. Exact replay after settlement retains the immutable
+locked-at-commit result while the projection reports the actual terminal status.
 
 **Errors:**
 
@@ -563,24 +646,35 @@ The `UPDATE ... WHERE balance >= :amount` pattern enforces sufficient funds at t
 |--------|-------------------------|----------------------------------------------------------|
 | 400    | `missing_field`         | Required field missing or empty                          |
 | 400    | `invalid_amount`        | `amount` is not a positive integer                       |
+| 400    | `invalid_operation_id`  | Operation ID is noncanonical                             |
 | 402    | `insufficient_funds`    | Account balance is less than the escrow amount           |
 | 404    | `account_not_found`     | No account for `payer_account_id`                        |
-| 409    | `escrow_already_locked` | Escrow already locked for this `(payer, task)` with different amount |
+| 409    | `operation_id_conflict` | Same ID carries changed kind or canonical request |
+| 409    | `financial_operation_already_committed` | Native payer/task lock belongs to another operation ID |
+| 409    | `legacy_operation_conflict` | Attested historical lock has a different amount |
 | 409    | `foreign_key_violation` | Foreign key constraint failed                            |
+| 500    | `receipt_ownership_missing` / `receipt_ownership_failed` | Existing lock has missing, invalid, or ambiguous receipt/observation ownership |
 
-**Idempotency:** The `idx_bank_escrow_lifetime` index enforces uniqueness on `(payer_account_id, task_id)` for every escrow status. Replay is checked before another debit. An identical lock returns the existing escrow and original event ID; a changed amount returns 409 `escrow_already_locked`. The required response `status` is the actual stored status: `locked`, `released` or `split`; replay must not fabricate `locked` for an already settled escrow.
+**Replay:** The lifetime payer/task key remains unique, but `operation_id` owns native replay.
+Same ID/request returns the exact receipt and fresh projection. A different ID for a native lock
+conflicts even if amount matches. An attested legacy exact lock returns an observation; changed
+amount returns `legacy_operation_conflict`.
 
 ---
 
 ### POST /bank/escrow/release
 
-Release escrowed funds in full to a recipient. Credits the recipient's account, resolves the escrow, logs an escrow_release transaction, and logs an event. Accepts an optional `constraints` object (see "Compare-and-Set Constraints" above) applied to the `bank_escrow` row being resolved.
+Release escrowed funds in full to a recipient. Credits the recipient's account, resolves the escrow,
+logs the transaction/event, and persists the receipt and leg atomically. The writer owns the
+locked-state predicate; caller-controlled `constraints` are rejected.
 
 **Request:**
 ```json
 {
+  "operation_id": "op-00000000-0000-4000-8000-000000000004",
   "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
   "recipient_account_id": "a-worker-uuid",
+  "source_reference": "task:t-123:approved",
   "tx_id": "tx-release-uuid",
   "resolved_at": "2026-02-28T11:00:00Z",
   "event": {
@@ -601,7 +695,7 @@ BEGIN IMMEDIATE;
 -- Load escrow and verify status
 SELECT escrow_id, amount, status FROM bank_escrow WHERE escrow_id = :escrow_id;
 -- If not found: ROLLBACK, return 404 escrow_not_found
--- If status != 'locked': ROLLBACK, return 409 escrow_already_resolved
+-- Require status = 'locked' under the writer-owned settlement predicate.
 UPDATE bank_accounts SET balance = balance + :amount
   WHERE account_id = :recipient_account_id AND balance <= :maximum - :amount;
 -- If no row updated: ROLLBACK; missing recipient => 404 account_not_found;
@@ -613,46 +707,51 @@ INSERT INTO bank_transactions (tx_id, account_id, type, amount, balance_after, r
 UPDATE bank_escrow SET status = 'released', resolved_at = :resolved_at WHERE escrow_id = :escrow_id;
 INSERT INTO events (event_source, event_type, timestamp, task_id, agent_id, summary, payload)
   VALUES (:event_source, :event_type, :timestamp, :task_id, :agent_id, :summary, :payload);
+-- Persist the escrow_release receipt and its positive recipient leg, bound to event/tx/escrow.
 COMMIT;
 ```
 
-**Response (200 OK):**
-```json
-{
-  "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
-  "status": "released",
-  "amount": 100,
-  "recipient_account_id": "a-worker-uuid",
-  "event_id": 5
-}
-```
+**Response (200 OK):** Native release receipt envelope. Its result is
+`{"escrow_status_at_commit":"released"}`; its one positive `recipient` leg contains the full
+stored escrow amount and exact transaction/balance; `current_escrow` is the released projection.
 
 **Errors:**
 
 | Status | Code                      | Description                                    |
 |--------|---------------------------|------------------------------------------------|
 | 400    | `missing_field`           | Required field missing or empty                |
-| 400    | `invalid_constraints`     | `constraints` is present but not an object, or a constraint column is not a valid identifier |
+| 400    | `invalid_operation_id`    | Operation ID is noncanonical                   |
+| 400    | `unknown_field`           | Request contains `constraints` or another unsupported field |
 | 404    | `escrow_not_found`        | No escrow with this ID                         |
 | 404    | `account_not_found`       | Recipient account not found                    |
 | 409    | `amount_out_of_range`     | Credit would exceed the recipient balance limit |
-| 409    | `escrow_already_resolved` | Escrow has already been released or split      |
-| 409    | `constraint_violation`    | `constraints` was supplied and did not match the escrow row's current state |
+| 409    | `operation_id_conflict`   | Same ID carries changed kind or canonical request |
+| 409    | `financial_operation_already_committed` | Another native settlement owns this escrow; details include its winning ID |
+| 409    | `historical_settlement_unreplayable` | Historical terminal settlement has no replayable operation ID |
+| 409    | `escrow_state_conflict`   | Escrow lost the writer-owned locked-state race |
+| 500    | `receipt_ownership_missing` / `receipt_ownership_failed` | Existing settlement ownership is missing, invalid, or ambiguous |
+
+Exact same-ID replay returns the original receipt before another movement. A different or opposing
+settlement does not turn `escrow_already_resolved` (or any generic resolved-state error) into
+success; it must receive the applicable explicit winner, historical, or ownership error.
 
 ---
 
 ### POST /bank/escrow/split
 
-Split escrowed funds between worker and poster. Credits both accounts proportionally, resolves the escrow, logs escrow_release transactions, and logs an event. Accepts an optional `constraints` object (see "Compare-and-Set Constraints" above) applied to the `bank_escrow` row being resolved.
+Split escrowed funds between worker and poster. The Gateway computes both shares from the stored
+escrow amount and `worker_pct`, applies positive credits, resolves the escrow, and persists the
+event, receipt, and ordered legs atomically. Caller amounts and financial `constraints` are rejected.
 
 **Request:**
 ```json
 {
+  "operation_id": "op-00000000-0000-4000-8000-000000000005",
   "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
   "worker_account_id": "a-worker-uuid",
-  "worker_amount": 40,
   "poster_account_id": "a-poster-uuid",
-  "poster_amount": 60,
+  "worker_pct": 40,
+  "source_reference": "task:t-123:ruling:r-456",
   "worker_tx_id": "tx-split-worker-uuid",
   "poster_tx_id": "tx-split-poster-uuid",
   "resolved_at": "2026-02-28T12:00:00Z",
@@ -663,12 +762,16 @@ Split escrowed funds between worker and poster. Credits both accounts proportion
     "task_id": "t-123",
     "agent_id": "a-poster-uuid",
     "summary": "Escrow split: worker 40, poster 60",
-    "payload": "{\"escrow_id\": \"esc-550e8400\", \"worker_amount\": 40, \"poster_amount\": 60}"
+    "payload": "{\"escrow_id\": \"esc-550e8400\", \"worker_pct\": 40}"
   }
 }
 ```
 
-The caller computes `worker_amount` and `poster_amount` (the gateway does not calculate percentages). Both amounts must sum to the escrow amount. Zero-amount shares are valid — no transaction is created for a zero share. The poster account must exist and equal the stored payer even for a zero poster share. A missing account returns 404 `account_not_found`; an existing unrelated poster returns 400 `payload_mismatch`. A recipient whose bounded credit cannot fit returns 409 `amount_out_of_range`, rolling back both legs and the event.
+The Gateway computes `worker_amount = floor(escrow.amount * worker_pct / 100)` and
+`poster_amount = escrow.amount - worker_amount`. The poster logical account ID must equal the
+stored payer. Each positive leg requires its account and creates a transaction. A zero leg creates
+no transaction, performs no account-existence check, and returns null transaction/balance fields.
+Overflow of either positive credit rolls back both legs, the escrow update, event, and receipt.
 
 **Transaction:**
 ```sql
@@ -676,8 +779,8 @@ BEGIN IMMEDIATE;
 -- Load escrow and verify
 SELECT escrow_id, amount, status FROM bank_escrow WHERE escrow_id = :escrow_id;
 -- If not found: ROLLBACK, return 404 escrow_not_found
--- If status != 'locked': ROLLBACK, return 409 escrow_already_resolved
--- If worker_amount + poster_amount != escrow.amount: ROLLBACK, return 400 amount_mismatch
+-- Require status = 'locked' under the writer-owned settlement predicate.
+-- Compute worker/poster amounts from stored amount and :worker_pct.
 -- Credit worker (if worker_amount > 0):
 UPDATE bank_accounts SET balance = balance + :worker_amount
   WHERE account_id = :worker_account_id AND balance <= :maximum - :worker_amount;
@@ -699,35 +802,31 @@ INSERT INTO bank_transactions (tx_id, account_id, type, amount, balance_after, r
 UPDATE bank_escrow SET status = 'split', resolved_at = :resolved_at WHERE escrow_id = :escrow_id;
 INSERT INTO events (event_source, event_type, timestamp, task_id, agent_id, summary, payload)
   VALUES (:event_source, :event_type, :timestamp, :task_id, :agent_id, :summary, :payload);
+-- Persist escrow_split receipt and ordered worker/poster legs; zero legs carry null tx/balance.
 COMMIT;
 ```
 
-**Response (200 OK):**
-```json
-{
-  "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
-  "status": "split",
-  "worker_amount": 40,
-  "poster_amount": 60,
-  "event_id": 6
-}
-```
+**Response (200 OK):** Native split receipt envelope. Its result is
+`{"escrow_status_at_commit":"split","worker_pct":40}`; ordered worker/poster legs expose the
+computed amounts and exact positive-leg identities; `current_escrow` is the split projection.
 
 **Errors:**
 
 | Status | Code                      | Description                                          |
 |--------|---------------------------|------------------------------------------------------|
 | 400    | `missing_field`           | Required field missing or empty                      |
-| 400    | `invalid_amount`          | Amount is negative                                   |
-| 400    | `amount_out_of_range`     | An input amount exceeds the signed-64-bit limit |
+| 400    | `invalid_percentage`      | `worker_pct` is not an integer in 0..100             |
+| 400    | `invalid_operation_id`    | Operation ID is noncanonical                         |
 | 400    | `payload_mismatch`        | Existing poster account is not the escrow payer, including a zero share |
-| 400    | `amount_mismatch`         | `worker_amount + poster_amount` != escrow amount     |
-| 400    | `invalid_constraints`     | `constraints` is present but not an object, or a constraint column is not a valid identifier |
+| 400    | `unknown_field`           | Request contains caller amounts, `constraints`, or another unsupported field |
 | 404    | `escrow_not_found`        | No escrow with this ID                               |
-| 404    | `account_not_found`       | Worker or poster account not found                   |
+| 404    | `account_not_found`       | Account for a positive worker/poster leg not found   |
 | 409    | `amount_out_of_range`     | Worker/poster credit would exceed a recipient balance limit, including combined same-account legs |
-| 409    | `escrow_already_resolved` | Escrow has already been released or split            |
-| 409    | `constraint_violation`    | `constraints` was supplied and did not match the escrow row's current state |
+| 409    | `operation_id_conflict`   | Same ID carries changed kind or canonical request |
+| 409    | `financial_operation_already_committed` | Another native settlement owns this escrow; details include its winning ID |
+| 409    | `historical_settlement_unreplayable` | Historical terminal settlement has no replayable operation ID |
+| 409    | `escrow_state_conflict`   | Escrow lost the writer-owned locked-state race |
+| 500    | `receipt_ownership_missing` / `receipt_ownership_failed` | Existing settlement ownership is missing, invalid, or ambiguous |
 
 ---
 
@@ -1370,19 +1469,24 @@ Complete list of error codes used by the Database Gateway service:
 | 400    | `invalid_amount`          | Amount is not a valid integer in the required range      |
 | 400    | `amount_out_of_range`     | Input exceeds the signed-64-bit monetary representation |
 | 400    | `payload_mismatch`        | Initial issuance differs from balance, or split poster differs from payer |
-| 400    | `invalid_field`           | Request contains an unknown or disallowed field name     |
+| 400    | `unknown_field`           | Request contains an unknown or disallowed field name     |
+| 400    | `invalid_field`           | A supported nonfinancial update object names a disallowed column |
+| 400    | `invalid_operation_id`    | Financial operation ID is noncanonical or is supplied for zero account creation |
+| 400    | `invalid_percentage`      | Financial `worker_pct` is not a strict integer in 0..100 |
+| 400    | `invalid_financial_request` | Canonical financial business request is invalid       |
 | 400    | `empty_updates`           | `updates` object contains no fields                      |
-| 400    | `amount_mismatch`         | Split amounts do not sum to escrow amount                |
 | 402    | `insufficient_funds`      | Escrow lock would cause negative balance                 |
 | 404    | `account_not_found`       | No account with this ID                                  |
 | 404    | `escrow_not_found`        | No escrow with this ID                                   |
 | 404    | `task_not_found`          | No task with this ID                                     |
 | 409    | `public_key_exists`        | Public key already registered                            |
 | 409    | `account_exists`          | Account already exists for this agent                    |
-| 409    | `reference_conflict`      | Duplicate credit reference with different amount         |
 | 409    | `amount_out_of_range`     | A credit or settlement would overflow the recipient balance |
-| 409    | `escrow_already_locked`   | Escrow already locked for this (payer, task) pair        |
-| 409    | `escrow_already_resolved` | Escrow has already been released or split                |
+| 409    | `operation_id_conflict`   | Operation ID already owns another kind or canonical request |
+| 409    | `financial_operation_already_committed` | Native natural-key effect or settlement belongs to another operation ID |
+| 409    | `legacy_operation_conflict` | Attested historical credit/lock has changed immutable terms |
+| 409    | `historical_settlement_unreplayable` | Attested historical terminal settlement has no native replay identity |
+| 409    | `escrow_state_conflict`   | Settlement lost the writer-owned locked-state race       |
 | 409    | `task_exists`             | Task with this ID already exists                         |
 | 409    | `bid_exists`              | Agent already bid on this task                           |
 | 409    | `asset_exists`            | Asset with this ID already exists                        |
@@ -1406,6 +1510,8 @@ Complete list of error codes used by the Database Gateway service:
 | 405    | `method_not_allowed`      | Path-segment collision on a route that reuses a literal (read routes) |
 | 503    | `service_not_ready`       | Reader/writer not yet initialized (startup ordering)      |
 | 503    | `database_unavailable`    | The database file could not be stat'd (health check)      |
+| 500    | `receipt_ownership_missing` | Existing financial effect has no native receipt or attested legacy marker |
+| 500    | `receipt_ownership_failed` | Receipt/marker ownership or cutover attestation is corrupt or ambiguous |
 
 ---
 
@@ -1429,8 +1535,12 @@ This format is shared by all services in the Agent Task Economy.
 
 ## What This Service Does NOT Do
 
-- **Domain business logic** — no signature verification, no permission checks, no independent state-machine decisions, no deadline calculation. The `constraints` mechanism lets a caller enforce a precondition it already decided on; the gateway never decides the precondition itself.
-- **ID generation** — callers generate all IDs (`a-<uuid4>`, `t-<uuid4>`, etc.) and pass them in requests. The gateway never generates IDs (except `event_id`, which is an autoincrement).
+- **Domain authorization/orchestration** — no economic-agent signature verification, permission
+  decisions, deadlines, or lifecycle orchestration. The financial writer does own receipt replay,
+  exact monetary calculations, and the atomic locked-state settlement predicate.
+- **ID generation** — callers generate all entity, transaction, escrow, and financial operation IDs
+  and pass them in requests. The gateway generates only the autoincrement `event_id`; replay returns
+  the stored winning IDs rather than caller candidates.
 - **Event derivation** — the gateway does not construct event summaries or payloads. Callers provide the complete event object.
 - **Status-transition validation beyond `constraints`** — `POST /board/tasks/{task_id}/status` accepts any allowed-column values; the calling service enforces which transitions are legal, optionally backed by a `constraints` precondition for exactly-once semantics.
 - **Economic-agent authentication** — the gateway authenticates service capabilities only. Agent/user credentials remain the domain service's responsibility, and economic agents, UI, and the platform notary receive no Gateway capability.

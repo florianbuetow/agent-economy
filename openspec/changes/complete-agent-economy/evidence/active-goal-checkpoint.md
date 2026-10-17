@@ -1,378 +1,84 @@
 # Active implementation checkpoint
 
-## Historical implementation — latest continuation
-
-Read `mp04-receipts/history-checkpoint-2026-10-17.md` for current evidence and limitations.
-The SDK/client/funding, Bank propagation and Gateway history implementation are independently
-approved. Gateway raw-ID and overlapping-lock-transaction ownership HIGHs were repaired after5
-genuine reds; history32 and native/router52 pass. No schema/migration changes. Public native
-settlement over empty historical creation time is repaired and approved; public history8/native13
-pass, agent SDK reconciliation92 passes. Parent combined cross-service26 and Bank integration24
-pass. Supplemental Task Board legacy posting guards pass without inserting/refunding old funds.
-
-**ROOT16 TERMINAL1:** parent session63802 exited1 in per-service integration after every library
-and service component CI passed. Exactly two setup failures omitted operation IDs: Task Board
-integration test_endpoints.py and Court integration/conftest.py. Parent added explicit IDs and
-replaced Task Board's flat lock mock with the actual seeded Gateway receipt. Focused suites2+1
-pass and Ruff/format pass; independent review is pending. Root log:
-`/private/tmp/agent-economy-mp04-root16-ci.log`. Before/after snapshots both contain929 identical
-source/config hashes. Cleanup manifest and fresh signal-0 checks confirm all9 owned groups absent:
-`/private/tmp/agent-economy-mp04-root16-cleanup.json`. Do not poll or restart root16.
-The rest of the root gate (agents/tools/runtime/browser/economy phases) was not reached by this run.
-The two integration fixture repairs are independently approved. The separate economy baseline
-session9986 is terminal1 (70 failed/19 passed/five setup errors), predominantly missing SDK operation
-IDs in old E2E callers. All ten owned groups are absent; log and cleanup are
-`/private/tmp/agent-economy-mp04-economy-baseline.log` and `-cleanup.json`.
-`/root/mp04_client_contracts` owns only agents/tests/e2e reconciliation; those active edits remain
-unverified and must not be included in a reviewed checkpoint yet. **LIVE UI browser run:** parent
-session87724, `/private/tmp/agent-economy-mp04-ui-e2e.log`. Poll the same handle; do not restart it.
-The full goal and MP-04 tickets stay open. A local historical implementation WIP checkpoint is being
-prepared; last existing commit is `96e3922`, with no push. Later notes below are superseded here.
-
-## Current continuation — 2026-10-17 (supersedes historical state below)
-
-New local WIP checkpoint: `96e3922`, committed Saturday 2026-10-17 at 17:54:17 CEST after verifying
-the weekend permission and local time. It contains the reviewed native integration, contract
-reconciliation and evidence (111 files). No push was performed. The two NEW historical test files
-were deliberately excluded and remain uncommitted; no historical production code is implemented.
-The initial SDK history suite had three positive-case failures and27 rejection controls, reproduced
-by parent session83766 (terminal1) in `/private/tmp/agent-economy-mp04-legacy-sdk-parent-red.log`.
-Independent review found that one positive terminal-release fixture incorrectly listed two release
-transactions; that one failure is NOT valid product-red evidence. The author is correcting it,
-adding a truthful split case, unsupported-kind controls and missing strictness vectors before
-implementation. Keep this initial log historical and use the corrected red evidence when ready.
-The Gateway history suite has15 genuine product reds and one valid-cutover unowned-effect control;
-owner log `/private/tmp/agent-economy-mp04-legacy-observations-red-final.log`. Parent independently
-reproduced15 failures/1 control in session59392 (terminal1), log
-`/private/tmp/agent-economy-mp04-legacy-observations-parent-red.log`. It uses real v0→v1 and
-verified-backup v1→v2 migration and the public DbWriter command boundary, not HTTP. Both new test
-files received review requests: SDK fixture/coverage corrections above, and exact safe conflict
-detail assertions in Gateway tests. The test authors own only those NEW files. Production
-implementation must wait for re-review. Public Bank/Gateway HTTP propagation proof remains
-required afterward.
-
-Latest verified state: shared SDK parser, shared BankClient response validation, Bank financial
-logging and exact ruling replay have independent approvals. Final parent auth, agents, shared-client
-and Bank component CIs all exited 0. Task Board now also passes parent component CI (session92963,
-exit0, log `/private/tmp/agent-economy-mp04-task-board-parent-ci.log`) after 481 unit tests passed.
-Its six existing-test reconciliations have independent approval. Parent Bank in-process integration
-passed16 (session85546, exit0). Details are in `mp04-receipts/sdk-validation-2026-10-17.md`.
-Parent's 23 new intent/ruling tests pass. Demo financial caller integration is independently approved;
-parent tools CI session4031 exited0 with136 tests (`/private/tmp/agent-economy-mp04-tools-parent-ci.log`).
-The concrete historical contract is now `docs/plans/2026-10-17-mp04-historical-observations.md`.
-It requires cutover-set verification inside the transaction, exclusive ownership, immutable
-historical facts, separate current projections and no fabricated historical identity/hash.
-Historical times may be empty and event IDs may be nonpositive under the admitted v1 contract;
-use separate legacy models and reject unsupported storage without coercion. No schema/migration
-change is planned. `/root/mp04_memory_ledger` now owns NEW Gateway historical observation tests;
-`/root/mp04_client_contracts` owns NEW service-auth legacy consumer tests. Both lanes are tests-only
-and must capture genuine red before implementation. Historical production support is NOT written.
-History implementation, remaining callers, cross-service/live integration and fresh root CI remain
-unfinished. The local checkpoint is recorded above; nothing was pushed. All parent CI and focused-test
-sessions are terminal. Historical test corrections and their independent re-review are pending.
-
-- The active objective is the full Core and Vision continuation in
-  `/Users/flo/.codex/attachments/e384874c-31cb-47e6-ba87-0d9a0be71ee8/pasted-text-1.txt`.
-  Branch is `refactor`; checkpoint commit `2575872` is work in progress. No push has been performed.
-  Weekends allow commits and pushes all day. Weekdays prohibit both from 08:00 inclusive to
-  18:00 exclusive Europe/Amsterdam. Check the actual time before either action; do not switch
-  branches, merge, rebase, cherry-pick, or use `git -C`.
-- OpenSpec apply reports 37/117 complete and 80 remaining. T-116/T-117 and tasks 6.2–6.4 stay open.
-  Root15 is still the last passing whole-repository gate; no component result replaces that gate.
-- The native Gateway, v2 startup/schema/audit and backup-bound migration components were reviewed
-  and verified. The public Bank adapter strictly validates native receipts. History API outcomes,
-  remaining callers and full integrated validation are still unfinished.
-- The in-memory ledger now produces native receipts through the same public contract. Independent
-  review approved the implementation and expanded overflow/concurrency/replay tests. Parent's
-  combined memory/contract-fixture run passed 56 tests; log:
-  `/private/tmp/agent-economy-mp04-memory-fixture-parent-final.log`.
-- Final parent service-clients component CI passed 96 tests (session 74019, exit 0), log
-  `/private/tmp/agent-economy-mp04-service-clients-parent-final-ci.log`. Gateway component CI session
-  9203 is terminal exit 0; independent review of its test reconciliation approved the repair that
-  restores the production schema fixture. Final parent auth session 76051 exited 0 (216 tests),
-  and agents session 86339 exited 0 (386 passed, three credential skips, 94 E2E deselected).
-- SDK and funding callers carry explicit financial identities and strictly validate receipts.
-  The original false-success HIGH and subsequent strict integer/text findings are resolved with
-  genuine red/green evidence and independent approval. The shared parser lives in service-auth;
-  no dependency was added. The separate BankClient boundary is also implemented and approved.
-- Central Bank existing router/normalization tests were reconciled by the assigned executor:
-  59 failed / 197 passed baseline, then 256 passed. Independent review approved the restored
-  committed-at assertion. Subsequent receipt logging adds six passing cases; final parent Bank CI
-  session 26814 exited 0 (`/private/tmp/agent-economy-mp04-bank-parent-final-ci.log`).
-- Earlier producer fixes have an explicit focused-red evidence gap; do not retroactively label
-  fixture-authoring failures as product reds. Accepted Q-M4 remains poster-specified acceptance
-  windows. Q-M1/Q-M2/Q-M3 and real-provider prerequisites remain unresolved; independent work continues.
-
-## Commit checkpoint preparation — 2026-10-17
-
-The owner requested a local commit and clarified that weekends are unrestricted. Commits/pushes remain prohibited only on weekdays 08:00–18:00 Europe/Amsterdam. Local time verified Saturday 16:24 CEST; no push was requested. All native agents are terminal; no writer is active. The full goal remains active and incomplete. The fresh `just ci-quiet` run exited 1 in service-clients with 18 failed and 68 passed (old financial client calls); its log is `/private/tmp/agent-economy-commit-ci-20261017.log`; this checkpoint must not be called a completed implementation or a passing release. Current startup and producer slices have since passed independent review; older resume notes below predate those approvals. Remaining financial caller, in-memory contract, history and old-fixture reconciliation still prevent a full completion claim.
-
-## Immediate resume state (2026-10-16, MP-04 components; supersedes older sections)
-
-- Goal ACTIVE, full Core+Vision; read objective below. Existing `refactor`, NO Git mutations. Last clock11:06CEST, officeban08:00–18:00Europe/Amsterdam; night-onlycommitpushpermission recorded. Do notswitch/rebase/merge/cherry-pick/git-C. Allworklocal.
-- ROOT15 lastfullgate: session45672 TERMINAL0,888unchangedsourcehashes,203cross/runtime295browser94economy,19CLIgroupsabsent. MP06/T120/T121/tasks5.1–5.5 closed. NOroot16. Progress37/117: onlyMP04bounded6.1redbaseline additionallychecked; T116/T117+6.2–6.4 OPEN. Currentintegration/oldcontracttests expectedred; doNOTclaimfullCI.
-- UserQ-M4 accepted: EACHPOSTERspecifiesacceptancewindow. Earlyacceptance retained,bidsstopbiddingcutoff,zero-bidexpireimmediate,preservepublishedterms,nosilentduration. Canonical+delta governance/policyrequestsupdated. Don'treask. Q-M1/M2/M3 unanswered; realCourtcredentials/budget/proof absent.
-- MP04concretecontracts docs/plans/2026-10-16-mp04-receipt-contract.md and -mp04-schema-v2.md. NativeopUUIDglobal,kind+canonicalbusinesshash,immutablewhole receipt+current_escrow; requiredsource_ref settlements; Gatewaycomputessplitfromworker_pct; constraints/calleramountsretired. Typedpositivelegs,2logicalsplitinclzero/noaccountFK. Legacyobservations+cutoverattestation,NEVERfakehistoricalcallerIDs. HistoryAPIbranchesNOTimplemented yet.
-
-### Frozen / approved components
-
-- NEWpublicBank test_mp04_replay_baseline.py originally8validred+3controls, parent7948TERMINAL1 archived mp04-receipts. OriginalprovisionalwholelockedbodyequalityWRONG,don'tciteearlylogs. Strengthened8approvedrealBank→Gateway→SQLitepostcommitloss,zero0%-workerwithoutBankaccount,exactreceipt/hash/joins,fullstateconflicts. LatestNEWtestfile nowhasexplicitcomponent-onlyv1+receipt-sidecar overlay and owner8GREEN afterproducerimplementation; startupnotproved.
-- NEWGateway financial_requests.py +test_mp04_request_contract.py:47green, independentAPPROVED0, allstatic0. Purecanonicalrequest/IDvalidator usednativewriter/audit. Fixedkindfields, strictints/no bool/float, validUTF8exactspelling, compactsortedJSONhash. IDsop-UUID39canonical.
-- NEWGateway receipt_v2.sql +receipt_audit.py +test_mp04_receipt_audit.py: APPROVED0 after3HIGHs fixed. DDLhashc0f96f7dedcaa944de467297901d0d77bf1ff6849a213ba21c36c1049ce1c532; audit1972a9ba20cc36b63874bcfbee1f92f430842e1aa504ea0de974f990ee33e976; testsa5b2af...38green. StrictresultJSONtypes/duplicatekeys, settlementrequestescrowbinding, lockcreated/event+settlementresolved timestamps. All5nativekindclean,legacyresolved+legacylock→nativezero split,missing/multipleowners,unowned/deletedeffects/hash/source drift. Allcorruptionfixturescleanfirst. NewtextlengthusesBLOBbytes becauseNULvalidUTF8. Rootcombinedrequest47+schema8+audit38=93GREEN archivedcontract-audit-parent-green.log.
-- Root schema.py addsCURRENT_V2 andloadcurrent_v2.sql; >2future, exactv1stillCURRENT_V1. CURRENT_V1 SQLfrozenSHAe23b49baf0a0eae7edcbdd9d1ea37fa7db294cc4dc3c6d3d13860e3a9e6c9f21. Fullv2resourcecopiesv1domainDDL,metadata2only+sidecars+explicitfreshcutoveremptyhashes. 6genuinered/2controls→8green;73schemahealthcontrols+54v0migrationcontrolsGREEN; criticAPPROVED0. ONLY3oldfutureversionfixtures in2files2→3 afterexplicitdocreconciliation; assertionsunchanged. docs/specifications/schema.sql andDbWriterstartupstillV1! V2recognitionisnotadmission.
-- NativeGateway writer APPROVED0 afternestedunknownfix: bank_writer.py, NEWservices/financial_records.py, routers/bank.py, ONLYbankrelease/splitdelegationsDbWriter.py. Initial2receipt/legtriggerreds→atomicrollback, replayFIRSTunderBEGIN, truewinnerconflicts/noaliases, correctzeros/bounds, nativeconcurrency. 3nestedinitial_creditunknownreds→exactnestedkeys. NEWidentity43+native9=52GREEN parent /private/tmp/agent-economy-mp04-native-identity-parent-final.log session10460TERMINAL0; architecture7/static0. Identitysuiteexplicitlyv1admissionthenreceipt-sidecar overlay COMPONENTONLY. Nativehistoryunownedguard receipt_ownership_missing remains; legacyAPIoutcomespendingseparatereds.
-- RootsharedBankClientbank.py nowrequireskeywordoperation_id/source_reference onrelease/split+aliases, passesunchangedsigned, preserveslock400. NEWlibs/test_mp04_bank_operation_identity.py7reds(APIabsence6+400mapping1)→7green, mypy/Pyright/Ruff0, criticAPPROVED0. OldSDK/TaskBoardcallers/testsNOTupdatedyet; rootownsdownstream.
-
-### Active owners / pending reviews
-
-- `/root/mp04_identity_red` ACTIVE CentralBankproducerrepair4criticissues. Owns central-bank/src, NEWproducer tests+NEWpublicbaseline, sharedGatewayClientgateway.py ONLYBankmethods. Firstproducer20green(8public+3strict+9auth), butcriticREJECT: zeroaccountsilentlydropsprovidedopID; malformedopIDGateway400converted500; get_accountcoercesbool/float/string; typedreceiptshapeallowsimpossiblesemantics/wrongsource/account/escrow/legs. Ownerinstructedgenuineredsbeforefixall4, expectedbusinesshash+semantics, strictaccountprojection, preserveinvalid_operation_id/invalid_financial_request, UTF8negative. Existinginmemorystoreoldcontract NOTyetupdated; nooldtestreconciliationdone. Publicauthmustprecedebusinessvalidation. Current NEWfinancial_responses.py Pydantic strictfields but crossfieldvalidationunderrepair. Newpublicbaselineoverlaycomponentonly. OwnernoteditingTaskBoard/service-auth/sharedBankClientbank.py. SemgrepchangedBankmethods0findings;2preexistingnonBankGatewaydefaultargs flaggedunresolvedseparatescope, no suppressions.
-- `/root/mp04_baseline_red` migrationowner source FROZEN afterrepair; owns NEWreceipt_migration.py +NEWtest_mp04_migration.py +thinmigration.migrate_v1_to_v2 entry ONLY. Originalentrypointabsence redhonestlylabelled; additionalinitialfaultcasesauthoredgreenafterimpl. First13greenrejected4items, then4genuinereviewreds→17green. Fixedlive-openstructuredsource_open_failed+obs/evidence/authorityrelease; postcommitcleanup/evidence reasons+observedstate/nativeclose/primarycause; COMMITcursorclose+endedtransaction; actualCOMMITthenraiseuncertainonecall; independentalltabletypedrowid/sequencepreservation+5addedtables. CurrentengineSHA42ebdb88f2bfb9d4d75a38c9083527ae8c4b03432b43b2bcbe45adaea6dbbae8; test14bb7fd8c8b3a090d3e95d5c4d997c5584ca8c5f5454c6d84d0667fa5d439126. `/root/mp06_money_review` ACTIVEre-review17casefrozenengine. No neweditsuntilfeedback. Frozenoldv0engine52+mode2=54controlsremainGREEN.
-- RootCLI recovery_cli/__main__.py addsEXPLICITmigrate-v1-to-v2, oldmigrate remainsv0→1(nochain); result exitboundoperationtoactualverifiedversion. NEWtest_mp04_migration_cli.py10commandabsence reds→34new+oldCLIgreen. Typedlocalinputshelperreplacedimportuntypedoldtesthelper; mypy/Pyright0 session64819TERMINAL0. Newengine actualoperationtests separate; no CLIstubgreenclaimengineverified.
-- RootCURRENTTOOL session78533 ACTIVE: combinednewmigration17+old54+CLI34 expected105 at /private/tmp/agent-economy-mp04-migration-parent-reviewed.log. PollONCEwhenready; preceding10130TERMINAL0 was101green BEFORE4reviewtests; don'tciteasfinal. ALLotherroottoolsessionsTERMINAL including38136(initialmypyhelperfailure),10460(52green).
-
-### Next required integration
-
-- Resolveproducerandmigrationreviews; parentfreshfocusedtests. Then startup/completev2migration/admission beforeactualfullstack. Need explicitv2freshbootstrapcutoverINSERTallowlist andreceiptownershipauditbeforewrites; v0/v1migration_required; docs/schema.sql/currentfixtures reconciletarget2whilefrozenv0→v1prooftarget1retained. Noautomaticmigrations.
-- Historicallegacycredit/lock observation wire shape stillneedsfinalization+redAPIproof; resolvedlegacysettlementmustexplicit409historical_settlement_unreplayable/nullwinner; nofakeopIDoralias. Missingnativeeffectownershipcannotmasqueradelegacy. Existingnativewriterallowslegacylockedsettlementunderfuturevalidstartupmarkers; verifyhistorypathswhenimplemented.
-- RootmustpropagateidentitythroughsharedBankClientcallers, service-authPlatformAgent/BankMixin/taskpostingSDK, treasury/funding/demoCLIs, TaskBoardEscrowCoordinator/callers, inmemorystore/testadapters. No newnetworkmethod generatesretryID. ProvisionalTaskBoardIDs mustreuse same approved/expiredintent ininitialandpendingretry; eventualMP07claimsreplaceprovisionalIDs. RulingstableIDexcludeschangedpct sochangedrulingintentconflicts. These are pendingtechnicalchoices, notimplemented.
-- Rootparentonlyboundedcomponentclaims; oldfixtures/contracts nowfailrequiredIDs/refs/shares/no-sidecars. ExplicitAPI/testamendmentspermitnarrowreconciliationpreservingauthority/money/events/assertionintent. No blanketfallback/skip/weakening. Fullcomponent/rootCIaftercoherentintegration. Root15remainslastwholegate; T116/T117OPEN, allremainingCore/Visionrequired.
-
-Historical checkpoints below preserve evidence and are superseded by this immediate state.
-
-## Objective and non-negotiable constraints
-
-Read `/Users/flo/.codex/attachments/6b2d166b-555f-4853-9545-1bfb413b8210/pasted-text-1.txt` before continuing. Implement the complete masterplan and OpenSpec `complete-agent-economy`, all Core and Vision requirements. Goal ACTIVE, unbounded. NEW USER OVERRIDE: commits and pushes are permitted only18:00–08:00 Europe/Amsterdam, prohibited08:00–18:00. This supersedes the objective file's all-hours prohibition for commits/pushes only. Current recovery changes remain local while review is unresolved; no Git mutation has been performed. Any future Git action is parent-coordinated at a verified checkpoint, with fresh local-time verification and preserved unrelated changes. Do not switch branches, merge, rebase or cherry-pick. Work on existing `refactor`; no git -C. Preserve unrelated work and ordinary data/keys/processes. Python only via uv run; shell scripts directly. Cache `/tmp/agent-economy-review-uv`; use UV_FROZEN=1 during gates. No new external dependencies. Native bounded agents explicitly authorized, executor outside Team; no OMX Team runtime.
-
-Skills: openspec-apply-change and testing-and-debugging; earlier partial tracker merge used openspec-sync-specs. Missing policies/credentials do not permit narrowing the goal or claiming completion. Continue independent work; no update_goal complete/blocked is justified now.
-
-## Current gate and active work
-
-### Current continuation — 2026-10-16, supersedes historical status below
-
-Full goal ACTIVE; checklist 32/117. No Git mutations. Night-only commit/push permission is recorded in tasks.md and the masterplan; all other branch/history restrictions remain.
-
-**Current verified state:** Root13 session40078 is TERMINAL0; do not poll or restart it. All component/service integration, 200 cross/runtime, 295 browser and 94 economy E2E cases passed. Before/after snapshots contain the same875 source/config hashes. All19 owned process groups from two runtimes were drained and independently absent. Evidence is archived in `evidence/root-ci-13-*` and `evidence/root13-checkpoint.md`. Three existing credential skips do not prove real-provider operation. T132/T133 and T173/T174 are now closed; tasks2.10/14.2/14.3 checked. Source freeze released.
-
-**Active ownership:** `mp06_schema` owns NEW migration.py/test_mp06_migration.py/fixtures for actual v0-to-v1 migration; parent owns migration CLI/new CLI tests/runtime proof/docs. `mp06_migration_evidence` owns only a narrow BackupBoundSource.write_evidence API in recovery.py and NEW test_migration_evidence.py. Clone path lifetime is platform-specific: Darwin F_GETPATH returns a stable path (existing post-close test passes); Linux descriptor paths need a live descriptor. The new API returns a stable retained evidence path on both platforms using guarded, exclusive writes inside the existing leased private scratch. No new raw clone copy or unguarded work-root writes. T120/T121 and tasks5.2–5.5 remain open; BankWriter guards still pending.
-
-Parent CLI: new explicit `migrate` command and test_migration_cli.py.14 genuine command-absence reds;24 new+existing CLI cases green, Ruff/format clean. Independent scope review is active in mp06_surface_review. Logs `/private/tmp/agent-economy-mp06-migration-cli-{red,green}.log`. Parent fixed only line length and extracted result exit-code helper after lint found too many returns; no suppressions. Full component/root gates await all migration/evidence source freezes.
-
-The following gate-in-progress text is historical and superseded by the verified state above.
-
-**Latest migration continuation:** parentCLI APPROVED0 (24green). New evidence API APPROVED0 after NUL regression repair (24new+114regressiongreen). Parent new root test `tests/runtime/test_migration_live_workload.py` APPROVED0: live1 fixtureFKfailure (notmigrationred); live2 green1/10.36s; live3 finalgreen1/10.82s session28229TERMINAL0. Actual public signedwork→controlledlegacyfixture→realCLImigrate→restoreprebackup→restartsamekeys→signedapproval/payout. Archived in evidence/mp06-migration with6unique runtime snapshots and43groupsfreshhostabsent. Sourcev0fixture conversion preserves allrows/types/rowids/sequence; nothistoricaldeploymentproof. No currentlivehandles.
-
-Migration engine candidate40green/152combined thenreviewREQUESTCHANGES (1HIGHcleanupuncertainty/disposal,2MEDopen/closeprimaryhandling andmissingnonnullcopyfields). `mp06_schema` paused/reverted incompleteBankWriter productedits and is repairing ONLYmigration.py/newtest_mp06_migration.py. NEWtest_mp06_money_guards.py remains with12intendedred/3controls, sofullcomponentCIexpectedreduntilBankresumed. `mp06_cleanup_design` readonlyarchitect advising enforceablewriterdisposal; raisingexceptionthroughwithdoesNOTretainmaintenanceauthority. `mp06_startup_health` executor owns ONLYservices/db_writer.py+NEWtest_schema_startup_health.py for realCHECK/FKorphanstartuprejection beforejournalmutation. Parentownsdocs/CLI/runtimeproof. mp06_surface_review ownsindependentreview; allothercompletedagentsidle. Root14notstarted; checkliststill32/117; T120/T121open.
-
-**Newest status (supersedes preceding in-progress ownership):** Parent owns BankWriter+NEWtest_mp06_money_guards.py and tiny DbReader.total_escrowed change. Reproduced39intendedred/3controls, then42green. Existingunitgate1fail772pass was missing-poster404precedence; fixedafter2newred/43controls withoutoldtestchanges. Added Barrier2 independentconnection maxcreditproof; initialreviewAPPROVE0 with105new+existingBankroutergreen. Thenactualescrowstatus addedtoGatewaylockresponse:3missingfieldreds/42controls,105green. DbReader SQLSUM overflowactualred1/45controls replacedbyPythonintegeraccumulation;106focusedgreen session77751TERMINAL0. Newstatus/aggregate extensionsawaitreview. Ruff/mypyclean; no currentparenttesthandle. Do not useold12redstatus ascurrentBankstate.
-
-Startuphealthslice APPROVED0: exactCHECK/FKstartupadmissionbeforejournal;2realreds/2controls, thencoverageextended toexactcounts/simultaneous/bothDatabaseErrorredactionpaths.65focusedgreen,staticclean. Migrationengine48green repairre-review still2MED: postcommit structuredcleanupcodes lost/wrongnames andadmissionROopenrawsqliteexception. mp06_schema fixing; parentawaitsfreeze beforeGatewaycomponentCI. Architect approvedboundednative-disposaldesign: exactbaseConnection withcached_statements0/check_same_threadFalse/LEGACYautocommit, noescapedhandles, baseclosebeforeobserve; safe codesexplicitinerror/evidence. References nowinmigrationimplementationplan.
-
-`mp06_bank_boundary` ACTIVEexecutor owns onlyCentralBankroutes/accounts.py+escrow.py,ledger_db_client.py,in_memory_ledger_store.py,newlocalmonetaryhelper+NEWtests. 16genuinebehaviorred: bool/oversizepublicinputs, in-memoryoverflow/lifetimereplay, publicstatusfabrication andamount_out_of_range mapped500/falsealreadyresolved. ParentGatewayresponse nowREQUIRESstatus; sharedGatewayClientpassesthrough unchanged. Ownercurrentlyexpectsnooldmockfixturereconciliation; reportactualfailuresfirst. NoLibedits/newdeps. ParentownsAPI/test/operationsdocs+alltracker/evidence. Root14notstarted/checklist32/117/goalACTIVE/noGitmutation; continueuntilallCore+Visionproof.
-
-**Latest final-review phase:** Gatewaymoney/status/DbReaderaggregate ANDnormativeAPI/testdocs nowAPPROVED0 bymp06_money_review;106focusedgreen/staticclean. Startuphealthfull65alsoAPPROVED0. ParentBankCI14768TERMINAL0 archivedmp06-money-guards (predatespendingprecedencerepair). Bankowner16redwasTRANSCRIPTONLYchunk47742a, nosavedlog; composed76/staticlogsarchived. PublicBankboundaryimplemented201unit/fullcomponent0 butparentfoundpercentageRANGEhelpermovedbeforeauthcontraryexistingT033doccontract(TYPEbefore,RANGEstoreafter). OwnercurrentlywritingdedicatedNEWred+malformedstatustests thenrepairunderreviewercoordination; nooldfixturesneeded. Gatewaycomponentnotstartedawaitingmigrationfinalreview.
-
-Migrationfinal2fixedstandalonepostcommitcleanupdiagnostics+ROcloneopen(raw->backup_clone_open_failed),50green; reviewerthenfoundcombinedpostcommitclose+evidencefailure primaryloss andcleanupcodesomittedfromvalidationfailureevidence. mp06_schema was explicitly REACTIVATED viafollowup tofixcombinedbranchwithactualred (do notmerelysend_message tocompletedagents). Parentmustfollowupmp06_surface_review afterfinalfreeze toactivatereview. Currentremainingowners: mp06_schema migrationonly;mp06_bank_boundary CentralBankonly;parentdocs/Gatewaymoneyfrozen. Parentprojectstructurepassedexit0 log /private/tmp/agent-economy-mp06-structure.log; OpenSpecstrictvalid. No root14/currentparentprocess exceptnativeagents; all14768/77751/36589 etcTERMINAL0.
-
-**CURRENT continuation state after gates/typing repair:** All Bank/Gatewaymoney/startup/CLI/evidence/native-disposal source slices are independentlyAPPROVED0. BankparentCI14768TERMINAL0; BankownerfinalCIalso0 `/private/tmp/agent-economy-mp06-bank-boundary-final-ci.log`; parentnew28focused90184TERMINAL0. Earlierpercentageprecedencehypothesis was WRONG: fullroute verifies first perapprovedMP03design101–111. OldT033APIprose wasstale; correctednew28testsandAPI/auth/testdocs nowAPPROVED0. `bank-precedence-red.log` is incorrecttestexpectation evidence, NOTproductred. No Bankauthproductionchangewasmade. Final7-fieldJWSdocconvention alsofixed/approved.
-
-Migrationfinalcombined repair52green+APPROVED0, thenparentGatewayCI99165TERMINAL1 caughtforbiddentype/pyrightignore inconnectautocommitLEGACY. ParentfailedcastLiteralattempt revealedactualtypeshedbool-onlysignature. Architect+officialPython/SQLiteapproved `autocommit=True` withEXPLICITSQLBEGIN/COMMIT/ROLLBACK; no cast/suppression/reflection/default-mode dependence. Exactbasefactory/cache0/threadFalse maintained. New`test_migration_transaction_mode.py`: genuine1red(DBAPIcommitno-op=>v0 afterclose), nativecloserollbackcontrol+SQLonecommitproof. Parentchangedcommit-then-raisefaultaction toSQLCOMMIT and3retainedwriterfixtures torealfactory, preservingassertions; wronglegacyfixtureprecondition3fail loghonestlyretained.54then68migration/mode/CLIgreen. ModechangeAPPROVED0 bymp06_surface_review, planupdatedofficialcitations. GatewayCI59214TERMINAL1 thenfoundMigrationError optional safe_details=None prohibiteddefault; parentmadeexplicitrequiredDictwithallsource+2faultcallsupdated. Focused68session13978TERMINAL0; Semgrep95816TERMINAL0(0findings); mechanicalsignature rereviewpending/inprogress.
-
-**Active validation:** finalGatewaycomponentCI session3567 ACTIVE at `/private/tmp/agent-economy-mp06-gateway-combined-parent-ci-final.log`; allpriorCIhandlesexceptthisareTERMINAL. Mechanicalrequired-detailssignaturereviewnowAPPROVED0 withfresh68green. Afterpass runfreshactual `tests/runtime/test_migration_live_workload.py` withunique `/private/tmp/agent-economy-mp06-migration-live-4` basetemp, archivefreshcleanup; thenROOT14snapshot+fullCIwhileallsourcesfrozen. Root14NOTstarted. Checkliststill32/117/T120T121open. NoGitmutation; localtimeafter08:00EuropeAmsterdam, commits/pushesNOWFORBIDDENuntil18:00.
-
-**Read-only next-slice agents:** mp04_receipt_design andmp07_transition_design are architects preparingboundedhandoffs only; no source/docs/Gitmutations permitted. Parentwillintegratetheirproposals afterMP06gate. Allimplementationownersidle/frozen, parentownsremainingroutineverification/docs. ContinueallCore+Vision; Q-M1/M2/M3andrealproviderstillunanswered/unproved.
-
-**NOW ROOT14 ACTIVE — newest status overrides above:** parentGatewaycomponent3567TERMINAL0 at `/private/tmp/agent-economy-mp06-gateway-combined-parent-ci-final.log`. Finalmode/default-free migration54/combinedCLI68 tests andallindependentreviewsAPPROVED0. Freshlive4 session24728TERMINAL0,1pass11.32s, afterfinalcode; `mp06-migration/live-cleanup.json` now8uniquemanifests/60ownedgroupsfreshhostabsent. Root14 session46995 ACTIVE `/private/tmp/agent-economy-root-ci-14.log`; before snapshot886source/config atroot-ci-14-before.json. ALLSOURCEFROZEN; onlydocs/evidence maychange. Do not restart46995. Afterterminal recordactualexit, captureafter withsource-snapshot.py, compare/archiveroot14logs+2CLIstackruntimegroups; no tasks/ticketscloseunlessroot0+unchanged. ThencloseMP06T120/T121/tasks5.2–5.5 onlyifallrequiredproofcovered andupdateMasterplan/OpenSpec/evidencemappings. NoGitmutations, officehourbanactive. NativeMP04/MP07designagentsreadonlyonly. GoalstillACTIVE32/117untilverifiedgate.
-
-Root14 progress: allcomponents/serviceintegration/agents/tools/cross-runtime passed; browserphase7active~80%, economyphase8remaining. Preparedarchiver `/private/tmp/agent-economy-archive-root-14.py` takesREQUIREDactualexitcodearg; runafterafter-snapshotwithhostpspermission. Noexitfileyet. Native`mp06_closure_audit` verifierACTIVEread-only checkingexactMP06closureclauses (especially concurrentlock/settlementatbounds andinterruption/restart versuscaughtfaults); awaitfindingsbeforeclosingT121 evenrootgreen.
-
-Nextarchitectrecommendations persistedin `docs/plans/2026-10-16-mp04-mp07-contract-handoff.md` (DRAFT,notpolicy). MP07architectcorrectedinitialoverreach: Q16isFEEDERpolicy, no globalhumanquorum andNOalreadyratifiedgracewindow. Q-M4 askedasync on2026-10-16: 60s/5min/poster-specified acceptancewindow fortaskswithbids, preserveearlyacceptance/closebidsatcutoff/zero-bidexpireimmediately. NOANSWER; dependentpolicyblockedbutMP04independentworkavailable. policy-decision-requests.md recordsitunderT122/T123. MP04architectwithdrawsyntheticlegacyreceipts; parentmustdefinehonestlegacycutovermarkers/unknownoperationIDs withoutsilentcontractnarrowing. Unifiedv2receipt+claimschemaisproposalonly, oneownerrequired; donotcoupleMP04toanunansweredpolicybyguessing.
-
-**LATEST / ROOT15 ACTIVE — supersedes allhistoricalgate/ownershiptext:** Root14TERMINAL0 archived886unchanged,201cross/runtime295browser94economy,19CLIgroupsabsent. Closureauditfound2explicitgreenproofgaps, soONLYT120closed/tasks5.2+5.5checked; total34/117. T121and5.3/5.4stayOPEN. ParentthenaddedNEWtests/runtime/test_migration_process_crash.py;executoraddedONLYNEWGatewaytests/unit/test_mp06_money_concurrency.py. NOproduction/oldtestchanges sinceRoot14. Concurrency3barrier/independentwriterMAXlock/release/splitcases; parent49existing+newmoney21417TERMINAL0. Crash2real7servicetestsSIGKILLownedchildafterDROP/afterCOPYviaOS-verifiedPIDPGID/SID stdoutselectorbarrier, exactv0/audits/lockreleased/backupimmutable, NEWexplicitpostcrashbackupbinding thenrealCLImigrate +sameidentitysignedworkflowafterrestart. Parent8037TERMINAL0:2passed21.39s; archiveevidence/mp06-crash-concurrency has4runtime+2killrecords,36groupsfreshhostabsent. BothclosureverifierANDcode-reviewerAPPROVED0; noitem-specificMP06gapremains. stderrchildPIPEnotarchived isnoteddiagnosticlimitation, notblocker.
-
-ROOT15session45672ACTIVE `/private/tmp/agent-economy-root-ci-15.log`, before888source/config `/private/tmp/agent-economy-root-ci-15-before.json`. ALLSOURCEFROZEN, docs/evidenceonly. DO NOTrestart45672. Onterminalcaptureafter using source-snapshot.py, then `/private/tmp/agent-economy-archive-root-15.py <ACTUAL_EXIT_CODE>` withhostpspermission; scriptpreparedbutNOTRUN. Ifroot0+888unchangedandcleanupabsent, closeT121/tasks5.3/5.4, markallMP06masterplanbullets, total36/117, strictOpenSpecvalidate andarchivecheckpoint. Thenreleasefreeze/proceedMP04testfirst. Root14andallpriorprocessesTERMINAL; onlyRoot15active. Allnativeagentscompleted/idle. NoGitmutation; officehourban08–18EuropeAmsterdamactive. Q-M1–M4noanswers; realCourtproviderunproved. GoalACTIVE/unbounded/allCore+Visionremain.
-
-**NEWEST gate update (supersedes in-progress details below):** Root13 ACTIVE session40078, /private/tmp/agent-economy-root-ci-13.log and .exit oncompletion;875source/configfiles snapshottedbefore inroot-ci-13-before.json. ALLSOURCEFROZEN; onlydocs/evidence maychange. Component/serviceintegration and200cross/runtime caseshavepassed; full295browserthen94economy runremaining. Do not restart40078. Afterterminal captureafter using/private/tmp/agent-economy-source-snapshot.py, thenrunprepared/private/tmp/agent-economy-archive-root-13.py withhostpsaccess (archivesrootlevelevidence, hashcomparison,2runtime manifests/groups). No newimplementationuntilgatecollected.
-
-All implemented slices now independently APPROVED0: schema/bootstrap, read-onlymoney audit, privateleasedretainedscratch/sourcebinding, MP12source+fixturehandoffs. Engine final creation-handoff repair capturespost-mkdiridentitybeforeopen/use, markerstoresdev/inode;114focusedgreen. Parentexplicitformatted5files afterreview, verifiedall5ASThashesidentical (/private/tmp/agent-economy-mp06-format-{before,after}.json); Gatewaycomponent53541TERMINAL0 afterpriorread-onlystylefailure. Parentfreshlive2proof59405TERMINAL0 (11.23s), root/private/tmp/agent-economy-workspace-live.uoW5M5;18groupsfreshhostabsent; archivesworkspace-live-* inmp06-recovery-foundation. Parentverifiedoldartifact/restoredtarget fromf83e... withNEWprivateworkroot /private/tmp/agent-economy-v1-compat-o74stuqs:76backup+77targetentries unchanged, artifact/identitytrue, migration/operationalfalse, unknown_schema retained. Compatibilityreportarchived. Newrootlivefixturesuse0700.
-
-ParentfullUIbrowser40698TERMINAL1:293pass/2oldexpectationsfail. FixedonlyMP02bidIDtestauthorizedresponsefixture(retainsbothXSSasserts+publicemptyassert) andObservatoryO58(originalsummary/BIDassertpost-open plusadditionalopenredactionproof). IndependenthandoffAPPROVED0; targeted15security+8SSE23pass session70059TERMINAL0. Fullbrowsernotrerunseparately; root13isfreshintegratedrun. MP12component+246integration+16browser+2actualsignedtests alreadygreen asbelow. No remainingcodeownersactive; allfrozen. Actualmigration andBankWriterguardsnotstarted; usefinalhandoffsectionindocs/plans/2026-10-16-mp06-migration-implementation.md afterrootcheckpoint. CLI/publicmigrationmustfreshlyentercontext, currentmetadatafivefields(no silentlyaddedplanhashcolumn), explicittimeoutaligned0..2147483647.
-
-- Recovery engine and all runtime/CLI/adoption surfaces now independently APPROVED with zero unresolved findings. Engine final verification: 79 focused recovery/read-race tests, 516 Gateway unit tests; final parent Gateway CI session30313 TERMINAL0. Final live public-API workload -> backup -> source-files-unavailable -> restore -> read-only adoption proof session78169 TERMINAL0 (1 passed). Fresh host process check found all9 recorded groups absent. Final logs, runtime, inventory and cleanup are archived under mp06-recovery-foundation/live-fd-final-* and mp06-gateway-fd-parent-ci.log. Operational restart and migration eligibility remain explicitly false; no MP06 implementation ticket is closed.
-- Root attempt11 session50305 TERMINAL1: seven Central Bank ledger contract setup errors because a valid generated Gateway config lacked the newly required recovery section;174 other Bank unit tests passed.846 selected source/config hashes unchanged; log/exit/before/after/comparison archived under mp06-recovery-foundation/root-ci-11*. No root gate is active.
-- Parent reproduced Bank parity suite red (7 pass/7 setup errors), added only explicit fixture-owned absolute maintenance_lock_path and backup_root, then14/14 passed and Ruff clean. No assertions changed. Bank component CI session51748 TERMINAL0; archived mp06-bank-fixture-ci.log.
-- Executor mp06_fixture_integration completed/released valid Gateway templates in tests/integration/gateway_helpers.py, Identity/Bank/Court integration conftest.py, and Identity test_concurrent_registration_live.py. It observed missing-recovery red before editing and16 focused integration/cleanup cases passed afterward; commands/results are in its transcript (no separate logs). Reviewer mp06_surface_review APPROVED0 findings, freshly reran Bank14+cleanup5 and Ruff. No assertions or deliberate negative configs changed.
-- **Root attempt12 TERMINAL0 session50994**, all components,165 cross/runtime,288browser,92economy passed;3existing credential skips are not provider proof. All19 recorded groups from two CLI-managed stacks drained and fresh-host absent.858-file snapshots includeUIweb. Three fixture files changed by CI automatic formatting: exact reversed quotes reproduce originalbeforehashes and ASTs are identical (root-ci-12-format-proof.json). Thus behaviorgatepasses but unchanged-source gate DOES NOT. Logs/exit/snapshots/comparison/runtime/cleanup archived under mp06-recovery-foundation/root-ci-12*. Do not poll/restart50994. Source freeze RELEASED. No root gate active.
-- Snapshot collector /private/tmp/agent-economy-source-snapshot.py now explicitly includes services/ui/data/web source assets, previously omitted by the runtime-data exclusion. Historical846-file root11 comparison remains unchanged; root12 will have the expanded baseline.
-- Read-only architect mp06_backup_design completed next migration/money handoff. Keep DbWriter constructor API, classify before journal-mode mutation, require current-v1 for schema_sql=None, close on failure. Exact complete semantic v0 includes all five historical additive columns (direct/full and old+ALTER layouts must match); missing columns partial. Explicit fixed v0->v1 migration uses statement-by-statement transactional DDL, never executescript inside BEGIN. Missing/invalid backup must block before RW source open; exact raw DB/WAL comparisons happen PRE-WRITE only, then retained inode/lock/immutable-backup and semantic transaction checks (do not compare original WAL after SQLite writes). Rollback proof is logicalv0/rows/events + immutablebackup, not rawWAL identity. Use ONE fixed SQLite signed64 representation bound; no new configurable money caps are required by spec. 5.2 stays open until actual migration entrypoint rejects missing/invalid backups before RW open. No schema/money implementation has started. Q-M1/Q-M2/Q-M3 and real-provider evidence remain open, without blocking independent work.
-- ci_readonly executor COMPLETED/released: removed autoformatter from seven service ci/ci-quiet recipes; explicit code-format remains. New tests/runtime/test_ci_readonly.py invokes copied actualrecipes withrealRuff/ownedmalformedfiles andstubsunrelatedgates.14intendedred+21controls;35green. ParentreviewAPPROVE andfresh35passed26.46s (session66897 TERMINAL0), structure/Ruffclean. evidence/ci-readonly holdslogs/report. Task2.9checked;2.10/T173/T174 remainopenpendingnextunchanged-source rootgate.
-- MP12 source and final handoff independently APPROVED0. Parent reconciled post-open test_task_drilldown_contract.py to exact83/91 amounts+proposalabsence withnames/timestampsretained; reconciled onlyE2E T21/22/23/25 using explicitposterDTOfixture (renderingproof, notauthproof), preservingname/quality/exact73amount; all9casesstillassertpublicbids=[]/count1, other5observercasesunstubbed. Parent16browsercases94578TERMINAL0, 9drilldown99298TERMINAL0, 27proxy+drilldown95398TERMINAL0. FirstUIcomponent3016TERMINAL1 Semgrep prohibitednoqaTC001; parentremovedfutureannotations+suppressionfromrouters/proxy.py tofollowexistingruntimeFastAPIpattern. Rerun87523TERMINAL0; all246UIintegration88137TERMINAL0, NOdeselections. NEWagents/tests/e2e/test_mp12_proxy_bids.py actualsigned7serviceproof26018TERMINAL0 (2pass): ownoperatorauthorizednames/amounts/private-no-store; foreignposter403; openactorhistoryhidden, acceptedloserhistory/feedvisible. Runroot /private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t;10groupsfreshhostabsent. Logs/runtime/cleanup archivedevidence/mp12-projections. FullGoal/MP12ticketsremainOPENpendingcombinedrootgate; task14.1redchecked,14.2/14.3awaitrootcheckpoint. NoMP13actualrevealschedulerclaim.
-- Schema/bootstrap slice FROZEN/APPROVED0 after8reviewcategoriesfixed. Public schema.py: SQLITE_MAX_INTEGER, SchemaState, SchemaClassification, classify_schema, load_schema_sql; resources legacy_v0.sql/legacy_base.sql/current_v1.sql anddocs/schema.sql. SupportsEXACT2legacy layouts;canonicalV1order;metadata-firstvalidation;tokenizerpreservesliterals/commentscorrectly;bootstrapallowlist/transaction/primarycleanup;strictWAL+boundedtimeout/effectivePRAGMAs. Parent9behavioralreviewreds+ownerexpanded23fail/34controls precededfix;58focused/74compatgreen; parent83combinedschema/reconciledtests29160TERMINAL0. EarlierinitialschemaAPIredwasunloggedCOLLECTIONFAIL, notbehavioralproof; T120historical12red andparentreviewreds separatelyhonest. Parentowns test_schema_review_regressions.py and3reconciledoldtests (maintenancefixturewritesprivatecurrentSQL; partiallegacyautoALTERtestsnowassertfailclosed/no-mutation). Evidence/mp06-schema-admission. ActualmigrationandBankWriterfinancialguardsstillNOTimplemented.
-- Recovery source-binding engine currently ACTIVE on final creation-handoff correction after a deliberate scratch-ownership architecture change. Public open_backup_bound_source yields frozen BackupBoundSource(backup_id,manifest_sha256,artifact_verification_result,source_database_path,database_path,wal_path); methodsverify_before_write/begin_write_phase/verify_during_write; artifact-v1audit/migration_eligibleFalse unchanged. Prior113focused/640fullGatewayunitgreen andstatic/Semgrepclean candidate nowrequires euid-ownedexistingwork_root0700, persistent0600 .recovery-owner.lock EXnonblockinglease heldALLpublicoperations withexplicitnestedworkspacepropagation. ScratchisRETAINED on success/error (no scratchunlink/rmdir/rmtree);closedmethods/FDs, clonepathreadableafterexit. OSdocs+architect provedno portableatomicmkdir-open/conditionalrmdir; sameUIDmustcooperatewithlease, notuncooperativesameUIDisolation. See scratch-ownership.md andoperationsguide. Parentcaught finalomission: _create_owned_scratch stillcapturedidentityAFTERopen; owner nowadding IMMEDIATEpost-mkdiridentity snapshot +open/currentcomparison BEFOREfchmod/ownermarker writes, owner marker includesdev/inode, successfulreplacementred. This doesNOTclaimdetectingreplacementBEFOREfirststat outsidecooperativethreatboundary. FinalvisibleDBmodecheck nowincluded. Do noteditrecovery.py or itsunitfixtures whileowneractive. Parentrootlive inventory/restore work_root.mkdir(mode=0700) updated; tests deferreduntilenginefreeze. New/privateleasecandidate stillneedsindependentreview+freshparentcomponent/live/artifact-v1compatproof. No rootgateactive.
-
-- NEW money_audit.py/test_migration_money_audit.py FROZEN/APPROVED0. audit_money returns frozenMoneyAuditResult withtypedfinancialfindings/totals, notauthorization. ExactSQLitetype/sign/MAX;nonemptyTEXTIDswithoutcoercion; supportedtx/status; Pythonintaccountnet/globalconservation; exactlock/escrow/release/tasklinkage; bank-onlyescrowsallowed; two-positive splitmustincludepayer; onefullworker/onepayer/twopayerlegsallowed. APIabsence10bodyfails honestlylabeled;balancedlinkagered11fail+13controls; finalsplitred1fail+31controls.32audit+58schema=90passed reviewer andparent75245TERMINAL0;staticclean. Evidence/mp06-money-audit. Worker mp06_schema released allownedfiles.
-- Next actualmigration design assessed bymp06_backup_design: onefixed5-table rebuild(bank_accounts,bank_transactions,bank_escrow,board_tasks,board_bids)+indexes+schema_metadata, structuraldeltaassertion. VerifiedROclone classification/audit precede ANYsourceRWopen. Publicentrymustfreshlyenterbackupcontext frominventory+ID (notacceptadetachedevidenceobject); internalboundhelpercanexecute. Explicitboundedtimeout, FKOFFbeforeBEGINIMMEDIATE; reclassify/auditsourceandcomparedigests;dropchild-first,recreate/copyparent-firstusingexplicitrowid+namedcolumnsfromclonewithoutcasts/ATTACH/executescript; preserveallotherrows/events/sqlite_sequence. ExactV1+money/FK/integrity/rowdigests+backupidentitybeforecommit;freshROvalidationafterclose. Commitexceptionsnonzerouncertainwithobservedstatus,noautoreapply. Architect suggestedextra planhashmetadatafieldbutCURRENTapprovedschemahasonly(singleton,version,migrated_from_version,backup_id,backup_manifesthash); doNOTblindlyaddfield. Useexternalplan/statusreportorreviewnecessaryschemaextension. ActualmigrationNOTyetimplemented/assigned; sourceprivateleaseprerequisitestillunderreview. MonetaryBankWriterguardsstillpending; retainedT120suiteoutsideproductiontestsremainsred-proofonly.
-
-Continuation audit: the preceding goal turn made concrete progress on contracts, inventory and live backup. This continuation added startup evidence, preparation integration, verified-byte reads and an actual public-API workload artifact restore. Both are progress turns; the full objective remains active.
-
-**Root attempt10 TERMINAL exit0**, session17133. All809 source/config hashes unchanged; archived root-ci-10 log/exit/before/after/comparison, two runtime manifests and cleanup report.14 owned service groups were drained and absent in a fresh host ps check. Root passed52 cross-service/runtime,288 browser and92 economy E2E;3 existing credential-dependent skips remain explicitly outside real-provider proof. Do not poll/restart17133.
-
-This is the verified MP02 checkpoint, not a current gate for later MP06 library edits. Source freeze is released. Checklist now27/115;4.2–4.5 and2.8 verified. T112/T113 and171/T172 closed in canonical+delta using mp02-checkpoint.md, which preserves the reconstructed-browser-baseline provenance limitation. Fullgoal remainsACTIVE.
-
-Current owners (latest2026-10-16 continuation):
-- Parent owns recovery.py temporarily after engine owner released repair2. Parent found remaining path-based verification reads, replaced them with pinned reads, added byte-YAML parser in commons, fixed actual relative asset audit, and added real restore proof. Engineindependentre-review is still outstanding; backend reviewer turn was stopped by an automated cybersecurity filter and was not retried. No completion/approval claim.
-- mp06_recovery_preparation owns scripts/recovery_preparation.py and test_recovery_preparation.py, repairing review findings: drained nonzero histories allowed; fsync/close primary preserved; refused repeats preserve terminal metadata even with invalid bounds; stale preexistingfile withnotprepared mustfail; exact0600 publication underrestrictiveumask. Reviewerwaitingforfreeze; avoidreviewingTDDinflightstates.
-- mp06_inventory_review independently APPROVED builder+startup+targets; reviewing preparation afterfreeze. Builder18tests andstartup6green; targets16green. No productcodeownership.
-- mp06_backup_design isread-onlyassessing verify_restore truthfulidentity/audit evidence and targetpublication contract; no engineedits/probes.
-- mp06_inventory_builder, mp06_restore_bindings, mp06_lock_identity andmp06_backup_engine completed/released. Existing-only lock API implemented,168commonsCI; laterparent byteparser CI177passed.
-- Parent alsoowns runtime startup/wrapper, field/registry/CLI helpers, liveintegrationtests andevidence. Allsourcechanges local; night-onlyGitpermission recordedabove butnoactions taken.
-
-## Latest continuation handoff (supersedes older in-progress details below)
-
-### Most recent continuation
-
-Previous turn was progress; this turn added a usable recovery-preparation CLI, immutable restored view, operations guide, and fixes for post-publication stop mutation/empty commands. No goal/task closure. Progress remains27/115. No Git action; night-only permission still applies.
-
-- **Engine owner mp06_backup_engine ACTIVE** on the FINAL5 review repair. Do not edit recovery.py/test_mp06_recovery.py. Prior FINAL8 fixes yielded71focused+508unit andstaticclean; full re-review then found5remainingissues: replacingrename violatesnoclobber payload/report publication; restoredsourceconfig needsSourceConfig.sha256+mode600 beforeparse; validatebackupIDbeforeselectedpathprobe; recheckrootmodesbeforeCOMPLETE; pinnedhelper cleanup leaks/masks onfailure. Ownerasked tofixcoherently (preferexclusivelyreservedfinalpayload+COMPLETEsolecommitpoint, link/unlinkreports, no platform-specificnewdependency), preserveallfaultassertions, thenfreeze. No writer/reviewer overlap: reviewercompletedpass; nextfullre-reviewonlyafterownerrelease.
-- **Engine review mp06_inventory_review completed REQUESTCHANGES5**, noengineapproval. EarlierfullreviewFINAL8 alsocoveredrootmodes/inventorycoherence/FDpublication/canonicalroots/workoutsideentirebackupstorage/authenticatedsingleJSONread/reservedIDs/primarycleanup; mostfixedbut5above remain. Initialdifferentbackendreviewer'sautomatedfilterfailure wasdisclosed; subsequentauthorizedread-onlyexisting-functional-review runs succeeded withoutretryingthatbroadfailedtask.
-- **All surface modules independently APPROVED**: preparation23cases, targets16, adoption11unit/37compat, CLI+runtime+guide aftertwofindingsfixed. Newfiles scripts/recovery_adoption.py andtests/runtime/test_recovery_adoption.py: frozenRestoredRuntimeView(repo_root,target_root,result,target_bindings,source_inventory,config_paths), adopt_restored_check_only(*,repo_root,target_root,work_root). Callsverify_restore, digestbindspinnedmanifest, strictcontracts/full8configmapping, detachedimmutablevalues, no lifecycle/provision/targetwrites. Actualadoptionintoliverestoretest stillnextstepafterenginefreeze.
-- ParentCLI additions in isolated_test_runtime.py: --prepare-recovery, REQUIRED explicit --registry-timeout-seconds / --registry-max-attempts, full7dependencyorder. Runsafterdrainedphaseevennonzero, retainsphaseexit, preparationfailure=>nonzero+safe reason, normalrununchanged.4red+8controls;12initialgreen. Reviewerfoundduplicatefinalstoprewritingdurablemanifestandbare--startingemptycommand;2genuinered+2controls. Added _stop_completed guard (onlysuccessfulcleanup+manifestwrite/allhandlesempty=>no-I/O repeatedstop); resetbeforeownedcommand/service start; failedcleanupremainsretryable. Normalizecommandbeforeemptycheck/create. Newcommandafterstopcontrol included. Sourcefrozen/APPROVED0findings; final62case runtime/CLI/preparation suite43752 TERMINAL0 in44.52s. Ruffandmypy with--explicit-package-bases+MYPYPATH repo clean; earlierduplicate-module mypy was invocation-only.
-- Newguide docs/operations/recovery-artifacts.md reviewedAPPROVE; coversisolatedprep/backup/verify/targetbinding/restore/check-only/finalize, honestseparateflags. Doesnotclaimordinaryruntimeinventory/operationalstartup/migrationscomplete.
-- ActualdirectCLIproof67375 TERMINAL1 EXPECTED: full7/provision then /usr/bin/false; readycanonicalinventory produced andnonzero1retained. Preservedroot /private/tmp/agent-economy-recovery-cli-proof.pCuZqr, runb5793130cda24f8ba44d5be33947059a. Digestmatches,10service/bootstrap/phase recordsdrained, freshhostps10PGIDsabsent. Archivedpreparation-cli-proof.json andlogs. Thisliveproofpredatedidempotentstopfix; current62tests+reviewprovefix, freshdirectCLIproofcanbeincludednextintegrationgate.
-- Parentcurrentmanifestdelta baseline: live54988 TERMINAL0,1pass17.51s withunknown_schema assertion; sourcefilesabsentrealworkloadrestore. Dedicatedroot /private/tmp/agent-economy-restored-evidence-proof.ExG5rM. ParentGatewaycomponent74853 TERMINAL0. BOTHpredateFINAL8/FINAL5engineedits, NOTcurrentacceptancegates. Root10stillhistoricalMP02only; norootgateactive.
-- Parentownedlive_restore testnowrequiresunknown_schema preserved. Afterenginefreeze addrealadoption+asserttargetbytes/modes/inodesunchanged, rerunfreshdedicatedbasetemp, archive9groupcleanupagain; do notreuseoldmanifestformatartifactsfornewproof.
-- Readonlyarchitectmigrationhandoff complete: afterbackupapproval freezeexactcompletelegacy_v0.sql; classifiers EMPTY/CURRENT_V1/SUPPORTED_V0/PARTIAL/UNKNOWN/FUTURE; onlyEMPTYbootstrap/currentopen; explicitoffline v0->v1 withexistingEXlock+verifiedexactbackup/rawidentity+cleancloneaudit, transactioncopyunchanged/noautofix, financialtype/bounds/payership/issuance/lifetime-replay constraints. Requiredmoneymax configboundedbySQLiteI64max (technicalboundonly,noinventedlowerpolicy). Noimplementationyet; noordinaryDBopens. Detailsinmp06_backup_design finalmessage; source targets remainmoney_map. Q-M1/M2/M3/realCourtproofstillopen.
-
-Terminalhandlesdonotpoll additionally:75028,67375(expectedexit1),12427,43752,54988,74853. Currentenginework onlyliveowner, sourceoperationsinprogress; getagentstatusbeforefuturewait/restart.
-
-Previous goal turn was progress; this turn also made concrete implementation/verification progress. Full objective remains ACTIVE; no task closure or goal completion is justified. User's new night-only Git permission is at the top; no commits/pushes/staging occurred.
-
-Current active engine owner is **mp06_backup_engine**, returned ownership after parent's read fixes. It is implementing architect's required standalone restored-evidence repair. Parent must not edit recovery.py or its owned test_mp06_recovery.py until release. Parent retains test_recovery_read_races.py, all runtime/live tests, config byte parser and CLI. Engine API unchanged.
-
-**Approved independent slices:**
-- Neutral contracts (safe IDs, explicit capture_root, identity consistency, lock topology); held lock handle; field catalog/registry helper.
-- Builder: four review defects fixed (pinned ancestor reads, exact7serviceownership/CWD, authorize before probes, consistent registry IDs), public read_recovery_source_file(path,*,label), same build API. Inventory+fields18green; independent APPROVE.
-- Runtime startup: exact service+agent config hashes and CWD before spawn, recheck after health; maintenance inode anchored before protected spawn; command records capture actualCWD and copy executed command list. _assert_maintenance_exclusion is accurately GLOBAL only, no PID attribution; actual per-service lifespan tests separately prove participation.6startup cases green +41established runtime/bootstrap/cleanup regressions. Caller-command mutation had actualred. Independent APPROVE.
-- Preparation scripts/recovery_preparation.py: explicit prepare_recovery_and_stop(runtime,*,registry_timeout_seconds,registry_max_attempts), wrapper onIsolatedRuntime; stable immediate double registry/inventory capture, stopfinally, final stoppedrebuild, allservice/bootstrap/phase records, canonical noclobber inventory+readymanifest. No normal/partial stop inventory. Four reviewfindings fixed: drained nonzerohistory permitted; primaryfsync error preservedwhenclosealsofails; repeatedattemptterminalstatus preserved eveninvalidbounds (stale notpreparedfile recordsfailed); explicitfchmod0600underumask0777.23fresh independenttests incllive7service, APPROVE0findings; owner62adjacentgreen.
-- Targets scripts/recovery_targets.py: pure build_target_bindings(inventory,*,target_root,process_cwds,agents_package_root,endpoint_values), ownedpathlayout preserved; only schema/web external mappedunder captured-code/id/basename; exact endpoint/CWD inventory andstrictkindtypes; DIRECTORY_ONLY ancestry allowed.16independentgreen, APPROVE0findings.
-
-**Parent engine corrections after repair2:**
-- Child's47focused green still left path.read_bytes/shutil.copyfile in verification/audit paths. Parent reproduced2actual metadata-to-read replacement failures in NEW tests/unit/test_recovery_read_races.py and converted contentreads to pinned descriptors, including tree/file index, DB/WAL auditclone, assets and restoredfiles. _read_pinned_regular also checksmtime/ctime/mode/inode consistency.
-- New service_commons.config.parse_yaml_config_bytes(content,*,source) reusesexistingYAMLbehavior; load_yaml_config delegates afterread. Recovery parses alreadyverifiedbytes and deletes temporaryconfig rereadworkaround; no newdependency. Byteparser red8absentAPI+1missingfilecontrol,9green. Parentcommons CI49463 TERMINAL0:177passed, /tmp/agent-economy-mp06-commons-bytes-ci.log.
-- ActualAPI assetrows store RELATIVE task/asset/filename paths; priorengineaudit assumedabsolute. Parentfixedaudit toacceptcanonicalrelative orcontainedlegacyabsolute, rejectparentescape/empty.1actual relativeassetred+5controls; parentobservedterminalred afterpatchbutlogprovesoldbehavior, do notclaimearlierobservationtimestamp.63focusedengine/CLI/read-regression tests passed, /tmp/agent-economy-mp06-read-races-green.log. This is NOT currentgate forchild's newrestore-evidence edits.
-- Backendengine independent reviewer turn stoppedbyautomatedcybersecurityfilter. Parentdisclosed, didboundedlocalverification, didnotretrythatbroadtask orclaimindependentengineapproval. Stillneedsappropriateindependentreviewofcompletedcurrentengine.
-
-**Actual artifact roundtrip:** NEW tests/runtime/test_recovery_live_restore.py usesactual7service runtime andpublicSDK toregisteralice, post/bid/accept/upload/submit task, preservingoperatorbalance andlocked100escrow. prepare->backup, thenrenameonlyits own data/assets/keys/configs sooriginalruntimepathsabsent; restoreinto fresh target; assertrawDBhashsame, sameIDs/submittedtask/balance/escrow andexactuploadedbytes via disposableDBclone; threeconfigs bindfreshmaintenancepath. No directDBstatewrites. operational_restore_verified remainsfalse; restoredservicesnotstarted.
-InitialtestwronglyassumedassetDBpathabsolute; implementationinspectioncorrectedtesttoactualrelativecontract andaddedstrongengineauditred. Finalproof session31351 TERMINAL0,1pass10.83s, /tmp/agent-economy-mp06-live-restore-final.log. Dedicatedbasetemp /private/tmp/agent-economy-live-restore-proof.DEXF6k (preservedoutsidepytest3-runretention). Runtime19bd23eab4ee4405898fc1429ed2269e;9groups allrecordeddrained andfreshhostpsabsent. Archived live-restore-runtime.json, live-restore-inventory.json, live-restore-cleanup.json +log under evidence/mp06-recovery-foundation/. Earlierbasetempordinarypytest artifacts werepurgedbyretention, so do notclaimtheyremain.
-
-**Current engine repair exact scope:** verify_restore previously discarded audit, suppliedidentityNone andreturnedidentityTrue/nofindings. Architectrequires canonicalsourceinventory/verification/audit+hash, recomputedrestoredkeypair/audit+hash,targetmaintenanceidentity, exhaustiveEXPECTEDwrittenfile/dir/absence index. Deriveindexwhilecopyingverifiedbytes/rendering, notfromwhateverisfoundlater; coverdirectorychildren/assets/sourceconfigevidence/renderedconfigs/DB/WAL/keys/schema/lock; beforeCOMPLETE exacttree/re-readcheck. Standaloneverifyexisting-onlyEXtargetlock, recordedidentity/empty0600/freshness, rerenderconfigexactbytes, validatepairs/fingerprints/DBregistry, preserveallfindings inclunknown_schema. migration/operational false. PreserveimmutableDB/WALhashes. DIRECTORY_ONLY keyroot MAYcontainexplicitdeclaredkeyfiles; architect's blanketempty wordingcorrected, require noUNDECLAREDchildren. Preserveemptycopieddirs. Alsofix outputcreation ancestor-pinning (_write_new_file still absoluteopen afterpath-basedensureparent) withoutclobber. No newrootCIuntilfreeze/review.
-
-**Next afterengine:** re-runartifactroundtripandindependentreview, read-only restoredadoption view/CLI/runbook asneeded, fullfreshrootgateonlyafterallownersfreeze; no5.2checkbox/T121closurebeforeproof. Money/schema map completed READONLY bymp06_money_map: retained12red+6controls in evidence/mp06-red-suites; targets bank_writer create_account/credit_account/_lookup_active_escrow/_load_escrow/escrow_split, db_writer._init_schema/_run_migrations, lifespanmissing-schema bypass, schema.sql constraints. No versioned migration fixtures exist beyond test_schema_additions. Backupapprovalbeforemigrationimplementation; noordinaryDBmigration. ContinueallCore/Vision afterfoundation. Q-M1/M2/M3 andrealCourtcredential/budget/eval stillopen; donotassumepolicyapproval.
-
-Terminalhandlesdonotpoll: root17133/commons45613/Gateway4180(sandboxCAfail)/61970(hostpass)/live1358/startup47266/runtime33820/startup-prep67153/engine97885+67737+62205/assetred75747/live37593+31351/commons49463. No rootgatecurrentlyrunning.
-
-No root gate is running. An authworker accidentally launched rootCI1582 and interrupted it duringservice-clients; parentpollconfirmedUnknownprocess1582. It isnotrootgateevidence. Intendedcomponentgate69785 passed. Noordinary runtime service was started bythat accidental check.
-
-## Prior gate evidence
-
-- Root7: terminal0, session67697, archived;794 unchanged hashes,273 browser and92 economy E2E. Foundation tickets T110/111,114/115,165–170 closed after separate audit. See foundation-checkpoint.md.
-- Root8: terminal1, session20148;806 hashes unchanged. All libs/service CI, per-service integration, agents/tools passed. Phase6:32 passes/15 setup errors because shared cross-service helper lacked Gateway auth. Fixed and reviewed below.
-- Root9: terminal1, session12888;808 hashes unchanged. Phases0–6 passed, including52 cross-service/runtime cases. Browser phase:168 failures/119 passes, every failure the same Playwright string-predicate EvalError under required CSP. No final economy phase. Fixed and reviewed below.
-- Root1–6 and dual-economy proof11312 are terminal. Never poll those old handles. Dual-economy proof preserved sentinel, identities/tasks, peer survival and cleanup.
-
-The new full browser-only run75350 is terminal0: **288 passed in324.35s**. It verifies the harness rewrite; its server started before the later frontend-containment source patch. Do not present it alone as validation of that final patch. Root10 is the combined fresh gate.
-
-## Checklist and tickets
-
-**27/115 tasks checked**: original20 (sections1–3 and MP06 task5.1), plus4.1 MP02 red proof and2.7 new audit red proof. Added T171/T172 baseline dependency pair under MP01 (2.7/2.8) and MP02 task4.5 for frontend containment. MP02 implementation4.2–4.5 and2.8 areverified; T112/T113 and171/T172 closureaudit isrecorded inmp02-checkpoint.md. MP06 5.1 is red proof only; no money/schema implementation done. Canonical/delta trackers preserve stable IDs; active change is not archived. Strict OpenSpec validation passed after adding4.5 and the final harness/containment reconciliation. Revalidate after later checklist changes.
-
-Masterplan and checklist include the root10 checkpoint at27/115. Later MP06 changes do not inherit that gate. No additional task closure is justified yet.
-
-## MP02 implemented and reviewed
-
-Gateway and callers:
-- Five distinct Gateway capability pairs; no economic/notary key reuse or Identity bootstrap cycle. Local public-key verification.
-- Strict7-field JWS header, exact3-field action/body_sha256/query_sha256 payload. Binds audience, METHOD/raw encoded path, actual serialized body and raw query.
-- Explicit method/FastAPI-template policy inventory; Court singular Board read only. Static aggregate routes cannot match singular grant. Only exact GET /health public; unknown routes fail closed; DELETE body replay covered.
-- Shared async GatewayClient used by Identity/Bank; Board/Rep/Court sync wrappers sign final requests. Required config-relative keypair/TTL300/audience fields. All5 caller component/integration suites passed before root reruns.
-- Gateway32 authority cases plus parent55 broader cases (20 cross-domain pairs,7 faults x5 target domains). Entire SQLite dump unchanged after rejected writes; same-body correct signer control succeeds.55 current green; reconstructed original app+middleware gives55 actual accepted-write failures. The temporary helper import for absent historical policy metadata was removed only in copied unselected helper code; assertions unchanged. Gateway unit expected422 total after55 additions.
-
-Bootstrap/runtime:
-- Full inventory preflight before any create/chmod, public metadata fingerprint inspector, cross-Gateway and Gateway-to-roster uniqueness. Economic roster aliases preserved.
-- Root startup load-only; explicit provision/check/adopt. Runtime rewrites trust/signer keys and UI origins to run-owned paths; partial runtime gets gateway-trust.yaml.
-- Auth182, agents281+3 credential skips, CLI17 and runtime26 passed owner gates; root independently repeats.
-- README documents agent-only legacy0644 adoption before root Gateway provisioning when pairs absent. No ordinary adoption/provision performed.
-
-UI:
-- Required strict local Host/Origin/marker/CSP configuration, loopback bind/client, exact current authority for writes, no public login mode. Non-secret marker route and same-origin write helper.
-- Browser admission precedes bounded body handling; bodyless accept/approve bytes bounded. No assertion or production validation weakened.
-- Shared HTML encoder, encoded task/bid request segments, escaped stored content/identifiers/quarter dates. No inline handlers or active previews; CSP+nosniff.
-- Browser15 security cases now include actual newly delivered SSE event and CSP control. Control loads a normal same-origin test script that calls eval; automation only inserts its script tag. A direct page.evaluate eval probe was unsuitable and is not claimed as CSP evidence.
-- Root9 harness reconciliation:37 expression waits in7 existing E2E/helper files become explicit functions returning identical predicates. Existing function arguments/timeouts and assertions unchanged. No unsafe-eval/CSP bypass. Targeted16 green, full288 green; independent review approved exact37 conversions and corrected control.
-- Newly discovered frontend fallback escape: encoded traversal/absolute paths and symlinked page/index/asset roots read temporary outside marker files.6 intended red failures+2 controls. Canonical root containment now guards direct pages, index fallback and asset mount;8 green, Ruff/mypy/format green, independent review approved. Fresh combined root10 still required. No ordinary files accessed in proof.
-
-UI prior full recipe:69 unit/3 architecture/228 integration passed; unit now has8 added containment cases (expected77). UI full component CI0 before containment/harness follow-up. Economy E2E92 passed after browser header fixture reconciliation. No mock-provider run is real-judge release proof.
-
-## Fixture reconciliation and review
-
-- Service Gateway live fixture now loads ISOLATED_RUNTIME_DIR/configs/db-gateway.yaml. Original6 setup errors retained separately; fresh6 real HTTP cases pass0, cleanup verified.
-- Existing agents proxy E2E client fetches browser-config and sends exact local Origin/marker; original operator identity/lifecycle/payment assertions unchanged. Initial403 fixture mismatch retained.
-- Shared root tests/integration/gateway_helpers.py now supplies5 distinct temporary service pairs and signed per-domain requests. Existing domain assertions unchanged. Review caught wrong-global cleanup ownership, swallowed RuntimeError and BaseException masking.3 precise red regressions preceded repair. Cleanup captures owned state/writer, conditionally resets only matching state, runs stages independently and preserves exceptions.5 cleanup+15 domain+52 full cross/runtime passed, parent independently reran cleanup/domain selection. Final review approved with no findings.
-- Initial browser child previously errored with automated cybersecurity filter after partial edits. Parent disclosed and completed direct bounded local work; do not retry that broad child task. Browser baseline red is honestly reconstructed in a temporary copy using read-only git show HEAD original app/JS/HTML with disposable fixtures:4 authority failures,5 stored-view markup failures,1 live SSE markup failure. Earlier selector timeout not counted.
-
-## Dependency baseline T171/T172
-
-GHSA-84m7-p3x7-pcfv affects mcp1.29.0, pinned only by Semgrep1.181.0 in7 service environments. Official metadata/advisory and uv mechanism linked in mp02.md. Scoped uv override applies only to Semgrep1.181.0 -> mcp1.30.0. All7 locks regenerated via uv sync; no new runtime dependency or advisory ignore.14 audit/Semgrep checks passed, imports verified, parent UI/root9 component gates passed. Override stops applying after Semgrep version change; remove when upstream uses patched requirement. Existing click exception is separate. Root10 still required for new ticket closure.
-
-## MP06 next / active native owner
-
-`evidence/mp06-backup-design.md` has the architect design and critic approval after6 corrections. MP06 implementation is underway, not complete. Contracts: Gateway/Board/UI lifetime shared maintenance locks; exclusive offline maintenance; fd/inode-safe raw DB/WAL copies; immutable prepublication clone audits; public nonblocking sorted batch key snapshots with lock identity checks; neutral RecoveryInventoryV1/TargetBindingsV1 in service-commons; captured-config rendering without cross-service imports; no-clobber reservation and digest-bound COMPLETE marker; publication_uncertain handled by exact verification, never overwrite/delete. Four states separate preservation, identity completeness, migration eligibility and MP21 operational restore.
-
-**mp06_key_lock_red** completed evidence/mp06-key-lock-red/ only. Parent independently reproduced1 intended failure +2 controls via public load_keypair: replacing the lock pathname immediately before flock leaves the loader synchronized on the unlinked old inode. Expected unsafe_path KeyMaterialError is not raised. Ordinary load and corrupt-key exception lock-release controls pass. Source/log/report retained; no product/config/ordinary-key edits. This is historical red proof for the now-implemented batch key-snapshot hardening, not MP06 completion. Root10 is terminal, not live.
-
-Retained MP06 money/schema proof:12 intended failures/6 controls against real writer/SQLite (wrong payer, inconsistent issuance, bool/REAL, overflow, partial/unknown schema, settled escrow lock replay). See mp06.md and mp06-red-suites. Move acceptance cases into component suite with implementation. Backup/restore must precede migrations. Never silently merge historical identities/escrows or coerce invalid money. Missing/ineligible backup must block migration.
-
-## Outstanding policy/external gates
-
-Q-M1 artifact/evidence/access/retention/provider policy, Q-M2 post-v1 pricing, Q-M3 quality aggregation were asked asynchronously; no explicit answers. See policy-decision-requests.md. Preselected/default options are not approval. Real Court credentials/budget/evaluation unproved;3 existing API-key skips are not provider proof. Independent backup/schema/recovery work remains available, so goal is neither blocked nor complete.
-
-Historical side effect: old UI fixture created ordinary data/keys/operator.lock0600 at2026-10-15 19:17:50CEST; existing key/pub0644 and July13timestamps unchanged. Disclosed and coordination lock retained. Do not claim zero ordinary-data side effects across the whole goal.
-
-## MP06 current implementation detail
-
-Shared maintenance module now yields frozen HeldMaintenanceLock(path,device,inode) with verify_identity(). It checks nofollow ancestor/path/fd identity after acquisition, on explicit check, and before unlock; rejects inactive handles before fd use; preserves primary exceptions and notes cleanup failures. Initial held-handle red was absent API, not prior-behavior proof. Independent review CLEAR. All28 lock tests pass. Callers use lexical os.path.abspath, not Path.resolve; parent directory must exist.
-
-Auth exposes frozenKeypairSnapshot(private_pem reprFalse,rawbytes,modes,fingerprint) andsnapshot_keypairs(targets,*,blocking). Initial20tests included19absentAPI failures +1publicload lockrace; reviewthenfoundmutablepreflight ordering.3actualredcases precededmovingexistence/modes/fullinodecollisionchecks UNDER allsort-acquiredlocks. Blockingwaits forprotectedtransitions;NBreportslock_unavailable; latercontentionreleasesearlierlocks.26snapshottests/auth208 CI0; independentreviewapproved. A missingpairmayleaveonlypersistentcoordinationlock metadata beforeabsent_pair; no keygeneration/replacement/chmod. Crossrolefingerprintuniqueness belongsrecoveryconsumer, rosteraliasesallowed.
-
-Neutral contracts remain pure/noIO/strict/frozen/extra-forbid; TargetBindings maps are copied immutable MappingProxyType values with JSON serializers. New required fields: SourceResourceV1.capture_root and SourceConfigV1.capture_root, canonical absolute and containing captured_path; RecoveryInventoryV1.maintenance_lock_identity = MaintenanceLockIdentityV1(device>=0,inode>0); SourceKeypairV1.expected_public_fingerprint_sha256, registration_requirement(required/optional/forbidden), captured_registration_state(registered/unregistered), expected_registered_agent_id nullable. CaptureKind also ABSENT_FILE and RUNTIME_LOCK, FILE-only. Resource/config IDs and key handles safe filename components. Same economic fingerprint aliases must agree registration state/ID; one registered ID cannot map to different fingerprints; Gateway keys unique and disjoint from economic keys. Partial structural inventory allows at most one matching runtime lock; engine completeness requires exactly one. Conflicting capture intents at one path rejected. New review red27 behavioral failures, focused121 green, fullcommons153 CI0; second independent review is active. Initial identity extensions red used actual extra-field rejection, not absent behavior of full restoration.
-
-Parent field catalog scripts/recovery_fields.py performs no IO, enumerates exhaustive actual service/agents fields and dynamic worker/Gateway/Court entries, preserves source bases and strict values. Independent review CLEAR;8 host tests green, mypy/Ruff clean. Initialred was missing module. Parent scripts/recovery_registry.py reads list/detail/list via caller-supplied httpx client and explicit max_attempts; exact canonical key-to-ID, ignores names, retries changed ID sets, never treats HTTP failure as empty.10green tests, mypy/Ruff clean, review active; initialred absent module.
-
-Parent runtime changes: task_feeder.tasks_file now run_dir/data/math_tasks.jsonl, deliberately absent until an explicit test workload provisions it. Genuine oldpath red precedes fix. Maintenance preflight invalid config now writes a redacted owned log and raises RuntimeErrorWithLog; preflight/key preparation live inside start cleanup scope. Existing invalid-startup diagnostic test and3newbehaviorreds exposed/fixed preflight regression.36 combined runtime/lock/catalog checks passed (session42018 terminal0), preserving sentinel/process cleanup. Registry checks run separately10green. Root/service suites cannot be selected in one pytest invocation because their tests.conftest module names collide.
-
-CLI recovery_cli/{__init__,__main__}.py exposes explicit create/verify/finalize/restore/verify-restore/finalize-restore paths, redacted reasons and nonzero publication_uncertain without retry.10tests pass after maintenance identity fixture update. Gateway combinedCI30930 and parentauth51932/commons34889 were polled terminal0; those gates predate newest engine/contracts. Boardintegration69236 terminal0 and no stray services/task-board/maintenance.lock recreation. Proven unused stray fixture lock inode325263949 was removed after lsof/stat checks; ordinary data/keys/operator.lock remains untouched.
-
-Engine initial review nine blockers: actual source topology, target DIRECTORY_ONLY ancestry, operation root overlap, protected modes, identity truthfulness, exact binding evidence, symlinked artifacts, recorded quiescence, publication cleanup/attempt reports. Owner repaired eight plus absent/runtime-lock intents, focused32/fullGateway469 green before latest capture_root/identity changes. Owner now implementing final clone registry/fingerprint audit and adapting capture roots; no acceptance claim until independent re-review and actual generated inventory roundtrip. migration_eligible/operational_restore_verified still false by design pending their lanes.
-
-Archived current logs under evidence/mp06-recovery-foundation/. Do not turn missing-API reds into claims of prior behavioral failures. No new OpenSpec task checked; progress remains27/115. Strict OpenSpec validation passes.
-
-Approved design corrected actualpath bases: allservice logs, GatewayDB/schema, BoardDB/assets, UIDB/webroot/operatorconfig areprocess-CWD-relative. ServiceGatewaykeys/trustpublics, Bank/Board/Rep/Court agentconfig,andagentkeys/roster areconfig-parent-relative. task_feeder.tasks_file isrelative toagents package root. URLs literal; CONFIG_PATH/AGENT_CONFIG_PATH selectfilesonly. Inventoriesmustcaptureexactbase/CWD, notnormalizeexistingappbehavior.
-
-## Next action
-
-Parent commons CI45613 TERMINAL0:153passed. Gateway CI4180 TERMINAL1 solely Semgrep sandbox ca-certs empty trust anchors; host rerun61970 TERMINAL0 at /tmp/agent-economy-mp06-gateway-parent-host-ci.log. Do not poll/restart any of those. These gates predate the current eight-defect repair.
-
-Parent live inventory proof session1358 TERMINAL0: tests/runtime/test_recovery_live_inventory.py starts actual7services, provisions only isolated treasury, captures live Identity registry and lock identity, stops allownedservices, builds8config/60binding inventory, and creates/verifies identity-complete backup at actual run_dir/backups with external schema/web inputs. operational_restore_verified remainsfalse. No restore proof yet. Log archived mp06-recovery-foundation; runtime a2a9ef241ee04fd98e20de1f521df703; parent hostps checks sevenservices+treasurycommand groups absent, records drained, archived live-backup-runtime.json and live-backup-cleanup.json. Source backup artifacts remain in the test temporary run.
-
-Second engine review blockers assigned mp06_backup_engine (genuine red tests required):
-1. Existing recorded maintenance lock missing -> creation-capable hold recreates it beforeidentitycompare. Shared owner adds hold_existing_maintenance_lock(path,*,mode,blocking,expected_device,expected_inode), no O_CREAT/mkdir/chmod; engine must use it.
-2. Restore copies path-read bytes after verification with no expected hash/mode check; actual changedtasks payload yields COMPLETE. Carryverifiedfileindex; nofollowpin/read/check eachcopy/config/asset/tree read; artifact/rootidentity recheck beforepublication.
-3. States/finding codes trusted from manifest; mustderive/validate withrecomputed audit/key/config evidence. v1 migration/operational false.
-4. Key metadata/restore_mode unchecked:0644private accepted. Validateactualpairs/fingerprints/metadata and0600private explicitpublicmodes.
-5. Readable partial identity table missingcolumns and malformedassetrows prevent safetybackup; recorddeterministic auditfindings, preserve rawsnapshot; actualcorruptSQLite stillfails.
-6. DuplicateexternalagentIDs andallzeropublickeys mustmarkidentityincomplete.
-7. Fsync backup_root whencreating .attempts child.
-8. Validate targetendpointtypes by correspondingbindingkind beforetargetreservation.
-
-Builder exactAPI build_recovery_inventory(*,runtime_id,source_root,code_root,config_paths,process_cwds,agents_package_root,maintenance_lock_identity,registry_bindings,required_registered_handles,process_ownership). Explicitfull7+agents only; actualnormal logpaths now deterministicdedup logs.root first sortedpath/logs.<config-id> forothers. Source-ownedresources/configs; onlyschema/web mayusecode_root. Builder independentreview active.
-
-Parent next: integrate explicit prepare_recovery_and_stop(*,registry_timeout_seconds,registry_max_attempts) afterreviewedbuilder; normal/partial stop staysinventory-free. Architect recommended startupconfig hashes/maintenanceinode anchors, noactiveownedcommand, two immediate pre-stop registry+key/config inventories, stopfinallyallownedprocesses, finalstopped rebuild match, publishcanonical recovery-inventory.json+runtime manifestdigest onlyafterdrained. Do not compare whole registry to startup: optionalworkers legitimatelyregister duringworkload. Preserveallcleanup/captureerrors. Includebootstrap/phasecommandCWD+ownershiprecords. Separate immutable check-only restoredview neverprovisions/startsmissingkeys; operationalstartup laterMP21. Fullactualrestore/fault proof stillrequired beforemigrations; MP065.2/T121 remainopen. FullCore/Vision goalACTIVE; root10historicalonly; noGitwrites.
+## Goal and standing rules
+
+Goal ACTIVE, unbounded: implement the entire masterplan and OpenSpec complete-agent-economy,
+all remaining Core and Vision work. Read the objective before continuing:
+`/Users/flo/.codex/attachments/e384874c-31cb-47e6-ba87-0d9a0be71ee8/pasted-text-1.txt`.
+Do not substitute a package checkpoint for full completion. OpenSpec progress:44/121 complete,
+77 remaining. The preceding goal turn made concrete repairs and verification progress; this turn
+completed the fresh root gate and independent closure audit.
+
+Work on existing refactor. Commits/pushes are permitted all weekend and weekdays before08:00 or
+from18:00 onward, Europe/Amsterdam. Check actual local date/time immediately before either.
+No branch switching, merge, rebase, cherry-pick or git -C. Preserve unrelated changes and ordinary
+data/assets/keys/processes. Python only through uv run. Gate environment:
+UV_CACHE_DIR=/tmp/agent-economy-review-uv UV_FROZEN=1.
+
+## Verified root19 and closed packages
+
+Root19 session18905 is TERMINAL0. ALL older parent gate/test handles are also terminal.
+Do not poll/restart them. No root20 exists. Raw log:
+`/private/tmp/agent-economy-root-ci-19.log`, also archived as evidence/root-ci-19.log.
+Before/after snapshots contain932 identical source/config hashes. Every root phase passed:
+all libraries/services, per-service integration, agents/tools,203 cross/runtime,298 UI browser
+and94 live-agent E2E cases. Three credential-dependent skips do not prove real providers.
+
+Root-owned stack cleanup:2 manifests,19 groups, all drained/error-free and independently absent.
+Separate migration/crash cleanup:8 retained records/manifests,56 groups independently absent.
+See root19-checkpoint.md and root-ci-19-{summary,hash-comparison,cleanup}.json plus
+root-ci-19-migration-cleanup.json. Independent final verifier returned PASS, including a fresh
+check of every current source path against the snapshot.
+
+T-116/T-117 and tasks6.2–6.4 are CLOSED: native/historical financial receipts, exact replay and
+conflicts, v2 migration/ownership audit, strict consumers, caller reconciliation, public Bank race
+proof and updated financial API docs. See mp04-receipts/completion-audit.md. It preserves genuine
+red proof separately from fixture/import/command errors and supplementary green-only tests.
+Nineteen selected terminal logs/observations are preserved in its completion-logs/ with a hash index.
+Historical source hashes/statuses in older checkpoints remain explicitly historical.
+
+T-175–T-178 and tasks2.12/2.14 are CLOSED: quarterly rapid-click navigation and controlled UI
+readiness polling. Existing browser assertions and timeout values remain unchanged. See
+quarter-navigation-checkpoint.md and ui-readiness-checkpoint.md. Both had independently reproduced
+red/control proof, focused green, independent review and root19 full browser/root verification.
+
+The two runtime migration fixtures retain all original v0-to-v1/crash/rowid/storage/key/asset/
+financial assertions, then create a new verified v1 backup and explicitly migrate v1-to-v2 before
+current-service restart. No production migration/startup code was changed for those fixture errors.
+Earlier focused raw manifests and the single-agent startup log were purged before parent archival;
+never claim they were retained. Root19 supplies fresh preserved migration and full browser evidence.
+
+Strict OpenSpec validation passes after synchronization. Source freeze may be released after the
+verified Git checkpoint; do not mix the upcoming intentionally-red MP-07 test into that checkpoint.
+Git checkpoint is being prepared. Before it, HEAD was ea1f0da, origin/refactor d4148401, five local
+commits ahead; a fresh remote read matched origin/refactor. No push had yet occurred at that point.
+Record the new commit/push receipt in the next working update after checking actual time.
+
+## Next: MP-07 failing-test-first
+
+`docs/plans/2026-10-17-mp07-transition-contract.md` passed critic review for T-122 tests. It separates
+native operations from narrow legacy observations, fixes claim/finalization/pending admission,
+removes mutable cutover attestation and grounds Court recovery in actual unique-task behavior.
+No T-123 implementation before the required red matrix. Q-M4 remains explicit poster-selected
+acceptance windows, early acceptance, bidding cutoff, immediate zero-bid expiry and preserved
+legacy cutoffs. Q-M1/Q-M2/Q-M3 and real-provider credentials/budget/proof remain unresolved.
+Prior questions are in policy-decision-requests.md; continue independent work without guessing.
+
+The first reviewed test remains OUTSIDE the repo, unexecuted:
+`/private/tmp/agent-economy-mp07-test-draft/test_mp07_atomic_task_transitions.py`.
+SHA-256: `a571abf9c52c6552522982d0bfc6e4b39de38fbc3dddf3ba78622a10a0bca108`.
+Syntax/Ruff/format/Pyright pass. Independent review approves bounded first red execution. One
+ExitStack protects both runtime constructions, signing, executor, observations and all assertions;
+each store registers close immediately, including partial-construction/cancellation cleanup.
+
+After checkpointing, install it at services/task-board/tests/integration/test_mp07_atomic_task_transitions.py
+and run the named approve/dispute case. Two independent Board runtime graphs read submitted from
+the live Gateway, synchronize after the reads and attempt conflicting review actions. Require one
+legal winner, explicit409 loser, one event, exclusive state and no losing Bank/Court invocation.
+Non409 errors, broken barriers, setup and thread failures are harness/other failures, not the intended
+red. Bank/Court are recording boundaries only, not real settlement/adjudication proof.
+
+Then extend the required T-122 acceptance/cancel, submission/expiry, competing acceptance,
+bid/cutoff, replay, authority and migration matrix before T-123. One race does not close T-122.
+Historical notes live in historical-active-checkpoints-through-root17.md; current worktree and
+actual tool/process state take precedence over those superseded instructions.

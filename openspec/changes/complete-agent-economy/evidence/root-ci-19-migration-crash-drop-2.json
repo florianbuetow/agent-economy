@@ -1,0 +1,9 @@
+{
+  "point": "after_drop:board_bids",
+  "pid": 45109,
+  "pgid": 45108,
+  "supervisor_pid": 45108,
+  "signal": 9,
+  "return_code": 137,
+  "group_absent": true
+}

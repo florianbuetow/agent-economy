@@ -1,5 +1,8 @@
 # MP-04 historical observations checkpoint
 
+Historical checkpoint: the status and counts below describe this earlier verification stage.
+The final MP-04 closure is recorded in completion-audit.md and ../root19-checkpoint.md.
+
 Status: historical implementation and bounded reviews pass; root integration gate still open after
 native checkpoint `96e3922`. T-116/T-117 and tasks 6.2–6.4 remain open. No new root CI success or
 complete MP-04 closure is claimed.
@@ -123,9 +126,18 @@ Continue remaining validation and then run a new root gate. Root15 remains the l
 The separate live economy baseline (`just test-e2e`) exited1: 70 failed, 19 passed and five setup
 errors, predominantly old calls omitting required SDK financial operation IDs. Its log is
 `/private/tmp/agent-economy-mp04-economy-baseline.log`; the exact ten owned groups are drained and
-absent (`agent-economy-mp04-economy-baseline-cleanup.json`). The assigned E2E test owner is reconciling
-only documented API changes while preserving every original behavior assertion. Those edits are
-not yet verified or approved. A separate UI browser run is active as parent session87724, log
-`/private/tmp/agent-economy-mp04-ui-e2e.log`.
+absent (`agent-economy-mp04-economy-baseline-cleanup.json`). The seven existing E2E files were
+reconciled only for the documented financial API contract, retaining behavioral/auth/no-effect
+assertions. Independent review APPROVED all seven with no findings; style, mypy, spelling and
+security passed. The isolated suite passed all94 tests in
+`/private/tmp/agent-economy-mp04-economy-final.log`. Parent verified all10 owned groups absent:
+`/private/tmp/agent-economy-mp04-economy-final-cleanup.json`. This is contract reconciliation,
+not a new product-red claim. The final root gate will independently rerun these tests.
+
+The separate UI browser session87724 exited1:294 passed/1 failed, log
+`/private/tmp/agent-economy-mp04-ui-e2e.log`. Investigation reproduced a real quarterly-page
+rapid-click race; T-175/T-176 track its new deterministic red and repair without changing the
+existing navigation test or timeout. Root17 has not started. Latest local WIP commit is `ea1f0da`;
+the seven agent E2E edits were excluded from that commit and remain local. No push was performed.
 All remaining Core and Vision packages, owner policy decisions, and real-provider proof retain
 their original scope.

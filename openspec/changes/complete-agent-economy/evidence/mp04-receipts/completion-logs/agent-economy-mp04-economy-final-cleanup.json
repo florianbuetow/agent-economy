@@ -1,0 +1,119 @@
+{
+  "run_id": "d8acf8a7bcd34097ad4866301917706a",
+  "manifest": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-d8acf8a7bcd34097ad4866301917706a-fgahcwag/runtime.json",
+  "records": [
+    {
+      "category": "processes",
+      "name": "db-gateway",
+      "pid": 47995,
+      "pgid": 47995,
+      "sid": 47995,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "category": "processes",
+      "name": "identity",
+      "pid": 48004,
+      "pgid": 48004,
+      "sid": 48004,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "category": "processes",
+      "name": "central-bank",
+      "pid": 48008,
+      "pgid": 48008,
+      "sid": 48008,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "category": "processes",
+      "name": "task-board",
+      "pid": 48017,
+      "pgid": 48017,
+      "sid": 48017,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "category": "processes",
+      "name": "reputation",
+      "pid": 48026,
+      "pgid": 48026,
+      "sid": 48026,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "category": "processes",
+      "name": "court",
+      "pid": 48036,
+      "pgid": 48036,
+      "sid": 48036,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "category": "processes",
+      "name": "ui",
+      "pid": 48065,
+      "pgid": 48065,
+      "sid": 48065,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "category": "commands",
+      "name": 0,
+      "pid": 48090,
+      "pgid": 48090,
+      "sid": 48090,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "category": "commands",
+      "name": 1,
+      "pid": 48100,
+      "pgid": 48100,
+      "sid": 48100,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "category": "bootstrap_commands",
+      "name": 0,
+      "pid": 47988,
+      "pgid": 47988,
+      "sid": 47988,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "metadata_clean": true,
+  "live_groups": [],
+  "unverified_groups": []
+}

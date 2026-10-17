@@ -1,0 +1,53 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 32 items / 27 deselected / 5 selected
+
+tests/unit/test_mp04_legacy_observations.py FFFFF                        [100%]
+
+=================================== FAILURES ===================================
+_ test_raw_selected_identifiers_are_corruption_without_string_normalization[credit] _
+tests/unit/test_mp04_legacy_observations.py:688: in test_raw_selected_identifiers_are_corruption_without_string_normalization
+    assert (failed.value.status_code, failed.value.error, failed.value.details) == (
+E   AssertionError: assert (500, 'receip...d': 'credit'}) == (500, 'receip...p_failed', {})
+E     
+E     At index 1 diff: 'receipt_ownership_missing' != 'receipt_ownership_failed'
+E     Use -v to get more diff
+_ test_raw_selected_identifiers_are_corruption_without_string_normalization[lock] _
+tests/unit/test_mp04_legacy_observations.py:688: in test_raw_selected_identifiers_are_corruption_without_string_normalization
+    assert (failed.value.status_code, failed.value.error, failed.value.details) == (
+E   AssertionError: assert (500, 'receip...d': 'escrow'}) == (500, 'receip...p_failed', {})
+E     
+E     At index 1 diff: 'receipt_ownership_missing' != 'receipt_ownership_failed'
+E     Use -v to get more diff
+___ test_native_leg_cannot_overlap_historical_lock_transaction[observe_lock] ___
+tests/unit/test_mp04_legacy_observations.py:753: in test_native_leg_cannot_overlap_historical_lock_transaction
+    with pytest.raises(ServiceError) as failed:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_____ test_native_leg_cannot_overlap_historical_lock_transaction[release] ______
+tests/unit/test_mp04_legacy_observations.py:753: in test_native_leg_cannot_overlap_historical_lock_transaction
+    with pytest.raises(ServiceError) as failed:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+______ test_native_leg_cannot_overlap_historical_lock_transaction[split] _______
+tests/unit/test_mp04_legacy_observations.py:753: in test_native_leg_cannot_overlap_historical_lock_transaction
+    with pytest.raises(ServiceError) as failed:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp04_legacy_observations.py::test_raw_selected_identifiers_are_corruption_without_string_normalization[credit]
+FAILED tests/unit/test_mp04_legacy_observations.py::test_raw_selected_identifiers_are_corruption_without_string_normalization[lock]
+FAILED tests/unit/test_mp04_legacy_observations.py::test_native_leg_cannot_overlap_historical_lock_transaction[observe_lock]
+FAILED tests/unit/test_mp04_legacy_observations.py::test_native_leg_cannot_overlap_historical_lock_transaction[release]
+FAILED tests/unit/test_mp04_legacy_observations.py::test_native_leg_cannot_overlap_historical_lock_transaction[split]
+================= 5 failed, 27 deselected, 1 warning in 7.20s ==================

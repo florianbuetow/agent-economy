@@ -1,0 +1,197 @@
+{
+  "run_id": "4be6fb4128a8498aa94f92cc66b029d2",
+  "run_dir": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6",
+  "ports": {
+    "db-gateway": 54026,
+    "identity": 54027,
+    "central-bank": 54028,
+    "task-board": 54029,
+    "reputation": 54030,
+    "court": 54031,
+    "ui": 54032
+  },
+  "config_paths": {
+    "db-gateway": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/db-gateway.yaml",
+    "identity": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/identity.yaml",
+    "central-bank": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/central-bank.yaml",
+    "task-board": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/task-board.yaml",
+    "reputation": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/reputation.yaml",
+    "court": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/court.yaml",
+    "ui": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/ui.yaml"
+  },
+  "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/agents.yaml",
+  "gateway_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/db-gateway.yaml",
+  "log_paths": {
+    "db-gateway": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/logs/db-gateway.log",
+    "identity": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/logs/identity.log",
+    "central-bank": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/logs/central-bank.log",
+    "task-board": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/logs/task-board.log",
+    "reputation": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/logs/reputation.log",
+    "court": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/logs/court.log",
+    "ui": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/logs/ui.log"
+  },
+  "processes": {
+    "db-gateway": {
+      "pid": 13646,
+      "pgid": 13646,
+      "sid": 13646,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "identity": {
+      "pid": 13649,
+      "pgid": 13649,
+      "sid": 13649,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "central-bank": {
+      "pid": 13654,
+      "pgid": 13654,
+      "sid": 13654,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "task-board": {
+      "pid": 13659,
+      "pgid": 13659,
+      "sid": 13659,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "reputation": {
+      "pid": 13662,
+      "pgid": 13662,
+      "sid": 13662,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "court": {
+      "pid": 13767,
+      "pgid": 13767,
+      "sid": 13767,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "ui": {
+      "pid": 13843,
+      "pgid": 13843,
+      "sid": 13843,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "just",
+        "_test-integration-suites"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy",
+      "pid": 13904,
+      "pgid": 13904,
+      "sid": 13904,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "bootstrap_commands": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "python",
+        "-m",
+        "key_provision_cli",
+        "provision",
+        "--config",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/agents.yaml",
+        "--gateway-config",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/db-gateway.yaml"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/agents",
+      "pid": 13640,
+      "pgid": 13640,
+      "sid": 13640,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "startup_inputs": {
+    "db-gateway": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/db-gateway.yaml",
+      "config_sha256": "8362956cc720881d7494fb94cb73cad8feee08b5b8d7e11f5f80edb6a58f8eea",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/agents.yaml",
+      "agent_config_sha256": "e066b93cd130253842c673b00936004fed0d91c02db9bb5707fe72a991f12e87",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway"
+    },
+    "identity": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/identity.yaml",
+      "config_sha256": "800e1759968389300222b15efe5f431edff7483c37a5e0015b889d4425558f4d",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/agents.yaml",
+      "agent_config_sha256": "e066b93cd130253842c673b00936004fed0d91c02db9bb5707fe72a991f12e87",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/identity"
+    },
+    "central-bank": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/central-bank.yaml",
+      "config_sha256": "75ce8a3dd5376c9f9586c7da4dc9aac864a0ef6d20d767982a42681f64a629a0",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/agents.yaml",
+      "agent_config_sha256": "e066b93cd130253842c673b00936004fed0d91c02db9bb5707fe72a991f12e87",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/central-bank"
+    },
+    "task-board": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/task-board.yaml",
+      "config_sha256": "c51f592ead29a377c0bfca2e5ef7d40462c6fa35ef31a372914632c5dfb677c7",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/agents.yaml",
+      "agent_config_sha256": "e066b93cd130253842c673b00936004fed0d91c02db9bb5707fe72a991f12e87",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/task-board"
+    },
+    "reputation": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/reputation.yaml",
+      "config_sha256": "aac5b0145f8d23d8ad505a4cf90b41499d1326290014d5afcde0bd674933c1be",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/agents.yaml",
+      "agent_config_sha256": "e066b93cd130253842c673b00936004fed0d91c02db9bb5707fe72a991f12e87",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/reputation"
+    },
+    "court": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/court.yaml",
+      "config_sha256": "526c3a709f00eecacd947c16c4f709fefefc43809c148a797ce41c35739d03f3",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/agents.yaml",
+      "agent_config_sha256": "e066b93cd130253842c673b00936004fed0d91c02db9bb5707fe72a991f12e87",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/court"
+    },
+    "ui": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/ui.yaml",
+      "config_sha256": "220b71f9ad6e1b50a783304f761f3a86b5416bd89cdd79b285a2bd40cb603ff2",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-4be6fb4128a8498aa94f92cc66b029d2-ny1vz8f6/configs/agents.yaml",
+      "agent_config_sha256": "e066b93cd130253842c673b00936004fed0d91c02db9bb5707fe72a991f12e87",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/ui"
+    }
+  },
+  "maintenance_identity": {
+    "device": 16777234,
+    "inode": 332288468
+  },
+  "recovery": {
+    "state": "not_prepared"
+  }
+}

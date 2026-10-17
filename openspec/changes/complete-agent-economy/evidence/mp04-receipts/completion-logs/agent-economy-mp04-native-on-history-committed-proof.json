@@ -1,0 +1,36 @@
+{
+  "database": "/private/tmp/agent-economy-history-http-red.yuOJ4v/test_native_settlement_preserv0/gateway.db",
+  "receipts": [
+    [
+      "op-00000000-0000-4000-8000-000000000509",
+      "escrow_release",
+      "esc-native"
+    ]
+  ],
+  "escrow": [
+    [
+      "esc-native",
+      "released",
+      "",
+      "2026-10-17T17:09:30Z"
+    ]
+  ],
+  "legs": [
+    [
+      "recipient",
+      "a-historical-worker",
+      100,
+      "tx-e2660828-783e-472d-a143-659895274f84"
+    ]
+  ],
+  "transactions": [
+    [
+      "tx-e2660828-783e-472d-a143-659895274f84",
+      "a-historical-worker",
+      "escrow_release",
+      100,
+      260,
+      1
+    ]
+  ]
+}

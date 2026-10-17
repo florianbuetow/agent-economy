@@ -1,0 +1,522 @@
+error: Failed to spawn: pytest
+  cause: No such file or directory (os error 2)
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+__ test_migration_cli_preserves_live_receipts_and_allows_signed_continuation ___
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2040/test_migration_cli_preserves_l0')
+
+    def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(tmp_path: Path):
+        runtime = IsolatedRuntime.create(repo_root=REPO_ROOT, artifacts_root=tmp_path)
+        try:
+            runtime.start()
+            assert runtime.provision() == 0
+            receipt = asyncio.run(_public_workload(runtime.agent_config_path))
+            prepared = runtime.prepare_recovery_and_stop(
+                registry_timeout_seconds=10.0, registry_max_attempts=2
+            )
+        finally:
+            runtime.stop()
+        (tmp_path / "runtime-before-migration.json").write_bytes(
+            (runtime.run_dir / "runtime.json").read_bytes()
+        )
+        inventory = RecoveryInventoryV1.model_validate_json(prepared.inventory_path.read_bytes())
+        assert all(
+            not record.running and record.group_drained for record in inventory.process_ownership
+        )
+        database = runtime.run_dir / "data/economy.db"
+>       original_rows = _install_legacy_fixture(database)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../../tests/runtime/test_migration_live_workload.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../tests/runtime/test_migration_live_workload.py:54: in _install_legacy_fixture
+    original = _logical_rows(connection)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection = <sqlite3.Connection object at 0x1085758a0>
+
+    def _logical_rows(connection):
+        """Independent row/storage-type evidence, including rowids and event sequence."""
+        result = {}
+        tables = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name != 'schema_metadata' ORDER BY name"
+        ).fetchall()
+        for (table,) in tables:
+            columns = sorted(row[1] for row in connection.execute(f'PRAGMA table_info("{table}")'))
+            selected = ", ".join(f'"{column}"' for column in columns)
+            storage_types = ", ".join(f'typeof("{column}")' for column in columns)
+>           rows = connection.execute(
+                f'SELECT rowid, {selected}, {storage_types} FROM "{table}" ORDER BY rowid'
+            ).fetchall()
+E           sqlite3.OperationalError: no such column: rowid
+
+../../tests/runtime/test_migration_live_workload.py:43: OperationalError
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=0f5e8d7116e144f551b15e82dbd5099145add85c6ca0cec0d6ad2a1bb82fd6a8
+provisioned handle=bob fingerprint_sha256=4af9be9af50f586e4398ad4e64dfd41b219d8762a74e9370c10dc21d498b7b02
+provisioned handle=feeder fingerprint_sha256=3426aca390713987b9ee3f9a5c268e1ba1ec8ad870fe58a11820279ad39855a3
+provisioned handle=mathbot fingerprint_sha256=45903adad211a0a160d91813c2ab95bdcfe502a50df4dee1dc4e8ff12fec985e
+provisioned handle=mathbot_mistral fingerprint_sha256=9c98d6aa1f5aef7f507dd3cd305296bd067c34b550345bb52fa1cb7386c62f95
+provisioned handle=mathbot_openai fingerprint_sha256=8a3bdfec46b3a159788a0e6523b1e7629a3d075908ee5ff042ca134785077c92
+provisioned handle=operator fingerprint_sha256=cb9b2df602c45b3232d77b3414f68987cc8ab63879b0aa509d6b580a3156bd3a
+provisioned handle=platform fingerprint_sha256=ffdfb120923f95b7c87d45a66df5f7c14e14241b8b3be11c2a240152ed87ede6
+provisioned handle=gateway-central-bank fingerprint_sha256=14e9e29136e85191d1a000f8e3b25f4b825305d18a955074ddaf76ae05870c1c
+provisioned handle=gateway-court fingerprint_sha256=bd0ddef3a2f230c758796bd72798fd8a1236b655a441320829b764b177b57a8f
+provisioned handle=gateway-identity fingerprint_sha256=5c266dc9c6b45dee4137a2f59ebfed3c9a3eca00e9407d01d77e05592148a911
+provisioned handle=gateway-reputation fingerprint_sha256=00f9b493742c519ecd4677dc67c1e3ab41d49d8e9d564e9a1aa8a46e646926bd
+provisioned handle=gateway-task-board fingerprint_sha256=8703f0371356aa038c7d053d6a91f75c18d1d1ba33ad874a79985e5c28c5c756
+agent_id=a-4525ac74-6c07-4ee4-aa6c-b3393b1230aa
+genesis_amount=1000000
+balance=1000000
+operation_id=op-5eb27bdf-4cc1-542b-890e-6d3cd4e395b0
+----------------------------- Captured stderr call -----------------------------
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64422/agents/register "HTTP/1.1 409 Conflict"
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64422/agents "HTTP/1.1 200 OK"
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64422/agents/a-c617c9b0-c187-4564-83ec-5873c2875e15 "HTTP/1.1 200 OK"
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64422/agents/a-c617c9b0-c187-4564-83ec-5873c2875e15 "HTTP/1.1 200 OK"
+2026-10-17T21:02:08 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-c617c9b0-c187-4564-83ec-5873c2875e15
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64422/agents/register "HTTP/1.1 409 Conflict"
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64422/agents "HTTP/1.1 200 OK"
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64422/agents/a-c617c9b0-c187-4564-83ec-5873c2875e15 "HTTP/1.1 200 OK"
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64422/agents/a-4525ac74-6c07-4ee4-aa6c-b3393b1230aa "HTTP/1.1 200 OK"
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64422/agents/a-4525ac74-6c07-4ee4-aa6c-b3393b1230aa "HTTP/1.1 200 OK"
+2026-10-17T21:02:08 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-4525ac74-6c07-4ee4-aa6c-b3393b1230aa
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64423/accounts "HTTP/1.1 201 Created"
+2026-10-17T21:02:08 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64423/accounts/a-4525ac74-6c07-4ee4-aa6c-b3393b1230aa/credit "HTTP/1.1 200 OK"
+2026-10-17T21:02:08 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-5eb27bdf-4cc1-542b-890e-6d3cd4e395b0, tx_id=tx-4c65e67a-37be-4732-8fbe-c1171f29c5f0, balance_after=1000000)
+2026-10-17T21:02:08 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64423/accounts/a-4525ac74-6c07-4ee4-aa6c-b3393b1230aa "HTTP/1.1 200 OK"
+_ test_process_death_preserves_legacy_and_signed_workflow_can_resume[after_drop:board_bids] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2040/test_process_death_preserves_l0')
+fault_point = 'after_drop:board_bids'
+
+    @pytest.mark.parametrize("fault_point", ["after_drop:board_bids", "after_copy:bank_transactions"])
+    def test_process_death_preserves_legacy_and_signed_workflow_can_resume(tmp_path, fault_point):
+        runtime = IsolatedRuntime.create(repo_root=REPO_ROOT, artifacts_root=tmp_path)
+        try:
+            runtime.start()
+            assert runtime.provision() == 0
+            receipt = asyncio.run(_public_workload(runtime.agent_config_path))
+            prepared = runtime.prepare_recovery_and_stop(
+                registry_timeout_seconds=10.0, registry_max_attempts=2
+            )
+        finally:
+            runtime.stop()
+        (tmp_path / "runtime-before-crash.json").write_bytes(
+            (runtime.run_dir / "runtime.json").read_bytes()
+        )
+        inventory = RecoveryInventoryV1.model_validate_json(prepared.inventory_path.read_bytes())
+        database = runtime.run_dir / "data/economy.db"
+>       original_rows = _install_legacy_fixture(database)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../../tests/runtime/test_migration_process_crash.py:182: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../tests/runtime/test_migration_live_workload.py:54: in _install_legacy_fixture
+    original = _logical_rows(connection)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection = <sqlite3.Connection object at 0x1085d0a90>
+
+    def _logical_rows(connection):
+        """Independent row/storage-type evidence, including rowids and event sequence."""
+        result = {}
+        tables = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name != 'schema_metadata' ORDER BY name"
+        ).fetchall()
+        for (table,) in tables:
+            columns = sorted(row[1] for row in connection.execute(f'PRAGMA table_info("{table}")'))
+            selected = ", ".join(f'"{column}"' for column in columns)
+            storage_types = ", ".join(f'typeof("{column}")' for column in columns)
+>           rows = connection.execute(
+                f'SELECT rowid, {selected}, {storage_types} FROM "{table}" ORDER BY rowid'
+            ).fetchall()
+E           sqlite3.OperationalError: no such column: rowid
+
+../../tests/runtime/test_migration_live_workload.py:43: OperationalError
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=3eaa546f3d033766b643f1eade2410d7eafa18888ecc621cbce93fb07b90cae9
+provisioned handle=bob fingerprint_sha256=7d636dad614179fee41088f089cf58b4eebc56d22ccc03e24d1aae0dcb1e6de3
+provisioned handle=feeder fingerprint_sha256=db74947efbe6768e948ce16b23854dab31bc4d04e375a935ab9778b538fdf20f
+provisioned handle=mathbot fingerprint_sha256=54c4f39d8870302fe72a4eb201dc2a0d539bf3ac31cb9b6dd810076a3af3a131
+provisioned handle=mathbot_mistral fingerprint_sha256=931800a7479db142fc4f29d6828026506a2c37bdbea2398814eb7045c4c46d05
+provisioned handle=mathbot_openai fingerprint_sha256=83dfb3991337cc1b1440185f745777042b132d144e8cf5eb08f3974c51d2983d
+provisioned handle=operator fingerprint_sha256=6bfd31d91a15df75f742a4fae4febe807fe067eb322c9aa2353bb3f5a17965b7
+provisioned handle=platform fingerprint_sha256=30123aa7451aeee91aa0d5aab001b0c0217a2b7d2a5ba95f3f6e90b6ff9379a2
+provisioned handle=gateway-central-bank fingerprint_sha256=c10341e0b8ffa77cd0a2e991e57f2162ee70d2936d51367e1dcbdd9f50d67b69
+provisioned handle=gateway-court fingerprint_sha256=340d9199fc93ad33f704225436b742bd4063ebcbd0e14352e694801ad2316005
+provisioned handle=gateway-identity fingerprint_sha256=fc29849c20b1714b4500ff5cbcc4566188953693f75cbeb09f07ee18f40bff81
+provisioned handle=gateway-reputation fingerprint_sha256=b939fd41dc07079bff28ed92463bb1a1cf6b3846130298b8872bb16239055dfa
+provisioned handle=gateway-task-board fingerprint_sha256=79bcf8f0a028f34c6f75721ec7552b687e07da90e24e1ed5d6a9cfb8ee92044b
+agent_id=a-83fb756e-639a-4a0a-b16e-9016711cfea5
+genesis_amount=1000000
+balance=1000000
+operation_id=op-a2fe1c26-7042-533f-9f61-a64147144ac1
+----------------------------- Captured stderr call -----------------------------
+2026-10-17T21:02:41 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64591/agents/register "HTTP/1.1 409 Conflict"
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64591/agents "HTTP/1.1 200 OK"
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64591/agents/a-ca73b13f-53f5-4ee1-abdb-cfc0c8c06cef "HTTP/1.1 200 OK"
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64591/agents/a-ca73b13f-53f5-4ee1-abdb-cfc0c8c06cef "HTTP/1.1 200 OK"
+2026-10-17T21:02:42 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-ca73b13f-53f5-4ee1-abdb-cfc0c8c06cef
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64591/agents/register "HTTP/1.1 409 Conflict"
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64591/agents "HTTP/1.1 200 OK"
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64591/agents/a-ca73b13f-53f5-4ee1-abdb-cfc0c8c06cef "HTTP/1.1 200 OK"
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64591/agents/a-83fb756e-639a-4a0a-b16e-9016711cfea5 "HTTP/1.1 200 OK"
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64591/agents/a-83fb756e-639a-4a0a-b16e-9016711cfea5 "HTTP/1.1 200 OK"
+2026-10-17T21:02:42 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-83fb756e-639a-4a0a-b16e-9016711cfea5
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64592/accounts "HTTP/1.1 201 Created"
+2026-10-17T21:02:42 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64592/accounts/a-83fb756e-639a-4a0a-b16e-9016711cfea5/credit "HTTP/1.1 200 OK"
+2026-10-17T21:02:42 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-a2fe1c26-7042-533f-9f61-a64147144ac1, tx_id=tx-4d7f3b3b-39c2-4e07-8eba-3372d715ad40, balance_after=1000000)
+2026-10-17T21:02:42 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64592/accounts/a-83fb756e-639a-4a0a-b16e-9016711cfea5 "HTTP/1.1 200 OK"
+_ test_process_death_preserves_legacy_and_signed_workflow_can_resume[after_copy:bank_transactions] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2040/test_process_death_preserves_l1')
+fault_point = 'after_copy:bank_transactions'
+
+    @pytest.mark.parametrize("fault_point", ["after_drop:board_bids", "after_copy:bank_transactions"])
+    def test_process_death_preserves_legacy_and_signed_workflow_can_resume(tmp_path, fault_point):
+        runtime = IsolatedRuntime.create(repo_root=REPO_ROOT, artifacts_root=tmp_path)
+        try:
+            runtime.start()
+            assert runtime.provision() == 0
+            receipt = asyncio.run(_public_workload(runtime.agent_config_path))
+            prepared = runtime.prepare_recovery_and_stop(
+                registry_timeout_seconds=10.0, registry_max_attempts=2
+            )
+        finally:
+            runtime.stop()
+        (tmp_path / "runtime-before-crash.json").write_bytes(
+            (runtime.run_dir / "runtime.json").read_bytes()
+        )
+        inventory = RecoveryInventoryV1.model_validate_json(prepared.inventory_path.read_bytes())
+        database = runtime.run_dir / "data/economy.db"
+>       original_rows = _install_legacy_fixture(database)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../../tests/runtime/test_migration_process_crash.py:182: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../tests/runtime/test_migration_live_workload.py:54: in _install_legacy_fixture
+    original = _logical_rows(connection)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection = <sqlite3.Connection object at 0x1086047c0>
+
+    def _logical_rows(connection):
+        """Independent row/storage-type evidence, including rowids and event sequence."""
+        result = {}
+        tables = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name != 'schema_metadata' ORDER BY name"
+        ).fetchall()
+        for (table,) in tables:
+            columns = sorted(row[1] for row in connection.execute(f'PRAGMA table_info("{table}")'))
+            selected = ", ".join(f'"{column}"' for column in columns)
+            storage_types = ", ".join(f'typeof("{column}")' for column in columns)
+>           rows = connection.execute(
+                f'SELECT rowid, {selected}, {storage_types} FROM "{table}" ORDER BY rowid'
+            ).fetchall()
+E           sqlite3.OperationalError: no such column: rowid
+
+../../tests/runtime/test_migration_live_workload.py:43: OperationalError
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=baed41f4f3580878d5cced653396a881a32a521f1000f83c89b6cc3bc4f9c9da
+provisioned handle=bob fingerprint_sha256=382f4a2f2c1e7e99f7e8432c066215fdcb740c994f298777a02827211c7c33ed
+provisioned handle=feeder fingerprint_sha256=26f39250fb8b7eb3d0c284684ce3c4d6fffbcce1d065354ae60abe9ce085f54b
+provisioned handle=mathbot fingerprint_sha256=ef5ed467ce91ff3436c921bd2811aa3742e1e6c45dba32616f13bf238da2c544
+provisioned handle=mathbot_mistral fingerprint_sha256=d16b498b542580326cf728b4f5fa4b50e5cecbc1a9ae710bc18d55fd56268329
+provisioned handle=mathbot_openai fingerprint_sha256=04198dac9a1bde7af9a964979f331c705b2371cb4753f460ccbc6c7f5755f992
+provisioned handle=operator fingerprint_sha256=364be7b8a9f3c08b4e2efc8f4b536206749f4b36123dc1b3462c568d8c84008f
+provisioned handle=platform fingerprint_sha256=8aeca0c481e70ec752d55f510d2f461789b348801d51939a593c43cd4d698a2f
+provisioned handle=gateway-central-bank fingerprint_sha256=56313f5d46389cdc2b17ab58e4d1c65b77fef2b525dc0b93bbfb4abd63b5dae4
+provisioned handle=gateway-court fingerprint_sha256=d117b903be3ae6dc013e48e627058288e9ab1343cb6df25b7d1ca5298fea965a
+provisioned handle=gateway-identity fingerprint_sha256=6cc9f212ba1552fc40439a5e925175d79802125f231d46fccbae38a3645f4134
+provisioned handle=gateway-reputation fingerprint_sha256=0fd213e55caff5eef7996f0f38d4c47946bef2056b8a03d62ec0badc6dfbbad2
+provisioned handle=gateway-task-board fingerprint_sha256=bb26b4fa4656d56bc8bf62bbd6faff4c8356f3ccd553cc4af777f7ff4c947cd6
+agent_id=a-caa8be8b-0155-4fcd-b72b-36564c1204b6
+genesis_amount=1000000
+balance=1000000
+operation_id=op-33b8ea08-5055-5475-86aa-48462caf836b
+----------------------------- Captured stderr call -----------------------------
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64769/agents/register "HTTP/1.1 409 Conflict"
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64769/agents "HTTP/1.1 200 OK"
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64769/agents/a-6642add8-123a-44dd-93d9-1bc4c1843c89 "HTTP/1.1 200 OK"
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64769/agents/a-6642add8-123a-44dd-93d9-1bc4c1843c89 "HTTP/1.1 200 OK"
+2026-10-17T21:03:12 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-6642add8-123a-44dd-93d9-1bc4c1843c89
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64769/agents/register "HTTP/1.1 409 Conflict"
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64769/agents "HTTP/1.1 200 OK"
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64769/agents/a-6642add8-123a-44dd-93d9-1bc4c1843c89 "HTTP/1.1 200 OK"
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64769/agents/a-caa8be8b-0155-4fcd-b72b-36564c1204b6 "HTTP/1.1 200 OK"
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64769/agents/a-caa8be8b-0155-4fcd-b72b-36564c1204b6 "HTTP/1.1 200 OK"
+2026-10-17T21:03:12 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-caa8be8b-0155-4fcd-b72b-36564c1204b6
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64770/accounts "HTTP/1.1 201 Created"
+2026-10-17T21:03:12 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: POST http://127.0.0.1:64770/accounts/a-caa8be8b-0155-4fcd-b72b-36564c1204b6/credit "HTTP/1.1 200 OK"
+2026-10-17T21:03:12 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-33b8ea08-5055-5475-86aa-48462caf836b, tx_id=tx-77534f9b-dbb3-4ce9-b46c-057998a18c95, balance_after=1000000)
+2026-10-17T21:03:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:64770/accounts/a-caa8be8b-0155-4fcd-b72b-36564c1204b6 "HTTP/1.1 200 OK"
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_migration_live_workload.py::test_migration_cli_preserves_live_receipts_and_allows_signed_continuation
+FAILED ../../tests/runtime/test_migration_process_crash.py::test_process_death_preserves_legacy_and_signed_workflow_can_resume[after_drop:board_bids]
+FAILED ../../tests/runtime/test_migration_process_crash.py::test_process_death_preserves_legacy_and_signed_workflow_can_resume[after_copy:bank_transactions]
+3 failed in 98.44s (0:01:38)
+.FF                                                                      [100%]
+=================================== FAILURES ===================================
+_ test_process_death_preserves_legacy_and_signed_workflow_can_resume[after_drop:board_bids] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2043/test_process_death_preserves_l0')
+fault_point = 'after_drop:board_bids'
+
+    @pytest.mark.parametrize("fault_point", ["after_drop:board_bids", "after_copy:bank_transactions"])
+    def test_process_death_preserves_legacy_and_signed_workflow_can_resume(tmp_path, fault_point):
+        runtime = IsolatedRuntime.create(repo_root=REPO_ROOT, artifacts_root=tmp_path)
+        try:
+            runtime.start()
+            assert runtime.provision() == 0
+            receipt = asyncio.run(_public_workload(runtime.agent_config_path))
+            prepared = runtime.prepare_recovery_and_stop(
+                registry_timeout_seconds=10.0, registry_max_attempts=2
+            )
+        finally:
+            runtime.stop()
+        (tmp_path / "runtime-before-crash.json").write_bytes(
+            (runtime.run_dir / "runtime.json").read_bytes()
+        )
+        inventory = RecoveryInventoryV1.model_validate_json(prepared.inventory_path.read_bytes())
+        database = runtime.run_dir / "data/economy.db"
+        original_rows = _install_legacy_fixture(database)
+        original_keys = _file_hashes(runtime.run_dir / "keys")
+        original_assets = _file_hashes(runtime.run_dir / "assets")
+        work_root = tmp_path / "crash-work"
+        work_root.mkdir(mode=0o700)
+        backup_root = runtime.run_dir / "backups"
+        original = create_backup(
+            inventory, backup_root=backup_root, backup_id="before-crash", work_root=work_root
+        )
+        assert original.state is PublicationState.COMPLETE
+        original_hashes = _file_hashes(original.location)
+    
+        killed = _kill_paused_migration(
+            runtime, prepared.inventory_path, backup_root, work_root, fault_point
+        )
+        (tmp_path / "crash-process.json").write_text(json.dumps(killed, indent=2) + "\n")
+        _assert_recovered_legacy(database, original_rows)
+        with hold_existing_maintenance_lock(
+            inventory.maintenance_lock_path,
+            mode=MaintenanceLockMode.EXCLUSIVE,
+            blocking=False,
+            expected_device=inventory.maintenance_lock_identity.device,
+            expected_inode=inventory.maintenance_lock_identity.inode,
+        ) as held:
+            held.verify_identity()
+        assert verify_backup(
+            backup_root=backup_root, backup_id="before-crash", work_root=work_root
+        ).identity_complete
+        assert _file_hashes(original.location) == original_hashes
+    
+        # A crash can change raw WAL bytes. Capture a new exact source binding, not an implicit retry.
+        fresh = create_backup(
+            inventory, backup_root=backup_root, backup_id="after-crash", work_root=work_root
+        )
+        assert fresh.state is PublicationState.COMPLETE
+        _resume_migration(runtime, prepared.inventory_path, backup_root, work_root)
+>       _assert_v1_database(database, original_rows, fresh)
+
+../../tests/runtime/test_migration_process_crash.py:220: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+database = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2043/test_process_death_preserves_l0/runtime-82210b1b7d534300a974f6f1a30b11df-99x7guw8/data/economy.db')
+original_rows = {'bank_accounts': (['account_id', 'balance', 'created_at'], [(1, 'a-e4dab830-1115-4314-acc5-605f648b1ffe', 999900, '20...854a', 'cc25d0364a20c3ae752c49d8f9324548e0ac692c543075b6022e3d6e05b6aa04', 'text/plain', 'result.txt', 56, ...)]), ...}
+backup = PublicationResult(state=<PublicationState.COMPLETE: 'complete'>, location=PosixPath('/private/var/folders/d5/vbvfgyfs4...1df-99x7guw8/backups/after-crash'), manifest_sha256='cb1c73185ee6c2e2d610bc12a843fb6028f06a80a396176ebf3ce4a734bbb7c5')
+
+    def _assert_v1_database(database, original_rows, backup):
+        with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as migrated:
+            assert classify_schema(migrated).state is SchemaState.CURRENT_V1
+            assert _logical_rows(migrated) == original_rows
+            assert audit_money(migrated).financially_clean
+>           assert migrated.execute("SELECT * FROM schema_metadata").fetchone() == (
+                1,
+                1,
+                0,
+                "legacy-live-work",
+                backup.manifest_sha256,
+            )
+E           AssertionError: assert (1, 1, 0, 'af...e4a734bbb7c5') == (1, 1, 0, 'le...e4a734bbb7c5')
+E             
+E             At index 3 diff: 'after-crash' != 'legacy-live-work'
+E             Use -v to get more diff
+
+../../tests/runtime/test_migration_live_workload.py:165: AssertionError
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=49f5076a17a25d0412c6f03f54e881867fd66b58a639ab7ac6754ae176c7c693
+provisioned handle=bob fingerprint_sha256=8d805c988e0cf887275b7945d51cd14b36620c81d3b7b0c4ffac84a374a3bc8d
+provisioned handle=feeder fingerprint_sha256=77e4d58afaf8de042941ee00d8f7fe1bc5cc89d9088e4e7b23eb8130624dd13e
+provisioned handle=mathbot fingerprint_sha256=124d826ab4b613fc1574a00cb1c86a076785b50a4aeb8ea9542da952079b8c83
+provisioned handle=mathbot_mistral fingerprint_sha256=b775e2c5161a373065ac0ccbba1ac91aa3eeda76e20ec488b8cbcea3d240d8f1
+provisioned handle=mathbot_openai fingerprint_sha256=423cc2e86de65cada1e087b3b3fcfb889d87fad81dfbfabc7a8d857463fd02c8
+provisioned handle=operator fingerprint_sha256=8a7babe37c5bdb1b281f60b476d002c688a59be17b5b72c8c52bc252b0e36161
+provisioned handle=platform fingerprint_sha256=a0f330b0c4d7213dd1d576e93354cdb56ea0fb601826125f0ead5732fe92623e
+provisioned handle=gateway-central-bank fingerprint_sha256=d612cab1a177264c3f3fbbf90932db62a4857f6c0ede87e98a6488b49b18494a
+provisioned handle=gateway-court fingerprint_sha256=fb3348459cedce7e0917fbcb10225b477aa02a12b34f5175da9439f967437054
+provisioned handle=gateway-identity fingerprint_sha256=92ee81d295b0190d7637069456a0a22cc727f96ecbad0e6f5c5a7d466108c37c
+provisioned handle=gateway-reputation fingerprint_sha256=572e6919e48ff422acf6ecc99b75b8e4aa7082f92a420ffbb890d6e9bc7929e3
+provisioned handle=gateway-task-board fingerprint_sha256=0da1dca722f012ccef8d5e78b7ab47bf434881fdb67925c18956b41192b877a8
+agent_id=a-e4dab830-1115-4314-acc5-605f648b1ffe
+genesis_amount=1000000
+balance=1000000
+operation_id=op-17742be2-679f-5298-9801-8507ac44a654
+{"operation": "migrate", "result": {"applied": true, "backup_id": "after-crash", "evidence_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2043/test_process_death_preserves_l0/crash-work/.mp06-bound-source-df9e8ff02069461e8ebeb8a2ef245a3d/migration-result.json", "manifest_sha256": "cb1c73185ee6c2e2d610bc12a843fb6028f06a80a396176ebf3ce4a734bbb7c5", "observation": "committed_v1_verified", "plan_sha256": "076551884fe321709115647876a8c8c123b4b5c0765643dec11848f9920479b0", "schema_version": 1}}
+----------------------------- Captured stderr call -----------------------------
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49260/agents/register "HTTP/1.1 409 Conflict"
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49260/agents "HTTP/1.1 200 OK"
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49260/agents/a-23e7b353-b3e0-4984-9f72-3eba0094307c "HTTP/1.1 200 OK"
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49260/agents/a-23e7b353-b3e0-4984-9f72-3eba0094307c "HTTP/1.1 200 OK"
+2026-10-17T21:06:16 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-23e7b353-b3e0-4984-9f72-3eba0094307c
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49260/agents/register "HTTP/1.1 409 Conflict"
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49260/agents "HTTP/1.1 200 OK"
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49260/agents/a-23e7b353-b3e0-4984-9f72-3eba0094307c "HTTP/1.1 200 OK"
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49260/agents/a-e4dab830-1115-4314-acc5-605f648b1ffe "HTTP/1.1 200 OK"
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49260/agents/a-e4dab830-1115-4314-acc5-605f648b1ffe "HTTP/1.1 200 OK"
+2026-10-17T21:06:16 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-e4dab830-1115-4314-acc5-605f648b1ffe
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49261/accounts "HTTP/1.1 201 Created"
+2026-10-17T21:06:16 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49261/accounts/a-e4dab830-1115-4314-acc5-605f648b1ffe/credit "HTTP/1.1 200 OK"
+2026-10-17T21:06:16 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-17742be2-679f-5298-9801-8507ac44a654, tx_id=tx-653e4093-eccd-4392-981b-a4b6922965bf, balance_after=1000000)
+2026-10-17T21:06:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49261/accounts/a-e4dab830-1115-4314-acc5-605f648b1ffe "HTTP/1.1 200 OK"
+_ test_process_death_preserves_legacy_and_signed_workflow_can_resume[after_copy:bank_transactions] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2043/test_process_death_preserves_l1')
+fault_point = 'after_copy:bank_transactions'
+
+    @pytest.mark.parametrize("fault_point", ["after_drop:board_bids", "after_copy:bank_transactions"])
+    def test_process_death_preserves_legacy_and_signed_workflow_can_resume(tmp_path, fault_point):
+        runtime = IsolatedRuntime.create(repo_root=REPO_ROOT, artifacts_root=tmp_path)
+        try:
+            runtime.start()
+            assert runtime.provision() == 0
+            receipt = asyncio.run(_public_workload(runtime.agent_config_path))
+            prepared = runtime.prepare_recovery_and_stop(
+                registry_timeout_seconds=10.0, registry_max_attempts=2
+            )
+        finally:
+            runtime.stop()
+        (tmp_path / "runtime-before-crash.json").write_bytes(
+            (runtime.run_dir / "runtime.json").read_bytes()
+        )
+        inventory = RecoveryInventoryV1.model_validate_json(prepared.inventory_path.read_bytes())
+        database = runtime.run_dir / "data/economy.db"
+        original_rows = _install_legacy_fixture(database)
+        original_keys = _file_hashes(runtime.run_dir / "keys")
+        original_assets = _file_hashes(runtime.run_dir / "assets")
+        work_root = tmp_path / "crash-work"
+        work_root.mkdir(mode=0o700)
+        backup_root = runtime.run_dir / "backups"
+        original = create_backup(
+            inventory, backup_root=backup_root, backup_id="before-crash", work_root=work_root
+        )
+        assert original.state is PublicationState.COMPLETE
+        original_hashes = _file_hashes(original.location)
+    
+        killed = _kill_paused_migration(
+            runtime, prepared.inventory_path, backup_root, work_root, fault_point
+        )
+        (tmp_path / "crash-process.json").write_text(json.dumps(killed, indent=2) + "\n")
+        _assert_recovered_legacy(database, original_rows)
+        with hold_existing_maintenance_lock(
+            inventory.maintenance_lock_path,
+            mode=MaintenanceLockMode.EXCLUSIVE,
+            blocking=False,
+            expected_device=inventory.maintenance_lock_identity.device,
+            expected_inode=inventory.maintenance_lock_identity.inode,
+        ) as held:
+            held.verify_identity()
+        assert verify_backup(
+            backup_root=backup_root, backup_id="before-crash", work_root=work_root
+        ).identity_complete
+        assert _file_hashes(original.location) == original_hashes
+    
+        # A crash can change raw WAL bytes. Capture a new exact source binding, not an implicit retry.
+        fresh = create_backup(
+            inventory, backup_root=backup_root, backup_id="after-crash", work_root=work_root
+        )
+        assert fresh.state is PublicationState.COMPLETE
+        _resume_migration(runtime, prepared.inventory_path, backup_root, work_root)
+>       _assert_v1_database(database, original_rows, fresh)
+
+../../tests/runtime/test_migration_process_crash.py:220: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+database = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2043/test_process_death_preserves_l1/runtime-a28dda2b331147f5acdfce5aac705565-zbc_5tsu/data/economy.db')
+original_rows = {'bank_accounts': (['account_id', 'balance', 'created_at'], [(1, 'a-6c74a52c-9869-4a80-a8a4-520ae4f7d568', 999900, '20...891e', 'cc25d0364a20c3ae752c49d8f9324548e0ac692c543075b6022e3d6e05b6aa04', 'text/plain', 'result.txt', 56, ...)]), ...}
+backup = PublicationResult(state=<PublicationState.COMPLETE: 'complete'>, location=PosixPath('/private/var/folders/d5/vbvfgyfs4...565-zbc_5tsu/backups/after-crash'), manifest_sha256='0dea56af01e147d7b165258306ede11f2bda8cb29619ae7f4099b6350691e5a2')
+
+    def _assert_v1_database(database, original_rows, backup):
+        with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as migrated:
+            assert classify_schema(migrated).state is SchemaState.CURRENT_V1
+            assert _logical_rows(migrated) == original_rows
+            assert audit_money(migrated).financially_clean
+>           assert migrated.execute("SELECT * FROM schema_metadata").fetchone() == (
+                1,
+                1,
+                0,
+                "legacy-live-work",
+                backup.manifest_sha256,
+            )
+E           AssertionError: assert (1, 1, 0, 'af...b6350691e5a2') == (1, 1, 0, 'le...b6350691e5a2')
+E             
+E             At index 3 diff: 'after-crash' != 'legacy-live-work'
+E             Use -v to get more diff
+
+../../tests/runtime/test_migration_live_workload.py:165: AssertionError
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=270ac44350241ce1f07a49e7e3cd94256e9b466b78cda9eccb6a42d5706ab27a
+provisioned handle=bob fingerprint_sha256=2f6034060e64d9ef2f81c02a42d2aeadcbaf6a06011a2966ed317c607a355a9b
+provisioned handle=feeder fingerprint_sha256=e89f44e70c99f95270776619c71356c726f1118d3223fa8d453ec361a72ee404
+provisioned handle=mathbot fingerprint_sha256=9ea74f29c4e091ede8f44fbf544785e6d315015e347993a7562427b300d3d401
+provisioned handle=mathbot_mistral fingerprint_sha256=69d59a1ffba1fc52b1bade4a844d5bfc569de71fa589bae1cd82e574d2bcdc2c
+provisioned handle=mathbot_openai fingerprint_sha256=b2c1b8b055abb54471a5f35b17023321f41dd1623d00cd6434c0fabb8716a54d
+provisioned handle=operator fingerprint_sha256=33620371400f21b5d0ca0bbda729875977201b4f9db257512de6d9d5809f18d5
+provisioned handle=platform fingerprint_sha256=c2f56859c965c04d725528153e8f749851d8a84a38cd2eb967930cddfe4462f7
+provisioned handle=gateway-central-bank fingerprint_sha256=578ef37ca64d4843485cbe9476335fbe9748b803613f80771b9a4bc3f31dcf8f
+provisioned handle=gateway-court fingerprint_sha256=14ca293b3c1752eab0038c23002bdf3f4d35524ecee775e1450da7bc199d88a7
+provisioned handle=gateway-identity fingerprint_sha256=6ead60d93cf5d234da5602ec761017b2422e6a802dd226ed02262e0caf9f5a31
+provisioned handle=gateway-reputation fingerprint_sha256=fe0f6b42150ef1b340db77be39bd4002e56f69cdb54bf3d608902638b3dacd88
+provisioned handle=gateway-task-board fingerprint_sha256=c1236571f7d08dec2d699002af1898a560defa0d875e1ae72ca63c88514104b5
+agent_id=a-6c74a52c-9869-4a80-a8a4-520ae4f7d568
+genesis_amount=1000000
+balance=1000000
+operation_id=op-89f262da-0bcc-5ea3-9668-41c3e5aa1367
+{"operation": "migrate", "result": {"applied": true, "backup_id": "after-crash", "evidence_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2043/test_process_death_preserves_l1/crash-work/.mp06-bound-source-bfcaf6ea04ca42d2b2244594d4901569/migration-result.json", "manifest_sha256": "0dea56af01e147d7b165258306ede11f2bda8cb29619ae7f4099b6350691e5a2", "observation": "committed_v1_verified", "plan_sha256": "076551884fe321709115647876a8c8c123b4b5c0765643dec11848f9920479b0", "schema_version": 1}}
+----------------------------- Captured stderr call -----------------------------
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49356/agents/register "HTTP/1.1 409 Conflict"
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49356/agents "HTTP/1.1 200 OK"
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49356/agents/a-bf972b4b-5bf9-4821-a064-cd8922122c66 "HTTP/1.1 200 OK"
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49356/agents/a-bf972b4b-5bf9-4821-a064-cd8922122c66 "HTTP/1.1 200 OK"
+2026-10-17T21:06:47 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-bf972b4b-5bf9-4821-a064-cd8922122c66
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49356/agents/register "HTTP/1.1 409 Conflict"
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49356/agents "HTTP/1.1 200 OK"
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49356/agents/a-bf972b4b-5bf9-4821-a064-cd8922122c66 "HTTP/1.1 200 OK"
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49356/agents/a-6c74a52c-9869-4a80-a8a4-520ae4f7d568 "HTTP/1.1 200 OK"
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49356/agents/a-6c74a52c-9869-4a80-a8a4-520ae4f7d568 "HTTP/1.1 200 OK"
+2026-10-17T21:06:47 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-6c74a52c-9869-4a80-a8a4-520ae4f7d568
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49358/accounts "HTTP/1.1 201 Created"
+2026-10-17T21:06:47 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49358/accounts/a-6c74a52c-9869-4a80-a8a4-520ae4f7d568/credit "HTTP/1.1 200 OK"
+2026-10-17T21:06:47 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-89f262da-0bcc-5ea3-9668-41c3e5aa1367, tx_id=tx-e30ccf11-4afa-486b-935d-eaf306475394, balance_after=1000000)
+2026-10-17T21:06:47 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49358/accounts/a-6c74a52c-9869-4a80-a8a4-520ae4f7d568 "HTTP/1.1 200 OK"
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_migration_process_crash.py::test_process_death_preserves_legacy_and_signed_workflow_can_resume[after_drop:board_bids]
+FAILED ../../tests/runtime/test_migration_process_crash.py::test_process_death_preserves_legacy_and_signed_workflow_can_resume[after_copy:bank_transactions]
+2 failed, 1 passed in 126.58s (0:02:06)
+..                                                                       [100%]
+2 passed in 112.15s (0:01:52)
+...                                                                      [100%]
+3 passed in 155.48s (0:02:35)
+...                                                                      [100%]
+3 passed in 76.77s (0:01:16)

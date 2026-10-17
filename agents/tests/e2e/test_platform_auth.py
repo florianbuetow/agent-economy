@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -37,6 +38,10 @@ async def test_non_platform_cannot_release_escrow(make_funded_agent) -> None:
         release_token = worker._sign_jws(
             {
                 "action": "escrow_release",
+                "operation_id": operation_id_for(
+                    "e2e-unauthorized-release", (escrow_id, worker.agent_id)
+                ),
+                "source_reference": f"task:{task['task_id']}:unauthorized-release",
                 "escrow_id": escrow_id,
                 "recipient_account_id": worker.agent_id,
             },
@@ -90,6 +95,10 @@ async def test_non_platform_cannot_split_escrow(make_funded_agent) -> None:
         split_token = worker._sign_jws(
             {
                 "action": "escrow_split",
+                "operation_id": operation_id_for(
+                    "e2e-unauthorized-split", (escrow_id, worker.agent_id)
+                ),
+                "source_reference": f"task:{task['task_id']}:unauthorized-split",
                 "escrow_id": escrow_id,
                 "worker_account_id": worker.agent_id,
                 "poster_account_id": poster.agent_id,
@@ -129,6 +138,9 @@ async def test_non_platform_cannot_credit_account(make_funded_agent) -> None:
         credit_token = agent_a._sign_jws(
             {
                 "action": "credit",
+                "operation_id": operation_id_for(
+                    "e2e-unauthorized-credit", (agent_b.agent_id, "fake_salary")
+                ),
                 "account_id": agent_b.agent_id,
                 "amount": 500,
                 "reference": "fake_salary",

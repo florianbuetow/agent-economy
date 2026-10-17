@@ -1,0 +1,289 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 10 items
+
+tests/unit/test_mp04_migration_cli.py FFFFFFFFFF                         [100%]
+
+=================================== FAILURES ===================================
+___ test_receipt_migration_cli_selects_only_the_explicit_v1_to_v2_operation ____
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1937: in _parse_known_args2
+    namespace, args = self._parse_known_args(args, namespace, intermixed)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2169: in _parse_known_args
+    positionals_end_index = consume_positionals(start_index)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2144: in consume_positionals
+    take_action(action, args)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1998: in take_action
+    argument_values = self._get_values(action, argument_strings)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2528: in _get_values
+    self._check_value(action, value[0])
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2578: in _check_value
+    raise ArgumentError(action, msg % args)
+E   argparse.ArgumentError: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)
+
+During handling of the above exception, another exception occurred:
+tests/unit/test_mp04_migration_cli.py:41: in test_receipt_migration_cli_selects_only_the_explicit_v1_to_v2_operation
+    assert main(arguments) == 0
+           ^^^^^^^^^^^^^^^
+src/db_gateway_service/recovery_cli/__main__.py:168: in main
+    args = _parse_arguments(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/recovery_cli/__main__.py:54: in _parse_arguments
+    return parser.parse_args(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1898: in parse_args
+    args, argv = self.parse_known_args(args, namespace)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1908: in parse_known_args
+    return self._parse_known_args2(args, namespace, intermixed=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1939: in _parse_known_args2
+    self.error(str(err))
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2658: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2645: in exit
+    _sys.exit(status)
+E   SystemExit: 2
+----------------------------- Captured stderr call -----------------------------
+usage: pytest [-h]
+              {backup,migrate,restore,verify-restore,finalize-restore} ...
+pytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)
+_ test_receipt_migration_cli_requires_all_explicit_authority_inputs[--inventory] _
+tests/unit/test_mp04_migration_cli.py:78: in test_receipt_migration_cli_requires_all_explicit_authority_inputs
+    assert f"required: {flag}" in capsys.readouterr().err
+E   assert 'required: --inventory' in "usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...\npytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n"
+E    +  where "usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...\npytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n" = CaptureResult(out='', err="usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...ommand: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n").err
+E    +    where CaptureResult(out='', err="usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...ommand: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n") = readouterr()
+E    +      where readouterr = <_pytest.capture.CaptureFixture object at 0x107ea7110>.readouterr
+_ test_receipt_migration_cli_requires_all_explicit_authority_inputs[--backup-root] _
+tests/unit/test_mp04_migration_cli.py:78: in test_receipt_migration_cli_requires_all_explicit_authority_inputs
+    assert f"required: {flag}" in capsys.readouterr().err
+E   assert 'required: --backup-root' in "usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...\npytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n"
+E    +  where "usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...\npytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n" = CaptureResult(out='', err="usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...ommand: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n").err
+E    +    where CaptureResult(out='', err="usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...ommand: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n") = readouterr()
+E    +      where readouterr = <_pytest.capture.CaptureFixture object at 0x107ea79d0>.readouterr
+_ test_receipt_migration_cli_requires_all_explicit_authority_inputs[--backup-id] _
+tests/unit/test_mp04_migration_cli.py:78: in test_receipt_migration_cli_requires_all_explicit_authority_inputs
+    assert f"required: {flag}" in capsys.readouterr().err
+E   assert 'required: --backup-id' in "usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...\npytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n"
+E    +  where "usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...\npytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n" = CaptureResult(out='', err="usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...ommand: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n").err
+E    +    where CaptureResult(out='', err="usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...ommand: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n") = readouterr()
+E    +      where readouterr = <_pytest.capture.CaptureFixture object at 0x107f17bb0>.readouterr
+_ test_receipt_migration_cli_requires_all_explicit_authority_inputs[--work-root] _
+tests/unit/test_mp04_migration_cli.py:78: in test_receipt_migration_cli_requires_all_explicit_authority_inputs
+    assert f"required: {flag}" in capsys.readouterr().err
+E   assert 'required: --work-root' in "usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...\npytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n"
+E    +  where "usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...\npytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n" = CaptureResult(out='', err="usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...ommand: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n").err
+E    +    where CaptureResult(out='', err="usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...ommand: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n") = readouterr()
+E    +      where readouterr = <_pytest.capture.CaptureFixture object at 0x107f17950>.readouterr
+_ test_receipt_migration_cli_requires_all_explicit_authority_inputs[--busy-timeout-ms] _
+tests/unit/test_mp04_migration_cli.py:78: in test_receipt_migration_cli_requires_all_explicit_authority_inputs
+    assert f"required: {flag}" in capsys.readouterr().err
+E   assert 'required: --busy-timeout-ms' in "usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...\npytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n"
+E    +  where "usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...\npytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n" = CaptureResult(out='', err="usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...ommand: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n").err
+E    +    where CaptureResult(out='', err="usage: pytest [-h]\n              {backup,migrate,restore,verify-restore,finalize-restore} ...ommand: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)\n") = readouterr()
+E    +      where readouterr = <_pytest.capture.CaptureFixture object at 0x107c7f890>.readouterr
+_ test_receipt_migration_cli_never_accepts_the_wrong_or_unverified_target[1-committed_v1_verified] _
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1937: in _parse_known_args2
+    namespace, args = self._parse_known_args(args, namespace, intermixed)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2169: in _parse_known_args
+    positionals_end_index = consume_positionals(start_index)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2144: in consume_positionals
+    take_action(action, args)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1998: in take_action
+    argument_values = self._get_values(action, argument_strings)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2528: in _get_values
+    self._check_value(action, value[0])
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2578: in _check_value
+    raise ArgumentError(action, msg % args)
+E   argparse.ArgumentError: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)
+
+During handling of the above exception, another exception occurred:
+tests/unit/test_mp04_migration_cli.py:101: in test_receipt_migration_cli_never_accepts_the_wrong_or_unverified_target
+    assert main(arguments) == 1
+           ^^^^^^^^^^^^^^^
+src/db_gateway_service/recovery_cli/__main__.py:168: in main
+    args = _parse_arguments(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/recovery_cli/__main__.py:54: in _parse_arguments
+    return parser.parse_args(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1898: in parse_args
+    args, argv = self.parse_known_args(args, namespace)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1908: in parse_known_args
+    return self._parse_known_args2(args, namespace, intermixed=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1939: in _parse_known_args2
+    self.error(str(err))
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2658: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2645: in exit
+    _sys.exit(status)
+E   SystemExit: 2
+----------------------------- Captured stderr call -----------------------------
+usage: pytest [-h]
+              {backup,migrate,restore,verify-restore,finalize-restore} ...
+pytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)
+_ test_receipt_migration_cli_never_accepts_the_wrong_or_unverified_target[2-committed_v2_observed] _
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1937: in _parse_known_args2
+    namespace, args = self._parse_known_args(args, namespace, intermixed)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2169: in _parse_known_args
+    positionals_end_index = consume_positionals(start_index)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2144: in consume_positionals
+    take_action(action, args)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1998: in take_action
+    argument_values = self._get_values(action, argument_strings)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2528: in _get_values
+    self._check_value(action, value[0])
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2578: in _check_value
+    raise ArgumentError(action, msg % args)
+E   argparse.ArgumentError: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)
+
+During handling of the above exception, another exception occurred:
+tests/unit/test_mp04_migration_cli.py:101: in test_receipt_migration_cli_never_accepts_the_wrong_or_unverified_target
+    assert main(arguments) == 1
+           ^^^^^^^^^^^^^^^
+src/db_gateway_service/recovery_cli/__main__.py:168: in main
+    args = _parse_arguments(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/recovery_cli/__main__.py:54: in _parse_arguments
+    return parser.parse_args(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1898: in parse_args
+    args, argv = self.parse_known_args(args, namespace)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1908: in parse_known_args
+    return self._parse_known_args2(args, namespace, intermixed=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1939: in _parse_known_args2
+    self.error(str(err))
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2658: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2645: in exit
+    _sys.exit(status)
+E   SystemExit: 2
+----------------------------- Captured stderr call -----------------------------
+usage: pytest [-h]
+              {backup,migrate,restore,verify-restore,finalize-restore} ...
+pytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)
+_ test_receipt_migration_cli_never_accepts_the_wrong_or_unverified_target[2-not_applied_v1_observed] _
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1937: in _parse_known_args2
+    namespace, args = self._parse_known_args(args, namespace, intermixed)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2169: in _parse_known_args
+    positionals_end_index = consume_positionals(start_index)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2144: in consume_positionals
+    take_action(action, args)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1998: in take_action
+    argument_values = self._get_values(action, argument_strings)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2528: in _get_values
+    self._check_value(action, value[0])
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2578: in _check_value
+    raise ArgumentError(action, msg % args)
+E   argparse.ArgumentError: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)
+
+During handling of the above exception, another exception occurred:
+tests/unit/test_mp04_migration_cli.py:101: in test_receipt_migration_cli_never_accepts_the_wrong_or_unverified_target
+    assert main(arguments) == 1
+           ^^^^^^^^^^^^^^^
+src/db_gateway_service/recovery_cli/__main__.py:168: in main
+    args = _parse_arguments(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/recovery_cli/__main__.py:54: in _parse_arguments
+    return parser.parse_args(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1898: in parse_args
+    args, argv = self.parse_known_args(args, namespace)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1908: in parse_known_args
+    return self._parse_known_args2(args, namespace, intermixed=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1939: in _parse_known_args2
+    self.error(str(err))
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2658: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2645: in exit
+    _sys.exit(status)
+E   SystemExit: 2
+----------------------------- Captured stderr call -----------------------------
+usage: pytest [-h]
+              {backup,migrate,restore,verify-restore,finalize-restore} ...
+pytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)
+_ test_receipt_migration_cli_reports_commit_uncertainty_once_without_sensitive_text _
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1937: in _parse_known_args2
+    namespace, args = self._parse_known_args(args, namespace, intermixed)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2169: in _parse_known_args
+    positionals_end_index = consume_positionals(start_index)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2144: in consume_positionals
+    take_action(action, args)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1998: in take_action
+    argument_values = self._get_values(action, argument_strings)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2528: in _get_values
+    self._check_value(action, value[0])
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2578: in _check_value
+    raise ArgumentError(action, msg % args)
+E   argparse.ArgumentError: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)
+
+During handling of the above exception, another exception occurred:
+tests/unit/test_mp04_migration_cli.py:118: in test_receipt_migration_cli_reports_commit_uncertainty_once_without_sensitive_text
+    assert main(arguments) == 1
+           ^^^^^^^^^^^^^^^
+src/db_gateway_service/recovery_cli/__main__.py:168: in main
+    args = _parse_arguments(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/recovery_cli/__main__.py:54: in _parse_arguments
+    return parser.parse_args(arguments)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1898: in parse_args
+    args, argv = self.parse_known_args(args, namespace)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1908: in parse_known_args
+    return self._parse_known_args2(args, namespace, intermixed=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1939: in _parse_known_args2
+    self.error(str(err))
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2658: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2645: in exit
+    _sys.exit(status)
+E   SystemExit: 2
+----------------------------- Captured stderr call -----------------------------
+usage: pytest [-h]
+              {backup,migrate,restore,verify-restore,finalize-restore} ...
+pytest: error: argument command: invalid choice: 'migrate-v1-to-v2' (choose from backup, migrate, restore, verify-restore, finalize-restore)
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp04_migration_cli.py::test_receipt_migration_cli_selects_only_the_explicit_v1_to_v2_operation
+FAILED tests/unit/test_mp04_migration_cli.py::test_receipt_migration_cli_requires_all_explicit_authority_inputs[--inventory]
+FAILED tests/unit/test_mp04_migration_cli.py::test_receipt_migration_cli_requires_all_explicit_authority_inputs[--backup-root]
+FAILED tests/unit/test_mp04_migration_cli.py::test_receipt_migration_cli_requires_all_explicit_authority_inputs[--backup-id]
+FAILED tests/unit/test_mp04_migration_cli.py::test_receipt_migration_cli_requires_all_explicit_authority_inputs[--work-root]
+FAILED tests/unit/test_mp04_migration_cli.py::test_receipt_migration_cli_requires_all_explicit_authority_inputs[--busy-timeout-ms]
+FAILED tests/unit/test_mp04_migration_cli.py::test_receipt_migration_cli_never_accepts_the_wrong_or_unverified_target[1-committed_v1_verified]
+FAILED tests/unit/test_mp04_migration_cli.py::test_receipt_migration_cli_never_accepts_the_wrong_or_unverified_target[2-committed_v2_observed]
+FAILED tests/unit/test_mp04_migration_cli.py::test_receipt_migration_cli_never_accepts_the_wrong_or_unverified_target[2-not_applied_v1_observed]
+FAILED tests/unit/test_mp04_migration_cli.py::test_receipt_migration_cli_reports_commit_uncertainty_once_without_sensitive_text
+======================== 10 failed, 1 warning in 0.35s =========================

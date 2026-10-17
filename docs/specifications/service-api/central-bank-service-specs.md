@@ -1,15 +1,17 @@
 # Central Bank Service — API Specification
 
-## MP-04 receipt contract amendment (implementation in progress)
+## MP-04 receipt contract amendment
 
 The [2026-10-16 financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md)
-defines the required replacement for flat financial responses and reference-only replay below.
+defines the implemented financial response and replay behavior documented below.
 It requires caller-owned operation IDs for positive issuance, credit and every escrow operation,
 explicit settlement source references, immutable receipts with actual ledger/event identities,
 and a separate current escrow projection. Exact native replay is payload-bound; conflicting
 identities return explicit 409 errors. Historical effects receive audited observations, never
 invented native receipts. Zero-balance account creation retains its existing natural identity.
-The amendment is a target contract; T-116/T-117 remain open until implementation and root CI prove it.
+The implementation and independent reviews are verified by root19 exit0; T-116/T-117 are closed.
+See the active change's evidence/root19-checkpoint.md. Historical observations follow the
+[historical contract](../../plans/2026-10-17-mp04-historical-observations.md).
 
 ## Purpose
 
@@ -80,7 +82,10 @@ The Central Bank depends on the Identity service for two operations, both scoped
 | `reference`    | TEXT    | Context string (e.g., `initial_balance`, a caller-supplied reference, task_id, escrow_id) |
 | `timestamp`    | TEXT    | ISO 8601 timestamp                                  |
 
-Note: on the DB Gateway, these tables are named `bank_accounts`, `bank_transactions`, and `bank_escrow` (`docs/specifications/schema.sql`). The Central Bank's own HTTP-facing field names above are unaffected by that internal naming.
+On the DB Gateway these tables are named `bank_accounts`, `bank_transactions`, and `bank_escrow`.
+The implemented receipt tables and constraints are defined in
+`services/db-gateway/src/db_gateway_service/schema_resources/current_v2.sql` and summarized by the
+linked MP-04 schema-v2 contract. The Central Bank's read-facing field names remain unchanged.
 
 ### Escrow Table
 
@@ -101,6 +106,81 @@ Note: on the DB Gateway, these tables are named `bank_accounts`, `bank_transacti
 | `ux_credit_reference`               | Unique index  | `(account_id, reference) WHERE type = 'credit'` — enforces credit idempotency |
 | `idx_bank_escrow_lifetime`          | Unique index  | `(payer_account_id, task_id)` for all statuses — one lifetime escrow per payer per task |
 | `ix_transactions_account_timestamp_tx_id` | Index   | `(account_id, timestamp, tx_id)` — efficient transaction history queries |
+
+### Financial command identity and responses
+
+The authoritative wire contract is the
+[MP-04 receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md), backed by
+[schema v2](../../plans/2026-10-16-mp04-schema-v2.md) and the
+[historical-observation contract](../../plans/2026-10-17-mp04-historical-observations.md).
+The rules below summarize that contract for these endpoints; those documents define the exact
+canonical hashes, persisted fields, replay matrix, and historical attestation rules.
+
+- `operation_id` is a caller-owned canonical `op-<UUID>` string. It is required in the signed
+  payload for positive account issuance, credit, lock, release, and split. It is forbidden for
+  zero-balance account creation. Operation IDs are global across all financial operation kinds.
+- A native success returns `outcome: "native_receipt"`, the immutable persisted `receipt`, and a
+  fresh `current_escrow` projection. `current_escrow` is null for issuance and credit. For escrow
+  operations it contains the actual escrow ID, payer, task, amount, current status, creation time,
+  and resolution time. Exact replay returns the original receipt identities and a newly read
+  projection; generated candidate IDs from the retry never replace stored IDs.
+- Receipt legs carry the exact transaction identity and `balance_after` for positive movements.
+  Split always returns ordered `worker` then `poster` legs. A zero allocation remains a logical
+  leg with null `transaction_id` and null `balance_after`; that zero leg does not require an
+  account to exist.
+- Exact historical credit/lock collisions may return `outcome: "legacy_observation"`. Such an
+  observation has null operation ownership for the historical effect and cannot prove a newly
+  committed native command. Release, split, and positive issuance never return this outcome.
+
+Native response shape (the endpoint sections specify the required kind-specific result and legs):
+
+```json
+{
+  "outcome": "native_receipt",
+  "receipt": {
+    "receipt_version": 1,
+    "operation_id": "op-00000000-0000-4000-8000-000000000001",
+    "operation_kind": "credit",
+    "request_sha256": "<64 lowercase hexadecimal characters>",
+    "source_reference": "salary_round_3",
+    "committed_at": "2026-02-23T10:00:00Z",
+    "event_id": 12,
+    "escrow_id": null,
+    "result": {
+      "account_id": "a-550e8400-e29b-41d4-a716-446655440000",
+      "amount": 10,
+      "balance_after": 60,
+      "reference": "salary_round_3"
+    },
+    "legs": [
+      {
+        "role": "account",
+        "account_id": "a-550e8400-e29b-41d4-a716-446655440000",
+        "direction": "credit",
+        "amount": 10,
+        "transaction_id": "tx-550e8400-e29b-41d4-a716-446655440000",
+        "balance_after": 60
+      }
+    ]
+  },
+  "current_escrow": null
+}
+```
+
+Replay and ownership outcomes are distinct:
+
+| Existing effect | Submitted command | Result |
+|---|---|---|
+| Native receipt with same ID | Same kind and canonical business request | Exact receipt replay; fresh current projection; no mutation |
+| Native receipt with same ID | Changed kind or business request | 409 `operation_id_conflict` with the original `winning_operation_id` |
+| Native credit/lock natural key | Different operation ID | 409 `financial_operation_already_committed` with the true winning ID |
+| Attested legacy credit/lock natural key | Exact observed terms | Explicit `legacy_observation`; historical `operation_id` remains null |
+| Attested legacy credit/lock natural key | Changed amount | 409 `legacy_operation_conflict`; `winning_operation_id` is null |
+| Attested legacy terminal escrow | New settlement attempt | 409 `historical_settlement_unreplayable`; no movement or invented identity |
+
+An `escrow_already_resolved` error is not a success signal. Exact native settlement replay succeeds
+only through its matching stored receipt. A different operation ID, opposing settlement, legacy
+terminal settlement, or unowned/corrupt effect returns its explicit conflict or ownership error.
 
 ---
 
@@ -164,9 +244,12 @@ Create a new account. Two modes, both verified via Identity (see the Accepted De
 {
   "action": "create_account",
   "agent_id": "a-550e8400-e29b-41d4-a716-446655440000",
-  "initial_balance": 50
+  "initial_balance": 50,
+  "operation_id": "op-00000000-0000-4000-8000-000000000001"
 }
 ```
+
+`operation_id` is required when `initial_balance` is positive and forbidden when it is zero.
 
 **Behavior (in code order):**
 1. Parse the request body as JSON; require a string `token` field.
@@ -177,19 +260,29 @@ Create a new account. Two modes, both verified via Identity (see the Accepted De
 6. Validate `initial_balance`: required, must be a non-negative integer.
 7. **Non-platform signers must pass `initial_balance: 0`** — a self-service request for a non-zero balance is rejected with `403 forbidden`.
 8. Call Identity to verify the target `agent_id` exists (`GET /agents/{agent_id}`).
-9. Create the account with the specified initial balance; if `initial_balance > 0`, log a `credit` transaction with reference `"initial_balance"`.
-10. All database operations happen in a single DB Gateway transaction.
+9. For a positive issuance, require and validate the caller's `operation_id`; for zero balance,
+   reject any supplied operation ID.
+10. Create the account with the specified initial balance; if `initial_balance > 0`, atomically
+    log the `initial_balance` credit, event, receipt, and account credit leg.
+11. All database operations happen in a single DB Gateway transaction.
 
 Because step 2 (remote signature verification) runs before steps 4–7 (payload validation), an invalid signature or an unreachable Identity service is reported (`403 forbidden` / `502 identity_service_unavailable`) even for requests whose domain payload is also malformed. Platform operations likewise authenticate the strict profile before domain validation, but do so locally; see the Authentication Specification's Error Precedence section.
 
-**Response (201 Created):**
+**Response (201 Created, zero balance):**
 ```json
 {
   "account_id": "a-550e8400-e29b-41d4-a716-446655440000",
-  "balance": 50,
+  "balance": 0,
   "created_at": "2026-02-23T10:00:00Z"
 }
 ```
+
+Positive issuance returns the native envelope defined above with
+`operation_kind: "account_issuance"`, null `current_escrow`, result fields `account_id`,
+`issued_amount`, and `balance_after`, and one positive `account` credit leg carrying the exact
+transaction ID. Positive issuance never returns a legacy observation. A different ID for existing
+native issuance returns `financial_operation_already_committed`; other account identity, including
+historical issuance-like data, remains 409 `account_exists`.
 
 **Errors:**
 
@@ -197,9 +290,12 @@ Because step 2 (remote signature verification) runs before steps 4–7 (payload 
 |--------|---------------------------------|--------------------------------------------------------|
 | 400    | `invalid_jws`                  | JWS token is malformed, missing, or not a string       |
 | 400    | `invalid_json`                 | Request body is not valid JSON or not a JSON object    |
-| 400    | `invalid_payload`              | JWS payload missing required fields or wrong action    |
+| 400    | `invalid_payload`              | JWS payload missing required fields/wrong action, or zero-balance creation carries an operation ID |
 | 400    | `invalid_amount`               | `initial_balance` is not a non-negative integer        |
 | 400    | `amount_out_of_range`           | `initial_balance` exceeds the signed-64-bit limit |
+| 400    | `invalid_operation_id`          | Positive issuance lacks a canonical operation ID |
+| 409    | `operation_id_conflict`         | Operation ID already owns a different financial request |
+| 409    | `financial_operation_already_committed` | Existing native issuance belongs to another operation ID |
 | 403    | `forbidden`                    | JWS signature verification failed; a non-platform signer named a different agent as `agent_id`; or a non-platform signer requested a non-zero `initial_balance` |
 | 404    | `agent_not_found`              | Agent does not exist in the Identity service            |
 | 409    | `account_exists`               | Account already exists for this agent                   |
@@ -212,7 +308,8 @@ Because step 2 (remote signature verification) runs before steps 4–7 (payload 
 
 ### POST /accounts/{account_id}/credit
 
-Add funds to an account. Platform-only operation, verified **locally**. Idempotent by `(account_id, reference)`.
+Add funds to an account. Platform-only operation, verified **locally**. Native replay is owned by
+the caller's global operation ID; `(account_id, reference)` remains the natural key.
 
 **Authentication:** JWS token in request body, verified locally via `PlatformAgent.validate_certificate()`.
 
@@ -229,31 +326,33 @@ Add funds to an account. Platform-only operation, verified **locally**. Idempote
   "action": "credit",
   "account_id": "a-550e8400-e29b-41d4-a716-446655440000",
   "amount": 10,
-  "reference": "salary_round_3"
+  "reference": "salary_round_3",
+  "operation_id": "op-00000000-0000-4000-8000-000000000002"
 }
 ```
 
 **Behavior (MP-03 strict-profile order):**
 1. Parse the request body as JSON; require a string `token` field.
 2. Verify the strict JWS profile, original signature and temporal policy locally. Require the authenticated platform `kid`, audience, concrete resource and `credit` action.
-3. Validate the authenticated domain payload: an optional `account_id` must match the URL, `amount` must be a positive bounded integer excluding booleans, and `reference` must be a non-null string.
+3. Validate the authenticated domain payload: an optional `account_id` must match the URL,
+   `amount` must be a positive bounded integer excluding booleans, `reference` must be a nonempty
+   valid UTF-8 string, and `operation_id` must be canonical.
 4. Credit the account and log a `credit` transaction atomically through the Gateway.
 
 Invalid signatures or platform identities return `403 forbidden` before malformed domain-field
 errors. Authentic expired or future-issued tokens retain their distinct 401 errors. This supersedes
 the historical T-033 payload-first order; there is no unverified domain-payload authorization path.
 
-**Idempotency:** The combination of `(account_id, reference)` is unique for credit transactions, enforced by the `ux_credit_reference` index. If a credit with the same account and reference already exists:
-- If the amount matches, the original `tx_id` and `balance_after` are returned (idempotent replay).
-- If the amount differs, a `payload_mismatch` error is returned.
+**Replay:** The operation ID owns native replay; `(account_id, reference)` remains the natural key.
+Same ID and same canonical request returns the exact native receipt. A different ID for an existing
+native natural key returns 409 `financial_operation_already_committed`, even when amount matches.
+An attested legacy natural-key match returns `legacy_observation` only when the amount matches;
+changed amount returns `legacy_operation_conflict`.
 
-**Response (200 OK):**
-```json
-{
-  "tx_id": "tx-550e8400-e29b-41d4-a716-446655440000",
-  "balance_after": 60
-}
-```
+**Response (200 OK):** The native envelope example in "Financial command identity and responses"
+is the credit response. An exact historical collision instead returns the exact typed observation
+defined by the historical-observation contract; consumers must not report it as a newly committed
+credit.
 
 **Errors:**
 
@@ -264,11 +363,16 @@ the historical T-033 payload-first order; there is no unverified domain-payload 
 | 400    | `invalid_payload`              | JWS payload missing required fields or wrong action    |
 | 400    | `invalid_amount`               | Amount is not a positive integer                       |
 | 400    | `amount_out_of_range`           | Credit input exceeds the signed-64-bit limit |
-| 400    | `payload_mismatch`             | JWS payload `account_id` does not match URL, or duplicate reference with different amount |
+| 400    | `invalid_operation_id`          | Missing or noncanonical operation ID |
+| 400    | `payload_mismatch`             | JWS payload `account_id` does not match URL |
 | 401    | `token_expired`                | The token's `exp` header claim is in the past           |
 | 403    | `forbidden`                    | Local signature verification failed (not signed by the registered platform key) |
 | 404    | `account_not_found`            | No account with this ID                                 |
 | 409    | `amount_out_of_range`           | Credit would exceed the recipient balance limit |
+| 409    | `operation_id_conflict`         | Same operation ID carries changed kind or business terms |
+| 409    | `financial_operation_already_committed` | Native natural key belongs to another operation ID |
+| 409    | `legacy_operation_conflict`     | Attested historical natural key has different immutable terms |
+| 500    | `receipt_ownership_missing` / `receipt_ownership_failed` | Existing effect lacks valid exclusive native or attested historical ownership |
 | 503    | `service_not_ready`            | Ledger or platform agent not yet initialized             |
 
 ---
@@ -411,6 +515,7 @@ Lock funds in escrow for a task. Agent-signed operation — the agent must be th
 ```json
 {
   "action": "escrow_lock",
+  "operation_id": "op-00000000-0000-4000-8000-000000000003",
   "agent_id": "a-550e8400-e29b-41d4-a716-446655440000",
   "amount": 10,
   "task_id": "T-123"
@@ -422,23 +527,22 @@ Lock funds in escrow for a task. Agent-signed operation — the agent must be th
 2. Verify the JWS token via Identity's `POST /agents/verify-jws`.
 3. Validate the JWS payload: `action` must be `"escrow_lock"`; `agent_id` must be a non-empty string.
 4. **Confirm the JWS signer matches the `agent_id` in the payload** (an agent can only lock its own funds; a mismatch is `403 forbidden`, checked after the action/`agent_id`-presence checks but before `amount`/`task_id` validation).
-5. Validate `amount` (positive integer) and `task_id` (non-empty string).
+5. Validate `amount` (positive bounded integer), `task_id` (nonempty valid UTF-8 string), and the
+   canonical caller-owned `operation_id`.
 6. Debit the agent's account, create an escrow record, and log an `escrow_lock` transaction.
 7. All database operations happen in a single DB Gateway transaction.
 
-**Idempotency:** The combination of `(payer_account_id, task_id)` is unique for the escrow's lifetime, enforced by the Gateway's `idx_bank_escrow_lifetime` index. Lookup happens before another debit, even after settlement or when spendable funds are exhausted. If an escrow with the same payer and task already exists:
-- If the amount matches, the existing escrow and its actual `locked`, `released` or `split` status are returned without another financial mutation.
-- If the amount differs, an `escrow_already_locked` error is returned.
+**Replay:** `(payer_account_id, task_id)` remains the natural key, but native replay is owned by
+`operation_id`. Same ID and canonical request returns the immutable original lock receipt while
+`current_escrow` reports the actual current `locked`, `released`, or `split` state. A different ID
+for an existing native lock returns `financial_operation_already_committed`, even when amount
+matches. An attested historical match returns a `legacy_observation`; changed amount returns
+`legacy_operation_conflict`.
 
-**Response (201 Created):**
-```json
-{
-  "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
-  "amount": 10,
-  "task_id": "T-123",
-  "status": "locked"
-}
-```
+**Response (201 Created):** Native envelope with `operation_kind: "escrow_lock"`, result
+`{"escrow_status_at_commit":"locked"}`, one positive `payer` debit leg, the exact committed
+escrow/transaction/event IDs, and the current escrow projection. An exact historical collision
+returns the typed legacy lock observation instead.
 
 **Errors:**
 
@@ -449,10 +553,14 @@ Lock funds in escrow for a task. Agent-signed operation — the agent must be th
 | 400    | `invalid_payload`              | JWS payload missing required fields or wrong action      |
 | 400    | `invalid_amount`               | Amount is not a positive integer                          |
 | 400    | `amount_out_of_range`           | Lock amount exceeds the signed-64-bit limit |
+| 400    | `invalid_operation_id`          | Missing or noncanonical operation ID |
 | 402    | `insufficient_funds`           | Account balance is less than the escrow amount             |
 | 403    | `forbidden`                    | Signature verification failed, or signer does not match `agent_id` in payload |
 | 404    | `account_not_found`            | No account for this agent                                    |
-| 409    | `escrow_already_locked`        | Escrow already locked for this task with a different amount |
+| 409    | `operation_id_conflict`         | Same operation ID carries changed kind or business terms |
+| 409    | `financial_operation_already_committed` | Native payer/task lock belongs to another operation ID |
+| 409    | `legacy_operation_conflict`     | Attested historical lock has a different amount |
+| 500    | `receipt_ownership_missing` / `receipt_ownership_failed` | Existing effect lacks valid exclusive native or attested historical ownership |
 | 502    | `identity_service_unavailable` | Cannot reach the Identity service                             |
 | 503    | `service_not_ready`            | Ledger or Identity client not yet initialized                 |
 
@@ -475,30 +583,28 @@ Release escrowed funds in full to a recipient. Platform-only operation, verified
 ```json
 {
   "action": "escrow_release",
+  "operation_id": "op-00000000-0000-4000-8000-000000000004",
   "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
-  "recipient_account_id": "a-worker-uuid"
+  "recipient_account_id": "a-worker-uuid",
+  "source_reference": "task:T-123:approved"
 }
 ```
 
 **Behavior (MP-03 strict-profile order):**
 1. Parse the request body as JSON; require a string `token` field.
 2. Verify the strict profile, signature and temporal policy locally; require the authenticated platform identity, audience, resource and `escrow_release` action.
-3. Validate authenticated `recipient_account_id` and any payload `escrow_id` against the URL.
+3. Validate the canonical `operation_id`, nonempty valid UTF-8 `source_reference`, authenticated
+   `recipient_account_id`, and any payload `escrow_id` against the URL.
 4. Look up the escrow record and confirm it is in `locked` status.
 5. Credit the full escrow amount to the recipient's account.
 6. Log an `escrow_release` transaction on the recipient's account (reference = `escrow_id`).
 7. Mark the escrow as `released` and set `resolved_at`.
 8. All database operations happen in a single DB Gateway transaction.
 
-**Response (200 OK):**
-```json
-{
-  "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
-  "status": "released",
-  "recipient": "a-worker-uuid",
-  "amount": 10
-}
-```
+**Response (200 OK):** Native envelope with `operation_kind: "escrow_release"`, the supplied
+source reference, result `{"escrow_status_at_commit":"released"}`, one positive `recipient`
+credit leg, exact committed identities, and a released current escrow projection. Exact same-ID
+replay returns that immutable receipt and the fresh projection without another credit.
 
 **Errors:**
 
@@ -508,12 +614,17 @@ Release escrowed funds in full to a recipient. Platform-only operation, verified
 | 400    | `invalid_json`                 | Request body is not valid JSON or not a JSON object      |
 | 400    | `invalid_payload`              | JWS payload missing required fields or wrong action       |
 | 400    | `payload_mismatch`             | JWS payload `escrow_id` does not match URL                 |
+| 400    | `invalid_operation_id`          | Missing or noncanonical operation ID |
 | 401    | `token_expired`                | The token's `exp` header claim is in the past               |
 | 403    | `forbidden`                    | Local signature verification failed                          |
 | 404    | `escrow_not_found`             | No escrow with this ID                                        |
 | 404    | `account_not_found`            | Recipient account not found                                   |
 | 409    | `amount_out_of_range`           | Release would exceed the recipient balance limit |
-| 409    | `escrow_already_resolved`      | Escrow has already been released or split                     |
+| 409    | `operation_id_conflict`         | Same operation ID carries changed kind or business terms |
+| 409    | `financial_operation_already_committed` | Another native settlement owns this escrow; details identify the winner |
+| 409    | `historical_settlement_unreplayable` | Escrow was terminal at historical cutover; winning ID is null |
+| 409    | `escrow_already_resolved`      | Non-replayable resolved-state conflict; never proof of success |
+| 500    | `receipt_ownership_missing` / `receipt_ownership_failed` | Settlement ownership cannot be safely established |
 | 503    | `service_not_ready`            | Ledger or platform agent not yet initialized                  |
 
 ---
@@ -535,17 +646,22 @@ Split escrowed funds proportionally between worker and poster. Platform-only ope
 ```json
 {
   "action": "escrow_split",
+  "operation_id": "op-00000000-0000-4000-8000-000000000005",
   "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
   "worker_account_id": "a-worker-uuid",
   "worker_pct": 40,
-  "poster_account_id": "a-poster-uuid"
+  "poster_account_id": "a-poster-uuid",
+  "source_reference": "task:T-123:ruling:r-456"
 }
 ```
 
 **Behavior (MP-03 strict-profile order):**
 1. Parse the request body as JSON; require a string `token` field.
 2. Verify the strict profile, signature and temporal policy locally; require the authenticated platform identity, audience, resource and `escrow_split` action.
-3. Validate authenticated worker/poster IDs, percentage and optional escrow-ID match. `worker_pct` must be an integer excluding booleans (`400 invalid_payload` for wrong type) and lie within 0–100 (`400 invalid_amount` otherwise).
+3. Validate the canonical `operation_id`, nonempty valid UTF-8 `source_reference`, authenticated
+   worker/poster IDs, percentage, and optional escrow-ID match. `worker_pct` must be an integer
+   excluding booleans (`400 invalid_payload` for wrong type) and lie within 0–100 (`400
+   invalid_amount` otherwise). Caller-supplied amounts and financial `constraints` are rejected.
 4. The store repeats percentage validation before looking up the escrow. With valid authentication, an out-of-range percentage on a nonexistent escrow returns `invalid_amount`; invalid signatures and authentic expiry still precede percentage errors.
 5. Look up the escrow record and confirm it is in `locked` status.
 6. Validate that `poster_account_id` matches the escrow's `payer_account_id`.
@@ -569,15 +685,11 @@ This zero-leg-skip and the poster==payer guard are enforced identically by both 
 
 The worker always gets `floor(total * worker_pct / 100)`. The poster always gets the remainder. This means rounding always favors the poster by at most 1 coin. Zero-amount shares are valid — no transaction is created for a zero share.
 
-**Response (200 OK):**
-```json
-{
-  "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
-  "status": "split",
-  "worker_amount": 4,
-  "poster_amount": 6
-}
-```
+**Response (200 OK):** Native envelope with `operation_kind: "escrow_split"`, the supplied source
+reference, result `{"escrow_status_at_commit":"split","worker_pct":40}`, ordered `worker` and
+`poster` credit legs, exact committed identities, and a split current escrow projection. Positive
+legs contain transaction/balance fields. A zero leg retains its requested logical account ID but
+has null transaction and balance fields and performs no account-existence check.
 
 **Errors:**
 
@@ -588,12 +700,17 @@ The worker always gets `floor(total * worker_pct / 100)`. The poster always gets
 | 400    | `invalid_payload`              | JWS payload missing required fields, wrong action, or non-integer `worker_pct` |
 | 400    | `invalid_amount`               | `worker_pct` is an integer but not between 0 and 100        |
 | 400    | `payload_mismatch`             | JWS payload `escrow_id` does not match URL, or `poster_account_id` does not match escrow payer |
+| 400    | `invalid_operation_id`          | Missing or noncanonical operation ID |
 | 401    | `token_expired`                | The token's `exp` header claim is in the past                |
 | 403    | `forbidden`                    | Local signature verification failed                           |
 | 404    | `escrow_not_found`             | No escrow with this ID                                         |
 | 404    | `account_not_found`            | Worker or poster account not found                             |
 | 409    | `amount_out_of_range`           | Split credits would exceed a recipient balance limit, including combined same-account shares |
-| 409    | `escrow_already_resolved`      | Escrow has already been released or split                      |
+| 409    | `operation_id_conflict`         | Same operation ID carries changed kind or business terms |
+| 409    | `financial_operation_already_committed` | Another native settlement owns this escrow; details identify the winner |
+| 409    | `historical_settlement_unreplayable` | Escrow was terminal at historical cutover; winning ID is null |
+| 409    | `escrow_already_resolved`      | Non-replayable resolved-state conflict; never proof of success |
+| 500    | `receipt_ownership_missing` / `receipt_ownership_failed` | Settlement ownership cannot be safely established |
 | 503    | `service_not_ready`            | Ledger or platform agent not yet initialized                   |
 
 ---
@@ -609,7 +726,9 @@ Complete list of error codes used by the Central Bank service:
 | 400    | `invalid_payload`              | JWS payload missing required fields or wrong action        |
 | 400    | `invalid_amount`               | Amount/balance has an invalid type or sign, or integer `worker_pct` lies outside 0–100 |
 | 400    | `amount_out_of_range`           | Monetary input exceeds the signed-64-bit representation |
-| 400    | `payload_mismatch`             | JWS payload field does not match URL parameter, or duplicate reference with different amount, or `poster_account_id` does not match escrow payer |
+| 400    | `invalid_operation_id`          | Required positive financial operation ID is missing or noncanonical |
+| 400    | `invalid_financial_request`     | Canonical business request is invalid |
+| 400    | `payload_mismatch`             | JWS payload field does not match URL parameter, or `poster_account_id` does not match escrow payer |
 | 401    | `token_expired`                | Platform-signed token's `exp` header claim is in the past (only reachable on `credit`/`escrow_release`/`escrow_split`, which locally enforce expiry; other endpoints delegate expiry handling to Identity) |
 | 402    | `insufficient_funds`           | Escrow lock would cause negative balance                      |
 | 403    | `forbidden`                    | Agent accessing another's account/funds, non-platform agent doing a platform op, or JWS signature verification failed |
@@ -619,12 +738,18 @@ Complete list of error codes used by the Central Bank service:
 | 405    | `method_not_allowed`           | HTTP method not supported on this endpoint                       |
 | 409    | `account_exists`               | Account already created for this agent                            |
 | 409    | `amount_out_of_range`           | Credit or settlement would overflow a recipient balance |
-| 409    | `escrow_already_resolved`      | Escrow has already been released or split                         |
-| 409    | `escrow_already_locked`        | Escrow already locked for this task with a different amount        |
+| 409    | `escrow_already_resolved`      | Non-replayable settlement state conflict; never proof of success |
+| 409    | `escrow_already_locked`        | Non-replayable lock constraint conflict |
+| 409    | `operation_id_conflict`         | Operation ID already owns another kind or canonical request; details include the winning ID |
+| 409    | `financial_operation_already_committed` | Native credit/lock/settlement effect belongs to another operation ID |
+| 409    | `legacy_operation_conflict`     | Attested historical credit/lock has different immutable terms; winning ID is null |
+| 409    | `historical_settlement_unreplayable` | Attested historical terminal settlement has no replayable operation ID |
 | 413    | `payload_too_large`            | Request body exceeds `request.max_body_size`                       |
 | 415    | `unsupported_media_type`       | `Content-Type` is not `application/json`                             |
 | 502    | `identity_service_unavailable` | Cannot reach the Identity service (agent-signed ops and `create_account` only; never for `credit`/`escrow_release`/`escrow_split`, which verify locally) |
 | 503    | `service_not_ready`            | The ledger, Identity client, or platform agent has not finished initializing, or the DB Gateway is unreachable (e.g. on `GET /health`) |
+| 500    | `receipt_ownership_missing`    | Existing effect has neither a native receipt nor an attested historical marker |
+| 500    | `receipt_ownership_failed`     | Receipt/marker ownership or historical attestation is corrupt or ambiguous |
 
 ---
 
@@ -671,7 +796,8 @@ Caller                          Central Bank                    Identity Service
   |  1. POST /accounts               |                                |
   |     { token: <JWS with           |                                |
   |       action=create_account,     |                                |
-  |       agent_id, initial_balance> }|                               |
+  |       agent_id, initial_balance, |                                |
+  |       operation_id if > 0> }     |                                |
   |  -------------------------------->|                                |
   |                                  |  2. POST /agents/verify-jws    |
   |                                  |     { token: "..." }           |
@@ -695,11 +821,12 @@ Caller                          Central Bank                    Identity Service
   |                                  |                                |
   |                                  | 10. BEGIN TRANSACTION (gateway)|
   |                                  | 11. Insert account record      |
-  |                                  | 12. Insert credit tx (if > 0) |
+  |                                  | 12. If > 0: insert tx/event,  |
+  |                                  |     receipt and account leg   |
   |                                  | 13. COMMIT                    |
   |                                  |                                |
-  | 14. 201 { account_id, balance,   |                                |
-  |           created_at }           |                                |
+  | 14. 201 zero account projection  |                                |
+  |     or native issuance envelope  |                                |
   |  <--------------------------------|                                |
 ```
 
@@ -711,7 +838,8 @@ Agent                           Central Bank                    Identity Service
   |  1. POST /escrow/lock            |                                |
   |     { token: <agent JWS          |                                |
   |       with action=escrow_lock,   |                                |
-  |       agent_id, amount, task_id> }|                               |
+  |       operation_id, agent_id,    |                                |
+  |       amount, task_id> }         |                                |
   |  -------------------------------->|                                |
   |                                  |  2. POST /agents/verify-jws    |
   |                                  |     { token: "..." }           |
@@ -732,8 +860,8 @@ Agent                           Central Bank                    Identity Service
   |                                  | 12. Insert escrow_lock tx      |
   |                                  | 13. COMMIT                    |
   |                                  |                                |
-  | 14. 201 { escrow_id, amount,     |                                |
-  |           task_id, status }      |                                |
+  | 14. 201 native receipt or typed  |                                |
+  |     historical lock observation  |                                |
   |  <--------------------------------|                                |
 ```
 
@@ -745,12 +873,13 @@ Task Board (platform-signed)    Central Bank
   |  1. POST /escrow/{id}/release    |
   |     { token: <platform JWS       |
   |       with action=escrow_release, |
-  |       escrow_id, recipient_id> } |
+  |       operation_id, escrow_id,   |
+  |       recipient_id, source_ref> }|
   |  -------------------------------->|
   |                                  |  2. Verify strict profile/signature/time LOCALLY
   |                                  |     and require the registered platform kid
   |                                  |  3. Check authenticated audience/resource/action
-  |                                  |  4. Validate recipient_account_id/escrow_id match
+  |                                  |  4. Validate operation/source/recipient/escrow match
   |                                  |
   |                                  |  5. BEGIN TRANSACTION (gateway)
   |                                  |  6. Load escrow (must be locked)
@@ -759,8 +888,8 @@ Task Board (platform-signed)    Central Bank
   |                                  |  9. Update escrow -> released
   |                                  | 10. COMMIT
   |                                  |
-  | 11. 200 { escrow_id, status,     |
-  |           recipient, amount }    |
+  | 11. 200 native receipt + current |
+  |     released escrow projection   |
   |  <--------------------------------|
 ```
 
@@ -772,14 +901,15 @@ Task Board (platform-signed)    Central Bank
   |  1. POST /escrow/{id}/split      |
   |     { token: <platform JWS       |
   |       with action=escrow_split,  |
-  |       escrow_id, worker_id,      |
-  |       worker_pct, poster_id> }   |
+  |       operation_id, escrow_id,   |
+  |       worker_id, worker_pct,     |
+  |       poster_id, source_ref> }   |
   |  -------------------------------->|
   |                                  |  2. Verify strict profile/signature/time LOCALLY
   |                                  |     and require the registered platform kid
   |                                  |  3. Check authenticated audience/resource/action
-  |                                  |  4. Validate worker_id/poster_id/strict percentage
-  |                                  |     and escrow_id match
+  |                                  |  4. Validate operation/source, worker/poster IDs,
+  |                                  |     strict percentage and escrow_id match
   |                                  |
   |                                  |  5. Validate worker_pct in [0, 100]
   |                                  |     (store layer, before escrow lookup)
@@ -796,9 +926,9 @@ Task Board (platform-signed)    Central Bank
   |                                  | 14. Update escrow -> split
   |                                  | 15. COMMIT
   |                                  |
-  | 16. 200 { escrow_id, status,     |
-  |           worker_amount,         |
-  |           poster_amount }        |
+  | 16. 200 native receipt with      |
+  |     ordered worker/poster legs + |
+  |     current escrow projection    |
   |  <--------------------------------|
 ```
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -202,6 +203,9 @@ async def test_insufficient_funds_cannot_post_task(make_funded_agent) -> None:
                 "escrow_token": agent._sign_jws(
                     {
                         "action": "escrow_lock",
+                        "operation_id": operation_id_for(
+                            "task-lock", ("t-insufficient-funds-test", agent.agent_id)
+                        ),
                         "agent_id": agent.agent_id,
                         "amount": 500,
                         "task_id": "t-insufficient-funds-test",

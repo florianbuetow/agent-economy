@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import httpx
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from service_auth.financial_identity import operation_id_for
 
 from base_agent.agent import BaseAgent
 from base_agent.config import AgentConfig
@@ -74,6 +75,7 @@ async def test_registered_agent_can_post_task_after_account_creation(
             account_id=agent.agent_id,
             amount=1000,
             reference="startup_funding",
+            operation_id=operation_id_for("e2e-credit", (agent.agent_id, "startup_funding")),
         )
 
         task = await agent.post_task(

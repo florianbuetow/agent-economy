@@ -1,0 +1,142 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 81 items
+
+tests/unit/test_mp04_legacy_observations.py ....FF...................... [ 34%]
+...................................................FF                    [100%]
+
+=================================== FAILURES ===================================
+_______ test_credit_attempts_share_one_unchanged_historical_observation ________
+src/service_auth/financial_responses.py:153: in parse_native_financial_envelope
+    envelope = NativeFinancialEnvelope.model_validate(value)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 4 validation errors for NativeFinancialEnvelope
+E   outcome
+E     Input should be 'native_receipt' [type=literal_error, input_value='legacy_observation', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/literal_error
+E   receipt
+E     Field required [type=missing, input_value={'outcome': 'legacy_obser... 'current_escrow': None}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   attempt
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'operation_id': 'op-0000...fe79edc58f5b7aba1bbcec'}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'operation_id': None, 'o...48b470e84d9d124c24d71c'}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_legacy_observations.py:445: in test_credit_attempts_share_one_unchanged_historical_observation
+    await _credit_call(
+tests/unit/test_mp04_legacy_observations.py:215: in _credit_call
+    result = await agent.credit_account(
+src/service_auth/platform.py:120: in credit_account
+    return parse_native_financial_envelope(
+src/service_auth/financial_responses.py:155: in parse_native_financial_envelope
+    raise RuntimeError("Gateway returned an invalid native financial envelope") from exc
+E   RuntimeError: Gateway returned an invalid native financial envelope
+____ test_lock_attempts_preserve_cutover_fact_and_project_native_settlement ____
+src/service_auth/financial_responses.py:153: in parse_native_financial_envelope
+    envelope = NativeFinancialEnvelope.model_validate(value)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 5 validation errors for NativeFinancialEnvelope
+E   outcome
+E     Input should be 'native_receipt' [type=literal_error, input_value='legacy_observation', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/literal_error
+E   receipt
+E     Field required [type=missing, input_value={'outcome': 'legacy_obser...'2026-10-17T15:00:00Z'}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   current_escrow.created_at
+E     String should have at least 1 character [type=string_too_short, input_value='', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/string_too_short
+E   attempt
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'operation_id': 'op-0000...299336b22c56bdd81fd3cd'}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'operation_id': None, 'o...tion_fact_sha256': None}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_legacy_observations.py:465: in test_lock_attempts_preserve_cutover_fact_and_project_native_settlement
+    await _lock_call(
+tests/unit/test_mp04_legacy_observations.py:246: in _lock_call
+    result = await agent.lock_escrow(amount, task_id, operation_id=operation_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/mixins/bank.py:106: in lock_escrow
+    return parse_native_financial_envelope(
+src/service_auth/financial_responses.py:155: in parse_native_financial_envelope
+    raise RuntimeError("Gateway returned an invalid native financial envelope") from exc
+E   RuntimeError: Gateway returned an invalid native financial envelope
+__________ test_self_consistent_terminal_resolution_fact_is_preserved __________
+src/service_auth/financial_responses.py:153: in parse_native_financial_envelope
+    envelope = NativeFinancialEnvelope.model_validate(value)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 5 validation errors for NativeFinancialEnvelope
+E   outcome
+E     Input should be 'native_receipt' [type=literal_error, input_value='legacy_observation', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/literal_error
+E   receipt
+E     Field required [type=missing, input_value={'outcome': 'legacy_obser...'2026-10-17T15:00:00Z'}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   current_escrow.created_at
+E     String should have at least 1 character [type=string_too_short, input_value='', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/string_too_short
+E   attempt
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'operation_id': 'op-0000...299336b22c56bdd81fd3cd'}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'operation_id': None, 'o...fdd9d6c7a97423205c7497'}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_legacy_observations.py:1037: in test_self_consistent_terminal_resolution_fact_is_preserved
+    result = await _lock_call(
+tests/unit/test_mp04_legacy_observations.py:246: in _lock_call
+    result = await agent.lock_escrow(amount, task_id, operation_id=operation_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/mixins/bank.py:106: in lock_escrow
+    return parse_native_financial_envelope(
+src/service_auth/financial_responses.py:155: in parse_native_financial_envelope
+    raise RuntimeError("Gateway returned an invalid native financial envelope") from exc
+E   RuntimeError: Gateway returned an invalid native financial envelope
+___________ test_self_consistent_split_resolution_fact_is_preserved ____________
+src/service_auth/financial_responses.py:153: in parse_native_financial_envelope
+    envelope = NativeFinancialEnvelope.model_validate(value)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 5 validation errors for NativeFinancialEnvelope
+E   outcome
+E     Input should be 'native_receipt' [type=literal_error, input_value='legacy_observation', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/literal_error
+E   receipt
+E     Field required [type=missing, input_value={'outcome': 'legacy_obser...'2026-10-17T15:00:00Z'}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   current_escrow.created_at
+E     String should have at least 1 character [type=string_too_short, input_value='', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/string_too_short
+E   attempt
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'operation_id': 'op-0000...299336b22c56bdd81fd3cd'}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'operation_id': None, 'o...c536cd4deaa275a3078a6d'}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_legacy_observations.py:1053: in test_self_consistent_split_resolution_fact_is_preserved
+    result = await _lock_call(
+tests/unit/test_mp04_legacy_observations.py:246: in _lock_call
+    result = await agent.lock_escrow(amount, task_id, operation_id=operation_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/mixins/bank.py:106: in lock_escrow
+    return parse_native_financial_envelope(
+src/service_auth/financial_responses.py:155: in parse_native_financial_envelope
+    raise RuntimeError("Gateway returned an invalid native financial envelope") from exc
+E   RuntimeError: Gateway returned an invalid native financial envelope
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp04_legacy_observations.py::test_credit_attempts_share_one_unchanged_historical_observation
+FAILED tests/unit/test_mp04_legacy_observations.py::test_lock_attempts_preserve_cutover_fact_and_project_native_settlement
+FAILED tests/unit/test_mp04_legacy_observations.py::test_self_consistent_terminal_resolution_fact_is_preserved
+FAILED tests/unit/test_mp04_legacy_observations.py::test_self_consistent_split_resolution_fact_is_preserved
+========================= 4 failed, 77 passed in 5.80s =========================

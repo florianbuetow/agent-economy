@@ -1,0 +1,30 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 86 items
+
+tests/unit/test_mp04_legacy_observations.py ............................ [ 32%]
+.........................................................F               [100%]
+
+=================================== FAILURES ===================================
+__________ test_self_consistent_one_leg_split_resolution_is_preserved __________
+tests/unit/test_mp04_legacy_observations.py:1102: in test_self_consistent_one_leg_split_resolution_is_preserved
+    result = await _lock_call(
+tests/unit/test_mp04_legacy_observations.py:247: in _lock_call
+    result = await agent.lock_escrow(amount, task_id, operation_id=operation_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/mixins/bank.py:106: in lock_escrow
+    return parse_financial_envelope(
+src/service_auth/financial_responses.py:205: in parse_financial_envelope
+    return _parse_historical_financial_envelope(
+src/service_auth/financial_responses.py:242: in _parse_historical_financial_envelope
+    _validate_historical_lock(envelope, expected_business_fields)
+src/service_auth/financial_responses.py:292: in _validate_historical_lock
+    raise RuntimeError("Bank returned a historical lock inconsistent with the request")
+E   RuntimeError: Bank returned a historical lock inconsistent with the request
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp04_legacy_observations.py::test_self_consistent_one_leg_split_resolution_is_preserved
+========================= 1 failed, 85 passed in 4.67s =========================

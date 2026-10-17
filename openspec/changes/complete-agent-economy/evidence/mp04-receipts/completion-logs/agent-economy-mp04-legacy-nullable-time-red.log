@@ -1,0 +1,128 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 90 items
+
+tests/unit/test_mp04_legacy_observations.py ............................ [ 31%]
+..........................................................FFFF           [100%]
+
+=================================== FAILURES ===================================
+_____ test_terminal_historical_null_resolution_time_is_preserved[released] _____
+src/service_auth/financial_responses.py:226: in _parse_historical_financial_envelope
+    envelope = LegacyFinancialEnvelope.model_validate(value)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 7 validation errors for LegacyFinancialEnvelope
+E   observation.LegacyCreditObservation.observed_kind
+E     Input should be 'observed_credit' [type=literal_error, input_value='observed_escrow_lock', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/literal_error
+E   observation.LegacyCreditObservation.escrow_lock
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'escrow_id': 'esc-histor...t': '', 'event_id': -11}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation.LegacyCreditObservation.observed_status
+E     Extra inputs are not permitted [type=extra_forbidden, input_value='released', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation.LegacyCreditObservation.lock_fact_sha256
+E     Extra inputs are not permitted [type=extra_forbidden, input_value='df43919b8511384c5a81fac0...01725fae5690febc2b29877', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation.LegacyCreditObservation.resolution_fact
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'escrow_id': 'esc-histor..._ids': ['tx-release-a']}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation.LegacyCreditObservation.resolution_fact_sha256
+E     Extra inputs are not permitted [type=extra_forbidden, input_value='9656d3075f2e1c52fbe8bedb...cd741f1789d848dc6b6c452', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation.LegacyLockObservation.resolution_fact.resolved_at
+E     Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+E       For further information visit https://errors.pydantic.dev/2.13/v/string_type
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_legacy_observations.py:1145: in test_terminal_historical_null_resolution_time_is_preserved
+    result = await _lock_call(
+tests/unit/test_mp04_legacy_observations.py:247: in _lock_call
+    result = await agent.lock_escrow(amount, task_id, operation_id=operation_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/mixins/bank.py:106: in lock_escrow
+    return parse_financial_envelope(
+src/service_auth/financial_responses.py:205: in parse_financial_envelope
+    return _parse_historical_financial_envelope(
+src/service_auth/financial_responses.py:228: in _parse_historical_financial_envelope
+    raise RuntimeError("Bank returned an invalid historical financial observation") from exc
+E   RuntimeError: Bank returned an invalid historical financial observation
+______ test_terminal_historical_null_resolution_time_is_preserved[split] _______
+src/service_auth/financial_responses.py:226: in _parse_historical_financial_envelope
+    envelope = LegacyFinancialEnvelope.model_validate(value)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 7 validation errors for LegacyFinancialEnvelope
+E   observation.LegacyCreditObservation.observed_kind
+E     Input should be 'observed_credit' [type=literal_error, input_value='observed_escrow_lock', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/literal_error
+E   observation.LegacyCreditObservation.escrow_lock
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'escrow_id': 'esc-histor...t': '', 'event_id': -11}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation.LegacyCreditObservation.observed_status
+E     Extra inputs are not permitted [type=extra_forbidden, input_value='split', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation.LegacyCreditObservation.lock_fact_sha256
+E     Extra inputs are not permitted [type=extra_forbidden, input_value='df43919b8511384c5a81fac0...01725fae5690febc2b29877', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation.LegacyCreditObservation.resolution_fact
+E     Extra inputs are not permitted [type=extra_forbidden, input_value={'escrow_id': 'esc-histor...ase-a', 'tx-release-b']}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation.LegacyCreditObservation.resolution_fact_sha256
+E     Extra inputs are not permitted [type=extra_forbidden, input_value='76274ce20d0704ea7842c399...fe1072fa1a504d657236e98', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E   observation.LegacyLockObservation.resolution_fact.resolved_at
+E     Input should be a valid string [type=string_type, input_value=None, input_type=NoneType]
+E       For further information visit https://errors.pydantic.dev/2.13/v/string_type
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_legacy_observations.py:1145: in test_terminal_historical_null_resolution_time_is_preserved
+    result = await _lock_call(
+tests/unit/test_mp04_legacy_observations.py:247: in _lock_call
+    result = await agent.lock_escrow(amount, task_id, operation_id=operation_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/mixins/bank.py:106: in lock_escrow
+    return parse_financial_envelope(
+src/service_auth/financial_responses.py:205: in parse_financial_envelope
+    return _parse_historical_financial_envelope(
+src/service_auth/financial_responses.py:228: in _parse_historical_financial_envelope
+    raise RuntimeError("Bank returned an invalid historical financial observation") from exc
+E   RuntimeError: Bank returned an invalid historical financial observation
+________ test_locked_historical_nonnull_resolution_time_is_preserved[] _________
+tests/unit/test_mp04_legacy_observations.py:1168: in test_locked_historical_nonnull_resolution_time_is_preserved
+    result = await _lock_call(
+tests/unit/test_mp04_legacy_observations.py:247: in _lock_call
+    result = await agent.lock_escrow(amount, task_id, operation_id=operation_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/mixins/bank.py:106: in lock_escrow
+    return parse_financial_envelope(
+src/service_auth/financial_responses.py:205: in parse_financial_envelope
+    return _parse_historical_financial_envelope(
+src/service_auth/financial_responses.py:242: in _parse_historical_financial_envelope
+    _validate_historical_lock(envelope, expected_business_fields)
+src/service_auth/financial_responses.py:292: in _validate_historical_lock
+    raise RuntimeError("Bank returned a historical lock inconsistent with the request")
+E   RuntimeError: Bank returned a historical lock inconsistent with the request
+_ test_locked_historical_nonnull_resolution_time_is_preserved[legacy-nonnull-time] _
+tests/unit/test_mp04_legacy_observations.py:1168: in test_locked_historical_nonnull_resolution_time_is_preserved
+    result = await _lock_call(
+tests/unit/test_mp04_legacy_observations.py:247: in _lock_call
+    result = await agent.lock_escrow(amount, task_id, operation_id=operation_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/mixins/bank.py:106: in lock_escrow
+    return parse_financial_envelope(
+src/service_auth/financial_responses.py:205: in parse_financial_envelope
+    return _parse_historical_financial_envelope(
+src/service_auth/financial_responses.py:242: in _parse_historical_financial_envelope
+    _validate_historical_lock(envelope, expected_business_fields)
+src/service_auth/financial_responses.py:292: in _validate_historical_lock
+    raise RuntimeError("Bank returned a historical lock inconsistent with the request")
+E   RuntimeError: Bank returned a historical lock inconsistent with the request
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp04_legacy_observations.py::test_terminal_historical_null_resolution_time_is_preserved[released]
+FAILED tests/unit/test_mp04_legacy_observations.py::test_terminal_historical_null_resolution_time_is_preserved[split]
+FAILED tests/unit/test_mp04_legacy_observations.py::test_locked_historical_nonnull_resolution_time_is_preserved[]
+FAILED tests/unit/test_mp04_legacy_observations.py::test_locked_historical_nonnull_resolution_time_is_preserved[legacy-nonnull-time]
+========================= 4 failed, 86 passed in 5.78s =========================

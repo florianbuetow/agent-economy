@@ -557,3 +557,20 @@ extra input; the test cannot pass because an unrelated required section is absen
 The old `proposal` drilldown assertion is superseded by canonical integer `amount`. Existing names,
 quality, timestamps, bid rendering and acceptance assertions remain meaningful for an authorized
 poster and must not be removed simply to make sealed observer responses pass.
+
+### Quarterly navigation concurrency (T-175/T-176)
+
+Rapid Prev/Next clicks must each advance from the preceding navigation result even when the prior
+report request is pending. Deterministic browser cases must cover repeated and mixed directions,
+year boundaries and no-data responses using the shipped script. A failed report remains visible
+and does not prevent a later navigation from succeeding. Keep the existing quarterly-page tests,
+assertions and timeouts unchanged. Capture the lost-click failure before the production repair.
+
+### Controlled browser-server readiness (T-177/T-178)
+
+A listening socket does not by itself prove HTTP readiness. A transient health-read timeout must
+remain inside the fixture's existing readiness polling budget, just as a connection refusal does.
+Persistent timeouts still end in a diagnostic readiness failure, and child exit fails immediately
+with its server log. Add deterministic unit proof before changing the helper; do not increase the
+existing timeout values or alter any browser behavior/assertion. The three single-agent setup errors
+share one session-fixture failure and are distinct from the already-repaired quarterly race.

@@ -406,13 +406,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-04 is selected
 - **THEN** the acceptance proof demonstrates the gap: Lost responses after committed release/split and public lock replay after settlement expose duplicated or nonconvergent financial commands.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Native and historical receipt proofs and bounded independent reviews pass; the fresh root gate and final evidence audit remain required. Evidence limitations are explicit in `openspec/changes/complete-agent-economy/evidence/mp04-receipts/history-checkpoint-2026-10-17.md`.
+- **Status:** CLOSED 2026-10-17 — Own genuine replay/identity/history red proof, green coverage, independent review and root19 exit0 verified. See evidence/mp04-receipts/completion-audit.md and evidence/root19-checkpoint.md in the active change; evidence limitations remain explicit.
 
 #### Scenario: T-117 Deliver financial operation receipts
 - **WHEN** T-116 is red-proven and the prerequisites are satisfied: MP-02, MP-06
 - **THEN** Exact Bank-operation replay returns the original receipt and ledger/event identities; changed content conflicts; concurrent opposing commands have one financial winner without duplicated movement.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Native/historical persistence, Bank, SDK, shared clients and funding/demo consumers have bounded verification; 24 public Bank and 26 cross-service tests pass. Root16 passed component gates but exposed two integration fixtures, now repaired and reviewed. Live-agent caller reconciliation and a fresh root closure gate remain required. See `openspec/changes/complete-agent-economy/evidence/mp04-receipts/history-checkpoint-2026-10-17.md`.
+- **Status:** CLOSED 2026-10-17 — Native/historical receipts, consumers, public opposing-settlement proof and documentation are implemented and independently approved. Root19 passed with932 unchanged source/config hashes and19 owned stack groups absent. See the active change's evidence/mp04-receipts/completion-audit.md and evidence/root19-checkpoint.md; lifecycle claims/recovery remain MP-07/08.
 
 ### Requirement: MP-05 Recoverable task publication
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-05. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -843,3 +843,34 @@ The completion backlog SHALL retain a separate fail-first obligation for the dep
 - **AND** any override of an upstream exact pin is explicit, limited to the development tool and documented with compatibility evidence and a removal condition
 - **AND** a fresh isolated root `just ci-quiet` exits zero before closure
 - **Status:** CLOSED 2026-10-15 — Item-specific evidence, independent review, root attempt10 exit0 and unchanged809-input snapshot verified; see openspec/changes/complete-agent-economy/evidence/mp02-checkpoint.md, including browser baseline provenance.
+
+### Requirement: MP-01 Quarterly navigation race repair
+The quarterly report SHALL preserve every accepted Prev/Next click in order while earlier report requests are pending. Implementation T-176 depends on red-proven test ticket T-175. Existing navigation assertions and timeouts SHALL remain unchanged; the universal root closure gate applies to both tickets.
+
+#### Scenario: T-175 Write acceptance tests for concurrent quarterly navigation
+- **WHEN** several Prev/Next clicks occur before the first requested report completes
+- **THEN** deterministic browser tests demonstrate the lost-navigation gap and assert the final requested quarter across year boundaries, including a no-data response
+- **AND** report failures remain visible and a later navigation can recover
+- **Status:** CLOSED 2026-10-17 — Two genuine reds/one control, focused green and independent review verified; root19 passed the complete298-case browser suite and full root gate. See the active change's evidence/quarter-navigation-checkpoint.md and evidence/root19-checkpoint.md.
+
+#### Scenario: T-176 Preserve each quarterly navigation click
+- **WHEN** T-175 is red-proven
+- **THEN** each accepted click shifts from the preceding navigation result in order, without duplicate requests caused by stale quarter state
+- **AND** the existing browser suite, new regression proofs, independent review and fresh isolated root CI pass without weakened assertions or increased timeouts
+- **Status:** CLOSED 2026-10-17 — Ordered navigation is implemented without changing original assertions/timeouts; focused proof, independent review and root19 full UI/root gate pass. See the active change's evidence/quarter-navigation-checkpoint.md and evidence/root19-checkpoint.md.
+
+
+### Requirement: MP-01 UI fixture readiness honors its existing budget
+The controlled UI browser fixture SHALL tolerate transient connection and request timeouts until its existing readiness deadline, while preserving immediate child-exit failure and terminal timeout diagnostics. T-178 depends on red-proven T-177; neither item closes without the universal root gate.
+
+#### Scenario: T-177 Write acceptance tests for delayed UI readiness
+- **WHEN** the fixture's listening socket accepts a health connection before the child can answer HTTP
+- **THEN** a deterministic test demonstrates the premature ReadTimeout failure and requires a later successful health response to establish readiness
+- **AND** persistent timeouts and child exit remain explicit failures with server-log diagnostics
+- **Status:** CLOSED 2026-10-17 — Two genuine readiness reds/two controls, four unit and ten focused browser passes, independent review and root19 full UI/root gate verified. See the active change's evidence/ui-readiness-checkpoint.md and evidence/root19-checkpoint.md.
+
+#### Scenario: T-178 Preserve bounded UI readiness polling
+- **WHEN** T-177 is red-proven
+- **THEN** transient connection and timeout failures remain within the existing readiness polling budget without increasing timeout values or suppressing terminal failure
+- **AND** focused readiness tests, unchanged single-agent browser cases, full UI suite, independent review and a fresh root gate pass
+- **Status:** CLOSED 2026-10-17 — Transient timeout handling preserves the existing readiness budget and terminal diagnostics. Focused proof, independent review and root19 full298-case UI/root gate pass. See the active change's evidence/ui-readiness-checkpoint.md and evidence/root19-checkpoint.md.
