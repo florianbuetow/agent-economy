@@ -1,6 +1,8 @@
 # MP-04 historical financial observations
 
-Status: concrete continuation contract for T-116/T-117; implementation and failing proof pending.
+Status: implemented and independently verified for T-116/T-117, with genuine red/green proof and
+root19 exit0. See `openspec/changes/complete-agent-economy/evidence/mp04-receipts/completion-audit.md`
+for the final requirement mapping and explicit evidence limitations.
 This uses the existing v2 marker/cutover tables. It changes no schema, frozen migration or economic
 policy. Native receipt semantics remain unchanged.
 

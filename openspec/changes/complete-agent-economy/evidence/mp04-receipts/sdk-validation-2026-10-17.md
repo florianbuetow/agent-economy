@@ -1,5 +1,8 @@
 # MP-04 SDK receipt validation
 
+Historical checkpoint: the status and counts below describe this earlier verification stage.
+The final MP-04 closure is recorded in completion-audit.md and ../root19-checkpoint.md.
+
 Status: implemented and independently approved as a bounded consumer slice. T-116/T-117 remain
 OPEN. This is not historical-operation support, lifecycle atomicity, or whole-repository CI proof.
 
@@ -82,7 +85,12 @@ Native Bank router logs now use immutable receipt IDs, source references and ord
 including split percentage from the receipt result. Four genuine logging reds and two controls
 preceded the repair. Parent's six logging cases pass and independent review approves the slice.
 
-## Source identities
+## Historical source identities at this bounded checkpoint
+
+These hashes identify the earlier native SDK checkpoint, not the final historical integration.
+Later history support and contextual timestamp validation changed several files. Current identities
+will be captured in the final root-gate source snapshot; the history checkpoint records those later
+changes and their proof. Do not interpret this chronological table as current source identity.
 
 | File | SHA-256 |
 | --- | --- |

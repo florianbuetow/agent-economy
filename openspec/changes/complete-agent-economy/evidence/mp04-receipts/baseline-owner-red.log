@@ -1,0 +1,150 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/central-bank/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/central-bank
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 8 items
+
+tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[release] FAILED [ 12%]
+tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-0-percent] FAILED [ 25%]
+tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-partial] FAILED [ 37%]
+tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-100-percent] FAILED [ 50%]
+tests/integration/test_mp04_replay_baseline.py::test_operation_id_reuse_with_changed_credit_reference_conflicts_without_write FAILED [ 62%]
+tests/integration/test_mp04_replay_baseline.py::test_operation_id_reuse_with_changed_lock_target_conflicts_without_write FAILED [ 75%]
+tests/integration/test_mp04_replay_baseline.py::test_exact_lock_replay_after_settlement_preserves_receipt_and_refreshes_projection FAILED [ 87%]
+tests/integration/test_mp04_replay_baseline.py::test_successful_release_exposes_reconcilable_public_receipt FAILED [100%]
+
+=================================== FAILURES ===================================
+_ test_committed_settlement_replay_returns_original_receipt_without_new_legs[release] _
+tests/integration/test_mp04_replay_baseline.py:430: in test_committed_settlement_replay_returns_original_receipt_without_new_legs
+    assert replay.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-16 08:15:29", "level": "WARNING", "logger": "central-bank.central_bank_service.core.exceptions", "message": "Service error", "extra": {"error_code": "escrow_already_resolved", "status_code": 409, "path": "/escrow/esc-290cf3cf-ab56-4b14-80e1-5ee50d3c29dd/release"}}
+------------------------------ Captured log call -------------------------------
+WARNING  db-gateway-central-bank-integration-test.db_gateway_service.core.exceptions:exceptions.py:26 Service error
+_ test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-0-percent] _
+tests/integration/test_mp04_replay_baseline.py:430: in test_committed_settlement_replay_returns_original_receipt_without_new_legs
+    assert replay.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-16 08:15:29", "level": "WARNING", "logger": "central-bank.central_bank_service.core.exceptions", "message": "Service error", "extra": {"error_code": "escrow_already_resolved", "status_code": 409, "path": "/escrow/esc-ce2e458f-f3c0-40df-8558-8b5de8f471ab/split"}}
+_ test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-partial] _
+tests/integration/test_mp04_replay_baseline.py:430: in test_committed_settlement_replay_returns_original_receipt_without_new_legs
+    assert replay.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-16 08:15:29", "level": "WARNING", "logger": "central-bank.central_bank_service.core.exceptions", "message": "Service error", "extra": {"error_code": "escrow_already_resolved", "status_code": 409, "path": "/escrow/esc-4fc20ef9-ac35-4c26-a981-758d9178b310/split"}}
+_ test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-100-percent] _
+tests/integration/test_mp04_replay_baseline.py:430: in test_committed_settlement_replay_returns_original_receipt_without_new_legs
+    assert replay.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-16 08:15:29", "level": "WARNING", "logger": "central-bank.central_bank_service.core.exceptions", "message": "Service error", "extra": {"error_code": "escrow_already_resolved", "status_code": 409, "path": "/escrow/esc-40e1d1be-345f-41c0-9964-dbd79e20ae71/split"}}
+_ test_operation_id_reuse_with_changed_credit_reference_conflicts_without_write _
+tests/integration/test_mp04_replay_baseline.py:485: in test_operation_id_reuse_with_changed_credit_reference_conflicts_without_write
+    assert (
+E   AssertionError: assert (200, None, None, False) == (409, 'operation_id_conflict', 'op-e46399c9-57f1-4a58-9e84-e28f662711a9', True)
+E     
+E     At index 0 diff: 200 != 409
+E     
+E     Full diff:
+E       (
+E     -     409,
+E     ?     ^ ^
+E     +     200,
+E     ?     ^ ^
+E     -     'operation_id_conflict',
+E     -     'op-e46399c9-57f1-4a58-9e84-e28f662711a9',
+E     -     True,
+E     +     None,
+E     +     None,
+E     +     False,
+E       )
+___ test_operation_id_reuse_with_changed_lock_target_conflicts_without_write ___
+tests/integration/test_mp04_replay_baseline.py:539: in test_operation_id_reuse_with_changed_lock_target_conflicts_without_write
+    assert (
+E   AssertionError: assert (201, None, None, False) == (409, 'operation_id_conflict', 'op-4a943c26-268e-42bf-91a9-0900ea7e4ad2', True)
+E     
+E     At index 0 diff: 201 != 409
+E     
+E     Full diff:
+E       (
+E     -     409,
+E     ?     ^ ^
+E     +     201,
+E     ?     ^ ^
+E     -     'operation_id_conflict',
+E     -     'op-4a943c26-268e-42bf-91a9-0900ea7e4ad2',
+E     -     True,
+E     +     None,
+E     +     None,
+E     +     False,
+E       )
+_ test_exact_lock_replay_after_settlement_preserves_receipt_and_refreshes_projection _
+tests/integration/test_mp04_replay_baseline.py:599: in test_exact_lock_replay_after_settlement_preserves_receipt_and_refreshes_projection
+    assert original.get("outcome") == "native_receipt"
+E   AssertionError: assert None == 'native_receipt'
+E    +  where None = <built-in method get of dict object at 0x1096561c0>('outcome')
+E    +    where <built-in method get of dict object at 0x1096561c0> = {'escrow_id': 'esc-a3989a51-d7b6-4cc2-b536-28fd2d31261e', 'amount': 100, 'task_id': 't-918fda29-eba1-4671-a6c3-f3de36deb6ba', 'status': 'locked'}.get
+_________ test_successful_release_exposes_reconcilable_public_receipt __________
+tests/integration/test_mp04_replay_baseline.py:739: in test_successful_release_exposes_reconcilable_public_receipt
+    receipt, leg, current_escrow = _assert_release_envelope(
+tests/integration/test_mp04_replay_baseline.py:615: in _assert_release_envelope
+    assert envelope["outcome"] == "native_receipt"
+           ^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'outcome'
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[release] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-0-percent] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-partial] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-100-percent] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/integration/test_mp04_replay_baseline.py::test_operation_id_reuse_with_changed_credit_reference_conflicts_without_write - AssertionError: assert (200, None, None, False) == (409, 'operation_id_conflict', 'op-e46399c9-57f1-4a58-9e84-e28f662711a9', True)
+  
+  At index 0 diff: 200 != 409
+  
+  Full diff:
+    (
+  -     409,
+  ?     ^ ^
+  +     200,
+  ?     ^ ^
+  -     'operation_id_conflict',
+  -     'op-e46399c9-57f1-4a58-9e84-e28f662711a9',
+  -     True,
+  +     None,
+  +     None,
+  +     False,
+    )
+FAILED tests/integration/test_mp04_replay_baseline.py::test_operation_id_reuse_with_changed_lock_target_conflicts_without_write - AssertionError: assert (201, None, None, False) == (409, 'operation_id_conflict', 'op-4a943c26-268e-42bf-91a9-0900ea7e4ad2', True)
+  
+  At index 0 diff: 201 != 409
+  
+  Full diff:
+    (
+  -     409,
+  ?     ^ ^
+  +     201,
+  ?     ^ ^
+  -     'operation_id_conflict',
+  -     'op-4a943c26-268e-42bf-91a9-0900ea7e4ad2',
+  -     True,
+  +     None,
+  +     None,
+  +     False,
+    )
+FAILED tests/integration/test_mp04_replay_baseline.py::test_exact_lock_replay_after_settlement_preserves_receipt_and_refreshes_projection - AssertionError: assert None == 'native_receipt'
+ +  where None = <built-in method get of dict object at 0x1096561c0>('outcome')
+ +    where <built-in method get of dict object at 0x1096561c0> = {'escrow_id': 'esc-a3989a51-d7b6-4cc2-b536-28fd2d31261e', 'amount': 100, 'task_id': 't-918fda29-eba1-4671-a6c3-f3de36deb6ba', 'status': 'locked'}.get
+FAILED tests/integration/test_mp04_replay_baseline.py::test_successful_release_exposes_reconcilable_public_receipt - KeyError: 'outcome'
+============================== 8 failed in 0.70s ===============================

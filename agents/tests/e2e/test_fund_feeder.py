@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 from base_agent.factory import AgentFactory
 
@@ -47,23 +48,22 @@ async def funded_feeder(
     platform: PlatformAgent,
 ) -> AsyncIterator[BaseAgent]:
     try:
-        await platform.create_account(agent_id=feeder_agent.agent_id, initial_balance=0)
+        await platform.create_account(
+            agent_id=feeder_agent.agent_id,
+            initial_balance=0,
+            operation_id=None,
+        )
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code != 409:
             raise
 
-    try:
-        await platform.credit_account(
-            account_id=feeder_agent.agent_id,
-            amount=500,
-            reference="fund_feeder_test_setup",
-        )
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code not in {400, 409}:
-            raise
-        error_data = exc.response.json()
-        if error_data.get("error") != "PAYLOAD_MISMATCH":
-            raise
+    setup_reference = "fund_feeder_test_setup"
+    await platform.credit_account(
+        account_id=feeder_agent.agent_id,
+        amount=500,
+        reference=setup_reference,
+        operation_id=operation_id_for("e2e-credit", (feeder_agent.agent_id, setup_reference)),
+    )
 
     yield feeder_agent
 
@@ -94,7 +94,11 @@ async def test_feeder_account_creation(
 ) -> None:
     """Platform agent can create a bank account for the feeder."""
     try:
-        await platform.create_account(agent_id=feeder_agent.agent_id, initial_balance=0)
+        await platform.create_account(
+            agent_id=feeder_agent.agent_id,
+            initial_balance=0,
+            operation_id=None,
+        )
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code != 409:
             raise
@@ -111,15 +115,19 @@ async def test_platform_can_credit_feeder(
 ) -> None:
     """Platform agent can credit funds to the feeder's account."""
     reference = f"test_credit_{uuid4().hex[:8]}"
+    operation_id = operation_id_for("e2e-credit", (funded_feeder.agent_id, reference))
     result = await platform.credit_account(
         account_id=funded_feeder.agent_id,
         amount=100,
         reference=reference,
+        operation_id=operation_id,
     )
 
-    assert "tx_id" in result
-    assert "balance_after" in result
-    assert isinstance(result["balance_after"], int)
+    assert result["outcome"] == "native_receipt"
+    assert result["receipt"]["operation_id"] == operation_id
+    assert result["receipt"]["operation_kind"] == "credit"
+    assert str(result["receipt"]["legs"][0]["transaction_id"]).startswith("tx-")
+    assert isinstance(result["receipt"]["result"]["balance_after"], int)
 
 
 @pytest.mark.e2e
@@ -127,21 +135,30 @@ async def test_credit_idempotency(
     funded_feeder: BaseAgent,
     platform: PlatformAgent,
 ) -> None:
-    """Crediting with the same reference and amount is idempotent."""
+    """Retrying one credit intent returns its receipt without double-crediting."""
     reference = f"test_idempotent_{uuid4().hex[:8]}"
+    operation_id = operation_id_for("e2e-credit", (funded_feeder.agent_id, reference))
+    balance_before = (await funded_feeder.get_balance())["balance"]
 
     first = await platform.credit_account(
         account_id=funded_feeder.agent_id,
         amount=50,
         reference=reference,
+        operation_id=operation_id,
     )
     second = await platform.credit_account(
         account_id=funded_feeder.agent_id,
         amount=50,
         reference=reference,
+        operation_id=operation_id,
     )
 
-    assert first["tx_id"] == second["tx_id"]
+    assert first["receipt"]["operation_id"] == second["receipt"]["operation_id"] == operation_id
+    assert (
+        first["receipt"]["legs"][0]["transaction_id"]
+        == second["receipt"]["legs"][0]["transaction_id"]
+    )
+    assert (await funded_feeder.get_balance())["balance"] == balance_before + 50
 
 
 @pytest.mark.e2e
@@ -151,18 +168,24 @@ async def test_credit_requires_positive_amount(
 ) -> None:
     """Crediting with zero or negative amount fails."""
     with pytest.raises(httpx.HTTPStatusError) as zero_exc:
+        zero_reference = f"test_zero_{uuid4().hex[:8]}"
         await platform.credit_account(
             account_id=funded_feeder.agent_id,
             amount=0,
-            reference=f"test_zero_{uuid4().hex[:8]}",
+            reference=zero_reference,
+            operation_id=operation_id_for("e2e-credit", (funded_feeder.agent_id, zero_reference)),
         )
     assert zero_exc.value.response.status_code == 400
 
     with pytest.raises(httpx.HTTPStatusError) as negative_exc:
+        negative_reference = f"test_negative_{uuid4().hex[:8]}"
         await platform.credit_account(
             account_id=funded_feeder.agent_id,
             amount=-10,
-            reference=f"test_negative_{uuid4().hex[:8]}",
+            reference=negative_reference,
+            operation_id=operation_id_for(
+                "e2e-credit", (funded_feeder.agent_id, negative_reference)
+            ),
         )
     assert negative_exc.value.response.status_code == 400
 
@@ -179,6 +202,7 @@ async def test_feeder_balance_reflects_credits(
         account_id=funded_feeder.agent_id,
         amount=200,
         reference=reference,
+        operation_id=operation_id_for("e2e-credit", (funded_feeder.agent_id, reference)),
     )
     after = await funded_feeder.get_balance()
 
@@ -193,27 +217,32 @@ async def test_funding_summary_fields(
     """The credit response contains tx_id and balance_after for summary output."""
     amount = 75
     reference = f"test_summary_{uuid4().hex[:8]}"
+    operation_id = operation_id_for("e2e-credit", (funded_feeder.agent_id, reference))
     result = await platform.credit_account(
         account_id=funded_feeder.agent_id,
         amount=amount,
         reference=reference,
+        operation_id=operation_id,
     )
 
-    assert "tx_id" in result
-    assert "balance_after" in result
-    assert str(result["tx_id"]).startswith("tx-")
-    assert isinstance(result["balance_after"], int)
-    assert result["balance_after"] >= amount
+    assert result["outcome"] == "native_receipt"
+    assert result["receipt"]["operation_id"] == operation_id
+    assert str(result["receipt"]["legs"][0]["transaction_id"]).startswith("tx-")
+    assert isinstance(result["receipt"]["result"]["balance_after"], int)
+    assert result["receipt"]["result"]["balance_after"] >= amount
 
 
 @pytest.mark.e2e
 async def test_credit_without_account_fails(platform: PlatformAgent) -> None:
     """Crediting a non-existent account fails with 404."""
+    account_id = "a-00000000-0000-0000-0000-000000000000"
+    reference = f"test_missing_account_{uuid4().hex[:8]}"
     with pytest.raises(httpx.HTTPStatusError) as exc_info:
         await platform.credit_account(
-            account_id="a-00000000-0000-0000-0000-000000000000",
+            account_id=account_id,
             amount=10,
-            reference=f"test_missing_account_{uuid4().hex[:8]}",
+            reference=reference,
+            operation_id=operation_id_for("e2e-credit", (account_id, reference)),
         )
 
     assert exc_info.value.response.status_code == 404
@@ -250,30 +279,22 @@ async def test_fund_feeder_full_workflow() -> None:
         await platform_agent.register()
 
         try:
-            await platform_agent.create_account(agent_id=feeder.agent_id, initial_balance=0)
+            await platform_agent.create_account(
+                agent_id=feeder.agent_id,
+                initial_balance=0,
+                operation_id=None,
+            )
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code != 409:
                 raise
 
         reference = "fund_feeder_e2e_test"
-        try:
-            await platform_agent.credit_account(
-                account_id=feeder.agent_id,
-                amount=amount,
-                reference=reference,
-            )
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code not in {400, 409}:
-                raise
-            error_data = exc.response.json()
-            if error_data.get("error") == "PAYLOAD_MISMATCH":
-                await platform_agent.credit_account(
-                    account_id=feeder.agent_id,
-                    amount=amount,
-                    reference=f"{reference}_{uuid4().hex[:8]}",
-                )
-            else:
-                raise
+        await platform_agent.credit_account(
+            account_id=feeder.agent_id,
+            amount=amount,
+            reference=reference,
+            operation_id=operation_id_for("e2e-credit", (feeder.agent_id, reference)),
+        )
 
         balance = await feeder.get_balance()
         assert isinstance(balance["balance"], int)

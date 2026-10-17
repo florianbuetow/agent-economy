@@ -1,0 +1,130 @@
+{
+  "checked_at_utc": "2026-10-17T18:59:32.694163+00:00",
+  "source_manifests": [
+    "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-6c9b8c86498a4cc884a5196446955130-kogg74e6/runtime.json"
+  ],
+  "records": [
+    {
+      "run_id": "6c9b8c86498a4cc884a5196446955130",
+      "category": "processes",
+      "name": "db-gateway",
+      "pid": 5717,
+      "pgid": 5717,
+      "sid": 5717,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "run_id": "6c9b8c86498a4cc884a5196446955130",
+      "category": "processes",
+      "name": "identity",
+      "pid": 6104,
+      "pgid": 6104,
+      "sid": 6104,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "run_id": "6c9b8c86498a4cc884a5196446955130",
+      "category": "processes",
+      "name": "central-bank",
+      "pid": 6468,
+      "pgid": 6468,
+      "sid": 6468,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "run_id": "6c9b8c86498a4cc884a5196446955130",
+      "category": "processes",
+      "name": "task-board",
+      "pid": 6740,
+      "pgid": 6740,
+      "sid": 6740,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "run_id": "6c9b8c86498a4cc884a5196446955130",
+      "category": "processes",
+      "name": "reputation",
+      "pid": 7011,
+      "pgid": 7011,
+      "sid": 7011,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "run_id": "6c9b8c86498a4cc884a5196446955130",
+      "category": "processes",
+      "name": "court",
+      "pid": 7208,
+      "pgid": 7208,
+      "sid": 7208,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "run_id": "6c9b8c86498a4cc884a5196446955130",
+      "category": "processes",
+      "name": "ui",
+      "pid": 8839,
+      "pgid": 8839,
+      "sid": 8839,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "run_id": "6c9b8c86498a4cc884a5196446955130",
+      "category": "commands",
+      "name": 0,
+      "pid": 9146,
+      "pgid": 9146,
+      "sid": 9146,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "run_id": "6c9b8c86498a4cc884a5196446955130",
+      "category": "bootstrap_commands",
+      "name": 0,
+      "pid": 5320,
+      "pgid": 5320,
+      "sid": 5320,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "owned_groups": [
+    5320,
+    5717,
+    6104,
+    6468,
+    6740,
+    7011,
+    7208,
+    8839,
+    9146
+  ],
+  "metadata_clean": true,
+  "live_groups": [],
+  "unverified_groups": []
+}

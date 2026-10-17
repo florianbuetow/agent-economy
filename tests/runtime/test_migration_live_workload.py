@@ -1,4 +1,4 @@
-"""Migrate a legacy-layout fixture carrying actual signed public-API receipts."""
+"""Migrate legacy domain facts produced by an actual signed public workload."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from service_commons.recovery_contract import RecoveryInventoryV1
 from tests.runtime.test_recovery_live_restore import DELIVERABLE, _endpoints, _public_workload
 
 from db_gateway_service.money_audit import audit_money
+from db_gateway_service.receipt_audit import audit_receipt_ownership
 from db_gateway_service.recovery import (
     PublicationState,
     create_backup,
@@ -27,17 +28,29 @@ from db_gateway_service.schema import SchemaState, classify_schema, load_schema_
 
 pytestmark = pytest.mark.integration
 REPO_ROOT = Path(__file__).resolve().parents[2]
+_LEGACY_DOMAIN_TABLES = (
+    "bank_accounts",
+    "bank_escrow",
+    "bank_transactions",
+    "board_assets",
+    "board_bids",
+    "board_tasks",
+    "court_claims",
+    "court_rebuttals",
+    "court_rulings",
+    "events",
+    "identity_agents",
+    "reputation_feedback",
+    "sqlite_sequence",
+)
 
 
 def _logical_rows(connection):
-    """Independent row/storage-type evidence, including rowids and event sequence."""
+    """Snapshot frozen v0/v1 domain rows, storage types, rowids and sequences."""
     result = {}
-    tables = connection.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' "
-        "AND name != 'schema_metadata' ORDER BY name"
-    ).fetchall()
-    for (table,) in tables:
+    for table in _LEGACY_DOMAIN_TABLES:
         columns = sorted(row[1] for row in connection.execute(f'PRAGMA table_info("{table}")'))
+        assert columns, f"Missing frozen legacy domain table: {table}"
         selected = ", ".join(f'"{column}"' for column in columns)
         storage_types = ", ".join(f'typeof("{column}")' for column in columns)
         rows = connection.execute(
@@ -48,7 +61,7 @@ def _logical_rows(connection):
 
 
 def _install_legacy_fixture(database):
-    """Rebuild only disposable test state in the frozen legacy schema, keeping every row."""
+    """Copy frozen domain rows into synthetic v0 without v2 receipt sidecars."""
     connection = sqlite3.connect(database.as_uri() + "?mode=rw", uri=True)
     try:
         original = _logical_rows(connection)
@@ -144,7 +157,7 @@ def _assert_pre_migration_restore(
         assert _logical_rows(db) == original_rows
 
 
-def _assert_migrated_database(database, original_rows, backup):
+def _assert_v1_database(database, original_rows, backup, backup_id):
     with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as migrated:
         assert classify_schema(migrated).state is SchemaState.CURRENT_V1
         assert _logical_rows(migrated) == original_rows
@@ -153,9 +166,117 @@ def _assert_migrated_database(database, original_rows, backup):
             1,
             1,
             0,
-            "legacy-live-work",
+            backup_id,
             backup.manifest_sha256,
         )
+
+
+def _migrate_v1_to_v2(runtime, inventory_path, backup_root, backup_id, work_root):
+    try:
+        assert (
+            runtime.run_command(
+                [
+                    "uv",
+                    "run",
+                    "python",
+                    "-m",
+                    "db_gateway_service.recovery_cli",
+                    "migrate-v1-to-v2",
+                    "--inventory",
+                    str(inventory_path),
+                    "--backup-root",
+                    str(backup_root),
+                    "--backup-id",
+                    backup_id,
+                    "--work-root",
+                    str(work_root),
+                    "--busy-timeout-ms",
+                    "5000",
+                ],
+                cwd=REPO_ROOT / "services/db-gateway",
+            )
+            == 0
+        )
+    finally:
+        runtime.stop()
+
+
+def _assert_v2_database(database, original_rows, v1_backup, v1_backup_id, v2_backup):
+    with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as migrated:
+        assert classify_schema(migrated).state is SchemaState.CURRENT_V2
+        assert _logical_rows(migrated) == original_rows
+        assert audit_money(migrated).financially_clean
+        ownership = audit_receipt_ownership(migrated)
+        assert ownership.ownership_clean
+        assert ownership.native_receipt_count == 0
+        assert ownership.legacy_transaction_count == ownership.transaction_count
+        assert ownership.legacy_escrow_count == ownership.escrow_count
+        assert migrated.execute("SELECT * FROM schema_metadata").fetchone() == (
+            1,
+            2,
+            1,
+            "before-receipt-migration",
+            v2_backup.manifest_sha256,
+        )
+        cutover = migrated.execute(
+            "SELECT cutover_kind, source_schema_version, source_migrated_from_version, "
+            "source_migration_backup_id, source_migration_backup_manifest_sha256, "
+            "migration_backup_id, migration_backup_manifest_sha256, "
+            "legacy_transaction_count, legacy_escrow_count FROM bank_receipt_cutover"
+        ).fetchone()
+        assert cutover == (
+            "v1_to_v2",
+            1,
+            0,
+            v1_backup_id,
+            v1_backup.manifest_sha256,
+            "before-receipt-migration",
+            v2_backup.manifest_sha256,
+            ownership.transaction_count,
+            ownership.escrow_count,
+        )
+
+
+def _upgrade_v1_to_v2(
+    runtime,
+    inventory,
+    inventory_path,
+    database,
+    original_rows,
+    v1_backup,
+    v1_backup_id,
+    backup_root,
+    work_root,
+):
+    v2_backup = create_backup(
+        inventory,
+        backup_root=backup_root,
+        backup_id="before-receipt-migration",
+        work_root=work_root,
+    )
+    assert v2_backup.state is PublicationState.COMPLETE
+    v2_backup_hashes = _file_hashes(v2_backup.location)
+    verified = verify_backup(
+        backup_root=backup_root,
+        backup_id="before-receipt-migration",
+        work_root=work_root,
+    )
+    assert verified.artifact_verified and verified.identity_complete
+    _migrate_v1_to_v2(
+        runtime,
+        inventory_path,
+        backup_root,
+        "before-receipt-migration",
+        work_root,
+    )
+    _assert_v2_database(database, original_rows, v1_backup, v1_backup_id, v2_backup)
+    assert _file_hashes(v2_backup.location) == v2_backup_hashes
+    return v2_backup, v2_backup_hashes
+
+
+def _assert_runtime_artifacts_unchanged(runtime, original_keys, original_assets):
+    assert _file_hashes(runtime.run_dir / "keys") == original_keys
+    assert _file_hashes(runtime.run_dir / "assets") == original_assets
 
 
 def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(tmp_path: Path):
@@ -214,7 +335,7 @@ def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(tm
         assert exit_code == 0
     finally:
         runtime.stop()
-    _assert_migrated_database(database, original_rows, backup)
+    _assert_v1_database(database, original_rows, backup, "legacy-live-work")
     evidence = list(work_root.rglob("migration-result.json"))
     assert len(evidence) == 1
     assert json.loads(evidence[0].read_text())["status"] == "committed_v1_verified"
@@ -233,13 +354,25 @@ def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(tm
         original_rows,
     )
     assert _file_hashes(backup.location) == original_artifact
-    assert _file_hashes(runtime.run_dir / "keys") == original_keys
-    assert _file_hashes(runtime.run_dir / "assets") == original_assets
+    _assert_runtime_artifacts_unchanged(runtime, original_keys, original_assets)
+
+    v2_backup, v2_backup_hashes = _upgrade_v1_to_v2(
+        runtime,
+        inventory,
+        prepared.inventory_path,
+        database,
+        original_rows,
+        backup,
+        "legacy-live-work",
+        backup_root,
+        work_root,
+    )
+    assert _file_hashes(backup.location) == original_artifact
 
     try:
         runtime.start()
         asyncio.run(_resume_signed_workload(runtime.agent_config_path, receipt))
     finally:
         runtime.stop()
-    assert _file_hashes(runtime.run_dir / "keys") == original_keys
-    assert _file_hashes(runtime.run_dir / "assets") == original_assets
+    _assert_runtime_artifacts_unchanged(runtime, original_keys, original_assets)
+    assert _file_hashes(v2_backup.location) == v2_backup_hashes

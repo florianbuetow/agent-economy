@@ -1,7 +1,9 @@
 # MP-04 receipt contract
 
-Status: concrete contract for T-116 red tests and subsequent T-117 implementation. MP-06 is closed
-at root15. No receipt implementation is claimed here. Receipt-only schema v2 precedes transition
+Status: implemented and independently verified. T-116/T-117 closed with root19 exit0, unchanged
+source hashes and clean owned-process teardown; see the active change's evidence/root19-checkpoint.md.
+MP-06 closed at root15.
+Receipt-only schema v2 precedes transition
 schema v3 so financial work remains a bounded package; Q-M4 is now resolved to poster-defined
 acceptance windows, but its separate lifecycle implementation/proof is still required.
 

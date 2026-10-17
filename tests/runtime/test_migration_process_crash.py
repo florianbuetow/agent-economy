@@ -17,10 +17,12 @@ from scripts.isolated_test_runtime import IsolatedRuntime
 from service_commons.maintenance_lock import MaintenanceLockMode, hold_existing_maintenance_lock
 from service_commons.recovery_contract import RecoveryInventoryV1
 from tests.runtime.test_migration_live_workload import (
+    _assert_v1_database,
     _file_hashes,
     _install_legacy_fixture,
     _logical_rows,
     _resume_signed_workload,
+    _upgrade_v1_to_v2,
 )
 from tests.runtime.test_recovery_live_restore import _public_workload
 
@@ -215,10 +217,23 @@ def test_process_death_preserves_legacy_and_signed_workflow_can_resume(tmp_path,
     )
     assert fresh.state is PublicationState.COMPLETE
     _resume_migration(runtime, prepared.inventory_path, backup_root, work_root)
+    _assert_v1_database(database, original_rows, fresh, "after-crash")
+
+    v2_backup, v2_backup_hashes = _upgrade_v1_to_v2(
+        runtime,
+        inventory,
+        prepared.inventory_path,
+        database,
+        original_rows,
+        fresh,
+        "after-crash",
+        backup_root,
+        work_root,
+    )
     with contextlib.closing(
         sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)
     ) as connection:
-        assert classify_schema(connection).state is SchemaState.CURRENT_V1
+        assert classify_schema(connection).state is SchemaState.CURRENT_V2
         assert _logical_rows(connection) == original_rows
         assert audit_money(connection).financially_clean
     try:
@@ -227,5 +242,6 @@ def test_process_death_preserves_legacy_and_signed_workflow_can_resume(tmp_path,
     finally:
         runtime.stop()
     assert _file_hashes(original.location) == original_hashes
+    assert _file_hashes(v2_backup.location) == v2_backup_hashes
     assert _file_hashes(runtime.run_dir / "keys") == original_keys
     assert _file_hashes(runtime.run_dir / "assets") == original_assets

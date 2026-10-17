@@ -1,5 +1,8 @@
 # MP-04 implementation checkpoint
 
+Historical checkpoint: the status and counts below describe this earlier verification stage.
+The final MP-04 closure is recorded in completion-audit.md and ../root19-checkpoint.md.
+
 Status: in progress. Task 6.1's bounded baseline is red-proven; T-116 and T-117 remain OPEN.
 No receipt persistence, schema upgrade, caller migration or integrated success is claimed here.
 Root15 remains the last successful whole-repository gate, before these new red tests.

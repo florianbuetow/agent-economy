@@ -35,6 +35,12 @@ Prerequisites: None; MP-00 focused proofs can precede this group.
 - [x] 2.9 [T-173] Reproduce CI changing a deliberately malformed disposable source file through its auto-format step; verify both verbose and quiet service CI should fail without changing source, while explicit code-format remains available.
 - [x] 2.10 [T-174] Remove automatic formatting from service CI and use the existing read-only code-style gate; verify all service recipe paths reject malformed source without mutation, project structure remains valid, and fresh root CI has identical source hashes before and after.
 
+- [x] 2.11 [T-175] Add deterministic rapid-click quarterly navigation proofs, including year boundaries, no-data responses and recovery after a request failure; record the lost-navigation red before implementation. Two intended reds/one control independently reproduced; see evidence/quarter-navigation-checkpoint.md. Root19 passed the full gate; see evidence/root19-checkpoint.md.
+- [x] 2.12 [T-176] Preserve navigation clicks while report requests are pending; verify the new proofs and unchanged existing browser assertions, independent review and a fresh isolated root gate.
+
+- [x] 2.13 [T-177] Prove that a transient health ReadTimeout aborts controlled UI fixture setup before its existing readiness budget; retain persistent-timeout and child-exit failure controls with diagnostics. Parent reproduced two intended reds/two controls; independent review approved. See evidence/ui-readiness-checkpoint.md; root19 passed the full gate; see evidence/root19-checkpoint.md.
+- [x] 2.14 [T-178] Keep transient timeouts inside the existing readiness polling loop without increasing timeout values; verify focused and unchanged browser cases, full UI, review and fresh root CI.
+
 ## 3. MP-03: Durable keys and one token contract
 
 Prerequisites: MP-01.
@@ -68,14 +74,16 @@ Prerequisites: MP-01; coordinate authoritative command schemas with MP-02.
 
 Prerequisites: MP-02 and MP-06.
 
-Current bounded consumer evidence is in `evidence/mp04-receipts/sdk-validation-2026-10-17.md`.
-SDK review is approved; shared-client/Task Board/history integration and the fresh root gate remain
-required before checking tasks 6.2–6.4 or closing T-116/T-117.
+MP-04 is verified complete at root19. Native/history persistence, consumers, public Bank race
+proof and documentation are independently approved. Root19 passed with932 unchanged source/config
+hashes,203 cross/runtime,298 UI browser and94 live-agent cases; all19 owned stack groups are absent.
+See `evidence/mp04-receipts/completion-audit.md` and `evidence/root19-checkpoint.md` for exact proof
+and limitations. The full Core/Vision goal and later lifecycle/recovery packages remain open.
 
-- [x] 6.1 [T-116] Inject response loss after Bank commits and replay locks after settlement; verify red behavior for exact versus conflicting requests without depending on task lifecycle claims. Bounded eight-case red proof independently reproduced and approved; see evidence/mp04-receipts/checkpoint.md. T-116/T-117 remain open pending the remaining proof and integrated gate.
-- [ ] 6.2 [T-117] Add stable operation identity, payload hash and durable result receipt to financial commands; verify exact replay returns original identities and changed recipients/amounts/percentages conflict.
-- [ ] 6.3 [T-117] Update Bank API and shared clients to return authoritative receipts; verify opposing direct Bank commands have one winner and zero/partial/full splits conserve money.
-- [ ] 6.4 [T-117] Document receipt/replay/error contracts and run Bank/gateway contracts; verify lifecycle consistency is reserved for MP-07/08 rather than falsely proved here.
+- [x] 6.1 [T-116] Inject response loss after Bank commits and replay locks after settlement; verify red behavior for exact versus conflicting requests without depending on task lifecycle claims. Bounded eight-case red proof independently reproduced and approved; see evidence/mp04-receipts/checkpoint.md. T-116/T-117 close with the complete item proof and root19 gate; see evidence/mp04-receipts/completion-audit.md.
+- [x] 6.2 [T-117] Add stable operation identity, payload hash and durable result receipt to financial commands; verify exact replay returns original identities and changed recipients/amounts/percentages conflict.
+- [x] 6.3 [T-117] Update Bank API and shared clients to return authoritative receipts; verify opposing direct Bank commands have one winner and zero/partial/full splits conserve money.
+- [x] 6.4 [T-117] Document receipt/replay/error contracts and run Bank/gateway contracts; verify lifecycle consistency is reserved for MP-07/08 rather than falsely proved here.
 
 ## 7. MP-07: Atomic task transitions
 

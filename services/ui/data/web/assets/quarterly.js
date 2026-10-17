@@ -5,6 +5,7 @@
   var state = {
     quarter: null // "YYYY-QN"; null until first response tells us the current quarter
   };
+  var navigationQueue = Promise.resolve();
 
   function parseQuarter(label) {
     var m = /^(\d{4})-Q([1-4])$/.exec(label);
@@ -179,6 +180,13 @@
     wireNotableLinks(content);
   }
 
+  function queueQuarterShift(delta) {
+    navigationQueue = navigationQueue.then(function() {
+      if (!state.quarter) return;
+      return loadQuarter(shiftQuarter(state.quarter, delta));
+    });
+  }
+
   // ── Bottom ticker ────────────────────────────────────────────
   function buildTicker() {
     if (ATE && typeof ATE.buildBottomTicker === 'function') {
@@ -197,12 +205,10 @@
     await loadQuarter(requestedQuarter);
 
     document.getElementById('qr-prev').addEventListener('click', function() {
-      if (!state.quarter) return;
-      loadQuarter(shiftQuarter(state.quarter, -1));
+      queueQuarterShift(-1);
     });
     document.getElementById('qr-next').addEventListener('click', function() {
-      if (!state.quarter) return;
-      loadQuarter(shiftQuarter(state.quarter, 1));
+      queueQuarterShift(1);
     });
   }
 

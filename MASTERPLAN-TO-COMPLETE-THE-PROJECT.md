@@ -4,7 +4,16 @@
 
 **Reviewed baseline:** branch `refactor`, HEAD `d4148401f4e3e5749d878e560a742c4ccb2aa68c`, including the tracked staged and unstaged changes present at review start. Three detached review worktrees received the complete `git diff HEAD --binary` snapshot. Existing user changes were preserved. Findings therefore describe more than the committed HEAD; recheck their cited functions before implementing on a different revision.
 
-**Assessment:** the normal economic lifecycle exists, but the platform is not ready for trusted financial/adjudication use. The most urgent repairs are lifecycle races and lost-acknowledgment settlement, immutable recoverable Court rulings, unauthenticated gateway access, unsafe asset filenames, stored browser script injection, and sealed-market data leaks. Then finish artifact handling, restart-safe agents, external onboarding and the complete human UI journey. This document contains 56 finding entries (54 from the original audit plus the reported UI CI and reproduced deadline-precision gaps; some corroborate the same root cause), 27 work packages, 58 paired test/implementation tickets, three tracked decision tickets and 25 release scenarios.
+**Assessment:** the normal economic lifecycle exists, but the platform is not ready for trusted financial/adjudication use. The most urgent repairs are lifecycle races and lost-acknowledgment settlement, immutable recoverable Court rulings, unauthenticated gateway access, unsafe asset filenames, stored browser script injection, and sealed-market data leaks. Then finish artifact handling, restart-safe agents, external onboarding and the complete human UI journey. This document contains 56 finding entries (54 from the original audit plus the reported UI CI and reproduced deadline-precision gaps; some corroborate the same root cause), 27 work packages, 66 paired test/implementation tickets, three tracked decision tickets and 25 release scenarios.
+
+**Additional baseline finding (2026-10-17):** the MP-04 browser gate exposed a quarterly-report race:
+two rapid Prev clicks read the same settled quarter and request it twice, losing one navigation.
+T-175/T-176 track deterministic browser proof and ordered navigation under MP-01. This repair must
+preserve the original assertions and timeouts; it does not replace any remaining Core or Vision work.
+
+The subsequent full UI run exposed a separate startup-fixture race: the listening socket can accept
+a health request before Uvicorn answers, but ReadTimeout escapes the existing readiness budget.
+T-177/T-178 track deterministic bounded-readiness proof and repair without longer timeouts.
 
 ## 1. Outcome and completion boundary
 
@@ -1118,6 +1127,10 @@ The arrows are dependencies, not permission handoffs. MP-20's response schemas s
 
 - [x] **Discovered baseline prerequisite (T-171):** the MP-02 UI audit reports GHSA-84m7-p3x7-pcfv in Semgrep's exact mcp 1.29.0 dependency. Preserve the nonzero audit and verify official advisory/pin evidence before remediation.
 - [x] **Implement and verify (T-172):** use the smallest compatible patched package with regenerated locks, explicitly document any development-only upstream-pin override and removal condition, and pass all affected Semgrep/audit checks plus fresh isolated root CI. Do not suppress the new advisory.
+- [x] **Discovered navigation red (T-175):** deterministic repeated and mixed browser clicks expose stale-quarter request duplication. Two intended reds and one error-recovery control were independently reproduced before repair; see `evidence/quarter-navigation-checkpoint.md` in the active OpenSpec change.
+- [x] **Navigation repair and root verification (T-176):** preserve each accepted quarter shift with ordered requests. Seven focused cases, independent review and root19's full298-case browser/root gate pass, without changing original assertions or timeouts.
+- [x] **Discovered readiness red (T-177):** prove premature ReadTimeout failure before the existing readiness budget; preserve persistent-timeout and child-exit diagnostic controls. Two intended reds/two controls were independently reproduced.
+- [x] **Readiness repair and root verification (T-178):** keep transient timeouts in the existing polling loop. Four unit and ten focused browser cases, independent review and root19 full UI/root gates pass without longer timeout values; see the active change's evidence/ui-readiness-checkpoint.md.
 
 #### MP-02 — Enforce persistence authority and the local browser boundary
 
@@ -1144,18 +1157,19 @@ The arrows are dependencies, not permission handoffs. MP-20's response schemas s
 
 **Tickets:** T-116 → T-117. **Priority:** P0. **Depends on:** MP-02, MP-06. **Owner:** Bank/gateway. **Findings:** F-M02, F-M08; foundation for F-L01–F-L04.
 
-Implementation checkpoint 2026-10-17: native and historical receipt persistence/validation,
-Bank/in-memory storage, shared clients and funding/demo consumers have bounded independent approval.
-Parent runs pass 24 public Bank tests and 26 cross-service tests. Root16 passed component gates with
-929 unchanged source/config hashes, then exposed two integration fixtures, now repaired and reviewed.
-Live-agent caller reconciliation and a fresh root closure gate remain required. Evidence
-limitations remain explicit. See `openspec/changes/complete-agent-economy/evidence/mp04-receipts/history-checkpoint-2026-10-17.md`.
+Verified checkpoint 2026-10-17: T-116/T-117 close after native/history implementation,
+consumer integration, public Bank concurrency proof, documentation and independent reviews.
+Root19 exited0 with932 identical source/config hashes,203 cross/runtime,298 browser and94
+live-agent cases; all19 root-owned stack groups and56 separately checked migration-test groups
+are absent. Scope and evidence limitations remain explicit in
+`openspec/changes/complete-agent-economy/evidence/mp04-receipts/completion-audit.md` and
+`openspec/changes/complete-agent-economy/evidence/root19-checkpoint.md`.
 
 - [x] **Red proof:** drop the successful response after release/split commit, then retry; replay a lock after settlement; replay with altered parties/amount. Demonstrate non-convergence or second debit. The bounded eight-case public Bank/Gateway baseline was independently reproduced and approved on 2026-10-16; remaining identity, history, concurrency and rollback proofs stay separately required before their implementation (see `openspec/changes/complete-agent-economy/evidence/mp04-receipts/checkpoint.md`).
-- [ ] **Implement:** stable operation ID plus canonical request hash and durable result for lock/release/split and issuance where needed. Atomically store receipt, escrow status, ledger legs and event. Exact replay returns the original successful result; changed content conflicts. Retain lifetime uniqueness of a task's escrow.
-- [ ] **Implement:** receipts expose actual recipient(s), amount(s), ruling/operation reference and transaction/event IDs so callers can reconcile ambiguous outcomes. Never convert any generic `escrow_already_resolved` into success.
-- [ ] **Files:** Bank API/schemas/router/store, gateway schema/writer/reader/bank routes, shared Bank/Gateway clients, Bank contract and cross-service tests.
-- [ ] **Green proof:** Bank release/refund and 0/partial/100% split operations survive response loss with one set of ledger legs; changed recipient/percentage fails; concurrent opposing Bank commands produce one financial winner and its receipt. Cross-service consistency with the winning lifecycle claim is proved in MP-07/08, after atomic lifecycle claims exist.
+- [x] **Implement:** stable operation ID plus canonical request hash and durable result for lock/release/split and issuance where needed. Atomically store receipt, escrow status, ledger legs and event. Exact replay returns the original successful result; changed content conflicts. Retain lifetime uniqueness of a task's escrow.
+- [x] **Implement:** receipts expose actual recipient(s), amount(s), ruling/operation reference and transaction/event IDs so callers can reconcile ambiguous outcomes. Never convert any generic `escrow_already_resolved` into success.
+- [x] **Files:** Bank API/schemas/router/store, gateway schema/writer/reader/bank routes, shared Bank/Gateway clients, Bank contract and cross-service tests.
+- [x] **Green proof:** Bank release/refund and 0/partial/100% split operations survive response loss with one set of ledger legs; changed recipient/percentage fails; concurrent opposing Bank commands produce one financial winner and its receipt. Cross-service consistency with the winning lifecycle claim is proved in MP-07/08, after atomic lifecycle claims exist.
 
 #### MP-05 — Make task posting and compensation recoverable
 

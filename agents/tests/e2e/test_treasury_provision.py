@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 from base_agent.factory import AgentFactory
 from treasury_provision_cli.config import load_treasury_settings
@@ -76,14 +77,18 @@ async def test_operator_account_creation_is_idempotent(
 ) -> None:
     """Creating the operator's zero-balance account twice is a safe no-op."""
     try:
-        await platform.create_account(agent_id=operator_agent.agent_id, initial_balance=0)
+        await platform.create_account(
+            agent_id=operator_agent.agent_id, initial_balance=0, operation_id=None
+        )
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code != 409:
             raise
 
     # Second call: must 409, not raise anything else.
     with pytest.raises(httpx.HTTPStatusError) as exc_info:
-        await platform.create_account(agent_id=operator_agent.agent_id, initial_balance=0)
+        await platform.create_account(
+            agent_id=operator_agent.agent_id, initial_balance=0, operation_id=None
+        )
     assert exc_info.value.response.status_code == 409
 
 
@@ -93,26 +98,39 @@ async def test_treasury_genesis_credit_is_idempotent(
     operator_agent: BaseAgent,
     treasury_settings,
 ) -> None:
-    """Crediting the genesis amount twice with the same reference does not double-credit."""
+    """Retrying the genesis operation does not double-credit the treasury."""
     try:
-        await platform.create_account(agent_id=operator_agent.agent_id, initial_balance=0)
+        await platform.create_account(
+            agent_id=operator_agent.agent_id, initial_balance=0, operation_id=None
+        )
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code != 409:
             raise
 
+    operation_id = operation_id_for(
+        "treasury-genesis", (operator_agent.agent_id, treasury_settings.genesis_reference)
+    )
     first = await platform.credit_account(
         account_id=operator_agent.agent_id,
         amount=treasury_settings.genesis_amount,
         reference=treasury_settings.genesis_reference,
+        operation_id=operation_id,
     )
     second = await platform.credit_account(
         account_id=operator_agent.agent_id,
         amount=treasury_settings.genesis_amount,
         reference=treasury_settings.genesis_reference,
+        operation_id=operation_id,
     )
 
-    assert first["tx_id"] == second["tx_id"]
-    assert first["balance_after"] == second["balance_after"]
+    assert first["receipt"]["operation_id"] == second["receipt"]["operation_id"] == operation_id
+    assert (
+        first["receipt"]["legs"][0]["transaction_id"]
+        == second["receipt"]["legs"][0]["transaction_id"]
+    )
+    assert (
+        first["receipt"]["result"]["balance_after"] == second["receipt"]["result"]["balance_after"]
+    )
 
 
 @pytest.mark.e2e
@@ -127,26 +145,31 @@ async def test_treasury_provision_full_workflow(treasury_settings) -> None:
         await platform_agent.register()
 
         try:
-            await platform_agent.create_account(agent_id=operator_agent.agent_id, initial_balance=0)
+            await platform_agent.create_account(
+                agent_id=operator_agent.agent_id,
+                initial_balance=0,
+                operation_id=None,
+            )
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code != 409:
                 raise
 
-        # Reuses the same genesis_reference as `just provision`, so on a
-        # shared/already-provisioned operator account this call is idempotent
-        # (the gateway replays the ORIGINAL tx, including its balance_after
-        # snapshot from whenever that reference was first recorded — not a
-        # live recomputation). Do not assert a balance floor tied to
-        # genesis_amount or compare against balance_after: the operator's
-        # live balance legitimately drops as other tests spend from the same
-        # shared account.
+        # Reuses the same explicit treasury-genesis operation identity as
+        # `just provision`, so the original receipt is replayed. Do not assert
+        # a balance floor tied to genesis_amount: the operator's live balance
+        # legitimately drops as other tests spend from the shared account.
+        operation_id = operation_id_for(
+            "treasury-genesis", (operator_agent.agent_id, treasury_settings.genesis_reference)
+        )
         result = await platform_agent.credit_account(
             account_id=operator_agent.agent_id,
             amount=treasury_settings.genesis_amount,
             reference=treasury_settings.genesis_reference,
+            operation_id=operation_id,
         )
-        assert "tx_id" in result
-        assert isinstance(result["balance_after"], int)
+        assert result["outcome"] == "native_receipt"
+        assert result["receipt"]["operation_id"] == operation_id
+        assert isinstance(result["receipt"]["result"]["balance_after"], int)
 
         balance = await operator_agent.get_balance()
         assert isinstance(balance["balance"], int)

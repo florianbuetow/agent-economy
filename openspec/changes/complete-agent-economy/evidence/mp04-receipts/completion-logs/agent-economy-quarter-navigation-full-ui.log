@@ -1,0 +1,514 @@
+
+[0;34m=== Running UI Playwright E2E Tests ===[0m
+
+Chromium launch prerequisite passed.
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/ui/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 298 items
+
+tests/e2e/test_agent_page.py::test_agent_page_loads_leaderboard_by_default PASSED [  0%]
+tests/e2e/test_agent_page.py::test_agent_page_leaderboard_sort_select_changes_rows PASSED [  0%]
+tests/e2e/test_agent_page.py::test_agent_page_leaderboard_row_navigates_to_profile PASSED [  1%]
+tests/e2e/test_agent_page.py::test_agent_profile_page_renders_known_agent PASSED [  1%]
+tests/e2e/test_agent_page.py::test_agent_profile_page_unknown_agent_shows_not_found PASSED [  1%]
+tests/e2e/test_agent_page.py::test_agent_profile_back_link_returns_to_leaderboard PASSED [  2%]
+tests/e2e/test_cross_page.py::TestCrossPageEmptyDB::test_x01_empty_db_landing_renders_zero_state PASSED [  2%]
+tests/e2e/test_cross_page.py::TestCrossPageEmptyDB::test_x02_empty_db_observatory_handles_no_feed PASSED [  2%]
+tests/e2e/test_cross_page.py::TestCrossPageEmptyDB::test_x03_empty_db_task_page_stays_in_create_mode PASSED [  3%]
+tests/e2e/test_cross_page.py::TestCrossPageEmptyDB::test_x04_empty_db_api_endpoints_return_safe_defaults PASSED [  3%]
+tests/e2e/test_cross_page.py::TestCrossPageSingleAgent::test_x05_single_agent_landing_kpis_reflect_singleton ERROR [  3%]
+tests/e2e/test_cross_page.py::TestCrossPageSingleAgent::test_x06_single_agent_landing_leaderboard_handles_one_agent ERROR [  4%]
+tests/e2e/test_cross_page.py::TestCrossPageSingleAgent::test_x07_single_agent_observatory_renders_single_poster ERROR [  4%]
+tests/e2e/test_cross_page.py::TestCrossPageNavigation::test_x08_landing_to_observatory_navigation PASSED [  4%]
+tests/e2e/test_cross_page.py::TestCrossPageNavigation::test_x09_observatory_to_task_to_home_navigation PASSED [  5%]
+tests/e2e/test_cross_page.py::TestCrossPageNavigation::test_x10_task_to_observatory_navigation PASSED [  5%]
+tests/e2e/test_cross_page.py::TestCrossPageBrowserEdgeCases::test_x11_back_forward_navigation_keeps_pages_usable PASSED [  5%]
+tests/e2e/test_cross_page.py::TestCrossPageBrowserEdgeCases::test_x12_resize_desktop_to_mobile_keeps_layout_operable PASSED [  6%]
+tests/e2e/test_cross_page.py::TestCrossPageBrowserEdgeCases::test_x13_tab_switch_visibility_change_does_not_break_feed PASSED [  6%]
+tests/e2e/test_cross_page.py::TestCrossPageBrowserEdgeCases::test_x14_reload_preserves_task_route_and_content PASSED [  6%]
+tests/e2e/test_infrastructure.py::test_extended_seed_data_has_10_agents PASSED [  7%]
+tests/e2e/test_infrastructure.py::test_extended_seed_data_has_50_events PASSED [  7%]
+tests/e2e/test_infrastructure.py::test_extended_seed_data_task_statuses PASSED [  7%]
+tests/e2e/test_infrastructure.py::test_landing_page_object PASSED        [  8%]
+tests/e2e/test_infrastructure.py::test_observatory_page_object PASSED    [  8%]
+tests/e2e/test_infrastructure.py::test_task_page_object PASSED           [  8%]
+tests/e2e/test_infrastructure.py::test_db_mutation_inserts_event PASSED  [  9%]
+tests/e2e/test_landing.py::TestLandingNavigation::test_l01_root_route_loads_landing PASSED [  9%]
+tests/e2e/test_landing.py::TestLandingNavigation::test_l02_observatory_button_navigates PASSED [  9%]
+tests/e2e/test_landing.py::TestLandingNavigation::test_l03_enter_economy_button_navigates PASSED [ 10%]
+tests/e2e/test_landing.py::TestLandingNavigation::test_l04_post_task_cta_navigates PASSED [ 10%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l05_top_ticker_track_visible PASSED [ 10%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l06_top_ticker_has_24_items PASSED [ 11%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l07_top_ticker_contains_expected_symbols PASSED [ 11%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l08_top_ticker_open_tasks_matches_seed PASSED [ 11%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l09_top_ticker_gdp_total_matches_seed PASSED [ 12%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l10_top_ticker_stream_is_doubled PASSED [ 12%]
+tests/e2e/test_landing.py::TestLandingHero::test_l11_hero_section_visible PASSED [ 12%]
+tests/e2e/test_landing.py::TestLandingHero::test_l12_hero_title_copy PASSED [ 13%]
+tests/e2e/test_landing.py::TestLandingHero::test_l13_hero_subtitle_copy PASSED [ 13%]
+tests/e2e/test_landing.py::TestLandingHero::test_l14_hero_cta_buttons_present PASSED [ 13%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l15_kpi_strip_visible PASSED [ 14%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l16_kpi_strip_has_five_cells PASSED [ 14%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l17_kpi_labels_match_expected PASSED [ 14%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l18_kpi_gdp_matches_seed PASSED [ 15%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l19_kpi_active_agents_matches_seed PASSED [ 15%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l20_kpi_tasks_completed_matches_seed PASSED [ 15%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l21_kpi_spec_quality_matches_seed PASSED [ 16%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l22_kpi_phase_is_uppercase_text PASSED [ 16%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l23_kpi_notes_present_for_all_cells PASSED [ 16%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l24_exchange_board_grid_visible PASSED [ 17%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l25_exchange_board_has_15_cells PASSED [ 17%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l26_exchange_board_clock_in_utc PASSED [ 17%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l27_exchange_board_has_required_labels PASSED [ 18%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l28_exchange_board_gdp_total_matches_seed PASSED [ 18%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l29_exchange_board_open_tasks_matches_seed PASSED [ 18%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l30_exchange_board_in_execution_matches_seed PASSED [ 19%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l31_exchange_board_disputes_active_matches_seed PASSED [ 19%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l32_exchange_board_escrow_locked_matches_seed PASSED [ 19%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l33_exchange_board_each_cell_has_sparkline PASSED [ 20%]
+tests/e2e/test_landing.py::TestLandingHowItWorks::test_l34_how_it_works_has_five_steps PASSED [ 20%]
+tests/e2e/test_landing.py::TestLandingHowItWorks::test_l35_how_it_works_step_order PASSED [ 20%]
+tests/e2e/test_landing.py::TestLandingHowItWorks::test_l36_how_it_works_descriptions_non_empty PASSED [ 21%]
+tests/e2e/test_landing.py::TestLandingMarketStory::test_l37_story_text_visible PASSED [ 21%]
+tests/e2e/test_landing.py::TestLandingMarketStory::test_l38_story_initial_copy_reflects_seed_counts PASSED [ 21%]
+tests/e2e/test_landing.py::TestLandingMarketStory::test_l39_story_title_present PASSED [ 22%]
+tests/e2e/test_landing.py::TestLandingMarketStory::test_l40_story_link_scrolls_to_exchange_board PASSED [ 22%]
+tests/e2e/test_landing.py::TestLandingMarketStory::test_l41_story_rotates_over_time PASSED [ 22%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l42_leaderboard_container_visible PASSED [ 23%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l43_leaderboard_has_two_panels PASSED [ 23%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l44_worker_panel_title PASSED [ 23%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l45_poster_panel_title PASSED [ 24%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l46_worker_row_count_matches_seed PASSED [ 24%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l47_poster_row_count_matches_seed PASSED [ 24%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l48_top_worker_name_matches_seed PASSED [ 25%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l49_top_worker_amount_matches_seed PASSED [ 25%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l50_top_poster_name_matches_seed PASSED [ 25%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l51_top_poster_amount_matches_seed PASSED [ 26%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l52_leaderboard_ranks_sequential PASSED [ 26%]
+tests/e2e/test_landing.py::TestLandingBottomTicker::test_l53_bottom_ticker_visible PASSED [ 26%]
+tests/e2e/test_landing.py::TestLandingBottomTicker::test_l54_bottom_ticker_has_16_items PASSED [ 27%]
+tests/e2e/test_landing.py::TestLandingBottomTicker::test_l55_bottom_ticker_contains_seed_metrics PASSED [ 27%]
+tests/e2e/test_landing.py::TestLandingLiveUpdates::test_l56_kpi_updates_after_status_change PASSED [ 27%]
+tests/e2e/test_landing.py::TestLandingLiveUpdates::test_l57_top_ticker_updates_after_new_open_task PASSED [ 28%]
+tests/e2e/test_landing.py::TestLandingLiveUpdates::test_l58_leaderboard_updates_after_earnings_change PASSED [ 28%]
+tests/e2e/test_mp02_browser_security.py::test_stored_strings_are_inert_on_every_browser_view[/-.lb-name] PASSED [ 28%]
+tests/e2e/test_mp02_browser_security.py::test_stored_strings_are_inert_on_every_browser_view[/task.html?task_id=t-task1-.feedback-row] PASSED [ 29%]
+tests/e2e/test_mp02_browser_security.py::test_stored_strings_are_inert_on_every_browser_view[/agent.html?agent_id=a-alice-.profile-name] PASSED [ 29%]
+tests/e2e/test_mp02_browser_security.py::test_stored_strings_are_inert_on_every_browser_view[/quarterly-report.html?quarter=2026-Q1-.notable-row] PASSED [ 29%]
+tests/e2e/test_mp02_browser_security.py::test_stored_strings_are_inert_on_every_browser_view[/observatory.html-.feed-item] PASSED [ 30%]
+tests/e2e/test_mp02_browser_security.py::test_new_sse_summary_is_literal_after_history_load PASSED [ 30%]
+tests/e2e/test_mp02_browser_security.py::test_csp_blocks_runtime_eval_but_allows_function_polling PASSED [ 30%]
+tests/e2e/test_mp02_browser_security.py::test_task_identifier_is_literal_text PASSED [ 31%]
+tests/e2e/test_mp02_browser_security.py::test_bid_identifier_stays_in_one_data_attribute PASSED [ 31%]
+tests/e2e/test_mp02_browser_security.py::test_task_identifier_is_one_encoded_request_segment PASSED [ 31%]
+tests/e2e/test_mp02_browser_security.py::test_quarterly_no_data_label_is_literal PASSED [ 32%]
+tests/e2e/test_mp02_browser_security.py::test_proxy_helper_rejects_targets_before_fetch[https://example.invalid/api/proxy/tasks-POST] PASSED [ 32%]
+tests/e2e/test_mp02_browser_security.py::test_proxy_helper_rejects_targets_before_fetch[/outside-proxy-POST] PASSED [ 32%]
+tests/e2e/test_mp02_browser_security.py::test_proxy_helper_rejects_targets_before_fetch[/api/proxy/tasks-GET] PASSED [ 33%]
+tests/e2e/test_mp02_browser_security.py::test_proxy_helper_preserves_same_origin_write PASSED [ 33%]
+tests/e2e/test_mp12_sealed_task_page.py::test_open_task_poster_sees_loading_before_authorized_bids PASSED [ 33%]
+tests/e2e/test_mp12_sealed_task_page.py::test_open_task_poster_loads_authorized_bid_amounts PASSED [ 34%]
+tests/e2e/test_mp12_sealed_task_page.py::test_open_task_nonposter_never_requests_authorized_bids PASSED [ 34%]
+tests/e2e/test_mp12_sealed_task_page.py::test_open_task_poster_sees_explicit_bid_load_failure[forbidden] PASSED [ 34%]
+tests/e2e/test_mp12_sealed_task_page.py::test_open_task_poster_sees_explicit_bid_load_failure[server] PASSED [ 35%]
+tests/e2e/test_mp12_sealed_task_page.py::test_open_task_poster_sees_explicit_bid_load_failure[malformed] PASSED [ 35%]
+tests/e2e/test_mp12_sealed_task_page.py::test_open_task_poster_sees_explicit_bid_load_failure[network] PASSED [ 35%]
+tests/e2e/test_observatory.py::test_o01_o05_navigation_layout[O01] PASSED [ 36%]
+tests/e2e/test_observatory.py::test_o01_o05_navigation_layout[O02] PASSED [ 36%]
+tests/e2e/test_observatory.py::test_o01_o05_navigation_layout[O03] PASSED [ 36%]
+tests/e2e/test_observatory.py::test_o01_o05_navigation_layout[O04] PASSED [ 37%]
+tests/e2e/test_observatory.py::test_o01_o05_navigation_layout[O05] PASSED [ 37%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O06] PASSED       [ 37%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O07] PASSED       [ 38%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O08] PASSED       [ 38%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O09] PASSED       [ 38%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O10] PASSED       [ 39%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O11] PASSED       [ 39%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O12] PASSED       [ 39%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O13] PASSED       [ 40%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O14] PASSED       [ 40%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O15] PASSED        [ 40%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O16] PASSED        [ 41%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O17] PASSED        [ 41%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O18] PASSED        [ 41%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O19] PASSED        [ 42%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O20] PASSED        [ 42%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O21] PASSED        [ 42%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O22] PASSED        [ 43%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O23] PASSED        [ 43%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O24] PASSED        [ 43%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O25] PASSED        [ 44%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O26] PASSED        [ 44%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O27] PASSED        [ 44%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O28] PASSED        [ 45%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O29] PASSED        [ 45%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O30] PASSED        [ 45%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O31] PASSED     [ 46%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O32] PASSED     [ 46%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O33] PASSED     [ 46%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O34] PASSED     [ 47%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O35] PASSED     [ 47%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O36] PASSED     [ 47%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O37] PASSED     [ 48%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O38] PASSED     [ 48%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O39] PASSED     [ 48%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O40] PASSED     [ 49%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O41] PASSED       [ 49%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O42] PASSED       [ 50%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O43] PASSED       [ 50%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O44] PASSED       [ 50%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O45] PASSED       [ 51%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O46] PASSED       [ 51%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O47] PASSED       [ 51%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O48] PASSED       [ 52%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O49] PASSED       [ 52%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O50] PASSED       [ 52%]
+tests/e2e/test_observatory.py::test_o51_o55_pause_resume[O51] PASSED     [ 53%]
+tests/e2e/test_observatory.py::test_o51_o55_pause_resume[O52] PASSED     [ 53%]
+tests/e2e/test_observatory.py::test_o51_o55_pause_resume[O53] PASSED     [ 53%]
+tests/e2e/test_observatory.py::test_o51_o55_pause_resume[O54] PASSED     [ 54%]
+tests/e2e/test_observatory.py::test_o51_o55_pause_resume[O55] PASSED     [ 54%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O56] PASSED  [ 54%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O57] PASSED  [ 55%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O58] PASSED  [ 55%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O59] PASSED  [ 55%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O60] PASSED  [ 56%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O61] PASSED  [ 56%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O62] PASSED  [ 56%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O63] PASSED  [ 57%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O64] PASSED [ 57%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O65] PASSED [ 57%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O66] PASSED [ 58%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O67] PASSED [ 58%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O68] PASSED [ 58%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O69] PASSED [ 59%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O70] PASSED [ 59%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O71] PASSED [ 59%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O72] PASSED [ 60%]
+tests/e2e/test_observatory.py::test_o73_o75_bottom_ticker[O73] PASSED    [ 60%]
+tests/e2e/test_observatory.py::test_o73_o75_bottom_ticker[O74] PASSED    [ 60%]
+tests/e2e/test_observatory.py::test_o73_o75_bottom_ticker[O75] PASSED    [ 61%]
+tests/e2e/test_observatory.py::test_o76_o78_periodic_refresh[O76] PASSED [ 61%]
+tests/e2e/test_observatory.py::test_o76_o78_periodic_refresh[O77] PASSED [ 61%]
+tests/e2e/test_observatory.py::test_o76_o78_periodic_refresh[O78] PASSED [ 62%]
+tests/e2e/test_observatory.py::test_o79_o81_edge_cases[O79] PASSED       [ 62%]
+tests/e2e/test_observatory.py::test_o79_o81_edge_cases[O80] PASSED       [ 62%]
+tests/e2e/test_observatory.py::test_o79_o81_edge_cases[O81] PASSED       [ 63%]
+tests/e2e/test_quarterly_navigation_concurrency.py::test_repeated_prev_clicks_cross_year_boundary_without_losing_no_data_quarters PASSED [ 63%]
+tests/e2e/test_quarterly_navigation_concurrency.py::test_mixed_rapid_clicks_apply_every_direction_in_order PASSED [ 63%]
+tests/e2e/test_quarterly_navigation_concurrency.py::test_report_failure_remains_visible_and_later_navigation_recovers PASSED [ 64%]
+tests/e2e/test_quarterly_report_page.py::test_quarterly_report_page_loads_current_quarter PASSED [ 64%]
+tests/e2e/test_quarterly_report_page.py::test_quarterly_report_page_explicit_quarter_renders_metrics PASSED [ 64%]
+tests/e2e/test_quarterly_report_page.py::test_quarterly_report_page_prev_next_navigation PASSED [ 65%]
+tests/e2e/test_quarterly_report_page.py::test_quarterly_report_page_no_data_quarter_shows_message PASSED [ 65%]
+tests/e2e/test_smoke.py::test_landing_page_loads PASSED                  [ 65%]
+tests/e2e/test_smoke.py::test_observatory_page_loads PASSED              [ 66%]
+tests/e2e/test_smoke.py::test_task_page_loads PASSED                     [ 66%]
+tests/e2e/test_smoke.py::test_health_endpoint PASSED                     [ 66%]
+tests/e2e/test_smoke.py::test_metrics_api PASSED                         [ 67%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T01] PASSED [ 67%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T02] PASSED [ 67%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T03] PASSED [ 68%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T04] PASSED [ 68%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T05] PASSED [ 68%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T06] PASSED [ 69%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T07] PASSED   [ 69%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T08] PASSED   [ 69%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T09] PASSED   [ 70%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T10] PASSED   [ 70%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T11] PASSED   [ 70%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T12] PASSED   [ 71%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T13] PASSED    [ 71%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T14] PASSED    [ 71%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T15] PASSED    [ 72%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T16] PASSED    [ 72%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T17] PASSED    [ 72%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T18] PASSED    [ 73%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T19] PASSED     [ 73%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T20] PASSED     [ 73%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T21] PASSED     [ 74%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T22] PASSED     [ 74%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T23] PASSED     [ 74%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T24] PASSED     [ 75%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T25] PASSED     [ 75%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T26] PASSED     [ 75%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T27] PASSED     [ 76%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T28] PASSED [ 76%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T29] PASSED [ 76%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T30] PASSED [ 77%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T31] PASSED [ 77%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T32] PASSED [ 77%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T33] PASSED [ 78%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T34] PASSED [ 78%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T35] PASSED [ 78%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T36] PASSED [ 79%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T37] PASSED [ 79%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T38] PASSED [ 79%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T39] PASSED [ 80%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T40] PASSED  [ 80%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T41] PASSED  [ 80%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T42] PASSED  [ 81%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T43] PASSED  [ 81%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T44] PASSED  [ 81%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T45] PASSED  [ 82%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T46] PASSED  [ 82%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T47] PASSED [ 82%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T48] PASSED [ 83%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T49] PASSED [ 83%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T50] PASSED [ 83%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T51] PASSED [ 84%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T52] PASSED [ 84%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T53] PASSED [ 84%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T54] PASSED [ 85%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T55] PASSED [ 85%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T56] PASSED [ 85%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T57] PASSED [ 86%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T58] PASSED [ 86%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T59] PASSED [ 86%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T60] PASSED [ 87%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T61] PASSED [ 87%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T62] PASSED [ 87%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T63] PASSED [ 88%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T64] PASSED [ 88%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T65] PASSED [ 88%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T66] PASSED [ 89%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T67] PASSED [ 89%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T68] PASSED [ 89%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T69] PASSED [ 90%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T70] PASSED [ 90%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T71] PASSED [ 90%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T72] PASSED [ 91%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T73] PASSED [ 91%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T74] PASSED [ 91%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T75] PASSED [ 92%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T76] PASSED [ 92%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T77] PASSED [ 92%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T78] PASSED [ 93%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T79] PASSED [ 93%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T80] PASSED [ 93%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T81] PASSED [ 94%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T82] PASSED [ 94%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T83] PASSED [ 94%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T84] PASSED [ 95%]
+tests/e2e/test_task_lifecycle.py::test_t85_t88_auto_play[T85] PASSED     [ 95%]
+tests/e2e/test_task_lifecycle.py::test_t85_t88_auto_play[T86] PASSED     [ 95%]
+tests/e2e/test_task_lifecycle.py::test_t85_t88_auto_play[T87] PASSED     [ 96%]
+tests/e2e/test_task_lifecycle.py::test_t85_t88_auto_play[T88] PASSED     [ 96%]
+tests/e2e/test_task_lifecycle.py::test_t89_t93_boundary_guards[T89] PASSED [ 96%]
+tests/e2e/test_task_lifecycle.py::test_t89_t93_boundary_guards[T90] PASSED [ 97%]
+tests/e2e/test_task_lifecycle.py::test_t89_t93_boundary_guards[T91] PASSED [ 97%]
+tests/e2e/test_task_lifecycle.py::test_t89_t93_boundary_guards[T92] PASSED [ 97%]
+tests/e2e/test_task_lifecycle.py::test_t89_t93_boundary_guards[T93] PASSED [ 98%]
+tests/e2e/test_task_lifecycle.py::test_t94_t96_db_mutation_live_updates[T94] PASSED [ 98%]
+tests/e2e/test_task_lifecycle.py::test_t94_t96_db_mutation_live_updates[T95] PASSED [ 98%]
+tests/e2e/test_task_lifecycle.py::test_t94_t96_db_mutation_live_updates[T96] PASSED [ 99%]
+tests/e2e/test_task_lifecycle.py::test_t97_t98_feedback_display[T97] PASSED [ 99%]
+tests/e2e/test_task_lifecycle.py::test_t97_t98_feedback_display[T98] PASSED [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of TestCrossPageSingleAgent.test_x05_single_agent_landing_kpis_reflect_singleton _
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:101: in map_httpcore_exceptions
+    yield
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:250: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/connection_pool.py:256: in handle_request
+    raise exc from None
+.venv/lib/python3.13/site-packages/httpcore/_sync/connection_pool.py:236: in handle_request
+    response = connection.handle_request(
+.venv/lib/python3.13/site-packages/httpcore/_sync/connection.py:103: in handle_request
+    return self._connection.handle_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:136: in handle_request
+    raise exc
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:106: in handle_request
+    ) = self._receive_response_headers(**kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:177: in _receive_response_headers
+    event = self._receive_event(timeout=timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:217: in _receive_event
+    data = self._network_stream.read(
+.venv/lib/python3.13/site-packages/httpcore/_backends/sync.py:126: in read
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.13/site-packages/httpcore/_exceptions.py:14: in map_exceptions
+    raise to_exc(exc) from exc
+E   httpcore.ReadTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+tests/e2e/test_cross_page.py:161: in single_agent_e2e_server
+    yield from start_controlled_ui_server(
+tests/e2e/_fixture_support.py:218: in start_controlled_ui_server
+    _wait_for_server(port, process, server_log_path)
+tests/e2e/_fixture_support.py:94: in _wait_for_server
+    response = httpx.get(url, timeout=2.0)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_api.py:195: in get
+    return request(
+.venv/lib/python3.13/site-packages/httpx/_api.py:109: in request
+    return client.request(
+.venv/lib/python3.13/site-packages/httpx/_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.13/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.13/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:249: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:118: in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+E   httpx.ReadTimeout: timed out
+_ ERROR at setup of TestCrossPageSingleAgent.test_x06_single_agent_landing_leaderboard_handles_one_agent _
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:101: in map_httpcore_exceptions
+    yield
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:250: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/connection_pool.py:256: in handle_request
+    raise exc from None
+.venv/lib/python3.13/site-packages/httpcore/_sync/connection_pool.py:236: in handle_request
+    response = connection.handle_request(
+.venv/lib/python3.13/site-packages/httpcore/_sync/connection.py:103: in handle_request
+    return self._connection.handle_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:136: in handle_request
+    raise exc
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:106: in handle_request
+    ) = self._receive_response_headers(**kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:177: in _receive_response_headers
+    event = self._receive_event(timeout=timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:217: in _receive_event
+    data = self._network_stream.read(
+.venv/lib/python3.13/site-packages/httpcore/_backends/sync.py:126: in read
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.13/site-packages/httpcore/_exceptions.py:14: in map_exceptions
+    raise to_exc(exc) from exc
+E   httpcore.ReadTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+tests/e2e/test_cross_page.py:161: in single_agent_e2e_server
+    yield from start_controlled_ui_server(
+tests/e2e/_fixture_support.py:218: in start_controlled_ui_server
+    _wait_for_server(port, process, server_log_path)
+tests/e2e/_fixture_support.py:94: in _wait_for_server
+    response = httpx.get(url, timeout=2.0)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_api.py:195: in get
+    return request(
+.venv/lib/python3.13/site-packages/httpx/_api.py:109: in request
+    return client.request(
+.venv/lib/python3.13/site-packages/httpx/_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.13/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.13/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:249: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:118: in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+E   httpx.ReadTimeout: timed out
+_ ERROR at setup of TestCrossPageSingleAgent.test_x07_single_agent_observatory_renders_single_poster _
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:101: in map_httpcore_exceptions
+    yield
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:250: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/connection_pool.py:256: in handle_request
+    raise exc from None
+.venv/lib/python3.13/site-packages/httpcore/_sync/connection_pool.py:236: in handle_request
+    response = connection.handle_request(
+.venv/lib/python3.13/site-packages/httpcore/_sync/connection.py:103: in handle_request
+    return self._connection.handle_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:136: in handle_request
+    raise exc
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:106: in handle_request
+    ) = self._receive_response_headers(**kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:177: in _receive_response_headers
+    event = self._receive_event(timeout=timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpcore/_sync/http11.py:217: in _receive_event
+    data = self._network_stream.read(
+.venv/lib/python3.13/site-packages/httpcore/_backends/sync.py:126: in read
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.13/site-packages/httpcore/_exceptions.py:14: in map_exceptions
+    raise to_exc(exc) from exc
+E   httpcore.ReadTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+tests/e2e/test_cross_page.py:161: in single_agent_e2e_server
+    yield from start_controlled_ui_server(
+tests/e2e/_fixture_support.py:218: in start_controlled_ui_server
+    _wait_for_server(port, process, server_log_path)
+tests/e2e/_fixture_support.py:94: in _wait_for_server
+    response = httpx.get(url, timeout=2.0)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_api.py:195: in get
+    return request(
+.venv/lib/python3.13/site-packages/httpx/_api.py:109: in request
+    return client.request(
+.venv/lib/python3.13/site-packages/httpx/_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.13/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.13/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:249: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.13/site-packages/httpx/_transports/default.py:118: in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+E   httpx.ReadTimeout: timed out
+=========================== short test summary info ============================
+ERROR tests/e2e/test_cross_page.py::TestCrossPageSingleAgent::test_x05_single_agent_landing_kpis_reflect_singleton - httpx.ReadTimeout: timed out
+ERROR tests/e2e/test_cross_page.py::TestCrossPageSingleAgent::test_x06_single_agent_landing_leaderboard_handles_one_agent - httpx.ReadTimeout: timed out
+ERROR tests/e2e/test_cross_page.py::TestCrossPageSingleAgent::test_x07_single_agent_observatory_renders_single_poster - httpx.ReadTimeout: timed out
+================== 295 passed, 3 errors in 462.76s (0:07:42) ===================
+error: recipe `test-ui-e2e` failed with exit code 1

@@ -1,6 +1,13 @@
 # Central Bank Service — Production Release Test Specification
 
-## MP-04 receipt acceptance amendment (implementation in progress)
+## MP-04 receipt acceptance amendment
+
+This amendment supersedes historical flat-response and reference-only replay assertions below;
+their monetary, authorization and no-effect intent remains required through the receipt contract.
+The supplemental `test_mp04_public_settlement_race.py` sends opposing public release/split requests
+through signed Gateway middleware into independent SQLite writers. It asserts one winner, exact
+winner-referencing conflict, immutable replay, balances, receipt/leg/transaction/event identity and
+no duplicated effects. It is green boundary coverage of already red-proven native behavior.
 
 Use the [financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md) for the
 new request/response and replay assertions. Valid monetary fixtures must provide explicit

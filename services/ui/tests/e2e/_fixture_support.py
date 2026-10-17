@@ -94,7 +94,7 @@ def _wait_for_server(
             response = httpx.get(url, timeout=2.0)
             if response.status_code == 200:
                 return
-        except httpx.ConnectError:
+        except (httpx.ConnectError, httpx.TimeoutException):
             pass
         time.sleep(0.3)
     msg = (
