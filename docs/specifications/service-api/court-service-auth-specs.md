@@ -36,26 +36,24 @@ Platform-only authentication prevents any agent from directly filing a dispute, 
 
 Per the project's two-tier verification model (`docs/plans/2026-07-09-target-architecture-and-refactoring-plan.md` §2.3), **platform-signed operations are verified locally** via the `PlatformAgent` the Court loaded at startup — the Court holds the platform's own keys and can check a signature claiming to be the platform without calling out to Identity. This is the Court's original pattern, now the project-wide standard for platform operations: no Identity dependency, survives Identity outages.
 
-The `identity_service_unavailable` error code is **retained for historical naming continuity** on the one path where local verification itself raises an unexpected (non-signature) exception — it does **not** mean an HTTP call to the Identity service occurred; none does, for any Court endpoint.
+No Court authentication route makes an Identity HTTP request. Shared token failures use the uniform `invalid_jws`, `token_expired`, `token_not_yet_valid`, or `forbidden` mapping rather than an Identity-unavailable error.
 
 ### The `kid == platform` Authorization Rule
 
 Cryptographic validity alone is not sufficient authorization. Every platform-signed write asserts **both**:
 
-1. `platform_agent.validate_certificate(token)` succeeds (the payload was signed by the platform's private key), **and**
-2. the JWS protected-header `kid` equals `platform_agent.agent_id` exactly.
+1. strict local verification returns an authenticated `VerifiedJws(header, payload)`, **and**
+2. the authenticated `header.kid` equals `platform_agent.agent_id` exactly.
 
-This is implemented by `court_service/routers/validation.py::verify_platform_token`, which calls a small header-decoding helper `_extract_kid(token)` (base64url-decodes the JWS protected header and reads its `kid` field) and rejects the request with `403 forbidden` if `_extract_kid(token) != platform_agent.agent_id` — **even when the signature itself verifies**. This closes a spec'd-identity-binding gap (GAP-B4): crypto authenticity proves the key used, not that the header's claimed identity matches it, so both are checked.
+The `kid` used for authorization comes only from the authenticated typed header. An unverified header decode may assist parsing, but it cannot supply signer identity or a payload-only success result.
 
-There used to be a separate `require_platform_signer` helper function performing a related check; it has been **deleted** (superseded by `_extract_kid`, dead-code removed in WP-11 per the ratified plan). It does not exist in the current codebase — do not reference it as live.
+**Required MP-03 verification order:**
 
-**Verification order** (confirmed against `verify_platform_token` and the router call sites — this differs from earlier drafts of this document, see the note below):
-
-1. `platform_agent.validate_certificate(token)` — raises `InvalidSignature`/`ValueError` → `403 forbidden`; raises any other exception → `502 identity_service_unavailable` (the legacy-named catch-all described above). This includes `service_auth.signing.TokenExpiredError` (see "Token Expiry" below), which is **not** a `ValueError` subclass and therefore falls into this generic branch — an expired platform token surfaces as `502 identity_service_unavailable`, not `403 forbidden`.
-2. `kid == platform_agent.agent_id` check → `403 forbidden` on mismatch.
-3. `action` field check (`require_action`) → `400 invalid_payload` on mismatch or missing.
-4. Field-level payload validation (required fields, length caps, URL/body `dispute_id` match) → `400 invalid_payload`.
-5. Domain-specific errors (dispute not found, wrong status, already ruled, not ready, etc.).
+1. Verify compact form, exact typed header and payload object, signature, and lifetime policy. Malformed profile is `400 invalid_jws`; future issue time is `401 token_not_yet_valid`; expiry is `401 token_expired`; signature mismatch is `403 forbidden`.
+2. Require authenticated `header.kid == platform_agent.agent_id` → `403 forbidden` on mismatch.
+3. Require `header.aud == service.name`, exact concrete `header.resource`, and the endpoint's payload `action` → `400 invalid_payload` on mismatch.
+4. Validate existing domain payload fields → `400 invalid_payload`.
+5. Apply domain-specific rules.
 
 **Signature/kid verification happens before `action` validation.** A token signed by a non-platform key is rejected with `403 forbidden` regardless of what its `action` field says — the signature check *is* the signer check under local verification, and it runs first. (An earlier draft of this document and its accompanying test spec described the opposite order — "action checked before platform signer verification" — that wording is stale; see `services/court/tests/unit/routers/test_disputes.py::test_prec_05_action_checked_before_signer`, whose docstring now reads "Signature verification rejects rogue signer before action check.")
 
@@ -72,16 +70,24 @@ Dispute data, votes, and rulings are public by design — transparency supports 
 ```json
 {
   "alg": "EdDSA",
-  "kid": "<platform_agent_id>"
+  "typ": "JWT",
+  "kid": "<platform_agent_id>",
+  "iat": 1792051200,
+  "exp": 1792051500,
+  "aud": "court",
+  "resource": "POST /disputes/<concrete-dispute-id>/rule"
 }
 ```
 
-- `alg` must be `"EdDSA"` (Ed25519).
-- `kid` must equal the platform agent's id — checked explicitly, in addition to signature validity (see above). No agent-signed tokens are accepted by the Court under any circumstance.
+- The header has exactly `alg`, `typ`, `kid`, `iat`, `exp`, `aud`, and `resource`.
+- `alg="EdDSA"`, `typ="JWT"`; `kid`, `aud`, and `resource` are non-blank strings.
+- `iat`/`exp` are JSON integers excluding booleans, with `exp > iat` and lifetime no greater than the configured positive maximum.
+- `aud` equals Court's configured `service.name`; `resource` equals the concrete uppercase `METHOD /path` handled.
+- `kid` equals the registered platform agent id. Tokens without expiry claims or with extra header fields are `400 invalid_jws`.
 
 ### JWS Payload
 
-Every JWS payload must include an `action` field identifying the operation. A token signed for one action cannot be replayed against a different endpoint (`400 invalid_payload`).
+The payload remains the existing domain object and includes string `action`. `aud` and `resource` stay in the protected header; similarly named domain fields grant no authority. Missing/wrong-type action or wrong authenticated audience, resource, or action is `400 invalid_payload` before any Court effect.
 
 ### Action Values
 
@@ -114,16 +120,16 @@ Task Board                     Court Service
   |     { action, ...fields }        |
   |  2. Sign with platform Ed25519   |
   |     private key                  |
-  |     Header: { alg: "EdDSA",      |
-  |       kid: "<platform_agent_id>" }|
+  |     Exact protected header with  |
+  |       platform kid, court aud,   |
+  |       concrete resource/lifetime |
   |  3. POST /disputes/file          |
   |     { "token": "eyJ..." }        |
   |  ===============================>|
-  |                                  |  4. Decode JWS header + payload
-  |                                  |  5. PlatformAgent.validate_certificate(token)
-  |                                  |     -> payload, or raises
-  |                                  |  6. Check: kid == platform_agent.agent_id
-  |                                  |  7. Validate action field
+  |                                  |  4. Strict local verification
+  |                                  |     -> VerifiedJws, or rejects
+  |                                  |  5. Check authenticated kid
+  |                                  |  6. Check aud/resource/action
   |                                  |  8. Validate payload fields
   |                                  |  9. Execute operation
   |  10. Response                    |
@@ -134,7 +140,7 @@ Task Board                     Court Service
 
 ## Authorization Rules
 
-1. **Signer must be the platform agent — checked twice, differently.** Local `validate_certificate()` must succeed (proves the key), and the header `kid` must equal `platform_agent.agent_id` (proves the claimed identity matches the key used). Either failure returns `403 forbidden`.
+1. **Signer must be the platform agent.** Strict local verification proves the signature, then the authenticated header `kid` must equal `platform_agent.agent_id`. Either authorization failure returns `403 forbidden`.
 2. **No agent-level authorization checks.** Unlike the Task Board or Reputation, the Court verifies only the platform identity — the Task Board is responsible for ensuring the correct agent authorized the underlying operation before it ever reaches the Court. The one exception is the rebuttal endpoint's optional `respondent_id` cross-check (see the API spec) — a defense against a corrupted forward, not agent-level auth.
 3. **No ownership checks on reads.** GET endpoints are public.
 
@@ -186,10 +192,11 @@ Task Board                     Court Service
 
 | Status | Code                          | When |
 |--------|-------------------------------|------|
-| 400    | `invalid_jws`                 | `token` missing, null, non-string, empty, or not a 3-part compact serialization |
-| 400    | `invalid_payload`             | `action` missing/mismatched, required payload fields missing, or a payload `dispute_id` that doesn't match the URL |
+| 400    | `invalid_jws`                 | Non-object request body or signed payload, compact/header form, decoded signature length other than 64 bytes, exact header fields/types/constants, or lifetime bound is invalid |
+| 400    | `invalid_payload`             | Action is missing/non-string, authenticated audience/resource/action mismatches, required payload fields are missing, or payload `dispute_id` differs from the URL |
+| 401    | `token_expired`               | Authentic token satisfies `now >= exp + clock_skew_seconds` |
+| 401    | `token_not_yet_valid`          | Authentic token satisfies `iat > now + clock_skew_seconds` |
 | 403    | `forbidden`                   | Local `validate_certificate()` rejects the signature, `kid != platform_agent.agent_id`, or (rebuttal only) a forwarded `respondent_id` mismatch |
-| 502    | `identity_service_unavailable`| Local certificate verification raised an unexpected non-signature exception (legacy code name; no Identity HTTP call is made) |
 
 ### Error Precedence (first match wins)
 
@@ -197,9 +204,9 @@ Task Board                     Court Service
 2. `413 payload_too_large` — body exceeds `request.max_body_size`
 3. `400 invalid_json` — malformed JSON body
 4. `400 invalid_jws` — missing/malformed `token` field
-5. `403 forbidden` **or** `502 identity_service_unavailable` — local signature verification (this happens **before** any payload field is inspected)
-6. `403 forbidden` — `kid != platform_agent.agent_id`
-7. `400 invalid_payload` — wrong `action`, missing/invalid payload fields, or URL/body `dispute_id` mismatch
+5. Strict local result: `400 invalid_jws`, `401 token_expired`, `401 token_not_yet_valid`, or `403 forbidden`
+6. `403 forbidden` — authenticated `kid != platform_agent.agent_id`
+7. `400 invalid_payload` — audience/resource/action mismatch, invalid payload fields, or URL/body `dispute_id` mismatch
 8. Domain-specific errors (`dispute_not_found`, `dispute_already_exists`, `invalid_dispute_status`, `rebuttal_already_submitted`, `dispute_already_ruled`, `dispute_not_ready`, `task_not_found`, etc.)
 9. `502` errors from downstream services (`task_board_unavailable`, `reputation_service_unavailable`, `judge_unavailable`)
 
@@ -229,6 +236,8 @@ Do not describe `platform.private_key_path`/`platform.public_key_path` as the li
 
 All of `agent_config_path`'s resolution chain (agents `config.yaml` → keys dir → roster) is required; a missing or invalid file at any step raises at startup.
 
+Token configuration is also required and explicit. Initial YAML values are signer TTL 300 seconds, admission maximum 300 seconds, and skew 30 seconds. TTL and maximum lifetime must be positive; skew must be nonnegative. Invalid or missing values fail startup.
+
 ---
 
 ## Infrastructure
@@ -237,7 +246,7 @@ All of `agent_config_path`'s resolution chain (agents `config.yaml` → keys dir
 
 Constructed during `lifespan()` startup via `AgentFactory(...).platform_agent()`, then registered (`await platform_agent.register()`) and stored on `AppState.platform_agent`. Provides (from `libs/service-auth/src/service_auth/platform.py`):
 
-- `validate_certificate(token) -> dict` — verifies a compact JWS against the platform's own public key and returns the decoded payload, or raises `InvalidSignature`/`ValueError` on mismatch. Fully local — no external call.
+- strict local verification returns `VerifiedJws(header, payload)` under an explicit `TokenPolicy`. It verifies the original compact bytes and makes no external call.
 - `get_task(task_id)` — `GET {task_board_url}/tasks/{task_id}` (unauthenticated read against the Task Board service, not the DB Gateway).
 - `record_ruling(task_id, payload)` — signs `payload` as the platform and `POST`s to `{task_board_url}/tasks/{task_id}/ruling`.
 - `submit_platform_feedback(payload)` — signs `payload` as the platform and `POST`s to `{reputation_url}/feedback`.
@@ -257,11 +266,11 @@ Task Board                     Court Service
   |  1. Sign JWS as platform: { action: file_dispute, ... }
   |  2. POST /disputes/file { "token": "eyJ..." }
   |  ===============================>|
-  |                                  |  3. Decode JWS token
-  |                                  |  4. validate_certificate(token) -> payload
-  |                                  |  5. Assert kid == platform_agent.agent_id
-  |                                  |  6. Validate action == "file_dispute"
-  |                                  |  7. Validate payload fields
+  |                                  |  3. Strict local verification
+  |                                  |     -> VerifiedJws
+  |                                  |  4. Assert authenticated kid
+  |                                  |  5. Validate aud/resource/action
+  |                                  |  6. Validate payload fields
   |                                  |  8. Create dispute record
   |  9. 201 { dispute }              |
   |  <===============================|
@@ -284,8 +293,8 @@ Task Board                     Court Service
 Task Board                     Court Service
   |  POST /disputes/file { token signed by platform key but header kid != platform_agent_id }
   |  ===============================>|
-  |                                  |  validate_certificate() succeeds (payload)
-  |                                  |  _extract_kid(token) != platform_agent.agent_id
+  |                                  |  signature verification succeeds
+  |                                  |  authenticated kid != platform_agent.agent_id
   |  403 { error: "forbidden" }      |
   |  <===============================|
 ```
@@ -307,9 +316,7 @@ Rogue Agent                    Court Service
 
 ## Token Expiry
 
-Since WP-02 (Q-10, ratified), JWS tokens system-wide carry `iat`/`exp` header claims stamped by `service_auth.signing.create_jws` whenever the signer is constructed with a `token_ttl_seconds`. The shared `agents/config.yaml` sets `signing.token_ttl_seconds: 300` — every `PlatformAgent`/`PlatformSigner` built from that file (including the Task Board's outgoing signer for `file_dispute`/`submit_rebuttal`/`trigger_ruling`) stamps a 300-second expiry. `service_auth.signing.verify_jws` enforces `exp` against an injectable clock and raises `TokenExpiredError` if it has passed; **tokens without `iat`/`exp` are still accepted** ("legacy tolerance" — the check is expiry-if-present, not expiry-required).
-
-On the Court side, `TokenExpiredError` is not caught by the `(InvalidSignature, ValueError)` branch in `verify_platform_token` (it is a plain `Exception` subclass), so an expired platform token falls into the generic catch-all and surfaces as `502 identity_service_unavailable`, not a `403`-style rejection. This is a verified, if surprising, mapping — see "Escalations" in the accompanying work report.
+`iat` and `exp` are required. The shared policy requires positive `max_lifetime_seconds`, nonnegative `clock_skew_seconds`, `exp > iat`, and a bounded lifetime. At the exact boundaries, `iat == now + skew` is accepted, `iat == now + skew + 1` is `401 token_not_yet_valid`, `now == exp + skew - 1` is accepted, and `now == exp + skew` is `401 token_expired`. Initial explicit YAML values are 300 seconds for signer TTL and admission maximum, and 30 seconds skew.
 
 ## Token Replay Considerations
 

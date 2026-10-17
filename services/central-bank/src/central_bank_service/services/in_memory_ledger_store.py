@@ -11,6 +11,12 @@ from typing import Any, ClassVar
 from service_commons.exceptions import ServiceError
 
 from central_bank_service.logging import get_logger
+from central_bank_service.monetary import (
+    checked_balance_add,
+    require_nonnegative_money,
+    require_positive_money,
+    require_worker_percentage,
+)
 
 _logger = get_logger(__name__)
 
@@ -51,13 +57,7 @@ class InMemoryLedgerStore:
         self._state.transactions.setdefault(account_id, []).append(tx)
 
     def create_account(self, account_id: str, initial_balance: int) -> dict[str, object]:
-        if initial_balance < 0:
-            raise ServiceError(
-                "invalid_amount",
-                "Initial balance must be non-negative",
-                400,
-                {},
-            )
+        initial_balance = require_nonnegative_money(initial_balance, "initial_balance")
 
         with self._state.lock:
             if account_id in self._state.accounts:
@@ -117,8 +117,7 @@ class InMemoryLedgerStore:
             }
 
     def credit(self, account_id: str, amount: int, reference: str) -> dict[str, object]:
-        if amount <= 0:
-            raise ServiceError("invalid_amount", "Amount must be a positive integer", 400, {})
+        amount = require_positive_money(amount, "amount")
 
         with self._state.lock:
             account = self._state.accounts.get(account_id)
@@ -140,7 +139,7 @@ class InMemoryLedgerStore:
                     "balance_after": int(existing["balance_after"]),
                 }
 
-            new_balance = int(account["balance"]) + amount
+            new_balance = checked_balance_add(int(account["balance"]), amount)
             account["balance"] = new_balance
             tx = {
                 "tx_id": self._new_tx_id(),
@@ -173,8 +172,7 @@ class InMemoryLedgerStore:
             return [dict(item) for item in items]
 
     def escrow_lock(self, payer_account_id: str, amount: int, task_id: str) -> dict[str, object]:
-        if amount <= 0:
-            raise ServiceError("invalid_amount", "Amount must be a positive integer", 400, {})
+        amount = require_positive_money(amount, "amount")
 
         with self._state.lock:
             payer = self._state.accounts.get(payer_account_id)
@@ -266,7 +264,7 @@ class InMemoryLedgerStore:
                 )
 
             amount = int(escrow["amount"])
-            new_balance = int(recipient["balance"]) + amount
+            new_balance = checked_balance_add(int(recipient["balance"]), amount)
             recipient["balance"] = new_balance
 
             tx = {
@@ -281,10 +279,6 @@ class InMemoryLedgerStore:
 
             escrow["status"] = "released"
             escrow["resolved_at"] = self._now()
-            self._state.locked_escrow_by_task.pop(
-                (str(escrow["payer_account_id"]), str(escrow["task_id"])),
-                None,
-            )
 
             result: dict[str, object] = {
                 "escrow_id": escrow_id,
@@ -312,8 +306,7 @@ class InMemoryLedgerStore:
         worker_pct: int,
         poster_account_id: str,
     ) -> dict[str, object]:
-        if worker_pct < 0 or worker_pct > 100:
-            raise ServiceError("invalid_amount", "worker_pct must be 0-100", 400, {})
+        worker_pct = require_worker_percentage(worker_pct)
 
         with self._state.lock:
             escrow = self._state.escrows.get(escrow_id)
@@ -340,13 +333,30 @@ class InMemoryLedgerStore:
             worker_amount = amount * worker_pct // 100
             poster_amount = amount - worker_amount
 
+            credit_amounts: dict[str, int] = {}
+            if worker_amount > 0:
+                credit_amounts[worker_account_id] = worker_amount
+            if poster_amount > 0:
+                credit_amounts[poster_account_id] = (
+                    credit_amounts.get(poster_account_id, 0) + poster_amount
+                )
+            for account_id, credit_amount in credit_amounts.items():
+                account = self._state.accounts.get(account_id)
+                if account is None:
+                    label = "Worker" if account_id == worker_account_id else "Poster"
+                    raise ServiceError(
+                        "account_not_found",
+                        f"{label} account not found",
+                        404,
+                        {},
+                    )
+                checked_balance_add(int(account["balance"]), credit_amount)
+
             # Zero-amount legs are skipped entirely (no balance no-op write, no tx
             # row, no existence check) — mirrors the gateway's db_writer.escrow_split.
             if worker_amount > 0:
-                worker = self._state.accounts.get(worker_account_id)
-                if worker is None:
-                    raise ServiceError("account_not_found", "Worker account not found", 404, {})
-                worker_new_balance = int(worker["balance"]) + worker_amount
+                worker = self._state.accounts[worker_account_id]
+                worker_new_balance = checked_balance_add(int(worker["balance"]), worker_amount)
                 worker["balance"] = worker_new_balance
                 worker_tx = {
                     "tx_id": self._new_tx_id(),
@@ -362,10 +372,8 @@ class InMemoryLedgerStore:
                 worker_tx_id = None
 
             if poster_amount > 0:
-                poster = self._state.accounts.get(poster_account_id)
-                if poster is None:
-                    raise ServiceError("account_not_found", "Poster account not found", 404, {})
-                poster_new_balance = int(poster["balance"]) + poster_amount
+                poster = self._state.accounts[poster_account_id]
+                poster_new_balance = checked_balance_add(int(poster["balance"]), poster_amount)
                 poster["balance"] = poster_new_balance
                 poster_tx = {
                     "tx_id": self._new_tx_id(),
@@ -382,10 +390,6 @@ class InMemoryLedgerStore:
 
             escrow["status"] = "split"
             escrow["resolved_at"] = self._now()
-            self._state.locked_escrow_by_task.pop(
-                (str(escrow["payer_account_id"]), str(escrow["task_id"])),
-                None,
-            )
 
             result: dict[str, object] = {
                 "escrow_id": escrow_id,

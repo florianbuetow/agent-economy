@@ -39,6 +39,9 @@ from db_gateway_service.core.state import reset_app_state as reset_gateway_state
 from db_gateway_service.services.db_reader import DbReader
 from db_gateway_service.services.db_writer import DbWriter
 from httpx import ASGITransport, AsyncClient
+from service_auth.gateway import GatewayRequestSigner, GatewaySignerConfig
+from service_auth.platform import PlatformAgent
+from service_auth.signing import generate_keypair
 
 from court_service.app import create_app
 from court_service.config import clear_settings_cache
@@ -54,6 +57,19 @@ if TYPE_CHECKING:
 PLATFORM_AGENT_ID = "a-platform-test-id"
 
 _SCHEMA_PATH = Path(__file__).resolve().parents[4] / "docs" / "specifications" / "schema.sql"
+
+
+class _GatewayAuth(httpx.Auth):
+    """Sign fixture requests with distinct domain capability keys."""
+
+    def __init__(self, signers: dict[str, GatewayRequestSigner]) -> None:
+        self._signers = signers
+
+    def auth_flow(self, request: httpx.Request) -> object:
+        route_domain = request.url.path.split("/", maxsplit=2)[1]
+        action_domain = "board" if route_domain == "board" else route_domain
+        action = f"gateway.{action_domain}.{'read' if request.method == 'GET' else 'write'}"
+        yield self._signers[route_domain].sign_request(request, action=action)
 
 
 def _free_port() -> int:
@@ -86,8 +102,38 @@ database:
   busy_timeout_ms: 5000
   journal_mode: "wal"
 
+recovery:
+  maintenance_lock_path: "{Path(db_path).parent / "maintenance.lock"}"
+  backup_root: "{Path(db_path).parent / "backups"}"
+
 request:
   max_body_size: 1048576
+auth:
+  audience: "db-gateway"
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 0
+  trusted_callers:
+    gateway-identity:
+      public_key_path: "{Path(db_path).parent / "gateway-identity.pub"}"
+      capabilities:
+        - "gateway.identity.read"
+        - "gateway.identity.write"
+    gateway-central-bank:
+      public_key_path: "{Path(db_path).parent / "gateway-central-bank.pub"}"
+      capabilities:
+        - "gateway.bank.read"
+        - "gateway.bank.write"
+    gateway-task-board:
+      public_key_path: "{Path(db_path).parent / "gateway-task-board.pub"}"
+      capabilities:
+        - "gateway.board.read"
+        - "gateway.board.write"
+    gateway-court:
+      public_key_path: "{Path(db_path).parent / "gateway-court.pub"}"
+      capabilities:
+        - "gateway.court.read"
+        - "gateway.court.write"
+        - "gateway.board.task.read"
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(content)
@@ -111,6 +157,14 @@ class _LiveGateway:
 async def _start_live_gateway(db_path: str) -> tuple[_LiveGateway, DbWriter]:
     """Build and serve a real DB Gateway ASGI app, on its own thread with its
     own event loop, against a fresh SQLite file."""
+    key_dir = Path(db_path).parent
+    for kid in (
+        "gateway-identity",
+        "gateway-central-bank",
+        "gateway-task-board",
+        "gateway-court",
+    ):
+        generate_keypair(kid, key_dir)
     config_path = _write_gateway_config(db_path)
     reset_gateway_state()
     state = init_gateway_state()
@@ -170,10 +224,32 @@ async def _gateway(gateway_db_path: str) -> AsyncIterator[_LiveGateway]:
 
 
 @pytest.fixture
-async def gateway_client(_gateway: _LiveGateway) -> AsyncIterator[httpx.AsyncClient]:
+async def gateway_client(
+    _gateway: _LiveGateway, gateway_db_path: str
+) -> AsyncIterator[httpx.AsyncClient]:
     """A client onto the live DB Gateway backing this test's court `state.store`
     — used to seed the identity/bank/board rows court_claims' FKs require."""
-    async with httpx.AsyncClient(base_url=_gateway.base_url) as c:
+    key_dir = Path(gateway_db_path).parent
+    signers = {
+        domain: GatewayRequestSigner(
+            GatewaySignerConfig(
+                kid=kid,
+                private_key_path=key_dir / f"{kid}.key",
+                audience="db-gateway",
+                token_ttl_seconds=300,
+            ),
+            config_dir=key_dir,
+        )
+        for domain, kid in {
+            "identity": "gateway-identity",
+            "bank": "gateway-central-bank",
+            "board": "gateway-task-board",
+        }.items()
+    }
+    async with httpx.AsyncClient(
+        base_url=_gateway.base_url,
+        auth=_GatewayAuth(signers),
+    ) as c:
         yield c
 
 
@@ -295,12 +371,50 @@ class _NoDeliverableFetcher:
         _ = task_id
         return []
 
+    async def close(self) -> None:
+        """Match the production fetcher lifecycle interface."""
+
+
+async def _register_platform_agent(agent: PlatformAgent) -> None:
+    agent.agent_id = PLATFORM_AGENT_ID
+
+
+def _write_agent_config(tmp_path: Path) -> Path:
+    keys_dir = tmp_path / "keys"
+    generate_keypair("platform", keys_dir)
+    roster_path = tmp_path / "roster.yaml"
+    roster_path.write_text('agents:\n  platform:\n    name: "Platform"\n')
+    config_path = tmp_path / "agents.yaml"
+    config_path.write_text(
+        f"""\
+platform:
+  identity_url: "http://localhost:8001"
+  bank_url: "http://localhost:8002"
+  task_board_url: "http://localhost:8003"
+  reputation_url: "http://localhost:8004"
+  court_url: "http://localhost:8005"
+data:
+  keys_dir: "{keys_dir}"
+  roster_path: "{roster_path}"
+signing:
+  token_ttl_seconds: 60
+  max_lifetime_seconds: 60
+  clock_skew_seconds: 0
+""",
+    )
+    return config_path
+
 
 @pytest.fixture
-async def app(tmp_path: Path, _gateway: _LiveGateway) -> AsyncIterator[FastAPI]:
+async def app(
+    tmp_path: Path,
+    _gateway: _LiveGateway,
+    monkeypatch: pytest.MonkeyPatch,
+) -> AsyncIterator[FastAPI]:
     """Real court app; its production DisputeDbClient talks to a real, live,
     fully-isolated in-process DB Gateway instead of the InMemoryDisputeStore
     fake unit tests use. The platform agent and judges stay mocked."""
+    agent_config_path = _write_agent_config(tmp_path)
     config_content = f"""\
 service:
   name: "court"
@@ -314,6 +428,7 @@ logging:
   directory: "data/logs"
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
+  agent_config_path: "{agent_config_path}"
 request:
   max_body_size: 1048576
 disputes:
@@ -334,6 +449,11 @@ judges:
 db_gateway:
   url: "{_gateway.base_url}"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-court"
+    private_key_path: "gateway-court.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -342,10 +462,12 @@ db_gateway:
 
     clear_settings_cache()
     reset_app_state()
+    monkeypatch.setattr(PlatformAgent, "register", _register_platform_agent)
 
     test_app = create_app()
     async with test_app.router.lifespan_context(test_app):
         state = get_app_state()
+        await state.platform_agent.close()
 
         state.platform_agent = make_mock_platform_agent(agent_id=PLATFORM_AGENT_ID)
         state.judges = [MockJudge(judge_id="judge-0", fixed_worker_pct=70, reasoning="Test")]

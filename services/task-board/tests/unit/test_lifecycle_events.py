@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import httpx
@@ -14,15 +15,32 @@ class _FakeGatewayClient:
     def __init__(self) -> None:
         self.posts: list[dict[str, Any]] = []
 
-    def post(self, url: str, json: dict[str, Any]) -> httpx.Response:
-        self.posts.append({"url": url, "json": json})
-        return httpx.Response(200, json={"task_id": "t-1", "status": json["updates"].get("status")})
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        self.posts.append({"url": request.url.path, "json": body})
+        return httpx.Response(
+            200,
+            json={"task_id": "t-1", "status": body["updates"].get("status")},
+        )
+
+
+class _TestSigner:
+    def sign_request(self, request: httpx.Request, *, action: str) -> httpx.Request:
+        request.headers["Authorization"] = f"Bearer {action}"
+        return request
 
 
 def _make_client(fake_gateway: _FakeGatewayClient) -> TaskDbClient:
-    client = TaskDbClient(base_url="http://db-gateway", timeout_seconds=1)
+    client = TaskDbClient(
+        base_url="http://db-gateway",
+        timeout_seconds=1,
+        signer=_TestSigner(),  # type: ignore[arg-type]
+    )
     client._client.close()
-    client._client = fake_gateway  # type: ignore[assignment]
+    client._client = httpx.Client(
+        base_url="http://db-gateway",
+        transport=httpx.MockTransport(fake_gateway.handler),
+    )
     return client
 
 

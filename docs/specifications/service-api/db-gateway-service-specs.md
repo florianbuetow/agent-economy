@@ -1,22 +1,34 @@
 # Database Gateway Service — API Specification
 
+## MP-04 receipt contract amendment (implementation in progress)
+
+The [2026-10-16 financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md)
+supersedes the financial command and flat-response shapes below. The Bank capability must supply
+explicit operation IDs; settlement adds a stable source reference. Split supplies `worker_pct`,
+and Gateway calculates exact shares from the stored escrow. Caller-provided financial constraints
+and split amounts are removed: Gateway owns the locked-state precondition. Receipt, positive
+ledger legs, event and money mutation commit atomically. Schema v2 requires its own explicit,
+verified-backup-bound migration; v1 and the v0-to-v1 migration remain frozen reference contracts.
+Historical observations must cover precisely the attested cutover set. Missing native receipts
+are corruption, never automatically classified as history. This amendment is not a completion claim.
+
 ## Purpose
 
 The Database Gateway is the persistence layer for the Agent Task Economy. It owns the shared `economy.db` SQLite database and is the only process that writes to it. All other services send structured write requests to the gateway, which executes them atomically within SQLite transactions, and read through the gateway's **blessed read API** — one `GET` route per query the rest of the system actually needs, mirroring the write side's one-endpoint-per-operation design (the single exception is the UI service's direct read-only SQLite connection, see §2.2/Q-4 of the target-architecture plan; that is a documented exception, not a second gateway).
 
-Domain services still own their business rules. They validate inputs, enforce authorization, check signatures, and decide state transitions; the gateway translates structured requests into SQL and executes them. What the gateway does add, beyond raw INSERT/UPDATE/SELECT, is real state enforcement in the form of optional `constraints` (compare-and-set) on several write endpoints — see "Compare-and-Set Constraints (`constraints`)" below. That is a deliberate, narrow piece of state-checking logic living in the gateway, not an accident, and this document stops describing the gateway as containing "no business logic" without qualification.
+Domain services still own their business rules. They validate agent/user authority and decide state transitions; the gateway separately authenticates each calling service and authorizes its persistence capability before translating the structured request into SQL. What the gateway adds beyond service admission and raw INSERT/UPDATE/SELECT is real state enforcement in the form of optional `constraints` (compare-and-set) on several write endpoints — see "Compare-and-Set Constraints (`constraints`)" below.
 
 ## Core Principles
 
-- **Constraints, not full business logic.** The gateway does not validate signatures, check permissions, or independently decide the task/dispute state machine — those decisions are made by the calling service. It does, however, enforce optional **compare-and-set (`constraints`)** conditions on several write endpoints as real state enforcement (e.g., "only update this task if its `status` is still `open`"), and database constraints (foreign keys, unique indexes) as the baseline safety net beneath that. See "Compare-and-Set Constraints" below.
+- **Service capability admission, not agent authorization.** The gateway validates a locally trusted service JWS and a per-route capability before any handler effect. It does not validate economic-agent credentials or independently decide the task/dispute state machine; those decisions remain with the calling service.
 - **Database constraints are the safety net.** Foreign key violations and unique constraint violations are caught (via `sqlite3`'s structured `exc.sqlite_errorcode`, never message-substring matching) and returned as structured errors. The gateway does not duplicate constraint logic in application code beyond the `constraints` mechanism above.
 - **Every write includes an event.** Every mutating endpoint accepts an `event` object in the request body. The gateway inserts the domain write and the event row in the same transaction. No write exists without its corresponding event — this now includes `DELETE /court/rulings/{claim_id}` and `POST /court/claims/{claim_id}/status`, both of which require `event` in the body (see their endpoint docs below).
 - **BEGIN IMMEDIATE, single writer, no `await` mid-transaction.** All write transactions use `BEGIN IMMEDIATE` to acquire the write lock upfront. The gateway keeps exactly one SQLite connection (WAL mode, `busy_timeout=5000ms`) for the whole process, shared by every domain writer and the reader; every write method is a plain (non-`async`) `def` that runs `BEGIN IMMEDIATE` through `COMMIT`/`ROLLBACK` to completion without `await`ing anything in between, so no other coroutine's write (or read) can interleave inside an open transaction on the shared connection. This single-writer/no-await invariant is enforced by a static architecture test (`tests/architecture/test_gap_c5_single_writer_invariant.py` and its domain-writer extension) that fails the build if any write method becomes `async` or an `await` appears in the writer modules. A full ADR covering the rationale lives alongside the rest of the target-architecture documentation sweep; this spec states the operational contract only.
 - **Idempotency via UNIQUE constraints.** Each endpoint documents its idempotency behavior. Where the schema defines a UNIQUE constraint, duplicate requests that match all constrained columns are treated as idempotent replays — the gateway returns the existing row, including the **original** `event_id` (and, where relevant, the real `balance_after`) rather than a placeholder. See "Idempotent Replay Values" below for the one caveat (rows written before the `event_id` columns existed).
 - **Domain-specific endpoints.** The gateway exposes one endpoint per operation (e.g., `/identity/agents`, `/bank/credit`, `GET /board/tasks/{task_id}`), not a generic SQL execution endpoint. This keeps the API auditable, prevents SQL injection, and makes each operation's contract explicit.
-- **Blessed read API, service-agnostic.** Every domain exposes `GET` routes for the queries the rest of the system needs (counts, single-row lookups, filtered lists). Any service may call any domain's read routes — the read API does not gate callers by which domain "owns" the data. See "Read API" below for the full route list.
+- **Blessed read API with least-privilege grants.** Every domain exposes `GET` routes for the queries its owning service needs. Identity, Bank, Task Board, Reputation, and Court receive only their own domain read/write grants. Court additionally receives one narrow `gateway.board.task.read` grant for `GET /board/tasks/{task_id}`; it cannot list tasks, bids, assets, or Board aggregates.
 - **Caller constructs events.** The gateway does not derive event payloads from write data. The calling service constructs the full event object (source, type, summary, payload) and passes it in the request. This keeps the gateway free of domain knowledge about what constitutes a meaningful event.
-- **Unauthenticated by design.** The gateway trusts its callers and performs no authentication. This is an intentional posture for a service that only ever talks to other services on the same trusted host — not an oversight — paired with the deployment constraint that port 8007 must never be reachable beyond `127.0.0.1` / the trusted host boundary. See the Configuration section's deployment-constraint note and "Authentication posture" under "What This Service Does NOT Do."
+- **Private and authenticated.** The gateway remains bound to the trusted host boundary, but network location is not authority. Every route except exact `GET /health` requires one locally verified service capability token; ordinary agents, UI, and the platform notary have no Gateway grants.
 
 ## Service Dependencies
 
@@ -35,7 +47,51 @@ Reputation (8004) ────────────┤
 Court (8005) ─────────────────┘
 ```
 
-The read API is service-agnostic: any caller may read any domain's data through the gateway. Court, for example, legitimately reads task context via `GET /board/tasks/{task_id}` rather than calling the Task Board service API — the gateway does not restrict which service calls which read route. The one exception outside this diagram is the UI service, which today reads `economy.db` directly (read-only SQLite connection, WAL mode) instead of through the gateway; that is a documented, single sanctioned exception, not a second write path.
+Each service authenticates with its own Gateway keypair and receives only the grants listed below. Court legitimately reads task context via the singular `GET /board/tasks/{task_id}` exception. The UI has no Gateway capability and continues to read `economy.db` directly through its documented read-only SQLite connection.
+
+---
+
+## Service Capability Admission
+
+Exact `GET /health` with no query string is the only public request. All other requests, including other methods on `/health`, unknown routes, reads, writes, and body-bearing `DELETE`, pass bounded body/content validation and then require exactly one `Authorization: Bearer <compact-JWS>` header.
+
+The compact Ed25519 JWS uses the shared strict profile. Its protected header contains exactly seven fields:
+
+```json
+{
+  "alg": "EdDSA",
+  "typ": "JWT",
+  "kid": "gateway-identity",
+  "iat": 1792065600,
+  "exp": 1792065900,
+  "aud": "db-gateway",
+  "resource": "POST /identity/agents"
+}
+```
+
+`resource` is the uppercase method plus the exact percent-encoded request path, excluding the query string. The payload contains exactly:
+
+```json
+{
+  "action": "gateway.identity.write",
+  "body_sha256": "<lowercase SHA-256 hex of the exact received body bytes>",
+  "query_sha256": "<lowercase SHA-256 hex of the exact raw query bytes>"
+}
+```
+
+The caller builds the final HTTPX request first, materializes any streaming body, hashes `request.content` and the encoded query bytes, then signs. A request with an existing Authorization header is rejected by the official signer. The Gateway loads trusted public keys only, never calls Identity, rejects a public-key filename whose stem differs from its KID, and fails startup if two trusted KIDs share the same public-key material.
+
+| Caller KID | Capabilities |
+|---|---|
+| `gateway-identity` | `gateway.identity.read`, `gateway.identity.write` |
+| `gateway-central-bank` | `gateway.bank.read`, `gateway.bank.write` |
+| `gateway-task-board` | `gateway.board.read`, `gateway.board.write` |
+| `gateway-reputation` | `gateway.reputation.read`, `gateway.reputation.write` |
+| `gateway-court` | `gateway.court.read`, `gateway.court.write`, `gateway.board.task.read` |
+
+Authorization is driven by an explicit `(method, FastAPI route template) → allowed actions` table. Startup fails if that table has a missing or stale key compared with the registered non-health `APIRoute` inventory. Matching follows FastAPI route order, so static templates such as `/board/tasks/count` and `/board/tasks/count-by-status` are never mistaken for `/board/tasks/{task_id}`. A route registered without an explicit policy fails closed.
+
+Admission mappings are stable: missing, duplicate, or malformed Bearer headers are `401 invalid_authorization`; malformed strict-profile JWS is `400 invalid_jws`; expired/future tokens are `401 token_expired` / `token_not_yet_valid`; unknown KID, invalid signature, and missing capability are `403 forbidden`; audience/resource/action or body/query digest mismatches are `400 invalid_payload`. Content type and body-size rejection occur before credential admission, and rejected requests cause no handler, database, or event effect.
 
 ---
 
@@ -59,6 +115,51 @@ The gateway operates on the unified schema defined in `docs/specifications/schem
 | `events`                | Shared     | `event_id`     | Event log (autoincrement, monotonic cursor)|
 
 Refer to `docs/specifications/schema.sql` for full column definitions, foreign keys, indexes, and CHECK constraints.
+
+### Schema initialization and migration admission
+
+MP-06 replaces implicit additive startup migration with explicit version admission. The configured
+schema file is mandatory and readable. An empty database is bootstrapped transactionally to the
+current schema; an exact current database can start without rewriting its schema. A complete
+supported legacy database requires an explicit offline migration with a verified backup. Partial,
+unknown and future schemas fail readiness without adding columns or changing existing rows.
+
+The supported legacy baseline includes all five historical dispute/rebuttal/event-ID additions.
+Both direct full creation and the known historical base followed by those additions are recognized;
+an isolated old `board_tasks` table or two old Bank tables are partial schemas, not migration inputs.
+Their previous startup-ALTER behavior is intentionally superseded. Missing metadata or altered
+constraint/default/conflict semantics cannot qualify as the current version. Bootstrap failure must
+leave no partial application schema, and startup failure must release its maintenance lock.
+
+The offline migration entry point must reject absent, invalid or mismatched backups before opening
+the source for writes. Artifact verification alone does not authorize migration. Existing nullable
+event IDs remain nullable; migration never invents historical events or silently coerces invalid data.
+
+Exact current-schema admission also runs SQLite integrity and foreign-key checks before changing
+persistent journal mode. Violations or unavailable checks fail startup with `database_integrity_failed`;
+diagnostics expose check names and issue counts, not raw stored values.
+
+### Authoritative monetary bounds and ownership
+
+Every Bank writer validates amounts again at the persistence boundary. Amounts are integers,
+excluding booleans, bounded by SQLite's signed-64-bit maximum `9223372036854775807`. Account
+balances and split shares may be zero; credits, initial-credit records and escrow locks must be
+positive. Wrong types or signs return 400 `invalid_amount`; an input above the representation
+bound returns 400 `amount_out_of_range`. Initial balance must equal its positive issuance record;
+zero initial balance requires no credit record. A mismatch returns 400 `payload_mismatch`.
+
+Credit, release and split use conditional additions with `balance <= maximum - amount`, returning
+409 `amount_out_of_range` if the account would overflow. Both split legs run in one transaction;
+if their recipient is the same account, their combined effect must fit. Every rejected operation
+preserves accounts, ledger rows, escrows and events. The split poster must be the stored escrow
+payer even when the poster receives zero; an existing unrelated poster returns 400 `payload_mismatch`.
+A missing poster account retains 404 `account_not_found`.
+
+Credit replay is resolved before another addition, so an exact retry can succeed at the maximum
+balance. Escrow lock identity is lifetime `(payer_account_id, task_id)` uniqueness, including
+released and split escrows. Exact replay returns the existing escrow and event without another
+debit; it does not require sufficient funds for a second lock. Changed amount returns 409
+`escrow_already_locked`. Durable release/split replay receipts remain a separate MP-04 gate.
 
 ---
 
@@ -110,7 +211,7 @@ index" — check this table.
 | `POST /identity/agents`              | `identity_agents.public_key`                               | **Idempotent** — returns existing agent | 409 `public_key_exists`  |
 | `POST /bank/accounts`                | `bank_accounts.account_id` (PK)                            | **Not idempotent** — 409 `account_exists` always | 409 `account_exists` |
 | `POST /bank/credit`                  | `idx_bank_tx_idempotent (account_id, reference) WHERE type='credit'` | **Idempotent** — returns existing tx (amount must match; see below) | 409 `reference_conflict` |
-| `POST /bank/escrow/lock`             | `idx_bank_escrow_active (payer_account_id, task_id) WHERE status='locked'` | **Idempotent** — returns existing escrow | 409 `escrow_already_locked` |
+| `POST /bank/escrow/lock`             | `idx_bank_escrow_lifetime (payer_account_id, task_id)` | **Idempotent** — returns existing escrow in any status | 409 `escrow_already_locked` |
 | `POST /board/tasks`                  | `board_tasks.task_id` (PK)                                 | **Not idempotent** — 409 `task_exists` always | 409 `task_exists`     |
 | `POST /board/bids`                   | `idx_board_bids_one_per_agent (task_id, bidder_id)`        | **Not idempotent** — 409 `bid_exists` always | 409 `bid_exists`          |
 | `POST /board/assets`                 | `board_assets.asset_id` (PK)                               | **Not idempotent** — 409 `asset_exists` always | 409 `asset_exists`      |
@@ -141,7 +242,7 @@ When a replayed write matches the existing row (see the table above), the gatewa
 
 - `event_id` is the `event_id` of the **original** write's event row (looked up via `MIN(event_id)` for the matching agent/event-type on registration replay, or read directly off the existing `bank_transactions`/`bank_escrow` row's `event_id` column for credit/escrow-lock replay) — never `0`.
 - `balance_after` (credit and escrow-lock replay) is the account's actual current balance — never `0`.
-- **Caveat:** `bank_transactions.event_id` and `bank_escrow.event_id` are nullable columns added by an additive migration (see "Schema Initialization & Migration" below). A row written **before** that migration ran has `event_id = NULL` in the database, and a replay against such a row honestly returns `event_id: null` — there is no original event to recover for those legacy rows.
+- **Caveat:** `bank_transactions.event_id` and `bank_escrow.event_id` are nullable columns introduced by historical additive migrations. Rows predating those additions can retain `event_id = NULL`, and replay honestly returns `event_id: null`. MP-06 requires a complete supported schema and explicit offline migration; startup no longer repairs partial legacy tables or invents event IDs.
 
 ### Compare-and-Set Constraints (`constraints`)
 
@@ -155,7 +256,7 @@ Endpoints that accept `constraints`: `POST /bank/escrow/release`, `POST /bank/es
 
 ## Read API
 
-All read routes are `GET`, take no request body, require no authentication, and return `200` with a JSON body (or a domain-specific `_not_found` 404 for single-resource lookups). None mutate state.
+All read routes are `GET`, take no request body, require the route's explicit service capability, and return `200` with a JSON body (or a domain-specific `_not_found` 404 for single-resource lookups). None mutate state.
 
 | Method | Path | Domain | Returns |
 |---|---|---|---|
@@ -369,7 +470,8 @@ Credit an account. Inserts a credit transaction, updates the account balance, an
 **Transaction:**
 ```sql
 BEGIN IMMEDIATE;
-UPDATE bank_accounts SET balance = balance + :amount WHERE account_id = :account_id;
+UPDATE bank_accounts SET balance = balance + :amount
+  WHERE account_id = :account_id AND balance <= :maximum - :amount;
 INSERT INTO bank_transactions (tx_id, account_id, type, amount, balance_after, reference, timestamp)
   VALUES (:tx_id, :account_id, 'credit', :amount,
           (SELECT balance FROM bank_accounts WHERE account_id = :account_id),
@@ -450,7 +552,8 @@ The `UPDATE ... WHERE balance >= :amount` pattern enforces sufficient funds at t
 {
   "escrow_id": "esc-550e8400-e29b-41d4-a716-446655440000",
   "balance_after": 400,
-  "event_id": 4
+  "event_id": 4,
+  "status": "locked"
 }
 ```
 
@@ -465,7 +568,7 @@ The `UPDATE ... WHERE balance >= :amount` pattern enforces sufficient funds at t
 | 409    | `escrow_already_locked` | Escrow already locked for this `(payer, task)` with different amount |
 | 409    | `foreign_key_violation` | Foreign key constraint failed                            |
 
-**Idempotency:** The `idx_bank_escrow_active` index enforces uniqueness on `(payer_account_id, task_id)` for locked escrows. If an identical escrow lock is replayed, the existing escrow is returned. If the amount differs, returns 409.
+**Idempotency:** The `idx_bank_escrow_lifetime` index enforces uniqueness on `(payer_account_id, task_id)` for every escrow status. Replay is checked before another debit. An identical lock returns the existing escrow and original event ID; a changed amount returns 409 `escrow_already_locked`. The required response `status` is the actual stored status: `locked`, `released` or `split`; replay must not fabricate `locked` for an already settled escrow.
 
 ---
 
@@ -499,8 +602,10 @@ BEGIN IMMEDIATE;
 SELECT escrow_id, amount, status FROM bank_escrow WHERE escrow_id = :escrow_id;
 -- If not found: ROLLBACK, return 404 escrow_not_found
 -- If status != 'locked': ROLLBACK, return 409 escrow_already_resolved
-UPDATE bank_accounts SET balance = balance + :amount WHERE account_id = :recipient_account_id;
--- If no row updated: ROLLBACK, return 404 account_not_found
+UPDATE bank_accounts SET balance = balance + :amount
+  WHERE account_id = :recipient_account_id AND balance <= :maximum - :amount;
+-- If no row updated: ROLLBACK; missing recipient => 404 account_not_found;
+-- existing recipient whose balance cannot fit the credit => 409 amount_out_of_range.
 INSERT INTO bank_transactions (tx_id, account_id, type, amount, balance_after, reference, timestamp)
   VALUES (:tx_id, :recipient_account_id, 'escrow_release', :amount,
           (SELECT balance FROM bank_accounts WHERE account_id = :recipient_account_id),
@@ -530,6 +635,7 @@ COMMIT;
 | 400    | `invalid_constraints`     | `constraints` is present but not an object, or a constraint column is not a valid identifier |
 | 404    | `escrow_not_found`        | No escrow with this ID                         |
 | 404    | `account_not_found`       | Recipient account not found                    |
+| 409    | `amount_out_of_range`     | Credit would exceed the recipient balance limit |
 | 409    | `escrow_already_resolved` | Escrow has already been released or split      |
 | 409    | `constraint_violation`    | `constraints` was supplied and did not match the escrow row's current state |
 
@@ -562,7 +668,7 @@ Split escrowed funds between worker and poster. Credits both accounts proportion
 }
 ```
 
-The caller computes `worker_amount` and `poster_amount` (the gateway does not calculate percentages). Both amounts must sum to the escrow amount. Zero-amount shares are valid — no transaction is created for a zero share.
+The caller computes `worker_amount` and `poster_amount` (the gateway does not calculate percentages). Both amounts must sum to the escrow amount. Zero-amount shares are valid — no transaction is created for a zero share. The poster account must exist and equal the stored payer even for a zero poster share. A missing account returns 404 `account_not_found`; an existing unrelated poster returns 400 `payload_mismatch`. A recipient whose bounded credit cannot fit returns 409 `amount_out_of_range`, rolling back both legs and the event.
 
 **Transaction:**
 ```sql
@@ -573,13 +679,19 @@ SELECT escrow_id, amount, status FROM bank_escrow WHERE escrow_id = :escrow_id;
 -- If status != 'locked': ROLLBACK, return 409 escrow_already_resolved
 -- If worker_amount + poster_amount != escrow.amount: ROLLBACK, return 400 amount_mismatch
 -- Credit worker (if worker_amount > 0):
-UPDATE bank_accounts SET balance = balance + :worker_amount WHERE account_id = :worker_account_id;
+UPDATE bank_accounts SET balance = balance + :worker_amount
+  WHERE account_id = :worker_account_id AND balance <= :maximum - :worker_amount;
+-- If no row updated: ROLLBACK; missing worker => 404 account_not_found;
+-- existing worker whose credit cannot fit => 409 amount_out_of_range.
 INSERT INTO bank_transactions (tx_id, account_id, type, amount, balance_after, reference, timestamp)
   VALUES (:worker_tx_id, :worker_account_id, 'escrow_release', :worker_amount,
           (SELECT balance FROM bank_accounts WHERE account_id = :worker_account_id),
           :escrow_id, :resolved_at);
 -- Credit poster (if poster_amount > 0):
-UPDATE bank_accounts SET balance = balance + :poster_amount WHERE account_id = :poster_account_id;
+UPDATE bank_accounts SET balance = balance + :poster_amount
+  WHERE account_id = :poster_account_id AND balance <= :maximum - :poster_amount;
+-- If no row updated: ROLLBACK both legs; missing poster => 404 account_not_found;
+-- existing poster whose credit cannot fit => 409 amount_out_of_range.
 INSERT INTO bank_transactions (tx_id, account_id, type, amount, balance_after, reference, timestamp)
   VALUES (:poster_tx_id, :poster_account_id, 'escrow_release', :poster_amount,
           (SELECT balance FROM bank_accounts WHERE account_id = :poster_account_id),
@@ -607,10 +719,13 @@ COMMIT;
 |--------|---------------------------|------------------------------------------------------|
 | 400    | `missing_field`           | Required field missing or empty                      |
 | 400    | `invalid_amount`          | Amount is negative                                   |
+| 400    | `amount_out_of_range`     | An input amount exceeds the signed-64-bit limit |
+| 400    | `payload_mismatch`        | Existing poster account is not the escrow payer, including a zero share |
 | 400    | `amount_mismatch`         | `worker_amount + poster_amount` != escrow amount     |
 | 400    | `invalid_constraints`     | `constraints` is present but not an object, or a constraint column is not a valid identifier |
 | 404    | `escrow_not_found`        | No escrow with this ID                               |
 | 404    | `account_not_found`       | Worker or poster account not found                   |
+| 409    | `amount_out_of_range`     | Worker/poster credit would exceed a recipient balance limit, including combined same-account legs |
 | 409    | `escrow_already_resolved` | Escrow has already been released or split            |
 | 409    | `constraint_violation`    | `constraints` was supplied and did not match the escrow row's current state |
 
@@ -1253,6 +1368,8 @@ Complete list of error codes used by the Database Gateway service:
 |--------|---------------------------|----------------------------------------------------------|
 | 400    | `missing_field`           | Required field missing, null, or empty string            |
 | 400    | `invalid_amount`          | Amount is not a valid integer in the required range      |
+| 400    | `amount_out_of_range`     | Input exceeds the signed-64-bit monetary representation |
+| 400    | `payload_mismatch`        | Initial issuance differs from balance, or split poster differs from payer |
 | 400    | `invalid_field`           | Request contains an unknown or disallowed field name     |
 | 400    | `empty_updates`           | `updates` object contains no fields                      |
 | 400    | `amount_mismatch`         | Split amounts do not sum to escrow amount                |
@@ -1263,6 +1380,7 @@ Complete list of error codes used by the Database Gateway service:
 | 409    | `public_key_exists`        | Public key already registered                            |
 | 409    | `account_exists`          | Account already exists for this agent                    |
 | 409    | `reference_conflict`      | Duplicate credit reference with different amount         |
+| 409    | `amount_out_of_range`     | A credit or settlement would overflow the recipient balance |
 | 409    | `escrow_already_locked`   | Escrow already locked for this (payer, task) pair        |
 | 409    | `escrow_already_resolved` | Escrow has already been released or split                |
 | 409    | `task_exists`             | Task with this ID already exists                         |
@@ -1277,6 +1395,12 @@ Complete list of error codes used by the Database Gateway service:
 | 409    | `foreign_key_violation`   | Foreign key constraint failed                            |
 | 400    | `invalid_constraints`     | `constraints` is not a non-empty object of valid column identifiers |
 | 400    | `invalid_json`            | Request body is not valid JSON, or not a JSON object      |
+| 400    | `invalid_jws`             | Compact token violates the strict seven-field JWS profile |
+| 400    | `invalid_payload`         | Audience, resource, action, body digest, or query digest does not match the received request |
+| 401    | `invalid_authorization`   | Missing, duplicate, or malformed Bearer Authorization header |
+| 401    | `token_expired`           | Authenticated service token is expired under Gateway policy |
+| 401    | `token_not_yet_valid`     | Authenticated service token was issued too far in the future |
+| 403    | `forbidden`               | Unknown KID, invalid signature, missing capability, or unclassified route |
 | 404    | `not_found`               | Generic not-found from a `constraints` check whose target row doesn't exist |
 | 404    | `agent_not_found` / `bid_not_found` / `asset_not_found` / `feedback_not_found` / `claim_not_found` / `rebuttal_not_found` / `ruling_not_found` | Domain-specific not-found on a read route |
 | 405    | `method_not_allowed`      | Path-segment collision on a route that reuses a literal (read routes) |
@@ -1309,9 +1433,9 @@ This format is shared by all services in the Agent Task Economy.
 - **ID generation** — callers generate all IDs (`a-<uuid4>`, `t-<uuid4>`, etc.) and pass them in requests. The gateway never generates IDs (except `event_id`, which is an autoincrement).
 - **Event derivation** — the gateway does not construct event summaries or payloads. Callers provide the complete event object.
 - **Status-transition validation beyond `constraints`** — `POST /board/tasks/{task_id}/status` accepts any allowed-column values; the calling service enforces which transitions are legal, optionally backed by a `constraints` precondition for exactly-once semantics.
-- **Authentication** — the gateway trusts its callers. It must never be reachable beyond the trusted host boundary (see the deployment constraint under Configuration).
+- **Economic-agent authentication** — the gateway authenticates service capabilities only. Agent/user credentials remain the domain service's responsibility, and economic agents, UI, and the platform notary receive no Gateway capability.
 - **Rate limiting** — no throttling on any endpoint. SQLite's write serialization (one writer connection, `BEGIN IMMEDIATE`) is the natural rate limiter.
-- **Schema migrations** — the gateway loads `docs/specifications/schema.sql` once at startup, gated on an empty-database check; it does not silently swallow a load failure (a schema error now kills startup). Column additions to an existing `economy.db` are handled by explicit additive `ALTER TABLE` statements, not a general migration framework.
+- **Implicit schema migrations** — startup never adds columns to existing databases. It validates the complete versioned schema and requires an explicit, verified-backup-bound offline migration for supported legacy data; partial or unknown layouts fail readiness.
 
 Superseded framing, corrected here: earlier drafts of this document said the gateway has "no read endpoints" and "does not serve read requests." That was accurate before the 2026-07 refactor and is not accurate now — see "Read API" above. Pagination on `GET /board/tasks` (`?limit=&offset=`) is the one read route that supports it. A non-numeric `limit`/`offset` value returns `400 invalid_payload` (WP-13 item 8b fix — previously an unhandled `ValueError` crashed to a generic `500`; see `services/db-gateway/tests/unit/routers/test_board_tasks_limit_offset_validation.py`).
 
@@ -1462,6 +1586,27 @@ database:
 
 request:
   max_body_size: 1048576
+
+auth:
+  audience: "db-gateway"
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 30
+  trusted_callers:
+    gateway-identity:
+      public_key_path: "../../data/keys/gateway-identity.pub"
+      capabilities: ["gateway.identity.read", "gateway.identity.write"]
+    gateway-central-bank:
+      public_key_path: "../../data/keys/gateway-central-bank.pub"
+      capabilities: ["gateway.bank.read", "gateway.bank.write"]
+    gateway-task-board:
+      public_key_path: "../../data/keys/gateway-task-board.pub"
+      capabilities: ["gateway.board.read", "gateway.board.write"]
+    gateway-reputation:
+      public_key_path: "../../data/keys/gateway-reputation.pub"
+      capabilities: ["gateway.reputation.read", "gateway.reputation.write"]
+    gateway-court:
+      public_key_path: "../../data/keys/gateway-court.pub"
+      capabilities: ["gateway.court.read", "gateway.court.write", "gateway.board.task.read"]
 ```
 
 | Section                | Key                | Type    | Description                                          |
@@ -1475,14 +1620,18 @@ request:
 | `logging.directory`    |                    | string  | Directory for JSON log files                         |
 | `logging.format`       |                    | string  | Log output format (`json` or `text`)                 |
 | `database.path`        |                    | string  | Path to the shared `economy.db` file                 |
-| `database.schema_path` |                    | string  | Path to `docs/specifications/schema.sql`, loaded once at startup against an empty database (see Schema Initialization & Migration below) |
+| `database.schema_path` |                    | string  | Mandatory readable current schema file; transactional bootstrap applies it only to an empty database (see Schema initialization and migration admission above) |
 | `database.busy_timeout_ms` |               | integer | SQLite busy timeout in milliseconds                  |
 | `database.journal_mode` |                  | string  | SQLite journal mode (`wal`)                          |
-| `request.max_body_size` |                  | integer | Maximum request body size in bytes; enforced by `RequestValidationMiddleware` on POST/PUT/PATCH (413 `payload_too_large` when exceeded, 415 `unsupported_media_type` for a non-`application/json` `Content-Type`) |
+| `request.max_body_size` |                  | integer | Maximum request body size in bytes; enforced on every method, including body-bearing `DELETE` (413 when exceeded; JSON methods require `application/json`) |
+| `auth.audience` | | string | Required receiver audience (`db-gateway`) |
+| `auth.max_lifetime_seconds` | | integer | Maximum admitted token lifetime; production value `300` |
+| `auth.clock_skew_seconds` | | integer | Receiver clock skew allowance; production value `30` |
+| `auth.trusted_callers` | | mapping | Required KID → canonical public-key path and non-empty capability list |
 
 All configuration values are required. The service fails to start if any value is missing. There are no hardcoded defaults.
 
-**Deployment constraint (v1, by design, not a gap):** the gateway is unauthenticated (see "Authentication posture" below). Port 8007 must never be bound or exposed beyond `127.0.0.1` / the trusted host boundary. This is a documented posture, not an open item — do not "fix" it by adding auth without a ratified decision to do so.
+**Deployment constraint:** capability authentication does not make the persistence API public. Port 8007 remains bound to `127.0.0.1` / the trusted host boundary, and normal startup is load-only: the five service keypairs must already be provisioned. Missing, corrupt, non-canonical, or duplicate trusted key material fails startup.
 
 ---
 

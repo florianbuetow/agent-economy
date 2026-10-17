@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx  # noqa: TC002 - runtime test signer annotation
 import pytest
 
 from central_bank_service.services.ledger_db_client import LedgerDbClient
@@ -40,6 +41,12 @@ _NON_COLUMN_PREFIXES = ("FOREIGN KEY", "CHECK", "PRIMARY KEY", "UNIQUE")
 
 # See module docstring.
 _GET_TRANSACTIONS_OMITS = frozenset({"account_id", "event_id"})
+
+
+class _TestSigner:
+    def sign_request(self, request: httpx.Request, *, action: str) -> httpx.Request:
+        request.headers["Authorization"] = f"Bearer {action}"
+        return request
 
 
 def _schema_columns(table: str) -> set[str]:
@@ -70,7 +77,11 @@ def _mock_response(status_code: int, json_data: Any = None) -> MagicMock:
 
 @pytest.fixture
 def client() -> LedgerDbClient:
-    return LedgerDbClient(base_url="http://gateway.invalid", timeout_seconds=1)
+    return LedgerDbClient(
+        base_url="http://gateway.invalid",
+        timeout_seconds=1,
+        signer=_TestSigner(),  # type: ignore[arg-type]
+    )
 
 
 @pytest.mark.unit
@@ -85,7 +96,7 @@ class TestGetAccountCoversEveryColumn:
 
     async def test_get_account_returns_every_schema_column(self, client: LedgerDbClient) -> None:
         row = {"account_id": "a-1", "balance": 100, "created_at": "2026-03-01T09:00:00Z"}
-        client._gateway.connection.get = AsyncMock(return_value=_mock_response(200, row))
+        client._gateway.connection.send = AsyncMock(return_value=_mock_response(200, row))
 
         result = await client.get_account("a-1")
 
@@ -103,7 +114,7 @@ class TestGetAccountCoversEveryColumn:
             "created_at": "2026-03-01T09:00:00Z",
             "surprise_column": "leaked",
         }
-        client._gateway.connection.get = AsyncMock(return_value=_mock_response(200, row))
+        client._gateway.connection.send = AsyncMock(return_value=_mock_response(200, row))
 
         result = await client.get_account("a-1")
 
@@ -128,14 +139,14 @@ class TestGetTransactionsCoversNonExcludedColumns:
         }
         account_row = {"account_id": "a-1", "balance": 10, "created_at": "2026-03-01T09:00:00Z"}
 
-        def _get(path: str, **_kwargs: object) -> MagicMock:
+        def _send(request: httpx.Request, **_kwargs: object) -> MagicMock:
             # get_transactions calls get_account first to check existence, so the
             # mock must answer both endpoints distinctly.
-            if path.endswith("/transactions"):
+            if request.url.path.endswith("/transactions"):
                 return _mock_response(200, {"transactions": [row]})
             return _mock_response(200, account_row)
 
-        client._gateway.connection.get = AsyncMock(side_effect=_get)
+        client._gateway.connection.send = AsyncMock(side_effect=_send)
 
         result = await client.get_transactions("a-1")
 

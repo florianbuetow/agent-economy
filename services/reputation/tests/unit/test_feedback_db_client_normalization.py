@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
+import httpx  # noqa: TC002 - runtime test signer annotation
 import pytest
 
 from reputation_service.services.feedback_db_client import FeedbackDbClient
@@ -32,6 +33,12 @@ from reputation_service.services.feedback_db_client import FeedbackDbClient
 SCHEMA_PATH = Path(__file__).resolve().parents[4] / "docs" / "specifications" / "schema.sql"
 
 _NON_COLUMN_PREFIXES = ("FOREIGN KEY", "CHECK", "PRIMARY KEY", "UNIQUE")
+
+
+class _TestSigner:
+    def sign_request(self, request: httpx.Request, *, action: str) -> httpx.Request:
+        request.headers["Authorization"] = f"Bearer {action}"
+        return request
 
 
 def _schema_columns(table: str) -> set[str]:
@@ -62,7 +69,11 @@ def _mock_response(status_code: int, json_data: Any = None) -> MagicMock:
 
 @pytest.fixture
 def client() -> FeedbackDbClient:
-    return FeedbackDbClient(base_url="http://gateway.invalid", timeout_seconds=1)
+    return FeedbackDbClient(
+        base_url="http://gateway.invalid",
+        timeout_seconds=1,
+        signer=_TestSigner(),  # type: ignore[arg-type]
+    )
 
 
 @pytest.mark.unit
@@ -102,7 +113,7 @@ class TestDictToRecordCoversEveryColumn:
             "submitted_at": "2026-03-01T09:00:00Z",
             "visible": True,
         }
-        client._client.get = MagicMock(return_value=_mock_response(200, row))
+        client._client.send = MagicMock(return_value=_mock_response(200, row))
 
         record = client.get_by_id("fb-1")
 
@@ -127,7 +138,7 @@ class TestDictToRecordCoversEveryColumn:
             "submitted_at": "2026-03-01T09:00:00Z",
             "visible": False,
         }
-        client._client.get = MagicMock(return_value=_mock_response(200, row))
+        client._client.send = MagicMock(return_value=_mock_response(200, row))
 
         record = client.get_by_id("fb-1")
 
@@ -149,7 +160,7 @@ class TestDictToRecordCoversEveryColumn:
             "submitted_at": "2026-03-01T09:00:00Z",
             "visible": True,
         }
-        client._client.get = MagicMock(return_value=_mock_response(200, row))
+        client._client.send = MagicMock(return_value=_mock_response(200, row))
 
         record = client.get_by_id("fb-1")
 

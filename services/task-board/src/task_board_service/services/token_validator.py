@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import base64
-import json
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from cryptography.exceptions import InvalidSignature
+from service_auth.jws import JwsAdmissionError, VerifiedJws, parse_jws, require_context
 from service_commons.exceptions import ServiceError
 
 if TYPE_CHECKING:
@@ -14,46 +13,13 @@ if TYPE_CHECKING:
     from service_clients.identity import IdentityClient
 
 
-def decode_base64url_json(part: str, section_name: str) -> dict[str, Any]:
-    """Decode a base64url JSON object from a JWS part."""
-    padded = part + "=" * (-len(part) % 4)
-    try:
-        decoded = base64.urlsafe_b64decode(padded)
-    except Exception as exc:
-        raise ServiceError(
-            "invalid_jws",
-            f"Token {section_name} is not valid base64url",
-            400,
-            {},
-        ) from exc
-
-    try:
-        value = json.loads(decoded)
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise ServiceError(
-            "invalid_jws",
-            f"Token {section_name} is not valid JSON",
-            400,
-            {},
-        ) from exc
-
-    if not isinstance(value, dict):
-        raise ServiceError(
-            "invalid_jws",
-            f"Token {section_name} must be a JSON object",
-            400,
-            {},
-        )
-    return value
-
-
 class TokenValidator:
     """Validates task-board JWS tokens and decodes escrow payloads."""
 
-    def __init__(  # nosemgrep: agent-economy.no-default-parameter-values
+    def __init__(
         self,
         platform_agent: PlatformAgent,
-        identity_client: IdentityClient | None = None,
+        identity_client: IdentityClient | None,
     ) -> None:
         """Initialize validator with platform agent and optional identity client."""
         self._platform_agent = platform_agent
@@ -63,46 +29,40 @@ class TokenValidator:
         self,
         token: str,
         expected_action: str | tuple[str, ...],
+        *,
+        expected_resource: str,
     ) -> dict[str, Any]:
-        """
-        Verify an agent-signed JWS token (via Identity) and validate the action field.
-
-        Returns the verified payload dict with "_signer_id" added.
-
-        Error precedence handled here:
-        - invalid_jws (steps 4): token is not valid three-part JWS
-        - identity_service_unavailable (step 5): Identity service unreachable
-        - forbidden (step 6): signature invalid
-        - invalid_payload (step 7): wrong action or missing action
-
-        Raises:
-            ServiceError: invalid_jws, identity_service_unavailable,
-                          forbidden, or invalid_payload
-        """
-        parts = self._require_compact_format(token)
-        if self._identity_client is not None:
-            payload, agent_id = await self._verify_via_identity_service(token)
-        else:
-            payload, agent_id = self._verify_via_platform_agent(token, parts)
-        return self._require_action(payload, agent_id, expected_action)
+        """Verify an agent token and bind it to Task Board route context."""
+        self._require_compact_format(token)
+        if self._identity_client is None:
+            raise ServiceError(
+                "service_not_ready",
+                "Identity client not initialized",
+                503,
+                {},
+            )
+        try:
+            verified = await self._identity_client.verify_jws(token)
+        except InvalidSignature as exc:
+            raise ServiceError(
+                "forbidden",
+                "JWS signature verification failed",
+                403,
+                {},
+            ) from exc
+        return self._admit(verified, expected_action, expected_resource)
 
     async def validate_platform_jws_token(
         self,
         token: str,
         expected_action: str | tuple[str, ...],
+        *,
+        expected_resource: str,
     ) -> dict[str, Any]:
-        """
-        Verify a platform-signed JWS token **locally** via the platform agent and validate
-        the action field.
-
-        Platform operations (e.g. ``record_ruling``) authenticate against the platform's
-        own key with no Identity round-trip, so they keep working while the Identity
-        service is unreachable. Same error precedence as :meth:`validate_jws_token`, minus
-        the Identity-unavailable case.
-        """
-        parts = self._require_compact_format(token)
-        payload, agent_id = self._verify_via_platform_agent(token, parts)
-        return self._require_action(payload, agent_id, expected_action)
+        """Verify a local platform token and bind it to Task Board route context."""
+        self._require_compact_format(token)
+        verified = self._verify_via_platform_agent(token)
+        return self._admit(verified, expected_action, expected_resource)
 
     def _require_compact_format(self, token: str) -> list[str]:
         """Step 4: basic JWS compact-format validation (three dot-separated parts)."""
@@ -119,111 +79,42 @@ class TokenValidator:
             )
         return parts
 
-    def _require_action(
+    def _admit(
         self,
-        payload: dict[str, Any],
-        agent_id: str,
+        verified: VerifiedJws,
         expected_action: str | tuple[str, ...],
+        expected_resource: str,
     ) -> dict[str, Any]:
-        """Step 7: validate the action field and stamp the verified signer id."""
-        if "action" not in payload:
-            raise ServiceError(
-                "invalid_payload",
-                "JWS payload must include an 'action' field",
-                400,
-                {},
+        """Bind authenticated metadata and expose a copied domain payload."""
+        try:
+            require_context(
+                verified,
+                audience="task-board",
+                resource=expected_resource,
+                allowed_action=expected_action,
             )
-
-        allowed_actions = (
-            {expected_action} if isinstance(expected_action, str) else set(expected_action)
-        )
-        action = payload["action"]
-        if action not in allowed_actions:
-            expected_actions_text = ", ".join(sorted(allowed_actions))
-            raise ServiceError(
-                "invalid_payload",
-                f"Expected action in [{expected_actions_text}], got '{action}'",
-                400,
-                {},
-            )
-
-        payload["_signer_id"] = agent_id
+        except JwsAdmissionError as exc:
+            raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
+        payload = dict(verified.payload)
+        payload["_signer_id"] = verified.header.kid
         return payload
-
-    async def _verify_via_identity_service(
-        self,
-        token: str,
-    ) -> tuple[dict[str, Any], str]:
-        """Verify a JWS token via the Identity service.
-
-        Returns (payload, agent_id).
-        """
-        assert self._identity_client is not None
-        result = await self._identity_client.verify_jws(token)
-
-        if not result.get("valid"):
-            raise ServiceError(
-                "forbidden",
-                "JWS signature verification failed",
-                403,
-                {},
-            )
-
-        payload = result.get("payload")
-        if not isinstance(payload, dict):
-            raise ServiceError(
-                "invalid_jws",
-                "Token payload is not a valid JSON object",
-                400,
-                {},
-            )
-
-        agent_id = result.get("agent_id", "")
-        if not isinstance(agent_id, str) or len(agent_id) < 1:
-            raise ServiceError("invalid_jws", "Token header is missing kid", 400, {})
-
-        return payload, agent_id
 
     def _verify_via_platform_agent(
         self,
         token: str,
-        parts: list[str],
-    ) -> tuple[dict[str, Any], str]:
-        """Verify a JWS token using the local platform agent (fallback for tests).
-
-        Returns (payload, agent_id).
-        """
+    ) -> VerifiedJws:
+        """Verify a JWS token using the exact registered platform identity."""
         try:
-            payload_raw = self._platform_agent.validate_certificate(token)
-        except (InvalidSignature, ValueError) as exc:
+            return self._platform_agent.validate_certificate(token)
+        except InvalidSignature as exc:
             raise ServiceError(
                 "forbidden",
                 "JWS signature verification failed",
                 403,
                 {},
             ) from exc
-        except Exception as exc:
-            raise ServiceError(
-                "identity_service_unavailable",
-                "Cannot connect to Identity service",
-                502,
-                {},
-            ) from exc
-        if not isinstance(payload_raw, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-            raise ServiceError(
-                "invalid_jws",
-                "Token payload is not a valid JSON object",
-                400,
-                {},
-            )
-        payload = cast("dict[str, Any]", payload_raw)
-        header = decode_base64url_json(parts[0], "header")
-        kid = header.get("kid")
-        if not isinstance(kid, str) or len(kid) < 1:
-            raise ServiceError("invalid_jws", "Token header is missing kid", 400, {})
-        agent_id = kid
-
-        return payload, agent_id
+        except JwsAdmissionError as exc:
+            raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
 
     def decode_escrow_token_payload(self, escrow_token: str) -> dict[str, Any]:
         """
@@ -240,44 +131,7 @@ class TokenValidator:
         If the payload decodes to valid JSON but is missing task_id or
         amount, raise token_mismatch — cross-validation cannot proceed.
         """
-        parts = escrow_token.split(".")
-        if len(parts) != 3:
-            raise ServiceError(
-                "invalid_jws",
-                "Escrow token must be in JWS compact serialization format",
-                400,
-                {},
-            )
-
-        payload_b64 = parts[1]
-        # Add padding for base64url decoding
-        padded = payload_b64 + "=" * (-len(payload_b64) % 4)
         try:
-            payload_bytes = base64.urlsafe_b64decode(padded)
-        except Exception as exc:
-            raise ServiceError(
-                "invalid_jws",
-                "Escrow token payload is not valid base64url",
-                400,
-                {},
-            ) from exc
-
-        try:
-            payload = json.loads(payload_bytes)
-        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise ServiceError(
-                "invalid_jws",
-                "Escrow token payload is not valid JSON",
-                400,
-                {},
-            ) from exc
-
-        if not isinstance(payload, dict):
-            raise ServiceError(
-                "invalid_jws",
-                "Escrow token payload must be a JSON object",
-                400,
-                {},
-            )
-
-        return payload
+            return parse_jws(escrow_token).payload
+        except JwsAdmissionError as exc:
+            raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc

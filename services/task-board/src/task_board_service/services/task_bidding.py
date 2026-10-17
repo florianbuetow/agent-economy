@@ -42,7 +42,11 @@ class TaskBiddingCoordinator:
         """
         manager = self._manager
         # Steps 4-7a: Verify JWS, validate action
-        payload = await manager.token_validator.validate_jws_token(token, "submit_bid")
+        payload = await manager.token_validator.validate_jws_token(
+            token,
+            "submit_bid",
+            expected_resource=f"POST /tasks/{task_id}/bids",
+        )
         signer_id: str = payload["_signer_id"]
 
         # Step 7b: Validate required fields
@@ -173,7 +177,11 @@ class TaskBiddingCoordinator:
                     {},
                 )
 
-            payload = await manager.token_validator.validate_jws_token(auth_token, "list_bids")
+            payload = await manager.token_validator.validate_jws_token(
+                auth_token,
+                "list_bids",
+                expected_resource=f"GET /tasks/{task_id}/bids",
+            )
             signer_id: str = payload["_signer_id"]
 
             # Validate task_id in payload matches URL
@@ -226,7 +234,11 @@ class TaskBiddingCoordinator:
         """
         manager = self._manager
         # Steps 4-7a: Verify JWS, validate action
-        payload = await manager.token_validator.validate_jws_token(token, "accept_bid")
+        payload = await manager.token_validator.validate_jws_token(
+            token,
+            "accept_bid",
+            expected_resource=f"POST /tasks/{task_id}/bids/{bid_id}/accept",
+        )
         signer_id: str = payload["_signer_id"]
 
         # Step 7b: Validate required fields

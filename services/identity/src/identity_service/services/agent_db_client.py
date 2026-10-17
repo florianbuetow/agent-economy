@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from service_clients.gateway import GatewayClient
 from service_commons.exceptions import ServiceError
 
 from identity_service.logging import get_logger
 from identity_service.services.errors import DuplicateAgentError
+
+if TYPE_CHECKING:
+    from service_auth.gateway import GatewayRequestSigner
 
 logger = get_logger(__name__)
 
@@ -23,8 +27,17 @@ class AgentDbClient:
     else unexpected), so callers built against this class see no behavior change.
     """
 
-    def __init__(self, base_url: str, timeout_seconds: int) -> None:
-        self._gateway = GatewayClient(base_url=base_url, timeout_seconds=timeout_seconds)
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: int,
+        signer: GatewayRequestSigner,
+    ) -> None:
+        self._gateway = GatewayClient(
+            base_url=base_url,
+            timeout_seconds=timeout_seconds,
+            signer=signer,
+        )
 
     async def insert(self, name: str, public_key: str) -> dict[str, str]:
         """

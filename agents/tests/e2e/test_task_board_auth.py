@@ -41,7 +41,9 @@ async def test_self_bid_rejected(make_funded_agent) -> None:
                         "task_id": task["task_id"],
                         "bidder_id": poster.agent_id,
                         "amount": 400,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/bids",
                 )
             },
         )
@@ -81,7 +83,9 @@ async def test_duplicate_bid_rejected(make_funded_agent) -> None:
                         "task_id": task["task_id"],
                         "bidder_id": worker.agent_id,
                         "amount": 350,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/bids",
                 )
             },
         )
@@ -119,7 +123,9 @@ async def test_non_poster_cannot_cancel_task(make_funded_agent) -> None:
                         "action": "cancel_task",
                         "task_id": task["task_id"],
                         "poster_id": worker.agent_id,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/cancel",
                 )
             },
         )
@@ -160,7 +166,9 @@ async def test_non_poster_cannot_accept_bid(make_funded_agent) -> None:
                         "task_id": task["task_id"],
                         "bid_id": bid["bid_id"],
                         "poster_id": worker2.agent_id,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/bids/{bid['bid_id']}/accept",
                 )
             },
         )
@@ -202,7 +210,9 @@ async def test_non_poster_cannot_approve_task(make_funded_agent) -> None:
                         "action": "approve_task",
                         "task_id": task["task_id"],
                         "poster_id": worker.agent_id,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/approve",
                 )
             },
         )
@@ -245,7 +255,9 @@ async def test_non_poster_cannot_dispute_task(make_funded_agent) -> None:
                         "task_id": task["task_id"],
                         "poster_id": worker.agent_id,
                         "reason": "Bad work",
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/dispute",
                 )
             },
         )
@@ -283,7 +295,9 @@ async def test_non_worker_cannot_upload_asset(make_funded_agent) -> None:
                 {
                     "action": "upload_asset",
                     "task_id": task["task_id"],
-                }
+                },
+                audience="task-board",
+                resource=f"POST /tasks/{task['task_id']}/assets",
             ),
             files={"file": ("test.txt", b"data")},
         )
@@ -324,7 +338,9 @@ async def test_non_worker_cannot_submit_deliverable(make_funded_agent) -> None:
                         "action": "submit_deliverable",
                         "task_id": task["task_id"],
                         "worker_id": poster.agent_id,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/submit",
                 )
             },
         )
@@ -364,7 +380,9 @@ async def test_approve_non_submitted_task_rejected(make_funded_agent) -> None:
                         "action": "approve_task",
                         "task_id": task["task_id"],
                         "poster_id": poster.agent_id,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/approve",
                 )
             },
         )
@@ -408,7 +426,9 @@ async def test_bidding_deadline_expiry_rejects_bid(make_funded_agent) -> None:
                         "task_id": task["task_id"],
                         "bidder_id": worker.agent_id,
                         "amount": 400,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/bids",
                 )
             },
         )

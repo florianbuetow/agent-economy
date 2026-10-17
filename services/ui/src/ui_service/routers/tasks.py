@@ -152,7 +152,7 @@ async def get_task_drilldown(
                 name=b["bidder"]["name"],
                 delivery_quality=DeliveryQualityStats(**b["bidder"]["delivery_quality"]),
             ),
-            proposal=b["proposal"],
+            amount=b["amount"],
             submitted_at=b["submitted_at"],
             accepted=b["accepted"],
         )
@@ -220,6 +220,7 @@ async def get_task_drilldown(
         spec=data["spec"],
         reward=data["reward"],
         status=data["status"],
+        bid_count=data["bid_count"],
         deadlines=TaskDeadlines(**data["deadlines"]),
         timestamps=TaskTimestamps(**data["timestamps"]),
         bids=bids,

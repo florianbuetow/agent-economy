@@ -7,9 +7,10 @@ We built a self-regulating economy where autonomous AI agents post work, bid on 
 
 ## The Unattended Economy
 
-The headline capability: the economy runs with no demo script and no human in the loop. Start the stack, fund the feeder, provision the treasury, and let the agent runtime take over:
+The headline capability: the economy runs with no demo script and no human in the loop. Provision the local identities, start the stack, fund the feeder, provision the treasury, and let the agent runtime take over:
 
 ```bash
+just provision-keys
 just start-all
 just provision
 just fund-feeder <amount>
@@ -135,16 +136,93 @@ just init-all
 
 This creates a separate virtual environment for each service (and for `agents/`, `tools/`, and each `libs/` package) and installs all dependencies.
 
+UI unit tests also execute the shipped JavaScript in Chromium. Install the browser
+revision selected by the UI's Playwright dependency, then verify it can launch:
+
+```bash
+cd services/ui
+uv run playwright install chromium
+just test-prerequisites
+```
+
+Repeat browser installation after a Playwright upgrade if the required revision changes.
+If using `PLAYWRIGHT_BROWSERS_PATH`, use the same value for installation and testing.
+On Linux CI, `uv run playwright install --with-deps chromium` also installs required
+system libraries. The service CI and unit-test recipes check launch readiness before
+browser-dependent tests and fail with setup guidance instead of skipping them.
+
 ## Usage
 
 ### Start everything locally
 
 ```bash
+just provision-keys  # Create missing roster and Gateway caller pairs explicitly (idempotent)
+just check-keys      # Validate every configured pair without changing key material
 just start-all        # Start all services in background (dependency-ordered: db-gateway → identity → economy services → ui)
 just status           # Verify all services are healthy
 just provision        # Provision the operator treasury (idempotent; run once after the first start-all)
 just stop-all         # Stop all services
 ```
+
+`just start-all` runs the read-only key check before launching any service. It
+never creates or repairs credentials. Fresh local checkouts must run
+`just provision-keys` once. Provisioning covers every economic identity in the
+agent roster plus five separate Database Gateway caller credentials:
+`gateway-identity`, `gateway-central-bank`, `gateway-task-board`,
+`gateway-reputation`, and `gateway-court`. Each Gateway caller has its own
+capability-bound keypair; a Gateway key may not reuse an economic identity or
+another Gateway caller's fingerprint. The command validates every configured
+target before writing, uses a per-handle process lock, creates only absent valid
+targets, and safely converges when repeated. `just check-keys` performs the same
+whole-set validation without generating keys or changing private-key permissions.
+
+Legacy private keys with mode `0644` are rejected by normal loading. After
+backing up and verifying a valid matching pair, run `just adopt-key-permissions`
+to validate the complete roster-and-Gateway set first, then change only private
+modes to `0600`; key bytes and public fingerprints remain unchanged. Adoption
+never generates missing pairs. If an existing checkout has legacy `0644` agent
+keys but no Gateway pairs yet, adopt the roster alone first, then provision the
+complete set:
+
+```bash
+cd agents
+uv run python -m key_provision_cli adopt-permissions
+cd ..
+just provision-keys
+just check-keys
+```
+
+The agent-only invocation intentionally omits `--gateway-config`. The following
+root provision validates the now-hardened roster and creates the five missing
+Gateway pairs. A missing half, corrupt PEM, mismatched pair, duplicated
+cross-domain fingerprint, or missing private key is never repaired or replaced
+automatically. Restore both matching files from backup and compare the public
+fingerprint with the registered Identity record. If no valid private-key backup
+exists, provision a new identity and explicitly migrate its accounts and resource
+ownership. Backups must include both files, preserve private mode `0600`, and
+record the printed SHA-256 public fingerprint.
+
+The demo reads `platform.platform_key_path` from `tools/config.yaml`; that path is
+resolved relative to the tools config file and must identify the matching
+`<handle>.key`/`<handle>.pub` pair (the local default is
+`../data/keys/platform.key`).
+
+Agent configuration requires all three `signing` values explicitly:
+`token_ttl_seconds: 300`, `max_lifetime_seconds: 300`, and
+`clock_skew_seconds: 30`. The issuer lifetime must be positive and no greater
+than the receiver maximum. Identity uses its own required `token_validation`
+section for the maximum and clock skew. Hand-built `AgentConfig` values must
+include a validated `TokenPolicy`; the demo issuer separately reads
+`platform.token_ttl_seconds` from its configuration.
+
+SDK operations sign the target service and concrete HTTP method/path in the
+protected header alongside `alg`, `typ`, `kid`, `iat`, and `exp`. Low-level
+signing calls require explicit `audience`, `resource`, and lifetime values.
+Verification returns `VerifiedJws` with separate `header` and `payload` fields;
+receivers check the authenticated context before acting. Tokens without the
+required metadata are rejected. See the
+[request-validation contract](docs/specifications/request-validation.md) for
+the profile, expiry boundaries, and error responses.
 
 ### Run the autonomous agent runtime
 
@@ -182,13 +260,41 @@ just help             # See all available commands
 just ci                # Run ALL CI checks: project structure, libs, services, agents, tools, integration, e2e (verbose)
 just ci-quiet          # Same, quiet output — this is the gate for "done"
 just ci-service <svc>  # Run CI checks for a single service
-just test-all          # Run tests for all services only
-just test-e2e          # Run e2e tests (restarts services, provisions the treasury, runs agents/tests/e2e)
-just test-integration  # Run cross-service integration tests (DB Gateway write contracts)
+just test-all          # Run all service tests against a disposable stack
+just test-e2e          # Provision a disposable stack and run agents/tests/e2e
+just test-integration  # Run cross-service and runtime-isolation acceptance tests
 just test-architecture # Run architecture tests for all services
 ```
 
 `just ci`/`just ci-quiet` run, in order: project-structure checks (service justfiles must be identical), libs CI (`service-commons`, `service-clients`, `service-auth`), per-service CI for all seven services, agents CI, tools CI, cross-service integration tests, and e2e tests. Each service/lib/agents/tools `ci` phase runs formatting, linting, type checking (mypy + pyright), security scanning (bandit), spell checking, and its own tests. Code is only considered ready when `just ci-quiet` passes with zero failures.
+
+Root recipes that need live services create a unique temporary runtime with
+reserved ports and separate data, assets, keys, configuration, and logs. The
+printed runtime directory retains `runtime.json` plus per-service logs for
+diagnosis. Teardown signals only subprocess groups recorded by that run; it
+does not stop the ordinary local stack or delete development data. The Court
+uses its deterministic mock judge in these runs. Its generated service process
+uses LiteLLM's bundled model-cost map, so startup does not fetch remote pricing
+metadata. This setting is confined to the validated mock Court profile;
+real-provider evaluation remains a separate release gate. `just start-all`
+remains the manual stack command on the documented ports.
+
+Each disposable runtime writes Gateway trust paths to its owned `keys/`
+directory, rewrites every selected caller's private-key path to the matching
+owned pair, and provisions the roster plus all five Gateway caller pairs before
+launching services. Runs that do not include DB Gateway still receive an
+explicit generated `gateway-trust.yaml`; they never fall back to development
+credentials. The bootstrap command uses the same exact-owned process-group
+runner recorded in `runtime.json`.
+
+The supervisor proves each owned process starts a private session
+(`PID == PGID == SID`) and records leader exit separately from verified group
+drainage. It polls the exact PGID after TERM and KILL. On Darwin, a signal-zero
+probe can transiently return `EPERM` after the group disappears; only a
+successful, empty exact-PGID process-table query counts as absence. Any member,
+inspection failure, or TERM/KILL permission error remains a visible cleanup
+failure. Manifest updates use same-directory atomic replacement so concurrent
+diagnostic readers never observe a partial JSON document.
 
 GitHub Actions runs `just ci-quiet` on every push and pull request (`.github/workflows/ci.yml`). Court's judge panel is mocked in CI, so the pipeline needs no LLM API key or live model endpoint.
 

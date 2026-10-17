@@ -18,6 +18,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+import httpx  # noqa: TC002 - runtime test signer annotation
 import pytest
 
 from task_board_service.services.task_db_client import TaskDbClient
@@ -30,6 +31,12 @@ _NON_COLUMN_PREFIXES = ("FOREIGN KEY", "CHECK", "PRIMARY KEY", "UNIQUE")
 # these from created_at/accepted_at/submitted_at plus the *_seconds columns via
 # DeadlineEvaluator.compute_deadline, so the client never reads them back.
 _RECOMPUTED_COLUMNS = frozenset({"bidding_deadline", "execution_deadline", "review_deadline"})
+
+
+class _TestSigner:
+    def sign_request(self, request: httpx.Request, *, action: str) -> httpx.Request:
+        request.headers["Authorization"] = f"Bearer {action}"
+        return request
 
 
 def _schema_board_task_columns() -> set[str]:
@@ -52,7 +59,11 @@ def _schema_board_task_columns() -> set[str]:
 @pytest.fixture
 def client() -> TaskDbClient:
     """A client bound to an unroutable base_url; no request is ever issued."""
-    return TaskDbClient(base_url="http://gateway.invalid", timeout_seconds=1)
+    return TaskDbClient(
+        base_url="http://gateway.invalid",
+        timeout_seconds=1,
+        signer=_TestSigner(),  # type: ignore[arg-type]
+    )
 
 
 @pytest.mark.unit

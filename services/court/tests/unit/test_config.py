@@ -31,6 +31,7 @@ logging:
   directory: "data/logs"
 platform:
   agent_id: "a-platform"
+  agent_config_path: "agents.yaml"
 request:
   max_body_size: 1048576
 disputes:

@@ -53,7 +53,13 @@ def _signed_token(
     exp: int | None = None,
 ) -> str:
     """Build a real compact JWS; iat/exp are stamped into the protected header."""
-    header: dict[str, object] = {"alg": "EdDSA", "kid": agent_id}
+    header: dict[str, object] = {
+        "alg": "EdDSA",
+        "typ": "JWT",
+        "kid": agent_id,
+        "aud": "central-bank",
+        "resource": "POST /escrow/lock",
+    }
     if iat is not None:
         header["iat"] = iat
     if exp is not None:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from service_commons.exceptions import ServiceError
 
@@ -78,6 +78,55 @@ async def create_task(
             502,
             {},
         ) from exc
+
+
+async def list_bids(task_id: str) -> list[dict[str, Any]]:
+    """List bids through the operator's poster-authorized Task Board client."""
+    agent = _get_user_agent()
+    untyped_agent: Any = agent
+    try:
+        result: object = await untyped_agent.list_bids(task_id=task_id)
+    except ServiceError:
+        raise
+    except Exception as exc:
+        response: Any = getattr(exc, "response", None)
+        if getattr(response, "status_code", None) == 403:
+            try:
+                body = response.json()
+            except Exception:
+                body = None
+            if (
+                not isinstance(body, dict)
+                or not isinstance(body.get("error"), str)
+                or not isinstance(body.get("message"), str)
+                or not isinstance(body.get("details"), dict)
+            ):
+                raise ServiceError(
+                    "bid_listing_failed",
+                    "Task Board returned a malformed authorization error.",
+                    502,
+                    {},
+                ) from exc
+            raise ServiceError(
+                body["error"],
+                body["message"],
+                403,
+                body["details"],
+            ) from exc
+        raise ServiceError(
+            "bid_listing_failed",
+            f"Failed to list bids: {exc}",
+            502,
+            {},
+        ) from exc
+    if not isinstance(result, list) or not all(isinstance(item, dict) for item in result):
+        raise ServiceError(
+            "bid_listing_failed",
+            "Unexpected response type from task-board operation.",
+            502,
+            {},
+        )
+    return cast("list[dict[str, Any]]", result)
 
 
 async def accept_bid(task_id: str, bid_id: str) -> dict[str, Any]:

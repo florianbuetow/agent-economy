@@ -15,7 +15,13 @@ if TYPE_CHECKING:
 class TokenSigner(Protocol):
     """Protocol for signer implementations used to create JWS tokens."""
 
-    def sign(self, payload: dict[str, Any]) -> str:
+    def sign(
+        self,
+        payload: dict[str, Any],
+        *,
+        audience: str,
+        resource: str,
+    ) -> str:
         """Sign a payload and return a JWS compact token."""
         ...
 
@@ -75,6 +81,12 @@ class BankClient(BaseServiceClient):
                 default_error="conflict",
                 default_message="Central Bank conflict",
             )
+        if response.status_code == 400:
+            raise self._response_service_error(
+                response,
+                default_error="bad_request",
+                default_message="Central Bank rejected the request",
+            )
         raise ServiceError(
             error="central_bank_unavailable",
             message="Central Bank returned unexpected status",
@@ -90,16 +102,23 @@ class BankClient(BaseServiceClient):
         self,
         escrow_id: str,
         recipient_account_id: str,
+        *,
+        operation_id: str,
+        source_reference: str,
     ) -> dict[str, Any]:
         """Release escrow funds to a recipient via a platform-signed token."""
+        release_path = self._escrow_release_path.format(escrow_id=escrow_id)
         signed_token = self._platform_signer.sign(
             {
                 "action": "escrow_release",
+                "operation_id": operation_id,
+                "source_reference": source_reference,
                 "escrow_id": escrow_id,
                 "recipient_account_id": recipient_account_id,
-            }
+            },
+            audience="central-bank",
+            resource=f"POST {release_path}",
         )
-        release_path = self._escrow_release_path.format(escrow_id=escrow_id)
         response = await self._post_raw(release_path, payload={"token": signed_token})
 
         if response.status_code == 200:
@@ -140,9 +159,17 @@ class BankClient(BaseServiceClient):
         self,
         escrow_id: str,
         recipient_account_id: str,
+        *,
+        operation_id: str,
+        source_reference: str,
     ) -> dict[str, Any]:
         """Backward-compatible alias for escrow release."""
-        return await self.release_escrow(escrow_id, recipient_account_id)
+        return await self.release_escrow(
+            escrow_id,
+            recipient_account_id,
+            operation_id=operation_id,
+            source_reference=source_reference,
+        )
 
     async def split_escrow(
         self,
@@ -150,6 +177,9 @@ class BankClient(BaseServiceClient):
         worker_account_id: str,
         poster_account_id: str,
         worker_pct: int,
+        *,
+        operation_id: str,
+        source_reference: str,
     ) -> dict[str, Any]:
         """Split escrow funds between worker and poster."""
         if self._escrow_split_path is None:
@@ -160,17 +190,20 @@ class BankClient(BaseServiceClient):
                 details={},
             )
 
+        split_path = self._escrow_split_path.format(escrow_id=escrow_id)
         signed_token = self._platform_signer.sign(
             {
                 "action": "escrow_split",
+                "operation_id": operation_id,
+                "source_reference": source_reference,
                 "escrow_id": escrow_id,
                 "worker_account_id": worker_account_id,
                 "poster_account_id": poster_account_id,
                 "worker_pct": worker_pct,
-            }
+            },
+            audience="central-bank",
+            resource=f"POST {split_path}",
         )
-
-        split_path = self._escrow_split_path.format(escrow_id=escrow_id)
         response = await self._post_raw(split_path, payload={"token": signed_token})
 
         if response.status_code == 200:
@@ -213,6 +246,9 @@ class BankClient(BaseServiceClient):
         worker_account_id: str,
         poster_account_id: str,
         worker_pct: int,
+        *,
+        operation_id: str,
+        source_reference: str,
     ) -> dict[str, Any]:
         """Backward-compatible alias for escrow split."""
         return await self.split_escrow(
@@ -220,6 +256,8 @@ class BankClient(BaseServiceClient):
             worker_account_id=worker_account_id,
             poster_account_id=poster_account_id,
             worker_pct=worker_pct,
+            operation_id=operation_id,
+            source_reference=source_reference,
         )
 
     def _response_service_error(

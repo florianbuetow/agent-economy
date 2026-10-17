@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from db_gateway_service.config import Settings
@@ -25,6 +28,24 @@ class TestConfig:
                 "journal_mode": "wal",
             },
             request={"max_body_size": 1048576},
+            recovery={
+                "maintenance_lock_path": "maintenance.lock",
+                "backup_root": "backups",
+            },
+            auth={
+                "audience": "db-gateway",
+                "max_lifetime_seconds": 30,
+                "clock_skew_seconds": 0,
+                "trusted_callers": {
+                    "gateway-identity": {
+                        "public_key_path": "gateway-identity.pub",
+                        "capabilities": [
+                            "gateway.identity.read",
+                            "gateway.identity.write",
+                        ],
+                    }
+                },
+            },
         )
         assert settings.service.name == "db-gateway"
         assert settings.server.port == 8006
@@ -45,6 +66,15 @@ class TestConfig:
                 },
                 request={"max_body_size": 1048576},
             )
+
+    def test_production_gateway_policy_matches_caller_token_lifetime(self) -> None:
+        """Production callers issue 300-second tokens admitted with 30-second skew."""
+        config_path = Path(__file__).resolve().parents[2] / "config.yaml"
+        settings = Settings.model_validate(yaml.safe_load(config_path.read_text()))
+
+        assert settings.auth.audience == "db-gateway"
+        assert settings.auth.max_lifetime_seconds == 300
+        assert settings.auth.clock_skew_seconds == 30
 
     def test_missing_required_field(self) -> None:
         """Missing required fields cause validation errors."""

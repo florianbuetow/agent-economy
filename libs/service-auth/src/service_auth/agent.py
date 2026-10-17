@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from service_auth.jws import VerifiedJws, verify_jws_for_signer
 from service_auth.mixins import (
     BankMixin,
     CourtMixin,
@@ -19,7 +20,7 @@ from service_auth.mixins import (
     ReputationMixin,
     TaskBoardMixin,
 )
-from service_auth.signing import create_jws, public_key_to_b64, verify_jws
+from service_auth.signing import create_jws, public_key_to_b64
 
 if TYPE_CHECKING:
     from service_auth.config import AgentConfig
@@ -45,7 +46,13 @@ class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, Court
         """
         return public_key_to_b64(self._public_key)
 
-    def _sign_jws(self, payload: dict[str, object]) -> str:
+    def _sign_jws(
+        self,
+        payload: dict[str, object],
+        *,
+        audience: str,
+        resource: str,
+    ) -> str:
         """Create a JWS token signed with this agent's private key.
 
         Args:
@@ -54,14 +61,25 @@ class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, Court
         Returns:
             Compact JWS string (header.payload.signature).
         """
+        if self.agent_id is None:
+            msg = "Agent must be registered before signing"
+            raise RuntimeError(msg)
         return create_jws(
             payload,
             self._private_key,
             kid=self.agent_id,
+            audience=audience,
+            resource=resource,
             token_ttl_seconds=self.config.token_ttl_seconds,
         )
 
-    def _auth_header(self, payload: dict[str, object]) -> dict[str, str]:
+    def _auth_header(
+        self,
+        payload: dict[str, object],
+        *,
+        audience: str,
+        resource: str,
+    ) -> dict[str, str]:
         """Create an Authorization header with a signed JWS token.
 
         Args:
@@ -70,7 +88,7 @@ class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, Court
         Returns:
             Dictionary with 'Authorization' key containing 'Bearer <JWS>'.
         """
-        token = self._sign_jws(payload)
+        token = self._sign_jws(payload, audience=audience, resource=resource)
         return {"Authorization": f"Bearer {token}"}
 
     async def _request(
@@ -116,23 +134,31 @@ class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, Court
         """
         return await self._http.request(method, url, **kwargs)
 
-    def validate_certificate(self, token: str) -> dict[str, object]:
+    def validate_certificate(self, token: str) -> VerifiedJws:
         """Validate that a JWS token (certificate) was signed with this agent's private key.
 
-        Decrypts the certificate using the agent's public key and returns the
-        decoded payload. If the signature is invalid, an exception is raised.
+        Verifies the original signed bytes and time policy, binds this registered
+        identity, and returns the authenticated header and payload.
 
         Args:
             token: Compact JWS string (header.payload.signature).
 
         Returns:
-            Decoded payload as a dictionary.
+            The authenticated header and object payload.
 
         Raises:
             ValueError: If the token format is invalid.
             cryptography.exceptions.InvalidSignature: If the signature is invalid.
         """
-        return verify_jws(token, self._public_key)
+        if self.agent_id is None:
+            msg = "Agent must be registered before validating its certificate"
+            raise RuntimeError(msg)
+        return verify_jws_for_signer(
+            token,
+            self._public_key,
+            policy=self.config.token_policy,
+            expected_kid=self.agent_id,
+        )
 
     async def close(self) -> None:
         """Close the HTTP client. Call this when done using the agent."""

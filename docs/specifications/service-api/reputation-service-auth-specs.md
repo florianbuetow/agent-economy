@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document specifies how the Reputation service authenticates `POST /feedback` submissions. It supersedes an earlier version of this document that described a bespoke "certificate" model (`PlatformAgent.validate_certificate(request_payload, certificate) -> bool` over a payload+certificate request shape). That model was never implemented; it has been rewritten to describe the real, shipped design: a **two-tier JWS model**, shared in shape with every other authenticated write in the system.
+This document specifies how the Reputation service authenticates `POST /feedback` submissions through the shared strict JWS profile and its two verification tiers.
 
 ## Motivation
 
@@ -29,7 +29,7 @@ Visible feedback is public data by design — any agent or consumer can query it
 
 ### How the tier is selected
 
-`_select_verifier` reads the **unverified** `kid` from the JWS header (base64url-decoding the header segment without checking the signature) purely to decide *which* verifier to hand the token to:
+Verifier routing may inspect `kid` only to select a candidate verification path. The selected path must return a fully authenticated `VerifiedJws`; the unverified value never becomes signer identity or an authorization result:
 
 ```python
 if platform_agent is not None and platform_verifier is not None and _token_kid(token) == platform_agent.agent_id:
@@ -37,11 +37,11 @@ if platform_agent is not None and platform_verifier is not None and _token_kid(t
 return state.identity_client
 ```
 
-This is a routing hint only, never a trust decision by itself — whichever verifier is selected then performs real cryptographic verification. A token whose header merely *claims* `kid == platform_agent.agent_id` but is not actually signed by the platform's private key is routed to `PlatformJwsVerifier`, which will reject it (its `validate_certificate` call fails signature verification against the platform's own key). It cannot fall through to Identity and be accepted as an ordinary agent either, because the payload's `from_agent_id` would then have to equal the platform's id for the signer-match check to pass, and Identity has no such agent registered under that id in the normal case. There is no cross-tier confusion attack: verification, not routing, is what admits or rejects a request.
+This is a routing hint only. A local result is admitted only when the signature verifies and authenticated `header.kid == platform_agent.agent_id`. There is no local fallback for an ordinary agent token and no Identity HTTP round trip for a locally verified platform token.
 
-### `IdentityConfig` is optional
+### Identity configuration is required
 
-`Settings.identity: IdentityConfig | None = None`. When `identity` is absent from `config.yaml`, `lifespan.py` sets `state.identity_client = state.platform_verifier` — i.e. **every** caller, including ordinary agents, is verified through the local platform verifier in that configuration. In the real deployed `config.yaml`, `identity` is present and populated, so this fallback is a documented-but-currently-unexercised code path (no test in the current suite constructs a config without an `identity` section) — noted here because it is real, verified code, not speculation.
+Agent-signed feedback has no local platform-verifier fallback. The Identity configuration required by that tier must fail startup when absent or invalid. This keeps local verification limited to the registered platform identity and prevents configuration omission from changing the authentication model.
 
 ---
 
@@ -51,14 +51,14 @@ Both verifiers — the remote one (Identity) and the local one (platform) — im
 
 ```python
 class JwsVerifier(Protocol):
-    async def verify_jws(self, token: str) -> dict[str, Any]:
-        """Return {"valid": bool, "agent_id": str, "payload": dict}."""
+    async def verify_jws(self, token: str) -> VerifiedJws:
+        """Return authenticated protected header and object payload."""
         ...
     async def close(self) -> None: ...
 ```
 
-- **Tier 1 implementation:** `service_clients.identity.IdentityClient` — an async HTTP client, `verify_jws` POSTs `{"token": token}` to Identity's `verify_jws_path` and returns Identity's JSON response.
-- **Tier 2 implementation:** `reputation_service.services.platform_identity_client.PlatformJwsVerifier` — holds a *provider callable* for the platform agent (`Callable[[], PlatformAgent | None]`, injected as `lambda: state.platform_agent`), not the agent itself, and not an `IdentityClient` subclass. `verify_jws` decodes the header locally, calls `platform_agent.validate_certificate(token)` (from `libs/service-auth`, a purely local Ed25519 verification against the platform's own public key — no network call), and returns the same `{"valid", "agent_id", "payload"}` shape.
+- **Tier 1 implementation:** `service_clients.identity.IdentityClient` type-strictly binds Identity's complete successful wire result to the originally requested token (`true`, `1`, and `1.0` differ) and returns `VerifiedJws`. An invalid requested token, inconsistent identity/header, missing field, non-object payload, or substituted type/value is `502 identity_service_unavailable`, never a fabricated payload.
+- **Tier 2 implementation:** the local platform verifier applies the shared profile and `TokenPolicy`, returns `VerifiedJws`, and requires the registered platform `kid`. It makes no Identity HTTP request.
 
 `routers/feedback.py` depends only on the `JwsVerifier` Protocol, never on either concrete class — it can call `verify_jws`/`close` on whichever verifier `_select_verifier` returns without knowing which one it got.
 
@@ -70,11 +70,11 @@ Before this rollout (WP-03), Reputation's local verifier was `PlatformIdentityCl
 
 ## JWS Token Format
 
-Verified against `libs/service-auth/src/service_auth/signing.py`.
+The following is the normative MP-03 profile; implementation verification is pending as stated in `request-validation.md`.
 
 - **Compact serialization**, three dot-separated base64url segments: `header.payload.signature`.
-- **Header**: `{"alg": "EdDSA", "typ": "JWT", "kid": "<signer-agent-id>"}`, plus `iat`/`exp` (Unix seconds) when the signer's `token_ttl_seconds` is configured — omitted entirely (no expiry enforced) when it is not. A token with an expired `exp` fails verification (`TokenExpiredError`, mapped to `valid: False` → `403 forbidden` by the router, same as a bad signature). Tokens without `iat`/`exp` are always accepted (legacy tolerance).
-- **Payload**: an arbitrary JSON object — for this endpoint, the feedback fields plus `action: "submit_feedback"`.
+- **Protected header**: exact object `{alg, typ, kid, iat, exp, aud, resource}`. `alg="EdDSA"`, `typ="JWT"`, `kid` is non-blank, `iat`/`exp` are JSON integers excluding booleans, `aud="reputation"`, and `resource="POST /feedback"`. Missing or extra fields are invalid. `exp > iat` and the configured maximum lifetime apply.
+- **Payload**: the existing feedback object plus string `action: "submit_feedback"`; it does not duplicate `aud` or `resource`. Similarly named domain fields never replace or authorize the protected header context.
 - **Canonicalization**: exactly one, system-wide — `json.dumps(obj, sort_keys=True, separators=(",", ":"))` — applied to both header and payload before signing. Verification checks the signature against the token bytes exactly as received (never re-canonicalized), so tokens from any signer using this one canonicalization verify correctly.
 - **Signature**: Ed25519, over `f"{header_b64}.{payload_b64}".encode("ascii")`.
 
@@ -112,17 +112,15 @@ The JWS payload, before signing:
 
 ## Authorization Rules
 
-Verified against `routers/feedback.py::submit_feedback_endpoint`, in the exact order the code checks them:
+The endpoint must apply this admission order after MP-03 integration:
 
 1. **Token extraction** — `token` must be present, non-null, a string, non-empty, and a three-part (`.`-separated) compact serialization. Any failure → `400 invalid_jws`.
-2. **Verification** — the selected verifier (Identity or local platform) authenticates the token. Failure (bad signature, unknown signer, expired token) → `403 forbidden`. Infrastructure failure while calling Identity (connection error, timeout, malformed 200 response) → `502 identity_service_unavailable` (`IdentityClient`/`BaseServiceClient` maps `httpx.ConnectError`/`httpx.TimeoutException`/other `httpx.HTTPError` and malformed-response cases to this; it is distinct from a genuine verification rejection).
-3. **Payload shape** — the verified payload must be a JSON object → else `400 invalid_payload`.
-4. **Signer identity present** — the verifier must have returned a non-empty `agent_id` (i.e. the token header had a `kid`) → else `400 invalid_jws` ("Token header is missing kid"). Note this check runs *after* verification succeeds, so a token that fails verification is always rejected with `403` before this is ever reached.
-5. **`action` check** — payload's `action` must equal `"submit_feedback"` → else `400 invalid_payload`.
-6. **`from_agent_id` present in payload** → else `400 invalid_payload`.
-7. **Signer matching** — the verified signer id must equal the payload's `from_agent_id` → else `403 forbidden`. An agent can only submit feedback in its own name; the platform can only submit feedback "from" itself.
-8. **`force_visible` decision** — `is_platform = (state.platform_agent is not None and signer_agent_id == state.platform_agent.agent_id)`. Because step 7 already forced `signer_agent_id == from_agent_id_in_payload`, this is equivalent to checking whether the payload's `from_agent_id` is the platform's own agent id. When true, the submission is stored immediately visible regardless of counterpart state (see API spec, "Court / Platform-Generated Feedback").
-9. **Business validation** — the ordinary feedback field rules (`missing_field`, `invalid_category`, `invalid_rating`, `self_feedback`, `comment_too_long`, `feedback_exists`) apply identically to both tiers; the auth tier only decides *who* is allowed to claim a given `from_agent_id` and whether the result is force-visible, not which field values are acceptable.
+2. **Verification** — the selected verifier authenticates the exact strict profile and returns `VerifiedJws`; malformed profile is `400 invalid_jws`, future issue time is `401 token_not_yet_valid`, expiry is `401 token_expired`, and bad signature or local platform `kid` mismatch is `403 forbidden`. Identity transport or malformed success alone is `502 identity_service_unavailable`.
+3. **Authenticated context** — `header.aud` must equal the configured service name, `header.resource` must equal `POST /feedback`, and payload `action` must be a string equal to `submit_feedback`; missing/wrong-type/mismatched action is `400 invalid_payload`.
+4. **Payload shape** — the authenticated payload must contain the existing required domain fields, including `from_agent_id` → otherwise `400 invalid_payload`.
+5. **Signer matching** — the authenticated `header.kid` must equal the payload's `from_agent_id` → otherwise `403 forbidden`. An agent can only submit feedback in its own name; the platform can only submit feedback "from" itself.
+6. **`force_visible` decision** — platform-authenticated feedback is stored immediately visible regardless of counterpart state.
+7. **Business validation** — the ordinary feedback field rules (`missing_field`, `invalid_category`, `invalid_rating`, `self_feedback`, `comment_too_long`, `feedback_exists`) apply identically to both tiers.
 
 There is no separate "platform-only" endpoint — `force_visible` is purely a consequence of *who signed the token*, expressed through the single `POST /feedback` route.
 
@@ -142,14 +140,16 @@ All errors use the standard three-field envelope (`{"error", "message", "details
 
 | Status | Code                          | When                                                         |
 |--------|-------------------------------|--------------------------------------------------------------|
-| 400    | `invalid_jws`                 | `token` missing, null, non-string, empty, not three-part compact serialization, or verified-but-missing `kid` |
-| 400    | `invalid_payload`             | Payload is not a JSON object, missing `action`, `action` != `"submit_feedback"`, or missing `from_agent_id` |
-| 403    | `forbidden`                   | Verification failed (bad signature, unknown/expired token), or signer does not match `from_agent_id` |
+| 400    | `invalid_jws`                 | Non-object request body or signed payload, compact/header form, decoded signature length other than 64 bytes, exact header fields/types/constants, or lifetime bound is invalid |
+| 400    | `invalid_payload`             | Action is missing/non-string, authenticated audience/resource/action mismatches, or required feedback fields are missing |
+| 401    | `token_expired`               | Authentic token satisfies `now >= exp + clock_skew_seconds` |
+| 401    | `token_not_yet_valid`          | Authentic token satisfies `iat > now + clock_skew_seconds` |
+| 403    | `forbidden`                   | Signature verification, registered platform `kid`, or signer/`from_agent_id` authorization fails |
 | 502    | `identity_service_unavailable`| Identity unreachable, timed out, or returned a malformed response — Tier 1 only; Tier 2 has no network dependency and cannot produce this code |
 
 ### Notes on error mapping
 
-- `403 forbidden` covers two distinct failure causes (bad signature vs. signer/payload mismatch) with one generic message, deliberately — the message never distinguishes "unregistered agent" from "signature mismatch" from "impersonation attempt," to avoid leaking which one an attacker hit.
+- `403 forbidden` covers bad signature, local platform identity mismatch, and signer/payload authorization mismatch. Expiry and future issue time use their distinct `401` codes.
 - `502 identity_service_unavailable` only arises on the agent-op (Tier 1) path. This is the entire point of the two-tier design: a platform/`force_visible` submission verifies with zero network calls and so cannot produce this error, and continues to succeed while Identity is down (verified: `tests/unit/routers/test_two_tier_feedback_auth.py::test_platform_feedback_succeeds_when_identity_down`). An ordinary agent submission made while Identity is down fails cleanly with `502`, not a crash or a silent bypass (`test_agent_feedback_fails_cleanly_when_identity_down`).
 
 ---
@@ -170,8 +170,9 @@ identity:
 ```
 
 - `platform.agent_config_path` is a path to the shared roster config (`agents/config.yaml`), resolved relative to the service's own config file when not absolute. At startup, `AgentFactory(config_path=...).platform_agent()` constructs the `PlatformAgent`, which then `await`s `register()` before being stored in `AppState`. This is the *only* platform-auth configuration the service needs — there are no separate PEM key-path settings; key material lives wherever the roster config's `AgentFactory` resolves it from.
-- `identity` (all four sub-keys) is present in the real deployed config but is **optional** at the `Settings` level (`IdentityConfig | None = None`) — see "IdentityConfig is optional" above for the fallback behavior when it is omitted.
+- `identity` and all four sub-keys are required for agent-signed verification. Missing or invalid configuration fails startup; it never routes ordinary agents through the platform verifier.
 - `request.max_body_size` lives in its own `request:` section (not nested under `feedback:`), matching the Central Bank / Task Board pattern, and is what `RequestValidationMiddleware` reads for the 413 check.
+- Token configuration is explicit and required: signer TTL 300 seconds, admission maximum 300 seconds, and skew 30 seconds initially. TTL and maximum must be positive; skew must be nonnegative.
 
 ---
 
@@ -179,7 +180,7 @@ identity:
 
 ### PlatformAgent
 
-Instantiated once during `lifespan.py` startup from the `platform.agent_config_path` roster config, stored in `AppState.platform_agent`, and wrapped by a `PlatformJwsVerifier` (composition, described above) stored in `AppState.platform_verifier`. `PlatformAgent.validate_certificate(token)` performs local Ed25519 verification of a JWS token against the platform's **own** public key — this is how Reputation authenticates tokens it expects to have been signed by itself-as-platform (e.g., forwarded by Court, which signs with the shared platform key). It is a synchronous, local, no-network operation. `close()` on the agent is called during shutdown; `PlatformJwsVerifier.close()` itself is a no-op (nothing to release).
+Instantiated once during `lifespan.py` startup from the `platform.agent_config_path` roster config, stored in `AppState.platform_agent`, and wrapped by a `PlatformJwsVerifier` (composition, described above) stored in `AppState.platform_verifier`. Local verification applies the shared strict parser and policy against the platform's public key and returns `VerifiedJws`; it never exposes a payload-only authenticated result. It is synchronous and makes no network call. `close()` on the agent is called during shutdown; `PlatformJwsVerifier.close()` itself is a no-op.
 
 ### Request Validation Middleware
 
@@ -190,7 +191,7 @@ Content-Type and body-size checks run in an ASGI `RequestValidationMiddleware` (
 ## What This Specification Does NOT Cover
 
 - **Rate limiting** — no throttling on authenticated or unauthenticated endpoints.
-- **Replay protection beyond `action` scoping and optional `exp`** — a valid, unexpired token for `submit_feedback` can be replayed until the target `(task_id, from_agent_id, to_agent_id)` triple already has a stored row, at which point it fails with `409 feedback_exists`. There is no nonce or single-use enforcement independent of that uniqueness constraint.
+- **Replay protection beyond target scoping and required expiry** — a valid, unexpired token for `submit_feedback` can be replayed until the target `(task_id, from_agent_id, to_agent_id)` triple already has a stored row, at which point it fails with `409 feedback_exists`. There is no nonce or single-use enforcement independent of that uniqueness constraint.
 - **A separate platform-only endpoint** — `force_visible` is a signer-derived property of the one `POST /feedback` route, not a distinct route or method.
 
 ---

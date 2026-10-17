@@ -25,6 +25,11 @@ logging:
   directory: "data/logs"
 database:
   path: "data/task-board.db"
+identity:
+  base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -33,14 +38,22 @@ central_bank:
   timeout_seconds: 10
 platform:
   agent_id: "a-platform-id"
+  agent_config_path: "agents.yaml"
 request:
   max_body_size: 1048576
+recovery:
+  maintenance_lock_path: "maintenance.lock"
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-task-board"
+    private_key_path: "gateway-task-board.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 deadline_evaluation:
   evaluation_interval_seconds: 10
 """
@@ -78,6 +91,11 @@ logging:
   directory: "data/logs"
 database:
   path: "data/task-board.db"
+identity:
+  base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -86,14 +104,22 @@ central_bank:
   timeout_seconds: 10
 platform:
   agent_id: "a-platform-id"
+  agent_config_path: "agents.yaml"
 request:
   max_body_size: 1048576
+recovery:
+  maintenance_lock_path: "maintenance.lock"
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-task-board"
+    private_key_path: "gateway-task-board.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 deadline_evaluation:
   evaluation_interval_seconds: 10
 """
@@ -143,6 +169,11 @@ logging:
   directory: "data/logs"
 database:
   path: "data/task-board.db"
+identity:
+  base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -151,14 +182,22 @@ central_bank:
   timeout_seconds: 10
 platform:
   agent_id: "a-platform-id"
+  agent_config_path: "agents.yaml"
 request:
   max_body_size: 1048576
+recovery:
+  maintenance_lock_path: "maintenance.lock"
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-task-board"
+    private_key_path: "gateway-task-board.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 deadline_evaluation:
   evaluation_interval_seconds: 10
 """

@@ -13,7 +13,6 @@ can be constructed exactly, and freezes the injectable clock seam
 
 from __future__ import annotations
 
-import os
 import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -24,6 +23,7 @@ from httpx import ASGITransport, AsyncClient
 
 from ui_service.app import create_app
 from ui_service.config import clear_settings_cache
+from ui_service.core import lifespan as lifespan_module
 from ui_service.core.lifespan import lifespan
 from ui_service.core.state import reset_app_state
 from ui_service.services import database as database_service
@@ -32,6 +32,30 @@ pytestmark = pytest.mark.integration
 
 SCHEMA_PATH = Path(__file__).resolve().parents[4] / "docs" / "specifications" / "schema.sql"
 FROZEN_NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
+
+
+class _StubUserAgent:
+    """Network-free operator for empty-economy app startup."""
+
+    agent_id = "a-test-ui"
+    name = "ui-user-agent"
+
+    async def register(self) -> None:
+        return None
+
+    async def close(self) -> None:
+        return None
+
+
+class _StubAgentFactory:
+    """Agent factory that cannot register against a live Identity service."""
+
+    def __init__(self, config_path: Path) -> None:
+        self._config_path = config_path
+
+    def user_agent(self, handle: str) -> _StubUserAgent:
+        assert handle == "ui-empty-economy-integration-test"
+        return _StubUserAgent()
 
 
 @pytest.fixture
@@ -47,7 +71,11 @@ def empty_db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-async def empty_app(empty_db_path: Path, tmp_path: Path):
+async def empty_app(
+    empty_db_path: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
     """Create test app pointing at the empty (unseeded) database."""
     web_dir = tmp_path / "web"
     web_dir.mkdir(exist_ok=True)
@@ -74,28 +102,39 @@ frontend:
   web_root: "{web_dir}"
 request:
   max_body_size: 1572864
+recovery:
+  maintenance_lock_path: "{tmp_path / "maintenance.lock"}"
+browser_security:
+  allowed_hosts: ["localhost"]
+  allowed_origins: ["http://localhost"]
+  csrf_header_name: "X-ATE-CSRF"
+  csrf_header_value: "local-operator"
+  content_security_policy: "default-src 'self'; script-src 'self'; object-src 'none'"
+user_agent:
+  agent_config_path: "{tmp_path / "agent-config.yaml"}"
+  handle: "ui-empty-economy-integration-test"
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
-    os.environ["CONFIG_PATH"] = str(config_path)
+    monkeypatch.setenv("CONFIG_PATH", str(config_path))
+    monkeypatch.setattr(lifespan_module, "AgentFactory", _StubAgentFactory)
 
     clear_settings_cache()
     reset_app_state()
-
-    test_app = create_app()
-    async with lifespan(test_app):
-        yield test_app
-
-    reset_app_state()
-    clear_settings_cache()
-    os.environ.pop("CONFIG_PATH", None)
+    try:
+        test_app = create_app()
+        async with lifespan(test_app):
+            yield test_app
+    finally:
+        reset_app_state()
+        clear_settings_cache()
 
 
 @pytest.fixture
 async def empty_client(empty_app):
     """Async HTTP client for the empty-DB test app."""
     transport = ASGITransport(app=empty_app)
-    async with AsyncClient(transport=transport, base_url="http://test") as c:
+    async with AsyncClient(transport=transport, base_url="http://localhost") as c:
         yield c
 
 

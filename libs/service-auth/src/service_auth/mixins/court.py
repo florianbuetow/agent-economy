@@ -12,7 +12,7 @@ class _CourtClient(Protocol):
     config: AgentConfig
     agent_id: str | None
 
-    def _sign_jws(self, payload: dict[str, object]) -> str: ...
+    def _sign_jws(self, payload: dict[str, object], *, audience: str, resource: str) -> str: ...
 
     async def _request(self, method: str, url: str, **kwargs: Any) -> dict[str, Any]: ...
 
@@ -38,7 +38,9 @@ class CourtMixin:
                 "respondent_id": respondent_id,
                 "claim": claim,
                 "escrow_id": escrow_id,
-            }
+            },
+            audience="court",
+            resource="POST /disputes/file",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -54,7 +56,9 @@ class CourtMixin:
                 "action": "submit_rebuttal",
                 "dispute_id": dispute_id,
                 "rebuttal": rebuttal,
-            }
+            },
+            audience="court",
+            resource=f"POST /disputes/{dispute_id}/rebuttal",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -68,7 +72,9 @@ class CourtMixin:
             {
                 "action": "trigger_ruling",
                 "dispute_id": dispute_id,
-            }
+            },
+            audience="court",
+            resource=f"POST /disputes/{dispute_id}/rule",
         )
         return await self._request("POST", url, json={"token": token})
 

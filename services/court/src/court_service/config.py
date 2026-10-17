@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, field_validator
+from service_auth.gateway import GatewaySignerConfig
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
@@ -47,7 +48,16 @@ class PlatformConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     agent_id: str = ""
     private_key_path: str | None = None
-    agent_config_path: str | None = None
+    agent_config_path: str
+
+    @field_validator("agent_config_path")
+    @classmethod
+    def agent_config_path_must_not_be_blank(cls, value: str) -> str:
+        """Require the load-only platform credential configuration."""
+        if not value.strip():
+            msg = "platform.agent_config_path must not be blank"
+            raise ValueError(msg)
+        return value
 
     @field_validator("private_key_path")
     @classmethod
@@ -125,12 +135,17 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
+class GatewaySigningConfig(GatewaySignerConfig):
+    """Court's shared strict Gateway signer configuration."""
+
+
 class DbGatewayConfig(BaseModel):
     """DB Gateway service configuration."""
 
     model_config = ConfigDict(extra="forbid")
     url: str
     timeout_seconds: int
+    signing: GatewaySigningConfig
 
 
 class Settings(BaseModel):

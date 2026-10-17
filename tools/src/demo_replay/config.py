@@ -7,18 +7,15 @@ passed explicitly into each client call.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StrictInt, field_validator
 from service_commons.config import get_config_path as resolve_config_path
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class PlatformConfig(BaseModel):
-    """Service URLs for the platform demo_replay talks to."""
+    """Platform service URLs and the explicitly provisioned signing key path."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -27,6 +24,16 @@ class PlatformConfig(BaseModel):
     task_board_url: str
     reputation_url: str
     court_url: str
+    platform_key_path: Path
+    token_ttl_seconds: StrictInt
+
+    @field_validator("token_ttl_seconds")
+    @classmethod
+    def validate_token_ttl_seconds(cls, value: int) -> int:
+        if value <= 0:
+            msg = "token_ttl_seconds must be a positive integer"
+            raise ValueError(msg)
+        return value
 
 
 class _FileSettings(BaseModel):
@@ -60,4 +67,7 @@ def load_platform_settings(config_path: Path | None = None) -> PlatformConfig:
         raise ValueError(msg)
 
     settings = _FileSettings(**raw)
+    key_path = settings.platform.platform_key_path
+    if not key_path.is_absolute():
+        settings.platform.platform_key_path = (config_path.parent / key_path).absolute()
     return settings.platform

@@ -61,9 +61,9 @@
     var meta = task.reward !== null && task.reward !== undefined
       ? task.reward + ' ©'
       : (task.bid_count !== null && task.bid_count !== undefined ? task.bid_count + ' bids' : '');
-    return '<div class="notable-row" data-task-id="' + task.task_id + '">' +
+    return '<div class="notable-row" data-task-id="' + ATE.escapeHTML(task.task_id) + '">' +
       '<span class="label" style="width:130px;flex-shrink:0">' + label + '</span>' +
-      '<span class="nr-title">' + task.title + '</span>' +
+      '<span class="nr-title">' + ATE.escapeHTML(task.title) + '</span>' +
       '<span class="nr-meta">' + meta + '</span>' +
     '</div>';
   }
@@ -74,9 +74,9 @@
     }
     return agents.map(function(a, index) {
       var amount = a[amountKey];
-      return '<div class="notable-row" data-agent-id="' + a.agent_id + '">' +
+      return '<div class="notable-row" data-agent-id="' + ATE.escapeHTML(a.agent_id) + '">' +
         '<span class="label" style="width:20px;flex-shrink:0">' + (index + 1) + '</span>' +
-        '<span class="nr-title">' + a.name + '</span>' +
+        '<span class="nr-title">' + ATE.escapeHTML(a.name) + '</span>' +
         '<span class="nr-meta">' + (amount !== null && amount !== undefined ? amount.toLocaleString() + ' ©' : '') + ' ' + amountLabel + '</span>' +
       '</div>';
     }).join('');
@@ -89,7 +89,7 @@
     return '<div class="card">' +
         '<div class="card-header"><span class="card-label">Period</span></div>' +
         '<div class="card-body" style="font-size:11px;color:var(--text-mid)">' +
-          report.period.start + ' → ' + report.period.end +
+          ATE.escapeHTML(report.period.start) + ' → ' + ATE.escapeHTML(report.period.end) +
         '</div>' +
       '</div>' +
       '<div class="card">' +
@@ -169,7 +169,7 @@
     if (report.notFound) {
       state.quarter = report.quarter;
       label.textContent = report.quarter;
-      content.innerHTML = '<div class="card"><div class="card-body notable-empty">No economy data exists for ' + report.quarter + '.</div></div>';
+      content.innerHTML = '<div class="card"><div class="card-body notable-empty">No economy data exists for ' + ATE.escapeHTML(report.quarter) + '.</div></div>';
       return;
     }
 

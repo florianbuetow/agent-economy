@@ -1,5 +1,27 @@
 # Database Gateway Service — Production Release Test Specification
 
+## MP-04 receipt acceptance amendment (implementation in progress)
+
+Use the [financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md) for native
+operation identity and historical observation semantics. Existing valid fixtures must explicitly
+supply operation IDs and settlement references; split uses a percentage and removes caller-owned
+financial constraints. Preserve original money/authorization/event assertions during this explicit
+contract reconciliation. Add independent authoritative red cases before implementing each slice.
+
+Required proof includes global identity reuse, exact replay after intervening activity, changed-ID
+natural-key conflicts with the true winner, opposing settlements through independent connections,
+receipt/leg/event atomic rollback, zero-recipient account absence, and complete legacy observations.
+The separately backup-bound v1-to-v2 migration must preserve all existing domain rows and identities,
+reject partial/unknown/corrupt sources, and retain deterministic legacy-set attestation through
+future native operations. An unowned effect or altered marker set must fail audit/startup admission.
+Retain the unchanged v0-to-v1 tests against the frozen v1 resource; do not reinterpret those as v2.
+
+Schema-classifier reconciliation: the three existing future-version fixtures in
+`test_mp06_schema.py` and `test_schema_review_regressions.py` now use version 3 because version 2
+has a declared schema. Keep their FUTURE/unsupported-version and no-journal-mutation assertions.
+New v2 tests separately reject missing ownership tables and malformed metadata as partial schemas;
+the frozen v1 resource and exact v0-to-v1 migration target remain unchanged.
+
 ## Purpose
 
 This document is the release-gate test specification for the Database Gateway Service.
@@ -9,7 +31,7 @@ It is intentionally strict and unambiguous:
 - Every failing response must use the standard error envelope.
 - Any behavior not listed here is out of scope for release sign-off.
 
-The Database Gateway is unique among the services: it has no authentication and no outbound service calls, and it does not decide domain-level business rules (signature verification, permissions, state-machine legality) — those stay with the calling services. It does, however, enforce real state consistency of its own: (1) every write is atomic with its event, (2) idempotency is enforced via database constraints, (3) foreign key and uniqueness violations are caught and returned as structured errors, (4) concurrent writes are serialized via `BEGIN IMMEDIATE`, and (5) an optional `constraints` object on several write endpoints gives callers compare-and-set (CAS) semantics — a real, testable state-enforcement mechanism, not "business logic" in the state-machine sense. The gateway is also the sole read path for every domain's data: any service may call any domain's `GET` routes.
+The Database Gateway authenticates service callers locally with strict Ed25519 capability tokens and makes no outbound service calls. It does not decide domain-level agent permissions or state-machine legality; those stay with the calling services. It enforces service-route grants plus real persistence consistency: atomic write/event pairing, database constraints, serialized `BEGIN IMMEDIATE` writes, and optional compare-and-set constraints.
 
 This document focuses on core functionality, atomicity, idempotency, constraint (CAS) enforcement, and the read API.
 
@@ -33,6 +55,8 @@ Required status/error mappings:
 |--------|-----------------------------|---------------|
 | 400    | `missing_field`             | A required field is absent, `null`, or empty string |
 | 400    | `invalid_amount`            | Amount is not a valid integer in the required range |
+| 400    | `amount_out_of_range`       | Input exceeds SQLite's signed-64-bit monetary representation |
+| 400    | `payload_mismatch`          | Initial issuance differs from balance or split poster is not the escrow payer |
 | 400    | `invalid_field`             | `updates` object contains an unknown column name |
 | 400    | `empty_updates`             | `updates` object is empty |
 | 400    | `amount_mismatch`           | Split amounts do not sum to escrow amount |
@@ -45,6 +69,7 @@ Required status/error mappings:
 | 409    | `public_key_exists`          | Duplicate public key registration |
 | 409    | `account_exists`            | Account already exists for this agent |
 | 409    | `reference_conflict`        | Duplicate credit reference with different amount |
+| 409    | `amount_out_of_range`       | A credit or settlement would exceed the recipient balance limit |
 | 409    | `escrow_already_locked`     | Escrow already locked for this (payer, task) pair with different amount |
 | 409    | `escrow_already_resolved`   | Escrow has already been released or split |
 | 409    | `task_exists`               | Task with this ID already exists |
@@ -68,12 +93,20 @@ Required status/error mappings:
 | 404    | `ruling_not_found`          | No ruling for this claim (`GET /court/rulings/{id}`) |
 | 413    | `payload_too_large`         | Request body exceeds configured `request.max_body_size` |
 | 415    | `unsupported_media_type`    | `Content-Type` is not `application/json` for JSON endpoints |
+| 400    | `invalid_jws`               | Bearer token violates the strict compact-JWS profile |
+| 400    | `invalid_payload`           | Audience/resource/action or exact body/query digest does not match |
+| 401    | `invalid_authorization`     | Authorization is missing, duplicated, malformed, or not one Bearer token |
+| 401    | `token_expired`             | Token is expired under receiver time policy |
+| 401    | `token_not_yet_valid`       | Token issuance time is beyond allowed clock skew |
+| 403    | `forbidden`                 | Unknown KID, bad signature, missing grant, or unclassified route |
 
 ---
 
 ## Test Data Conventions
 
-- All requests are plain JSON. No JWS tokens — the gateway trusts its callers.
+- Exact `GET /health` is public. Every other request uses one distinct service fixture signer and the route's explicit capability.
+- Test signers build the final HTTPX request first and sign its exact body bytes, encoded query bytes, uppercase method, and percent-encoded path.
+- Fixture credentials are distinct per domain; no all-powerful test credential is permitted.
 - `valid_event(source, type)` constructs a valid event object with all required fields populated.
 - `agent_id` values match `a-<uuid4>`. The test harness generates fresh UUIDs per test.
 - `task_id` values match `t-<uuid4>`.
@@ -307,6 +340,7 @@ Required status/error mappings:
 **Expected:**
 - `201 Created`
 - Body includes `escrow_id`, `balance_after`, `event_id`
+- Body includes `status: "locked"`; replay returns the actual stored status (see MP06-MON-03)
 - `balance_after` is `70`
 
 ### ELOCK-02 Balance decreases by lock amount
@@ -1361,10 +1395,10 @@ Every route below is read-only, requires no request body, and never mutates stat
 **Action:** `GET /court/rulings/clm-does-not-exist`.
 **Expected:** `404`, `error = ruling_not_found`.
 
-### READ-33 Any service may read any domain — no cross-domain restriction
+### READ-33 Court may read exactly one Board task through its narrow grant
 **Setup:** Create a task via the normal Board write path.
-**Action:** Issue `GET /board/tasks/{task_id}` using a client that never called any `/board/*` write route in this test (simulating Court reading task context).
-**Expected:** `200` — the read succeeds; the gateway does not gate `GET` routes by which domain "owns" the caller.
+**Action:** Issue `GET /board/tasks/{task_id}` with `gateway-court` and action `gateway.board.task.read`.
+**Expected:** `200`. The same credential is forbidden from Board lists, counts, bids, assets, and writes.
 
 ---
 
@@ -1478,6 +1512,94 @@ Every route below is read-only, requires no request body, and never mutates stat
 
 ---
 
+## Category 27: Service Capability Admission
+
+### AUTH-01 Exact GET /health is the sole public request
+**Action:** Send unsigned `GET /health`, then unsigned `HEAD /health` and `GET /health?probe=1`.
+**Expected:** Exact GET returns `200`; the other requests require authorization and return `401 invalid_authorization`.
+
+### AUTH-02 Unsigned reads fail before every domain handler
+**Action:** Send one valid unsigned read request to Identity, Bank, Board, Reputation, and Court.
+**Expected:** Every response is `401 invalid_authorization`.
+
+### AUTH-03 Unsigned writes cause no database or event effect
+**Action:** Send one otherwise-valid unsigned write to every domain and compare domain/event row counts before and after.
+**Expected:** Every response is `401 invalid_authorization`; all counts are unchanged.
+
+### AUTH-04 Bearer header shape is strict
+**Action:** Send missing, Basic, empty Bearer, whitespace-bearing, non-ASCII, and duplicate Authorization headers.
+**Expected:** `401 invalid_authorization`; exactly one `Bearer <token>` header is required.
+
+### AUTH-05 Strict compact-JWS structure is required
+**Action:** Send a Bearer value that is not a strict three-segment token, has non-canonical base64url/JSON, duplicate JSON keys, wrong header fields, wrong `alg`/`typ`, or a payload other than exactly `action`, `body_sha256`, and `query_sha256`.
+**Expected:** Structural/profile failures return `400 invalid_jws`; authenticated payload-shape failures return `400 invalid_payload`.
+
+### AUTH-06 Unknown KID and invalid signature are forbidden
+**Action:** Sign once with an untrusted KID and once with a different private key under a trusted KID.
+**Expected:** Both return `403 forbidden`.
+
+### AUTH-07 Receiver-owned time policy is enforced
+**Action:** Send expired, future-issued, and over-maximum-lifetime tokens at exact policy boundaries.
+**Expected:** Expired is `401 token_expired`; future is `401 token_not_yet_valid`; excessive lifetime is `400 invalid_jws`.
+
+### AUTH-08 Audience, method, and exact path are bound
+**Action:** Replay a valid token against a different audience, method, concrete path, or percent-encoded path.
+**Expected:** `400 invalid_payload`; no handler effect.
+
+### AUTH-09 Exact body bytes are bound
+**Action:** Sign a valid JSON body, then add whitespace or otherwise change the received bytes without changing the token.
+**Expected:** `400 invalid_payload`; no database/event change.
+
+### AUTH-10 Exact encoded query bytes are bound
+**Action:** Sign one encoded query and send a reordered, re-encoded, added, removed, or changed query.
+**Expected:** `400 invalid_payload`.
+
+### AUTH-11 Final HTTPX request must be materialized before signing
+**Action:** Sign a final buffered request, a request with an unread streaming body, and a request with an existing Authorization header.
+**Expected:** Buffered request verifies; the official signer rejects unread streaming content and pre-authorized requests locally.
+
+### AUTH-12 Domain capabilities are least privilege
+**Action:** For each service KID, call one valid write in every other domain using that
+route's action (all 20 caller/domain pairs). Also exercise wrong-domain, unknown-key,
+bad-signature, expired, future, changed-body and changed-query writes in all five domains.
+**Expected:** Every cross-domain call is `403 forbidden`; other faults use their exact error
+contract. Compare the entire stored database before/after each rejection, including events and
+balances. A correctly signed identical-body control succeeds for each target domain.
+
+### AUTH-13 Court singular Board task read succeeds
+**Action:** Call `GET /board/tasks/{task_id}` as `gateway-court` with `gateway.board.task.read`.
+**Expected:** `200` and the requested task.
+
+### AUTH-14 Court cannot use the singular grant on static aggregates
+**Action:** Use `gateway.board.task.read` on `/board/tasks/count` and `/board/tasks/count-by-status`.
+**Expected:** `400 invalid_payload`; neither static route is matched as `{task_id}`.
+
+### AUTH-15 Court lacks all other Board reads
+**Action:** Call Board count, count-by-status, list, task bids, and task assets with `gateway-court` using `gateway.board.read`.
+**Expected:** Every request returns `403 forbidden`.
+
+### AUTH-16 Explicit route-policy inventory is exact
+**Action:** Compare every registered non-health FastAPI `(method, route template)` with the capability-policy table.
+**Expected:** Sets are identical. Application creation fails for any missing or stale policy entry; public inventory is exactly `GET /health`.
+
+### AUTH-17 Ordered route matching follows FastAPI
+**Action:** Resolve static Board count templates and a real singular task path through the admission matcher.
+**Expected:** Static templates win before `/board/tasks/{task_id}`; the singular path selects the parameter template.
+
+### AUTH-18 Newly registered unclassified route fails closed
+**Action:** Register a route after the frozen inventory, sign it with an otherwise valid trusted capability, and call it.
+**Expected:** `403 forbidden`; the handler does not execute.
+
+### AUTH-19 Trusted key material is domain-separated
+**Action:** Configure two trusted KIDs with byte-identical public keys or a public-key filename stem that differs from the KID.
+**Expected:** Application creation fails before serving requests.
+
+### AUTH-20 Body limits and replay cover DELETE
+**Action:** Send a correctly signed body-bearing `DELETE /court/rulings/{claim_id}` and oversized or wrong-content-type variants.
+**Expected:** Valid body reaches the unchanged handler with identical bytes; oversized is `413 payload_too_large`; wrong content type is `415 unsupported_media_type`.
+
+---
+
 ## Release Gate Checklist
 
 Service is release-ready only if:
@@ -1520,11 +1642,12 @@ Service is release-ready only if:
 | Ruling Deletion | RDEL-01 to RDEL-04 | 4 |
 | Task Already Disputed | TDISP-01 to TDISP-02 | 2 |
 | bid_count Materialization | BCNT-01 to BCNT-04 | 4 |
-| **Total** |  | **241** |
+| Service Capability Admission | AUTH-01 to AUTH-20 | 20 |
+| **Total** |  | **261** |
 
 | Endpoint | Covered By |
 |----------|------------|
-| `GET /health` | HLTH-01 to HLTH-05 |
+| `GET /health` | HLTH-01 to HLTH-05, AUTH-01 |
 | `POST /identity/agents` | AGT-01 to AGT-13, CONC-02, EVT-02, EVT-04, SEC-04 |
 | `POST /bank/accounts` | ACCT-01 to ACCT-09, ATOM-01, EVT-05 |
 | `POST /bank/credit` | CR-01 to CR-11, EVT-02, SEC-04, CONC-03 |
@@ -1541,4 +1664,98 @@ Service is release-ready only if:
 | `POST /court/rebuttals` | REB-01 to REB-09, ATOM-05, CAS-10 |
 | `POST /court/rulings` | RUL-01 to RUL-10 |
 | `DELETE /court/rulings/{claim_id}` | RDEL-01 to RDEL-04 |
-| Read API (`GET` routes, all domains) | READ-01 to READ-33, CAS-04 (via `GET /board/tasks/{task_id}`), BCNT-01 to BCNT-04 (via `GET`) |
+| Read API (`GET` routes, all domains) | READ-01 to READ-33, AUTH-01 to AUTH-18, CAS-04 (via `GET /board/tasks/{task_id}`), BCNT-01 to BCNT-04 (via `GET`) |
+
+## MP-06 schema admission and migration prerequisites
+
+These requirements supersede the earlier implicit additive-startup migration assumptions. They are
+release gates, not claims that the current implementation is complete.
+
+### MP06-SCH-01 Required schema input and maintenance cleanup
+
+A valid Gateway startup fixture provides a readable current schema at an explicit temporary path.
+A missing or unreadable configured schema fails startup. Shared maintenance exclusion must cover
+schema/DB initialization and remain held through resource cleanup; every startup failure releases it.
+Existing lock assertions remain in force when fixture inputs are reconciled.
+
+### MP06-SCH-02 Complete version admission without implicit ALTER
+
+An empty database bootstraps the exact current schema transactionally. Reopening an exact current
+schema preserves its rows. Complete supported v0 requires explicit offline migration; partial,
+unknown and future layouts fail before readiness and persistent journal changes. An isolated old
+Task Board table or two old Bank tables must retain identical bytes, columns and rows after repeated
+rejected startup attempts. They are not a supported full legacy version.
+
+The direct complete legacy layout and the approved historical base plus five additive columns are
+both recognized. Current-v1 column order is canonical; compatibility for the known legacy layouts
+must not permit arbitrary reordered current schemas.
+
+### MP06-SCH-03 Schema identity includes behavior and metadata
+
+Missing, duplicate, malformed or future version metadata cannot qualify as current. Classification
+must distinguish literal case/whitespace, active constraints from commented text, conflict policies,
+collation and foreign-key deferral. A commented-out money check that admits a negative balance must
+never classify as the constrained current schema. Full known table/index/key/constraint shape is
+required, including metadata provenance fields.
+
+### MP06-SCH-04 Bootstrap rollback and error preservation
+
+Faults during bootstrap leave no partial application objects. Comment-prefixed transaction control
+cannot escape the transaction. Rollback and close failures must not replace the primary admission
+or schema error; retain them as secondary diagnostics. Explicit connection settings must be valid
+and their effective journal/foreign-key state must be verified before readiness.
+
+### MP06-SCH-05 Migration requires fresh held admission
+
+The actual migration command rejects absent, invalid, mismatched or changed backups before opening
+the source for writes. It requires the exact existing exclusive maintenance lock and verified source
+DB/WAL identity, then separately validates supported schema and money on a verified clone. Artifact
+verification and detached diagnostic results are not migration authorization. Existing artifact-v1
+verification remains compatible and preserves its original unclassified-schema finding.
+
+Changing the backup completion marker or redirecting the scratch work directory must fail safely.
+The pre-write phase verifies original raw DB/WAL bytes; after authorized SQLite writes, identity and
+logical transaction checks replace raw-WAL equality. A pre-commit fault leaves the logical legacy
+schema/rows intact and the immutable backup unchanged. A commit exception remains an uncertain,
+nonzero result even if a fresh read observes committed v1; it never retries the commit. All invalid historical values and duplicate
+escrows are reported for explicit reconciliation, never silently coerced or deleted.
+
+### MP06-SCH-06 Data health before persistent configuration
+
+An exact current schema with a foreign-key orphan or an ignored CHECK violation fails startup before
+changing journal mode. Verify the exact integrity/FK issue counts for individual and simultaneous
+corruption, and prove the connection closes with bytes, rows, DELETE journal and sidecars unchanged.
+If either health PRAGMA raises a database error, return stable `database_integrity_failed` diagnostics
+with `health_check_unavailable`; raw diagnostic sentinels must not appear in the error.
+
+### MP06-MON-01 Authoritative amounts and initial issuance
+
+Call the writer directly as well as its signed service route. Reject booleans, non-integers and
+invalid signs with 400 `invalid_amount`, and values above `9223372036854775807` with 400
+`amount_out_of_range`. Positive initial balance must equal its positive initial credit; zero balance
+without issuance is valid. Mismatches return 400 `payload_mismatch`. Every negative case preserves
+accounts, transactions, escrows and events and leaves no transaction active.
+
+### MP06-MON-02 Guarded settlement and payer identity
+
+An existing unrelated poster is rejected with 400 `payload_mismatch`, including a zero-value poster
+share. A nonexistent poster remains 404 `account_not_found`. Credit, release and split cannot
+overflow a recipient balance or promote it to REAL. A same-account split whose first leg fits and
+second leg overflows must roll back both legs and its event. An exact split at the bound remains
+valid. Independent connections racing two credits into the final available unit admit exactly one
+credit and one event; the loser receives 409 `amount_out_of_range` without mutation.
+
+### MP06-MON-03 Replay precedes arithmetic
+
+An exact credit replay at the balance limit returns its original transaction/event and balance
+without another addition. An exact escrow lock replay succeeds with no remaining spendable balance,
+and after either release or split. It returns the original escrow/event and actual required
+`status`, with no new debit, escrow, transaction or event. A changed amount conflicts. This does not
+substitute for MP-04's durable release/split replay receipts.
+
+### MP06-MON-04 Aggregate conservation beyond one account's bound
+
+Two independently valid maximum-size locked escrows produce an exact Python-integer total larger
+than SQLite's signed-64-bit aggregate range. Neither SQL integer overflow nor REAL rounding is
+acceptable. Issuance equals balances plus locked escrow using exact totals, including after one
+escrow is released; empty locked escrow totals zero.

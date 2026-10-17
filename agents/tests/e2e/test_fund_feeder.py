@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -17,7 +18,9 @@ if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
     from base_agent.platform import PlatformAgent
 
-CONFIG_PATH = Path(__file__).resolve().parents[2] / "config.yaml"
+CONFIG_PATH = Path(
+    os.environ.get("AGENT_CONFIG_PATH", str(Path(__file__).resolve().parents[2] / "config.yaml"))
+)
 
 
 @pytest.fixture()
@@ -219,7 +222,11 @@ async def test_credit_without_account_fails(platform: PlatformAgent) -> None:
 @pytest.mark.e2e
 async def test_feeder_agent_uses_ed25519_signing(feeder_agent: BaseAgent) -> None:
     """The feeder agent's JWS tokens use Ed25519 signing."""
-    token = feeder_agent._sign_jws({"action": "test", "data": "hello"})
+    token = feeder_agent._sign_jws(
+        {"action": "test", "data": "hello"},
+        audience="identity",
+        resource="POST /agents/verify-jws",
+    )
     parts = token.split(".")
 
     assert len(parts) == 3

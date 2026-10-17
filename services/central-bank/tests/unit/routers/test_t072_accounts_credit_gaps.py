@@ -12,6 +12,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from cryptography.exceptions import InvalidSignature
 
 from central_bank_service.core.state import get_app_state
 
@@ -182,9 +183,7 @@ class TestCreateAccountSignatureBeatsPayload:
         """PREC-06: a tampered/invalid JWS (per Identity) returns 403 forbidden even
         though the payload is separately missing agent_id — signature check wins."""
         state = get_app_state()
-        state.identity_client.verify_jws = AsyncMock(
-            return_value={"valid": False, "reason": "signature mismatch"}
-        )
+        state.identity_client.verify_jws = AsyncMock(side_effect=InvalidSignature())
         private_key, _ = agent_keypair
         token = make_jws_token(
             private_key,

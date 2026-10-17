@@ -15,9 +15,11 @@ class _TaskBoardClient(Protocol):
     config: AgentConfig
     agent_id: str | None
 
-    def _sign_jws(self, payload: dict[str, object]) -> str: ...
+    def _sign_jws(self, payload: dict[str, object], *, audience: str, resource: str) -> str: ...
 
-    def _auth_header(self, payload: dict[str, object]) -> dict[str, str]: ...
+    def _auth_header(
+        self, payload: dict[str, object], *, audience: str, resource: str
+    ) -> dict[str, str]: ...
 
     async def _request(self, method: str, url: str, **kwargs: Any) -> dict[str, Any]: ...
 
@@ -50,7 +52,9 @@ class TaskBoardMixin:
                 "bidding_deadline_seconds": bidding_deadline_seconds,
                 "execution_deadline_seconds": execution_deadline_seconds,
                 "review_deadline_seconds": review_deadline_seconds,
-            }
+            },
+            audience="task-board",
+            resource="POST /tasks",
         )
         escrow_token = self._sign_jws(
             {
@@ -58,7 +62,9 @@ class TaskBoardMixin:
                 "task_id": task_id,
                 "amount": reward,
                 "agent_id": self.agent_id,
-            }
+            },
+            audience="central-bank",
+            resource="POST /escrow/lock",
         )
         return await self._request(
             "POST",
@@ -97,7 +103,9 @@ class TaskBoardMixin:
                 "action": "cancel_task",
                 "task_id": task_id,
                 "poster_id": self.agent_id,
-            }
+            },
+            audience="task-board",
+            resource=f"POST /tasks/{task_id}/cancel",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -110,7 +118,9 @@ class TaskBoardMixin:
                 "task_id": task_id,
                 "bidder_id": self.agent_id,
                 "amount": amount,
-            }
+            },
+            audience="task-board",
+            resource=f"POST /tasks/{task_id}/bids",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -122,7 +132,9 @@ class TaskBoardMixin:
                 "action": "list_bids",
                 "task_id": task_id,
                 "poster_id": self.agent_id,
-            }
+            },
+            audience="task-board",
+            resource=f"GET /tasks/{task_id}/bids",
         )
         response = await self._request("GET", url, headers=headers)
         return cast("list[dict[str, Any]]", response["bids"])
@@ -136,7 +148,9 @@ class TaskBoardMixin:
                 "task_id": task_id,
                 "bid_id": bid_id,
                 "poster_id": self.agent_id,
-            }
+            },
+            audience="task-board",
+            resource=f"POST /tasks/{task_id}/bids/{bid_id}/accept",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -152,7 +166,9 @@ class TaskBoardMixin:
             {
                 "action": "upload_asset",
                 "task_id": task_id,
-            }
+            },
+            audience="task-board",
+            resource=f"POST /tasks/{task_id}/assets",
         )
         return await self._request(
             "POST", url, headers=headers, files={"file": (filename, content)}
@@ -166,7 +182,9 @@ class TaskBoardMixin:
                 "action": "submit_deliverable",
                 "task_id": task_id,
                 "worker_id": self.agent_id,
-            }
+            },
+            audience="task-board",
+            resource=f"POST /tasks/{task_id}/submit",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -178,7 +196,9 @@ class TaskBoardMixin:
                 "action": "approve_task",
                 "task_id": task_id,
                 "poster_id": self.agent_id,
-            }
+            },
+            audience="task-board",
+            resource=f"POST /tasks/{task_id}/approve",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -191,7 +211,9 @@ class TaskBoardMixin:
                 "task_id": task_id,
                 "poster_id": self.agent_id,
                 "reason": reason,
-            }
+            },
+            audience="task-board",
+            resource=f"POST /tasks/{task_id}/dispute",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -223,6 +245,8 @@ class TaskBoardMixin:
                 "dispute_id": dispute_id,
                 "worker_id": self.agent_id,
                 "rebuttal": rebuttal,
-            }
+            },
+            audience="task-board",
+            resource=f"POST /tasks/{task_id}/rebuttal",
         )
         return await self._request("POST", url, json={"token": token})

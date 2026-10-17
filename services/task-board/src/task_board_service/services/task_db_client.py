@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
 from task_board_service.services.errors import DuplicateBidError, DuplicateTaskError
+
+if TYPE_CHECKING:
+    from service_auth.gateway import GatewayRequestSigner
 
 # Re-exported so callers outside the HTTP-client boundary (e.g. the deadline
 # evaluator's platform-signed ruling trigger, GAP-A1) can catch transport errors
@@ -62,11 +65,32 @@ class TaskDbClient:
         "escrow_pending",
     )
 
-    def __init__(self, base_url: str, timeout_seconds: int) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: int,
+        signer: GatewayRequestSigner,
+    ) -> None:
         self._client = httpx.Client(
             base_url=base_url,
             timeout=httpx.Timeout(timeout_seconds),
         )
+        self._signer = signer
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, Any] | None,
+        params: dict[str, Any] | None,
+    ) -> httpx.Response:
+        request = self._client.build_request(method, path, json=json, params=params)
+        signed_request = self._signer.sign_request(
+            request,
+            action=f"gateway.board.{'read' if method == 'GET' else 'write'}",
+        )
+        return self._client.send(signed_request)
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
@@ -123,7 +147,7 @@ class TaskDbClient:
         bidding_deadline_dt = self._parse_iso(created_at) + timedelta(
             seconds=bidding_deadline_seconds
         )
-        bidding_deadline = bidding_deadline_dt.isoformat(timespec="seconds").replace("+00:00", "Z")
+        bidding_deadline = bidding_deadline_dt.isoformat(timespec="auto").replace("+00:00", "Z")
 
         payload: dict[str, Any] = {
             "task_id": task_data["task_id"],
@@ -153,7 +177,7 @@ class TaskDbClient:
             ),
         }
 
-        response = self._client.post("/board/tasks", json=payload)
+        response = self._request("POST", "/board/tasks", json=payload, params=None)
         if response.status_code == 409:
             raise DuplicateTaskError(f"A task with task_id={task_data['task_id']} already exists")
         if response.status_code not in (200, 201):
@@ -161,7 +185,7 @@ class TaskDbClient:
             raise RuntimeError(msg)
 
     def get_task(self, task_id: str) -> dict[str, Any] | None:
-        response = self._client.get(f"/board/tasks/{task_id}")
+        response = self._request("GET", f"/board/tasks/{task_id}", json=None, params=None)
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -192,7 +216,9 @@ class TaskDbClient:
             ),
         }
 
-        response = self._client.post(f"/board/tasks/{task_id}/status", json=payload)
+        response = self._request(
+            "POST", f"/board/tasks/{task_id}/status", json=payload, params=None
+        )
         if response.status_code in {404, 409}:
             return 0
         if response.status_code != 200:
@@ -220,7 +246,7 @@ class TaskDbClient:
         if offset is not None:
             params["offset"] = offset
 
-        response = self._client.get("/board/tasks", params=params)
+        response = self._request("GET", "/board/tasks", json=None, params=params)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -230,14 +256,14 @@ class TaskDbClient:
         return [self._normalize_task(item) for item in items if isinstance(item, dict)]
 
     def count_tasks(self) -> int:
-        response = self._client.get("/board/tasks/count")
+        response = self._request("GET", "/board/tasks/count", json=None, params=None)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
         return int(self._json(response)["count"])
 
     def count_tasks_by_status(self) -> dict[str, int]:
-        response = self._client.get("/board/tasks/count-by-status")
+        response = self._request("GET", "/board/tasks/count-by-status", json=None, params=None)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -256,14 +282,14 @@ class TaskDbClient:
             "constraints": {"status": "open"},
             "event": self._build_event(
                 event_type="bid.submitted",
-                summary=f"Bid submitted for task {bid_data['task_id']}",
-                payload={"bid_id": bid_data["bid_id"], "amount": amount},
+                summary="Bid submitted",
+                payload={},
                 task_id=str(bid_data["task_id"]),
                 agent_id=str(bid_data["bidder_id"]),
             ),
         }
 
-        response = self._client.post("/board/bids", json=payload)
+        response = self._request("POST", "/board/bids", json=payload, params=None)
         if response.status_code == 409:
             raise DuplicateBidError("This agent already bid on this task")
         if response.status_code not in (200, 201):
@@ -271,7 +297,9 @@ class TaskDbClient:
             raise RuntimeError(msg)
 
     def get_bid(self, bid_id: str, task_id: str) -> dict[str, Any] | None:
-        response = self._client.get(f"/board/bids/{bid_id}", params={"task_id": task_id})
+        response = self._request(
+            "GET", f"/board/bids/{bid_id}", json=None, params={"task_id": task_id}
+        )
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -287,7 +315,7 @@ class TaskDbClient:
         }
 
     def get_bids_for_task(self, task_id: str) -> list[dict[str, Any]]:
-        response = self._client.get(f"/board/tasks/{task_id}/bids")
+        response = self._request("GET", f"/board/tasks/{task_id}/bids", json=None, params=None)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -331,7 +359,7 @@ class TaskDbClient:
             ),
         }
 
-        response = self._client.post("/board/assets", json=payload)
+        response = self._request("POST", "/board/assets", json=payload, params=None)
         if response.status_code == 409:
             msg = "Asset with this asset_id already exists"
             raise RuntimeError(msg)
@@ -340,7 +368,9 @@ class TaskDbClient:
             raise RuntimeError(msg)
 
     def get_asset(self, asset_id: str, task_id: str) -> dict[str, Any] | None:
-        response = self._client.get(f"/board/assets/{asset_id}", params={"task_id": task_id})
+        response = self._request(
+            "GET", f"/board/assets/{asset_id}", json=None, params={"task_id": task_id}
+        )
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -362,7 +392,7 @@ class TaskDbClient:
         }
 
     def get_assets_for_task(self, task_id: str) -> list[dict[str, Any]]:
-        response = self._client.get(f"/board/tasks/{task_id}/assets")
+        response = self._request("GET", f"/board/tasks/{task_id}/assets", json=None, params=None)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -388,7 +418,9 @@ class TaskDbClient:
         ]
 
     def count_assets(self, task_id: str) -> int:
-        response = self._client.get(f"/board/tasks/{task_id}/assets/count")
+        response = self._request(
+            "GET", f"/board/tasks/{task_id}/assets/count", json=None, params=None
+        )
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)

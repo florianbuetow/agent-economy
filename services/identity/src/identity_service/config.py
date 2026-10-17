@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from service_auth.gateway import GatewaySignerConfig
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
@@ -64,12 +65,25 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
+class TokenValidationConfig(BaseModel):
+    """Strict compact-JWS lifetime admission policy."""
+
+    model_config = ConfigDict(extra="forbid")
+    max_lifetime_seconds: int = Field(strict=True, gt=0)
+    clock_skew_seconds: int = Field(strict=True, ge=0)
+
+
+class GatewaySigningConfig(GatewaySignerConfig):
+    """Identity's shared strict Gateway signer configuration."""
+
+
 class DbGatewayConfig(BaseModel):
     """DB Gateway service configuration."""
 
     model_config = ConfigDict(extra="forbid")
     url: str
     timeout_seconds: int
+    signing: GatewaySigningConfig
 
 
 class Settings(BaseModel):
@@ -86,6 +100,7 @@ class Settings(BaseModel):
     logging: LoggingConfig
     crypto: CryptoConfig
     request: RequestConfig
+    token_validation: TokenValidationConfig
     db_gateway: DbGatewayConfig | None = None
 
 

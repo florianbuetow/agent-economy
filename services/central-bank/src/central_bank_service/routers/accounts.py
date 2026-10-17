@@ -7,9 +7,10 @@ from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
 from central_bank_service.core.state import get_app_state
+from central_bank_service.financial_responses import validate_operation_id
 from central_bank_service.logging import get_logger
+from central_bank_service.monetary import require_nonnegative_money, require_positive_money
 from central_bank_service.routers.helpers import (
-    decode_unverified_payload,
     get_platform_agent_id,
     parse_json_body,
     require_account_owner,
@@ -18,6 +19,24 @@ from central_bank_service.routers.helpers import (
 )
 
 router = APIRouter()
+
+
+def _required_operation_id(payload: dict[str, object]) -> str:
+    try:
+        return validate_operation_id(payload.get("operation_id"))
+    except ValueError as exc:
+        raise ServiceError("invalid_operation_id", str(exc), 400, {}) from exc
+
+
+def _reject_unknown_payload_fields(payload: dict[str, object], allowed: set[str]) -> None:
+    unknown = sorted(set(payload) - allowed)
+    if unknown:
+        raise ServiceError(
+            "invalid_payload",
+            "JWS payload contains unsupported fields",
+            400,
+            {"fields": unknown},
+        )
 
 
 # === POST /accounts — Create Account ===
@@ -43,14 +62,20 @@ async def create_account(request: Request) -> JSONResponse:
             details={},
         )
 
-    verified = await verify_jws_token(data["token"])
-    caller_agent_id = verified["agent_id"]
+    verified = await verify_jws_token(
+        data["token"],
+        audience="central-bank",
+        resource="POST /accounts",
+        allowed_action="create_account",
+    )
+    caller_agent_id = verified.header.kid
     is_platform = caller_agent_id == get_platform_agent_id()
 
-    payload = verified["payload"]
-    action = payload.get("action")
-    if action != "create_account":
-        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
+    payload = verified.payload
+    _reject_unknown_payload_fields(
+        payload,
+        {"action", "agent_id", "initial_balance", "operation_id"},
+    )
 
     agent_id = payload.get("agent_id")
     if not agent_id or not isinstance(agent_id, str):
@@ -65,21 +90,15 @@ async def create_account(request: Request) -> JSONResponse:
             {},
         )
 
-    initial_balance = payload.get("initial_balance")
-    if initial_balance is None:
+    raw_initial_balance = payload.get("initial_balance")
+    if raw_initial_balance is None:
         raise ServiceError(
             "invalid_payload",
             "Missing initial_balance in JWS payload",
             400,
             {},
         )
-    if not isinstance(initial_balance, int) or initial_balance < 0:
-        raise ServiceError(
-            "invalid_amount",
-            "initial_balance must be a non-negative integer",
-            400,
-            {},
-        )
+    initial_balance = require_nonnegative_money(raw_initial_balance, "initial_balance")
 
     # Non-platform callers must use initial_balance of 0
     if not is_platform and initial_balance != 0:
@@ -107,7 +126,17 @@ async def create_account(request: Request) -> JSONResponse:
             {},
         )
 
-    result = await state.ledger.create_account(agent_id, initial_balance)
+    operation_id: str | None = None
+    if initial_balance > 0:
+        operation_id = _required_operation_id(payload)
+    elif "operation_id" in payload:
+        raise ServiceError(
+            "invalid_payload",
+            "operation_id is not allowed for zero-balance account creation",
+            400,
+            {},
+        )
+    result = await state.ledger.create_account(agent_id, initial_balance, operation_id)
 
     get_logger(__name__).info(
         "Account created",
@@ -139,12 +168,17 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
             details={},
         )
 
-    # Validate payload shape before authorization so payload errors beat the 403 (T-033).
-    payload = decode_unverified_payload(data["token"])
-
-    action = payload.get("action")
-    if action != "credit":
-        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
+    verified = verify_platform_signature(
+        data["token"],
+        audience="central-bank",
+        resource=f"POST /accounts/{account_id}/credit",
+        allowed_action="credit",
+    )
+    payload = verified.payload
+    _reject_unknown_payload_fields(
+        payload,
+        {"action", "account_id", "amount", "reference", "operation_id"},
+    )
 
     payload_account_id = payload.get("account_id")
     if payload_account_id is not None and payload_account_id != account_id:
@@ -155,9 +189,7 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
             {},
         )
 
-    amount = payload.get("amount")
-    if not isinstance(amount, int) or amount <= 0:
-        raise ServiceError("invalid_amount", "Amount must be a positive integer", 400, {})
+    amount = require_positive_money(payload.get("amount"), "amount")
 
     reference = payload.get("reference")
     if reference is None:
@@ -169,11 +201,9 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
         )
     if not isinstance(reference, str):
         raise ServiceError("invalid_payload", "reference must be a string", 400, {})
+    operation_id = _required_operation_id(payload)
 
-    # Platform authorization: local signature verification (survives Identity outage).
-    verify_platform_signature(data["token"])
-
-    result = await state.ledger.credit(account_id, amount, reference)
+    result = await state.ledger.credit(account_id, amount, reference, operation_id)
 
     get_logger(__name__).info(
         "Account credited",
@@ -181,7 +211,7 @@ async def credit_account(request: Request, account_id: str) -> dict[str, object]
             "account_id": account_id,
             "amount": amount,
             "reference": reference,
-            "tx_id": result.get("tx_id"),
+            "operation_id": operation_id,
         },
     )
     return result
@@ -204,13 +234,14 @@ async def get_balance(request: Request, account_id: str) -> dict[str, object]:
 
     token = auth_header[7:]  # Strip "Bearer "
 
-    verified = await verify_jws_token(token)
-    require_account_owner(verified["agent_id"], account_id)
-    payload = verified["payload"]
-
-    action = payload.get("action")
-    if action != "get_balance":
-        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
+    verified = await verify_jws_token(
+        token,
+        audience="central-bank",
+        resource=f"GET /accounts/{account_id}",
+        allowed_action="get_balance",
+    )
+    require_account_owner(verified.header.kid, account_id)
+    payload = verified.payload
 
     payload_account_id = payload.get("account_id")
     if payload_account_id is not None and payload_account_id != account_id:
@@ -254,13 +285,14 @@ async def get_transactions(request: Request, account_id: str) -> dict[str, list[
 
     token = auth_header[7:]
 
-    verified = await verify_jws_token(token)
-    require_account_owner(verified["agent_id"], account_id)
-    payload = verified["payload"]
-
-    action = payload.get("action")
-    if action != "get_transactions":
-        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
+    verified = await verify_jws_token(
+        token,
+        audience="central-bank",
+        resource=f"GET /accounts/{account_id}/transactions",
+        allowed_action="get_transactions",
+    )
+    require_account_owner(verified.header.kid, account_id)
+    payload = verified.payload
 
     payload_account_id = payload.get("account_id")
     if payload_account_id is not None and payload_account_id != account_id:

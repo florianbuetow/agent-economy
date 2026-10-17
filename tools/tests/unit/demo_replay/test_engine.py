@@ -8,6 +8,7 @@ config-resolved URL, never a hardcoded one).
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -24,6 +25,8 @@ def _make_config() -> PlatformConfig:
         task_board_url="http://taskboard.test",
         reputation_url="http://reputation.test",
         court_url="http://court.test",
+        platform_key_path=Path("keys/platform.key"),
+        token_ttl_seconds=300,
     )
 
 

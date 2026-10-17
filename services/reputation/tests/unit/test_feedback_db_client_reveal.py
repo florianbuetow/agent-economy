@@ -22,6 +22,12 @@ ALICE = "a-alice"
 BOB = "a-bob"
 
 
+class _TestSigner:
+    def sign_request(self, request: httpx.Request, *, action: str) -> httpx.Request:
+        request.headers["Authorization"] = f"Bearer {action}"
+        return request
+
+
 class _MockGateway:
     """Minimal stand-in for the gateway's atomic reveal policy."""
 
@@ -56,7 +62,11 @@ class _MockGateway:
 
 
 def _client(gateway: _MockGateway) -> FeedbackDbClient:
-    client = FeedbackDbClient(base_url="http://gateway.test", timeout_seconds=5)
+    client = FeedbackDbClient(
+        base_url="http://gateway.test",
+        timeout_seconds=5,
+        signer=_TestSigner(),  # type: ignore[arg-type]
+    )
     client._client = httpx.Client(
         base_url="http://gateway.test",
         transport=httpx.MockTransport(gateway.handler),

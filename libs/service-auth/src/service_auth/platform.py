@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from service_auth.agent import BaseAgent
+
+if TYPE_CHECKING:
+    from service_auth.jws import VerifiedJws
 
 
 class PlatformAgent(BaseAgent):
@@ -18,6 +21,19 @@ class PlatformAgent(BaseAgent):
     platform-signed requests without calling the Identity service.
     """
 
+    def sign(
+        self,
+        payload: dict[str, Any],
+        *,
+        audience: str,
+        resource: str,
+    ) -> str:
+        """Sign a token with this registered platform identity's in-memory key."""
+        if self.agent_id is None:
+            msg = "Platform agent must be registered before signing"
+            raise RuntimeError(msg)
+        return self._sign_jws(payload, audience=audience, resource=resource)
+
     async def create_account(self, agent_id: str, initial_balance: int) -> dict[str, Any]:  # type: ignore[override]
         """Create an account for an agent in the Central Bank.
 
@@ -30,7 +46,9 @@ class PlatformAgent(BaseAgent):
         """
         url = f"{self.config.bank_url}/accounts"
         token = self._sign_jws(
-            {"action": "create_account", "agent_id": agent_id, "initial_balance": initial_balance}
+            {"action": "create_account", "agent_id": agent_id, "initial_balance": initial_balance},
+            audience="central-bank",
+            resource="POST /accounts",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -52,7 +70,9 @@ class PlatformAgent(BaseAgent):
                 "account_id": account_id,
                 "amount": amount,
                 "reference": reference,
-            }
+            },
+            audience="central-bank",
+            resource=f"POST /accounts/{account_id}/credit",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -72,7 +92,9 @@ class PlatformAgent(BaseAgent):
                 "action": "escrow_release",
                 "escrow_id": escrow_id,
                 "recipient_account_id": recipient_account_id,
-            }
+            },
+            audience="central-bank",
+            resource=f"POST /escrow/{escrow_id}/release",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -102,7 +124,9 @@ class PlatformAgent(BaseAgent):
                 "worker_account_id": worker_account_id,
                 "poster_account_id": poster_account_id,
                 "worker_pct": worker_pct,
-            }
+            },
+            audience="central-bank",
+            resource=f"POST /escrow/{escrow_id}/split",
         )
         return await self._request("POST", url, json={"token": token})
 
@@ -129,7 +153,11 @@ class PlatformAgent(BaseAgent):
             Response from Task Board.
         """
         url = f"{self.config.task_board_url}/tasks/{task_id}/ruling"
-        token = self._sign_jws(ruling_payload)
+        token = self._sign_jws(
+            ruling_payload,
+            audience="task-board",
+            resource=f"POST /tasks/{task_id}/ruling",
+        )
         return await self._request("POST", url, json={"token": token})
 
     async def submit_platform_feedback(self, feedback_payload: dict[str, Any]) -> dict[str, Any]:
@@ -142,10 +170,14 @@ class PlatformAgent(BaseAgent):
             Response from Reputation service.
         """
         url = f"{self.config.reputation_url}/feedback"
-        token = self._sign_jws(feedback_payload)
+        token = self._sign_jws(
+            feedback_payload,
+            audience="reputation",
+            resource="POST /feedback",
+        )
         return await self._request("POST", url, json={"token": token})
 
-    def verify_platform_jws(self, token: str) -> dict[str, object]:
+    def verify_platform_jws(self, token: str) -> VerifiedJws:
         """Verify a JWS token was signed by this platform agent.
 
         Alias for validate_certificate(). Prefer validate_certificate() for new code.

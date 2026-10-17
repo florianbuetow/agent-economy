@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from service_auth.factory import AgentFactory
+from service_auth.gateway import GatewayRequestSigner
 from service_clients.identity import IdentityClient
 
 from central_bank_service.config import get_config_path, get_settings
@@ -31,6 +32,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     state = init_app_state()
 
+    # Validate required, pre-provisioned credentials before opening clients.
+    gateway_signer = GatewayRequestSigner(
+        settings.db_gateway.signing,
+        config_dir=Path(get_config_path()).parent,
+    )
+    config_path = Path(settings.platform.agent_config_path)
+    if not config_path.is_absolute():
+        config_path = Path(get_config_path()).parent / config_path
+    factory = AgentFactory(config_path=config_path)
+    state.platform_agent = factory.platform_agent()
+
     # Initialize ledger. db_gateway is a required config field (Pydantic enforces its
     # presence at load); guard against an empty URL so startup still fails fast.
     if not settings.db_gateway.url:
@@ -40,6 +52,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state.ledger = LedgerDbClient(
         base_url=settings.db_gateway.url,
         timeout_seconds=settings.db_gateway.timeout_seconds,
+        signer=gateway_signer,
     )
 
     # Initialize identity client
@@ -50,15 +63,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         verify_jws_path=identity_config.verify_jws_path,
         timeout_seconds=identity_config.timeout_seconds,
     )
-    # Platform identity is resolved from the registered PlatformAgent only.
-    if settings.platform.agent_config_path:
-        config_path = Path(settings.platform.agent_config_path)
-        if not config_path.is_absolute():
-            config_path = Path(get_config_path()).parent / config_path
-        factory = AgentFactory(config_path=config_path)
-        state.platform_agent = factory.platform_agent()
-        await state.platform_agent.register()
-        logger.info("Platform agent registered", extra={"agent_id": state.platform_agent.agent_id})
+    await state.platform_agent.register()
+    logger.info("Platform agent registered", extra={"agent_id": state.platform_agent.agent_id})
 
     logger.info(
         "Service starting",
@@ -73,7 +79,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # === SHUTDOWN ===
     logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
-    if state.platform_agent is not None:
-        await state.platform_agent.close()
+    await state.platform_agent.close()
     await state.identity_client.close()
     await state.ledger.close()

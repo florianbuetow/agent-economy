@@ -24,9 +24,8 @@ from task_board_service.services.task_ruling import TaskRulingCoordinator
 if TYPE_CHECKING:
     import logging
 
-    from service_auth import PlatformSigner
     from service_auth.platform import PlatformAgent
-    from service_clients.bank import BankClient
+    from service_clients.bank import BankClient, TokenSigner
 
     from task_board_service.services.asset_manager import AssetManager
     from task_board_service.services.deadline_evaluator import DeadlineEvaluator
@@ -52,7 +51,7 @@ class TaskManager:
         token_validator: TokenValidator,
         deadline_evaluator: DeadlineEvaluator,
         asset_manager: AssetManager,
-        platform_signer: PlatformSigner,
+        platform_signer: TokenSigner,
         platform_agent_id: str,
     ) -> None:
         self._store = store

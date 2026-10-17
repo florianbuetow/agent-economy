@@ -12,7 +12,7 @@ class _ReputationClient(Protocol):
     config: AgentConfig
     agent_id: str | None
 
-    def _sign_jws(self, payload: dict[str, object]) -> str: ...
+    def _sign_jws(self, payload: dict[str, object], *, audience: str, resource: str) -> str: ...
 
     async def _request(self, method: str, url: str, **kwargs: Any) -> dict[str, Any]: ...
 
@@ -40,7 +40,11 @@ class ReputationMixin:
         }
         if comment is not None:
             payload["comment"] = comment
-        token = self._sign_jws(payload)
+        token = self._sign_jws(
+            payload,
+            audience="reputation",
+            resource="POST /feedback",
+        )
         return await self._request("POST", url, json={"token": token})
 
     async def get_task_feedback(self: _ReputationClient, task_id: str) -> list[dict[str, Any]]:

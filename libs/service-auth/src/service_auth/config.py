@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import yaml
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from service_commons.config import get_config_path as resolve_config_path
 
-from service_auth.signing import generate_keypair, load_private_key, load_public_key
+from service_auth.jws import TokenPolicy
+from service_auth.signing import load_keypair
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -31,11 +32,23 @@ class AgentConfig:
     task_board_url: str
     reputation_url: str
     court_url: str
-    # Token lifetime for signed JWS tokens. ``None`` means no expiry is stamped
-    # (legacy). Production configs always set this via the required
-    # ``signing.token_ttl_seconds`` key; the default exists only so tests can
-    # hand-construct a config without wiring the signing section.
-    token_ttl_seconds: int | None = None
+    token_ttl_seconds: int
+    token_policy: TokenPolicy
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.token_policy, TokenPolicy):
+            msg = "token_policy must be a TokenPolicy"
+            raise ValueError(msg)
+        if (
+            isinstance(self.token_ttl_seconds, bool)
+            or not isinstance(self.token_ttl_seconds, int)
+            or self.token_ttl_seconds <= 0
+        ):
+            msg = "token_ttl_seconds must be a positive integer"
+            raise ValueError(msg)
+        if self.token_ttl_seconds > self.token_policy.max_lifetime_seconds:
+            msg = "token_ttl_seconds must not exceed max_lifetime_seconds"
+            raise ValueError(msg)
 
 
 class _PlatformUrls(BaseModel):
@@ -56,9 +69,22 @@ class _DataPaths(BaseModel):
 
 
 class _Signing(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", strict=True)
 
     token_ttl_seconds: int
+    max_lifetime_seconds: int
+    clock_skew_seconds: int
+
+    @model_validator(mode="after")
+    def validate_policy(self) -> _Signing:
+        policy = TokenPolicy(
+            max_lifetime_seconds=self.max_lifetime_seconds,
+            clock_skew_seconds=self.clock_skew_seconds,
+        )
+        if self.token_ttl_seconds <= 0 or self.token_ttl_seconds > policy.max_lifetime_seconds:
+            msg = "token_ttl_seconds must be positive and not exceed max_lifetime_seconds"
+            raise ValueError(msg)
+        return self
 
 
 class _FileSettings(BaseModel):
@@ -100,13 +126,7 @@ def load_agent_config(handle: str, config_path: Path | None = None) -> AgentConf
         keys_dir = config_path.parent / keys_dir
     keys_dir = keys_dir.resolve()
 
-    private_path = keys_dir / f"{handle}.key"
-    public_path = keys_dir / f"{handle}.pub"
-    if private_path.exists() and public_path.exists():
-        private_key = load_private_key(private_path)
-        public_key = load_public_key(public_path)
-    else:
-        private_key, public_key = generate_keypair(handle, keys_dir)
+    private_key, public_key = load_keypair(handle, keys_dir)
 
     return AgentConfig(
         name=agent_entry["name"],
@@ -118,4 +138,8 @@ def load_agent_config(handle: str, config_path: Path | None = None) -> AgentConf
         reputation_url=file_settings.platform.reputation_url,
         court_url=file_settings.platform.court_url,
         token_ttl_seconds=file_settings.signing.token_ttl_seconds,
+        token_policy=TokenPolicy(
+            max_lifetime_seconds=file_settings.signing.max_lifetime_seconds,
+            clock_skew_seconds=file_settings.signing.clock_skew_seconds,
+        ),
     )

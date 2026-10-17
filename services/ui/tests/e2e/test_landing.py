@@ -100,16 +100,18 @@ def _load_landing(
     landing_page = LandingPage(e2e_page, e2e_server)
     landing_page.navigate()
     e2e_page.wait_for_function(
-        "document.querySelectorAll('#ticker-track .ticker-item').length >= 24"
+        "() => document.querySelectorAll('#ticker-track .ticker-item').length >= 24"
     )
-    e2e_page.wait_for_function("document.querySelectorAll('.kpi-cell').length >= 5")
-    e2e_page.wait_for_function("document.querySelectorAll('.board-cell').length >= 15")
-    e2e_page.wait_for_function("document.querySelectorAll('#news-track .bt-item').length >= 16")
+    e2e_page.wait_for_function("() => document.querySelectorAll('.kpi-cell').length >= 5")
+    e2e_page.wait_for_function("() => document.querySelectorAll('.board-cell').length >= 15")
+    e2e_page.wait_for_function(
+        "() => document.querySelectorAll('#news-track .bt-item').length >= 16"
+    )
     if accelerate_intervals:
         e2e_page.wait_for_timeout(3000)
     else:
         e2e_page.wait_for_function(
-            "Array.from(document.querySelectorAll('.kpi-value'))."
+            "() => Array.from(document.querySelectorAll('.kpi-value'))."
             "every((el) => !el.classList.contains('counting'))",
         )
     return landing_page

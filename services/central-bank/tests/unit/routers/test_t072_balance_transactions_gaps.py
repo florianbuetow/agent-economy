@@ -76,6 +76,7 @@ class TestBalanceWrongActionAndMismatch:
             private_key,
             "a-alice",
             {"action": "get_balance", "account_id": "a-different-uuid"},
+            resource="GET /accounts/a-alice",
         )
         response = await client.get(
             "/accounts/a-alice",

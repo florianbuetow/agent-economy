@@ -7,11 +7,14 @@ Every value must be explicitly specified or startup fails.
 
 from __future__ import annotations
 
+import re
 from functools import lru_cache
+from ipaddress import ip_address
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from service_commons.config import (
     REDACTION_MARKER,
     get_safe_model_config,
@@ -85,6 +88,96 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
+class RecoveryConfig(BaseModel):
+    """Explicit maintenance coordination configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+    maintenance_lock_path: Path
+
+
+def _loopback_hostname(host: str) -> bool:
+    if host == "localhost":
+        return True
+    try:
+        return ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+class BrowserSecurityConfig(BaseModel):
+    """Explicit authority and response policy for the local operator browser."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    allowed_hosts: list[str]
+    allowed_origins: list[str]
+    csrf_header_name: str
+    csrf_header_value: str
+    content_security_policy: str
+
+    @field_validator("allowed_hosts")
+    @classmethod
+    def hosts_must_be_local_authorities(cls, values: list[str]) -> list[str]:
+        if not values or len(set(values)) != len(values):
+            raise ValueError("allowed_hosts must be explicit and unique")
+        for value in values:
+            host = value[1:-1] if value.startswith("[") and value.endswith("]") else value
+            if (
+                value != value.strip()
+                or not value.isascii()
+                or (":" in value and not value.startswith("["))
+                or not _loopback_hostname(host)
+            ):
+                raise ValueError("allowed_hosts must contain only localhost or loopback IP hosts")
+        return values
+
+    @field_validator("allowed_origins")
+    @classmethod
+    def origins_must_be_exact_and_local(cls, values: list[str]) -> list[str]:
+        if not values or len(set(values)) != len(values):
+            raise ValueError("allowed_origins must be explicit and unique")
+        for value in values:
+            parsed = urlsplit(value)
+            port = parsed.port
+            if (
+                not value.isascii()
+                or any(character.isspace() for character in value)
+                or parsed.scheme not in {"http", "https"}
+                or not parsed.hostname
+                or not _loopback_hostname(parsed.hostname)
+                or parsed.path
+                or parsed.query
+                or parsed.fragment
+                or parsed.username is not None
+                or parsed.password is not None
+                or value != f"{parsed.scheme}://{parsed.netloc}"
+                or parsed.netloc.endswith(":")
+                or (port is not None and port <= 0)
+            ):
+                raise ValueError("allowed_origins must contain exact local HTTP(S) origins")
+        return values
+
+    @field_validator("csrf_header_name")
+    @classmethod
+    def marker_header_must_be_custom(cls, value: str) -> str:
+        if re.fullmatch(r"X-[A-Za-z0-9-]+", value, flags=re.IGNORECASE) is None:
+            raise ValueError("csrf_header_name must be an ASCII custom X- header")
+        if value.lower().startswith("x-forwarded-"):
+            raise ValueError("csrf_header_name must not alter proxy forwarding metadata")
+        return value
+
+    @field_validator("csrf_header_value", "content_security_policy")
+    @classmethod
+    def response_values_must_be_printable_ascii(cls, value: str) -> str:
+        if (
+            not value
+            or value != value.strip()
+            or not value.isascii()
+            or any(ord(character) < 32 or ord(character) == 127 for character in value)
+        ):
+            raise ValueError("browser header values must be non-blank printable ASCII")
+        return value
+
+
 class UserAgentConfig(BaseModel):
     """User agent configuration."""
 
@@ -97,6 +190,15 @@ class UserAgentConfig(BaseModel):
     # docs/plans/2026-07-10-q9-treasury-bootstrap-decision.md and
     # agents/src/treasury_provision_cli.
     handle: str
+
+    @field_validator("agent_config_path", "handle")
+    @classmethod
+    def signing_configuration_must_not_be_blank(cls, value: str) -> str:
+        """Require explicit load-only operator credential configuration."""
+        if not value.strip():
+            msg = "operator signing configuration must not be blank"
+            raise ValueError(msg)
+        return value
 
 
 class Settings(BaseModel):
@@ -115,7 +217,24 @@ class Settings(BaseModel):
     sse: SSEConfig
     frontend: FrontendConfig
     request: RequestConfig
+    browser_security: BrowserSecurityConfig
     user_agent: UserAgentConfig
+    recovery: RecoveryConfig
+
+    @field_validator("server")
+    @classmethod
+    def server_must_bind_to_loopback(cls, value: ServerConfig) -> ServerConfig:
+        try:
+            is_loopback = ip_address(value.host).is_loopback
+        except ValueError:
+            is_loopback = False
+        if not is_loopback:
+            msg = (
+                "UI server.host must be a loopback IP because no complete "
+                "authenticated non-loopback deployment mode exists"
+            )
+            raise ValueError(msg)
+        return value
 
 
 def get_config_path() -> Path:
@@ -161,6 +280,26 @@ def get_settings() -> Settings:
 def clear_settings_cache() -> None:
     """Clear cached settings for test isolation."""
     get_settings.cache_clear()
+
+
+def resolve_recovery_path(path: Path) -> Path:
+    """Resolve a recovery path lexically against the selected config parent."""
+    candidate = path if path.is_absolute() else get_config_path().parent / path
+    return _absolute_lexical_path(candidate)
+
+
+def _absolute_lexical_path(path: Path) -> Path:
+    candidate = path if path.is_absolute() else Path.cwd() / path
+    normalized_parts: list[str] = []
+    for part in candidate.parts:
+        if part in {candidate.anchor, "", "."}:
+            continue
+        if part == "..":
+            if normalized_parts:
+                normalized_parts.pop()
+            continue
+        normalized_parts.append(part)
+    return Path(candidate.anchor, *normalized_parts)
 
 
 def get_safe_config() -> dict[str, Any]:

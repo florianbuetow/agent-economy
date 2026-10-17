@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from base_agent.config import AgentConfig
 from base_agent.platform import PlatformAgent
-from base_agent.signing import create_jws
+from base_agent.signing import TokenPolicy, create_jws
 
 
 @pytest.fixture()
@@ -26,6 +26,8 @@ def platform_config() -> AgentConfig:
         task_board_url="http://localhost:8003",
         reputation_url="http://localhost:8004",
         court_url="http://localhost:8005",
+        token_ttl_seconds=300,
+        token_policy=TokenPolicy(max_lifetime_seconds=300, clock_skew_seconds=30),
     )
 
 
@@ -58,7 +60,9 @@ class TestCreateAccount:
 
         assert result == response
         agent._sign_jws.assert_called_once_with(
-            {"action": "create_account", "agent_id": "a-alice", "initial_balance": 100}
+            {"action": "create_account", "agent_id": "a-alice", "initial_balance": 100},
+            audience="central-bank",
+            resource="POST /accounts",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -88,7 +92,9 @@ class TestCreditAccount:
                 "account_id": "a-alice",
                 "amount": 100,
                 "reference": "salary",
-            }
+            },
+            audience="central-bank",
+            resource="POST /accounts/a-alice/credit",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -117,7 +123,9 @@ class TestReleaseEscrow:
                 "action": "escrow_release",
                 "escrow_id": "esc-1",
                 "recipient_account_id": "a-alice",
-            }
+            },
+            audience="central-bank",
+            resource="POST /escrow/esc-1/release",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -153,7 +161,9 @@ class TestSplitEscrow:
                 "worker_account_id": "a-alice",
                 "poster_account_id": "a-bob",
                 "worker_pct": 70,
-            }
+            },
+            audience="central-bank",
+            resource="POST /escrow/esc-1/split",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -171,17 +181,29 @@ class TestVerifyPlatformJws:
         agent = PlatformAgent(config=platform_config)
         agent.agent_id = "a-platform"
 
-        token = agent._sign_jws({"action": "create_account", "agent_id": "a-alice"})
+        token = agent._sign_jws(
+            {"action": "create_account", "agent_id": "a-alice"},
+            audience="central-bank",
+            resource="POST /accounts",
+        )
         result = agent.verify_platform_jws(token)
 
-        assert result["action"] == "create_account"
-        assert result["agent_id"] == "a-alice"
+        assert result.payload["action"] == "create_account"
+        assert result.payload["agent_id"] == "a-alice"
 
     def test_verify_rejects_non_platform_token(self, platform_config: AgentConfig) -> None:
         agent = PlatformAgent(config=platform_config)
+        agent.agent_id = "a-platform"
 
         other_key = Ed25519PrivateKey.generate()
-        token = create_jws({"action": "create_account"}, other_key, kid="a-imposter")
+        token = create_jws(
+            {"action": "create_account"},
+            other_key,
+            kid="a-imposter",
+            audience="central-bank",
+            resource="POST /accounts",
+            token_ttl_seconds=300,
+        )
 
         with pytest.raises(InvalidSignature):
             agent.verify_platform_jws(token)

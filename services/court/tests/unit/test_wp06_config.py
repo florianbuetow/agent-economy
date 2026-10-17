@@ -19,7 +19,7 @@ def _settings_with(mock_worker_pct: int, max_deliverable_bytes: int) -> Settings
         service={"name": "court", "version": "0.1.0"},
         server={"host": "127.0.0.1", "port": 8005, "log_level": "info"},
         logging={"level": "WARNING", "directory": "data/logs"},
-        platform=PlatformConfig(agent_id="a-platform"),
+        platform=PlatformConfig(agent_id="a-platform", agent_config_path="agents.yaml"),
         disputes={
             "rebuttal_deadline_seconds": 86400,
             "max_claim_length": 10000,
@@ -35,7 +35,16 @@ def _settings_with(mock_worker_pct: int, max_deliverable_bytes: int) -> Settings
             judges=[JudgeConfig(id="judge-0", provider="mock", model="mock-judge")],
         ),
         request={"max_body_size": 1048576},
-        db_gateway={"url": "http://127.0.0.1:8007", "timeout_seconds": 10},
+        db_gateway={
+            "url": "http://127.0.0.1:8007",
+            "timeout_seconds": 10,
+            "signing": {
+                "kid": "gateway-court",
+                "private_key_path": "gateway-court.key",
+                "audience": "db-gateway",
+                "token_ttl_seconds": 300,
+            },
+        },
     )
 
 

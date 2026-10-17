@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -488,10 +489,10 @@ class TestSchemaInitIsStrict:
         with pytest.raises(sqlite3.OperationalError):
             next(_open_writer(tmp_db_path, "CREATE TABLE broken (;"))
 
-    def test_event_id_columns_are_added_to_legacy_bank_tables(
+    def test_partial_bank_tables_are_rejected_without_columns_or_row_changes(
         self, tmp_db_path: str, schema_sql: str
     ) -> None:
-        """A database predating event_id gains the column without losing rows."""
+        """Partial Bank schemas need explicit reconciliation, not startup ALTER."""
         conn = sqlite3.connect(tmp_db_path)
         conn.execute(
             "CREATE TABLE bank_transactions ("
@@ -511,24 +512,26 @@ class TestSchemaInitIsStrict:
         )
         conn.commit()
         conn.close()
+        before = Path(tmp_db_path).read_bytes()
 
-        writer = next(_open_writer(tmp_db_path, schema_sql))
+        with pytest.raises(ServiceError, match="incomplete or unknown"):
+            next(_open_writer(tmp_db_path, schema_sql))
+        conn = sqlite3.connect(tmp_db_path)
         try:
             tx_columns = [
-                str(row[1]) for row in writer._db.execute("PRAGMA table_info(bank_transactions)")
+                str(row[1]) for row in conn.execute("PRAGMA table_info(bank_transactions)")
             ]
-            escrow_columns = [
-                str(row[1]) for row in writer._db.execute("PRAGMA table_info(bank_escrow)")
-            ]
-            legacy = writer._db.execute(
-                "SELECT event_id FROM bank_transactions WHERE tx_id = 'tx-legacy'"
+            escrow_columns = [str(row[1]) for row in conn.execute("PRAGMA table_info(bank_escrow)")]
+            legacy = conn.execute(
+                "SELECT * FROM bank_transactions WHERE tx_id = 'tx-legacy'"
             ).fetchone()
 
-            assert tx_columns.count("event_id") == 1
-            assert escrow_columns.count("event_id") == 1
-            assert legacy[0] is None
+            assert "event_id" not in tx_columns
+            assert "event_id" not in escrow_columns
+            assert legacy == ("tx-legacy", "a-1", "credit", 10, 10, "ref", "2026-01-01T00:00:00Z")
         finally:
-            writer.close()
+            conn.close()
+        assert Path(tmp_db_path).read_bytes() == before
 
     def test_schema_referencing_missing_table_raises(self, tmp_db_path: str) -> None:
         with pytest.raises(sqlite3.OperationalError):

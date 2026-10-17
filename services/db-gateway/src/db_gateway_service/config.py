@@ -7,9 +7,11 @@ Every value must be explicitly specified or startup fails.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
+from service_auth.gateway import GatewayTrustConfig
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
@@ -18,9 +20,6 @@ from service_commons.config import (
 from service_commons.config import (
     get_config_path as resolve_config_path,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class ServiceConfig(BaseModel):
@@ -66,6 +65,14 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
+class RecoveryConfig(BaseModel):
+    """Explicit paths used by offline recovery operations."""
+
+    model_config = ConfigDict(extra="forbid")
+    maintenance_lock_path: Path
+    backup_root: Path
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -80,6 +87,11 @@ class Settings(BaseModel):
     logging: LoggingConfig
     database: DatabaseConfig
     request: RequestConfig
+    auth: GatewayTrustConfig
+    recovery: RecoveryConfig
+
+
+Settings.model_rebuild(_types_namespace={"GatewayTrustConfig": GatewayTrustConfig})
 
 
 def get_config_path() -> Path:
@@ -91,6 +103,26 @@ def get_config_path() -> Path:
 
 
 get_settings, clear_settings_cache = create_settings_loader(Settings, get_config_path)  # nosemgrep
+
+
+def resolve_recovery_path(path: Path) -> Path:
+    """Resolve a recovery path lexically against the selected config parent."""
+    candidate = path if path.is_absolute() else get_config_path().parent / path
+    return _absolute_lexical_path(candidate)
+
+
+def _absolute_lexical_path(path: Path) -> Path:
+    candidate = path if path.is_absolute() else Path.cwd() / path
+    normalized_parts: list[str] = []
+    for part in candidate.parts:
+        if part in {candidate.anchor, "", "."}:
+            continue
+        if part == "..":
+            if normalized_parts:
+                normalized_parts.pop()
+            continue
+        normalized_parts.append(part)
+    return Path(candidate.anchor, *normalized_parts)
 
 
 def get_safe_config() -> dict[str, Any]:

@@ -1,19 +1,33 @@
 """Proxy route handlers — task lifecycle via UserAgent."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
+from ui_service.config import get_settings
+from ui_service.core.deps import DbConn
 from ui_service.schemas import (
+    BidItem,
     CreateTaskRequest,
     FileDisputeRequest,
+    OperatorBidListResponse,
     ProxyIdentityResponse,
 )
 from ui_service.services import proxy as proxy_service
+from ui_service.services import tasks as tasks_service
 
 router = APIRouter()
+
+
+@router.get("/proxy/browser-config")
+async def get_browser_config() -> dict[str, str]:
+    """Return the non-secret same-origin marker required for browser writes."""
+    security = get_settings().browser_security
+    return {
+        "csrf_header_name": security.csrf_header_name,
+        "csrf_header_value": security.csrf_header_value,
+    }
 
 
 @router.get("/proxy/identity")
@@ -33,6 +47,21 @@ async def create_task(body: CreateTaskRequest) -> dict[str, Any]:
         bidding_deadline_seconds=body.bidding_deadline_seconds,
         execution_deadline_seconds=body.execution_deadline_seconds,
         review_deadline_seconds=body.review_deadline_seconds,
+    )
+
+
+@router.get("/proxy/tasks/{task_id}/bids")
+async def list_bids(task_id: str, db: DbConn) -> JSONResponse:
+    """Return the operator poster's authoritative view of sealed bids."""
+    authorized_bids = await proxy_service.list_bids(task_id=task_id)
+    bids = await tasks_service.enrich_authorized_bids(db, authorized_bids)
+    response = OperatorBidListResponse(
+        task_id=task_id,
+        bids=[BidItem(**bid) for bid in bids],
+    )
+    return JSONResponse(
+        content=response.model_dump(by_alias=True),
+        headers={"Cache-Control": "private, no-store"},
     )
 
 

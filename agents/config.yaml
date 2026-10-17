@@ -16,6 +16,8 @@ data:
 signing:
   # Lifetime stamped into each signed token's iat/exp header claims (seconds).
   token_ttl_seconds: 300
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 30
 
 # Treasury provisioning (WP-08 / Q-9). Idempotent genesis for the UI
 # operator's account, run explicitly via `just provision` — see

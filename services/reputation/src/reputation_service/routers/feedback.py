@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import base64
 import json
 from typing import TYPE_CHECKING
 
+from cryptography.exceptions import InvalidSignature
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from service_auth.jws import JwsAdmissionError, parse_jws, require_context
 from starlette.concurrency import run_in_threadpool
 
 from reputation_service.core.exceptions import ServiceError
@@ -29,17 +30,11 @@ router = APIRouter()
 
 
 def _token_kid(token: str) -> str:
-    """Return the ``kid`` from a JWS protected header without verifying the signature."""
-    header_b64 = token.split(".", maxsplit=1)[0]
-    padded = header_b64 + "=" * (-len(header_b64) % 4)
+    """Strictly parse the protected header used only to select the verifier."""
     try:
-        header = json.loads(base64.urlsafe_b64decode(padded))
-    except (json.JSONDecodeError, ValueError, UnicodeDecodeError):
-        return ""
-    if not isinstance(header, dict):
-        return ""
-    kid = header.get("kid", "")
-    return kid if isinstance(kid, str) else ""
+        return parse_jws(token).header.kid
+    except JwsAdmissionError as exc:
+        raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
 
 
 def _select_verifier(state: AppState, token: str) -> JwsVerifier | None:
@@ -48,11 +43,12 @@ def _select_verifier(state: AppState, token: str) -> JwsVerifier | None:
     The signer is read from the (unverified) ``kid`` only to pick the verifier; the
     chosen verifier then authenticates the token.
     """
+    token_kid = _token_kid(token)
     platform_agent = state.platform_agent
     if (
         platform_agent is not None
         and state.platform_verifier is not None
-        and _token_kid(token) == platform_agent.agent_id
+        and token_kid == platform_agent.agent_id
     ):
         return state.platform_verifier
     return state.identity_client
@@ -162,44 +158,27 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
             details={},
         )
 
-    verify_result = await verifier.verify_jws(token)
-
-    if not verify_result.get("valid"):
+    try:
+        verified = await verifier.verify_jws(token)
+    except InvalidSignature as exc:
         raise ServiceError(
-            error="forbidden",
-            message="JWS signature verification failed",
-            status_code=403,
-            details={},
+            "forbidden",
+            "JWS signature verification failed",
+            403,
+            {},
+        ) from exc
+    try:
+        require_context(
+            verified,
+            audience="reputation",
+            resource="POST /feedback",
+            allowed_action="submit_feedback",
         )
+    except JwsAdmissionError as exc:
+        raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
 
-    payload_from_identity = verify_result.get("payload")
-    if not isinstance(payload_from_identity, dict):
-        raise ServiceError(
-            error="invalid_payload",
-            message="JWS payload must be a JSON object",
-            status_code=400,
-            details={},
-        )
-
-    payload: dict[str, object] = payload_from_identity
-    signer_agent_id: str = verify_result.get("agent_id", "")
-    if not signer_agent_id:
-        raise ServiceError(
-            error="invalid_jws",
-            message="Token header is missing kid",
-            status_code=400,
-            details={},
-        )
-
-    # --- Payload Validation ---
-    action = payload.get("action")
-    if action != "submit_feedback":
-        raise ServiceError(
-            error="invalid_payload",
-            message='JWS payload action must be "submit_feedback"',
-            status_code=400,
-            details={},
-        )
+    payload = verified.payload
+    signer_agent_id = verified.header.kid
 
     from_agent_id_in_payload = payload.get("from_agent_id")
     if not from_agent_id_in_payload or not isinstance(from_agent_id_in_payload, str):

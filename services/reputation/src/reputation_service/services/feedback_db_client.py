@@ -5,22 +5,46 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
 from reputation_service.services.exceptions import DuplicateFeedbackError
 from reputation_service.types import FeedbackRecord
 
+if TYPE_CHECKING:
+    from service_auth.gateway import GatewayRequestSigner
+
 
 class FeedbackDbClient:
     """Feedback storage backed by the DB Gateway HTTP API."""
 
-    def __init__(self, base_url: str, timeout_seconds: int) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: int,
+        signer: GatewayRequestSigner,
+    ) -> None:
         self._client = httpx.Client(
             base_url=base_url,
             timeout=httpx.Timeout(timeout_seconds),
         )
+        self._signer = signer
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, Any] | None,
+        params: dict[str, Any] | None,
+    ) -> httpx.Response:
+        request = self._client.build_request(method, path, json=json, params=params)
+        signed_request = self._signer.sign_request(
+            request,
+            action=f"gateway.reputation.{'read' if method == 'GET' else 'write'}",
+        )
+        return self._client.send(signed_request)
 
     def _json(self, response: httpx.Response) -> dict[str, Any]:
         try:
@@ -88,20 +112,12 @@ class FeedbackDbClient:
                 "event_type": "feedback.submitted",
                 "timestamp": submitted_at,
                 "task_id": task_id,
-                "agent_id": from_agent_id,
-                "summary": f"Feedback submitted by {from_agent_id} for {to_agent_id}",
-                "payload": json.dumps(
-                    {
-                        "from_agent_id": from_agent_id,
-                        "to_agent_id": to_agent_id,
-                        "category": category,
-                        "rating": rating,
-                    }
-                ),
+                "summary": "Feedback submitted",
+                "payload": json.dumps({}),
             },
         }
 
-        response = self._client.post("/reputation/feedback", json=payload)
+        response = self._request("POST", "/reputation/feedback", json=payload, params=None)
         if response.status_code == 409:
             raise DuplicateFeedbackError(
                 f"Feedback already exists for ({task_id}, {from_agent_id}, {to_agent_id})"
@@ -128,7 +144,9 @@ class FeedbackDbClient:
         )
 
     def get_by_id(self, feedback_id: str) -> FeedbackRecord | None:
-        response = self._client.get(f"/reputation/feedback/{feedback_id}")
+        response = self._request(
+            "GET", f"/reputation/feedback/{feedback_id}", json=None, params=None
+        )
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -137,7 +155,9 @@ class FeedbackDbClient:
         return self._dict_to_record(self._json(response))
 
     def get_by_task(self, task_id: str) -> list[FeedbackRecord]:
-        response = self._client.get("/reputation/feedback", params={"task_id": task_id})
+        response = self._request(
+            "GET", "/reputation/feedback", json=None, params={"task_id": task_id}
+        )
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -148,7 +168,9 @@ class FeedbackDbClient:
         return [self._dict_to_record(item) for item in items if isinstance(item, dict)]
 
     def get_by_agent(self, agent_id: str) -> list[FeedbackRecord]:
-        response = self._client.get("/reputation/feedback", params={"agent_id": agent_id})
+        response = self._request(
+            "GET", "/reputation/feedback", json=None, params={"agent_id": agent_id}
+        )
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -159,7 +181,7 @@ class FeedbackDbClient:
         return [self._dict_to_record(item) for item in items if isinstance(item, dict)]
 
     def count(self) -> int:
-        response = self._client.get("/reputation/feedback/count")
+        response = self._request("GET", "/reputation/feedback/count", json=None, params=None)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)

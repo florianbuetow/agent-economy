@@ -33,3 +33,8 @@ feedback:
 db_gateway:
   url: "http://127.0.0.1:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-reputation"
+    private_key_path: "../../data/keys/gateway-reputation.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300

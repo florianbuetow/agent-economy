@@ -1,8 +1,4 @@
-"""Central Bank domain writes (WP-11, B16 god-class decomposition).
-
-Extracted from db_writer.py. See identity_writer.py's module docstring for
-the shared-connection/no-await invariant this preserves.
-"""
+"""Central Bank writes with atomic native operation receipts."""
 
 from __future__ import annotations
 
@@ -11,109 +7,226 @@ from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
-from db_gateway_service.services.db_writer_helpers import (
-    check_constraint_violation,
-    compile_constraints,
-    insert_event,
-    is_foreign_key_violation,
-    is_unique_violation,
+from db_gateway_service.financial_requests import canonical_request, validate_operation_id
+from db_gateway_service.schema import SQLITE_MAX_INTEGER
+from db_gateway_service.services.db_writer_helpers import insert_event, is_foreign_key_violation
+from db_gateway_service.services.financial_records import (
+    FinancialRecords,
+    missing_ownership,
+    ownership_conflict,
 )
 
 if TYPE_CHECKING:
+    from db_gateway_service.financial_requests import FinancialRequest
     from db_gateway_service.services.db_writer import DbWriter
 
 
+def _money_amount(value: object, *, minimum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+        raise ServiceError(
+            "invalid_amount", "Amount must be an integer in the required range", 400, {}
+        )
+    if value > SQLITE_MAX_INTEGER:
+        raise ServiceError("amount_out_of_range", "Amount exceeds SQLite integer capacity", 400, {})
+    return value
+
+
+def _validate_initial_issuance(data: dict[str, Any]) -> None:
+    balance = _money_amount(data["balance"], minimum=0)
+    initial_credit = data.get("initial_credit")
+    if initial_credit is None and balance == 0:
+        return
+    if not isinstance(initial_credit, dict):
+        raise ServiceError(
+            "payload_mismatch", "Initial balance requires matching issuance", 400, {}
+        )
+    amount = _money_amount(initial_credit.get("amount"), minimum=1)
+    if amount != balance or initial_credit.get("reference") != "initial_balance":
+        raise ServiceError(
+            "payload_mismatch",
+            "Initial balance requires the fixed matching issuance",
+            400,
+            {},
+        )
+
+
+def _financial_request(
+    data: dict[str, Any],
+    operation_kind: str,
+    fields: dict[str, object],
+) -> tuple[str, FinancialRequest]:
+    try:
+        operation_id = validate_operation_id(data.get("operation_id"))
+    except ValueError as exc:
+        raise ServiceError(
+            "invalid_operation_id",
+            "operation_id must be a canonical op-UUID string",
+            400,
+            {"field": "operation_id"},
+        ) from exc
+    try:
+        request = canonical_request(operation_kind, fields)
+    except ValueError as exc:
+        raise ServiceError("invalid_financial_request", str(exc), 400, {}) from exc
+    return operation_id, request
+
+
 class BankWriter:
-    """Handles account creation, credit, and escrow lock/release/split writes."""
+    """Serialize money effects, immutable receipts, and legs in one transaction."""
 
     def __init__(self, writer: DbWriter) -> None:
         self._writer = writer
+        self._records = FinancialRecords()
 
     def create_account(self, data: dict[str, Any]) -> dict[str, Any]:
-        """
-        Create a bank account with optional initial credit.
+        _validate_initial_issuance(data)
+        balance = int(data["balance"])
+        if balance == 0:
+            if "operation_id" in data:
+                raise ServiceError(
+                    "invalid_operation_id",
+                    "Zero-balance account creation has no financial operation identity",
+                    400,
+                    {"field": "operation_id"},
+                )
+            return self._create_zero_account(data)
 
-        INSERT INTO bank_accounts + optional INSERT INTO bank_transactions + INSERT INTO events.
-        Idempotency: PK on account_id.
-        """
+        initial_credit = data["initial_credit"]
+        operation_id, request = _financial_request(
+            data,
+            "account_issuance",
+            {
+                "account_id": data["account_id"],
+                "amount": balance,
+                "reference": "initial_balance",
+            },
+        )
+        db = self._writer.connection
+        cursor = db.cursor()
+        receipt_phase = False
+        try:
+            cursor.execute("BEGIN IMMEDIATE")
+            replay = self._records.replay(cursor, operation_id, request)
+            if replay is not None:
+                db.rollback()
+                return replay
+            existing = self._lookup_account(data["account_id"])
+            if existing is not None:
+                winner = self._records.credit_winner(cursor, data["account_id"], "initial_balance")
+                if winner is not None:
+                    raise ownership_conflict(winner)
+                raise ServiceError("account_exists", "Account already exists", 409, {})
+            cursor.execute(
+                "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?, ?, ?)",
+                (data["account_id"], balance, data["created_at"]),
+            )
+            event_id = insert_event(cursor, data["event"])
+            cursor.execute(
+                "INSERT INTO bank_transactions "
+                "(tx_id, account_id, type, amount, balance_after, reference, timestamp, event_id) "
+                "VALUES (?, ?, 'credit', ?, ?, 'initial_balance', ?, ?)",
+                (
+                    initial_credit["tx_id"],
+                    data["account_id"],
+                    balance,
+                    balance,
+                    initial_credit["timestamp"],
+                    event_id,
+                ),
+            )
+            result = {
+                "account_id": data["account_id"],
+                "issued_amount": balance,
+                "balance_after": balance,
+            }
+            legs = (
+                {
+                    "role": "account",
+                    "account_id": data["account_id"],
+                    "direction": "credit",
+                    "amount": balance,
+                    "transaction_id": initial_credit["tx_id"],
+                    "balance_after": balance,
+                },
+            )
+            receipt_phase = True
+            envelope = self._records.persist(
+                cursor,
+                operation_id,
+                request,
+                initial_credit["timestamp"],
+                event_id,
+                None,
+                result,
+                legs,
+            )
+            db.commit()
+            return envelope
+        except ServiceError:
+            db.rollback()
+            raise
+        except sqlite3.IntegrityError as exc:
+            db.rollback()
+            if receipt_phase:
+                raise
+            if is_foreign_key_violation(exc):
+                raise ServiceError(
+                    "foreign_key_violation", "Foreign key constraint failed", 409, {}
+                ) from exc
+            raise ServiceError("account_exists", "Account already exists", 409, {}) from exc
+        except Exception:
+            db.rollback()
+            raise
+
+    def _create_zero_account(self, data: dict[str, Any]) -> dict[str, Any]:
         db = self._writer.connection
         cursor = db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
             cursor.execute(
-                "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?, ?, ?)",
-                (data["account_id"], data["balance"], data["created_at"]),
+                "INSERT INTO bank_accounts (account_id, balance, created_at) VALUES (?, 0, ?)",
+                (data["account_id"], data["created_at"]),
             )
             event_id = insert_event(cursor, data["event"])
-            # Optional initial credit transaction
-            initial_credit = data.get("initial_credit")
-            if initial_credit is not None:
-                cursor.execute(
-                    "INSERT INTO bank_transactions "
-                    "(tx_id, account_id, type, amount, balance_after, reference, timestamp, "
-                    "event_id) "
-                    "VALUES (?, ?, 'credit', ?, ?, ?, ?, ?)",
-                    (
-                        initial_credit["tx_id"],
-                        data["account_id"],
-                        initial_credit["amount"],
-                        data["balance"],
-                        initial_credit["reference"],
-                        initial_credit["timestamp"],
-                        event_id,
-                    ),
-                )
             db.commit()
             return {"account_id": data["account_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
             db.rollback()
             if is_foreign_key_violation(exc):
                 raise ServiceError(
-                    "foreign_key_violation",
-                    "Foreign key constraint failed",
-                    409,
-                    {},
+                    "foreign_key_violation", "Foreign key constraint failed", 409, {}
                 ) from exc
-            raise ServiceError(
-                "account_exists",
-                "Account already exists for this agent",
-                409,
-                {},
-            ) from exc
+            raise ServiceError("account_exists", "Account already exists", 409, {}) from exc
         except Exception:
             db.rollback()
             raise
 
-    def _lookup_account(self, account_id: str) -> dict[str, Any] | None:
-        """Look up an account by ID."""
-        cursor = self._writer.connection.execute(
-            "SELECT account_id, balance, created_at FROM bank_accounts WHERE account_id = ?",
-            (account_id,),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        return {"account_id": row[0], "balance": row[1], "created_at": row[2]}
-
     def credit_account(self, data: dict[str, Any]) -> dict[str, Any]:
-        """
-        Credit an account.
-
-        UPDATE bank_accounts + INSERT INTO bank_transactions + INSERT INTO events.
-        Idempotency: idx_bank_tx_idempotent on (account_id, reference) WHERE type='credit'.
-        """
+        amount = _money_amount(data["amount"], minimum=1)
+        operation_id, request = _financial_request(
+            data,
+            "credit",
+            {
+                "account_id": data["account_id"],
+                "amount": amount,
+                "reference": data["reference"],
+            },
+        )
         db = self._writer.connection
         cursor = db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
-            cursor.execute(
-                "UPDATE bank_accounts SET balance = balance + ? WHERE account_id = ?",
-                (data["amount"], data["account_id"]),
-            )
-            if cursor.rowcount == 0:
+            replay = self._records.replay(cursor, operation_id, request)
+            if replay is not None:
                 db.rollback()
-                raise ServiceError("account_not_found", "No account with this account_id", 404, {})
-            # The event is written first so the transaction row can name it.
+                return replay
+            existing = self._lookup_credit_tx(data["account_id"], data["reference"])
+            if existing is not None:
+                winner = self._records.credit_winner(cursor, data["account_id"], data["reference"])
+                if winner is None:
+                    raise missing_ownership("credit", str(existing["tx_id"]))
+                raise ownership_conflict(winner)
+            self._credit_balance(cursor, data["account_id"], amount)
             event_id = insert_event(cursor, data["event"])
             cursor.execute(
                 "INSERT INTO bank_transactions "
@@ -123,91 +236,87 @@ class BankWriter:
                 (
                     data["tx_id"],
                     data["account_id"],
-                    data["amount"],
+                    amount,
                     data["account_id"],
                     data["reference"],
                     data["timestamp"],
                     event_id,
                 ),
             )
-            balance_cursor = db.execute(
-                "SELECT balance FROM bank_accounts WHERE account_id = ?",
-                (data["account_id"],),
-            )
-            balance_row = balance_cursor.fetchone()
-            balance_after = int(balance_row[0]) if balance_row else 0
-            db.commit()
-            return {
-                "tx_id": data["tx_id"],
+            balance_after = self._balance(cursor, data["account_id"])
+            result = {
+                "account_id": data["account_id"],
+                "amount": amount,
                 "balance_after": balance_after,
-                "event_id": event_id,
+                "reference": data["reference"],
             }
+            legs = (
+                {
+                    "role": "account",
+                    "account_id": data["account_id"],
+                    "direction": "credit",
+                    "amount": amount,
+                    "transaction_id": data["tx_id"],
+                    "balance_after": balance_after,
+                },
+            )
+            envelope = self._records.persist(
+                cursor,
+                operation_id,
+                request,
+                data["timestamp"],
+                event_id,
+                None,
+                result,
+                legs,
+            )
+            db.commit()
+            return envelope
         except ServiceError:
-            raise
-        except sqlite3.IntegrityError as exc:
             db.rollback()
-            if is_unique_violation(exc):
-                # Idempotency check — same (account_id, reference) for credit
-                existing = self._lookup_credit_tx(data["account_id"], data["reference"])
-                if existing is not None and existing["amount"] == data["amount"]:
-                    return {
-                        "tx_id": existing["tx_id"],
-                        "balance_after": existing["balance_after"],
-                        "event_id": existing["event_id"],
-                    }
-                raise ServiceError(
-                    "reference_conflict",
-                    "Same (account_id, reference) exists with different amount",
-                    409,
-                    {},
-                ) from exc
-            raise ServiceError(
-                "reference_conflict",
-                "Transaction constraint violation",
-                409,
-                {},
-            ) from exc
+            raise
+        except sqlite3.IntegrityError:
+            db.rollback()
+            raise
         except Exception:
             db.rollback()
             raise
 
-    def _lookup_credit_tx(self, account_id: str, reference: str) -> dict[str, Any] | None:
-        """Look up an existing credit transaction by (account_id, reference).
-
-        event_id is None for a legacy row written before the column existed.
-        """
-        cursor = self._writer.connection.execute(
-            "SELECT tx_id, amount, balance_after, event_id FROM bank_transactions "
-            "WHERE account_id = ? AND reference = ? AND type = 'credit'",
-            (account_id, reference),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        return {"tx_id": row[0], "amount": row[1], "balance_after": row[2], "event_id": row[3]}
-
     def escrow_lock(self, data: dict[str, Any]) -> dict[str, Any]:
-        """
-        Lock funds in escrow.
-
-        UPDATE bank_accounts (debit) + INSERT INTO bank_escrow +
-        INSERT INTO bank_transactions + INSERT INTO events.
-        """
+        amount = _money_amount(data["amount"], minimum=1)
+        operation_id, request = _financial_request(
+            data,
+            "escrow_lock",
+            {
+                "payer_account_id": data["payer_account_id"],
+                "task_id": data["task_id"],
+                "amount": amount,
+            },
+        )
         db = self._writer.connection
         cursor = db.cursor()
+        receipt_phase = False
         try:
             cursor.execute("BEGIN IMMEDIATE")
-            # Debit payer (balance check via WHERE clause)
+            replay = self._records.replay(cursor, operation_id, request)
+            if replay is not None:
+                db.rollback()
+                return replay
+            existing = self._lookup_escrow(data["payer_account_id"], data["task_id"])
+            if existing is not None:
+                winner = self._records.lock_winner(
+                    cursor, data["payer_account_id"], data["task_id"]
+                )
+                if winner is None:
+                    raise missing_ownership("escrow", str(existing["escrow_id"]))
+                raise ownership_conflict(winner)
             cursor.execute(
                 "UPDATE bank_accounts SET balance = balance - ? "
                 "WHERE account_id = ? AND balance >= ?",
-                (data["amount"], data["payer_account_id"], data["amount"]),
+                (amount, data["payer_account_id"], amount),
             )
             if cursor.rowcount == 0:
-                # Check if account exists at all
-                acct = self._lookup_account(data["payer_account_id"])
-                db.rollback()
-                if acct is None:
+                if self._lookup_account(data["payer_account_id"]) is None:
                     raise ServiceError(
                         "account_not_found", "No account for payer_account_id", 404, {}
                     )
@@ -217,9 +326,7 @@ class BankWriter:
                     402,
                     {},
                 )
-            # The event is written first so the escrow and transaction rows can name it.
             event_id = insert_event(cursor, data["event"])
-            # Create escrow record
             cursor.execute(
                 "INSERT INTO bank_escrow "
                 "(escrow_id, payer_account_id, amount, task_id, status, created_at, event_id) "
@@ -227,13 +334,12 @@ class BankWriter:
                 (
                     data["escrow_id"],
                     data["payer_account_id"],
-                    data["amount"],
+                    amount,
                     data["task_id"],
                     data["created_at"],
                     event_id,
                 ),
             )
-            # Log escrow_lock transaction
             cursor.execute(
                 "INSERT INTO bank_transactions "
                 "(tx_id, account_id, type, amount, balance_after, reference, timestamp, event_id) "
@@ -242,110 +348,77 @@ class BankWriter:
                 (
                     data["tx_id"],
                     data["payer_account_id"],
-                    data["amount"],
+                    amount,
                     data["payer_account_id"],
                     data["task_id"],
                     data["created_at"],
                     event_id,
                 ),
             )
-            # Get balance after debit
-            balance_cursor = db.execute(
-                "SELECT balance FROM bank_accounts WHERE account_id = ?",
-                (data["payer_account_id"],),
+            balance_after = self._balance(cursor, data["payer_account_id"])
+            result = {"escrow_status_at_commit": "locked"}
+            legs = (
+                {
+                    "role": "payer",
+                    "account_id": data["payer_account_id"],
+                    "direction": "debit",
+                    "amount": amount,
+                    "transaction_id": data["tx_id"],
+                    "balance_after": balance_after,
+                },
             )
-            balance_row = balance_cursor.fetchone()
-            balance_after = int(balance_row[0]) if balance_row else 0
+            receipt_phase = True
+            envelope = self._records.persist(
+                cursor,
+                operation_id,
+                request,
+                data["created_at"],
+                event_id,
+                data["escrow_id"],
+                result,
+                legs,
+            )
             db.commit()
-            return {
-                "escrow_id": data["escrow_id"],
-                "balance_after": balance_after,
-                "event_id": event_id,
-            }
+            return envelope
         except ServiceError:
+            db.rollback()
             raise
         except sqlite3.IntegrityError as exc:
             db.rollback()
+            if receipt_phase:
+                raise
             if is_foreign_key_violation(exc):
                 raise ServiceError(
-                    "foreign_key_violation",
-                    "Foreign key constraint failed",
-                    409,
-                    {},
-                ) from exc
-            if is_unique_violation(exc):
-                # Idempotency: check existing escrow
-                existing = self._lookup_active_escrow(data["payer_account_id"], data["task_id"])
-                if existing is not None and existing["amount"] == data["amount"]:
-                    account = self._lookup_account(data["payer_account_id"])
-                    if account is None:
-                        raise ServiceError(
-                            "account_not_found", "No account for payer_account_id", 404, {}
-                        ) from exc
-                    return {
-                        "escrow_id": existing["escrow_id"],
-                        "balance_after": int(account["balance"]),
-                        "event_id": existing["event_id"],
-                    }
-                raise ServiceError(
-                    "escrow_already_locked",
-                    "Escrow already locked for this (payer, task) pair",
-                    409,
-                    {},
+                    "foreign_key_violation", "Foreign key constraint failed", 409, {}
                 ) from exc
             raise ServiceError(
-                "escrow_already_locked",
-                "Escrow constraint violation",
-                409,
-                {},
+                "escrow_already_locked", "Escrow constraint violation", 409, {}
             ) from exc
         except Exception:
             db.rollback()
             raise
 
-    def _lookup_active_escrow(self, payer_account_id: str, task_id: str) -> dict[str, Any] | None:
-        """Look up an active (locked) escrow.
-
-        event_id is None for a legacy row written before the column existed.
-        """
-        cursor = self._writer.connection.execute(
-            "SELECT escrow_id, amount, event_id FROM bank_escrow "
-            "WHERE payer_account_id = ? AND task_id = ? AND status = 'locked'",
-            (payer_account_id, task_id),
+    def escrow_release(self, data: dict[str, Any]) -> dict[str, Any]:
+        operation_id, request = _financial_request(
+            data,
+            "escrow_release",
+            {
+                "escrow_id": data["escrow_id"],
+                "recipient_account_id": data["recipient_account_id"],
+                "source_reference": data["source_reference"],
+            },
         )
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        return {"escrow_id": row[0], "amount": row[1], "event_id": row[2]}
-
-    def escrow_release(
-        self,
-        data: dict[str, Any],
-        constraints: dict[str, Any] | None,
-    ) -> dict[str, Any]:
-        """
-        Release escrowed funds to a recipient.
-
-        SELECT escrow + UPDATE bank_accounts (credit) +
-        INSERT INTO bank_transactions + UPDATE bank_escrow + INSERT INTO events.
-        """
         db = self._writer.connection
         cursor = db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
-            # Load and verify escrow
-            escrow = self._load_escrow(cursor, data["escrow_id"])
-            # Credit recipient
-            cursor.execute(
-                "UPDATE bank_accounts SET balance = balance + ? WHERE account_id = ?",
-                (escrow["amount"], data["recipient_account_id"]),
-            )
-            if cursor.rowcount == 0:
+            replay = self._records.replay(cursor, operation_id, request)
+            if replay is not None:
                 db.rollback()
-                raise ServiceError("account_not_found", "Recipient account not found", 404, {})
-            # The event is written first so the transaction row can name it.
+                return replay
+            escrow = self._load_escrow_for_settlement(cursor, data["escrow_id"])
+            self._credit_balance(cursor, data["recipient_account_id"], escrow["amount"])
             event_id = insert_event(cursor, data["event"])
-            # Log escrow_release transaction
             cursor.execute(
                 "INSERT INTO bank_transactions "
                 "(tx_id, account_id, type, amount, balance_after, reference, timestamp, event_id) "
@@ -361,195 +434,221 @@ class BankWriter:
                     event_id,
                 ),
             )
-            # Resolve escrow
-            if constraints is not None:
-                where_clause, where_params = compile_constraints(
-                    "bank_escrow",
-                    "escrow_id",
-                    data["escrow_id"],
-                    constraints,
-                )
-                cursor.execute(
-                    f"UPDATE bank_escrow SET status = 'released', resolved_at = ? "
-                    f"WHERE {where_clause}",  # nosec B608
-                    [data["resolved_at"], *where_params],
-                )
-                if cursor.rowcount == 0:
-                    try:
-                        check_constraint_violation(
-                            cursor,
-                            "bank_escrow",
-                            "escrow_id",
-                            data["escrow_id"],
-                            constraints,
-                        )
-                    except ServiceError:
-                        db.rollback()
-                        raise
-                    db.rollback()
-                    raise ServiceError("escrow_not_found", "No escrow with this ID", 404, {})
-            else:
-                cursor.execute(
-                    "UPDATE bank_escrow SET status = 'released', resolved_at = ? "
-                    "WHERE escrow_id = ?",
-                    (data["resolved_at"], data["escrow_id"]),
-                )
+            cursor.execute(
+                "UPDATE bank_escrow SET status = 'released', resolved_at = ? "
+                "WHERE escrow_id = ? AND status = 'locked'",
+                (data["resolved_at"], data["escrow_id"]),
+            )
+            if cursor.rowcount != 1:
+                raise ServiceError("escrow_state_conflict", "Escrow is no longer locked", 409, {})
+            balance_after = self._balance(cursor, data["recipient_account_id"])
+            envelope = self._records.persist(
+                cursor,
+                operation_id,
+                request,
+                data["resolved_at"],
+                event_id,
+                data["escrow_id"],
+                {"escrow_status_at_commit": "released"},
+                (
+                    {
+                        "role": "recipient",
+                        "account_id": data["recipient_account_id"],
+                        "direction": "credit",
+                        "amount": escrow["amount"],
+                        "transaction_id": data["tx_id"],
+                        "balance_after": balance_after,
+                    },
+                ),
+            )
             db.commit()
-            return {
-                "escrow_id": data["escrow_id"],
-                "status": "released",
-                "amount": escrow["amount"],
-                "recipient_account_id": data["recipient_account_id"],
-                "event_id": event_id,
-            }
+            return envelope
         except ServiceError:
+            db.rollback()
             raise
         except Exception:
             db.rollback()
             raise
 
-    def _load_escrow(self, cursor: sqlite3.Cursor, escrow_id: str) -> dict[str, Any]:
-        """Load an escrow and verify it is locked. Raises on not found or already resolved."""
-        cursor.execute(
-            "SELECT escrow_id, amount, status FROM bank_escrow WHERE escrow_id = ?",
-            (escrow_id,),
+    def escrow_split(self, data: dict[str, Any]) -> dict[str, Any]:
+        operation_id, request = _financial_request(
+            data,
+            "escrow_split",
+            {
+                "escrow_id": data["escrow_id"],
+                "worker_account_id": data["worker_account_id"],
+                "poster_account_id": data["poster_account_id"],
+                "worker_pct": data["worker_pct"],
+                "source_reference": data["source_reference"],
+            },
         )
-        row = cursor.fetchone()
-        if row is None:
-            self._writer.connection.rollback()
-            raise ServiceError("escrow_not_found", "No escrow with this ID", 404, {})
-        if row[2] != "locked":
-            self._writer.connection.rollback()
-            raise ServiceError(
-                "escrow_already_resolved",
-                "Escrow has already been released or split",
-                409,
-                {},
-            )
-        return {"escrow_id": row[0], "amount": row[1], "status": row[2]}
-
-    def escrow_split(
-        self,
-        data: dict[str, Any],
-        constraints: dict[str, Any] | None,
-    ) -> dict[str, Any]:
-        """
-        Split escrowed funds between worker and poster.
-
-        Validates amounts sum to escrow amount. Credits both accounts
-        (skipping zero-amount shares). Resolves escrow as 'split'.
-        """
+        worker_pct = int(data["worker_pct"])
         db = self._writer.connection
         cursor = db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
-            # Load and verify escrow
-            escrow = self._load_escrow(cursor, data["escrow_id"])
-            # Validate amounts sum
-            worker_amount = data["worker_amount"]
-            poster_amount = data["poster_amount"]
-            if worker_amount + poster_amount != escrow["amount"]:
+            replay = self._records.replay(cursor, operation_id, request)
+            if replay is not None:
                 db.rollback()
-                raise ServiceError(
-                    "amount_mismatch",
-                    "worker_amount + poster_amount does not equal escrow amount",
-                    400,
-                    {},
-                )
-            # The event is written first so the transaction rows can name it.
+                return replay
+            escrow = self._load_escrow_for_settlement(cursor, data["escrow_id"])
+            if data["poster_account_id"] != escrow["payer_account_id"]:
+                raise ServiceError("payload_mismatch", "Poster is not the escrow payer", 400, {})
+            worker_amount = escrow["amount"] * worker_pct // 100
+            poster_amount = escrow["amount"] - worker_amount
             event_id = insert_event(cursor, data["event"])
-            # Credit worker (if amount > 0)
-            if worker_amount > 0:
-                cursor.execute(
-                    "UPDATE bank_accounts SET balance = balance + ? WHERE account_id = ?",
-                    (worker_amount, data["worker_account_id"]),
-                )
-                if cursor.rowcount == 0:
-                    db.rollback()
-                    raise ServiceError("account_not_found", "Worker account not found", 404, {})
-                cursor.execute(
-                    "INSERT INTO bank_transactions "
-                    "(tx_id, account_id, type, amount, balance_after, reference, timestamp, "
-                    "event_id) "
-                    "VALUES (?, ?, 'escrow_release', ?, "
-                    "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?, ?)",
-                    (
-                        data["worker_tx_id"],
-                        data["worker_account_id"],
-                        worker_amount,
-                        data["worker_account_id"],
-                        data["escrow_id"],
-                        data["resolved_at"],
-                        event_id,
-                    ),
-                )
-            # Credit poster (if amount > 0)
-            if poster_amount > 0:
-                cursor.execute(
-                    "UPDATE bank_accounts SET balance = balance + ? WHERE account_id = ?",
-                    (poster_amount, data["poster_account_id"]),
-                )
-                if cursor.rowcount == 0:
-                    db.rollback()
-                    raise ServiceError("account_not_found", "Poster account not found", 404, {})
-                cursor.execute(
-                    "INSERT INTO bank_transactions "
-                    "(tx_id, account_id, type, amount, balance_after, reference, timestamp, "
-                    "event_id) "
-                    "VALUES (?, ?, 'escrow_release', ?, "
-                    "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?, ?)",
-                    (
-                        data["poster_tx_id"],
-                        data["poster_account_id"],
-                        poster_amount,
-                        data["poster_account_id"],
-                        data["escrow_id"],
-                        data["resolved_at"],
-                        event_id,
-                    ),
-                )
-            # Resolve escrow
-            if constraints is not None:
-                where_clause, where_params = compile_constraints(
-                    "bank_escrow",
-                    "escrow_id",
-                    data["escrow_id"],
-                    constraints,
-                )
-                cursor.execute(
-                    f"UPDATE bank_escrow SET status = 'split', resolved_at = ? "
-                    f"WHERE {where_clause}",  # nosec B608
-                    [data["resolved_at"], *where_params],
-                )
-                if cursor.rowcount == 0:
-                    try:
-                        check_constraint_violation(
-                            cursor,
-                            "bank_escrow",
-                            "escrow_id",
-                            data["escrow_id"],
-                            constraints,
-                        )
-                    except ServiceError:
-                        db.rollback()
-                        raise
-                    db.rollback()
-                    raise ServiceError("escrow_not_found", "No escrow with this ID", 404, {})
-            else:
-                cursor.execute(
-                    "UPDATE bank_escrow SET status = 'split', resolved_at = ? WHERE escrow_id = ?",
-                    (data["resolved_at"], data["escrow_id"]),
-                )
+            worker_balance = self._credit_split_leg(
+                cursor,
+                data["worker_account_id"],
+                worker_amount,
+                data["worker_tx_id"],
+                data["escrow_id"],
+                data["resolved_at"],
+                event_id,
+            )
+            poster_balance = self._credit_split_leg(
+                cursor,
+                data["poster_account_id"],
+                poster_amount,
+                data["poster_tx_id"],
+                data["escrow_id"],
+                data["resolved_at"],
+                event_id,
+            )
+            cursor.execute(
+                "UPDATE bank_escrow SET status = 'split', resolved_at = ? "
+                "WHERE escrow_id = ? AND status = 'locked'",
+                (data["resolved_at"], data["escrow_id"]),
+            )
+            if cursor.rowcount != 1:
+                raise ServiceError("escrow_state_conflict", "Escrow is no longer locked", 409, {})
+            legs = (
+                {
+                    "role": "worker",
+                    "account_id": data["worker_account_id"],
+                    "direction": "credit",
+                    "amount": worker_amount,
+                    "transaction_id": None if worker_amount == 0 else data["worker_tx_id"],
+                    "balance_after": worker_balance,
+                },
+                {
+                    "role": "poster",
+                    "account_id": data["poster_account_id"],
+                    "direction": "credit",
+                    "amount": poster_amount,
+                    "transaction_id": None if poster_amount == 0 else data["poster_tx_id"],
+                    "balance_after": poster_balance,
+                },
+            )
+            envelope = self._records.persist(
+                cursor,
+                operation_id,
+                request,
+                data["resolved_at"],
+                event_id,
+                data["escrow_id"],
+                {"escrow_status_at_commit": "split", "worker_pct": worker_pct},
+                legs,
+            )
             db.commit()
-            return {
-                "escrow_id": data["escrow_id"],
-                "status": "split",
-                "worker_amount": worker_amount,
-                "poster_amount": poster_amount,
-                "event_id": event_id,
-            }
+            return envelope
         except ServiceError:
+            db.rollback()
             raise
         except Exception:
             db.rollback()
             raise
+
+    def _credit_split_leg(
+        self,
+        cursor: sqlite3.Cursor,
+        account_id: str,
+        amount: int,
+        transaction_id: str,
+        escrow_id: str,
+        timestamp: str,
+        event_id: int,
+    ) -> int | None:
+        if amount == 0:
+            return None
+        self._credit_balance(cursor, account_id, amount)
+        cursor.execute(
+            "INSERT INTO bank_transactions "
+            "(tx_id, account_id, type, amount, balance_after, reference, timestamp, event_id) "
+            "VALUES (?, ?, 'escrow_release', ?, "
+            "(SELECT balance FROM bank_accounts WHERE account_id = ?), ?, ?, ?)",
+            (transaction_id, account_id, amount, account_id, escrow_id, timestamp, event_id),
+        )
+        return self._balance(cursor, account_id)
+
+    def _load_escrow_for_settlement(
+        self,
+        cursor: sqlite3.Cursor,
+        escrow_id: str,
+    ) -> dict[str, Any]:
+        row = cursor.execute(
+            "SELECT escrow_id, amount, status, payer_account_id FROM bank_escrow "
+            "WHERE escrow_id = ?",
+            (escrow_id,),
+        ).fetchone()
+        if row is None:
+            raise ServiceError("escrow_not_found", "No escrow with this ID", 404, {})
+        if row[2] != "locked":
+            winner = self._records.settlement_winner(cursor, escrow_id)
+            if winner is None:
+                raise missing_ownership("escrow_settlement", escrow_id)
+            raise ownership_conflict(winner)
+        return {
+            "escrow_id": str(row[0]),
+            "amount": int(row[1]),
+            "status": str(row[2]),
+            "payer_account_id": str(row[3]),
+        }
+
+    def _credit_balance(self, cursor: sqlite3.Cursor, account_id: str, amount: int) -> None:
+        cursor.execute(
+            "UPDATE bank_accounts SET balance = balance + ? WHERE account_id = ? AND balance <= ?",
+            (amount, account_id, SQLITE_MAX_INTEGER - amount),
+        )
+        if cursor.rowcount:
+            return
+        if self._lookup_account(account_id) is None:
+            raise ServiceError("account_not_found", "No account with this account_id", 404, {})
+        raise ServiceError("amount_out_of_range", "Credit would exceed account capacity", 409, {})
+
+    def _balance(self, cursor: sqlite3.Cursor, account_id: str) -> int:
+        row = cursor.execute(
+            "SELECT balance FROM bank_accounts WHERE account_id = ?", (account_id,)
+        ).fetchone()
+        if row is None:
+            raise ServiceError("account_not_found", "No account with this account_id", 404, {})
+        return int(row[0])
+
+    def _lookup_account(self, account_id: str) -> dict[str, Any] | None:
+        row = self._writer.connection.execute(
+            "SELECT account_id, balance, created_at FROM bank_accounts WHERE account_id = ?",
+            (account_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {"account_id": row[0], "balance": row[1], "created_at": row[2]}
+
+    def _lookup_credit_tx(self, account_id: str, reference: str) -> dict[str, Any] | None:
+        row = self._writer.connection.execute(
+            "SELECT tx_id, amount, balance_after, event_id FROM bank_transactions "
+            "WHERE account_id = ? AND reference = ? AND type = 'credit'",
+            (account_id, reference),
+        ).fetchone()
+        if row is None:
+            return None
+        return {"tx_id": row[0], "amount": row[1], "balance_after": row[2], "event_id": row[3]}
+
+    def _lookup_escrow(self, payer_account_id: str, task_id: str) -> dict[str, Any] | None:
+        row = self._writer.connection.execute(
+            "SELECT escrow_id, amount, event_id, status FROM bank_escrow "
+            "WHERE payer_account_id = ? AND task_id = ?",
+            (payer_account_id, task_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return {"escrow_id": row[0], "amount": row[1], "event_id": row[2], "status": row[3]}

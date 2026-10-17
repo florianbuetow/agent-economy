@@ -2,19 +2,13 @@
 
 from __future__ import annotations
 
-import os
-import shutil
-import signal
-import socket
 import sqlite3
-import subprocess
-import sys
-import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 
+from ._fixture_support import start_controlled_ui_server
 from .pages.landing import LandingPage
 from .pages.observatory import ObservatoryPage
 from .pages.task import TaskPage
@@ -28,30 +22,6 @@ pytestmark = pytest.mark.e2e
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 SCHEMA_PATH = PROJECT_ROOT / "docs" / "specifications" / "schema.sql"
-REAL_WEB = PROJECT_ROOT / "services" / "ui" / "data" / "web"
-
-
-def _free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        return int(sock.getsockname()[1])
-
-
-def _wait_for_server(port: int, timeout: float = 15.0) -> None:
-    import httpx  # noqa: PLC0415
-
-    url = f"http://127.0.0.1:{port}/health"
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        try:
-            response = httpx.get(url, timeout=2.0)
-            if response.status_code == 200:
-                return
-        except httpx.ConnectError:
-            pass
-        time.sleep(0.25)
-    msg = f"Server on port {port} did not become healthy within {timeout}s"
-    raise TimeoutError(msg)
 
 
 def _seed_single_agent(conn: sqlite3.Connection) -> None:
@@ -153,75 +123,6 @@ def _seed_single_agent(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def _start_ui_server_with_db(
-    db_path: Path,
-    tmp_path_factory: pytest.TempPathFactory,
-    name: str,
-) -> Generator[str, None, None]:
-    port = _free_port()
-    work_dir = tmp_path_factory.mktemp(name)
-
-    web_dir = work_dir / "web"
-    shutil.copytree(str(REAL_WEB), str(web_dir))
-
-    log_dir = work_dir / "logs"
-    log_dir.mkdir()
-
-    config_path = work_dir / "config.yaml"
-    config_content = (
-        'service:\n  name: "ui"\n  version: "0.1.0"\n'
-        f'server:\n  host: "127.0.0.1"\n  port: {port}\n  log_level: "warning"\n'
-        f'logging:\n  level: "WARNING"\n  directory: "{log_dir}"\n'
-        f'database:\n  path: "{db_path}"\n'
-        "sse:\n  poll_interval_seconds: 1\n  keepalive_interval_seconds: 15\n  batch_size: 50\n"
-        f'frontend:\n  web_root: "{web_dir}"\n'
-        "request:\n  max_body_size: 1572864\n"
-        'user_agent:\n  agent_config_path: "../../agents/config.yaml"\n'
-    )
-    config_path.write_text(config_content)
-
-    # Launch via a shim that freezes the injectable clock seam (database._clock)
-    # to just after the seed timestamps, so time-windowed metrics (e.g. the
-    # 30-day "active agents" window) are deterministic regardless of today's
-    # date. The override runs inside the spawned process before the app loads,
-    # so it reaches the server without any env var or config change.
-    server_script = work_dir / "run_frozen_server.py"
-    server_script.write_text(
-        "import datetime as dt\n"
-        "from ui_service.services import database\n"
-        "database._clock = lambda: dt.datetime(2026, 3, 2, 7, 0, 0, tzinfo=dt.UTC)\n"
-        "import uvicorn\n"
-        "from ui_service.app import create_app\n"
-        f"uvicorn.run(create_app, factory=True, host='127.0.0.1', port={port}, "
-        "log_level='warning')\n"
-    )
-
-    env = {**os.environ, "CONFIG_PATH": str(config_path)}
-    process = subprocess.Popen(
-        [sys.executable, str(server_script)],
-        cwd=str(PROJECT_ROOT / "services" / "ui"),
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    try:
-        _wait_for_server(port)
-    except TimeoutError:
-        process.kill()
-        raise
-
-    try:
-        yield f"http://127.0.0.1:{port}"
-    finally:
-        process.send_signal(signal.SIGTERM)
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
-
-
 def _build_db(
     tmp_path_factory: pytest.TempPathFactory,
     name: str,
@@ -245,14 +146,24 @@ def _build_db(
 def empty_e2e_server(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, None, None]:
     """A separate UI server backed by schema-only empty DB."""
     db_path = _build_db(tmp_path_factory, "e2e_empty_db", seed_fn=None)
-    yield from _start_ui_server_with_db(db_path, tmp_path_factory, "e2e_empty_server")
+    yield from start_controlled_ui_server(
+        db_path,
+        tmp_path_factory,
+        "e2e_empty_server",
+        frozen_clock=True,
+    )
 
 
 @pytest.fixture(scope="session")
 def single_agent_e2e_server(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, None, None]:
     """A separate UI server backed by a single-agent DB."""
     db_path = _build_db(tmp_path_factory, "e2e_single_agent_db", seed_fn=_seed_single_agent)
-    yield from _start_ui_server_with_db(db_path, tmp_path_factory, "e2e_single_agent_server")
+    yield from start_controlled_ui_server(
+        db_path,
+        tmp_path_factory,
+        "e2e_single_agent_server",
+        frozen_clock=True,
+    )
 
 
 class TestCrossPageEmptyDB:
@@ -265,7 +176,7 @@ class TestCrossPageEmptyDB:
         _ = e2e_server
         landing = LandingPage(e2e_page, empty_e2e_server)
         landing.navigate()
-        e2e_page.wait_for_function("document.querySelectorAll('.kpi-cell').length === 5")
+        e2e_page.wait_for_function("() => document.querySelectorAll('.kpi-cell').length === 5")
         values = landing.get_kpi_values()
         assert values["Economy GDP"] == "0 \u00a9"
         assert values["Active Agents"] == "0"
@@ -282,7 +193,7 @@ class TestCrossPageEmptyDB:
         _ = e2e_server
         observatory = ObservatoryPage(e2e_page, empty_e2e_server)
         observatory.navigate()
-        e2e_page.wait_for_function("document.querySelectorAll('.vital-item').length >= 7")
+        e2e_page.wait_for_function("() => document.querySelectorAll('.vital-item').length >= 7")
         vitals = observatory.get_vitals()
         assert vitals["Active Agents"]["value"] == "0"
         assert vitals["Open Tasks"]["value"] == "0"
@@ -299,7 +210,7 @@ class TestCrossPageEmptyDB:
         task = TaskPage(e2e_page, empty_e2e_server)
         task.navigate()
         e2e_page.wait_for_function(
-            "document.querySelector('#phase-content') && "
+            "() => document.querySelector('#phase-content') && "
             "document.querySelector('#phase-content').textContent.length > 0",
         )
         assert "Post a New Task" in (task.panel_title.text_content() or "")
@@ -338,7 +249,7 @@ class TestCrossPageSingleAgent:
         _ = e2e_server
         landing = LandingPage(e2e_page, single_agent_e2e_server)
         landing.navigate()
-        e2e_page.wait_for_function("document.querySelectorAll('.kpi-cell').length === 5")
+        e2e_page.wait_for_function("() => document.querySelectorAll('.kpi-cell').length === 5")
         values = landing.get_kpi_values()
         assert values["Active Agents"] == "1"
         assert values["Economy GDP"] == "0 \u00a9"
@@ -360,7 +271,7 @@ class TestCrossPageSingleAgent:
         landing = LandingPage(e2e_page, single_agent_e2e_server)
         landing.navigate()
         e2e_page.wait_for_function(
-            "document.querySelectorAll('#lb-container .lb-panel').length === 2"
+            "() => document.querySelectorAll('#lb-container .lb-panel').length === 2"
         )
         worker_rows = e2e_page.locator("#lb-container .lb-panel").nth(0).locator(".lb-row").count()
         poster_panel = e2e_page.locator("#lb-container .lb-panel").nth(1)
@@ -380,7 +291,7 @@ class TestCrossPageSingleAgent:
         _ = e2e_server
         observatory = ObservatoryPage(e2e_page, single_agent_e2e_server)
         observatory.navigate()
-        e2e_page.wait_for_function("document.querySelectorAll('.vital-item').length >= 7")
+        e2e_page.wait_for_function("() => document.querySelectorAll('.vital-item').length >= 7")
         vitals = observatory.get_vitals()
         assert vitals["Active Agents"]["value"] == "1"
         assert vitals["Open Tasks"]["value"] == "1"
@@ -424,7 +335,7 @@ class TestCrossPageNavigation:
         task = TaskPage(e2e_page, e2e_server)
         task.navigate(task_id="t-task1")
         e2e_page.wait_for_function(
-            "document.querySelector('#phase-content') && "
+            "() => document.querySelector('#phase-content') && "
             "document.querySelector('#phase-content').textContent.trim().length > 0",
         )
         e2e_page.locator(".topnav-link:has-text('Observatory')").click()
@@ -458,7 +369,7 @@ class TestCrossPageBrowserEdgeCases:
         assert landing.hero_section.is_visible()
         e2e_page.set_viewport_size({"width": 390, "height": 844})
         e2e_page.reload(wait_until="domcontentloaded")
-        e2e_page.wait_for_function("document.querySelectorAll('.kpi-cell').length === 5")
+        e2e_page.wait_for_function("() => document.querySelectorAll('.kpi-cell').length === 5")
         assert landing.hero_section.is_visible()
         observatory = ObservatoryPage(e2e_page, e2e_server)
         observatory.navigate()
@@ -472,7 +383,7 @@ class TestCrossPageBrowserEdgeCases:
     ) -> None:
         observatory = ObservatoryPage(e2e_page, e2e_server)
         observatory.navigate()
-        e2e_page.wait_for_function("document.querySelectorAll('.feed-btn').length > 0")
+        e2e_page.wait_for_function("() => document.querySelectorAll('.feed-btn').length > 0")
         other_tab = e2e_context.new_page()
         try:
             other_tab.goto("about:blank")
@@ -492,14 +403,14 @@ class TestCrossPageBrowserEdgeCases:
         task = TaskPage(e2e_page, e2e_server)
         task.navigate(task_id="t-task1")
         e2e_page.wait_for_function(
-            "document.querySelector('#phase-content') && "
+            "() => document.querySelector('#phase-content') && "
             "document.querySelector('#phase-content').textContent.trim().length > 0",
         )
         assert "task_id=t-task1" in e2e_page.url
         before_status = (task.task_status.text_content() or "").strip()
         e2e_page.reload(wait_until="domcontentloaded")
         e2e_page.wait_for_function(
-            "document.querySelector('#phase-content') && "
+            "() => document.querySelector('#phase-content') && "
             "document.querySelector('#phase-content').textContent.trim().length > 0",
         )
         after_status = (task.task_status.text_content() or "").strip()

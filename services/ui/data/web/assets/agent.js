@@ -73,11 +73,11 @@
       var color = ATE.agentColor(agent.agent_id);
       var metric = metricForSort(agent, sortBy);
       var rankClass = index === 0 ? 'lb-rank top' : 'lb-rank';
-      return '<div class="lb-row" data-agent-id="' + agent.agent_id + '">' +
+      return '<div class="lb-row" data-agent-id="' + ATE.escapeHTML(agent.agent_id) + '">' +
         '<div class="' + rankClass + '">' + (index + 1) + '</div>' +
         '<div class="lb-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + initials(agent.name) + '</div>' +
         '<div class="lb-info">' +
-          '<div class="lb-name">' + agent.name + '</div>' +
+          '<div class="lb-name">' + ATE.escapeHTML(agent.name) + '</div>' +
           '<div class="lb-stat">' + agent.stats.tasks_posted + ' posted · ' + agent.stats.tasks_completed_as_worker + ' completed</div>' +
         '</div>' +
         '<div class="lb-metric"><div class="amount">' + metric.amount + '</div><div class="label-sm">' + metric.label + '</div></div>' +
@@ -156,10 +156,10 @@
     }
     return tasks.map(function(t) {
       var badge = ATE.TASK_STATUS_BADGE[t.status] || { text: t.status.toUpperCase(), cls: 'status-open' };
-      return '<div class="list-row" data-task-id="' + t.task_id + '">' +
+      return '<div class="list-row" data-task-id="' + ATE.escapeHTML(t.task_id) + '">' +
         '<span class="status-badge ' + badge.cls + '">' + badge.text + '</span>' +
-        '<span class="lr-title">' + t.title + '</span>' +
-        '<span class="lr-meta">' + t.role + ' · ' + t.reward + ' ©</span>' +
+        '<span class="lr-title">' + ATE.escapeHTML(t.title) + '</span>' +
+        '<span class="lr-meta">' + ATE.escapeHTML(t.role) + ' · ' + t.reward + ' ©</span>' +
       '</div>';
     }).join('');
   }
@@ -172,9 +172,9 @@
     return feedback.map(function(fb) {
       var color = ratingColor[fb.rating] || 'var(--text-dim)';
       return '<div class="feedback-row">' +
-        '<span class="feedback-from">' + fb.from_agent_name + '</span>' +
-        '<span class="feedback-rating" style="color:' + color + '">' + fb.category.replace('_', ' ') + ': ' + fb.rating.replace('_', ' ') + '</span>' +
-        '<span class="feedback-comment">' + (fb.comment || '') + '</span>' +
+        '<span class="feedback-from">' + ATE.escapeHTML(fb.from_agent_name) + '</span>' +
+        '<span class="feedback-rating" style="color:' + color + '">' + ATE.escapeHTML(fb.category.replace('_', ' ')) + ': ' + ATE.escapeHTML(fb.rating.replace('_', ' ')) + '</span>' +
+        '<span class="feedback-comment">' + ATE.escapeHTML(fb.comment || '') + '</span>' +
       '</div>';
     }).join('');
   }
@@ -189,8 +189,8 @@
         '<div class="profile-header">' +
           '<div class="profile-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + initials(profile.name) + '</div>' +
           '<div>' +
-            '<div class="profile-name">' + profile.name + '</div>' +
-            '<div class="profile-meta">' + profile.agent_id + ' · registered ' + ATE.timeAgo(new Date(profile.registered_at).getTime()) + '</div>' +
+            '<div class="profile-name">' + ATE.escapeHTML(profile.name) + '</div>' +
+            '<div class="profile-meta">' + ATE.escapeHTML(profile.agent_id) + ' · registered ' + ATE.timeAgo(new Date(profile.registered_at).getTime()) + '</div>' +
           '</div>' +
           '<div class="profile-balance"><div class="amount">' + profile.balance.toLocaleString() + ' ©</div><div class="label-sm">Balance</div></div>' +
         '</div>' +

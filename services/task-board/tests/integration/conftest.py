@@ -33,6 +33,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 import uvicorn
+import yaml
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
@@ -43,13 +44,18 @@ from db_gateway_service.core.state import reset_app_state as reset_gateway_state
 from db_gateway_service.services.db_reader import DbReader
 from db_gateway_service.services.db_writer import DbWriter
 from httpx import ASGITransport, AsyncClient
-from joserfc import jws
-from joserfc.jwk import OKPKey
+from service_auth.gateway import GatewayRequestSigner, GatewaySignerConfig
+from service_auth.jws import JwsAdmissionError, VerifiedJws
+from service_auth.platform import PlatformAgent
+from service_auth.signing import generate_keypair as provision_keypair
+from service_commons.exceptions import ServiceError
 
 from task_board_service.app import create_app
 from task_board_service.config import clear_settings_cache
 from task_board_service.core.lifespan import lifespan
 from task_board_service.core.state import get_app_state, reset_app_state
+from tests.helpers import make_jws_token as make_strict_jws_token
+from tests.helpers import verify_compact_jws
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -59,6 +65,57 @@ if TYPE_CHECKING:
 PLATFORM_AGENT_ID = "a-platform-test-id"
 
 _SCHEMA_PATH = Path(__file__).resolve().parents[4] / "docs" / "specifications" / "schema.sql"
+
+
+class _GatewayAuth(httpx.Auth):
+    """Sign fixture requests with distinct domain capability keys."""
+
+    def __init__(self, signers: dict[str, GatewayRequestSigner]) -> None:
+        self._signers = signers
+
+    def auth_flow(self, request: httpx.Request) -> Any:
+        route_domain = request.url.path.split("/", maxsplit=2)[1]
+        action_domain = "board" if route_domain == "board" else route_domain
+        action = f"gateway.{action_domain}.{'read' if request.method == 'GET' else 'write'}"
+        yield self._signers[route_domain].sign_request(request, action=action)
+
+
+def _write_platform_agent_config(tmp_path: Path) -> Path:
+    keys_dir = tmp_path / "agent-keys"
+    provision_keypair("platform", keys_dir)
+    roster_path = tmp_path / "roster.yaml"
+    roster_path.write_text(
+        yaml.safe_dump({"agents": {"platform": {"name": "Platform", "type": "platform"}}})
+    )
+    agent_config_path = tmp_path / "agents.yaml"
+    agent_config_path.write_text(
+        yaml.safe_dump(
+            {
+                "platform": {
+                    "identity_url": "http://localhost:8001",
+                    "bank_url": "http://localhost:8002",
+                    "task_board_url": "http://localhost:8003",
+                    "reputation_url": "http://localhost:8004",
+                    "court_url": "http://localhost:8005",
+                },
+                "data": {
+                    "keys_dir": str(keys_dir),
+                    "roster_path": str(roster_path),
+                },
+                "signing": {
+                    "token_ttl_seconds": 300,
+                    "max_lifetime_seconds": 300,
+                    "clock_skew_seconds": 0,
+                },
+            }
+        )
+    )
+    return agent_config_path
+
+
+async def _register_test_platform(agent: PlatformAgent) -> dict[str, str]:
+    agent.agent_id = PLATFORM_AGENT_ID
+    return {"agent_id": PLATFORM_AGENT_ID}
 
 
 def _free_port() -> int:
@@ -77,19 +134,8 @@ def _generate_keypair() -> tuple[Ed25519PrivateKey, str]:
 
 
 def make_jws_token(private_key: Ed25519PrivateKey, agent_id: str, payload: dict[str, Any]) -> str:
-    """Create a JWS compact token signed by the given private key."""
-    raw_private = private_key.private_bytes_raw()
-    raw_public = private_key.public_key().public_bytes_raw()
-    jwk_dict = {
-        "kty": "OKP",
-        "crv": "Ed25519",
-        "d": base64.urlsafe_b64encode(raw_private).rstrip(b"=").decode(),
-        "x": base64.urlsafe_b64encode(raw_public).rstrip(b"=").decode(),
-    }
-    key = OKPKey.import_key(jwk_dict)
-    protected = {"alg": "EdDSA", "kid": agent_id}
-    payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
-    return jws.serialize_compact(protected, payload_bytes, key, algorithms=["EdDSA"])
+    """Create a strict Task Board token signed by the given private key."""
+    return make_strict_jws_token(private_key, agent_id, payload)
 
 
 def _write_gateway_config(db_path: str) -> str:
@@ -117,6 +163,29 @@ database:
 
 request:
   max_body_size: 1048576
+recovery:
+  maintenance_lock_path: "{Path(db_path).parent / "maintenance.lock"}"
+  backup_root: "{Path(db_path).parent / "backups"}"
+auth:
+  audience: "db-gateway"
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 0
+  trusted_callers:
+    gateway-identity:
+      public_key_path: "{Path(db_path).parent / "gateway-identity.pub"}"
+      capabilities:
+        - "gateway.identity.read"
+        - "gateway.identity.write"
+    gateway-central-bank:
+      public_key_path: "{Path(db_path).parent / "gateway-central-bank.pub"}"
+      capabilities:
+        - "gateway.bank.read"
+        - "gateway.bank.write"
+    gateway-task-board:
+      public_key_path: "{Path(db_path).parent / "gateway-task-board.pub"}"
+      capabilities:
+        - "gateway.board.read"
+        - "gateway.board.write"
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(content)
@@ -127,8 +196,15 @@ class _LiveGateway:
     """A real DB Gateway ASGI app served by uvicorn on a random local port,
     started/stopped around a single test."""
 
-    def __init__(self, base_url: str, server: uvicorn.Server, thread: threading.Thread) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        server: uvicorn.Server,
+        thread: threading.Thread,
+        maintenance_lock_path: Path,
+    ) -> None:
         self.base_url = base_url
+        self.maintenance_lock_path = maintenance_lock_path
         self._server = server
         self._thread = thread
 
@@ -150,6 +226,10 @@ async def _start_live_gateway(db_path: str) -> tuple[_LiveGateway, DbWriter]:
     `check_same_thread=False` on the gateway's sqlite3 connection (GAP-C7
     era) makes sharing the DbWriter across threads safe.
     """
+    key_dir = Path(db_path).parent
+    provision_keypair("gateway-identity", key_dir)
+    provision_keypair("gateway-central-bank", key_dir)
+    provision_keypair("gateway-task-board", key_dir)
     config_path = _write_gateway_config(db_path)
     reset_gateway_state()
     state = init_gateway_state()
@@ -190,7 +270,7 @@ async def _start_live_gateway(db_path: str) -> tuple[_LiveGateway, DbWriter]:
             msg = "In-process DB Gateway did not become ready in time"
             raise RuntimeError(msg)
 
-    return _LiveGateway(base_url, server, thread), writer
+    return _LiveGateway(base_url, server, thread, key_dir / "maintenance.lock"), writer
 
 
 @pytest.fixture
@@ -209,11 +289,33 @@ async def _gateway(gateway_db_path: str) -> AsyncIterator[_LiveGateway]:
 
 
 @pytest.fixture
-async def gateway_client(_gateway: _LiveGateway) -> AsyncIterator[httpx.AsyncClient]:
+async def gateway_client(
+    _gateway: _LiveGateway, gateway_db_path: str
+) -> AsyncIterator[httpx.AsyncClient]:
     """A client onto the live DB Gateway backing this test's task-board
     `state.store` — used to set up identity_agents rows the FK on
     board_tasks/bids etc. requires."""
-    async with httpx.AsyncClient(base_url=_gateway.base_url) as c:
+    key_dir = Path(gateway_db_path).parent
+    signers = {
+        domain: GatewayRequestSigner(
+            GatewaySignerConfig(
+                kid=kid,
+                private_key_path=key_dir / f"{kid}.key",
+                audience="db-gateway",
+                token_ttl_seconds=300,
+            ),
+            config_dir=key_dir,
+        )
+        for domain, kid in {
+            "identity": "gateway-identity",
+            "bank": "gateway-central-bank",
+            "board": "gateway-task-board",
+        }.items()
+    }
+    async with httpx.AsyncClient(
+        base_url=_gateway.base_url,
+        auth=_GatewayAuth(signers),
+    ) as c:
         yield c
 
 
@@ -258,11 +360,16 @@ def worker_keypair() -> tuple[Ed25519PrivateKey, str]:
 
 
 @pytest.fixture
-async def app(tmp_path: Path, _gateway: _LiveGateway) -> AsyncIterator[FastAPI]:
+async def app(
+    tmp_path: Path,
+    _gateway: _LiveGateway,
+    monkeypatch: pytest.MonkeyPatch,
+) -> AsyncIterator[FastAPI]:
     """Real task-board app; its production TaskDbClient talks to a real, live,
     fully-isolated in-process DB Gateway instead of the InMemoryTaskStore fake
     unit tests use. Central Bank/Identity/platform-agent stay mocked."""
     db_path = tmp_path / "test.db"
+    agent_config_path = _write_platform_agent_config(tmp_path)
     config_content = f"""
 service:
   name: "task-board"
@@ -278,7 +385,9 @@ database:
   path: "{db_path}"
 identity:
   base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
   verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -287,14 +396,22 @@ central_bank:
   timeout_seconds: 10
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
+  agent_config_path: "{agent_config_path}"
 request:
   max_body_size: 1048576
+recovery:
+  maintenance_lock_path: "{tmp_path / "maintenance.lock"}"
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
 db_gateway:
   url: "{_gateway.base_url}"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-task-board"
+    private_key_path: "gateway-task-board.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 deadline_evaluation:
   evaluation_interval_seconds: 3600
 """
@@ -305,6 +422,7 @@ deadline_evaluation:
 
     clear_settings_cache()
     reset_app_state()
+    monkeypatch.setattr(PlatformAgent, "register", _register_test_platform)
 
     test_app = create_app()
     async with lifespan(test_app):
@@ -312,7 +430,7 @@ deadline_evaluation:
 
         mock_platform = MagicMock()
         mock_platform.agent_id = PLATFORM_AGENT_ID
-        mock_platform.validate_certificate = MagicMock(side_effect=_decode_jws_payload)
+        mock_platform.validate_certificate = MagicMock(side_effect=verify_compact_jws)
         mock_platform.file_claim = AsyncMock(
             return_value={"dispute_id": "disp-1", "status": "rebuttal_pending"}
         )
@@ -364,17 +482,22 @@ def _make_delegating_verify_jws(state_ref: Any) -> Any:
     """A verify_jws mock that delegates to platform_agent.validate_certificate,
     mirroring tests/unit/routers/conftest.py's identity-client mock."""
 
-    async def _delegating_verify_jws(token: str) -> dict[str, Any]:
-        header_b64 = token.split(".", maxsplit=1)[0]
-        padded_header = header_b64 + "=" * (-len(header_b64) % 4)
-        header = json.loads(base64.urlsafe_b64decode(padded_header))
-        agent_id = header.get("kid", "")
-
+    async def _delegating_verify_jws(token: str) -> VerifiedJws:
         try:
-            payload = state_ref.platform_agent.validate_certificate(token)
-        except (InvalidSignature, ValueError):
-            return {"valid": False, "reason": "signature mismatch"}
-        return {"valid": True, "agent_id": agent_id, "payload": payload}
+            verified = state_ref.platform_agent.validate_certificate(token)
+            action = verified.payload.get("action")
+            if not isinstance(action, str) or not action:
+                raise ServiceError(
+                    "invalid_payload",
+                    "Identity rejected malformed payload action",
+                    400,
+                    {},
+                )
+            return verified
+        except InvalidSignature:
+            raise
+        except JwsAdmissionError as exc:
+            raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
 
     return _delegating_verify_jws
 

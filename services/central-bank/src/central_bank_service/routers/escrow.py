@@ -7,15 +7,41 @@ from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
 from central_bank_service.core.state import get_app_state
+from central_bank_service.financial_responses import validate_operation_id
 from central_bank_service.logging import get_logger
+from central_bank_service.monetary import require_positive_money, require_worker_percentage
 from central_bank_service.routers.helpers import (
-    decode_unverified_payload,
     parse_json_body,
     verify_jws_token,
     verify_platform_signature,
 )
 
 router = APIRouter()
+
+
+def _required_payload_string(payload: dict[str, object], field: str) -> str:
+    value = payload.get(field)
+    if not isinstance(value, str) or not value:
+        raise ServiceError("invalid_payload", f"Missing or invalid {field}", 400, {})
+    return value
+
+
+def _required_operation_id(payload: dict[str, object]) -> str:
+    try:
+        return validate_operation_id(payload.get("operation_id"))
+    except ValueError as exc:
+        raise ServiceError("invalid_operation_id", str(exc), 400, {}) from exc
+
+
+def _reject_unknown_payload_fields(payload: dict[str, object], allowed: set[str]) -> None:
+    unknown = sorted(set(payload) - allowed)
+    if unknown:
+        raise ServiceError(
+            "invalid_payload",
+            "JWS payload contains unsupported fields",
+            400,
+            {"fields": unknown},
+        )
 
 
 # === POST /escrow/lock — Lock Funds in Escrow (Agent-signed) ===
@@ -32,19 +58,24 @@ async def escrow_lock(request: Request) -> JSONResponse:
     if not isinstance(data["token"], str):
         raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
 
-    verified = await verify_jws_token(data["token"])
-    payload = verified["payload"]
-
-    action = payload.get("action")
-    if action != "escrow_lock":
-        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
+    verified = await verify_jws_token(
+        data["token"],
+        audience="central-bank",
+        resource="POST /escrow/lock",
+        allowed_action="escrow_lock",
+    )
+    payload = verified.payload
+    _reject_unknown_payload_fields(
+        payload,
+        {"action", "operation_id", "agent_id", "amount", "task_id"},
+    )
 
     # Agent must be the one whose funds are locked
     agent_id = payload.get("agent_id")
     if not agent_id or not isinstance(agent_id, str):
         raise ServiceError("invalid_payload", "Missing agent_id in JWS payload", 400, {})
 
-    if verified["agent_id"] != agent_id:
+    if verified.header.kid != agent_id:
         raise ServiceError(
             "forbidden",
             "You can only lock your own funds",
@@ -52,13 +83,12 @@ async def escrow_lock(request: Request) -> JSONResponse:
             {},
         )
 
-    amount = payload.get("amount")
-    if not isinstance(amount, int) or amount <= 0:
-        raise ServiceError("invalid_amount", "Amount must be a positive integer", 400, {})
+    amount = require_positive_money(payload.get("amount"), "amount")
 
     task_id = payload.get("task_id")
     if not task_id or not isinstance(task_id, str):
         raise ServiceError("invalid_payload", "Missing task_id in JWS payload", 400, {})
+    operation_id = _required_operation_id(payload)
 
     state = get_app_state()
     if state.ledger is None:
@@ -69,7 +99,7 @@ async def escrow_lock(request: Request) -> JSONResponse:
             details={},
         )
 
-    result = await state.ledger.escrow_lock(agent_id, amount, task_id)
+    result = await state.ledger.escrow_lock(agent_id, amount, task_id, operation_id)
 
     get_logger(__name__).info(
         "Escrow locked",
@@ -97,12 +127,25 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
     if not isinstance(data["token"], str):
         raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
 
-    # Validate payload shape before authorization so payload errors beat the 403 (T-033).
-    payload = decode_unverified_payload(data["token"])
-
-    action = payload.get("action")
-    if action != "escrow_release":
-        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
+    verified = verify_platform_signature(
+        data["token"],
+        audience="central-bank",
+        resource=f"POST /escrow/{escrow_id}/release",
+        allowed_action="escrow_release",
+    )
+    payload = verified.payload
+    _reject_unknown_payload_fields(
+        payload,
+        {
+            "action",
+            "operation_id",
+            "escrow_id",
+            "recipient_account_id",
+            "source_reference",
+        },
+    )
+    operation_id = _required_operation_id(payload)
+    source_reference = _required_payload_string(payload, "source_reference")
 
     recipient_account_id = payload.get("recipient_account_id")
     if not recipient_account_id or not isinstance(recipient_account_id, str):
@@ -122,9 +165,6 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
             {},
         )
 
-    # Platform authorization: local signature verification (survives Identity outage).
-    verify_platform_signature(data["token"])
-
     state = get_app_state()
     if state.ledger is None:
         raise ServiceError(
@@ -134,7 +174,12 @@ async def escrow_release(request: Request, escrow_id: str) -> dict[str, object]:
             details={},
         )
 
-    result = await state.ledger.escrow_release(escrow_id, recipient_account_id)
+    result = await state.ledger.escrow_release(
+        escrow_id,
+        recipient_account_id,
+        operation_id,
+        source_reference,
+    )
 
     get_logger(__name__).info(
         "Escrow released",
@@ -161,12 +206,27 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
     if not isinstance(data["token"], str):
         raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
 
-    # Validate payload shape before authorization so payload errors beat the 403 (T-033).
-    payload = decode_unverified_payload(data["token"])
-
-    action = payload.get("action")
-    if action != "escrow_split":
-        raise ServiceError("invalid_payload", "Invalid action in JWS payload", 400, {})
+    verified = verify_platform_signature(
+        data["token"],
+        audience="central-bank",
+        resource=f"POST /escrow/{escrow_id}/split",
+        allowed_action="escrow_split",
+    )
+    payload = verified.payload
+    _reject_unknown_payload_fields(
+        payload,
+        {
+            "action",
+            "operation_id",
+            "escrow_id",
+            "worker_account_id",
+            "worker_pct",
+            "poster_account_id",
+            "source_reference",
+        },
+    )
+    operation_id = _required_operation_id(payload)
+    source_reference = _required_payload_string(payload, "source_reference")
 
     worker_account_id = payload.get("worker_account_id")
     if not worker_account_id or not isinstance(worker_account_id, str):
@@ -186,9 +246,7 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
             {},
         )
 
-    worker_pct = payload.get("worker_pct")
-    if not isinstance(worker_pct, int):
-        raise ServiceError("invalid_payload", "worker_pct must be an integer", 400, {})
+    worker_pct = require_worker_percentage(payload.get("worker_pct"))
 
     payload_escrow_id = payload.get("escrow_id")
     if payload_escrow_id is not None and payload_escrow_id != escrow_id:
@@ -198,9 +256,6 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
             400,
             {},
         )
-
-    # Platform authorization: local signature verification (survives Identity outage).
-    verify_platform_signature(data["token"])
 
     state = get_app_state()
     if state.ledger is None:
@@ -216,6 +271,8 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
         worker_account_id,
         worker_pct,
         poster_account_id,
+        operation_id,
+        source_reference,
     )
 
     get_logger(__name__).info(

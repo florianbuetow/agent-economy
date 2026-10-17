@@ -123,7 +123,9 @@ async def test_self_feedback_rejected(make_funded_agent) -> None:
                 "task_id": task["task_id"],
                 "category": "spec_quality",
                 "rating": "extremely_satisfied",
-            }
+            },
+            audience="reputation",
+            resource="POST /feedback",
         )
         response = await poster._request_raw(
             "POST",
@@ -181,7 +183,9 @@ async def test_duplicate_feedback_rejected(make_funded_agent) -> None:
                 "category": "delivery_quality",
                 "rating": "extremely_satisfied",
                 "comment": "Even better",
-            }
+            },
+            audience="reputation",
+            resource="POST /feedback",
         )
         response = await poster._request_raw(
             "POST",

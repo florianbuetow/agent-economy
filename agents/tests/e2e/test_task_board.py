@@ -246,7 +246,9 @@ async def test_sealed_bid_visibility(make_funded_agent) -> None:
                 "action": "list_bids",
                 "task_id": task["task_id"],
                 "poster_id": observer.agent_id,
-            }
+            },
+            audience="task-board",
+            resource=f"GET /tasks/{task['task_id']}/bids",
         )
         observer_response = await observer._request_raw(
             "GET",

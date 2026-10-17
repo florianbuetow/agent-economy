@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from service_auth.jws import VerifiedJws, parse_identity_verification_response
+
 if TYPE_CHECKING:
     import httpx
 
@@ -77,7 +79,8 @@ class IdentityMixin:
         response = await self._request("GET", url)
         return cast("list[dict[str, Any]]", response["agents"])
 
-    async def verify_jws(self: _IdentityClient, token: str) -> dict[str, Any]:
+    async def verify_jws(self: _IdentityClient, token: str) -> VerifiedJws:
         """Verify a compact JWS token via Identity."""
         url = f"{self.config.identity_url}/agents/verify-jws"
-        return await self._request("POST", url, json={"token": token})
+        response = await self._request("POST", url, json={"token": token})
+        return parse_identity_verification_response(response, token)

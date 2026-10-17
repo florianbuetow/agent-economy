@@ -131,6 +131,7 @@ class TestErrorPrecedence:
         token = make_fake_jws(
             {"action": "wrong_action", "task_id": task_id},
             kid=alice_agent_id,
+            resource=f"POST /tasks/{task_id}/cancel",
         )
         resp = await client.post(
             f"/tasks/{task_id}/cancel",
@@ -156,6 +157,7 @@ class TestErrorPrecedence:
                 "task_id": task_id,
                 "poster_id": alice_agent_id,
             },
+            resource=f"POST /tasks/{task_id}/cancel",
         )
         tampered_token = tamper_jws(valid_token)
         resp = await client.post(

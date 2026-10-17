@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from service_auth.platform import PlatformAgent
+from service_auth.signing import generate_keypair
 
 from reputation_service.app import create_app
 from reputation_service.config import clear_settings_cache
@@ -20,8 +22,38 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
 
+async def _register_platform_agent(agent: PlatformAgent) -> None:
+    agent.agent_id = "a-platform-test-id"
+
+
+def _write_agent_config(tmp_path: Path) -> Path:
+    keys_dir = tmp_path / "keys"
+    generate_keypair("platform", keys_dir)
+    roster_path = tmp_path / "roster.yaml"
+    roster_path.write_text('agents:\n  platform:\n    name: "Platform"\n')
+    config_path = tmp_path / "agents.yaml"
+    config_path.write_text(
+        f"""\
+platform:
+  identity_url: "http://localhost:8001"
+  bank_url: "http://localhost:8002"
+  task_board_url: "http://localhost:8003"
+  reputation_url: "http://localhost:8004"
+  court_url: "http://localhost:8005"
+data:
+  keys_dir: "{keys_dir}"
+  roster_path: "{roster_path}"
+signing:
+  token_ttl_seconds: 60
+  max_lifetime_seconds: 60
+  clock_skew_seconds: 0
+""",
+    )
+    return config_path
+
+
 @pytest.fixture(autouse=True)
-def _isolate_test(tmp_path: Path) -> Iterator[str]:
+def _isolate_test(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
     """Isolate each test with its own temp database and config.
 
     Yields the temp sqlite path so `client()` can back the test-only fake
@@ -29,7 +61,9 @@ def _isolate_test(tmp_path: Path) -> Iterator[str]:
     production (GAP-C8/exception #15), so it no longer flows through Settings.
     """
     db_path = str(tmp_path / "test.db")
-    config_content = """\
+    generate_keypair("gateway-reputation", tmp_path)
+    agent_config_path = _write_agent_config(tmp_path)
+    config_content = f"""\
 service:
   name: "reputation"
   version: "0.1.0"
@@ -41,7 +75,12 @@ logging:
   level: "INFO"
   directory: "data/logs"
 platform:
-  agent_config_path: ""
+  agent_config_path: "{agent_config_path}"
+identity:
+  base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 request:
   max_body_size: 1048576
 feedback:
@@ -50,6 +89,11 @@ feedback:
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-reputation"
+    private_key_path: "gateway-reputation.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -58,6 +102,7 @@ db_gateway:
     os.environ["CONFIG_PATH"] = str(config_path)
     clear_settings_cache()
     reset_app_state()
+    monkeypatch.setattr(PlatformAgent, "register", _register_platform_agent)
 
     yield db_path
 

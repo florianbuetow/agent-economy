@@ -61,7 +61,9 @@ async def _resolve_dispute_id(
             "respondent_id": worker.agent_id,
             "claim": dispute_reason,
             "escrow_id": disputed_task["escrow_id"],
-        }
+        },
+        audience="court",
+        resource="POST /disputes/file",
     )
     file_response = await platform_agent._request_raw(
         "POST",
@@ -92,7 +94,9 @@ async def _submit_rebuttal(platform_agent: PlatformAgent, dispute_id: str) -> in
             "action": "submit_rebuttal",
             "dispute_id": dispute_id,
             "rebuttal": "Work meets the agreed specification.",
-        }
+        },
+        audience="court",
+        resource=f"POST /disputes/{dispute_id}/rebuttal",
     )
     rebuttal_response = await platform_agent._request_raw(
         "POST",
@@ -109,7 +113,9 @@ async def _trigger_ruling(
         {
             "action": "trigger_ruling",
             "dispute_id": dispute_id,
-        }
+        },
+        audience="court",
+        resource=f"POST /disputes/{dispute_id}/rule",
     )
     ruling_response = await platform_agent._request_raw(
         "POST",

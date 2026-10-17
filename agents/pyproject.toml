@@ -35,7 +35,12 @@ service-auth = { path = "../libs/service-auth", editable = true }
 service-commons = { path = "../libs/service-commons", editable = true }
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/base_agent", "src/math_worker", "src/task_feeder"]
+packages = [
+    "src/base_agent",
+    "src/key_provision_cli",
+    "src/math_worker",
+    "src/task_feeder",
+]
 
 # === Ruff ===
 [tool.ruff]

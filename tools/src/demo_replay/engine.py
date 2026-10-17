@@ -81,11 +81,17 @@ class ReplayEngine:
         for agent_def in self.scenario["agents"]:
             handle = agent_def["handle"]
             display_name = agent_def["name"]
-            self.agents[handle] = DemoAgent.create(handle, display_name)
+            self.agents[handle] = DemoAgent.create(
+                handle, display_name, self._config.token_ttl_seconds
+            )
 
         # Load the real platform agent (must match keys known to Central Bank)
-        platform_key = Path(__file__).resolve().parents[3] / "data" / "keys" / "platform.key"
-        self.platform = DemoAgent.from_pem("platform", "Platform", platform_key)
+        self.platform = DemoAgent.from_pem(
+            "platform",
+            "Platform",
+            self._config.platform_key_path,
+            self._config.token_ttl_seconds,
+        )
 
         async with httpx.AsyncClient(timeout=30.0) as http:
             # Register platform agent first

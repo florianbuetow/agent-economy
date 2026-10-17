@@ -97,6 +97,7 @@ class TestPayloadMismatch:
             private_key,
             PLATFORM_AGENT_ID,
             {"action": "credit", "account_id": "a-alice", "amount": 10, "reference": "test"},
+            resource="POST /accounts/a-bob/credit",
         )
         response = await client.post("/accounts/a-bob/credit", json={"token": token})
         assert response.status_code == 400
@@ -116,6 +117,7 @@ class TestPayloadMismatch:
                 "escrow_id": "esc-real",
                 "recipient_account_id": "a-worker",
             },
+            resource="POST /escrow/esc-fake/release",
         )
         response = await client.post(
             "/escrow/esc-fake/release",
@@ -140,6 +142,7 @@ class TestPayloadMismatch:
                 "worker_pct": 50,
                 "poster_account_id": "a-poster",
             },
+            resource="POST /escrow/esc-fake/split",
         )
         response = await client.post(
             "/escrow/esc-fake/split",

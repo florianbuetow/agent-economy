@@ -2,29 +2,15 @@
 
 from __future__ import annotations
 
-import base64
 import json
 from typing import TYPE_CHECKING, Any
 
 from cryptography.exceptions import InvalidSignature
+from service_auth.jws import JwsAdmissionError, VerifiedJws, require_context
 from service_commons.exceptions import ServiceError
 
 if TYPE_CHECKING:
     from service_auth.platform import PlatformAgent
-
-
-def _extract_kid(token: str) -> str | None:
-    """Return the ``kid`` from a compact JWS protected header, or None."""
-    header_b64 = token.split(".", 1)[0]
-    padding = "=" * (-len(header_b64) % 4)
-    try:
-        header = json.loads(base64.urlsafe_b64decode(header_b64 + padding))
-    except (ValueError, json.JSONDecodeError):
-        return None
-    if not isinstance(header, dict):
-        return None
-    kid = header.get("kid")
-    return kid if isinstance(kid, str) else None
 
 
 def parse_json_body(raw_body: bytes) -> dict[str, Any]:
@@ -57,8 +43,15 @@ def extract_jws_token(data: dict[str, Any], field: str) -> str:
     return token
 
 
-def verify_platform_token(token: str, platform_agent: PlatformAgent | None) -> dict[str, Any]:
-    """Verify a JWS token was signed by the platform agent.
+def verify_platform_token(
+    token: str,
+    platform_agent: PlatformAgent | None,
+    *,
+    audience: str,
+    resource: str,
+    allowed_action: str | tuple[str, ...],
+) -> VerifiedJws:
+    """Verify a platform token and bind its authenticated route context.
 
     Uses local cryptographic verification — no Identity service round-trip needed.
     If verification succeeds, the token was signed with the platform's private key.
@@ -82,39 +75,17 @@ def verify_platform_token(token: str, platform_agent: PlatformAgent | None) -> d
         )
 
     try:
-        payload = platform_agent.validate_certificate(token)
-    except (InvalidSignature, ValueError) as exc:
-        raise ServiceError("forbidden", "JWS signature verification failed", 403, {}) from exc
-    except Exception as exc:
-        raise ServiceError(
-            "identity_service_unavailable",
-            "Cannot reach Identity service",
-            502,
-            {},
-        ) from exc
-
-    if not isinstance(payload, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-        raise ServiceError("invalid_payload", "JWS payload must be a JSON object", 400, {})
-
-    # GAP-B4: crypto authenticity alone is not enough — the spec'd identity binding
-    # (protected-header ``kid``) must name the platform agent. Reject a token whose
-    # header kid does not match, even if the signature verifies.
-    if _extract_kid(token) != platform_agent.agent_id:
-        raise ServiceError("forbidden", "JWS signer is not the platform agent", 403, {})
-
-    return payload
-
-
-def require_action(payload: dict[str, Any], expected_action: str) -> None:
-    """Validate expected action value in payload."""
-    action = payload.get("action")
-    if action != expected_action:
-        raise ServiceError(
-            "invalid_payload",
-            f'JWS payload action must be "{expected_action}"',
-            400,
-            {},
+        verified = platform_agent.validate_certificate(token)
+        return require_context(
+            verified,
+            audience=audience,
+            resource=resource,
+            allowed_action=allowed_action,
         )
+    except InvalidSignature as exc:
+        raise ServiceError("forbidden", "JWS signature verification failed", 403, {}) from exc
+    except JwsAdmissionError as exc:
+        raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
 
 
 def require_non_empty_string(data: dict[str, Any], field: str) -> str:

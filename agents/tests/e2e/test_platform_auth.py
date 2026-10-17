@@ -39,7 +39,9 @@ async def test_non_platform_cannot_release_escrow(make_funded_agent) -> None:
                 "action": "escrow_release",
                 "escrow_id": escrow_id,
                 "recipient_account_id": worker.agent_id,
-            }
+            },
+            audience="central-bank",
+            resource=f"POST /escrow/{escrow_id}/release",
         )
         response = await worker._request_raw(
             "POST",
@@ -92,7 +94,9 @@ async def test_non_platform_cannot_split_escrow(make_funded_agent) -> None:
                 "worker_account_id": worker.agent_id,
                 "poster_account_id": poster.agent_id,
                 "worker_pct": 100,
-            }
+            },
+            audience="central-bank",
+            resource=f"POST /escrow/{escrow_id}/split",
         )
         response = await worker._request_raw(
             "POST",
@@ -128,7 +132,9 @@ async def test_non_platform_cannot_credit_account(make_funded_agent) -> None:
                 "account_id": agent_b.agent_id,
                 "amount": 500,
                 "reference": "fake_salary",
-            }
+            },
+            audience="central-bank",
+            resource=f"POST /accounts/{agent_b.agent_id}/credit",
         )
         response = await agent_a._request_raw(
             "POST",

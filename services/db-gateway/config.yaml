@@ -23,3 +23,39 @@ database:
 
 request:
   max_body_size: 1048576
+
+recovery:
+  maintenance_lock_path: "../../data/maintenance.lock"
+  backup_root: "../../data/backups"
+
+auth:
+  audience: "db-gateway"
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 30
+  trusted_callers:
+    gateway-identity:
+      public_key_path: "../../data/keys/gateway-identity.pub"
+      capabilities:
+        - "gateway.identity.read"
+        - "gateway.identity.write"
+    gateway-central-bank:
+      public_key_path: "../../data/keys/gateway-central-bank.pub"
+      capabilities:
+        - "gateway.bank.read"
+        - "gateway.bank.write"
+    gateway-task-board:
+      public_key_path: "../../data/keys/gateway-task-board.pub"
+      capabilities:
+        - "gateway.board.read"
+        - "gateway.board.write"
+    gateway-reputation:
+      public_key_path: "../../data/keys/gateway-reputation.pub"
+      capabilities:
+        - "gateway.reputation.read"
+        - "gateway.reputation.write"
+    gateway-court:
+      public_key_path: "../../data/keys/gateway-court.pub"
+      capabilities:
+        - "gateway.court.read"
+        - "gateway.court.write"
+        - "gateway.board.task.read"

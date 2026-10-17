@@ -12,13 +12,20 @@ lifespan() refuses to start without it.
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 import pytest
+import yaml
+from service_auth.platform import PlatformAgent
+from service_auth.signing import generate_keypair as provision_keypair
 
 from task_board_service.app import create_app
 from task_board_service.config import Settings, clear_settings_cache, get_settings
 from task_board_service.core.lifespan import lifespan
 from task_board_service.core.state import reset_app_state
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _BASE_CONFIG = """\
 service:
@@ -33,6 +40,11 @@ logging:
   directory: "data/logs"
 database:
   path: "{db_path}"
+identity:
+  base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -41,11 +53,19 @@ central_bank:
   timeout_seconds: 10
 platform:
   agent_id: "a-platform-test-id"
+  agent_config_path: "{agent_config_path}"
 request:
   max_body_size: 1048576
+recovery:
+  maintenance_lock_path: "maintenance.lock"
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-task-board"
+    private_key_path: "gateway-task-board.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 assets:
   storage_path: "{assets_path}"
   max_file_size: 10485760
@@ -54,12 +74,52 @@ assets:
 """
 
 
+def _write_platform_agent_config(tmp_path: Path) -> Path:
+    keys_dir = tmp_path / "agent-keys"
+    provision_keypair("platform", keys_dir)
+    provision_keypair("gateway-task-board", tmp_path)
+    roster_path = tmp_path / "roster.yaml"
+    roster_path.write_text(
+        yaml.safe_dump({"agents": {"platform": {"name": "Platform", "type": "platform"}}})
+    )
+    agent_config_path = tmp_path / "agents.yaml"
+    agent_config_path.write_text(
+        yaml.safe_dump(
+            {
+                "platform": {
+                    "identity_url": "http://localhost:8001",
+                    "bank_url": "http://localhost:8002",
+                    "task_board_url": "http://localhost:8003",
+                    "reputation_url": "http://localhost:8004",
+                    "court_url": "http://localhost:8005",
+                },
+                "data": {
+                    "keys_dir": str(keys_dir),
+                    "roster_path": str(roster_path),
+                },
+                "signing": {
+                    "token_ttl_seconds": 300,
+                    "max_lifetime_seconds": 300,
+                    "clock_skew_seconds": 0,
+                },
+            }
+        )
+    )
+    return agent_config_path
+
+
+async def _register_test_platform(agent: PlatformAgent) -> dict[str, str]:
+    agent.agent_id = "a-platform-test-id"
+    return {"agent_id": agent.agent_id}
+
+
 @pytest.mark.unit
 def test_deadline_evaluation_section_loads(tmp_path) -> None:
     """A config with deadline_evaluation.evaluation_interval_seconds loads it."""
     config_content = _BASE_CONFIG.format(
         db_path=str(tmp_path / "task-board.db"),
         assets_path=str(tmp_path / "assets"),
+        agent_config_path="agents.yaml",
         deadline_evaluation_section=("deadline_evaluation:\n  evaluation_interval_seconds: 30\n"),
     )
     config_path = tmp_path / "config.yaml"
@@ -83,6 +143,7 @@ def test_deadline_evaluation_missing_interval_field_rejected(tmp_path) -> None:
     config_content = _BASE_CONFIG.format(
         db_path=str(tmp_path / "task-board.db"),
         assets_path=str(tmp_path / "assets"),
+        agent_config_path="agents.yaml",
         deadline_evaluation_section="deadline_evaluation: {}\n",
     )
     config_path = tmp_path / "config.yaml"
@@ -98,16 +159,21 @@ def test_deadline_evaluation_missing_interval_field_rejected(tmp_path) -> None:
 
 
 @pytest.mark.unit
-async def test_lifespan_fails_fast_without_deadline_evaluation_section(tmp_path) -> None:
+async def test_lifespan_fails_fast_without_deadline_evaluation_section(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A config missing deadline_evaluation entirely refuses to start the service.
 
     No code default exists (Q-5): the section is Optional at the schema level
     (test_config.py's fixtures predate it) but required to actually start,
     exactly mirroring the existing db_gateway required-check in lifespan.py.
     """
+    agent_config_path = _write_platform_agent_config(tmp_path)
     config_content = _BASE_CONFIG.format(
         db_path=str(tmp_path / "task-board.db"),
         assets_path=str(tmp_path / "assets"),
+        agent_config_path=str(agent_config_path),
         deadline_evaluation_section="",
     )
     config_path = tmp_path / "config.yaml"
@@ -115,6 +181,7 @@ async def test_lifespan_fails_fast_without_deadline_evaluation_section(tmp_path)
     os.environ["CONFIG_PATH"] = str(config_path)
     clear_settings_cache()
     reset_app_state()
+    monkeypatch.setattr(PlatformAgent, "register", _register_test_platform)
 
     test_app = create_app()
     with pytest.raises(RuntimeError, match="deadline_evaluation"):

@@ -43,11 +43,14 @@ These error codes apply to authentication failures. Existing error codes from `t
 
 | Status | Error Code                      | Required When                                                |
 |--------|---------------------------------|--------------------------------------------------------------|
-| 400    | `invalid_jws`                  | `token` / `task_token` field is missing, null, non-string, empty, or malformed (not a three-part compact serialization); or `Authorization` header is missing, lacks the `Bearer ` prefix, or contains an empty/malformed token |
-| 400    | `invalid_json`                 | Request body is not valid JSON, or is valid JSON but not an object (e.g., array, string) |
-| 400    | `invalid_payload`              | JWS payload is missing `action`, `action` does not match the expected value for the endpoint, or required payload fields are missing |
+| 400    | `invalid_jws`                  | Non-object request body or signed payload, malformed compact/header form, decoded signature length other than 64 bytes, exact header profile, or lifetime bound is invalid |
+| 400    | `invalid_json`                 | Request body is not valid JSON |
+| 400    | `invalid_payload`              | Action is missing/non-string, authenticated audience/resource/action mismatches, or required domain fields are missing |
 | 400    | `token_mismatch`               | `task_id` or `amount`/`reward` mismatch between `task_token` and `escrow_token` during task creation |
-| 403    | `forbidden`                    | JWS signature verification failed locally via `PlatformAgent.validate_certificate()` (tampered token, unknown agent, invalid certificate), signer does not match the required role (poster, worker, platform), or agent is not authorized for the operation |
+| 401    | `token_expired`                | Authentic token satisfies `now >= exp + clock_skew_seconds` |
+| 401    | `token_not_yet_valid`           | Authentic token satisfies `iat > now + clock_skew_seconds` |
+| 403    | `forbidden`                    | Identity-backed or local signature verification fails, authenticated signer does not match the required role, or authenticated local `kid` is not the platform identity |
+| 502    | `identity_service_unavailable` | Agent-token verification cannot reach Identity or receives a malformed successful response |
 | 502    | `central_bank_unavailable`     | Central Bank service is unreachable or returns an unexpected response during escrow operations |
 
 All failing responses must use the standard error envelope:
@@ -67,7 +70,8 @@ All failing responses must use the standard error envelope:
 - `platform_agent` is the `PlatformAgent` instantiated locally with a known Ed25519 keypair. Its `agent_id` matches `settings.platform.agent_id`. It performs local certificate verification via `validate_certificate()`.
 - `agent_poster`, `agent_worker`, `agent_bidder` are test agents with known Ed25519 public/private keypairs.
 - `rogue_agent` is a non-platform agent with a valid Ed25519 keypair.
-- `jws(signer, payload)` denotes a JWS compact serialization (RFC 7515, EdDSA/Ed25519) with header `{"alg":"EdDSA","kid":"<signer.agent_id>"}`, the given JSON payload, and a valid Ed25519 signature.
+- `jws(signer, payload)` is concise scenario notation for a real Ed25519 compact JWS with exact protected header `{alg,typ,kid,iat,exp,aud="task-board",resource}` and the existing action/domain payload. The fixture call passes the concrete resource explicitly; the notation does not authorize a default.
+- `raw_jws(header, payload, key)` creates real signatures only for malformed-profile vectors. Domain-only mocks must return a complete typed `VerifiedJws(header, payload)` and do not prove authentication.
 - `tampered_jws(signer, payload)` denotes a JWS where the payload has been altered after signing (signature mismatch).
 - Agent IDs use the format `a-<uuid4>`.
 - Task IDs use the format `t-<uuid4>`.
@@ -145,21 +149,21 @@ These tests cover token format validation patterns not already tested in the mai
 **Action:** `POST /tasks/{task_id}/cancel` with `Content-Type: application/json` and body `[{"token": "eyJ..."}]`.
 **Expected:**
 - `400 Bad Request`
-- `error = invalid_json`
+- `error = invalid_jws`
 
 ### AUTH-10 Non-object JSON body (string) on single-token endpoint
 
 **Action:** `POST /tasks/{task_id}/bids` with `Content-Type: application/json` and body `"just a string"`.
 **Expected:**
 - `400 Bad Request`
-- `error = invalid_json`
+- `error = invalid_jws`
 
 ### AUTH-11 Non-object JSON body (array) on dual-token endpoint
 
 **Action:** `POST /tasks` with `Content-Type: application/json` and body `[{"task_token": "eyJ...", "escrow_token": "eyJ..."}]`.
 **Expected:**
 - `400 Bad Request`
-- `error = invalid_json`
+- `error = invalid_jws`
 
 ### AUTH-12 Null `task_token` with valid `escrow_token` on task creation
 
@@ -289,6 +293,41 @@ The Task Board uses Bearer tokens for two endpoints:
 - `403 Forbidden`
 - `error = forbidden`
 
+### MP03-TB-01 Strict header types and lifetime bounds
+
+**Action:** Send real-signed agent and platform tokens with a non-object signed payload, missing/extra header fields, wrong types including boolean `iat`/`exp`, decoded signature length other than 64 bytes, `exp <= iat`, and lifetime above the configured maximum.
+**Expected:** Each returns `400 invalid_jws`; no task, bid, asset, or ruling effect occurs.
+
+### MP03-TB-02 Exact future and expiry boundaries
+
+**Action:** At controlled time, exercise `iat = now + skew`, `iat = now + skew + 1`, `now = exp + skew - 1`, and `now = exp + skew` on an Identity-backed agent route and the real local platform ruling adapter.
+**Expected:** Boundary-within-skew cases succeed; the next future second is `401 token_not_yet_valid`; exact expiry is `401 token_expired`.
+
+### MP03-TB-03 Audience, method/resource, and action
+
+**Action:** Send authentic tokens with wrong audience, wrong HTTP method, wrong concrete path or route id, missing/wrong-type/wrong-value action, and payload `aud`/`resource` fields that disagree with the protected header.
+**Expected:** Each returns `400 invalid_payload`; zero domain effect.
+
+### MP03-TB-04 Correct platform signature with wrong `kid`
+
+**Action:** Sign a ruling token with the platform key while placing another registered identity in protected `kid`.
+**Expected:** `403 forbidden`; no ruling is recorded.
+
+### MP03-TB-05 Malformed Identity success is unavailable
+
+**Action:** On an agent route, make Identity return HTTP 200/`valid:true` with missing `protected_header`, non-object payload, `agent_id != protected_header.kid`, a `true`/`1`/`1.0` substitution, or success for an invalid originally requested token.
+**Expected:** `502 identity_service_unavailable`; no authenticated payload is fabricated and no task effect occurs.
+
+### MP03-TB-06 Shared, Identity, and local-adapter conformance
+
+**Action:** Run the same actual-signature success and failure vectors through shared verification, real Identity HTTP verification where applicable, and Task Board's real local platform adapter.
+**Expected:** Success returns the same typed `VerifiedJws`; failures use the uniform mapping. Local platform vectors perform no Identity HTTP request.
+
+### MP03-TB-07 Authentication configuration fails closed
+
+**Action:** Load settings with missing Identity configuration, missing/zero/negative signer TTL or admission maximum, or missing/negative skew; then load explicit initial `300/300/30` values.
+**Expected:** Invalid settings fail at startup. The valid settings preserve Identity-backed agent verification and no-HTTP local platform verification.
+
 ---
 
 ## Category 3: Public Endpoints
@@ -413,10 +452,11 @@ Authentication is release-ready only if:
 |----------|-----|-------|
 | Body Token Edge Cases | AUTH-01 to AUTH-13 | 13 |
 | Bearer Token Validation | BEARER-01 to BEARER-13 | 13 |
+| MP-03 strict-profile conformance | MP03-TB-01 to MP03-TB-07 | 7 |
 | Public Endpoints | PUB-01 to PUB-06 | 6 |
 | Cross-Service Token Replay | REPLAY-01 to REPLAY-03 | 3 |
 | Cross-Cutting Security | SEC-AUTH-01 to SEC-AUTH-03 | 3 |
-| **Total** | | **38** |
+| **Total** | | **45** |
 
 | Endpoint | Covered By (this document) | Also Covered By (main spec) |
 |----------|----------------------------|------------------------------|

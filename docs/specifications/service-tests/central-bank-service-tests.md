@@ -1,5 +1,21 @@
 # Central Bank Service — Production Release Test Specification
 
+## MP-04 receipt acceptance amendment (implementation in progress)
+
+Use the [financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md) for the
+new request/response and replay assertions. Valid monetary fixtures must provide explicit
+operation IDs and settlement references. Reconcile old flat-response assertions to the new
+receipt/result/current projection while preserving their money, authentication and event intent.
+Fresh negative tests must prove missing/invalid IDs, changed kind/parties/amount/percentage,
+true winning-operation conflicts, and no mutation of any ledger/event/receipt surface.
+
+Response-loss tests must prove a real commit before loss, then exact receipt replay for release
+and 0/partial/100% splits. Receipt IDs must join to actual persisted event and ledger facts; hash
+assertions compute the canonical business request independently. Split always exposes two logical
+legs, and a zero-value recipient need not have a Bank account. Lock replay retains its immutable
+receipt while truthfully projecting settled status. These baseline proofs do not close T-116 or
+replace separate issuance, concurrency, migration/history and atomic rollback coverage.
+
 ## Purpose
 
 This document is the release-gate test specification for the Central Bank Service.
@@ -35,7 +51,8 @@ Error codes are lowercase `snake_case` (R1). Required status/error mappings:
 | 400    | `invalid_jws`               | JWS token is malformed, missing, empty, or not a string |
 | 400    | `invalid_json`              | Request body is not valid JSON or not a JSON object |
 | 400    | `invalid_payload`           | JWS payload missing required fields, wrong `action`, or wrong field type for a payload field |
-| 400    | `invalid_amount`            | Amount, balance, or `worker_pct` is not a valid integer in the required range |
+| 400    | `invalid_amount`            | Amount/balance has an invalid type or sign, or integer `worker_pct` lies outside 0–100 |
+| 400    | `amount_out_of_range`       | Monetary input exceeds the signed-64-bit representation |
 | 400    | `payload_mismatch`          | JWS payload field does not match URL parameter, or duplicate credit reference with different amount, or `poster_account_id` does not match escrow payer |
 | 402    | `insufficient_funds`        | Escrow lock would cause negative balance |
 | 403    | `forbidden`                 | Agent accessing another's account, non-platform agent doing platform-only work, or JWS signature verification failed |
@@ -46,6 +63,7 @@ Error codes are lowercase `snake_case` (R1). Required status/error mappings:
 | 409    | `account_exists`            | Account already created for this agent |
 | 409    | `escrow_already_resolved`   | Escrow has already been released or split |
 | 409    | `escrow_already_locked`     | Escrow already locked for this task with a different amount |
+| 409    | `amount_out_of_range`       | Credit or settlement would exceed a recipient balance limit |
 | 413    | `payload_too_large`         | Request body exceeds configured `request.max_body_size` |
 | 415    | `unsupported_media_type`    | `Content-Type` is not `application/json` for JSON endpoints |
 | 502    | `identity_service_unavailable` | Cannot reach the Identity service for JWS verification or agent lookup (never on `credit`/`escrow_release`/`escrow_split`, which verify locally) |
@@ -55,8 +73,8 @@ Error codes are lowercase `snake_case` (R1). Required status/error mappings:
 
 ## Test Data Conventions
 
-- `jws(signer, payload)` constructs a valid JWS compact token signed by the given agent's Ed25519 private key with the given JSON payload. The JWS header is `{"alg": "EdDSA", "typ": "JWT", "kid": "<signer_agent_id>"}`.
-- `tampered_jws(signer, payload)` constructs a JWS token where the signature does not match the payload (e.g., the payload was modified after signing).
+- `jws(signer, payload)` constructs a valid strict-profile compact JWS using the signer's Ed25519 private key. The protected header contains exactly `alg: "EdDSA"`, `typ: "JWT"`, the registered signer `kid`, controlled integer `iat` and `exp`, `aud: "central-bank"`, and the test request's concrete uppercase `METHOD /path` resource. The helper supplies explicit lifetime/context values within the configured policy; booleans are not valid timestamps.
+- `tampered_jws(signer, payload)` starts from the same valid seven-field profile and then modifies the signed bytes so the signature no longer matches, without accidentally testing a missing-header-field failure instead.
 - `platform` refers to the registered platform agent — whichever agent the Central Bank's own `PlatformAgent` (loaded via `platform.agent_config_path`) is running as. There is no `platform.agent_id` config value to reference.
 - `alice`, `bob`, `carol` are regular agents registered in the Identity service, each with their own Ed25519 keypair. Unless a test's Setup explicitly creates an account for an agent, assume no account exists yet — `create_account` may be called by the agent itself (self-service) or by `platform`.
 - All account IDs equal the agent's `agent_id` (e.g., `a-<uuid4>`).
@@ -805,3 +823,39 @@ Service is release-ready only if:
 | `POST /escrow/{escrow_id}/release` | REL-01 to REL-09, SEC-01, SEC-02 |
 | `POST /escrow/{escrow_id}/split` | SPL-01 to SPL-17, SEC-01, SEC-02 |
 | `GET /health` | HLTH-01 to HLTH-05 |
+
+## MP-06 monetary boundary release gates
+
+These additional gates extend the 90-case legacy index above. They apply to public signed routes
+and both ledger implementations; they do not replace the original assertions.
+
+### MP06-BANK-01 Strict values before effects
+
+Account creation, credit and lock reject booleans and non-integer amounts. The individual monetary
+limit is `9223372036854775807`; larger inputs return 400 `amount_out_of_range`. Negative balances
+and non-positive credit/lock amounts return 400 `invalid_amount`. A boolean or non-integer
+`worker_pct` returns 400 `invalid_payload`; integer percentages outside 0–100 return 400
+`invalid_amount`. Verify no account, transaction, escrow or Gateway mutation occurs on rejection.
+
+### MP06-BANK-02 Overflow remains a financial rejection
+
+Credit, release and split that exceed a recipient's balance limit return 409 `amount_out_of_range`
+from both ledger implementations. The Gateway-backed adapter must preserve the code and status,
+not return a generic server failure or falsely claim that the escrow was already resolved. The
+in-memory implementation must validate all credits before mutating any leg, including a split where
+worker and poster are the same account. Existing balances, histories and escrow state remain exact.
+
+### MP06-BANK-03 Lifetime lock replay is truthful
+
+Lock and then release or split an escrow. Exact lock replay returns the original escrow identity
+and actual settled status, without another debit, ledger leg or escrow. Changed amounts conflict.
+The Gateway adapter consumes the required returned status and rejects missing or invalid status
+instead of fabricating `locked`. Also preserve exact replay when available balance is insufficient
+for a second lock. Durable release/split replay receipts remain a separate MP-04 requirement.
+
+### MP06-BANK-04 Aggregates retain exact large totals
+
+Multiple individually valid amounts may sum above the individual signed-64-bit bound. Two
+maximum-sized locked escrows return exactly twice that maximum from `total_escrowed`, with Python
+integer arithmetic and no float conversion or aggregate cap. Settlement removes the corresponding
+locked amount from the aggregate without changing conservation.

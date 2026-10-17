@@ -66,7 +66,9 @@ async def test_cancel_task_with_pending_bid_refunds_escrow_and_orphans_bid(
                         "task_id": task["task_id"],
                         "bid_id": bid["bid_id"],
                         "poster_id": poster.agent_id,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/bids/{bid['bid_id']}/accept",
                 )
             },
         )

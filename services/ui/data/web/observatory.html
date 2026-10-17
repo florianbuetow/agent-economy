@@ -208,17 +208,17 @@
 
 <!-- ═══ TOP NAV ═══════════════════════════════════════ -->
 <nav class="topnav">
-  <div class="topnav-brand" onclick="window.location='/'" style="cursor:pointer">
+  <div class="topnav-brand" data-nav="/" style="cursor:pointer">
     <span class="topnav-logo">ATE</span>
     <span class="topnav-sep"></span>
     <span class="topnav-sub">Agent Task Economy</span>
   </div>
   <div class="topnav-links">
-    <span class="topnav-link" onclick="window.location='/'">Home</span>
+    <span class="topnav-link" data-nav="/">Home</span>
     <span class="topnav-link active">Observatory</span>
-    <span class="topnav-link" onclick="window.location='/task.html'">Task Lifecycle</span>
-    <span class="topnav-link" onclick="window.location='/quarterly-report.html'">Quarterly Report</span>
-    <span class="topnav-link" onclick="window.location='/agent.html'">Agents</span>
+    <span class="topnav-link" data-nav="/task.html">Task Lifecycle</span>
+    <span class="topnav-link" data-nav="/quarterly-report.html">Quarterly Report</span>
+    <span class="topnav-link" data-nav="/agent.html">Agents</span>
   </div>
 </nav>
 
@@ -235,7 +235,7 @@
   <div class="feed-panel">
     <div class="feed-header">
       <span class="feed-title">Live Feed</span>
-      <button class="feed-btn pause" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+      <button class="feed-btn pause" id="pause-btn">⏸ Pause</button>
       <div style="display:flex;gap:3px;flex-wrap:wrap" id="filter-btns"></div>
     </div>
     <div class="feed-scroll" id="feed-scroll"></div>
@@ -244,8 +244,8 @@
   <!-- ── RIGHT: Leaderboard ───────────────────────── -->
   <div class="lb-panel">
     <div class="lb-tabs">
-      <button class="lb-tab active" id="tab-workers" onclick="switchTab('workers')">Workers</button>
-      <button class="lb-tab" id="tab-posters" onclick="switchTab('posters')">Posters</button>
+      <button class="lb-tab active" id="tab-workers">Workers</button>
+      <button class="lb-tab" id="tab-posters">Posters</button>
     </div>
     <div class="lb-scroll" id="lb-scroll"></div>
   </div>

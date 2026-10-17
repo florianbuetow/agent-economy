@@ -12,10 +12,12 @@ token).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from service_auth import jws as core_jws
 from service_auth.signing import create_jws
 
 from .test_two_tier_auth import PLATFORM_ID, identity_down
@@ -41,6 +43,9 @@ async def test_non_platform_signer_on_release_is_forbidden(identity_down: Any) -
         },
         non_platform_key,
         kid="a-eve",
+        audience="central-bank",
+        resource=f"POST /escrow/{escrow_id}/release",
+        token_ttl_seconds=60,
     )
     resp = await client.post(f"/escrow/{escrow_id}/release", json={"token": token})
 
@@ -69,6 +74,9 @@ async def test_non_platform_signer_on_split_is_forbidden(identity_down: Any) -> 
         },
         non_platform_key,
         kid="a-eve",
+        audience="central-bank",
+        resource=f"POST /escrow/{escrow_id}/split",
+        token_ttl_seconds=60,
     )
     resp = await client.post(f"/escrow/{escrow_id}/split", json={"token": token})
 
@@ -88,6 +96,9 @@ async def test_create_account_fails_cleanly_when_identity_down(identity_down: An
         {"action": "create_account", "agent_id": "a-alice", "initial_balance": 0},
         agent_key,
         kid="a-alice",
+        audience="central-bank",
+        resource="POST /accounts",
+        token_ttl_seconds=60,
     )
     resp = await client.post("/accounts", json={"token": token})
 
@@ -96,17 +107,29 @@ async def test_create_account_fails_cleanly_when_identity_down(identity_down: An
 
 
 @pytest.mark.unit
-async def test_expired_platform_token_rejected_on_credit(identity_down: Any) -> None:
+async def test_expired_platform_token_rejected_on_credit(
+    identity_down: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """EXP-01: a platform-signed credit token with an already-elapsed TTL is
     rejected with 401 token_expired."""
     client, state, private_key = identity_down
     await state.ledger.create_account("a-worker", 0)
 
+    issued_at = datetime(2030, 1, 1, tzinfo=UTC)
+    monkeypatch.setattr(core_jws, "_clock", lambda: issued_at)
     token = create_jws(
         {"action": "credit", "account_id": "a-worker", "amount": 10, "reference": "r-exp"},
         private_key,
         kid=PLATFORM_ID,
-        token_ttl_seconds=-10,
+        audience="central-bank",
+        resource="POST /accounts/a-worker/credit",
+        token_ttl_seconds=60,
+    )
+    monkeypatch.setattr(
+        core_jws,
+        "_clock",
+        lambda: datetime.fromtimestamp(int(issued_at.timestamp()) + 60, tz=UTC),
     )
     resp = await client.post("/accounts/a-worker/credit", json={"token": token})
 
@@ -115,19 +138,25 @@ async def test_expired_platform_token_rejected_on_credit(identity_down: Any) -> 
 
 
 @pytest.mark.unit
-async def test_non_expiring_token_accepted_regardless_of_age(identity_down: Any) -> None:
-    """EXP-02: a platform-signed token with no `exp` claim (token_ttl_seconds=None)
-    is accepted — a token without an exp claim never expires."""
-    client, state, private_key = identity_down
+async def test_non_expiring_token_is_rejected_before_request(identity_down: Any) -> None:
+    """EXP-02: production issuance rejects the removed no-expiry mode."""
+    _client, state, private_key = identity_down
     await state.ledger.create_account("a-worker", 0)
 
-    token = create_jws(
-        {"action": "credit", "account_id": "a-worker", "amount": 10, "reference": "r-noexp"},
-        private_key,
-        kid=PLATFORM_ID,
-        token_ttl_seconds=None,
-    )
-    resp = await client.post("/accounts/a-worker/credit", json={"token": token})
-
-    assert resp.status_code == 200
-    assert resp.json()["balance_after"] == 10
+    with pytest.raises(ValueError, match="positive integer"):
+        create_jws(
+            {
+                "action": "credit",
+                "account_id": "a-worker",
+                "amount": 10,
+                "reference": "r-noexp",
+            },
+            private_key,
+            kid=PLATFORM_ID,
+            audience="central-bank",
+            resource="POST /accounts/a-worker/credit",
+            token_ttl_seconds=None,  # type: ignore[arg-type]
+        )
+    account = await state.ledger.get_account("a-worker")
+    assert account is not None
+    assert account["balance"] == 0

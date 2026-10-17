@@ -34,11 +34,78 @@ from typing import Any
 
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service.receipt_audit import audit_receipt_ownership
+from db_gateway_service.schema import (
+    SchemaClassification,
+    SchemaState,
+    _tokenize_sql,
+    classify_schema,
+)
 from db_gateway_service.services.bank_writer import BankWriter
 from db_gateway_service.services.board_writer import BoardWriter
 from db_gateway_service.services.court_writer import CourtWriter
 from db_gateway_service.services.identity_writer import IdentityWriter
 from db_gateway_service.services.reputation_writer import ReputationWriter
+
+
+def _schema_statements(schema_sql: str) -> tuple[str, ...]:
+    """Split and allowlist complete bootstrap statements before any mutation."""
+    statements: list[str] = []
+    buffer = ""
+    for character in schema_sql:
+        buffer += character
+        if not sqlite3.complete_statement(buffer):
+            continue
+        statement = buffer.strip()
+        buffer = ""
+        if _tokenize_sql(statement):
+            _validate_bootstrap_statement(statement)
+            statements.append(statement)
+    if _tokenize_sql(buffer):
+        raise sqlite3.OperationalError("incomplete schema statement")
+    if not statements:
+        raise sqlite3.OperationalError("schema contains no statements")
+    return tuple(statements)
+
+
+def _validate_bootstrap_statement(statement: str) -> None:
+    tokens = _tokenize_sql(statement)
+    body = tokens[:-1] if tokens and tokens[-1] == ";" else tokens
+    allowed = (
+        body[:2] == ("create", "table")
+        or body[:3] == ("create", "unique", "index")
+        or body[:2] == ("create", "index")
+        or body[:3] == ("insert", "into", "schema_metadata")
+        or body[:3] == ("insert", "into", "bank_receipt_cutover")
+    )
+    if not allowed or ";" in body:
+        first_word = body[0] if body else "empty"
+        raise sqlite3.OperationalError(
+            f"schema statement is not allowed during transactional bootstrap: {first_word}"
+        )
+
+
+def _validate_database_configuration(busy_timeout_ms: int, journal_mode: str) -> None:
+    valid_timeout = (
+        not isinstance(busy_timeout_ms, bool)
+        and isinstance(busy_timeout_ms, int)
+        and 0 <= busy_timeout_ms <= 2_147_483_647
+    )
+    if valid_timeout and journal_mode == "wal":
+        return
+    raise ServiceError(
+        "invalid_database_configuration",
+        "Invalid database configuration",
+        500,
+        {
+            "busy_timeout_ms": busy_timeout_ms,
+            "journal_mode": journal_mode,
+        },
+    )
+
+
+def _add_cleanup_note(primary: BaseException, operation: str, secondary: BaseException) -> None:
+    primary.add_note(f"Secondary {operation} failure: {secondary!r}")
 
 
 class DbWriter:
@@ -63,70 +130,174 @@ class DbWriter:
         schema_sql: str | None,
     ) -> None:
         self._db_path = db_path
+        _validate_database_configuration(busy_timeout_ms, journal_mode)
         self._db = sqlite3.connect(db_path, check_same_thread=False)
-        self._db.row_factory = sqlite3.Row
-        self._db.execute(f"PRAGMA journal_mode={journal_mode}")
-        self._db.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
-        self._db.execute("PRAGMA foreign_keys=ON")
+        try:
+            self._db.row_factory = sqlite3.Row
+            classification = classify_schema(self._db)
+            if classification.state is SchemaState.EMPTY:
+                classification = self._bootstrap_schema(schema_sql)
+            self._admit_existing_schema(classification)
+            self._admit_database_health()
+            self._admit_receipt_ownership()
 
-        if schema_sql is not None:
-            self._init_schema(schema_sql)
+            self._configure_connection(busy_timeout_ms, journal_mode)
 
-        self._identity = IdentityWriter(self)
-        self._bank = BankWriter(self)
-        self._board = BoardWriter(self)
-        self._reputation = ReputationWriter(self)
-        self._court = CourtWriter(self)
+            self._identity = IdentityWriter(self)
+            self._bank = BankWriter(self)
+            self._board = BoardWriter(self)
+            self._reputation = ReputationWriter(self)
+            self._court = CourtWriter(self)
+        except BaseException as primary:
+            try:
+                self._db.close()
+            except BaseException as secondary:
+                _add_cleanup_note(primary, "connection close", secondary)
+            raise
 
-    def _init_schema(self, schema_sql: str) -> None:
-        """Initialize database schema from SQL file.
+    def _admit_database_health(self) -> None:
+        """Reject corrupt stored data before persistent connection configuration."""
+        try:
+            integrity_rows = self._db.execute("PRAGMA integrity_check").fetchall()
+            integrity_issue_count = sum(
+                1 for row in integrity_rows if len(row) != 1 or row[0] != "ok"
+            )
+            foreign_key_issue_count = sum(
+                1 for _row in self._db.execute("PRAGMA foreign_key_check")
+            )
+        except sqlite3.DatabaseError as exc:
+            raise ServiceError(
+                "database_integrity_failed",
+                "Database integrity admission could not be completed",
+                500,
+                {
+                    "failed_checks": ["health_check_unavailable"],
+                    "foreign_key_issue_count": None,
+                    "integrity_issue_count": None,
+                },
+            ) from exc
 
-        The schema script is not re-runnable — its CREATE statements carry no
-        IF NOT EXISTS — so it runs only against a database with no tables yet.
-        Errors are never suppressed: a broken or missing schema kills startup.
-        """
-        if self._schema_is_absent():
-            self._db.executescript(schema_sql)
-        self._run_migrations()
-
-    def _schema_is_absent(self) -> bool:
-        """Report whether the database holds no application tables yet."""
-        cursor = self._db.execute(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+        failed_checks: list[str] = []
+        if integrity_issue_count:
+            failed_checks.append("integrity_check")
+        if foreign_key_issue_count:
+            failed_checks.append("foreign_key_check")
+        if not failed_checks:
+            return
+        raise ServiceError(
+            "database_integrity_failed",
+            "Database integrity admission failed",
+            500,
+            {
+                "failed_checks": failed_checks,
+                "foreign_key_issue_count": foreign_key_issue_count,
+                "integrity_issue_count": integrity_issue_count,
+            },
         )
-        row = cursor.fetchone()
-        return int(row[0]) == 0
 
-    def _run_migrations(self) -> None:
-        """Add columns to databases created before those columns existed.
-
-        The schema script is a no-op on an existing database, so every column added
-        after a deployment must be introduced here. Failures are deliberately not
-        suppressed: without these columns disputes and event provenance fail at runtime.
-        """
-        self._add_column_if_missing("board_tasks", "dispute_id", "TEXT")
-        self._add_column_if_missing("board_tasks", "rebuttal_deadline", "TEXT")
-        self._add_column_if_missing("board_tasks", "rebuttal_submitted_at", "TEXT")
-        self._add_column_if_missing("bank_transactions", "event_id", "INTEGER")
-        self._add_column_if_missing("bank_escrow", "event_id", "INTEGER")
-
-    def _add_column_if_missing(self, table: str, column: str, decl: str) -> None:
-        """Add one column to an existing table. No-op when the table or column is absent."""
-        for identifier in (table, column, decl):
-            if not identifier.isidentifier():
-                raise ServiceError(
-                    "invalid_migration",
-                    "Migration identifiers must be valid identifiers",
-                    500,
-                    {"table": table, "column": column},
-                )
-        columns = self._db.execute(f"PRAGMA table_info({table})").fetchall()  # nosec B608
-        if len(columns) == 0:
+    def _admit_receipt_ownership(self) -> None:
+        """Reject incomplete or corrupt financial ownership before configuration."""
+        result = audit_receipt_ownership(self._db)
+        if result.ownership_clean:
             return
-        if any(row["name"] == column for row in columns):
+        raise ServiceError(
+            "receipt_ownership_failed",
+            "Financial receipt ownership admission failed",
+            500,
+            {
+                "finding_codes": sorted({finding.code for finding in result.findings}),
+                "financially_clean": result.financially_clean,
+            },
+        )
+
+    def _bootstrap_schema(self, schema_sql: str | None) -> SchemaClassification:
+        """Create the exact current v2 schema atomically without implicit commits."""
+        if schema_sql is None:
+            raise ServiceError(
+                "schema_required",
+                "An empty database requires the configured current schema",
+                500,
+                None,
+            )
+        statements = _schema_statements(schema_sql)
+        self._db.execute("BEGIN IMMEDIATE")
+        try:
+            for statement in statements:
+                self._db.execute(statement)
+            classification = classify_schema(self._db)
+            self._admit_existing_schema(classification)
+            self._admit_database_health()
+            self._admit_receipt_ownership()
+            self._db.commit()
+            return classification
+        except BaseException as primary:
+            try:
+                self._db.rollback()
+            except BaseException as secondary:
+                _add_cleanup_note(primary, "bootstrap rollback", secondary)
+            raise
+
+    def _configure_connection(self, busy_timeout_ms: int, journal_mode: str) -> None:
+        journal_row = self._db.execute(
+            f"PRAGMA journal_mode={journal_mode}"  # nosec B608
+        ).fetchone()
+        self._db.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")  # nosec B608
+        self._db.execute("PRAGMA foreign_keys=ON")
+        timeout_row = self._db.execute("PRAGMA busy_timeout").fetchone()
+        foreign_keys_row = self._db.execute("PRAGMA foreign_keys").fetchone()
+        effective_journal = None if journal_row is None else str(journal_row[0]).lower()
+        effective_timeout = None if timeout_row is None else timeout_row[0]
+        effective_foreign_keys = None if foreign_keys_row is None else foreign_keys_row[0]
+        if (
+            effective_journal == journal_mode
+            and effective_timeout == busy_timeout_ms
+            and effective_foreign_keys == 1
+        ):
             return
-        self._db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")  # nosec B608
-        self._db.commit()
+        raise ServiceError(
+            "invalid_database_configuration",
+            "Effective database configuration postconditions were not applied",
+            500,
+            {
+                "requested_journal_mode": journal_mode,
+                "effective_journal_mode": effective_journal,
+                "requested_busy_timeout_ms": busy_timeout_ms,
+                "effective_busy_timeout_ms": effective_timeout,
+                "effective_foreign_keys": effective_foreign_keys,
+            },
+        )
+
+    @staticmethod
+    def _admit_existing_schema(classification: SchemaClassification) -> None:
+        if classification.state is SchemaState.CURRENT_V2:
+            return
+        details: dict[str, object] = {
+            "state": classification.state.value,
+            "signature_sha256": classification.signature_sha256,
+            "findings": list(classification.findings),
+        }
+        if classification.version is not None:
+            details["version"] = classification.version
+        if classification.state in {SchemaState.SUPPORTED_V0, SchemaState.CURRENT_V1}:
+            raise ServiceError(
+                "migration_required",
+                "The older schema requires an explicit verified migration",
+                503,
+                details,
+            )
+        if classification.state is SchemaState.FUTURE:
+            raise ServiceError(
+                "unsupported_schema_version",
+                "The database schema is newer than this service supports",
+                503,
+                details,
+            )
+        raise ServiceError(
+            "invalid_schema",
+            "The database schema is incomplete or unknown",
+            500,
+            details,
+        )
 
     @property
     def connection(self) -> sqlite3.Connection:
@@ -191,21 +362,13 @@ class DbWriter:
         """Lock funds in escrow."""
         return self._bank.escrow_lock(data)
 
-    def escrow_release(
-        self,
-        data: dict[str, Any],
-        constraints: dict[str, Any] | None,
-    ) -> dict[str, Any]:
+    def escrow_release(self, data: dict[str, Any]) -> dict[str, Any]:
         """Release escrowed funds to a recipient."""
-        return self._bank.escrow_release(data, constraints)
+        return self._bank.escrow_release(data)
 
-    def escrow_split(
-        self,
-        data: dict[str, Any],
-        constraints: dict[str, Any] | None,
-    ) -> dict[str, Any]:
+    def escrow_split(self, data: dict[str, Any]) -> dict[str, Any]:
         """Split escrowed funds between worker and poster."""
-        return self._bank.escrow_split(data, constraints)
+        return self._bank.escrow_split(data)
 
     def create_task(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new task."""

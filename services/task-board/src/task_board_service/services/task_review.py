@@ -38,7 +38,11 @@ class TaskReviewCoordinator:
         """
         manager = self._manager
         # Steps 4-7a: Verify JWS, validate action
-        payload = await manager.token_validator.validate_jws_token(token, "submit_deliverable")
+        payload = await manager.token_validator.validate_jws_token(
+            token,
+            "submit_deliverable",
+            expected_resource=f"POST /tasks/{task_id}/submit",
+        )
         signer_id: str = payload["_signer_id"]
 
         # Step 7b: Validate required fields
@@ -129,7 +133,11 @@ class TaskReviewCoordinator:
         """
         manager = self._manager
         # Steps 4-7a: Verify JWS, validate action
-        payload = await manager.token_validator.validate_jws_token(token, "approve_task")
+        payload = await manager.token_validator.validate_jws_token(
+            token,
+            "approve_task",
+            expected_resource=f"POST /tasks/{task_id}/approve",
+        )
         signer_id: str = payload["_signer_id"]
 
         # Step 7b: Validate required fields
@@ -174,7 +182,12 @@ class TaskReviewCoordinator:
             raise ServiceError("forbidden", "Only the poster can approve", 403, {})
 
         # Step 13: Release escrow to worker
-        await manager.escrow_coordinator.release_escrow(task["escrow_id"], task["worker_id"])
+        await manager.escrow_coordinator.release_task_escrow(
+            task_id,
+            "approved",
+            task["escrow_id"],
+            task["worker_id"],
+        )
 
         # Update task
         approved_at = now_iso()

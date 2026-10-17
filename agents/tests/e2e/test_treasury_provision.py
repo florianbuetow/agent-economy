@@ -7,6 +7,7 @@ crediting the treasury amount are all safe to repeat.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,7 +23,9 @@ if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
     from base_agent.platform import PlatformAgent
 
-CONFIG_PATH = Path(__file__).resolve().parents[2] / "config.yaml"
+CONFIG_PATH = Path(
+    os.environ.get("AGENT_CONFIG_PATH", str(Path(__file__).resolve().parents[2] / "config.yaml"))
+)
 
 
 @pytest.fixture()

@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
 from ui_service.services.database import (
     execute_fetchall,
     execute_fetchone,
     execute_scalar,
+)
+from ui_service.services.public_events import (
+    BID_SUBMITTED,
+    PUBLIC_BID_STATUSES,
+    project_public_event,
 )
 from ui_service.taxonomy import (
     AGENT_FEED_EVENT_TYPES,
@@ -433,6 +437,13 @@ async def get_agent_feed(
     conditions = [f"e.event_type IN ({placeholders})"]
     params: list[Any] = list(AGENT_FEED_EVENT_TYPES)
 
+    # Open-task bid membership is sealed. Requiring a known post-open status
+    # also fails closed when an event references a missing task.
+    conditions.append(
+        f"(e.event_type != ? OR t.status IN ({sql_placeholders(PUBLIC_BID_STATUSES)}))"
+    )
+    params.extend((BID_SUBMITTED, *PUBLIC_BID_STATUSES))
+
     # Agent involvement condition
     conditions.append("(e.agent_id = ? OR t.poster_id = ? OR t.worker_id = ?)")
     params.extend([agent_id, agent_id, agent_id])
@@ -440,6 +451,23 @@ async def get_agent_feed(
     if before is not None:
         conditions.append("e.event_id < ?")
         params.append(before)
+
+    if role_filter == "AS_POSTER":
+        conditions.append("t.poster_id = ?")
+        params.append(agent_id)
+    elif role_filter == "AS_WORKER":
+        conditions.append("t.worker_id = ?")
+        params.append(agent_id)
+
+    if type_filter is not None:
+        matching_event_types = tuple(
+            event_type for event_type, badge in EVENT_TYPE_TO_BADGE.items() if badge == type_filter
+        )
+        if matching_event_types:
+            conditions.append(f"e.event_type IN ({sql_placeholders(matching_event_types)})")
+            params.extend(matching_event_types)
+        else:
+            conditions.append("0 = 1")
 
     if time_filter == "LAST_7D":
         conditions.append("e.timestamp >= datetime('now', '-7 days')")
@@ -453,7 +481,8 @@ async def get_agent_feed(
         "SELECT DISTINCT e.event_id, e.event_source, e.event_type, "
         "e.timestamp, e.task_id, e.agent_id, e.summary, e.payload, "
         "t.poster_id, t.worker_id, t.title AS task_title, t.reward AS task_reward, "
-        "poster_agent.name AS poster_name, worker_agent.name AS worker_name "
+        "poster_agent.name AS poster_name, worker_agent.name AS worker_name, "
+        "t.status AS task_status "
         "FROM events e "
         "LEFT JOIN board_tasks t ON e.task_id = t.task_id "
         "LEFT JOIN identity_agents poster_agent ON t.poster_id = poster_agent.agent_id "
@@ -486,25 +515,13 @@ async def get_agent_feed(
             task_reward,
             poster_name,
             worker_name,
+            task_status,
         ) = row
 
         role = _derive_agent_role(agent_id, event_agent_id, poster_id, worker_id)
 
-        # Apply role filter after derivation
-        if role_filter == "AS_POSTER" and role != "POSTER":
-            continue
-        if role_filter == "AS_WORKER" and role != "WORKER":
-            continue
-
         badge = EVENT_TYPE_TO_BADGE.get(event_type, DEFAULT_EVENT_BADGE)
-
-        # Apply type filter
-        if type_filter is not None and badge != type_filter:
-            continue
-
-        payload = json.loads(payload_raw) if payload_raw else {}
-
-        events.append(
+        public_event = project_public_event(
             {
                 "event_id": event_id,
                 "event_source": event_source,
@@ -513,7 +530,14 @@ async def get_agent_feed(
                 "task_id": task_id,
                 "agent_id": event_agent_id,
                 "summary": summary,
-                "payload": payload,
+                "payload": payload_raw,
+                "task_status": task_status,
+            }
+        )
+
+        events.append(
+            {
+                **public_event,
                 "badge": badge,
                 "role": role,
                 "task_title": task_title,

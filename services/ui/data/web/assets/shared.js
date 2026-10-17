@@ -25,6 +25,55 @@
     return Math.floor(seconds / 3600) + 'h ago';
   }
 
+  function escapeHTML(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function bindStaticActions() {
+    document.querySelectorAll('[data-nav]').forEach(function(element) {
+      element.addEventListener('click', function() {
+        window.location = element.getAttribute('data-nav');
+      });
+    });
+    document.querySelectorAll('[data-scroll-target]').forEach(function(element) {
+      element.addEventListener('click', function() {
+        var target = document.getElementById(element.getAttribute('data-scroll-target'));
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', bindStaticActions);
+
+  var browserConfigPromise = null;
+
+  async function proxyFetch(url, options) {
+    var target = new URL(url, window.location.origin);
+    var requestOptions = Object.assign({}, options || {});
+    var method = String(requestOptions.method || '').toUpperCase();
+    if (target.origin !== window.location.origin || target.username || target.password ||
+        target.hash || !target.pathname.startsWith('/api/proxy/') ||
+        ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(method) === -1) {
+      throw new Error('Browser writes require a same-origin proxy target');
+    }
+    if (!browserConfigPromise) {
+      browserConfigPromise = fetch('/api/proxy/browser-config').then(function(response) {
+        if (!response.ok) throw new Error('Browser security configuration unavailable');
+        return response.json();
+      });
+    }
+    var browserConfig = await browserConfigPromise;
+    requestOptions.method = method;
+    requestOptions.headers = new Headers(requestOptions.headers || {});
+    requestOptions.headers.set(browserConfig.csrf_header_name, browserConfig.csrf_header_value);
+    return fetch(target.href, requestOptions);
+  }
+
   function renderSparkSVG(data, w, h, fill) {
     if (!data || data.length < 2) {
       return '<svg class="sparkline" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"></svg>';
@@ -430,10 +479,10 @@
     ];
 
     if (topEarner) {
-      items.push({ sym: 'TOP/EARNER', val: topEarner.name, chg: topEarner.earned + ' \u00a9 earned', up: true });
+      items.push({ sym: 'TOP/EARNER', val: escapeHTML(topEarner.name), chg: topEarner.earned + ' \u00a9 earned', up: true });
     }
     if (topPoster) {
-      items.push({ sym: 'TOP/POSTER', val: topPoster.name, chg: topPoster.spent + ' \u00a9 spent', up: null });
+      items.push({ sym: 'TOP/POSTER', val: escapeHTML(topPoster.name), chg: topPoster.spent + ' \u00a9 spent', up: null });
     }
 
     items.push({ sym: 'AGENTS/REG', val: String(S.agents.total), chg: S.agents.active + ' active', up: null });
@@ -464,6 +513,8 @@
     animateCounter: animateCounter,
     agentColor: agentColor,
     trendVisual: trendVisual,
+    escapeHTML: escapeHTML,
+    proxyFetch: proxyFetch,
     // API client
     fetchMetrics: fetchMetrics,
     fetchAgents: fetchAgents,

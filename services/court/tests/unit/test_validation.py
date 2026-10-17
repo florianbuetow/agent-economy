@@ -3,14 +3,36 @@
 from __future__ import annotations
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from service_auth.jws import (
+    InvalidPayloadError,
+    JwsProtectedHeader,
+    VerifiedJws,
+    create_jws,
+    require_context,
+)
 from service_commons.exceptions import ServiceError
 
 from court_service.routers.validation import (
     extract_jws_token,
     parse_json_body,
-    require_action,
     require_non_empty_string,
 )
+
+
+def _verified(action: str) -> VerifiedJws:
+    return VerifiedJws(
+        header=JwsProtectedHeader(
+            alg="EdDSA",
+            typ="JWT",
+            kid="a-platform",
+            iat=1,
+            exp=2,
+            aud="court",
+            resource="POST /disputes/file",
+        ),
+        payload={"action": action},
+    )
 
 
 @pytest.mark.unit
@@ -61,24 +83,39 @@ def test_extract_jws_token_not_string() -> None:
 
 @pytest.mark.unit
 def test_require_action_correct() -> None:
-    """require_action accepts matching action value."""
-    require_action({"action": "file_dispute"}, "file_dispute")
+    """Authenticated context accepts a matching action value."""
+    require_context(
+        _verified("file_dispute"),
+        audience="court",
+        resource="POST /disputes/file",
+        allowed_action="file_dispute",
+    )
 
 
 @pytest.mark.unit
 def test_require_action_wrong() -> None:
-    """require_action rejects non-matching action value."""
-    with pytest.raises(ServiceError) as exc:
-        require_action({"action": "submit_rebuttal"}, "file_dispute")
-    assert exc.value.error == "invalid_payload"
+    """Authenticated context rejects non-matching action value."""
+    with pytest.raises(InvalidPayloadError):
+        require_context(
+            _verified("submit_rebuttal"),
+            audience="court",
+            resource="POST /disputes/file",
+            allowed_action="file_dispute",
+        )
 
 
 @pytest.mark.unit
 def test_require_action_missing() -> None:
-    """require_action rejects missing action value."""
-    with pytest.raises(ServiceError) as exc:
-        require_action({}, "file_dispute")
-    assert exc.value.error == "invalid_payload"
+    """The strict token profile rejects a missing payload action."""
+    with pytest.raises(InvalidPayloadError):
+        create_jws(
+            {"task_id": "t-1"},
+            Ed25519PrivateKey.generate(),
+            kid="a-platform",
+            audience="court",
+            resource="POST /disputes/file",
+            token_ttl_seconds=60,
+        )
 
 
 @pytest.mark.unit

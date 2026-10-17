@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from court_service.core.state import get_app_state
+from tests.helpers import make_mock_platform_agent
 from tests.unit.routers.conftest import (
     PLATFORM_AGENT_ID,
     file_and_rebut,
@@ -35,9 +37,7 @@ class TestPlatformKidAssertion:
     async def test_file_wrong_kid_rejected(self, client: AsyncClient) -> None:
         """File dispute: valid signature but wrong header kid -> 403 forbidden."""
         payload = file_dispute_payload()
-        # Signature verifies (validate_certificate returns the payload) ...
-        inject_identity_verify(PLATFORM_AGENT_ID, payload)
-        # ... but the protected header carries a non-platform kid.
+        # The default local verifier accepts the fixture signature but binds kid.
         response = await client.post("/disputes/file", json=token_body(payload, kid=WRONG_KID))
         assert response.status_code == 403
         assert response.json()["error"] == "forbidden"
@@ -46,8 +46,8 @@ class TestPlatformKidAssertion:
         """Submit rebuttal: valid signature but wrong header kid -> 403 forbidden."""
         dispute = await file_dispute(client)
         dispute_id = dispute["dispute_id"]
+        get_app_state().platform_agent = make_mock_platform_agent(agent_id=PLATFORM_AGENT_ID)
         reb_pay = rebuttal_payload(dispute_id)
-        inject_identity_verify(PLATFORM_AGENT_ID, reb_pay)
         response = await client.post(
             f"/disputes/{dispute_id}/rebuttal",
             json=token_body(reb_pay, kid=WRONG_KID),
@@ -59,8 +59,8 @@ class TestPlatformKidAssertion:
         """Trigger ruling: valid signature but wrong header kid -> 403 forbidden."""
         dispute = await file_and_rebut(client)
         dispute_id = dispute["dispute_id"]
+        get_app_state().platform_agent = make_mock_platform_agent(agent_id=PLATFORM_AGENT_ID)
         rule_pay = ruling_payload(dispute_id)
-        inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)
         response = await client.post(
             f"/disputes/{dispute_id}/rule",
             json=token_body(rule_pay, kid=WRONG_KID),

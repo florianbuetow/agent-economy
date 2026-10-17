@@ -52,6 +52,7 @@ class TaskRulingCoordinator:
         payload = await manager.token_validator.validate_jws_token(
             token,
             "dispute_task",
+            expected_resource=f"POST /tasks/{task_id}/dispute",
         )
         signer_id: str = payload["_signer_id"]
 
@@ -191,7 +192,11 @@ class TaskRulingCoordinator:
         13.  invalid_rebuttal — empty or too long
         """
         manager = self._manager
-        payload = await manager.token_validator.validate_jws_token(token, "submit_rebuttal")
+        payload = await manager.token_validator.validate_jws_token(
+            token,
+            "submit_rebuttal",
+            expected_resource=f"POST /tasks/{task_id}/rebuttal",
+        )
         signer_id: str = payload["_signer_id"]
 
         for field in ("task_id", "dispute_id", "worker_id", "rebuttal"):
@@ -305,6 +310,7 @@ class TaskRulingCoordinator:
         payload = await manager.token_validator.validate_platform_jws_token(
             token,
             "record_ruling",
+            expected_resource=f"POST /tasks/{task_id}/ruling",
         )
         signer_id: str = payload["_signer_id"]
 
@@ -408,15 +414,27 @@ class TaskRulingCoordinator:
         # - 100% => full payout to worker
         # - otherwise => split between both
         if worker_pct_int == 0:
-            await manager.escrow_coordinator.release_escrow(task["escrow_id"], task["poster_id"])
+            await manager.escrow_coordinator.release_ruling_escrow(
+                task_id,
+                ruling_id,
+                task["escrow_id"],
+                task["poster_id"],
+            )
         elif worker_pct_int == 100:
-            await manager.escrow_coordinator.release_escrow(task["escrow_id"], task["worker_id"])
+            await manager.escrow_coordinator.release_ruling_escrow(
+                task_id,
+                ruling_id,
+                task["escrow_id"],
+                task["worker_id"],
+            )
         else:
-            await manager.escrow_coordinator.split_escrow(
-                escrow_id=task["escrow_id"],
-                worker_id=task["worker_id"],
-                poster_id=task["poster_id"],
-                worker_pct=worker_pct_int,
+            await manager.escrow_coordinator.split_ruling_escrow(
+                task_id,
+                ruling_id,
+                task["escrow_id"],
+                task["worker_id"],
+                task["poster_id"],
+                worker_pct_int,
             )
 
         # Update task

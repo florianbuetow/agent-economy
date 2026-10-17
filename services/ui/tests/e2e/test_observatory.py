@@ -81,13 +81,13 @@ def _open_observatory(
     """Open observatory page and wait for key sections to load."""
     observatory.navigate()
     e2e_page.wait_for_function(
-        "document.querySelectorAll('.vital-item').length >= 7",
+        "() => document.querySelectorAll('.vital-item').length >= 7",
     )
     e2e_page.wait_for_function(
-        "document.querySelectorAll('#filter-btns .feed-btn').length >= 11",
+        "() => document.querySelectorAll('#filter-btns .feed-btn').length >= 11",
     )
     if wait_for_feed:
-        e2e_page.wait_for_function("document.querySelectorAll('.feed-item').length > 0")
+        e2e_page.wait_for_function("() => document.querySelectorAll('.feed-item').length > 0")
 
 
 def _gdp_detail_map(observatory: ObservatoryPage) -> dict[str, str]:
@@ -486,7 +486,7 @@ def _check_o67(
 def _switch_to_posters_and_wait(observatory: ObservatoryPage, e2e_page: Page) -> None:
     observatory.click_tab("posters")
     e2e_page.wait_for_function(
-        "document.querySelectorAll('#lb-scroll .lb-row').length > 0",
+        "() => document.querySelectorAll('#lb-scroll .lb-row').length > 0",
     )
 
 
@@ -544,7 +544,7 @@ def _check_o72(
     observatory.click_tab("posters")
     observatory.click_tab("workers")
     e2e_page.wait_for_function(
-        "document.querySelectorAll('#lb-scroll .lb-row').length > 0",
+        "() => document.querySelectorAll('#lb-scroll .lb-row').length > 0",
     )
     rows = _read_leaderboard_rows(e2e_page)
     assert workers
@@ -911,7 +911,7 @@ def test_o51_o55_pause_resume(
         )
         wait_for_sse_update(e2e_page, timeout=8_000)
         e2e_page.wait_for_function(
-            f"document.querySelector('.feed-item .feed-text') && "
+            f"() => document.querySelector('.feed-item .feed-text') && "
             f"document.querySelector('.feed-item .feed-text').textContent.includes('{summary}')",
         )
         top = observatory.get_feed_items()[0]
@@ -969,17 +969,42 @@ def test_o56_o63_sse_live_events(
         event_type=event_type,
         summary=summary,
         payload={"ticket": ticket},
-        task_id="t-task6",
+        task_id="t-task1" if ticket == "O58" else "t-task6",
         agent_id="a-alice",
     )
     wait_for_sse_update(e2e_page, timeout=8_000)
     e2e_page.wait_for_function(
-        f"document.querySelector('.feed-item .feed-text') && "
+        f"() => document.querySelector('.feed-item .feed-text') && "
         f"document.querySelector('.feed-item .feed-text').textContent.includes('{summary}')",
     )
     top = observatory.get_feed_items()[0]
     assert top["badge"] == expected_badge
     assert summary in top["text"]
+    if ticket == "O58":
+        _assert_open_bid_event_is_sealed(observatory, e2e_page, e2e_db_path)
+
+
+def _assert_open_bid_event_is_sealed(
+    observatory: ObservatoryPage, page: Page, database: Path
+) -> None:
+    """The same live BID path preserves occurrence without sealed free text."""
+    secret = f"O58 private bid summary {time.time_ns()}"
+    _insert_runtime_event(
+        database,
+        event_source="board",
+        event_type="bid.submitted",
+        summary=secret,
+        payload={"amount": 73, "bidder_id": "a-bob"},
+        task_id="t-task6",
+        agent_id="a-bob",
+    )
+    page.wait_for_function(
+        "() => document.querySelector('.feed-item .feed-text')?.textContent === 'Bid submitted'"
+    )
+    top = observatory.get_feed_items()[0]
+    assert top["badge"] == "BID"
+    assert top["text"] == "Bid submitted"
+    assert all(secret not in text for text in page.locator(".feed-item").all_text_contents())
 
 
 @pytest.mark.e2e
@@ -1006,7 +1031,7 @@ def test_o64_o72_leaderboard_tabs(
     observatory = ObservatoryPage(e2e_page, e2e_server)
     _open_observatory(observatory, e2e_page)
     observatory.click_tab("workers")
-    e2e_page.wait_for_function("document.querySelectorAll('#lb-scroll .lb-row').length > 0")
+    e2e_page.wait_for_function("() => document.querySelectorAll('#lb-scroll .lb-row').length > 0")
     agents = _agents_for_observatory(e2e_page, e2e_server)
     workers = sorted(
         [agent for agent in agents if agent["role"] == "worker"],
@@ -1140,7 +1165,7 @@ def test_o76_o78_periodic_refresh(
         finally:
             conn.close()
         e2e_page.wait_for_function(
-            "(() => {"
+            "() => (() => {"
             " const el = document.querySelector('#lb-scroll .lb-row .lb-name');"
             " return !!el && el.textContent.trim().startsWith('Dave');"
             "})()",
@@ -1207,7 +1232,7 @@ def test_o79_o81_edge_cases(
         finally:
             conn.close()
         e2e_page.wait_for_function(
-            "document.querySelectorAll('.feed-item').length >= 80",
+            "() => document.querySelectorAll('.feed-item').length >= 80",
             timeout=20_000,
         )
         assert e2e_page.locator(".feed-item").count() == 80

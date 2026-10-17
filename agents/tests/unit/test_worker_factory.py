@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import yaml
+from service_auth.signing import generate_keypair
 
 from base_agent.worker_factory import MathWorkerBundle, WorkerFactory
 
@@ -30,6 +31,10 @@ def _write_config(
     roster_path = tmp_path / "roster.yaml"
     roster_path.write_text(yaml.dump({"agents": roster_agents}))
 
+    keys_dir = tmp_path / "keys"
+    for handle in roster_agents:
+        generate_keypair(handle, keys_dir)
+
     config: dict[str, object] = {
         "platform": {
             "identity_url": "http://localhost:8001",
@@ -39,8 +44,13 @@ def _write_config(
             "court_url": "http://localhost:8005",
         },
         "data": {
-            "keys_dir": str(tmp_path / "keys"),
+            "keys_dir": str(keys_dir),
             "roster_path": str(roster_path),
+        },
+        "signing": {
+            "token_ttl_seconds": 300,
+            "max_lifetime_seconds": 300,
+            "clock_skew_seconds": 30,
         },
     }
     if workers is not None:

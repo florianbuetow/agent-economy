@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 import httpx
@@ -10,15 +11,16 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from base_agent.agent import BaseAgent
 from base_agent.config import AgentConfig
+from base_agent.signing import TokenPolicy
 
 if TYPE_CHECKING:
     from base_agent.platform import PlatformAgent
 
-IDENTITY_URL = "http://localhost:8001"
-BANK_URL = "http://localhost:8002"
-TASK_BOARD_URL = "http://localhost:8003"
-REPUTATION_URL = "http://localhost:8004"
-COURT_URL = "http://localhost:8005"
+IDENTITY_URL = os.environ.get("IDENTITY_URL", "http://localhost:8001")
+BANK_URL = os.environ.get("BANK_URL", "http://localhost:8002")
+TASK_BOARD_URL = os.environ.get("TASK_BOARD_URL", "http://localhost:8003")
+REPUTATION_URL = os.environ.get("REPUTATION_URL", "http://localhost:8004")
+COURT_URL = os.environ.get("COURT_URL", "http://localhost:8005")
 
 
 def _make_agent_config(name: str) -> AgentConfig:
@@ -32,6 +34,8 @@ def _make_agent_config(name: str) -> AgentConfig:
         task_board_url=TASK_BOARD_URL,
         reputation_url=REPUTATION_URL,
         court_url=COURT_URL,
+        token_ttl_seconds=300,
+        token_policy=TokenPolicy(max_lifetime_seconds=300, clock_skew_seconds=30),
     )
 
 

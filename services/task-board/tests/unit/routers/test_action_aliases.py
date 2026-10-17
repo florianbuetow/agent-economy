@@ -48,7 +48,12 @@ async def test_file_dispute_alias_is_rejected(
         "poster_id": alice_agent_id,
         "reason": "Spec not met.",
     }
-    token = make_jws_token(alice_keypair[0], alice_agent_id, payload)
+    token = make_jws_token(
+        alice_keypair[0],
+        alice_agent_id,
+        payload,
+        resource=f"POST /tasks/{task_id}/dispute",
+    )
 
     resp = await client.post(f"/tasks/{task_id}/dispute", json={"token": token})
 
@@ -77,7 +82,12 @@ async def test_submit_ruling_alias_is_rejected(
         "worker_pct": 50,
         "ruling_summary": "Split ruling",
     }
-    token = make_jws_token(platform_keypair[0], platform_agent_id, payload)
+    token = make_jws_token(
+        platform_keypair[0],
+        platform_agent_id,
+        payload,
+        resource=f"POST /tasks/{task_id}/ruling",
+    )
 
     resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
 
