@@ -1,150 +1,113 @@
-"""WP-06.1 (GAP-A1): the deadline evaluator fires the Court ruling trigger.
+"""Ruling-trigger eligibility/retry with real disputed task and rebuttal history.
 
-A disputed task with a submitted rebuttal — or one whose rebuttal deadline has
-passed — must fire a platform-signed ``trigger_ruling`` on the next lazy evaluation.
-A disputed task still inside an open rebuttal window (no rebuttal yet) must not.
-A failed trigger is swallowed so the read that provoked it still succeeds, and the
-task stays disputed for the next retry.
+The trigger itself is mocked: these tests do not claim live judging or a ruling.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock
 
 import httpx
 import pytest
 
-from task_board_service.services.deadline_evaluator import DeadlineEvaluator
-from tests.fakes.in_memory_task_store import InMemoryTaskStore
+from tests.fakes.native_task_fixture import TaskTerms, native_task_context
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+    from service_auth.platform import PlatformAgent
+
+    from tests.fakes.native_task_fixture import NativeTaskFixture
+
+pytestmark = pytest.mark.unit
+_TERMS = TaskTerms(100, 3600, 600, 3600, 3600)
 
 
-def _now() -> datetime:
-    return datetime.now(UTC)
+@pytest.fixture(name="native_tasks")
+def native_tasks_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[NativeTaskFixture]:
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+        yield scenario
 
 
-def _disputed_task(
-    *,
-    dispute_id: str | None = "disp-1",
-    rebuttal_submitted_at: str | None = None,
-    rebuttal_deadline: str | None = None,
-) -> dict[str, Any]:
-    return {
-        "task_id": "t-wp06",
-        "poster_id": "a-poster",
-        "title": "t",
-        "spec": "s",
-        "reward": 100,
-        "bidding_deadline_seconds": 3600,
-        "deadline_seconds": 3600,
-        "review_deadline_seconds": 3600,
-        "status": "disputed",
-        "escrow_id": "esc-1",
-        "bid_count": 1,
-        "worker_id": "a-worker",
-        "accepted_bid_id": "bid-1",
-        "created_at": _now().isoformat(),
-        "accepted_at": None,
-        "submitted_at": None,
-        "approved_at": None,
-        "cancelled_at": None,
-        "disputed_at": _now().isoformat(),
-        "dispute_reason": "wrong",
-        "dispute_id": dispute_id,
-        "rebuttal_deadline": rebuttal_deadline,
-        "rebuttal_submitted_at": rebuttal_submitted_at,
-        "ruling_id": None,
-        "ruled_at": None,
-        "worker_pct": None,
-        "ruling_summary": None,
-        "expired_at": None,
-        "escrow_pending": 0,
-    }
+def _disputed_task(native_tasks: NativeTaskFixture) -> None:
+    native_tasks.open_task("t-wp06", _TERMS)
+    native_tasks.bid("t-wp06", 90)
+    native_tasks.accept("t-wp06", 90)
+    native_tasks.submit("t-wp06")
+    native_tasks.dispute("t-wp06", rebuttal_seconds=3600)
 
 
-def _make_evaluator(store: InMemoryTaskStore, platform_agent: Any) -> DeadlineEvaluator:
-    coordinator = AsyncMock()
-    coordinator.retry_pending_escrow = AsyncMock(side_effect=lambda task: task)
-    return DeadlineEvaluator(
-        store=store,
-        escrow_coordinator=coordinator,
-        platform_agent=platform_agent,
+async def test_trigger_fires_when_rebuttal_submitted(native_tasks: NativeTaskFixture) -> None:
+    _disputed_task(native_tasks)
+    native_tasks.rebut("t-wp06")
+    platform = AsyncMock()
+    platform.trigger_ruling.return_value = {"status": "ruled"}
+    result = await native_tasks.evaluator(cast("PlatformAgent", platform)).evaluate_deadline(
+        native_tasks.task("t-wp06")
     )
+    platform.trigger_ruling.assert_awaited_once_with("clm-t-wp06")
+    assert result["status"] == "disputed"
+    assert result["ruling_id"] is None
 
 
-@pytest.mark.unit
-async def test_trigger_fires_when_rebuttal_submitted(tmp_path: Any) -> None:
-    """A rebuttal exists -> the ruling trigger fires with the dispute id."""
-    store = InMemoryTaskStore(db_path=str(tmp_path / "a.db"))
-    task = _disputed_task(rebuttal_submitted_at=_now().isoformat())
-    store.insert_task(task)
-    platform_agent = AsyncMock()
-    platform_agent.trigger_ruling = AsyncMock(return_value={"status": "ruled"})
-
-    evaluator = _make_evaluator(store, platform_agent)
-    await evaluator.evaluate_deadline(store.get_task("t-wp06"))
-
-    platform_agent.trigger_ruling.assert_awaited_once_with("disp-1")
+async def test_trigger_fires_when_rebuttal_deadline_passed(native_tasks: NativeTaskFixture) -> None:
+    _disputed_task(native_tasks)
+    native_tasks.clock.at_seconds(3600)
+    platform = AsyncMock()
+    platform.trigger_ruling.return_value = {"status": "ruled"}
+    result = await native_tasks.evaluator(cast("PlatformAgent", platform)).evaluate_deadline(
+        native_tasks.task("t-wp06")
+    )
+    platform.trigger_ruling.assert_awaited_once_with("clm-t-wp06")
+    assert result["status"] == "disputed"
+    assert result["ruling_id"] is None
 
 
-@pytest.mark.unit
-async def test_trigger_fires_when_rebuttal_deadline_passed(tmp_path: Any) -> None:
-    """No rebuttal but the window has closed -> the ruling trigger fires."""
-    store = InMemoryTaskStore(db_path=str(tmp_path / "b.db"))
-    past = (_now() - timedelta(seconds=5)).isoformat()
-    store.insert_task(_disputed_task(rebuttal_deadline=past))
-    platform_agent = AsyncMock()
-    platform_agent.trigger_ruling = AsyncMock(return_value={"status": "ruled"})
-
-    evaluator = _make_evaluator(store, platform_agent)
-    await evaluator.evaluate_deadline(store.get_task("t-wp06"))
-
-    platform_agent.trigger_ruling.assert_awaited_once_with("disp-1")
+async def test_trigger_not_fired_inside_open_window(native_tasks: NativeTaskFixture) -> None:
+    _disputed_task(native_tasks)
+    native_tasks.clock.at_seconds(1800)
+    platform = AsyncMock()
+    before = native_tasks.task("t-wp06")
+    result = await native_tasks.evaluator(cast("PlatformAgent", platform)).evaluate_deadline(before)
+    assert result == before
+    platform.trigger_ruling.assert_not_awaited()
 
 
-@pytest.mark.unit
-async def test_trigger_not_fired_inside_open_window(tmp_path: Any) -> None:
-    """No rebuttal and the window is still open -> no ruling trigger."""
-    store = InMemoryTaskStore(db_path=str(tmp_path / "c.db"))
-    future = (_now() + timedelta(hours=1)).isoformat()
-    store.insert_task(_disputed_task(rebuttal_deadline=future))
-    platform_agent = AsyncMock()
-    platform_agent.trigger_ruling = AsyncMock()
-
-    evaluator = _make_evaluator(store, platform_agent)
-    await evaluator.evaluate_deadline(store.get_task("t-wp06"))
-
-    platform_agent.trigger_ruling.assert_not_awaited()
-
-
-@pytest.mark.unit
-async def test_failed_trigger_is_retryable(tmp_path: Any) -> None:
-    """A Court error during the trigger does not break the read; task stays disputed."""
-    store = InMemoryTaskStore(db_path=str(tmp_path / "d.db"))
-    store.insert_task(_disputed_task(rebuttal_submitted_at=_now().isoformat()))
-    platform_agent = AsyncMock()
-    request = httpx.Request("POST", "http://court/disputes/disp-1/rule")
+async def test_failed_trigger_is_retryable(native_tasks: NativeTaskFixture) -> None:
+    _disputed_task(native_tasks)
+    native_tasks.rebut("t-wp06")
+    platform = AsyncMock()
+    request = httpx.Request("POST", "http://court.invalid/disputes/clm-t-wp06/rule")
     response = httpx.Response(502, request=request)
-    platform_agent.trigger_ruling = AsyncMock(
-        side_effect=httpx.HTTPStatusError("502", request=request, response=response)
-    )
-
-    evaluator = _make_evaluator(store, platform_agent)
-    result = await evaluator.evaluate_deadline(store.get_task("t-wp06"))
-
+    platform.trigger_ruling.side_effect = [
+        httpx.HTTPStatusError("502", request=request, response=response),
+        {"status": "ruled"},
+    ]
+    evaluator = native_tasks.evaluator(cast("PlatformAgent", platform))
+    task = native_tasks.task("t-wp06")
+    before_events = native_tasks.store.writer.get_total_events()
+    result = await evaluator.evaluate_deadline(task)
+    assert result == task
     assert result["status"] == "disputed"
-    platform_agent.trigger_ruling.assert_awaited_once_with("disp-1")
+    platform.trigger_ruling.assert_awaited_once_with("clm-t-wp06")
+    retried = await evaluator.evaluate_deadline(result)
+    assert retried == task
+    assert platform.trigger_ruling.await_count == 2
+    assert all(call.args == ("clm-t-wp06",) for call in platform.trigger_ruling.await_args_list)
+    assert native_tasks.store.writer.get_total_events() == before_events
 
 
-@pytest.mark.unit
-async def test_no_trigger_without_platform_agent(tmp_path: Any) -> None:
-    """With no injected platform agent the evaluator leaves disputed tasks alone."""
-    store = InMemoryTaskStore(db_path=str(tmp_path / "e.db"))
-    store.insert_task(_disputed_task(rebuttal_submitted_at=_now().isoformat()))
-    coordinator = AsyncMock()
-    coordinator.retry_pending_escrow = AsyncMock(side_effect=lambda task: task)
-
-    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=coordinator, platform_agent=None)
-    result = await evaluator.evaluate_deadline(store.get_task("t-wp06"))
+async def test_no_trigger_without_platform_agent(native_tasks: NativeTaskFixture) -> None:
+    _disputed_task(native_tasks)
+    native_tasks.rebut("t-wp06")
+    task = native_tasks.task("t-wp06")
+    before_events = native_tasks.store.writer.get_total_events()
+    result = await native_tasks.evaluator(None).evaluate_deadline(task)
+    assert result == task
     assert result["status"] == "disputed"
+    assert native_tasks.store.writer.get_total_events() == before_events
+    native_tasks.bank.escrow_release.assert_not_awaited()

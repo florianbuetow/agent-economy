@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from service_commons.exceptions import ServiceError
+
 from ui_service.services.database import (
     execute_fetchall,
     execute_fetchone,
@@ -248,8 +250,10 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
         "SELECT bt.task_id, bt.poster_id, bt.worker_id, bt.title, bt.spec, "
         "bt.reward, bt.status, bt.accepted_bid_id, "
         "bt.bidding_deadline, bt.execution_deadline, bt.review_deadline, "
-        "bt.created_at, bt.accepted_at, bt.submitted_at, bt.approved_at "
+        "bt.created_at, bt.accepted_at, bt.submitted_at, bt.approved_at, "
+        "btc.lifecycle_version "
         "FROM board_tasks bt "
+        "LEFT JOIN board_task_contracts btc ON btc.task_id = bt.task_id "
         "WHERE bt.task_id = ?",
         (task_id,),
     )
@@ -272,7 +276,15 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
         accepted_at,
         submitted_at,
         approved_at,
+        lifecycle_version,
     ) = task_row
+    if type(lifecycle_version) is not int:
+        raise ServiceError(
+            "task_contract_missing",
+            "Task lifecycle contract is missing",
+            500,
+            {"task_id": task_id},
+        )
 
     # 2-7. Load related records (poster, worker, bids, assets, feedback, dispute)
     poster_name = await _resolve_agent_name(db, poster_id)
@@ -298,6 +310,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
         "spec": spec,
         "reward": reward,
         "status": status,
+        "lifecycle_version": lifecycle_version,
         "bid_count": bid_count,
         "deadlines": {
             "bidding_deadline": bidding_deadline,

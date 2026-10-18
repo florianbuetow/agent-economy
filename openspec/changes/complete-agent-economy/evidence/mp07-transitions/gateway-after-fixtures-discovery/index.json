@@ -1,0 +1,93 @@
+{
+  "parent_handle": 2376,
+  "exit_code": 1,
+  "passed": 1068,
+  "failed": 79,
+  "errors": 12,
+  "warnings": 1,
+  "source_and_log_snapshot": "177 scoped Python files and202 ordinary log files unchanged throughout run",
+  "supersedes": "gateway-full-discovery baseline925pass214fail19errors",
+  "limits": "Component discovery, not rootCI. Remaining fixture/contract/product causes must be individually resolved; do not restore retired genericwriters or weaken nativeadmission.",
+  "failures_by_file": [
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_board.py",
+      "count": 23
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_court.py",
+      "count": 15
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_court_reads.py",
+      "count": 6
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_t072_court_reads_gaps.py",
+      "count": 3
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_config.py",
+      "count": 1
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_constraints.py",
+      "count": 7
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_cross_cutting.py",
+      "count": 2
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_feedback_reveal_atomicity.py",
+      "count": 1
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_gap_c7_error_mapping.py",
+      "count": 2
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_gap_e13_bid_count.py",
+      "count": 4
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_schema_additions.py",
+      "count": 6
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_t072_constraints_gaps.py",
+      "count": 6
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_task_dispute_id_column.py",
+      "count": 3
+    },
+    {
+      "kind": "ERROR",
+      "file": "tests/unit/test_feedback_reveal_atomicity.py",
+      "count": 8
+    },
+    {
+      "kind": "ERROR",
+      "file": "tests/unit/test_write_integrity.py",
+      "count": 4
+    }
+  ],
+  "artifacts": {
+    "agent-economy-mp07-gateway-unit-after-fixtures-after.json": "7c288671b1c4a56c64d16155270ba54e95602f70ae9240f789e407537e5a9c68",
+    "agent-economy-mp07-gateway-unit-after-fixtures-before.json": "7c288671b1c4a56c64d16155270ba54e95602f70ae9240f789e407537e5a9c68",
+    "agent-economy-mp07-gateway-unit-after-fixtures.log": "8df49cba93607d0abddf7c3d341d18e26eba69c0611b72345d92393c0657888b"
+  }
+}

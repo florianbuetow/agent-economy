@@ -1,0 +1,180 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-commons
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 38 items
+
+tests/unit/test_recovery_contract_review.py FFFFFFFFFFFFFFFFF..F......FF [ 73%]
+.FF.FFFFF.                                                               [100%]
+
+=================================== FAILURES ===================================
+_________ test_resource_logical_ids_are_safe_filesystem_components[.] __________
+tests/unit/test_recovery_contract_review.py:108: in test_resource_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+_________ test_resource_logical_ids_are_safe_filesystem_components[..] _________
+tests/unit/test_recovery_contract_review.py:108: in test_resource_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+_____ test_resource_logical_ids_are_safe_filesystem_components[/absolute] ______
+tests/unit/test_recovery_contract_review.py:108: in test_resource_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+__ test_resource_logical_ids_are_safe_filesystem_components[nested/resource] ___
+tests/unit/test_recovery_contract_review.py:108: in test_resource_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+__ test_resource_logical_ids_are_safe_filesystem_components[nested\\resource] __
+tests/unit/test_recovery_contract_review.py:108: in test_resource_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+_____ test_resource_logical_ids_are_safe_filesystem_components[bad\x00id] ______
+tests/unit/test_recovery_contract_review.py:108: in test_resource_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+______ test_resource_logical_ids_are_safe_filesystem_components[bad\nid] _______
+tests/unit/test_recovery_contract_review.py:108: in test_resource_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+__________ test_config_logical_ids_are_safe_filesystem_components[.] ___________
+tests/unit/test_recovery_contract_review.py:117: in test_config_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+__________ test_config_logical_ids_are_safe_filesystem_components[..] __________
+tests/unit/test_recovery_contract_review.py:117: in test_config_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+______ test_config_logical_ids_are_safe_filesystem_components[/absolute] _______
+tests/unit/test_recovery_contract_review.py:117: in test_config_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+____ test_config_logical_ids_are_safe_filesystem_components[nested/config] _____
+tests/unit/test_recovery_contract_review.py:117: in test_config_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+____ test_config_logical_ids_are_safe_filesystem_components[nested\\config] ____
+tests/unit/test_recovery_contract_review.py:117: in test_config_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+______ test_config_logical_ids_are_safe_filesystem_components[bad\x00id] _______
+tests/unit/test_recovery_contract_review.py:117: in test_config_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+_______ test_config_logical_ids_are_safe_filesystem_components[bad\tid] ________
+tests/unit/test_recovery_contract_review.py:117: in test_config_logical_ids_are_safe_filesystem_components
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+__________ test_key_handles_reject_control_characters[bad\x00handle] ___________
+tests/unit/test_recovery_contract_review.py:128: in test_key_handles_reject_control_characters
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+___________ test_key_handles_reject_control_characters[bad\rhandle] ____________
+tests/unit/test_recovery_contract_review.py:128: in test_key_handles_reject_control_characters
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+__________ test_key_handles_reject_control_characters[bad\x7fhandle] ___________
+tests/unit/test_recovery_contract_review.py:128: in test_key_handles_reject_control_characters
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+________ test_resource_and_config_capture_roots_are_explicit_boundaries ________
+tests/unit/test_recovery_contract_review.py:147: in test_resource_and_config_capture_roots_are_explicit_boundaries
+    resource = SourceResourceV1(
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for SourceResourceV1
+E   capture_root
+E     Extra inputs are not permitted [type=extra_forbidden, input_value=PosixPath('/source/data'), input_type=PosixPath]
+E       For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+____________ test_directory_capture_path_may_equal_its_capture_root ____________
+tests/unit/test_recovery_contract_review.py:211: in test_directory_capture_path_may_equal_its_capture_root
+    resource = SourceResourceV1(
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for SourceResourceV1
+E   capture_root
+E     Extra inputs are not permitted [type=extra_forbidden, input_value=PosixPath('/source/assets'), input_type=PosixPath]
+E       For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+_________ test_registered_agent_id_cannot_map_to_distinct_fingerprints _________
+tests/unit/test_recovery_contract_review.py:226: in test_registered_agent_id_cannot_map_to_distinct_fingerprints
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+_____________________ test_gateway_fingerprints_are_unique _____________________
+tests/unit/test_recovery_contract_review.py:249: in test_gateway_fingerprints_are_unique
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+___________ test_gateway_and_economic_fingerprint_sets_are_disjoint ____________
+tests/unit/test_recovery_contract_review.py:260: in test_gateway_and_economic_fingerprint_sets_are_disjoint
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+__________ test_runtime_lock_resource_must_match_inventory_lock_path ___________
+tests/unit/test_recovery_contract_review.py:288: in test_runtime_lock_resource_must_match_inventory_lock_path
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+____________ test_inventory_rejects_multiple_runtime_lock_resources ____________
+tests/unit/test_recovery_contract_review.py:304: in test_inventory_rejects_multiple_runtime_lock_resources
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+_ test_duplicate_paths_reject_contradictory_resource_shapes[file-absent_file] __
+tests/unit/test_recovery_contract_review.py:328: in test_duplicate_paths_reject_contradictory_resource_shapes
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+_ test_duplicate_paths_reject_contradictory_resource_shapes[file-runtime_lock] _
+tests/unit/test_recovery_contract_review.py:328: in test_duplicate_paths_reject_contradictory_resource_shapes
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+__ test_duplicate_paths_reject_contradictory_resource_shapes[directory-copy] ___
+tests/unit/test_recovery_contract_review.py:328: in test_duplicate_paths_reject_contradictory_resource_shapes
+    with pytest.raises(ValidationError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValidationError
+=========================== short test summary info ============================
+FAILED tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[.]
+FAILED tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[..]
+FAILED tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[/absolute]
+FAILED tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[nested/resource]
+FAILED tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[nested\\resource]
+FAILED tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[bad\x00id]
+FAILED tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[bad\nid]
+FAILED tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[.]
+FAILED tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[..]
+FAILED tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[/absolute]
+FAILED tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[nested/config]
+FAILED tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[nested\\config]
+FAILED tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[bad\x00id]
+FAILED tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[bad\tid]
+FAILED tests/unit/test_recovery_contract_review.py::test_key_handles_reject_control_characters[bad\x00handle]
+FAILED tests/unit/test_recovery_contract_review.py::test_key_handles_reject_control_characters[bad\rhandle]
+FAILED tests/unit/test_recovery_contract_review.py::test_key_handles_reject_control_characters[bad\x7fhandle]
+FAILED tests/unit/test_recovery_contract_review.py::test_resource_and_config_capture_roots_are_explicit_boundaries
+FAILED tests/unit/test_recovery_contract_review.py::test_directory_capture_path_may_equal_its_capture_root
+FAILED tests/unit/test_recovery_contract_review.py::test_registered_agent_id_cannot_map_to_distinct_fingerprints
+FAILED tests/unit/test_recovery_contract_review.py::test_gateway_fingerprints_are_unique
+FAILED tests/unit/test_recovery_contract_review.py::test_gateway_and_economic_fingerprint_sets_are_disjoint
+FAILED tests/unit/test_recovery_contract_review.py::test_runtime_lock_resource_must_match_inventory_lock_path
+FAILED tests/unit/test_recovery_contract_review.py::test_inventory_rejects_multiple_runtime_lock_resources
+FAILED tests/unit/test_recovery_contract_review.py::test_duplicate_paths_reject_contradictory_resource_shapes[file-absent_file]
+FAILED tests/unit/test_recovery_contract_review.py::test_duplicate_paths_reject_contradictory_resource_shapes[file-runtime_lock]
+FAILED tests/unit/test_recovery_contract_review.py::test_duplicate_paths_reject_contradictory_resource_shapes[directory-copy]
+======================== 27 failed, 11 passed in 0.11s =========================

@@ -20,6 +20,7 @@ from service_auth.financial_responses import (
     parse_financial_envelope,
 )
 
+from demo_replay.task_operations import operation_identity, posting_duration
 from demo_replay.wallet import DemoAgent
 
 
@@ -122,11 +123,20 @@ async def post_task(
     spec: str,
     reward: int,
     task_board_url: str,
-    bidding_deadline_seconds: int = 3600,
-    execution_deadline_seconds: int = 7200,
-    review_deadline_seconds: int = 3600,
+    bidding_deadline_seconds: int,
+    execution_deadline_seconds: int,
+    review_deadline_seconds: int,
+    *,
+    acceptance_window_seconds: int,
 ) -> dict[str, Any]:
     """Post a new task to the Task Board. Returns response including task_id."""
+    for name, value in (
+        ("bidding_deadline_seconds", bidding_deadline_seconds),
+        ("execution_deadline_seconds", execution_deadline_seconds),
+        ("review_deadline_seconds", review_deadline_seconds),
+        ("acceptance_window_seconds", acceptance_window_seconds),
+    ):
+        posting_duration(value, name)
     poster_id = poster.agent_id
     if poster_id is None:
         msg = f"Agent '{poster.handle}' must be registered before posting a task"
@@ -143,6 +153,7 @@ async def post_task(
             "spec": spec,
             "reward": reward,
             "bidding_deadline_seconds": bidding_deadline_seconds,
+            "acceptance_window_seconds": acceptance_window_seconds,
             "execution_deadline_seconds": execution_deadline_seconds,
             "review_deadline_seconds": review_deadline_seconds,
         },
@@ -171,12 +182,20 @@ async def submit_bid(
     task_id: str,
     amount: int,
     task_board_url: str,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
 ) -> dict[str, Any]:
     """Submit a bid on a task."""
+    operation_id, expected_lifecycle_version = operation_identity(
+        operation_id, expected_lifecycle_version
+    )
     url = f"{task_board_url}/tasks/{task_id}/bids"
     token = bidder.sign_jws(
         {
             "action": "submit_bid",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": expected_lifecycle_version,
             "task_id": task_id,
             "bidder_id": bidder.agent_id,
             "amount": amount,
@@ -219,12 +238,20 @@ async def accept_bid(
     task_id: str,
     bid_id: str,
     task_board_url: str,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
 ) -> dict[str, Any]:
     """Accept a bid on a task."""
+    operation_id, expected_lifecycle_version = operation_identity(
+        operation_id, expected_lifecycle_version
+    )
     url = f"{task_board_url}/tasks/{task_id}/bids/{bid_id}/accept"
     token = poster.sign_jws(
         {
             "action": "accept_bid",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": expected_lifecycle_version,
             "task_id": task_id,
             "bid_id": bid_id,
             "poster_id": poster.agent_id,
@@ -274,12 +301,20 @@ async def submit_deliverable(
     worker: DemoAgent,
     task_id: str,
     task_board_url: str,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
 ) -> dict[str, Any]:
     """Submit deliverables for review."""
+    operation_id, expected_lifecycle_version = operation_identity(
+        operation_id, expected_lifecycle_version
+    )
     url = f"{task_board_url}/tasks/{task_id}/submit"
     token = worker.sign_jws(
         {
             "action": "submit_deliverable",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": expected_lifecycle_version,
             "task_id": task_id,
             "worker_id": worker.agent_id,
         },
@@ -296,12 +331,20 @@ async def approve_task(
     poster: DemoAgent,
     task_id: str,
     task_board_url: str,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
 ) -> dict[str, Any]:
     """Approve a submitted task."""
+    operation_id, expected_lifecycle_version = operation_identity(
+        operation_id, expected_lifecycle_version
+    )
     url = f"{task_board_url}/tasks/{task_id}/approve"
     token = poster.sign_jws(
         {
             "action": "approve_task",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": expected_lifecycle_version,
             "task_id": task_id,
             "poster_id": poster.agent_id,
         },
@@ -319,12 +362,20 @@ async def dispute_task(
     task_id: str,
     reason: str,
     task_board_url: str,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
 ) -> dict[str, Any]:
     """Dispute a submitted task."""
+    operation_id, expected_lifecycle_version = operation_identity(
+        operation_id, expected_lifecycle_version
+    )
     url = f"{task_board_url}/tasks/{task_id}/dispute"
     token = poster.sign_jws(
         {
             "action": "dispute_task",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": expected_lifecycle_version,
             "task_id": task_id,
             "poster_id": poster.agent_id,
             "reason": reason,

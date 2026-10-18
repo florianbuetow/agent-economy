@@ -22,6 +22,7 @@ from tests.helpers import (
     make_jws_token,
     make_mock_judge,
     make_mock_platform_agent,
+    make_ruling_acknowledgment,
     make_task_data,
     new_escrow_id,
     new_task_id,
@@ -96,7 +97,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "court"}"
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
   agent_config_path: "{agent_config_path}"
@@ -150,10 +151,29 @@ async def app(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[F
         if state.dispute_service is not None:
             state.dispute_service._store = fake_store
             state.dispute_service._orchestrator._store = fake_store
+        task_response = make_task_data()
         state.platform_agent = make_mock_platform_agent(
             agent_id=PLATFORM_AGENT_ID,
-            task_response=make_task_data(),
+            task_response=task_response,
         )
+
+        async def _record_ruling(
+            _task_id: str,
+            payload: dict[str, object],
+        ) -> dict[str, Any]:
+            dispute = fake_store.get_dispute(str(payload["ruling_id"]))
+            if dispute is None:
+                raise AssertionError("Ruling fixture requires a stored dispute")
+            return make_ruling_acknowledgment(
+                payload,
+                poster_id=str(dispute["claimant_id"]),
+                worker_id=str(dispute["respondent_id"]),
+                escrow_id=str(dispute["escrow_id"]),
+                reward=int(task_response["reward"]),
+                event_id=1,
+            )
+
+        state.platform_agent.record_ruling.side_effect = _record_ruling
         state.judges = [make_mock_judge()]
         state.deliverable_fetcher = _NoDeliverableFetcher()
         yield test_app

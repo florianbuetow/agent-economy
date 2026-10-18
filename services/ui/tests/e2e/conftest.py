@@ -76,6 +76,7 @@ _MUTABLE_SEED_TABLES = (
     "reputation_feedback",
     "board_assets",
     "board_bids",
+    "board_task_contracts",
     "board_tasks",
     "bank_escrow",
     "bank_transactions",

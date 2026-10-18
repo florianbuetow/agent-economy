@@ -1,0 +1,31 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 33 items / 30 deselected / 3 selected
+
+tests/unit/test_mp07_native_proxy.py FFF                                 [100%]
+
+=================================== FAILURES ===================================
+____ test_proxy_rejects_semantically_mismatched_success_ack[source_version] ____
+tests/unit/test_mp07_native_proxy.py:600: in test_proxy_rejects_semantically_mismatched_success_ack
+    assert response.status_code == 502
+E   assert 200 == 502
+E    +  where 200 = <Response [200 OK]>.status_code
+____ test_proxy_rejects_semantically_mismatched_success_ack[source_status] _____
+tests/unit/test_mp07_native_proxy.py:600: in test_proxy_rejects_semantically_mismatched_success_ack
+    assert response.status_code == 502
+E   assert 200 == 502
+E    +  where 200 = <Response [200 OK]>.status_code
+_____ test_proxy_rejects_semantically_mismatched_success_ack[effect_kind] ______
+tests/unit/test_mp07_native_proxy.py:600: in test_proxy_rejects_semantically_mismatched_success_ack
+    assert response.status_code == 502
+E   assert 200 == 502
+E    +  where 200 = <Response [200 OK]>.status_code
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_native_proxy.py::test_proxy_rejects_semantically_mismatched_success_ack[source_version]
+FAILED tests/unit/test_mp07_native_proxy.py::test_proxy_rejects_semantically_mismatched_success_ack[source_status]
+FAILED tests/unit/test_mp07_native_proxy.py::test_proxy_rejects_semantically_mismatched_success_ack[effect_kind]
+======================= 3 failed, 30 deselected in 0.27s =======================

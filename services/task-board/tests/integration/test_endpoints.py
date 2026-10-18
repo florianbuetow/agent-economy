@@ -1,10 +1,9 @@
 """Integration tests — the real task-board app driven end-to-end against a
 real, live, in-process DB Gateway (the production `TaskDbClient` path,
-T-071/GAP-F1). Unlike tests/unit (InMemoryTaskStore fake), every assertion
-here is checked both through the task-board API and by reading the
-gateway's own SQLite file directly — including the FK-enforced relationships
-(poster/worker -> identity_agents, escrow_id -> bank_escrow) a fake store
-has no concept of.
+T-071/GAP-F1). These tests exercise the HTTP transport in addition to the
+Gateway persistence also used by the unit fixtures. Assertions read both
+the task-board API and the gateway's SQLite file, including FK-enforced
+relationships (poster/worker -> identity_agents, escrow_id -> bank_escrow).
 """
 
 from __future__ import annotations
@@ -20,6 +19,10 @@ from service_auth.financial_identity import operation_id_for
 
 from task_board_service.core.state import get_app_state
 from tests.integration.conftest import make_jws_token, register_identity_agent
+from tests.integration.test_mp07_native_public_lifecycle import (
+    _create_zero_balance_account,
+    _install_persisting_release,
+)
 
 if TYPE_CHECKING:
     import httpx
@@ -143,6 +146,7 @@ class TestTaskLifecycleGatewayBacked:
         escrow_id = f"esc-{uuid.uuid4()}"
 
         await register_identity_agent(gateway_client, worker_id)
+        await _create_zero_balance_account(gateway_client, account_id=worker_id)
         escrow_result = await _seed_funded_escrow(
             gateway_client, payer_id=poster_id, amount=100, task_id=task_id, escrow_id=escrow_id
         )
@@ -156,6 +160,7 @@ class TestTaskLifecycleGatewayBacked:
             "spec": "Prove the real gateway-backed path end to end",
             "reward": 100,
             "bidding_deadline_seconds": 3600,
+            "acceptance_window_seconds": 1800,
             "execution_deadline_seconds": 86400,
             "review_deadline_seconds": 86400,
         }
@@ -172,6 +177,9 @@ class TestTaskLifecycleGatewayBacked:
             "/tasks", json={"task_token": task_token, "escrow_token": escrow_token}
         )
         assert create_resp.status_code == 201, create_resp.text
+        created_task = create_resp.json()
+        assert created_task["status"] == "open"
+        assert created_task["lifecycle_version"] == 0
 
         row = _read_one(
             gateway_db_path,
@@ -185,6 +193,8 @@ class TestTaskLifecycleGatewayBacked:
 
         bid_payload = {
             "action": "submit_bid",
+            "operation_id": f"op-{uuid.uuid4()}",
+            "expected_lifecycle_version": created_task["lifecycle_version"],
             "task_id": task_id,
             "bidder_id": worker_id,
             "amount": 90,
@@ -204,6 +214,8 @@ class TestTaskLifecycleGatewayBacked:
 
         accept_payload = {
             "action": "accept_bid",
+            "operation_id": f"op-{uuid.uuid4()}",
+            "expected_lifecycle_version": created_task["lifecycle_version"],
             "task_id": task_id,
             "bid_id": bid_id,
             "poster_id": poster_id,
@@ -213,6 +225,9 @@ class TestTaskLifecycleGatewayBacked:
             f"/tasks/{task_id}/bids/{bid_id}/accept", json={"token": accept_token}
         )
         assert accept_resp.status_code == 200, accept_resp.text
+        accepted_task = accept_resp.json()
+        assert accepted_task["status"] == "accepted"
+        assert accepted_task["lifecycle_version"] == 1
 
         accepted_row = _read_one(
             gateway_db_path,
@@ -234,21 +249,51 @@ class TestTaskLifecycleGatewayBacked:
 
         submit_payload = {
             "action": "submit_deliverable",
+            "operation_id": f"op-{uuid.uuid4()}",
+            "expected_lifecycle_version": accepted_task["lifecycle_version"],
             "task_id": task_id,
             "worker_id": worker_id,
         }
         submit_token = make_jws_token(worker_keypair[0], worker_id, submit_payload)
         submit_resp = await client.post(f"/tasks/{task_id}/submit", json={"token": submit_token})
         assert submit_resp.status_code == 200, submit_resp.text
+        submitted_task = submit_resp.json()
+        assert submitted_task["status"] == "submitted"
+        assert submitted_task["lifecycle_version"] == 2
 
+        approve_operation_id = f"op-{uuid.uuid4()}"
+        source_reference = f"task:{task_id}:approved"
+        release = _install_persisting_release(
+            gateway_client,
+            db_path=gateway_db_path,
+            task_id=task_id,
+            command="approve_task",
+            operation_id=approve_operation_id,
+            source_status="submitted",
+            source_version=submitted_task["lifecycle_version"],
+            escrow_id=escrow_id,
+            recipient_id=worker_id,
+            source_reference=source_reference,
+        )
         approve_payload = {
             "action": "approve_task",
+            "operation_id": approve_operation_id,
+            "expected_lifecycle_version": submitted_task["lifecycle_version"],
             "task_id": task_id,
             "poster_id": poster_id,
         }
         approve_token = make_jws_token(poster_keypair[0], poster_id, approve_payload)
         approve_resp = await client.post(f"/tasks/{task_id}/approve", json={"token": approve_token})
         assert approve_resp.status_code == 200, approve_resp.text
+        approved_task = approve_resp.json()
+        assert approved_task["status"] == "approved"
+        assert approved_task["lifecycle_version"] == 3
+        release.assert_awaited_once_with(
+            escrow_id=escrow_id,
+            recipient_account_id=worker_id,
+            operation_id=approve_operation_id,
+            source_reference=source_reference,
+        )
 
         final_row = _read_one(
             gateway_db_path,
@@ -258,3 +303,27 @@ class TestTaskLifecycleGatewayBacked:
         assert final_row is not None
         assert final_row["status"] == "approved"
         assert final_row["approved_at"] is not None
+
+        receipt = _read_one(
+            gateway_db_path,
+            "SELECT operation_kind, source_reference FROM bank_operation_receipts "
+            "WHERE operation_id = ?",
+            (approve_operation_id,),
+        )
+        assert receipt == {
+            "operation_kind": "escrow_release",
+            "source_reference": source_reference,
+        }
+        worker_account = _read_one(
+            gateway_db_path,
+            "SELECT balance FROM bank_accounts WHERE account_id = ?",
+            (worker_id,),
+        )
+        assert worker_account == {"balance": 100}
+        approval_event = _read_one(
+            gateway_db_path,
+            "SELECT COUNT(*) AS count FROM events "
+            "WHERE task_id = ? AND event_source = 'board' AND event_type = 'task.approved'",
+            (task_id,),
+        )
+        assert approval_event == {"count": 1}

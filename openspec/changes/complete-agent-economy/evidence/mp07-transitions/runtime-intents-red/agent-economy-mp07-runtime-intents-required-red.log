@@ -1,0 +1,309 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 49 items
+
+tests/unit/test_runtime_intents.py FEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 75%]
+EEEEEEEEEEEE                                                             [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_exact_intent_reopens_with_same_identity_version_terms_and_bytes _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+__ ERROR at setup of test_stored_slot_lookup_precedes_fresh_decision_factory ___
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+__ ERROR at setup of test_changed_terms_in_existing_slot_are_a_local_conflict __
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[environment_id-production] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[role-task-feeder] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[profile-mathbot] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[handle-worker-bob] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[registered_agent_id-a-worker-bob] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[service_urls-changed5] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+__ ERROR at setup of test_owner_and_intent_records_are_private_regular_files ___
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+____ ERROR at setup of test_relative_or_symlinked_runtime_root_is_rejected _____
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+____ ERROR at setup of test_symlink_or_nonregular_owner_record_is_rejected _____
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_____ ERROR at setup of test_unsafe_record_permissions_are_rejected[owner] _____
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+____ ERROR at setup of test_unsafe_record_permissions_are_rejected[intent] _____
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+___ ERROR at setup of test_corrupt_intent_record_is_rejected[malformed-json] ___
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+___ ERROR at setup of test_corrupt_intent_record_is_rejected[semantic-hash] ____
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_symlink_or_nonregular_intent_and_lease_records_are_rejected[intent] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_symlink_or_nonregular_intent_and_lease_records_are_rejected[lease] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_symlinked_identity_or_intent_directory_is_rejected[identity] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_symlinked_identity_or_intent_directory_is_rejected[intents] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_intent_paths_are_hashed_and_cannot_escape_identity_directory _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_____ ERROR at setup of test_max_record_bytes_rejection_prevents_transport _____
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_file_fsync_failure_prevents_transport_and_publication _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_initial_owner_publication_fault_leaves_no_owner[replace] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_initial_owner_publication_fault_leaves_no_owner[file-fsync] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_owner_directory_fsync_failure_reopens_surviving_owner _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+___ ERROR at setup of test_stale_revision_observed_by_open_store_is_rejected ___
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_replace_failure_prevents_transport_and_leaves_no_final_intent _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_directory_fsync_failure_prevents_transport_but_reopen_reuses_visible_intent _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+___ ERROR at setup of test_second_process_cannot_acquire_same_identity_lease ___
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_matching_completed_acknowledgment_marks_intent_completed _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+____ ERROR at setup of test_repeated_completed_acknowledgment_is_idempotent ____
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_foreign_or_malformed_success_is_never_completion[bid-False] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_foreign_or_malformed_success_is_never_completion[bid-True] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_foreign_or_malformed_success_is_never_completion[mutation-False] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_foreign_or_malformed_success_is_never_completion[mutation-True] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_typed_definitive_nonapplication_retains_original_identity _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_pending_current_target_or_malformed_acknowledgment_is_not_completion[matching-pending] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_pending_current_target_or_malformed_acknowledgment_is_not_completion[current-target-only] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_pending_current_target_or_malformed_acknowledgment_is_not_completion[malformed] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_foreign_pending_owner_is_blocked_and_records_both_operation_ids _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+____ ERROR at setup of test_acknowledgment_update_requires_current_revision ____
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+____ ERROR at setup of test_diagnostics_are_bounded_by_explicit_store_limit ____
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_all_native_runtime_slots_freeze_public_arguments_separately_from_ack_context[submit_bid] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_all_native_runtime_slots_freeze_public_arguments_separately_from_ack_context[accept_bid] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_all_native_runtime_slots_freeze_public_arguments_separately_from_ack_context[submit_deliverable] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_all_native_runtime_slots_freeze_public_arguments_separately_from_ack_context[approve_task] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+_ ERROR at setup of test_all_native_runtime_slots_freeze_public_arguments_separately_from_ack_context[dispute_task] _
+tests/unit/test_runtime_intents.py:375: in _required_runtime_interface
+    assert _runtime is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_intents is required
+E   assert None is not None
+=================================== FAILURES ===================================
+__________________ test_runtime_intent_interface_is_available __________________
+tests/unit/test_runtime_intents.py:382: in test_runtime_intent_interface_is_available
+    assert _runtime is not None, (
+E   AssertionError: T-181 capability missing: base_agent.runtime_intents has not been implemented
+E   assert None is not None
+=========================== short test summary info ============================
+FAILED tests/unit/test_runtime_intents.py::test_runtime_intent_interface_is_available
+ERROR tests/unit/test_runtime_intents.py::test_exact_intent_reopens_with_same_identity_version_terms_and_bytes
+ERROR tests/unit/test_runtime_intents.py::test_stored_slot_lookup_precedes_fresh_decision_factory
+ERROR tests/unit/test_runtime_intents.py::test_changed_terms_in_existing_slot_are_a_local_conflict
+ERROR tests/unit/test_runtime_intents.py::test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[environment_id-production]
+ERROR tests/unit/test_runtime_intents.py::test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[role-task-feeder]
+ERROR tests/unit/test_runtime_intents.py::test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[profile-mathbot]
+ERROR tests/unit/test_runtime_intents.py::test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[handle-worker-bob]
+ERROR tests/unit/test_runtime_intents.py::test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[registered_agent_id-a-worker-bob]
+ERROR tests/unit/test_runtime_intents.py::test_owner_binding_rejects_environment_role_profile_handle_agent_or_url_change[service_urls-changed5]
+ERROR tests/unit/test_runtime_intents.py::test_owner_and_intent_records_are_private_regular_files
+ERROR tests/unit/test_runtime_intents.py::test_relative_or_symlinked_runtime_root_is_rejected
+ERROR tests/unit/test_runtime_intents.py::test_symlink_or_nonregular_owner_record_is_rejected
+ERROR tests/unit/test_runtime_intents.py::test_unsafe_record_permissions_are_rejected[owner]
+ERROR tests/unit/test_runtime_intents.py::test_unsafe_record_permissions_are_rejected[intent]
+ERROR tests/unit/test_runtime_intents.py::test_corrupt_intent_record_is_rejected[malformed-json]
+ERROR tests/unit/test_runtime_intents.py::test_corrupt_intent_record_is_rejected[semantic-hash]
+ERROR tests/unit/test_runtime_intents.py::test_symlink_or_nonregular_intent_and_lease_records_are_rejected[intent]
+ERROR tests/unit/test_runtime_intents.py::test_symlink_or_nonregular_intent_and_lease_records_are_rejected[lease]
+ERROR tests/unit/test_runtime_intents.py::test_symlinked_identity_or_intent_directory_is_rejected[identity]
+ERROR tests/unit/test_runtime_intents.py::test_symlinked_identity_or_intent_directory_is_rejected[intents]
+ERROR tests/unit/test_runtime_intents.py::test_intent_paths_are_hashed_and_cannot_escape_identity_directory
+ERROR tests/unit/test_runtime_intents.py::test_max_record_bytes_rejection_prevents_transport
+ERROR tests/unit/test_runtime_intents.py::test_file_fsync_failure_prevents_transport_and_publication
+ERROR tests/unit/test_runtime_intents.py::test_initial_owner_publication_fault_leaves_no_owner[replace]
+ERROR tests/unit/test_runtime_intents.py::test_initial_owner_publication_fault_leaves_no_owner[file-fsync]
+ERROR tests/unit/test_runtime_intents.py::test_owner_directory_fsync_failure_reopens_surviving_owner
+ERROR tests/unit/test_runtime_intents.py::test_stale_revision_observed_by_open_store_is_rejected
+ERROR tests/unit/test_runtime_intents.py::test_replace_failure_prevents_transport_and_leaves_no_final_intent
+ERROR tests/unit/test_runtime_intents.py::test_directory_fsync_failure_prevents_transport_but_reopen_reuses_visible_intent
+ERROR tests/unit/test_runtime_intents.py::test_second_process_cannot_acquire_same_identity_lease
+ERROR tests/unit/test_runtime_intents.py::test_matching_completed_acknowledgment_marks_intent_completed
+ERROR tests/unit/test_runtime_intents.py::test_repeated_completed_acknowledgment_is_idempotent
+ERROR tests/unit/test_runtime_intents.py::test_foreign_or_malformed_success_is_never_completion[bid-False]
+ERROR tests/unit/test_runtime_intents.py::test_foreign_or_malformed_success_is_never_completion[bid-True]
+ERROR tests/unit/test_runtime_intents.py::test_foreign_or_malformed_success_is_never_completion[mutation-False]
+ERROR tests/unit/test_runtime_intents.py::test_foreign_or_malformed_success_is_never_completion[mutation-True]
+ERROR tests/unit/test_runtime_intents.py::test_typed_definitive_nonapplication_retains_original_identity
+ERROR tests/unit/test_runtime_intents.py::test_pending_current_target_or_malformed_acknowledgment_is_not_completion[matching-pending]
+ERROR tests/unit/test_runtime_intents.py::test_pending_current_target_or_malformed_acknowledgment_is_not_completion[current-target-only]
+ERROR tests/unit/test_runtime_intents.py::test_pending_current_target_or_malformed_acknowledgment_is_not_completion[malformed]
+ERROR tests/unit/test_runtime_intents.py::test_foreign_pending_owner_is_blocked_and_records_both_operation_ids
+ERROR tests/unit/test_runtime_intents.py::test_acknowledgment_update_requires_current_revision
+ERROR tests/unit/test_runtime_intents.py::test_diagnostics_are_bounded_by_explicit_store_limit
+ERROR tests/unit/test_runtime_intents.py::test_all_native_runtime_slots_freeze_public_arguments_separately_from_ack_context[submit_bid]
+ERROR tests/unit/test_runtime_intents.py::test_all_native_runtime_slots_freeze_public_arguments_separately_from_ack_context[accept_bid]
+ERROR tests/unit/test_runtime_intents.py::test_all_native_runtime_slots_freeze_public_arguments_separately_from_ack_context[submit_deliverable]
+ERROR tests/unit/test_runtime_intents.py::test_all_native_runtime_slots_freeze_public_arguments_separately_from_ack_context[approve_task]
+ERROR tests/unit/test_runtime_intents.py::test_all_native_runtime_slots_freeze_public_arguments_separately_from_ack_context[dispute_task]
+========================= 1 failed, 48 errors in 0.33s =========================

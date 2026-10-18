@@ -1,0 +1,428 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 53 items
+
+tests/unit/test_mp07_native_effect_delivery.py .............             [ 24%]
+tests/integration/test_mp07_native_effect_recovery.py EEEE               [ 32%]
+tests/integration/test_mp07_bid_admission_races.py EEE                   [ 37%]
+tests/integration/test_mp07_accept_expiry_race.py E                      [ 39%]
+tests/integration/test_mp07_atomic_task_transitions.py EEE               [ 45%]
+tests/integration/test_mp07_deadline_transition_races.py EEE             [ 50%]
+tests/architecture/test_architecture.py ....................             [ 88%]
+tests/architecture/test_cross_service_deps.py .                          [ 90%]
+tests/architecture/test_db_client_isolation.py ...                       [ 96%]
+tests/architecture/test_shared_identity_client.py ..                     [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_missing_receipt_stays_pending_and_exact_retry_completes _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_persisted_receipt_survives_lost_bank_acknowledgement __
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_precommit_bank_failure_keeps_claim_for_same_operation_retry _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_open_task_approval_returns_domain_conflict_before_bank_or_claim _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_bid_validated_before_acceptance_cannot_mutate_accepted_task _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_bid_validated_before_cutoff_cannot_commit_at_equality _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+___________ ERROR at setup of test_two_independent_bids_both_succeed ___________
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_stale_validated_accept_cannot_overwrite_acceptance_expiry _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_concurrent_approve_and_dispute_have_one_serial_winner _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_____ ERROR at setup of test_competing_acceptances_have_one_serial_winner ______
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_concurrent_acceptance_and_poster_cancel_have_one_serial_winner _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_stale_validated_submit_cannot_overwrite_execution_expiry _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_stale_review_action_cannot_beat_autoapproval_at_cutoff[approve] _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+_ ERROR at setup of test_stale_review_action_cannot_beat_autoapproval_at_cutoff[dispute] _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:743: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:313: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:309: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:293: in _gateway
+    live_gateway, writer = await _start_live_gateway(gateway_db_path)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/conftest.py:261: in _start_live_gateway
+    port = _free_port()
+           ^^^^^^^^^^^^
+tests/integration/conftest.py:124: in _free_port
+    s.bind(("127.0.0.1", 0))
+E   PermissionError: [Errno 1] Operation not permitted
+=========================== short test summary info ============================
+ERROR tests/integration/test_mp07_native_effect_recovery.py::test_missing_receipt_stays_pending_and_exact_retry_completes
+ERROR tests/integration/test_mp07_native_effect_recovery.py::test_persisted_receipt_survives_lost_bank_acknowledgement
+ERROR tests/integration/test_mp07_native_effect_recovery.py::test_precommit_bank_failure_keeps_claim_for_same_operation_retry
+ERROR tests/integration/test_mp07_native_effect_recovery.py::test_open_task_approval_returns_domain_conflict_before_bank_or_claim
+ERROR tests/integration/test_mp07_bid_admission_races.py::test_bid_validated_before_acceptance_cannot_mutate_accepted_task
+ERROR tests/integration/test_mp07_bid_admission_races.py::test_bid_validated_before_cutoff_cannot_commit_at_equality
+ERROR tests/integration/test_mp07_bid_admission_races.py::test_two_independent_bids_both_succeed
+ERROR tests/integration/test_mp07_accept_expiry_race.py::test_stale_validated_accept_cannot_overwrite_acceptance_expiry
+ERROR tests/integration/test_mp07_atomic_task_transitions.py::test_concurrent_approve_and_dispute_have_one_serial_winner
+ERROR tests/integration/test_mp07_atomic_task_transitions.py::test_competing_acceptances_have_one_serial_winner
+ERROR tests/integration/test_mp07_atomic_task_transitions.py::test_concurrent_acceptance_and_poster_cancel_have_one_serial_winner
+ERROR tests/integration/test_mp07_deadline_transition_races.py::test_stale_validated_submit_cannot_overwrite_execution_expiry
+ERROR tests/integration/test_mp07_deadline_transition_races.py::test_stale_review_action_cannot_beat_autoapproval_at_cutoff[approve]
+ERROR tests/integration/test_mp07_deadline_transition_races.py::test_stale_review_action_cannot_beat_autoapproval_at_cutoff[dispute]
+======================== 39 passed, 14 errors in 28.06s ========================

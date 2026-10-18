@@ -1,0 +1,51 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 54 items
+
+tests/unit/test_mp06_migration.py ...................................... [ 70%]
+...FFF........                                                           [ 96%]
+tests/unit/test_migration_transaction_mode.py ..                         [100%]
+
+=================================== FAILURES ===================================
+_ test_precommit_cleanup_failures_use_native_disposal_before_unlock[rollback-only] _
+tests/unit/test_mp06_migration.py:629: in test_precommit_cleanup_failures_use_native_disposal_before_unlock
+    assert raised.value.reason == "migration_failed"
+E   AssertionError: assert 'configuration_failed' == 'migration_failed'
+E     
+E     - migration_failed
+E     ? ^
+E     + configuration_failed
+E     ? ^^^^  +
+_ test_precommit_cleanup_failures_use_native_disposal_before_unlock[close-only] _
+tests/unit/test_mp06_migration.py:629: in test_precommit_cleanup_failures_use_native_disposal_before_unlock
+    assert raised.value.reason == "migration_failed"
+E   AssertionError: assert 'configuration_failed' == 'migration_failed'
+E     
+E     - migration_failed
+E     ? ^
+E     + configuration_failed
+E     ? ^^^^  +
+___ test_precommit_cleanup_failures_use_native_disposal_before_unlock[both] ____
+tests/unit/test_mp06_migration.py:629: in test_precommit_cleanup_failures_use_native_disposal_before_unlock
+    assert raised.value.reason == "migration_failed"
+E   AssertionError: assert 'configuration_failed' == 'migration_failed'
+E     
+E     - migration_failed
+E     ? ^
+E     + configuration_failed
+E     ? ^^^^  +
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp06_migration.py::test_precommit_cleanup_failures_use_native_disposal_before_unlock[rollback-only]
+FAILED tests/unit/test_mp06_migration.py::test_precommit_cleanup_failures_use_native_disposal_before_unlock[close-only]
+FAILED tests/unit/test_mp06_migration.py::test_precommit_cleanup_failures_use_native_disposal_before_unlock[both]
+=================== 3 failed, 51 passed, 1 warning in 4.17s ====================

@@ -1,0 +1,131 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 20 items
+
+tests/unit/test_deadline_evaluator.py ..FFFFFFFF                         [ 50%]
+tests/unit/test_deadline_sweep.py FFFFF                                  [ 75%]
+tests/unit/test_wp06_ruling_trigger.py FFFFF                             [100%]
+
+=================================== FAILURES ===================================
+________________ test_evaluate_deadline_terminal_status_skipped ________________
+tests/unit/test_deadline_evaluator.py:85: in test_evaluate_deadline_terminal_status_skipped
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+_________________ test_evaluate_deadline_open_no_bids_expired __________________
+tests/unit/test_deadline_evaluator.py:103: in test_evaluate_deadline_open_no_bids_expired
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+________________ test_evaluate_deadline_open_with_bids_expires _________________
+tests/unit/test_deadline_evaluator.py:130: in test_evaluate_deadline_open_with_bids_expires
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+________________ test_evaluate_deadline_accepted_past_execution ________________
+tests/unit/test_deadline_evaluator.py:150: in test_evaluate_deadline_accepted_past_execution
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+_________________ test_evaluate_deadline_submitted_past_review _________________
+tests/unit/test_deadline_evaluator.py:172: in test_evaluate_deadline_submitted_past_review
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+___________________ test_evaluate_deadline_not_past_deadline ___________________
+tests/unit/test_deadline_evaluator.py:193: in test_evaluate_deadline_not_past_deadline
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+________________ test_evaluate_deadline_retries_pending_escrow _________________
+tests/unit/test_deadline_evaluator.py:212: in test_evaluate_deadline_retries_pending_escrow
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+_________________ test_evaluate_deadlines_batch_processes_all __________________
+tests/unit/test_deadline_evaluator.py:232: in test_evaluate_deadlines_batch_processes_all
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+______________ test_sweep_expires_open_task_without_any_api_read _______________
+tests/unit/test_deadline_sweep.py:99: in test_sweep_expires_open_task_without_any_api_read
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+__________ test_sweep_visits_accepted_submitted_and_disputed_statuses __________
+tests/unit/test_deadline_sweep.py:127: in test_sweep_visits_accepted_submitted_and_disputed_statuses
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+______________ test_sweep_leaves_task_not_past_deadline_untouched ______________
+tests/unit/test_deadline_sweep.py:146: in test_sweep_leaves_task_not_past_deadline_untouched
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+________ test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation _________
+tests/unit/test_deadline_sweep.py:169: in test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+_________ test_sweep_survives_a_failing_task_and_continues_with_others _________
+tests/unit/test_deadline_sweep.py:197: in test_sweep_survives_a_failing_task_and_continues_with_others
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+__________________ test_trigger_fires_when_rebuttal_submitted __________________
+tests/unit/test_wp06_ruling_trigger.py:85: in test_trigger_fires_when_rebuttal_submitted
+    evaluator = _make_evaluator(store, platform_agent)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_wp06_ruling_trigger.py:69: in _make_evaluator
+    return DeadlineEvaluator(
+E   TypeError: DeadlineEvaluator.__init__() missing 1 required keyword-only argument: 'deadline_actor_id'
+_______________ test_trigger_fires_when_rebuttal_deadline_passed _______________
+tests/unit/test_wp06_ruling_trigger.py:100: in test_trigger_fires_when_rebuttal_deadline_passed
+    evaluator = _make_evaluator(store, platform_agent)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_wp06_ruling_trigger.py:69: in _make_evaluator
+    return DeadlineEvaluator(
+E   TypeError: DeadlineEvaluator.__init__() missing 1 required keyword-only argument: 'deadline_actor_id'
+__________________ test_trigger_not_fired_inside_open_window ___________________
+tests/unit/test_wp06_ruling_trigger.py:115: in test_trigger_not_fired_inside_open_window
+    evaluator = _make_evaluator(store, platform_agent)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_wp06_ruling_trigger.py:69: in _make_evaluator
+    return DeadlineEvaluator(
+E   TypeError: DeadlineEvaluator.__init__() missing 1 required keyword-only argument: 'deadline_actor_id'
+_______________________ test_failed_trigger_is_retryable _______________________
+tests/unit/test_wp06_ruling_trigger.py:133: in test_failed_trigger_is_retryable
+    evaluator = _make_evaluator(store, platform_agent)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_wp06_ruling_trigger.py:69: in _make_evaluator
+    return DeadlineEvaluator(
+E   TypeError: DeadlineEvaluator.__init__() missing 1 required keyword-only argument: 'deadline_actor_id'
+____________________ test_no_trigger_without_platform_agent ____________________
+tests/unit/test_wp06_ruling_trigger.py:148: in test_no_trigger_without_platform_agent
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=coordinator, platform_agent=None)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 1 required keyword-only argument: 'deadline_actor_id'
+=========================== short test summary info ============================
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_terminal_status_skipped
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_open_no_bids_expired
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_open_with_bids_expires
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_accepted_past_execution
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_submitted_past_review
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_not_past_deadline
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_retries_pending_escrow
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadlines_batch_processes_all
+FAILED tests/unit/test_deadline_sweep.py::test_sweep_expires_open_task_without_any_api_read
+FAILED tests/unit/test_deadline_sweep.py::test_sweep_visits_accepted_submitted_and_disputed_statuses
+FAILED tests/unit/test_deadline_sweep.py::test_sweep_leaves_task_not_past_deadline_untouched
+FAILED tests/unit/test_deadline_sweep.py::test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation
+FAILED tests/unit/test_deadline_sweep.py::test_sweep_survives_a_failing_task_and_continues_with_others
+FAILED tests/unit/test_wp06_ruling_trigger.py::test_trigger_fires_when_rebuttal_submitted
+FAILED tests/unit/test_wp06_ruling_trigger.py::test_trigger_fires_when_rebuttal_deadline_passed
+FAILED tests/unit/test_wp06_ruling_trigger.py::test_trigger_not_fired_inside_open_window
+FAILED tests/unit/test_wp06_ruling_trigger.py::test_failed_trigger_is_retryable
+FAILED tests/unit/test_wp06_ruling_trigger.py::test_no_trigger_without_platform_agent
+========================= 18 failed, 2 passed in 0.59s =========================

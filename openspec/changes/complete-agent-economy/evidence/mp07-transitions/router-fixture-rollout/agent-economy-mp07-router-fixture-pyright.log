@@ -1,0 +1,38 @@
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/fakes/router_gateway_effects.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/fakes/router_gateway_effects.py:86:46 - error: Argument of type "object" cannot be assigned to parameter "task_id" of type "str | None" in function "event"
+    Type "object" is not assignable to type "str | None"
+      "object" is not assignable to "str"
+      "object" is not assignable to "None" (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/fakes/router_gateway_effects.py:86:66 - error: Argument of type "object" cannot be assigned to parameter "agent_id" of type "str | None" in function "event"
+    Type "object" is not assignable to type "str | None"
+      "object" is not assignable to "str"
+      "object" is not assignable to "None" (reportArgumentType)
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:313:36 - error: "_store" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:314:36 - error: "_central_bank_client" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:315:36 - error: "_platform_signer" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:316:48 - error: "_deadline_evaluator" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:317:27 - error: "_store" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:318:27 - error: "_platform_agent" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:319:39 - error: "_platform_agent" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:320:39 - error: "_identity_client" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:321:42 - error: "_store" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:322:42 - error: "_central_bank_client" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:323:37 - error: "_store" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:350:26 - error: "validate_certificate" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:353:27 - error: "verify_jws" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:355:31 - error: "_identity_client" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:362:26 - error: "validate_certificate" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:365:27 - error: "verify_jws" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:374:31 - error: "_identity_client" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:381:26 - error: "validate_certificate" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:384:27 - error: "verify_jws" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:393:31 - error: "_identity_client" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:400:26 - error: "validate_certificate" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:403:27 - error: "verify_jws" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:412:31 - error: "_identity_client" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:419:31 - error: "escrow_lock" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:426:31 - error: "escrow_lock" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:429:31 - error: "escrow_release" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/conftest.py:432:31 - error: "escrow_split" is not a known attribute of "None" (reportOptionalMemberAccess)
+29 errors, 0 warnings, 0 informations

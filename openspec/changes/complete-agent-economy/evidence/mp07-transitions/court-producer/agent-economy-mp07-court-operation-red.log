@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 7 items
+
+tests/unit/test_mp07_court_operation_contract.py ......F                 [100%]
+
+=================================== FAILURES ===================================
+____ test_native_court_operation_claim_finalization_and_authority_contract _____
+tests/unit/test_mp07_court_operation_contract.py:714: in test_native_court_operation_claim_finalization_and_authority_contract
+    pytest.fail(
+E   Failed: Missing native Court-operation capability: dispute_task must return a claimed court_claim envelope (HTTP 202); exact/missing/mismatched Court evidence, platform identity readiness, ruling linkage, and 0/partial/100 settlement scenarios remain prepared behind this producer gate
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_court_operation_contract.py::test_native_court_operation_claim_finalization_and_authority_contract
+==================== 1 failed, 6 passed, 1 warning in 1.97s ====================

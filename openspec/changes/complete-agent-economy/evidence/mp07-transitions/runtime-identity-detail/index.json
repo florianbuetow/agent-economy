@@ -1,0 +1,103 @@
+{
+  "scope": "runtime-identity-detail",
+  "limits": "Logs prove only their recorded source version and scope; current source hashes do not retroactively certify earlier gates. No full root or package closure.",
+  "artifacts": [
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-runtime-integration-followups.md",
+      "artifact": "2026-10-18-mp07-runtime-integration-followups.md",
+      "sha256": "b0bbc9690947febc0d3e84f7f3ab4621bf3e90426aac25ad3d4f53182d002006"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-acceptance-before-detail.py",
+      "artifact": "agent-economy-mp07-acceptance-before-detail.py",
+      "sha256": "c256b033d71c5cd13e88074c19e1013de0a15745e691a5488e05abe785412955"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-acceptance-result-parent-red.log",
+      "artifact": "agent-economy-mp07-acceptance-result-parent-red.log",
+      "sha256": "2eaa3a5ff1559d93b870f7566d28a63340139a03e7f00b6f0c79e68a8fd32b33"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-acceptance-result-projection-red.log",
+      "artifact": "agent-economy-mp07-acceptance-result-projection-red.log",
+      "sha256": "780afab6c6ad848232c286b8b6b41b1e0a9209e24b28b77504dcb574684c9220"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-acceptance-result-projection-statics.log",
+      "artifact": "agent-economy-mp07-acceptance-result-projection-statics.log",
+      "sha256": "7126aa75e6ad15f20cb47cdca2297ab5508514a786aacd4084548d26d704a37b"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-acceptance-snapshot-green-discovery.log",
+      "artifact": "agent-economy-mp07-acceptance-snapshot-green-discovery.log",
+      "sha256": "12d66c2556707173abac2e52e076d48457f812546240d46267b86aeecc249627"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-acceptance-snapshot-green.log",
+      "artifact": "agent-economy-mp07-acceptance-snapshot-green.log",
+      "sha256": "8ab284d737ef3f8736c9cc2f5ceea2ce1424e3e727bcf900c4a39e4449ba4222"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-acceptance-snapshot-red.log",
+      "artifact": "agent-economy-mp07-acceptance-snapshot-red.log",
+      "sha256": "6672013801837b06ce595e96437b0bf51a05788abd6514672ff9816b94a6e5c1"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-acceptance-window-parent-red.log",
+      "artifact": "agent-economy-mp07-acceptance-window-parent-red.log",
+      "sha256": "3bfd77df7e19c0636359050ced72bdc574a883a7ef313269cfa9e821163a5fbf"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-acceptance-window-red.log",
+      "artifact": "agent-economy-mp07-acceptance-window-red.log",
+      "sha256": "883463ceff109876840cd90225d378b066ef699e2805be980c7973f5b655d69c"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-feeder-acceptance-before-detail.py",
+      "artifact": "agent-economy-mp07-feeder-acceptance-before-detail.py",
+      "sha256": "c0070567808bf0c433d5da847efe6f6dc8f00144df30577b9ebdc4f3d6c160fe"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-feeder-intents-before-detail.py",
+      "artifact": "agent-economy-mp07-feeder-intents-before-detail.py",
+      "sha256": "8ea2ea0a16cd7ff753f2afd39f17592f20e5a61165c20a71183961663adda73f"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-feeder-statuses-before-detail.py",
+      "artifact": "agent-economy-mp07-feeder-statuses-before-detail.py",
+      "sha256": "12ad2b5a2be5c8d651f574760f4ce2d7c6a41fd3b213c21d65fa2f0f7bbdf1ae"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-runtime-identities-green.log",
+      "artifact": "agent-economy-mp07-runtime-identities-green.log",
+      "sha256": "f143264bbc5a87cdd5fd3c77828ca0d1c8517d361748a9cf1a943efc637ed0ca"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-runtime-operation-id-green.log",
+      "artifact": "agent-economy-mp07-runtime-operation-id-green.log",
+      "sha256": "7ecf19cb65483e1fcfbbc7e54ea0a70e7fea69487a271d936ee705b924a429c5"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-runtime-operation-id-red.log",
+      "artifact": "agent-economy-mp07-runtime-operation-id-red.log",
+      "sha256": "47607b48a5bfcadf75014e91b5fbfbd820232f2e83097a60a1f70cdfbdc5285b"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-runtime-operation-model-before.py",
+      "artifact": "agent-economy-mp07-runtime-operation-model-before.py",
+      "sha256": "6b4cf3c70da0b6ad0272fa557bda3c8ec40481e384b4dd0e3c9035c2d3cc1376"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-runtime-task-id-red.log",
+      "artifact": "agent-economy-mp07-runtime-task-id-red.log",
+      "sha256": "5b600bb62474e01d9f5933b644aa919cae0283a5acae5807156f3e51f04de723"
+    }
+  ],
+  "current_sources": {
+    "agents/src/base_agent/runtime_intent_models.py": "11d7078198a6978aac49e5c3e12f684f5c05a3747888b9035b8ddc81c8ff027d",
+    "agents/src/task_feeder/acceptance.py": "8c550cf15caeac5f9f7188492b47d31f81ba7bbfc9022552a256f1bd593f1571",
+    "agents/tests/unit/test_runtime_operation_identity.py": "a0124cf6a906cad83fbf26fcc715f4bc6dfb8232182cf63c772aaa467ac3111f",
+    "agents/tests/unit/test_runtime_task_identity.py": "4bb76460e3e493d1907c12f4a2b328245207dcc1fb70f9fa6e6deb3298417942",
+    "agents/tests/unit/task_feeder/test_mp07_acceptance_snapshot.py": "fc8cc241ff3c52faa66d759aa5e32665f9e350b4688f485d9ec2d0cc5805fa9f"
+  }
+}

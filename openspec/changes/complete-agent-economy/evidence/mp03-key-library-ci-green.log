@@ -1,0 +1,51 @@
+Checking service-auth...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-auth/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 38 items
+
+tests/unit/test_key_provisioning.py::test_generate_keypair_is_idempotent_and_never_replaces_existing_pair PASSED [  2%]
+tests/unit/test_key_provisioning.py::test_cold_concurrent_generate_keypair_converges_across_processes PASSED [  5%]
+tests/unit/test_key_provisioning.py::test_partial_pair_is_refused_without_changing_surviving_bytes[private] PASSED [  7%]
+tests/unit/test_key_provisioning.py::test_partial_pair_is_refused_without_changing_surviving_bytes[public] PASSED [ 10%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[private] PASSED [ 13%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[public] PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[both] PASSED [ 18%]
+tests/unit/test_key_provisioning.py::test_mismatched_pair_is_refused_without_replacement PASSED [ 21%]
+tests/unit/test_key_provisioning.py::test_load_keypair_rejects_mismatched_pair_without_rewrite PASSED [ 23%]
+tests/unit/test_key_provisioning.py::test_fresh_private_key_mode_is_exactly_0600_under_permissive_umask PASSED [ 26%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[] PASSED [ 28%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[.] PASSED [ 31%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[..] PASSED [ 34%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[nested/agent] PASSED [ 36%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[nested\\agent] PASSED [ 39%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[private] PASSED [ 42%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[public] PASSED [ 44%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[lock] PASSED [ 47%]
+tests/unit/test_key_provisioning.py::test_interrupted_public_first_publication_remains_partial_and_is_not_replaced PASSED [ 50%]
+tests/unit/test_key_provisioning.py::test_publication_fsyncs_public_before_private_commit_marker PASSED [ 52%]
+tests/unit/test_key_provisioning.py::test_missing_lock_reader_never_observes_publication_in_progress PASSED [ 55%]
+tests/unit/test_key_provisioning.py::test_lock_acquisition_failure_closes_descriptor_and_preserves_diagnostic PASSED [ 57%]
+tests/unit/test_key_provisioning.py::test_unlock_failure_does_not_mask_body_failure_and_descriptor_is_closed PASSED [ 60%]
+tests/unit/test_signing.py::TestKeygenRoundtrip::test_creates_and_loads_keys PASSED [ 63%]
+tests/unit/test_signing.py::TestSignVerify::test_sign_and_verify_roundtrip PASSED [ 65%]
+tests/unit/test_signing.py::TestSignVerify::test_verify_rejects_wrong_key PASSED [ 68%]
+tests/unit/test_signing.py::TestSignVerify::test_malformed_token_raises_value_error PASSED [ 71%]
+tests/unit/test_signing.py::TestSignVerify::test_canonicalization_is_key_order_independent PASSED [ 73%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_payload PASSED [ 76%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_header PASSED [ 78%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_ttl_stamps_iat_exp_into_header_not_payload PASSED [ 81%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_legacy_token_without_exp_is_accepted PASSED [ 84%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_expired_token_is_rejected PASSED [ 86%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_unexpired_token_is_accepted PASSED [ 89%]
+tests/unit/test_signing.py::TestCrossCanonicalizationCompatibility::test_accepts_base_agent_old_canonicalization PASSED [ 92%]
+tests/unit/test_signing.py::TestCrossCanonicalizationCompatibility::test_accepts_platform_signer_canonicalization PASSED [ 94%]
+tests/unit/test_signing.py::TestPlatformSigner::test_signs_and_verifies PASSED [ 97%]
+tests/unit/test_signing.py::TestPlatformSigner::test_legacy_signer_omits_exp PASSED [100%]
+
+============================== 38 passed in 0.45s ==============================
+[0;32m✓ service-auth CI passed[0m

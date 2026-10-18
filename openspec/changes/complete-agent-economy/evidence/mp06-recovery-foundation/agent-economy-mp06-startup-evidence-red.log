@@ -1,0 +1,132 @@
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+____ test_startup_records_exact_configuration_cwd_and_maintenance_identity _____
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-964/test_startup_records_exact_con0')
+
+    def test_startup_records_exact_configuration_cwd_and_maintenance_identity(tmp_path: Path) -> None:
+        runtime = IsolatedRuntime.create(
+            repo_root=REPO_ROOT, artifacts_root=tmp_path, services=("db-gateway",),
+        )
+        try:
+            runtime.start()
+>           facts = runtime._startup_inputs["db-gateway"]
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'IsolatedRuntime' object has no attribute '_startup_inputs'
+
+../../tests/runtime/test_runtime_startup_evidence.py:22: AttributeError
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=21dbc31ef8c6fa745918e9c247e7083862c2ef1fc2df5eea82d9667424f9ac50
+provisioned handle=bob fingerprint_sha256=3cc203712a27ec9fae2fda57b242fa6644852c233891ff100e615c34f22c0aaf
+provisioned handle=feeder fingerprint_sha256=069827bdbfe3b9dec6df53b42125eb214e2ce84d3d00557f85502b9e905d0426
+provisioned handle=mathbot fingerprint_sha256=6ce5cc68cbcee517483725a630deca04f7b17ed28c99837ab890930e3ab637c9
+provisioned handle=mathbot_mistral fingerprint_sha256=6a15b35df577d4a07fceb46ba3304e96c15b3057edbc1474c5a6feee8901c6c2
+provisioned handle=mathbot_openai fingerprint_sha256=f098435c3a55a7862f701f7eddff6e24db8fcf688bc6648a636b3fc1028ef1f0
+provisioned handle=operator fingerprint_sha256=7af2c5659f62672ee1b6304610d3670d800c7ee3c7bc4c05ad9d964c8383d3c4
+provisioned handle=platform fingerprint_sha256=dcd936c9ef7e0cdc6eddb1fa6c3543fd10bc3e8b07f40b37dde68345d29aaa87
+provisioned handle=gateway-central-bank fingerprint_sha256=92b183599385b610c939fda255996340179fc444ff330504b7edcd1719c6ec6c
+provisioned handle=gateway-court fingerprint_sha256=e4adc5a9d57ef7e96b41a4350d3aef60fb0b1a5b004f7f198e54266426b81349
+provisioned handle=gateway-identity fingerprint_sha256=8f65314fb79e6509f754c94f5c3d7b5f20f315caa4b5156652ef80d76dbd070b
+provisioned handle=gateway-reputation fingerprint_sha256=c3948f40ac062c292a7edb0ebd4deb5a298257af9d60d441d42159a1920732ca
+provisioned handle=gateway-task-board fingerprint_sha256=ecc9796f43546aad9b0017fb52efbc36ac4ca5e86994f40ff3dbc47ba2ef7b51
+______ test_config_changed_during_startup_cannot_be_recorded_as_consumed _______
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-964/test_config_changed_during_sta0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c12b5c0>
+
+    def test_config_changed_during_startup_cannot_be_recorded_as_consumed(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        runtime = IsolatedRuntime.create(
+            repo_root=REPO_ROOT, artifacts_root=tmp_path, services=("db-gateway",),
+        )
+        wait_for_health = runtime._wait_for_health
+    
+        def wait_and_change(service, process):
+            wait_for_health(service, process)
+            path = runtime.config_paths[service]
+            path.write_bytes(path.read_bytes() + b"\n# changed after service consumed config\n")
+    
+        monkeypatch.setattr(runtime, "_wait_for_health", wait_and_change)
+        try:
+>           with pytest.raises(RuntimeError, match="configuration changed"):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE <class 'RuntimeError'>
+
+../../tests/runtime/test_runtime_startup_evidence.py:54: Failed
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=25c870edce7bee352bd55ab418656d0480cc182a8ea1b53bb42ce637592ea6aa
+provisioned handle=bob fingerprint_sha256=14e0bae48f29d801cd4a9c4a26338496f4c1b055140183052666062fd375d9f7
+provisioned handle=feeder fingerprint_sha256=f898410497562a82b19ac2bfd3c5f74ddd1a2f2ddfbde4f3cafe8e5f3f96ea27
+provisioned handle=mathbot fingerprint_sha256=5407bd292409dbc6f4988b7812915e9df6d69967e755247d4292a626fe635b9b
+provisioned handle=mathbot_mistral fingerprint_sha256=e4b80c3447fb938310b40f2fe6293461bcf860ae42f2fd93f2502b33f6d95ab3
+provisioned handle=mathbot_openai fingerprint_sha256=d10a85d85bcc627167022075c67215d3e7a9fa7b5fbebed9a69ac47e7c45c6ad
+provisioned handle=operator fingerprint_sha256=cd3b668d574bec9292713c3b0ebc376878893efc2d4105c2bcf00a392b8b4207
+provisioned handle=platform fingerprint_sha256=c4a18beb25931a4543783f0f42327418fb0e42942d012dd988b06d9edef612e1
+provisioned handle=gateway-central-bank fingerprint_sha256=420bce28177aadb2d32eba26690a482f453606549380fcb40922a6a8af199981
+provisioned handle=gateway-court fingerprint_sha256=3768369412b8d6eceb532c93d19df26ffed039e9475e4115d683d2f786208828
+provisioned handle=gateway-identity fingerprint_sha256=4c04f8847f782859078ce3c09297bf67e07d294a788e0049dfdaba44a99fcaca
+provisioned handle=gateway-reputation fingerprint_sha256=fe0435ce5f8538a0d6a2115407c9aba1592a8226b2896d3cb02d09b1d719e7b7
+provisioned handle=gateway-task-board fingerprint_sha256=99111d84265f99e7a101ef7389b850ff8f9bf64520e8689f3997da55088964ac
+___ test_maintenance_replacement_during_startup_cannot_anchor_a_second_lock ____
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-964/test_maintenance_replacement_d0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c29b820>
+
+    def test_maintenance_replacement_during_startup_cannot_anchor_a_second_lock(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        runtime = IsolatedRuntime.create(
+            repo_root=REPO_ROOT, artifacts_root=tmp_path, services=("db-gateway",),
+        )
+        wait_for_health = runtime._wait_for_health
+    
+        def wait_and_replace(service, process):
+            wait_for_health(service, process)
+            path = runtime.run_dir / "maintenance.lock"
+            path.rename(runtime.run_dir / "old-maintenance.lock")
+            path.touch(mode=0o600)
+    
+        monkeypatch.setattr(runtime, "_wait_for_health", wait_and_replace)
+        try:
+>           with pytest.raises(RuntimeError, match="maintenance"):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE <class 'RuntimeError'>
+
+../../tests/runtime/test_runtime_startup_evidence.py:78: Failed
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=73245aec2cc839d313469b70ec59736ccb9d613deafe03875e27d5fa6b1b47ba
+provisioned handle=bob fingerprint_sha256=cc5aaaa654ef9fee4eb2cf33c46454e385ca49303ddb25b6fa2edea22bfe29aa
+provisioned handle=feeder fingerprint_sha256=444160bb702e3591d9a11b8ec1f68840d6bf300d5e1852205ce9eacadf1abc1e
+provisioned handle=mathbot fingerprint_sha256=dfb446e9d73737797a5179f004a624d3b59d23cabd1700eab2811ea6986db116
+provisioned handle=mathbot_mistral fingerprint_sha256=f2f2ad714e9c5657bc3ba311c78a4abcf17d2a34e4d0934504df2dafa20a459f
+provisioned handle=mathbot_openai fingerprint_sha256=6c677016f0bcf976cadb205baf9697483b8455b65104520007fd0467643c6f16
+provisioned handle=operator fingerprint_sha256=0bdcc71b1f6e09d6911d75f49c7437fc7efc8cb943533c8515b9137d79bb199b
+provisioned handle=platform fingerprint_sha256=10ef1b8061f26ea385a1efcfa0cf40e3958d8fe0efd8abe09e772274ac357e45
+provisioned handle=gateway-central-bank fingerprint_sha256=6ca29fc8a9fd628b975a29901b5cc03ef9c77e6ab958ab8d6ca3619e6875ee0a
+provisioned handle=gateway-court fingerprint_sha256=1faf90107a9fc2beea3548279ee33fc7567a1497ffc10ed16f51b4c04b897e42
+provisioned handle=gateway-identity fingerprint_sha256=5593b054d4b50dc0ef1335e4b477982d5e729288d30ab630712326a857c474a7
+provisioned handle=gateway-reputation fingerprint_sha256=cfa46e7334841de05d570be8b3e97fb92a63d7e217471db50b355870cadf2e5e
+provisioned handle=gateway-task-board fingerprint_sha256=59b3c344c14574eeec025f496b6a1b6ee09c04c26d8c8b967a51bdb430b0671f
+________ test_owned_phase_command_records_its_actual_working_directory _________
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-964/test_owned_phase_command_recor0')
+
+    def test_owned_phase_command_records_its_actual_working_directory(tmp_path: Path) -> None:
+        runtime = IsolatedRuntime.create(
+            repo_root=REPO_ROOT, artifacts_root=tmp_path, services=("db-gateway",),
+        )
+        command_cwd = runtime.run_dir / "data"
+        try:
+            assert runtime.run_command(["/usr/bin/true"], cwd=command_cwd) == 0
+>           assert runtime.command_records[0]["cwd"] == str(command_cwd)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           KeyError: 'cwd'
+
+../../tests/runtime/test_runtime_startup_evidence.py:92: KeyError
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_runtime_startup_evidence.py::test_startup_records_exact_configuration_cwd_and_maintenance_identity
+FAILED ../../tests/runtime/test_runtime_startup_evidence.py::test_config_changed_during_startup_cannot_be_recorded_as_consumed
+FAILED ../../tests/runtime/test_runtime_startup_evidence.py::test_maintenance_replacement_during_startup_cannot_anchor_a_second_lock
+FAILED ../../tests/runtime/test_runtime_startup_evidence.py::test_owned_phase_command_records_its_actual_working_directory
+4 failed in 2.72s

@@ -1,0 +1,4 @@
+Success: no issues found in 47 source files
+/Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/task_operation_requests.py
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/task_operation_requests.py:206:12 - error: Unnecessary "cast" call; type is already "TaskCommand" (reportUnnecessaryCast)
+1 error, 0 warnings, 0 informations

@@ -1,0 +1,1737 @@
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;31m✗ Unit tests failed[0m
+
+[0;34m=== Running Unit Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/task-board/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 642 items
+
+tests/unit/routers/test_action_aliases.py::test_file_dispute_alias_is_rejected PASSED [  0%]
+tests/unit/routers/test_action_aliases.py::test_submit_ruling_alias_is_rejected PASSED [  0%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_worker_uploads_file PASSED [  0%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_upload_nonexistent_task PASSED [  0%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_upload_wrong_status_task PASSED [  0%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_non_worker_cannot_upload PASSED [  0%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_no_file_in_multipart PASSED [  1%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_file_exceeds_max_size PASSED [  1%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_multiple_uploads_succeed PASSED [  1%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_too_many_assets PASSED [  1%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_content_hash_is_sha256 PASSED [  1%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_upload_uses_bearer_token PASSED [  1%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_poster_cannot_upload PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_list_assets PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_list_assets_empty PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_download_asset PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_download_nonexistent_asset PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_list_assets_nonexistent_task PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_assets_are_public_no_auth PASSED [  2%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_null_tokens_on_task_creation PASSED [  3%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_null_token_on_single_token_endpoint PASSED [  3%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_integer_token_in_body PASSED [  3%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_array_token_in_body PASSED [  3%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_object_token_in_body PASSED [  3%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_boolean_token_in_body PASSED [  3%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_missing_action_field_in_jws_cancel PASSED [  4%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_missing_action_field_in_jws_ruling PASSED [  4%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_array_body_on_single_token_endpoint PASSED [  4%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_string_body_on_single_token_endpoint PASSED [  4%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_array_body_on_dual_token_endpoint PASSED [  4%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_null_task_token_with_valid_escrow_token PASSED [  4%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_valid_task_token_with_null_escrow_token PASSED [  4%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_valid_bearer_on_sealed_bids PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_valid_bearer_on_asset_upload PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_missing_authorization_header_sealed_bids PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_authorization_without_bearer_prefix PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_empty_bearer_token PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_malformed_bearer_token PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_tampered_bearer_token PASSED [  6%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_wrong_action_in_bearer_sealed_bids PASSED [  6%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_wrong_action_in_bearer_asset_upload PASSED [  6%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_task_id_mismatch_in_bearer_sealed_bids PASSED [  6%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_task_id_mismatch_in_bearer_asset_upload PASSED [  6%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_non_poster_accessing_sealed_bids PASSED [  6%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_non_worker_uploading_asset PASSED [  7%]
+tests/unit/routers/test_auth.py::TestIdentityDependency::test_identity_timeout_returns_502 PASSED [  7%]
+tests/unit/routers/test_auth.py::TestIdentityDependency::test_identity_unexpected_response_returns_502 PASSED [  7%]
+tests/unit/routers/test_auth.py::TestIdentityDependency::test_identity_unexpected_response_on_bearer_endpoint PASSED [  7%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_list_tasks_no_auth PASSED [  7%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_get_task_no_auth PASSED [  7%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_list_bids_no_auth_when_not_open PASSED [  7%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_list_assets_no_auth PASSED [  8%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_download_asset_no_auth PASSED [  8%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_health_no_auth PASSED [  8%]
+tests/unit/routers/test_auth.py::TestTokenReplay::test_central_bank_token_rejected PASSED [  8%]
+tests/unit/routers/test_auth.py::TestTokenReplay::test_court_token_rejected PASSED [  8%]
+tests/unit/routers/test_auth.py::TestTokenReplay::test_reputation_token_rejected PASSED [  8%]
+tests/unit/routers/test_auth.py::TestAuthSecurity::test_error_envelope_consistency PASSED [  9%]
+tests/unit/routers/test_auth.py::TestAuthSecurity::test_no_internal_error_leakage PASSED [  9%]
+tests/unit/routers/test_auth.py::TestAuthSecurity::test_cross_service_token_reuse_rejected PASSED [  9%]
+tests/unit/routers/test_bid_count_after_accept.py::test_ba_10_bid_count_reflects_total_bids_after_acceptance PASSED [  9%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_01_submit_valid_bid PASSED [  9%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_02_bid_on_nonexistent_task PASSED [  9%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_03_bid_on_cancelled_task FAILED [  9%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_04_bid_on_accepted_task PASSED [ 10%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_05_duplicate_bid_rejected PASSED [ 10%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_06_multiple_different_bidders PASSED [ 10%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_07_signer_mismatch PASSED [ 10%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_08_wrong_action PASSED [ 10%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_09_missing_payload_fields PASSED [ 10%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[zero] PASSED [ 11%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[negative] PASSED [ 11%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[float] PASSED [ 11%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[string] PASSED [ 11%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_11_self_bid_rejected PASSED [ 11%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_12_bid_after_bidding_deadline PASSED [ 11%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_13_concurrent_duplicate_bid_race PASSED [ 11%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_14_bid_increments_bid_count PASSED [ 12%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_15_malformed_bid_token PASSED [ 12%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_01_list_bids_with_bids PASSED [ 12%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_02_list_bids_empty PASSED [ 12%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_03_list_bids_nonexistent_task PASSED [ 12%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_04_sealed_bids_poster_sees_with_bearer PASSED [ 12%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_05_bids_public_after_acceptance PASSED [ 13%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_06_bid_list_includes_fields PASSED [ 13%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_07_ordered_by_submitted_at PASSED [ 13%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_08_non_poster_forbidden_on_sealed_bids PASSED [ 13%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_01_accept_valid_bid PASSED [ 13%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_02_accept_nonexistent_bid PASSED [ 13%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_03_accept_on_nonexistent_task PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_04_accept_wrong_status PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_05_non_poster_forbidden PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_06_wrong_action PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_07_signer_mismatch PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_08_accept_sets_execution_deadline PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_09_accept_sets_accepted_at PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_accept_at_acceptance_deadline_is_rejected FAILED [ 15%]
+tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[connect_error] PASSED [ 15%]
+tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[timeout] PASSED [ 15%]
+tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[ack_decode_error] PASSED [ 15%]
+tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[http_status_error] PASSED [ 15%]
+tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[connect_error] PASSED [ 15%]
+tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[timeout] PASSED [ 16%]
+tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[ack_decode_error] PASSED [ 16%]
+tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[http_status_error] PASSED [ 16%]
+tests/unit/routers/test_dispute_court_handoff.py::test_dispute_auto_files_court_claim PASSED [ 16%]
+tests/unit/routers/test_disputes.py::TestDispute::test_poster_disputes_deliverable PASSED [ 16%]
+tests/unit/routers/test_disputes.py::TestDispute::test_non_poster_cannot_dispute PASSED [ 16%]
+tests/unit/routers/test_disputes.py::TestDispute::test_worker_cannot_dispute PASSED [ 16%]
+tests/unit/routers/test_disputes.py::TestDispute::test_cannot_dispute_non_submitted_task PASSED [ 17%]
+tests/unit/routers/test_disputes.py::TestDispute::test_empty_dispute_reason PASSED [ 17%]
+tests/unit/routers/test_disputes.py::TestDispute::test_dispute_reason_exceeding_max_length PASSED [ 17%]
+tests/unit/routers/test_disputes.py::TestDispute::test_dispute_reason_at_max_length PASSED [ 17%]
+tests/unit/routers/test_disputes.py::TestDispute::test_wrong_action_in_dispute_token PASSED [ 17%]
+tests/unit/routers/test_disputes.py::TestDispute::test_dispute_on_nonexistent_task PASSED [ 17%]
+tests/unit/routers/test_disputes.py::TestDispute::test_task_id_in_payload_must_match_url PASSED [ 18%]
+tests/unit/routers/test_disputes.py::TestRuling::test_platform_records_ruling FAILED [ 18%]
+tests/unit/routers/test_disputes.py::TestRuling::test_non_platform_agent_cannot_record_ruling PASSED [ 18%]
+tests/unit/routers/test_disputes.py::TestRuling::test_cannot_rule_on_non_disputed_task PASSED [ 18%]
+tests/unit/routers/test_disputes.py::TestRuling::test_worker_pct_zero_full_poster_win FAILED [ 18%]
+tests/unit/routers/test_disputes.py::TestRuling::test_worker_pct_100_full_worker_win FAILED [ 18%]
+tests/unit/routers/test_disputes.py::TestRuling::test_worker_pct_50_split FAILED [ 19%]
+tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[negative] PASSED [ 19%]
+tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[over_100] PASSED [ 19%]
+tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[float] PASSED [ 19%]
+tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[string] PASSED [ 19%]
+tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[null] PASSED [ 19%]
+tests/unit/routers/test_disputes.py::TestRuling::test_ruling_summary_stored_in_response FAILED [ 19%]
+tests/unit/routers/test_disputes.py::TestRuling::test_ruling_sets_ruled_at_worker_pct_summary FAILED [ 20%]
+tests/unit/routers/test_disputes.py::TestRuling::test_wrong_action_in_ruling_token PASSED [ 20%]
+tests/unit/routers/test_disputes.py::TestRuling::test_ruling_on_nonexistent_task PASSED [ 20%]
+tests/unit/routers/test_disputes.py::TestRuling::test_missing_payload_fields_in_ruling PASSED [ 20%]
+tests/unit/routers/test_disputes.py::TestRuling::test_central_bank_unavailable_during_ruling PASSED [ 20%]
+tests/unit/routers/test_expiry_with_bids.py::test_open_task_with_bids_expires_at_acceptance_deadline FAILED [ 20%]
+tests/unit/routers/test_expiry_with_bids.py::test_expiry_with_bids_releases_escrow_to_poster_exactly_once FAILED [ 21%]
+tests/unit/routers/test_expiry_with_bids.py::test_expiry_with_bids_emits_task_expired_event FAILED [ 21%]
+tests/unit/routers/test_expiry_with_bids.py::test_zero_bid_expiry_still_works FAILED [ 21%]
+tests/unit/routers/test_expiry_with_bids.py::test_open_task_before_its_selected_cutoff_does_not_expire[bidding_deadline] PASSED [ 21%]
+tests/unit/routers/test_expiry_with_bids.py::test_open_task_before_its_selected_cutoff_does_not_expire[acceptance_deadline] PASSED [ 21%]
+tests/unit/routers/test_health.py::test_health_returns_ok_with_correct_schema PASSED [ 21%]
+tests/unit/routers/test_health.py::test_health_uptime_increases_over_time PASSED [ 21%]
+tests/unit/routers/test_health.py::test_health_task_counts_reflect_actual_data PASSED [ 22%]
+tests/unit/routers/test_health.py::test_health_post_not_allowed PASSED   [ 22%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_full_happy_path FAILED [ 22%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_dispute_flow FAILED [ 22%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_bidding_deadline_expiry FAILED [ 22%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_execution_deadline_expiry FAILED [ 22%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_review_deadline_auto_approves FAILED [ 23%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_expired_tasks_in_listing FAILED [ 23%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_cannot_bid_on_expired_task FAILED [ 23%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_cannot_submit_on_expired_execution FAILED [ 23%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_terminal_status_blocks_all_mutations FAILED [ 23%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_deadline_does_not_affect_terminal_states FAILED [ 23%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_terminal_status_permanent_across_gets FAILED [ 23%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_review_period_race_first_wins FAILED [ 24%]
+tests/unit/routers/test_mp04_legacy_posting_guard.py::test_posting_rejects_historical_lock_without_task_or_settlement_side_effects[locked] PASSED [ 24%]
+tests/unit/routers/test_mp04_legacy_posting_guard.py::test_posting_rejects_historical_lock_without_task_or_settlement_side_effects[released] PASSED [ 24%]
+tests/unit/routers/test_mp07_router_storage.py::test_router_approval_has_the_matching_persisted_receipt FAILED [ 24%]
+tests/unit/routers/test_mp07_router_storage.py::test_success_body_without_claim_cannot_complete_router_dispute PASSED [ 24%]
+tests/unit/routers/test_mp07_router_storage.py::test_router_rebuttal_uses_the_actual_atomic_court_timestamp PASSED [ 24%]
+tests/unit/routers/test_mp07_router_storage.py::test_router_fixture_rejects_an_impostor_key_under_platform_identity PASSED [ 25%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_worker_cannot_inject_rebuttal_into_another_tasks_dispute PASSED [ 25%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_task_with_no_recorded_dispute_is_rejected PASSED [ 25%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_matching_dispute_id_is_forwarded_once PASSED [ 25%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_dispute_task_persists_court_dispute_id PASSED [ 25%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_court_without_dispute_id_leaves_task_undisputed PASSED [ 25%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_persisted_claim_survives_malformed_acknowledgment PASSED [ 26%]
+tests/unit/routers/test_rebuttal_middleware.py::TestRebuttalMiddlewareCoverage::test_wrong_content_type_returns_415 PASSED [ 26%]
+tests/unit/routers/test_rebuttal_middleware.py::TestRebuttalMiddlewareCoverage::test_oversized_body_returns_413 PASSED [ 26%]
+tests/unit/routers/test_rebuttal_middleware.py::TestRebuttalMiddlewareCoverage::test_malformed_json_still_returns_clean_400 PASSED [ 26%]
+tests/unit/routers/test_rebuttals.py::TestWorkerRebuttal::test_worker_rebuttal_is_forwarded_by_platform PASSED [ 26%]
+tests/unit/routers/test_rebuttals.py::TestWorkerRebuttal::test_non_worker_rebuttal_is_rejected PASSED [ 26%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[DELETE-/tasks] PASSED [ 26%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[PATCH-/tasks] PASSED [ 27%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[DELETE-/tasks/t-fake-id] PASSED [ 27%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[PATCH-/tasks/t-fake-id] PASSED [ 27%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/cancel] PASSED [ 27%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[DELETE-/tasks/t-fake-id/bids] PASSED [ 27%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/bids/bid-fake/accept] PASSED [ 27%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[DELETE-/tasks/t-fake-id/assets] PASSED [ 28%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/submit] PASSED [ 28%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/approve] PASSED [ 28%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/dispute] PASSED [ 28%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/ruling] PASSED [ 28%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[POST-/health] PASSED [ 28%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_content_type_before_token PASSED [ 28%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_body_size_before_token PASSED [ 29%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_json_parsing_before_token PASSED [ 29%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_token_format_before_payload PASSED [ 29%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_identity_service_before_payload PASSED [ 29%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_signature_validity_before_payload_content PASSED [ 29%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_action_validation_before_signer_matching PASSED [ 29%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_task_existence_before_signer_matching PASSED [ 30%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_command_shape_and_task_state_are_both_validated[-400-invalid_reason] FAILED [ 30%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_command_shape_and_task_state_are_both_validated[A well-formed dispute-409-invalid_status] FAILED [ 30%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_token_mismatch_before_central_bank_errors PASSED [ 30%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_error_envelope_consistency PASSED [ 30%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_no_internal_error_leakage PASSED [ 30%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_task_ids_match_format PASSED [ 30%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_bid_ids_match_format PASSED [ 31%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_asset_ids_match_format PASSED [ 31%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_escrow_ids_match_format PASSED [ 31%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_cross_action_token_replay_rejected PASSED [ 31%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_sql_injection_in_path_params[/tasks/' OR '1'='1] PASSED [ 31%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_sql_injection_in_path_params[/tasks/' OR '1'='1/bids] PASSED [ 31%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_sql_injection_in_path_params[/tasks/' OR '1'='1/assets] PASSED [ 32%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_path_traversal_in_asset_download[../../etc/passwd] PASSED [ 32%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_path_traversal_in_asset_download[../../../config.yaml] PASSED [ 32%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_01_worker_submits_deliverable PASSED [ 32%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_02_non_worker_cannot_submit PASSED [ 32%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_03_wrong_status_cannot_submit PASSED [ 32%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_04_no_assets_uploaded PASSED [ 33%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_05_sets_review_deadline PASSED [ 33%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_06_already_submitted_cannot_submit_again PASSED [ 33%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_07_wrong_action PASSED [ 33%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_08_after_execution_deadline_expired FAILED [ 33%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_09_missing_payload_fields PASSED [ 33%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_01_poster_approves_deliverable FAILED [ 33%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_02_non_poster_cannot_approve PASSED [ 34%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_03_wrong_status_cannot_approve PASSED [ 34%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_04_approve_releases_escrow_to_worker FAILED [ 34%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_05_sets_approved_at FAILED [ 34%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_06_wrong_action PASSED [ 34%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_07_signer_not_poster PASSED [ 34%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_08_review_deadline_auto_approval FAILED [ 35%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_09_missing_payload_fields PASSED [ 35%]
+tests/unit/routers/test_t072_assets_gaps.py::TestAssetUploadGaps::test_au11_impersonation_signer_not_claimed_worker_id PASSED [ 35%]
+tests/unit/routers/test_t072_bids_gaps.py::TestBiddingGaps::test_bid13_task_id_payload_must_match_url PASSED [ 35%]
+tests/unit/routers/test_t072_bids_gaps.py::TestBidListingGaps::test_bl05_bids_public_for_cancelled_task FAILED [ 35%]
+tests/unit/routers/test_t072_bids_gaps.py::TestBidListingGaps::test_bl06_bids_public_for_expired_task FAILED [ 35%]
+tests/unit/routers/test_t072_bids_gaps.py::TestBidAcceptanceGaps::test_ba08_bid_id_payload_must_match_url PASSED [ 35%]
+tests/unit/routers/test_t072_bids_gaps.py::TestBidAcceptanceGaps::test_ba09_task_id_payload_must_match_url PASSED [ 36%]
+tests/unit/routers/test_t072_disputes_gaps.py::TestRulingGaps::test_rul08_empty_ruling_summary_rejected PASSED [ 36%]
+tests/unit/routers/test_t072_disputes_gaps.py::TestRulingGaps::test_rul09_empty_ruling_id_rejected PASSED [ 36%]
+tests/unit/routers/test_t072_disputes_gaps.py::TestRulingGaps::test_rul13_task_id_payload_must_match_url PASSED [ 36%]
+tests/unit/routers/test_t072_health_gaps.py::TestHealthStatusBreakdownGap::test_health04_tasks_by_status_reflects_actual_state FAILED [ 36%]
+tests/unit/routers/test_t072_submission_gaps.py::TestDeliverableSubmissionGaps::test_sub03_poster_cannot_submit PASSED [ 36%]
+tests/unit/routers/test_t072_submission_gaps.py::TestDeliverableSubmissionGaps::test_sub08_submit_on_nonexistent_task PASSED [ 37%]
+tests/unit/routers/test_t072_submission_gaps.py::TestDeliverableSubmissionGaps::test_sub09_task_id_payload_must_match_url PASSED [ 37%]
+tests/unit/routers/test_t072_submission_gaps.py::TestApprovalGaps::test_app07_central_bank_unavailable_on_approve_release PASSED [ 37%]
+tests/unit/routers/test_t072_submission_gaps.py::TestApprovalGaps::test_app08_approve_on_nonexistent_task PASSED [ 37%]
+tests/unit/routers/test_t072_submission_gaps.py::TestApprovalGaps::test_app09_task_id_payload_must_match_url PASSED [ 37%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc15_empty_title_rejected PASSED [ 37%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc17_empty_spec_rejected PASSED [ 38%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc17_spec_over_max_length_rejected PASSED [ 38%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc21_unregistered_agent_signer_forbidden PASSED [ 38%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc28_escrow_rollback_on_db_insert_race PASSED [ 38%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskQueryGaps::test_tq04_sql_injection_returns_task_not_found PASSED [ 38%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskQueryGaps::test_tq09_filter_by_worker_id PASSED [ 38%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskQueryGaps::test_tq10_combined_filters_and_logic FAILED [ 38%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskQueryGaps::test_tq11_unknown_filter_value_returns_empty_list PASSED [ 39%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCancellationGaps::test_can03_impersonation_signer_not_payload_poster PASSED [ 39%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCancellationGaps::test_can07_central_bank_unavailable_on_cancel_release PASSED [ 39%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCancellationGaps::test_can09_task_id_payload_must_match_url PASSED [ 39%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc01_create_valid_task_with_escrow PASSED [ 39%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc02_duplicate_task_id_rejected PASSED [ 39%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc03_invalid_task_id_format[not-a-uuid] PASSED [ 40%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc03_invalid_task_id_format[t-notauuid] PASSED [ 40%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc03_invalid_task_id_format[digits] PASSED [ 40%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc03_invalid_task_id_format[empty] PASSED [ 40%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc04_missing_task_token PASSED [ 40%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc05_missing_escrow_token PASSED [ 40%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc06_both_tokens_missing PASSED [ 40%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc07_malformed_task_token[no-dots] PASSED [ 41%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc07_malformed_task_token[two-parts] PASSED [ 41%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc07_malformed_task_token[integer] PASSED [ 41%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc07_malformed_task_token[null] PASSED [ 41%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc07_malformed_task_token[empty] PASSED [ 41%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc08_wrong_action_in_task_token PASSED [ 41%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc09_missing_required_payload_fields[poster_id] PASSED [ 42%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc09_missing_required_payload_fields[title] PASSED [ 42%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc09_missing_required_payload_fields[spec] PASSED [ 42%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc09_missing_required_payload_fields[reward] PASSED [ 42%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc09_missing_required_payload_fields[task_id] PASSED [ 42%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc10_signer_does_not_match_poster_id PASSED [ 42%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc11_task_id_mismatch_between_tokens PASSED [ 42%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc12_reward_amount_mismatch_between_tokens PASSED [ 43%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[zero] PASSED [ 43%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[negative] PASSED [ 43%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[float] PASSED [ 43%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[string] PASSED [ 43%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[null] PASSED [ 43%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[zero] PASSED [ 44%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[negative] PASSED [ 44%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[float] PASSED [ 44%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[string] PASSED [ 44%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[zero] PASSED [ 44%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[negative] PASSED [ 44%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[float] PASSED [ 45%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[string] PASSED [ 45%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[zero] PASSED [ 45%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[negative] PASSED [ 45%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[float] PASSED [ 45%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[string] PASSED [ 45%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc15_escrow_insufficient_funds PASSED [ 45%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc16_central_bank_unavailable PASSED [ 46%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc17_title_at_max_length_accepted PASSED [ 46%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc18_title_exceeds_max_length PASSED [ 46%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc19_spec_at_max_length_accepted PASSED [ 46%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc20_tampered_task_token PASSED [ 46%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc21_escrow_signer_differs_from_task_signer PASSED [ 46%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc22_identity_service_unavailable PASSED [ 47%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc23_malformed_json_body PASSED [ 47%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc24_wrong_content_type PASSED [ 47%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc25_oversized_body PASSED [ 47%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc26_extra_fields_in_payload_ignored PASSED [ 47%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc27_concurrent_duplicate_task_id PASSED [ 47%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc28_empty_body PASSED [ 47%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq01_get_task_by_id PASSED [ 48%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq02_get_nonexistent_task PASSED [ 48%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq03_get_malformed_task_id PASSED [ 48%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq04_path_traversal PASSED [ 48%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq05_list_tasks_empty PASSED [ 48%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq06_list_tasks_with_data PASSED [ 48%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq07_filter_by_status FAILED [ 49%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq08_filter_by_poster_id PASSED [ 49%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq09_pagination_offset_limit PASSED [ 49%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq10_ordered_by_created_at_desc PASSED [ 49%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq11_no_internal_fields_exposed PASSED [ 49%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq12_idempotent_read PASSED [ 49%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq13_sql_injection_safety PASSED [ 50%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can01_poster_cancels_open_task FAILED [ 50%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can02_cancel_releases_escrow FAILED [ 50%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can03_non_poster_forbidden PASSED [ 50%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can04_cancel_nonexistent_task PASSED [ 50%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can05_cancel_already_cancelled FAILED [ 50%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can06_wrong_action_in_cancel_token PASSED [ 50%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can07_cancel_wrong_status_accepted PASSED [ 51%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can08_malformed_token_on_cancel PASSED [ 51%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can09_cancel_before_short_bidding_deadline FAILED [ 51%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_cancel_at_or_after_bidding_cutoff_has_no_effect[0] PASSED [ 51%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_cancel_at_or_after_bidding_cutoff_has_no_effect[1] PASSED [ 51%]
+tests/unit/routers/test_two_tier_ruling.py::test_record_ruling_succeeds_when_identity_down FAILED [ 51%]
+tests/unit/routers/test_two_tier_ruling.py::test_agent_op_fails_cleanly_when_identity_down PASSED [ 52%]
+tests/unit/routers/test_validation.py::test_parse_json_body_valid_object PASSED [ 52%]
+tests/unit/routers/test_validation.py::test_parse_json_body_invalid_json PASSED [ 52%]
+tests/unit/routers/test_validation.py::test_parse_json_body_non_object PASSED [ 52%]
+tests/unit/routers/test_validation.py::test_parse_json_body_empty PASSED [ 52%]
+tests/unit/routers/test_validation.py::test_extract_token_valid PASSED   [ 52%]
+tests/unit/routers/test_validation.py::test_extract_token_missing_field PASSED [ 52%]
+tests/unit/routers/test_validation.py::test_extract_token_null_value PASSED [ 53%]
+tests/unit/routers/test_validation.py::test_extract_token_not_string PASSED [ 53%]
+tests/unit/routers/test_validation.py::test_extract_token_empty_string PASSED [ 53%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_required_valid PASSED [ 53%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_required_missing PASSED [ 53%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_required_wrong_scheme PASSED [ 53%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_required_empty_token PASSED [ 54%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_optional_valid PASSED [ 54%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_optional_missing PASSED [ 54%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_optional_wrong_scheme PASSED [ 54%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_identical_ruling_id_rerecord_is_idempotent FAILED [ 54%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_different_ruling_id_on_ruled_task_conflicts FAILED [ 54%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_changed_ruling_terms_cannot_reuse_completed_operation[worker_pct-0] FAILED [ 54%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_changed_ruling_terms_cannot_reuse_completed_operation[worker_pct-49] FAILED [ 55%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_changed_ruling_terms_cannot_reuse_completed_operation[worker_pct-100] FAILED [ 55%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_changed_ruling_terms_cannot_reuse_completed_operation[ruling_summary-Changed verdict] FAILED [ 55%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_changed_ruling_terms_cannot_reuse_completed_operation[ruling_id-clm-changed-ruling] FAILED [ 55%]
+tests/unit/test_asset_manager.py::test_upload_asset_success PASSED       [ 55%]
+tests/unit/test_asset_manager.py::test_upload_asset_file_too_large PASSED [ 55%]
+tests/unit/test_asset_manager.py::test_upload_asset_too_many_files PASSED [ 56%]
+tests/unit/test_asset_manager.py::test_upload_asset_task_not_found PASSED [ 56%]
+tests/unit/test_asset_manager.py::test_upload_asset_wrong_status PASSED  [ 56%]
+tests/unit/test_asset_manager.py::test_upload_asset_wrong_worker PASSED  [ 56%]
+tests/unit/test_asset_manager.py::test_list_assets_success PASSED        [ 56%]
+tests/unit/test_asset_manager.py::test_list_assets_task_not_found PASSED [ 56%]
+tests/unit/test_asset_manager.py::test_download_asset_success PASSED     [ 57%]
+tests/unit/test_asset_manager.py::test_download_asset_task_not_found PASSED [ 57%]
+tests/unit/test_asset_manager.py::test_download_asset_not_found PASSED   [ 57%]
+tests/unit/test_asset_manager.py::test_download_asset_path_traversal PASSED [ 57%]
+tests/unit/test_asset_manager.py::test_count_assets_delegates PASSED     [ 57%]
+tests/unit/test_config.py::test_config_loads_from_yaml PASSED            [ 57%]
+tests/unit/test_config.py::test_config_rejects_extra_fields PASSED       [ 57%]
+tests/unit/test_config.py::test_config_missing_required_section PASSED   [ 58%]
+tests/unit/test_config.py::test_config_platform_agent_id_present PASSED  [ 58%]
+tests/unit/test_deadline_evaluation_config.py::test_deadline_evaluation_section_loads PASSED [ 58%]
+tests/unit/test_deadline_evaluation_config.py::test_deadline_evaluation_missing_interval_field_rejected PASSED [ 58%]
+tests/unit/test_deadline_evaluation_config.py::test_lifespan_fails_fast_without_deadline_evaluation_section PASSED [ 58%]
+tests/unit/test_deadline_evaluator.py::test_compute_deadline_valid PASSED [ 58%]
+tests/unit/test_deadline_evaluator.py::test_compute_deadline_none_base PASSED [ 59%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_terminal_status_skipped FAILED [ 59%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_open_no_bids_expired FAILED [ 59%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_open_with_bids_expires FAILED [ 59%]
+tests/unit/test_deadline_evaluator.py::test_legacy_timing_contract_keeps_original_acceptance_cutoff FAILED [ 59%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_accepted_past_execution FAILED [ 59%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_submitted_past_review FAILED [ 59%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_not_past_deadline PASSED [ 60%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_retries_pending_escrow FAILED [ 60%]
+tests/unit/test_deadline_evaluator.py::test_bare_pending_flag_cannot_authorize_early_release PASSED [ 60%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadlines_batch_processes_all FAILED [ 60%]
+tests/unit/test_deadline_sweep.py::test_sweep_expires_open_task_without_any_api_read FAILED [ 60%]
+tests/unit/test_deadline_sweep.py::test_sweep_visits_accepted_submitted_and_disputed_statuses FAILED [ 60%]
+tests/unit/test_deadline_sweep.py::test_sweep_leaves_task_not_past_deadline_untouched PASSED [ 61%]
+tests/unit/test_deadline_sweep.py::test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation FAILED [ 61%]
+tests/unit/test_deadline_sweep.py::test_sweep_survives_a_failing_task_and_continues_with_others FAILED [ 61%]
+tests/unit/test_escrow_coordinator.py::test_release_escrow_success PASSED [ 61%]
+tests/unit/test_escrow_coordinator.py::test_release_escrow_service_error_propagates PASSED [ 61%]
+tests/unit/test_escrow_coordinator.py::test_release_escrow_generic_error_wraps PASSED [ 61%]
+tests/unit/test_escrow_coordinator.py::test_split_escrow_success PASSED  [ 61%]
+tests/unit/test_escrow_coordinator.py::test_split_escrow_service_error_propagates PASSED [ 62%]
+tests/unit/test_escrow_coordinator.py::test_split_escrow_generic_error_wraps PASSED [ 62%]
+tests/unit/test_escrow_coordinator.py::test_claimed_expiry_completes_only_after_persisted_release FAILED [ 62%]
+tests/unit/test_escrow_coordinator.py::test_failed_delivery_does_not_complete_expiry PASSED [ 62%]
+tests/unit/test_escrow_coordinator.py::test_unowned_open_state_has_no_implicit_release PASSED [ 62%]
+tests/unit/test_escrow_coordinator.py::test_pending_retry_completes_the_same_owner[expiry] FAILED [ 62%]
+tests/unit/test_escrow_coordinator.py::test_pending_retry_completes_the_same_owner[approval] FAILED [ 63%]
+tests/unit/test_escrow_coordinator.py::test_repeated_delivery_failure_keeps_native_ownership PASSED [ 63%]
+tests/unit/test_escrow_coordinator.py::test_disputed_state_has_no_implicit_bank_retry PASSED [ 63%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates0-task.accepted] PASSED [ 63%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates1-task.submitted] PASSED [ 63%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates2-task.approved] PASSED [ 63%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates3-task.auto_approved] PASSED [ 64%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates4-task.disputed] PASSED [ 64%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates5-task.ruled] PASSED [ 64%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates6-task.cancelled] PASSED [ 64%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates7-task.expired] PASSED [ 64%]
+tests/unit/test_lifecycle_events.py::test_update_task_keeps_generic_event_for_non_lifecycle_updates PASSED [ 64%]
+tests/unit/test_mp01_integration_log_isolation.py::test_gateway_fixture_logs_are_owned_before_startup PASSED [ 64%]
+tests/unit/test_mp01_integration_log_isolation.py::test_board_fixture_logs_are_owned_and_separate PASSED [ 65%]
+tests/unit/test_mp01_unit_log_isolation.py::test_router_fixture_uses_owned_board_log_directory PASSED [ 65%]
+tests/unit/test_mp01_unit_log_isolation.py::test_deadline_config_uses_owned_board_log_directory PASSED [ 65%]
+tests/unit/test_mp02_gateway_signing.py::test_task_reads_are_signed_over_the_final_query PASSED [ 65%]
+tests/unit/test_mp03_platform_agent_startup.py::test_startup_reuses_registered_platform_agent_as_token_signer PASSED [ 65%]
+tests/unit/test_mp03_platform_agent_startup.py::test_missing_agent_config_fails_before_legacy_key_generation PASSED [ 65%]
+tests/unit/test_mp03_platform_agent_startup.py::test_damaged_agent_key_fails_without_legacy_key_generation PASSED [ 66%]
+tests/unit/test_mp03_receiver_context.py::test_identity_configuration_is_required_and_strict PASSED [ 66%]
+tests/unit/test_mp03_receiver_context.py::test_validator_rejects_wrong_resource PASSED [ 66%]
+tests/unit/test_mp03_receiver_context.py::test_remote_invalid_signature_maps_to_forbidden PASSED [ 66%]
+tests/unit/test_mp03_receiver_context.py::test_ordinary_agent_validation_has_no_local_fallback PASSED [ 66%]
+tests/unit/test_mp03_receiver_context.py::test_validator_requires_identity_dependency_argument PASSED [ 66%]
+tests/unit/test_mp03_receiver_context.py::test_deep_escrow_payload_maps_to_invalid_jws PASSED [ 66%]
+tests/unit/test_mp03_receiver_context.py::test_local_adapter_cryptographically_rejects_unregistered_kid PASSED [ 67%]
+tests/unit/test_mp04_financial_intents.py::test_new_task_accepts_only_matching_actually_locked_native_receipt PASSED [ 67%]
+tests/unit/test_mp04_financial_intents.py::test_new_task_rejects_non_proof_lock_responses[legacy] PASSED [ 67%]
+tests/unit/test_mp04_financial_intents.py::test_new_task_rejects_non_proof_lock_responses[settled] PASSED [ 67%]
+tests/unit/test_mp04_financial_intents.py::test_new_task_rejects_non_proof_lock_responses[wrong_task] PASSED [ 67%]
+tests/unit/test_mp04_financial_intents.py::test_new_task_rejects_non_proof_lock_responses[wrong_payer] PASSED [ 67%]
+tests/unit/test_mp04_financial_intents.py::test_new_task_rejects_non_proof_lock_responses[wrong_amount] PASSED [ 68%]
+tests/unit/test_mp04_financial_intents.py::test_new_task_rejects_non_proof_lock_responses[wrong_operation] PASSED [ 68%]
+tests/unit/test_mp04_financial_intents.py::test_approval_and_pending_retry_reuse_one_financial_intent FAILED [ 68%]
+tests/unit/test_mp04_financial_intents.py::test_opposing_task_settlements_have_distinct_financial_intents FAILED [ 68%]
+tests/unit/test_mp04_financial_intents.py::test_ruling_release_and_split_retain_the_claimed_operation_identity[0] FAILED [ 68%]
+tests/unit/test_mp04_financial_intents.py::test_ruling_release_and_split_retain_the_claimed_operation_identity[50] FAILED [ 68%]
+tests/unit/test_mp04_financial_intents.py::test_ruling_release_and_split_retain_the_claimed_operation_identity[100] FAILED [ 69%]
+tests/unit/test_mp04_ruling_replay.py::test_identical_stored_ruling_replay_returns_original_without_settlement ERROR [ 69%]
+tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[0-Split ruling] ERROR [ 69%]
+tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[100-Split ruling] ERROR [ 69%]
+tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[49-Split ruling] ERROR [ 69%]
+tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[50-Changed verdict] ERROR [ 69%]
+tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[True] ERROR [ 69%]
+tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[False] ERROR [ 70%]
+tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[None] ERROR [ 70%]
+tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50] ERROR [ 70%]
+tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50.0] ERROR [ 70%]
+tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[-1] ERROR [ 70%]
+tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[101] ERROR [ 70%]
+tests/unit/test_mp04_ruling_replay.py::test_malformed_other_ruling_fails_shape_validation_without_effect ERROR [ 71%]
+tests/unit/test_mp04_ruling_replay.py::test_other_ruling_preserves_status_precedence_and_stored_terms ERROR [ 71%]
+tests/unit/test_mp06_maintenance_lock.py::test_task_board_holds_shared_maintenance_lock_while_active PASSED [ 71%]
+tests/unit/test_mp06_maintenance_lock.py::test_task_board_releases_maintenance_lock_after_startup_failure PASSED [ 71%]
+tests/unit/test_mp06_maintenance_lock.py::test_task_board_recovery_configuration_is_required PASSED [ 71%]
+tests/unit/test_mp06_maintenance_lock.py::test_task_board_recovery_path_keeps_symlink_ancestor_lexical PASSED [ 71%]
+tests/unit/test_mp07_bid_error_contract.py::test_bid_claim_error_keeps_the_public_contract[bid_exists-409-bid_already_exists] PASSED [ 71%]
+tests/unit/test_mp07_bid_error_contract.py::test_bid_claim_error_keeps_the_public_contract[bid_exists-503-bid_exists] PASSED [ 72%]
+tests/unit/test_mp07_bid_error_contract.py::test_bid_claim_error_keeps_the_public_contract[operation_id_conflict-409-operation_id_conflict] PASSED [ 72%]
+tests/unit/test_mp07_bid_error_contract.py::test_bid_claim_error_keeps_the_public_contract[task_version_conflict-409-task_version_conflict] PASSED [ 72%]
+tests/unit/test_mp07_bid_error_contract.py::test_bid_claim_error_keeps_the_public_contract[cutoff_reached-409-cutoff_reached] PASSED [ 72%]
+tests/unit/test_mp07_bid_error_contract.py::test_bid_claim_error_keeps_the_public_contract[forbidden-403-forbidden] PASSED [ 72%]
+tests/unit/test_mp07_bid_presence_read.py::test_valid_empty_bid_list_remains_distinct_from_invalid_success PASSED [ 72%]
+tests/unit/test_mp07_bid_presence_read.py::test_valid_bid_rows_are_strictly_normalized_without_proposal PASSED [ 73%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_list_success_is_not_treated_as_empty[non-object] PASSED [ 73%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_list_success_is_not_treated_as_empty[missing-bids] PASSED [ 73%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_list_success_is_not_treated_as_empty[null-bids] PASSED [ 73%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_list_success_is_not_treated_as_empty[object-bids] PASSED [ 73%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_list_success_is_not_treated_as_empty[scalar-row] PASSED [ 73%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_list_success_is_not_treated_as_empty[non-json] PASSED [ 73%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_row_is_rejected_without_coercion_or_filtering[amount-True] PASSED [ 74%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_row_is_rejected_without_coercion_or_filtering[amount-90] PASSED [ 74%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_row_is_rejected_without_coercion_or_filtering[bidder_id-None] PASSED [ 74%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_row_is_rejected_without_coercion_or_filtering[submitted_at-None] PASSED [ 74%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_row_is_rejected_without_coercion_or_filtering[proposal-None] PASSED [ 74%]
+tests/unit/test_mp07_bid_presence_read.py::test_malformed_bid_row_is_rejected_without_coercion_or_filtering[extra-unexpected] PASSED [ 74%]
+tests/unit/test_mp07_bid_presence_read.py::test_bid_from_another_task_is_rejected PASSED [ 75%]
+tests/unit/test_mp07_bid_presence_read.py::test_typed_gateway_error_is_preserved PASSED [ 75%]
+tests/unit/test_mp07_bid_projection_validation.py::test_malformed_bid_is_rejected_before_normalization[amount-True] PASSED [ 75%]
+tests/unit/test_mp07_bid_projection_validation.py::test_malformed_bid_is_rejected_before_normalization[amount-90] PASSED [ 75%]
+tests/unit/test_mp07_bid_projection_validation.py::test_malformed_bid_is_rejected_before_normalization[amount-1.5] PASSED [ 75%]
+tests/unit/test_mp07_bid_projection_validation.py::test_malformed_bid_is_rejected_before_normalization[amount-None] PASSED [ 75%]
+tests/unit/test_mp07_bid_projection_validation.py::test_malformed_bid_is_rejected_before_normalization[bidder_id-None] PASSED [ 76%]
+tests/unit/test_mp07_bid_projection_validation.py::test_malformed_bid_is_rejected_before_normalization[submitted_at-None] PASSED [ 76%]
+tests/unit/test_mp07_bid_projection_validation.py::test_malformed_bid_is_rejected_before_normalization[bid_id-bid-other] PASSED [ 76%]
+tests/unit/test_mp07_bid_projection_validation.py::test_malformed_bid_is_rejected_before_normalization[task_id-t-other] PASSED [ 76%]
+tests/unit/test_mp07_bid_projection_validation.py::test_malformed_bid_is_rejected_before_normalization[proposal-None] PASSED [ 76%]
+tests/unit/test_mp07_bid_projection_validation.py::test_valid_bid_and_missing_bid_remain_distinct PASSED [ 76%]
+tests/unit/test_mp07_creation_cutoff_bounds.py::test_unrepresentable_composed_cutoff_fails_before_effects[sqlite-integer-sized] PASSED [ 76%]
+tests/unit/test_mp07_creation_cutoff_bounds.py::test_unrepresentable_composed_cutoff_fails_before_effects[year-10000] PASSED [ 77%]
+tests/unit/test_mp07_creation_cutoff_bounds.py::test_largest_representable_composed_cutoff_is_retained PASSED [ 77%]
+tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[missing] PASSED [ 77%]
+tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[null] PASSED [ 77%]
+tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[zero] PASSED [ 77%]
+tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[negative] PASSED [ 77%]
+tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[bool] PASSED [ 78%]
+tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[float] PASSED [ 78%]
+tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[string] PASSED [ 78%]
+tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[overflow] PASSED [ 78%]
+tests/unit/test_mp07_creation_window.py::test_explicit_acceptance_window_reaches_persisted_task_input PASSED [ 78%]
+tests/unit/test_mp07_deadline_actor_config.py::test_deadline_actor_is_required_without_an_implicit_identity PASSED [ 78%]
+tests/unit/test_mp07_deadline_actor_config.py::test_explicit_deadline_actor_is_preserved PASSED [ 78%]
+tests/unit/test_mp07_deadline_actor_config.py::test_invalid_deadline_actor_fails_for_the_identity_field[None-string_type] PASSED [ 79%]
+tests/unit/test_mp07_deadline_actor_config.py::test_invalid_deadline_actor_fails_for_the_identity_field[False-string_type] PASSED [ 79%]
+tests/unit/test_mp07_deadline_actor_config.py::test_invalid_deadline_actor_fails_for_the_identity_field[42-string_type] PASSED [ 79%]
+tests/unit/test_mp07_deadline_actor_config.py::test_invalid_deadline_actor_fails_for_the_identity_field[-value_error] PASSED [ 79%]
+tests/unit/test_mp07_deadline_actor_config.py::test_invalid_deadline_actor_fails_for_the_identity_field[ \t-value_error] PASSED [ 79%]
+tests/unit/test_mp07_deadline_actor_config.py::test_invalid_deadline_actor_fails_for_the_identity_field[ system-task-board-deadline-value_error] PASSED [ 79%]
+tests/unit/test_mp07_deadline_actor_config.py::test_invalid_deadline_actor_fails_for_the_identity_field[system-task-board-deadline -value_error] PASSED [ 80%]
+tests/unit/test_mp07_deadline_precision.py::test_compute_deadline_preserves_fractional_base_precision PASSED [ 80%]
+tests/unit/test_mp07_deadline_precision.py::test_compute_deadline_keeps_whole_second_format PASSED [ 80%]
+tests/unit/test_mp07_deadline_precision.py::test_gateway_create_payload_preserves_fractional_deadline PASSED [ 80%]
+tests/unit/test_mp07_deadline_precision.py::test_fractional_deadline_remains_open_just_before_cutoff PASSED [ 80%]
+tests/unit/test_mp07_deadline_precision.py::test_fractional_deadline_expires_at_exact_cutoff FAILED [ 80%]
+tests/unit/test_mp07_gateway_store_parity.py::test_empty_adapter_does_not_invent_fixture_facts PASSED [ 80%]
+tests/unit/test_mp07_gateway_store_parity.py::test_native_bid_replay_preserves_one_bid_and_event PASSED [ 81%]
+tests/unit/test_mp07_gateway_store_parity.py::test_native_finalization_requires_persisted_bank_evidence FAILED [ 81%]
+tests/unit/test_mp07_gateway_store_parity.py::test_changed_command_identity_is_rejected_without_new_bid PASSED [ 81%]
+tests/unit/test_mp07_gateway_store_parity.py::test_court_finalization_requires_the_persisted_matching_claim PASSED [ 81%]
+tests/unit/test_mp07_gateway_store_parity.py::test_task_asset_and_bid_reads_share_real_projection_and_counts PASSED [ 81%]
+tests/unit/test_mp07_gateway_store_parity.py::test_malformed_operation_id_never_reaches_storage[] PASSED [ 81%]
+tests/unit/test_mp07_gateway_store_parity.py::test_malformed_operation_id_never_reaches_storage[wrong-prefix] PASSED [ 82%]
+tests/unit/test_mp07_gateway_store_parity.py::test_malformed_operation_id_never_reaches_storage[True] PASSED [ 82%]
+tests/unit/test_mp07_gateway_store_parity.py::test_malformed_operation_id_never_reaches_storage[op-has space] PASSED [ 82%]
+tests/unit/test_mp07_gateway_store_parity.py::test_missing_finalize_identity_is_typed_not_silent PASSED [ 82%]
+tests/unit/test_mp07_gateway_store_parity.py::test_legacy_status_writer_cannot_steal_native_claim PASSED [ 82%]
+tests/unit/test_mp07_gateway_store_parity.py::test_missing_contract_is_reported_without_filling_defaults PASSED [ 82%]
+tests/unit/test_mp07_gateway_store_parity.py::test_malformed_projection_still_uses_real_client_validation PASSED [ 83%]
+tests/unit/test_mp07_gateway_store_parity.py::test_close_reopen_and_other_caller_preserve_owned_database PASSED [ 83%]
+tests/unit/test_mp07_gateway_store_parity.py::test_explicit_clock_controls_native_cutoff PASSED [ 83%]
+tests/unit/test_mp07_gateway_store_parity.py::test_constructor_failure_releases_its_connection_without_deleting_database PASSED [ 83%]
+tests/unit/test_mp07_native_effect_delivery.py::test_completed_input_returns_without_bank_or_finalizer PASSED [ 83%]
+tests/unit/test_mp07_native_effect_delivery.py::test_existing_gateway_evidence_completes_before_bank_delivery PASSED [ 83%]
+tests/unit/test_mp07_native_effect_delivery.py::test_finalize_cannot_change_immutable_claim_context[task] PASSED [ 83%]
+tests/unit/test_mp07_native_effect_delivery.py::test_finalize_cannot_change_immutable_claim_context[command] PASSED [ 84%]
+tests/unit/test_mp07_native_effect_delivery.py::test_finalize_cannot_change_immutable_claim_context[hash] PASSED [ 84%]
+tests/unit/test_mp07_native_effect_delivery.py::test_finalize_cannot_change_immutable_claim_context[versions] PASSED [ 84%]
+tests/unit/test_mp07_native_effect_delivery.py::test_finalize_cannot_change_immutable_claim_context[intent] PASSED [ 84%]
+tests/unit/test_mp07_native_effect_delivery.py::test_pending_release_uses_exact_persisted_financial_identity PASSED [ 84%]
+tests/unit/test_mp07_native_effect_delivery.py::test_pending_split_uses_exact_persisted_financial_identity PASSED [ 84%]
+tests/unit/test_mp07_native_effect_delivery.py::test_bank_exception_after_effect_converges_from_gateway_evidence PASSED [ 85%]
+tests/unit/test_mp07_native_effect_delivery.py::test_bank_error_with_still_pending_evidence_reraises_original PASSED [ 85%]
+tests/unit/test_mp07_native_effect_delivery.py::test_finalizer_conflict_after_bank_propagates_without_bank_retry PASSED [ 85%]
+tests/unit/test_mp07_native_effect_delivery.py::test_repeated_pending_calls_reuse_identity_without_legacy_updates PASSED [ 85%]
+tests/unit/test_mp07_public_task_projection.py::test_native_full_and_summary_projections_use_exact_persisted_cutoffs PASSED [ 85%]
+tests/unit/test_mp07_public_task_projection.py::test_migrated_timing_v1_preserves_null_window_and_separate_reconciliation PASSED [ 85%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[lifecycle_version-task_to_response] PASSED [ 85%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[lifecycle_version-task_to_summary] PASSED [ 86%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[timing_contract_version-task_to_response] PASSED [ 86%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[timing_contract_version-task_to_summary] PASSED [ 86%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[acceptance_window_seconds-task_to_response] PASSED [ 86%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[acceptance_window_seconds-task_to_summary] PASSED [ 86%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[bidding_cutoff_us-task_to_response] PASSED [ 86%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[bidding_cutoff_us-task_to_summary] PASSED [ 87%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[acceptance_cutoff_us-task_to_response] PASSED [ 87%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[acceptance_cutoff_us-task_to_summary] PASSED [ 87%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[execution_cutoff_us-task_to_response] PASSED [ 87%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[execution_cutoff_us-task_to_summary] PASSED [ 87%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[review_cutoff_us-task_to_response] PASSED [ 87%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[review_cutoff_us-task_to_summary] PASSED [ 88%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[accepted_reward-task_to_response] PASSED [ 88%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[accepted_reward-task_to_summary] PASSED [ 88%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[accepted_bid_amount-task_to_response] PASSED [ 88%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[accepted_bid_amount-task_to_summary] PASSED [ 88%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[pending_transition-task_to_response] PASSED [ 88%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[pending_transition-task_to_summary] PASSED [ 88%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[legacy_reconciliations-task_to_response] PASSED [ 89%]
+tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[legacy_reconciliations-task_to_summary] PASSED [ 89%]
+tests/unit/test_mp07_public_whole_second_cutoffs.py::test_whole_second_cutoffs_retain_existing_public_format PASSED [ 89%]
+tests/unit/test_mp07_router_verifier_errors.py::test_unexpected_fixture_verifier_exception_propagates[RuntimeError] PASSED [ 89%]
+tests/unit/test_mp07_router_verifier_errors.py::test_unexpected_fixture_verifier_exception_propagates[ValueError] PASSED [ 89%]
+tests/unit/test_mp07_router_verifier_errors.py::test_unexpected_fixture_verifier_exception_propagates[TypeError] PASSED [ 89%]
+tests/unit/test_mp07_router_verifier_errors.py::test_malformed_fixture_verifier_return_is_not_dependency_unavailability PASSED [ 90%]
+tests/unit/test_mp07_router_verifier_errors.py::test_declared_dependency_failures_remain_typed[error0] PASSED [ 90%]
+tests/unit/test_mp07_router_verifier_errors.py::test_declared_dependency_failures_remain_typed[error1] PASSED [ 90%]
+tests/unit/test_mp07_router_verifier_errors.py::test_declared_dependency_failures_remain_typed[error2] PASSED [ 90%]
+tests/unit/test_mp07_task_operation_client.py::test_native_operation_methods_sign_validate_and_fail_closed PASSED [ 90%]
+tests/unit/test_mp07_task_operation_client.py::test_task_reads_preserve_native_and_legacy_v3_projections PASSED [ 90%]
+tests/unit/test_mp07_task_operation_client.py::test_task_reads_fail_closed_when_any_v3_contract_field_is_missing PASSED [ 90%]
+tests/unit/test_mp07_task_operation_client.py::test_task_publication_forwards_explicit_acceptance_window_unchanged PASSED [ 91%]
+tests/unit/test_mp07_task_operation_client_regressions.py::test_valid_producer_intents_and_command_results_are_accepted PASSED [ 91%]
+tests/unit/test_mp07_task_operation_client_regressions.py::test_claim_rejects_self_consistent_effect_intent_not_bound_to_request PASSED [ 91%]
+tests/unit/test_mp07_task_operation_client_regressions.py::test_claim_rejects_command_specific_result_mismatch PASSED [ 91%]
+tests/unit/test_mp07_task_operation_client_regressions.py::test_finalize_rejects_internally_inconsistent_effect_and_result PASSED [ 91%]
+tests/unit/test_mp07_task_operation_client_regressions.py::test_task_reads_reject_simultaneous_native_and_legacy_recovery_owners PASSED [ 91%]
+tests/unit/test_mp07_task_operation_client_regressions.py::test_malformed_typed_gateway_error_fails_closed[response0] PASSED [ 92%]
+tests/unit/test_mp07_task_operation_client_regressions.py::test_malformed_typed_gateway_error_fails_closed[response1] PASSED [ 92%]
+tests/unit/test_mp07_task_operation_client_regressions.py::test_malformed_typed_gateway_error_fails_closed[response2] PASSED [ 92%]
+tests/unit/test_mp07_task_operation_client_regressions.py::test_malformed_typed_gateway_error_fails_closed[response3] PASSED [ 92%]
+tests/unit/test_mp07_unbuildable_approval.py::test_recovery_owner_precedes_unbuildable_approval_state[native] PASSED [ 92%]
+tests/unit/test_mp07_unbuildable_approval.py::test_recovery_owner_precedes_unbuildable_approval_state[legacy] PASSED [ 92%]
+tests/unit/test_mp07_unbuildable_approval.py::test_stale_version_precedes_open_status_classification PASSED [ 92%]
+tests/unit/test_mp07_unbuildable_approval.py::test_matching_version_open_task_is_invalid_status_without_effects PASSED [ 93%]
+tests/unit/test_mp07_unbuildable_approval.py::test_accepted_and_approved_histories_still_reach_gateway_replay PASSED [ 93%]
+tests/unit/test_mp07_unbuildable_approval.py::test_submitted_task_missing_frozen_terms_remains_dependency_corruption PASSED [ 93%]
+tests/unit/test_mp12_public_bid_events.py::test_bid_submission_event_contains_no_sealed_bid_fields PASSED [ 93%]
+tests/unit/test_no_base_agent_imports.py::test_no_base_agent_imports PASSED [ 93%]
+tests/unit/test_placeholder.py::test_service_scaffolded PASSED           [ 93%]
+tests/unit/test_response_contracts.py::test_bid_response_uses_amount_not_the_stale_proposal_field PASSED [ 94%]
+tests/unit/test_response_contracts.py::test_asset_response_includes_content_hash PASSED [ 94%]
+tests/unit/test_response_contracts.py::test_task_endpoints_wire_response_model PASSED [ 94%]
+tests/unit/test_response_contracts.py::test_bid_endpoints_wire_response_model PASSED [ 94%]
+tests/unit/test_response_contracts.py::test_asset_endpoints_wire_response_model PASSED [ 94%]
+tests/unit/test_state.py::test_app_state_init PASSED                     [ 94%]
+tests/unit/test_state.py::test_app_state_uptime PASSED                   [ 95%]
+tests/unit/test_state.py::test_app_state_started_at PASSED               [ 95%]
+tests/unit/test_state.py::test_get_app_state_uninitialized PASSED        [ 95%]
+tests/unit/test_state.py::test_init_app_state PASSED                     [ 95%]
+tests/unit/test_state.py::test_reset_app_state PASSED                    [ 95%]
+tests/unit/test_task_db_client_normalization.py::TestTaskDbClientNormalization::test_whitelist_covers_every_persisted_schema_column PASSED [ 95%]
+tests/unit/test_task_db_client_normalization.py::TestTaskDbClientNormalization::test_recomputed_columns_are_not_read_back PASSED [ 95%]
+tests/unit/test_task_db_client_normalization.py::TestTaskDbClientNormalization::test_dispute_id_survives_normalization PASSED [ 96%]
+tests/unit/test_task_db_client_normalization.py::TestTaskDbClientNormalization::test_unknown_columns_are_dropped PASSED [ 96%]
+tests/unit/test_task_store.py::test_task_crud_and_counts PASSED          [ 96%]
+tests/unit/test_task_store.py::test_bid_operations PASSED                [ 96%]
+tests/unit/test_task_store.py::test_asset_operations PASSED              [ 96%]
+tests/unit/test_task_store.py::test_close_succeeds PASSED                [ 96%]
+tests/unit/test_token_validator.py::test_validate_jws_token_empty_token PASSED [ 97%]
+tests/unit/test_token_validator.py::test_validate_jws_token_wrong_format PASSED [ 97%]
+tests/unit/test_token_validator.py::test_validate_jws_token_identity_unavailable PASSED [ 97%]
+tests/unit/test_token_validator.py::test_validate_jws_token_identity_service_error PASSED [ 97%]
+tests/unit/test_token_validator.py::test_validate_jws_token_forbidden_tampered PASSED [ 97%]
+tests/unit/test_token_validator.py::test_validate_jws_token_missing_action PASSED [ 97%]
+tests/unit/test_token_validator.py::test_validate_jws_token_wrong_action PASSED [ 97%]
+tests/unit/test_token_validator.py::test_validate_jws_token_valid_single_action PASSED [ 98%]
+tests/unit/test_token_validator.py::test_validate_jws_token_valid_tuple_action PASSED [ 98%]
+tests/unit/test_token_validator.py::test_decode_escrow_token_payload_valid PASSED [ 98%]
+tests/unit/test_token_validator.py::test_decode_escrow_token_payload_wrong_format PASSED [ 98%]
+tests/unit/test_token_validator.py::test_decode_escrow_token_payload_invalid_base64 PASSED [ 98%]
+tests/unit/test_token_validator.py::test_decode_escrow_token_payload_invalid_json PASSED [ 98%]
+tests/unit/test_token_validator.py::test_decode_escrow_token_payload_not_object PASSED [ 99%]
+tests/unit/test_token_validator.py::test_validate_jws_token_invalid_signature PASSED [ 99%]
+tests/unit/test_wp06_ruling_trigger.py::test_trigger_fires_when_rebuttal_submitted PASSED [ 99%]
+tests/unit/test_wp06_ruling_trigger.py::test_trigger_fires_when_rebuttal_deadline_passed PASSED [ 99%]
+tests/unit/test_wp06_ruling_trigger.py::test_trigger_not_fired_inside_open_window PASSED [ 99%]
+tests/unit/test_wp06_ruling_trigger.py::test_failed_trigger_is_retryable PASSED [ 99%]
+tests/unit/test_wp06_ruling_trigger.py::test_no_trigger_without_platform_agent PASSED [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_identical_stored_ruling_replay_returns_original_without_settlement _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_changed_stored_ruling_terms_conflict_without_effect[0-Split ruling] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_changed_stored_ruling_terms_conflict_without_effect[100-Split ruling] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_changed_stored_ruling_terms_conflict_without_effect[49-Split ruling] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_changed_stored_ruling_terms_conflict_without_effect[50-Changed verdict] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[True] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[False] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[None] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50.0] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[-1] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[101] _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_malformed_other_ruling_fails_shape_validation_without_effect _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_ ERROR at setup of test_other_ruling_preserves_status_precedence_and_stored_terms _
+tests/unit/test_mp04_ruling_replay.py:119: in stored_ruling
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:253: in record_ruling
+    finalized = await complete_bank_operation(
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+=================================== FAILURES ===================================
+________________ TestBidding.test_bid_03_bid_on_cancelled_task _________________
+tests/unit/routers/test_bids.py:86: in test_bid_03_bid_on_cancelled_task
+    assert cancel_resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:20", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-6f8c981f-f455-42ef-b547-ece80b6c7b38/cancel"}}
+_______ TestBidAcceptance.test_accept_at_acceptance_deadline_is_rejected _______
+tests/unit/routers/test_bids.py:878: in test_accept_at_acceptance_deadline_is_rejected
+    assert task.json()["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 08:24:27", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-10a5e965-bde3-469b-b333-056b2e3d9bc5/bids/bid-60bf6d3d-93e7-4d09-9ab0-8469fffffd68/accept"}}
+{"timestamp": "2026-10-18 08:24:27", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-10a5e965-bde3-469b-b333-056b2e3d9bc5", "command": "expire_acceptance", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+___________________ TestRuling.test_platform_records_ruling ____________________
+tests/unit/routers/test_disputes.py:318: in test_platform_records_ruling
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:30", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-39783c95-54a7-48d0-9e74-750caa7d74b2/ruling"}}
+_______________ TestRuling.test_worker_pct_zero_full_poster_win ________________
+tests/unit/routers/test_disputes.py:409: in test_worker_pct_zero_full_poster_win
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:31", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-3d4e12c8-cbda-4e92-aea7-90610ffb09d3/ruling"}}
+________________ TestRuling.test_worker_pct_100_full_worker_win ________________
+tests/unit/routers/test_disputes.py:440: in test_worker_pct_100_full_worker_win
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:31", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-a667132d-7357-4974-bcfe-c29c4782d796/ruling"}}
+_____________________ TestRuling.test_worker_pct_50_split ______________________
+tests/unit/routers/test_disputes.py:471: in test_worker_pct_50_split
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:31", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-efe06f62-99dc-464f-9910-24544ebc6223/ruling"}}
+______________ TestRuling.test_ruling_summary_stored_in_response _______________
+tests/unit/routers/test_disputes.py:543: in test_ruling_summary_stored_in_response
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:32", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-033dbb2a-e79f-41f5-b92d-32d9e32949c7/ruling"}}
+___________ TestRuling.test_ruling_sets_ruled_at_worker_pct_summary ____________
+tests/unit/routers/test_disputes.py:572: in test_ruling_sets_ruled_at_worker_pct_summary
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:32", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-b4212604-be69-4c89-a3e8-465c9867d6d0/ruling"}}
+___________ test_open_task_with_bids_expires_at_acceptance_deadline ____________
+tests/unit/routers/test_expiry_with_bids.py:68: in test_open_task_with_bids_expires_at_acceptance_deadline
+    assert body["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 08:25:33", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-247d0233-b219-4667-9985-6ee0b669e6dd", "command": "expire_acceptance", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+_________ test_expiry_with_bids_releases_escrow_to_poster_exactly_once _________
+tests/unit/routers/test_expiry_with_bids.py:90: in test_expiry_with_bids_releases_escrow_to_poster_exactly_once
+    assert first.json()["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 08:25:34", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-7200c609-3842-4718-9e68-b6950e728e85", "command": "expire_acceptance", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+________________ test_expiry_with_bids_emits_task_expired_event ________________
+tests/unit/routers/test_expiry_with_bids.py:133: in test_expiry_with_bids_emits_task_expired_event
+    assert response.json()["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 08:25:34", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-a9821027-f3b3-4fc3-b9ef-fab4d1350ce5", "command": "expire_acceptance", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+_______________________ test_zero_bid_expiry_still_works _______________________
+tests/unit/routers/test_expiry_with_bids.py:160: in test_zero_bid_expiry_still_works
+    assert response.json()["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:34", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-4a8e7f6f-0fdf-44b7-b7aa-19b2250e4e1b", "command": "expire_bidding", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+______________________ TestLifecycle.test_full_happy_path ______________________
+tests/unit/routers/test_lifecycle.py:163: in test_full_happy_path
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:37", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-55a66eb0-859d-4ec8-8270-410d8a66cfe4/approve"}}
+_______________________ TestLifecycle.test_dispute_flow ________________________
+tests/unit/routers/test_lifecycle.py:237: in test_dispute_flow
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:37", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-a6be76e2-59ec-40c4-990a-2e1380f6d140/ruling"}}
+__________________ TestLifecycle.test_bidding_deadline_expiry __________________
+tests/unit/routers/test_lifecycle.py:278: in test_bidding_deadline_expiry
+    assert body["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-db157387-3e0f-4a8e-9243-f99b3466e47a", "command": "expire_bidding", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+_________________ TestLifecycle.test_execution_deadline_expiry _________________
+tests/unit/routers/test_lifecycle.py:330: in test_execution_deadline_expiry
+    assert body["status"] == "expired"
+E   AssertionError: assert 'accepted' == 'expired'
+E     
+E     - expired
+E     + accepted
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-cae46021-4737-4afa-9f62-e45346508792", "command": "expire_execution", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+_______________ TestLifecycle.test_review_deadline_auto_approves _______________
+tests/unit/routers/test_lifecycle.py:389: in test_review_deadline_auto_approves
+    assert body["status"] == "approved"
+E   AssertionError: assert 'submitted' == 'approved'
+E     
+E     - approved
+E     + submitted
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-a8995c98-282e-4b45-8385-be69b10bc4cd", "command": "auto_approve", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+_________________ TestLifecycle.test_expired_tasks_in_listing __________________
+tests/unit/routers/test_lifecycle.py:432: in test_expired_tasks_in_listing
+    assert matching[0]["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-a8dc78dd-16c1-43e1-949e-d848c0b05ddf", "command": "expire_bidding", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+________________ TestLifecycle.test_cannot_bid_on_expired_task _________________
+tests/unit/routers/test_lifecycle.py:471: in test_cannot_bid_on_expired_task
+    assert expired.json()["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-78258d83-4e8e-4347-bfd4-e4de61c3d24a/bids"}}
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-78258d83-4e8e-4347-bfd4-e4de61c3d24a", "command": "expire_bidding", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+____________ TestLifecycle.test_cannot_submit_on_expired_execution _____________
+tests/unit/routers/test_lifecycle.py:530: in test_cannot_submit_on_expired_execution
+    assert expired.json()["status"] == "expired"
+E   AssertionError: assert 'accepted' == 'expired'
+E     
+E     - expired
+E     + accepted
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-123e36ce-7096-4ac9-816e-f347da0fad25/submit"}}
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-123e36ce-7096-4ac9-816e-f347da0fad25", "command": "expire_execution", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+___________ TestLifecycle.test_terminal_status_blocks_all_mutations ____________
+tests/unit/routers/test_lifecycle.py:559: in test_terminal_status_blocks_all_mutations
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:38", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-671e049b-784b-4228-aecd-5e3dd5a71f5a/approve"}}
+_________ TestLifecycle.test_deadline_does_not_affect_terminal_states __________
+tests/unit/routers/test_lifecycle.py:626: in test_deadline_does_not_affect_terminal_states
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:00", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-fa5de906-422d-4715-b55f-4eee14c0e7d8/cancel"}}
+___________ TestLifecycle.test_terminal_status_permanent_across_gets ___________
+tests/unit/routers/test_lifecycle.py:675: in test_terminal_status_permanent_across_gets
+    assert resp.json()["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-b32f489d-fce2-4e35-8128-9739cdc19fea", "command": "expire_bidding", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+_______________ TestLifecycle.test_review_period_race_first_wins _______________
+tests/unit/routers/test_lifecycle.py:727: in test_review_period_race_first_wins
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:39", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-6bf91d30-a5d9-422f-82fc-12542b68a0b7/approve"}}
+___________ test_router_approval_has_the_matching_persisted_receipt ____________
+tests/unit/routers/test_mp07_router_storage.py:45: in test_router_approval_has_the_matching_persisted_receipt
+    assert response.status_code == 200, response.text
+E   AssertionError: {"error":"effect_evidence_conflict","message":"Persisted effect evidence contradicts the claimed task operation","details":{"operation_id":"op-7f1ed30f-1a13-4710-82b2-c72350ac76d3"}}
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:39", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-aee4541f-53bc-44f2-b0f7-54c3c7c92c63/approve"}}
+_ TestErrorPrecedence.test_command_shape_and_task_state_are_both_validated[-400-invalid_reason] _
+tests/unit/routers/test_security.py:265: in test_command_shape_and_task_state_are_both_validated
+    assert approve_resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:46", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-83ae13e5-0e63-4738-b56c-c1222dbcd6a6/approve"}}
+_ TestErrorPrecedence.test_command_shape_and_task_state_are_both_validated[A well-formed dispute-409-invalid_status] _
+tests/unit/routers/test_security.py:265: in test_command_shape_and_task_state_are_both_validated
+    assert approve_resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:46", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-c4d96c32-b07a-4454-b7fb-b9b5c97317fc/approve"}}
+____ TestDeliverableSubmission.test_sub_08_after_execution_deadline_expired ____
+tests/unit/routers/test_submission.py:290: in test_sub_08_after_execution_deadline_expired
+    assert expired.json()["status"] == "expired"
+E   AssertionError: assert 'accepted' == 'expired'
+E     
+E     - expired
+E     + accepted
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-19 08:24:50", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-5f29896f-7562-4c6f-a39b-0b62467f579d/submit"}}
+{"timestamp": "2026-10-19 08:24:50", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-5f29896f-7562-4c6f-a39b-0b62467f579d", "command": "expire_execution", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+_____________ TestApproval.test_app_01_poster_approves_deliverable _____________
+tests/unit/routers/test_submission.py:345: in test_app_01_poster_approves_deliverable
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:50", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-c4bfee4d-56dd-4baf-a75d-410d022e9564/approve"}}
+__________ TestApproval.test_app_04_approve_releases_escrow_to_worker __________
+tests/unit/routers/test_submission.py:405: in test_app_04_approve_releases_escrow_to_worker
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:51", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-a877c13e-60a1-47ea-9d53-41d53a25cf30/approve"}}
+__________________ TestApproval.test_app_05_sets_approved_at ___________________
+tests/unit/routers/test_submission.py:435: in test_app_05_sets_approved_at
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:51", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-b3392b11-1169-4c95-905a-cc06edfdcc56/approve"}}
+____________ TestApproval.test_app_08_review_deadline_auto_approval ____________
+tests/unit/routers/test_submission.py:511: in test_app_08_review_deadline_auto_approval
+    assert data["status"] == "approved"
+E   AssertionError: assert 'submitted' == 'approved'
+E     
+E     - approved
+E     + submitted
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-19 08:24:52", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-32fd6433-603d-4790-a29e-8423e644d1a6", "command": "auto_approve", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+_________ TestBidListingGaps.test_bl05_bids_public_for_cancelled_task __________
+tests/unit/routers/test_t072_bids_gaps.py:84: in test_bl05_bids_public_for_cancelled_task
+    assert cancel_resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:52", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-68224c50-fc4c-4988-94ab-f8beaae271de/cancel"}}
+__________ TestBidListingGaps.test_bl06_bids_public_for_expired_task ___________
+tests/unit/routers/test_t072_bids_gaps.py:119: in test_bl06_bids_public_for_expired_task
+    assert resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 01:00:01", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-0d808357-79af-414f-9040-68a30c0d3ea6", "command": "expire_acceptance", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+{"timestamp": "2025-01-01 01:00:01", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_jws", "status_code": 400, "path": "/tasks/t-0d808357-79af-414f-9040-68a30c0d3ea6/bids"}}
+_ TestHealthStatusBreakdownGap.test_health04_tasks_by_status_reflects_actual_state _
+tests/unit/routers/test_t072_health_gaps.py:48: in test_health04_tasks_by_status_reflects_actual_state
+    assert cancel_resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:54", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-1d5fa67a-c94f-46a4-8193-5562d2f40a22/cancel"}}
+____________ TestTaskQueryGaps.test_tq10_combined_filters_and_logic ____________
+tests/unit/routers/test_t072_tasks_gaps.py:249: in test_tq10_combined_filters_and_logic
+    assert cancel_resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:24:56", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-88c87aa4-a614-4112-807c-613fd5c006cf/cancel"}}
+__________________ TestTaskQueries.test_tq07_filter_by_status __________________
+tests/unit/routers/test_tasks.py:1052: in test_tq07_filter_by_status
+    assert cancel_resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:11", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-c33e5e16-df3b-4b77-9b35-95c85c58c44c/cancel"}}
+___________ TestTaskCancellation.test_can01_poster_cancels_open_task ___________
+tests/unit/routers/test_tasks.py:1191: in test_can01_poster_cancels_open_task
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:12", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-dec61eb0-30d3-4521-8845-f25959235c04/cancel"}}
+____________ TestTaskCancellation.test_can02_cancel_releases_escrow ____________
+tests/unit/routers/test_tasks.py:1219: in test_can02_cancel_releases_escrow
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:13", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-4830e8f4-d407-479b-bfaa-c3f739848bc0/cancel"}}
+___________ TestTaskCancellation.test_can05_cancel_already_cancelled ___________
+tests/unit/routers/test_tasks.py:1321: in test_can05_cancel_already_cancelled
+    assert resp1.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:13", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-db0865d5-d9f7-495b-b270-4356c6dce517/cancel"}}
+_____ TestTaskCancellation.test_can09_cancel_before_short_bidding_deadline _____
+tests/unit/routers/test_tasks.py:1432: in test_can09_cancel_before_short_bidding_deadline
+    assert response.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 12:00:00", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-5a25f98d-9963-4b3c-af97-fdcf2123fcf6/cancel"}}
+________________ test_record_ruling_succeeds_when_identity_down ________________
+tests/unit/routers/test_two_tier_ruling.py:66: in test_record_ruling_succeeds_when_identity_down
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:15", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-7a5d67c6-c936-4e25-b29b-68e258a7139d/ruling"}}
+_______________ test_identical_ruling_id_rerecord_is_idempotent ________________
+tests/unit/routers/test_wp06_record_ruling_idempotent.py:97: in test_identical_ruling_id_rerecord_is_idempotent
+    assert first.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:15", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-69021783-7811-4b50-a468-71cc549f5f22/ruling"}}
+_______________ test_different_ruling_id_on_ruled_task_conflicts _______________
+tests/unit/routers/test_wp06_record_ruling_idempotent.py:151: in test_different_ruling_id_on_ruled_task_conflicts
+    assert first.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:15", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-96dd39b9-3396-4714-9564-14b9dd275302/ruling"}}
+___ test_changed_ruling_terms_cannot_reuse_completed_operation[worker_pct-0] ___
+tests/unit/routers/test_wp06_record_ruling_idempotent.py:191: in test_changed_ruling_terms_cannot_reuse_completed_operation
+    assert first.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:16", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-2562be8c-5e0d-4349-8cfa-9136cf220410/ruling"}}
+__ test_changed_ruling_terms_cannot_reuse_completed_operation[worker_pct-49] ___
+tests/unit/routers/test_wp06_record_ruling_idempotent.py:191: in test_changed_ruling_terms_cannot_reuse_completed_operation
+    assert first.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:16", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-bd2dc456-ce6b-4b18-98f5-34ed2313e917/ruling"}}
+__ test_changed_ruling_terms_cannot_reuse_completed_operation[worker_pct-100] __
+tests/unit/routers/test_wp06_record_ruling_idempotent.py:191: in test_changed_ruling_terms_cannot_reuse_completed_operation
+    assert first.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:16", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-42495500-d0df-43b6-8eaf-2ef99dec9c2a/ruling"}}
+_ test_changed_ruling_terms_cannot_reuse_completed_operation[ruling_summary-Changed verdict] _
+tests/unit/routers/test_wp06_record_ruling_idempotent.py:191: in test_changed_ruling_terms_cannot_reuse_completed_operation
+    assert first.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:16", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-14aa3ebb-7e67-49f7-8717-0a22ecf3c5cb/ruling"}}
+_ test_changed_ruling_terms_cannot_reuse_completed_operation[ruling_id-clm-changed-ruling] _
+tests/unit/routers/test_wp06_record_ruling_idempotent.py:191: in test_changed_ruling_terms_cannot_reuse_completed_operation
+    assert first.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 07:25:17", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/tasks/t-23cc817d-30d5-480e-ab32-8baaf94e6f15/ruling"}}
+________________ test_evaluate_deadline_terminal_status_skipped ________________
+tests/unit/test_deadline_evaluator.py:45: in test_evaluate_deadline_terminal_status_skipped
+    await native_tasks.approve("t-1")
+tests/fakes/native_task_fixture.py:228: in approve
+    result = await complete_bank_operation(self.store, self.escrow, claimed)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_________________ test_evaluate_deadline_open_no_bids_expired __________________
+tests/unit/test_deadline_evaluator.py:63: in test_evaluate_deadline_open_no_bids_expired
+    assert result["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+________________ test_evaluate_deadline_open_with_bids_expires _________________
+tests/unit/test_deadline_evaluator.py:91: in test_evaluate_deadline_open_with_bids_expires
+    assert result["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+_________ test_legacy_timing_contract_keeps_original_acceptance_cutoff _________
+tests/unit/test_deadline_evaluator.py:111: in test_legacy_timing_contract_keeps_original_acceptance_cutoff
+    assert result["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+________________ test_evaluate_deadline_accepted_past_execution ________________
+tests/unit/test_deadline_evaluator.py:128: in test_evaluate_deadline_accepted_past_execution
+    assert result["status"] == "expired"
+E   AssertionError: assert 'accepted' == 'expired'
+E     
+E     - expired
+E     + accepted
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+_________________ test_evaluate_deadline_submitted_past_review _________________
+tests/unit/test_deadline_evaluator.py:151: in test_evaluate_deadline_submitted_past_review
+    assert result["status"] == "approved"
+E   AssertionError: assert 'submitted' == 'approved'
+E     
+E     - approved
+E     + submitted
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+________________ test_evaluate_deadline_retries_pending_escrow _________________
+tests/unit/test_deadline_evaluator.py:196: in test_evaluate_deadline_retries_pending_escrow
+    assert result["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+Automatic task transition did not complete; current state will be re-read
+_________________ test_evaluate_deadlines_batch_processes_all __________________
+tests/unit/test_deadline_evaluator.py:239: in test_evaluate_deadlines_batch_processes_all
+    assert result[0]["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+Automatic task transition did not complete; current state will be re-read
+______________ test_sweep_expires_open_task_without_any_api_read _______________
+tests/unit/test_deadline_sweep.py:53: in test_sweep_expires_open_task_without_any_api_read
+    operation_id = native_tasks.assert_settlement(
+tests/fakes/native_task_fixture.py:326: in assert_settlement
+    assert task["status"] == status
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+__________ test_sweep_visits_accepted_submitted_and_disputed_statuses __________
+tests/unit/test_deadline_sweep.py:85: in test_sweep_visits_accepted_submitted_and_disputed_statuses
+    native_tasks.assert_settlement(
+tests/fakes/native_task_fixture.py:326: in assert_settlement
+    assert task["status"] == status
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+Automatic task transition did not complete; current state will be re-read
+Automatic task transition did not complete; current state will be re-read
+________ test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation _________
+tests/unit/test_deadline_sweep.py:159: in test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation
+    operation_id = native_tasks.assert_settlement(
+tests/fakes/native_task_fixture.py:326: in assert_settlement
+    assert task["status"] == status
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+Automatic task transition did not complete; current state will be re-read
+_________ test_sweep_survives_a_failing_task_and_continues_with_others _________
+tests/unit/test_deadline_sweep.py:198: in test_sweep_survives_a_failing_task_and_continues_with_others
+    native_tasks.assert_settlement(
+tests/fakes/native_task_fixture.py:326: in assert_settlement
+    assert task["status"] == status
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError
+----------------------------- Captured stderr call -----------------------------
+Deadline sweep failed for task; will retry next interval
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/services/deadline_evaluator.py", line 287, in run_periodic_sweep
+    await self.evaluate_deadline(task)
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_deadline_sweep.py", line 193, in _flaky_evaluate
+    raise RuntimeError("simulated evaluation failure")
+RuntimeError: simulated evaluation failure
+Automatic task transition did not complete; current state will be re-read
+__________ test_claimed_expiry_completes_only_after_persisted_release __________
+tests/unit/test_escrow_coordinator.py:226: in test_claimed_expiry_completes_only_after_persisted_release
+    result = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_____________ test_pending_retry_completes_the_same_owner[expiry] ______________
+tests/unit/test_escrow_coordinator.py:302: in test_pending_retry_completes_the_same_owner
+    completed = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+____________ test_pending_retry_completes_the_same_owner[approval] _____________
+tests/unit/test_escrow_coordinator.py:302: in test_pending_retry_completes_the_same_owner
+    completed = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+__________ test_approval_and_pending_retry_reuse_one_financial_intent __________
+tests/unit/test_mp04_financial_intents.py:186: in test_approval_and_pending_retry_reuse_one_financial_intent
+    await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+________ test_opposing_task_settlements_have_distinct_financial_intents ________
+tests/unit/test_mp04_financial_intents.py:216: in test_opposing_task_settlements_have_distinct_financial_intents
+    await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+____ test_ruling_release_and_split_retain_the_claimed_operation_identity[0] ____
+tests/unit/test_mp04_financial_intents.py:333: in test_ruling_release_and_split_retain_the_claimed_operation_identity
+    completed = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+___ test_ruling_release_and_split_retain_the_claimed_operation_identity[50] ____
+tests/unit/test_mp04_financial_intents.py:333: in test_ruling_release_and_split_retain_the_claimed_operation_identity
+    completed = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+___ test_ruling_release_and_split_retain_the_claimed_operation_identity[100] ___
+tests/unit/test_mp04_financial_intents.py:333: in test_ruling_release_and_split_retain_the_claimed_operation_identity
+    completed = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:177: in complete_bank_operation
+    return _finalize_same_operation(store, envelope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:134: in _finalize_same_operation
+    finalized = store.finalize_task_operation(envelope["operation_id"])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+_______________ test_fractional_deadline_expires_at_exact_cutoff _______________
+tests/unit/test_mp07_deadline_precision.py:146: in test_fractional_deadline_expires_at_exact_cutoff
+    assert result["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stderr call -----------------------------
+Automatic task transition did not complete; current state will be re-read
+__________ test_native_finalization_requires_persisted_bank_evidence ___________
+tests/unit/test_mp07_gateway_store_parity.py:294: in test_native_finalization_requires_persisted_bank_evidence
+    completed = store.finalize_task_operation("op-00000000-0000-4000-8000-000000000006")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_db_client.py:191: in finalize_task_operation
+    self._raise_gateway_error(response)
+src/task_board_service/services/task_db_client.py:167: in _raise_gateway_error
+    raise ServiceError(error.error, error.message, response.status_code, error.details)
+E   service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_bids.py::TestBidding::test_bid_03_bid_on_cancelled_task - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_bids.py::TestBidAcceptance::test_accept_at_acceptance_deadline_is_rejected - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_platform_records_ruling - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_worker_pct_zero_full_poster_win - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_worker_pct_100_full_worker_win - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_worker_pct_50_split - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_ruling_summary_stored_in_response - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_ruling_sets_ruled_at_worker_pct_summary - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_expiry_with_bids.py::test_open_task_with_bids_expires_at_acceptance_deadline - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/routers/test_expiry_with_bids.py::test_expiry_with_bids_releases_escrow_to_poster_exactly_once - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/routers/test_expiry_with_bids.py::test_expiry_with_bids_emits_task_expired_event - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/routers/test_expiry_with_bids.py::test_zero_bid_expiry_still_works - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_full_happy_path - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_dispute_flow - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_bidding_deadline_expiry - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_execution_deadline_expiry - AssertionError: assert 'accepted' == 'expired'
+  
+  - expired
+  + accepted
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_review_deadline_auto_approves - AssertionError: assert 'submitted' == 'approved'
+  
+  - approved
+  + submitted
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_expired_tasks_in_listing - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_cannot_bid_on_expired_task - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_cannot_submit_on_expired_execution - AssertionError: assert 'accepted' == 'expired'
+  
+  - expired
+  + accepted
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_terminal_status_blocks_all_mutations - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_deadline_does_not_affect_terminal_states - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_terminal_status_permanent_across_gets - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_review_period_race_first_wins - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_mp07_router_storage.py::test_router_approval_has_the_matching_persisted_receipt - AssertionError: {"error":"effect_evidence_conflict","message":"Persisted effect evidence contradicts the claimed task operation","details":{"operation_id":"op-7f1ed30f-1a13-4710-82b2-c72350ac76d3"}}
+assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_security.py::TestErrorPrecedence::test_command_shape_and_task_state_are_both_validated[-400-invalid_reason] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_security.py::TestErrorPrecedence::test_command_shape_and_task_state_are_both_validated[A well-formed dispute-409-invalid_status] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_08_after_execution_deadline_expired - AssertionError: assert 'accepted' == 'expired'
+  
+  - expired
+  + accepted
+FAILED tests/unit/routers/test_submission.py::TestApproval::test_app_01_poster_approves_deliverable - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_submission.py::TestApproval::test_app_04_approve_releases_escrow_to_worker - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_submission.py::TestApproval::test_app_05_sets_approved_at - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_submission.py::TestApproval::test_app_08_review_deadline_auto_approval - AssertionError: assert 'submitted' == 'approved'
+  
+  - approved
+  + submitted
+FAILED tests/unit/routers/test_t072_bids_gaps.py::TestBidListingGaps::test_bl05_bids_public_for_cancelled_task - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_t072_bids_gaps.py::TestBidListingGaps::test_bl06_bids_public_for_expired_task - assert 400 == 200
+ +  where 400 = <Response [400 Bad Request]>.status_code
+FAILED tests/unit/routers/test_t072_health_gaps.py::TestHealthStatusBreakdownGap::test_health04_tasks_by_status_reflects_actual_state - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_t072_tasks_gaps.py::TestTaskQueryGaps::test_tq10_combined_filters_and_logic - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq07_filter_by_status - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can01_poster_cancels_open_task - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can02_cancel_releases_escrow - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can05_cancel_already_cancelled - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can09_cancel_before_short_bidding_deadline - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_two_tier_ruling.py::test_record_ruling_succeeds_when_identity_down - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_identical_ruling_id_rerecord_is_idempotent - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_different_ruling_id_on_ruled_task_conflicts - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_changed_ruling_terms_cannot_reuse_completed_operation[worker_pct-0] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_changed_ruling_terms_cannot_reuse_completed_operation[worker_pct-49] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_changed_ruling_terms_cannot_reuse_completed_operation[worker_pct-100] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_changed_ruling_terms_cannot_reuse_completed_operation[ruling_summary-Changed verdict] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_changed_ruling_terms_cannot_reuse_completed_operation[ruling_id-clm-changed-ruling] - assert 409 == 200
+ +  where 409 = <Response [409 Conflict]>.status_code
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_terminal_status_skipped - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_open_no_bids_expired - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_open_with_bids_expires - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/test_deadline_evaluator.py::test_legacy_timing_contract_keeps_original_acceptance_cutoff - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_accepted_past_execution - AssertionError: assert 'accepted' == 'expired'
+  
+  - expired
+  + accepted
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_submitted_past_review - AssertionError: assert 'submitted' == 'approved'
+  
+  - approved
+  + submitted
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_retries_pending_escrow - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/test_deadline_evaluator.py::test_evaluate_deadlines_batch_processes_all - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/test_deadline_sweep.py::test_sweep_expires_open_task_without_any_api_read - AssertionError
+FAILED tests/unit/test_deadline_sweep.py::test_sweep_visits_accepted_submitted_and_disputed_statuses - AssertionError
+FAILED tests/unit/test_deadline_sweep.py::test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation - AssertionError
+FAILED tests/unit/test_deadline_sweep.py::test_sweep_survives_a_failing_task_and_continues_with_others - AssertionError
+FAILED tests/unit/test_escrow_coordinator.py::test_claimed_expiry_completes_only_after_persisted_release - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+FAILED tests/unit/test_escrow_coordinator.py::test_pending_retry_completes_the_same_owner[expiry] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+FAILED tests/unit/test_escrow_coordinator.py::test_pending_retry_completes_the_same_owner[approval] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+FAILED tests/unit/test_mp04_financial_intents.py::test_approval_and_pending_retry_reuse_one_financial_intent - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+FAILED tests/unit/test_mp04_financial_intents.py::test_opposing_task_settlements_have_distinct_financial_intents - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+FAILED tests/unit/test_mp04_financial_intents.py::test_ruling_release_and_split_retain_the_claimed_operation_identity[0] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+FAILED tests/unit/test_mp04_financial_intents.py::test_ruling_release_and_split_retain_the_claimed_operation_identity[50] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+FAILED tests/unit/test_mp04_financial_intents.py::test_ruling_release_and_split_retain_the_claimed_operation_identity[100] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+FAILED tests/unit/test_mp07_deadline_precision.py::test_fractional_deadline_expires_at_exact_cutoff - AssertionError: assert 'open' == 'expired'
+  
+  - expired
+  + open
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_native_finalization_requires_persisted_bank_evidence - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_identical_stored_ruling_replay_returns_original_without_settlement - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[0-Split ruling] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[100-Split ruling] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[49-Split ruling] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[50-Changed verdict] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[True] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[False] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[None] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50.0] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[-1] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[101] - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_malformed_other_ruling_fails_shape_validation_without_effect - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+ERROR tests/unit/test_mp04_ruling_replay.py::test_other_ruling_preserves_status_precedence_and_stored_terms - service_commons.exceptions.ServiceError: Persisted effect evidence contradicts the claimed task operation
+============= 71 failed, 557 passed, 14 errors in 87.67s (0:01:27) =============
+error: recipe `test-unit` failed on line 303 with exit code 1
+error: recipe `ci-quiet` failed with exit code 1

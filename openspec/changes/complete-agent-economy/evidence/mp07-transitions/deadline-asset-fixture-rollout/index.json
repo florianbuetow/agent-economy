@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-18T03:47:55.847616+02:00",
+  "artifact_sha256": {
+    "agent-economy-mp07-asset-precision-diff.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agent-economy-mp07-asset-precision-final-diff.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agent-economy-mp07-asset-precision-final-format.log": "3bc53bf3e981a98a34a852e175bf9b77af841edea74fca595d9aedcbaf9a4938",
+    "agent-economy-mp07-asset-precision-final-repeat.log": "939d7c54c19bb8d632e84b7dab3c8b55d1353928a5976d78f08ac8842cb3505f",
+    "agent-economy-mp07-asset-precision-final-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-asset-precision-final.log": "d707a49c8e5c5bb6a9a9f60d0f8318c88884a594b25c1dfcafae5f9195991f1c",
+    "agent-economy-mp07-asset-precision-format-apply.log": "96a977f329ec3c59092d40e041a019b49dcf03ca04055e177aa0ccb8c27234df",
+    "agent-economy-mp07-asset-precision-format.log": "b11b9bb92a2529bb29ce1991fa498d7b53e963f6682bfb090e469eb4be41aaa4",
+    "agent-economy-mp07-asset-precision-intermediate-2.log": "e28588c649ed742a57509261b4867d2e9107a348bfc2073e3655abaffd4afc31",
+    "agent-economy-mp07-asset-precision-intermediate.log": "f29b3531214bcbc12c969460d64c8463db44b128816f12122204d3fafef8d025",
+    "agent-economy-mp07-asset-precision-parent-green.log": "e1b0484add274a1e7c4a4f2bdade9fb9648449d27db5243d62edb977f896ee62",
+    "agent-economy-mp07-asset-precision-ruff.log": "93048e06675f25392eca952da3860c4236d97caaaa1a9f0795572ee96cbd0bdf",
+    "agent-economy-mp07-asset-precision-source-sha256.log": "0d646069ceaf04891f65951a8bd9349402fcb83a89b817109002cbf18ea11d9d",
+    "agent-economy-mp07-asset-precision-untouched.log": "f6ccf08cd7dd236b9fcbec4d4d9d3bf7ee70ac6a0b60ba11de84f49f36088183",
+    "agent-economy-mp07-deadline-fixtures-before.log": "3f82997f6fd9571f028df37abed1bcafbcf0fc95cff91038b366e09bb20c4930",
+    "agent-economy-mp07-deadline-fixtures-combined.log": "cbf8f907cdd18f9e25271bc1931c7fce28667f67916a3f7e9f36ee50082b459e",
+    "agent-economy-mp07-deadline-fixtures-evaluator-first.log": "763d8cce66fec1c6e73c4645005b45cc9267a84a261a9cf2a1be92af4787f6da",
+    "agent-economy-mp07-deadline-fixtures-final-green.log": "0743540b53aceab8431875446807f27ec4b8b776a4e3dbef6291fc90f635b2cb",
+    "agent-economy-mp07-deadline-fixtures-final2-green.log": "a99a8ade11cd92b5b41c2ff6c206724ec8c3139ff4a829030e6a57fb80f4f6e3",
+    "agent-economy-mp07-deadline-fixtures-format-final.log": "383df188576f1eee9b833e5e2f7d5d2f4b5a2c3a05e57a27613153e344923a48",
+    "agent-economy-mp07-deadline-fixtures-format-final2.log": "177f260a5645724013185e4b140c7045cc39e56c0c97b120f5cb23599f85f0de",
+    "agent-economy-mp07-deadline-fixtures-format.log": "1dc6a19feae160e87088a6a505f8844ac8bfdaf9001c9c3cc558beceb0f6c9d9",
+    "agent-economy-mp07-deadline-fixtures-mypy-final.log": "71144743c83babea384888a735db0c4daba3d4d7b7942b6839984bd5c21b52bb",
+    "agent-economy-mp07-deadline-fixtures-mypy-final2.log": "71144743c83babea384888a735db0c4daba3d4d7b7942b6839984bd5c21b52bb",
+    "agent-economy-mp07-deadline-fixtures-mypy.log": "cc40d0c14759689aa15d900688b7fb9615676973d88878c7674659d08339a714",
+    "agent-economy-mp07-deadline-fixtures-parent-green.log": "2bc1576c504902479503350a2ee0aff58813ec6399e80e2080a9f782c80bff6c",
+    "agent-economy-mp07-deadline-fixtures-pyright-final.log": "1746613f44bdc2074abb917b436af29f6654d65502e57ac21ea45f0c0ddd5ca1",
+    "agent-economy-mp07-deadline-fixtures-pyright-final2.log": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332",
+    "agent-economy-mp07-deadline-fixtures-pyright.log": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332",
+    "agent-economy-mp07-deadline-fixtures-ruff-final.log": "a91e355218d1e4e97f8ac6acb207b0c9d141cc57682b8e19c8c5c679f91ca941",
+    "agent-economy-mp07-deadline-fixtures-ruff-final2.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-deadline-fixtures-ruff.log": "2042ed1ca0f55a613ae1f303dabcf316e04af66586a565166e281908eb6bfed0",
+    "agent-economy-mp07-deadline-fixtures-ruling-first.log": "ba5a27a4f231477517d66f0ab28cdf7c54de9377ce9a443a80e13c55fad7db28",
+    "agent-economy-mp07-deadline-fixtures-sweep-first.log": "0f916d4c9cb91d62900e470f59bd57b2a43ffed75cfa37393a70d107741b93b5"
+  },
+  "source_sha256": {
+    "services/task-board/tests/fakes/native_task_fixture.py": "46a362ef0f723a4e14dc01d69ad43878f4dd944ef629a3c2fb415f12ab6f1e9a",
+    "services/task-board/tests/unit/test_deadline_evaluator.py": "bdbc95ea5dcb2535319905e362b0b701fbbb7608683369f8579efca78ba44518",
+    "services/task-board/tests/unit/test_deadline_sweep.py": "22e655faa0631cc0c9dfa99731b1014189b51a8db6ac1269d7ce3a382a65d341",
+    "services/task-board/tests/unit/test_wp06_ruling_trigger.py": "9677d42956a1dcef9ce2d102d283bb6b3133125916b5f2179c25cea8040a0755",
+    "services/task-board/tests/unit/test_asset_manager.py": "5145cf2e4139b1ea0b9f779daf18a4dea5592d41fce3685e8b12b4dd3a4be598",
+    "services/task-board/tests/unit/test_mp07_deadline_precision.py": "3d3b7d08f19438240d255ef444e11e11f5ae9f4a05c5ef80be9ec9cc638ed5b3",
+    "docs/plans/2026-10-18-mp07-deadline-fixture-reconciliation.md": "9138cc4e0a43f907d71e54bb82769eaf195cd5d98302be5ea85c1b4c76dc9337",
+    "docs/plans/2026-10-18-mp07-asset-precision-reconciliation.md": "f88987892c4de04d944adfc8a7be868e55057ee29f68359d483b5ea93108a0dc"
+  },
+  "run_results": [
+    "Deadline baseline18 failures/2 arithmetic controls: obsolete constructors missing authority. These are fixture errors.",
+    "Deadline39-case author and independent parent groups pass:22 deadline/trigger scenarios plus17 adapter parity cases. The20 old scenarios remain represented with timing-v1 and flag-only controls added.",
+    "Asset/precision baseline15 passes/3 fixture failures; intermediate3 mismatches used the wrong list/read projection shapes. Final author and parent18 pass, preserving13 asset and5 precision cases.",
+    "Overlap proof forces two same-ID deliveries before Bank commit, then asserts one receipt, transaction, event and auditable balance reconciliation. Court trigger mocks prove attempts/retry only."
+  ],
+  "independent_review": {
+    "agent": "/root/mp07_board_rollout_review",
+    "verdict": "APPROVE deadline fixtures and asset/precision adoption"
+  },
+  "limitations": [
+    "Stored timing-v1 control is explicitly fixture history, not a migration execution claim.",
+    "Three remaining dictionary-fake consumers and general caller/recovery work remain.",
+    "No root gate or MP07 closure."
+  ]
+}

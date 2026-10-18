@@ -1,0 +1,20 @@
+{
+  "claims": {
+    "parent": 33457,
+    "exit_code": 0,
+    "passed": 49,
+    "warnings": 1,
+    "scope": "Full MP06 schema test file. Current runtime fixturesv3/futurev4; historicalv1 semantic/rollback assertions retained."
+  },
+  "review": "APPROVE by /root/mp07_board_rollout_review after archived-diff inspection; no substantive findings. Wider Gateway failures remain open.",
+  "artifacts": {
+    "agent-economy-mp07-gateway-pragma-fixture-green.log": "9994af4c8a5c96d7ee2683fdf5d48152f92b2a787ee730058d706cdfbb4631d0",
+    "baseline/test_mp06_schema.py": "4bf3e4b437525521731358b69a5be1a433bbe51acea411b2e01f7749256cfbd5",
+    "agent-economy-mp07-gateway-three-fixtures-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-gateway-three-fixtures-format.log": "177f260a5645724013185e4b140c7045cc39e56c0c97b120f5cb23599f85f0de"
+  },
+  "sources": {
+    "services/db-gateway/tests/unit/test_mp06_schema.py": "258f66864e7560d652b030a2da0d8f457baf83232ec1732d8fc8eb2fa11a4d28",
+    "docs/plans/2026-10-18-mp07-gateway-pragma-fixture-reconciliation.md": "9a5aba54dd20eb775b3d62ab613b7fcd63a59f2a5fdd0ab79ab776b7c1440e1b"
+  }
+}

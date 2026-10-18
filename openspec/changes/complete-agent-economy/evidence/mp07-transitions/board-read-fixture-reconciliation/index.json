@@ -1,0 +1,27 @@
+{
+  "baseline": {
+    "handle": 76149,
+    "exit_code": 1,
+    "failed": 14,
+    "passed": 9
+  },
+  "parent_green": {
+    "handle": 44028,
+    "exit_code": 0,
+    "combined_passed": 51,
+    "warnings": 1
+  },
+  "review": "APPROVE by /root/mp07_board_rollout_review: all original read/filter/pagination/count/notfound assertions unchanged; realnative bid/accept histories and validfixturetiming, noSQLbypass; clock afterpublication/beforecutoff distinctJWTclock.",
+  "sources": {
+    "services/db-gateway/tests/unit/routers/test_board_reads.py": "566b0debdf98019b5f04b765582564af1058bca4b617a71dba3ea84255559908",
+    "services/db-gateway/tests/unit/routers/test_t072_board_reads_gaps.py": "73787ba8e1e944d318ff2750caa57053d470cd6e2f55ab22bb180e3439458be4",
+    "docs/plans/2026-10-18-mp07-board-read-fixture-reconciliation.md": "ffb61173c8692963cee898db60365146a393ec3e183f3b261ae54494817f984d"
+  },
+  "artifacts": {
+    "agent-economy-mp07-board-read-fixture-baseline.log": "679854a982376e2ebf57af509e87feb458615993949cb65dda96083af769c794",
+    "agent-economy-mp07-board-read-fixture-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-gateway-read-fixtures-parent-combined.log": "5b34ebf26c9927b105634bbdd99f4174b170849ff239e969dcd2218b37203931",
+    "baseline/test_board_reads.py": "ac3493165e7f26180801541e70ca66b2b75948014705b3d207a21505c39b06a9",
+    "baseline/test_t072_board_reads_gaps.py": "3204f9aad5ab1cbc110340cb633e5f2f63771888d89f469c9671beb3cedf4e35"
+  }
+}

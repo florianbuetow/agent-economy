@@ -1,0 +1,47 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+___ test_generated_agent_journals_have_distinct_owned_paths_and_environment ____
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2707/test_generated_agent_journals_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c054180>
+
+    def test_generated_agent_journals_have_distinct_owned_paths_and_environment(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        original_loader = isolated_test_runtime._load_yaml
+        ordinary_state = tmp_path / "ordinary-state"
+        source_settings = {
+            "environment_id": "ordinary-environment",
+            "directory": str(ordinary_state),
+            "diagnostic_limit": 11,
+            "max_record_bytes": 98304,
+        }
+    
+        def load_source_config(path: Path) -> dict[str, Any]:
+            config = original_loader(path)
+            if path == REPO_ROOT / "agents/config.yaml":
+                config["runtime_state"] = dict(source_settings)
+            return config
+    
+        monkeypatch.setattr(isolated_test_runtime, "_load_yaml", load_source_config)
+        observed: list[tuple[Path, str]] = []
+        with ExitStack() as cleanup:
+            for _ in range(2):
+                runtime = IsolatedRuntime.create(
+                    repo_root=REPO_ROOT, artifacts_root=tmp_path, services=("db-gateway", "identity")
+                )
+                cleanup.callback(runtime.stop)
+                config = yaml.safe_load(runtime.agent_config_path.read_text(encoding="utf-8"))
+                state = config["runtime_state"]
+                directory = Path(state["directory"])
+                assert directory.is_absolute()
+>               assert directory.is_relative_to(runtime.run_dir)
+E               AssertionError: assert False
+E                +  where False = is_relative_to(PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2707/test_generated_agent_journals_0/runtime-43e3507a753243e2b160ac3017deeb13-593rf45_'))
+E                +    where is_relative_to = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2707/test_generated_agent_journals_0/ordinary-state').is_relative_to
+E                +    and   PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2707/test_generated_agent_journals_0/runtime-43e3507a753243e2b160ac3017deeb13-593rf45_') = IsolatedRuntime(repo_root=PosixPath('/Users/flo/Developer/github/agent-economy'), run_id='43e3507a753243e2b160ac3017de...dr=('127.0.0.1', 63349)>)}, _startup_inputs={}, _maintenance_identity=None, _recovery_status={'state': 'not_prepared'}).run_dir
+
+../../tests/runtime/test_mp07_agent_state_isolation.py:48: AssertionError
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_mp07_agent_state_isolation.py::test_generated_agent_journals_have_distinct_owned_paths_and_environment
+1 failed in 0.10s

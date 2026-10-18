@@ -24,7 +24,15 @@ async def test_task_post_emits_separately_bound_strict_tokens(sample_config) -> 
     await agent._http.aclose()
     agent._http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     try:
-        await agent.post_task("Title", "Spec", 25, 10, 20, 30)
+        await agent.post_task(
+            "Title",
+            "Spec",
+            25,
+            10,
+            20,
+            30,
+            acceptance_window_seconds=40,
+        )
     finally:
         await agent.close()
 
@@ -41,6 +49,7 @@ async def test_task_post_emits_separately_bound_strict_tokens(sample_config) -> 
         "resource": "POST /tasks",
     }
     assert task.payload["action"] == "create_task"
+    assert task.payload["acceptance_window_seconds"] == 40
     assert (escrow.header.aud, escrow.header.resource) == (
         "central-bank",
         "POST /escrow/lock",

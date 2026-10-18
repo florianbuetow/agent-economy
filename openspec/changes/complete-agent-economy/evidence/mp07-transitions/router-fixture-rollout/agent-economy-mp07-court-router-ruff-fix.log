@@ -1,0 +1,78 @@
+E501 Line too long (101 > 100)
+  --> tests/unit/routers/test_t072_disputes_gaps.py:52:101
+   |
+50 |         }
+51 |         token = make_jws_token(
+52 |             platform_keypair[0], platform_agent_id, payload, resource=f"POST /tasks/{task_id}/ruling"
+   |                                                                                                     ^
+53 |         )
+54 |         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
+   |
+
+E501 Line too long (101 > 100)
+  --> tests/unit/routers/test_t072_disputes_gaps.py:83:101
+   |
+81 |         }
+82 |         token = make_jws_token(
+83 |             platform_keypair[0], platform_agent_id, payload, resource=f"POST /tasks/{task_id}/ruling"
+   |                                                                                                     ^
+84 |         )
+85 |         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
+   |
+
+E501 Line too long (101 > 100)
+   --> tests/unit/routers/test_t072_disputes_gaps.py:115:101
+    |
+113 |         }
+114 |         token = make_jws_token(
+115 |             platform_keypair[0], platform_agent_id, payload, resource=f"POST /tasks/{task_id}/ruling"
+    |                                                                                                     ^
+116 |         )
+117 |         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
+    |
+
+E501 Line too long (102 > 100)
+  --> tests/unit/routers/test_wp06_record_ruling_idempotent.py:43:101
+   |
+41 |     connection = store.writer.connection
+42 |     return (
+43 |         tuple(connection.execute("SELECT * FROM board_tasks WHERE task_id=?", (task_id,)).fetchone()),
+   |                                                                                                     ^^
+44 |         tuple(tuple(row) for row in connection.execute(
+45 |             "SELECT * FROM board_task_operations WHERE task_id=? ORDER BY operation_id", (task_id,)
+   |
+
+E501 Line too long (105 > 100)
+  --> tests/unit/routers/test_wp06_record_ruling_idempotent.py:48:101
+   |
+46 |         )),
+47 |         tuple(tuple(row) for row in connection.execute(
+48 |             "SELECT * FROM bank_operation_receipts WHERE escrow_id=? ORDER BY operation_id", (escrow_id,)
+   |                                                                                                     ^^^^^
+49 |         )),
+50 |         tuple(tuple(row) for row in connection.execute(
+   |
+
+E501 Line too long (101 > 100)
+  --> tests/unit/routers/test_wp06_record_ruling_idempotent.py:90:101
+   |
+88 |     payouts = store.writer.connection.execute(
+89 |         "SELECT account_id,amount FROM bank_transactions "
+90 |         "WHERE reference=? AND type='escrow_release' ORDER BY account_id", (first_body["escrow_id"],)
+   |                                                                                                     ^
+91 |     ).fetchall()
+92 |     assert [tuple(row) for row in payouts] == sorted([(alice_agent_id, 50), (bob_agent_id, 50)])
+   |
+
+E501 Line too long (103 > 100)
+   --> tests/unit/routers/test_wp06_record_ruling_idempotent.py:110:101
+    |
+108 |         client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
+109 |     )
+110 |     first = await _record_ruling(client, platform_keypair, platform_agent_id, _ruling_payload(task_id))
+    |                                                                                                     ^^^
+111 |     assert first.status_code == 200
+112 |     escrow_id = first.json()["escrow_id"]
+    |
+
+Found 10 errors (3 fixed, 7 remaining).

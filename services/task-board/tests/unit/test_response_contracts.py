@@ -26,6 +26,7 @@ from task_board_service.schemas import (
     BidListResponse,
     BidResponse,
     TaskListResponse,
+    TaskMutationResponse,
     TaskResponse,
 )
 
@@ -120,11 +121,11 @@ def test_task_endpoints_wire_response_model(app) -> None:
     assert _route_response_model(app, "/tasks", "POST") is TaskResponse
     assert _route_response_model(app, "/tasks", "GET") is TaskListResponse
     assert _route_response_model(app, "/tasks/{task_id}", "GET") is TaskResponse
-    assert _route_response_model(app, "/tasks/{task_id}/cancel", "POST") is TaskResponse
-    assert _route_response_model(app, "/tasks/{task_id}/submit", "POST") is TaskResponse
-    assert _route_response_model(app, "/tasks/{task_id}/approve", "POST") is TaskResponse
-    assert _route_response_model(app, "/tasks/{task_id}/dispute", "POST") is TaskResponse
-    assert _route_response_model(app, "/tasks/{task_id}/ruling", "POST") is TaskResponse
+    assert _route_response_model(app, "/tasks/{task_id}/cancel", "POST") is TaskMutationResponse
+    assert _route_response_model(app, "/tasks/{task_id}/submit", "POST") is TaskMutationResponse
+    assert _route_response_model(app, "/tasks/{task_id}/approve", "POST") is TaskMutationResponse
+    assert _route_response_model(app, "/tasks/{task_id}/dispute", "POST") is TaskMutationResponse
+    assert _route_response_model(app, "/tasks/{task_id}/ruling", "POST") is TaskMutationResponse
 
 
 @pytest.mark.unit
@@ -132,7 +133,8 @@ def test_bid_endpoints_wire_response_model(app) -> None:
     assert _route_response_model(app, "/tasks/{task_id}/bids", "POST") is BidResponse
     assert _route_response_model(app, "/tasks/{task_id}/bids", "GET") is BidListResponse
     assert (
-        _route_response_model(app, "/tasks/{task_id}/bids/{bid_id}/accept", "POST") is TaskResponse
+        _route_response_model(app, "/tasks/{task_id}/bids/{bid_id}/accept", "POST")
+        is TaskMutationResponse
     )
 
 

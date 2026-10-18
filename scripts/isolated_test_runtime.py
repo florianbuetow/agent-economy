@@ -728,6 +728,9 @@ class IsolatedRuntime:
             "keys_dir": str(self.run_dir / "keys"),
             "roster_path": str(roster_path),
         }
+        runtime_state = _mapping_section(agent_config, "runtime_state")
+        runtime_state["environment_id"] = self.run_id
+        runtime_state["directory"] = str(self.run_dir / "data" / "agent-runtime")
         _mapping_section(agent_config, "task_feeder")["tasks_file"] = str(
             self.run_dir / "data" / "math_tasks.jsonl"
         )
@@ -737,8 +740,14 @@ class IsolatedRuntime:
             self._runtime_gateway_auth()
         )
 
+        source_configs = {
+            service: _load_yaml(self.repo_root / "services" / service / "config.yaml")
+            for service in self.services
+        }
+        _validate_deadline_actor_agreement(source_configs)
+
         for service in self.services:
-            config = _load_yaml(self.repo_root / "services" / service / "config.yaml")
+            config = source_configs[service]
             _mapping_section(config, "server")["port"] = self.ports[service]
             _mapping_section(config, "logging")["directory"] = str(self.run_dir / "logs")
             if service in {"db-gateway", "task-board", "ui"}:
@@ -764,6 +773,9 @@ class IsolatedRuntime:
                 )
             if service == "db-gateway":
                 config["auth"] = gateway_auth
+                _mapping_section(config, "board_authority")["platform_public_key_path"] = str(
+                    self.run_dir / "keys" / "platform.pub"
+                )
                 _mapping_section(config, "recovery")["backup_root"] = str(self.run_dir / "backups")
                 database = _mapping_section(config, "database")
                 database["path"] = str(self.run_dir / "data" / "economy.db")
@@ -1082,6 +1094,37 @@ def _mapping_section(config: dict[str, object], name: str) -> dict[str, object]:
     normalized = {key: item for key, item in value.items() if isinstance(key, str)}
     config[name] = normalized
     return normalized
+
+
+def _canonical_actor(config: dict[str, object], section: str, field: str, label: str) -> str:
+    value = _mapping_section(config, section).get(field)
+    if not isinstance(value, str) or not value or value.strip() != value:
+        raise ValueError(f"{label} must be a canonical non-blank string")
+    return value
+
+
+def _validate_deadline_actor_agreement(
+    source_configs: dict[str, dict[str, object]],
+) -> None:
+    if "db-gateway" not in source_configs or "task-board" not in source_configs:
+        return
+    gateway_actor = _canonical_actor(
+        source_configs["db-gateway"],
+        "board_authority",
+        "deadline_actor_id",
+        "Gateway board_authority.deadline_actor_id",
+    )
+    task_board_actor = _canonical_actor(
+        source_configs["task-board"],
+        "deadline_evaluation",
+        "actor_id",
+        "Task Board deadline_evaluation.actor_id",
+    )
+    if gateway_actor != task_board_actor:
+        raise ValueError(
+            "Gateway board_authority.deadline_actor_id must match "
+            "Task Board deadline_evaluation.actor_id"
+        )
 
 
 def _dump_yaml(path: Path, content: dict[str, object]) -> None:

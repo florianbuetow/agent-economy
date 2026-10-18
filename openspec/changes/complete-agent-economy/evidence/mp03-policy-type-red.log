@@ -1,0 +1,51 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 7 items / 4 deselected / 3 selected
+
+libs/service-auth/tests/unit/test_mp03_producers.py FFF                  [100%]
+
+=================================== FAILURES ===================================
+___________ test_agent_config_requires_validated_token_policy[None] ____________
+libs/service-auth/tests/unit/test_mp03_producers.py:139: in test_agent_config_requires_validated_token_policy
+    replace(_config(), token_policy=policy)
+../../../.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/dataclasses.py:1596: in replace
+    return _replace(obj, **changes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/dataclasses.py:1630: in _replace
+    return self.__class__(**changes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+<string>:13: in __init__
+    ???
+libs/service-auth/src/service_auth/config.py:46: in __post_init__
+    if self.token_ttl_seconds > self.token_policy.max_lifetime_seconds:
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'max_lifetime_seconds'
+__________ test_agent_config_requires_validated_token_policy[policy1] __________
+libs/service-auth/tests/unit/test_mp03_producers.py:139: in test_agent_config_requires_validated_token_policy
+    replace(_config(), token_policy=policy)
+../../../.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/dataclasses.py:1596: in replace
+    return _replace(obj, **changes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+../../../.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/dataclasses.py:1630: in _replace
+    return self.__class__(**changes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+<string>:13: in __init__
+    ???
+libs/service-auth/src/service_auth/config.py:46: in __post_init__
+    if self.token_ttl_seconds > self.token_policy.max_lifetime_seconds:
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'object' object has no attribute 'max_lifetime_seconds'
+__________ test_agent_config_requires_validated_token_policy[policy2] __________
+libs/service-auth/tests/unit/test_mp03_producers.py:138: in test_agent_config_requires_validated_token_policy
+    with pytest.raises(ValueError, match="token_policy must be a TokenPolicy"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+=========================== short test summary info ============================
+FAILED libs/service-auth/tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[None]
+FAILED libs/service-auth/tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[policy1]
+FAILED libs/service-auth/tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[policy2]
+======================= 3 failed, 4 deselected in 0.05s ========================

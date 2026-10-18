@@ -1,0 +1,42 @@
+TC002 Move third-party import `httpx` into a type-checking block
+  --> src/court_service/services/ruling_acknowledgment.py:9:8
+   |
+ 7 | from typing import Any
+ 8 |
+ 9 | import httpx
+   |        ^^^^^
+10 | from service_commons.exceptions import ServiceError
+   |
+help: Move into type-checking block
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/unit/routers/test_wp06_retry_clean.py:8:1
+   |
+ 6 |   """
+ 7 |
+ 8 | / from __future__ import annotations
+ 9 | |
+10 | | from typing import TYPE_CHECKING
+11 | | from unittest.mock import AsyncMock
+12 | |
+13 | | import httpx
+14 | | import pytest
+15 | |
+16 | | from court_service.core.state import get_app_state
+17 | | from tests.unit.routers.conftest import (
+18 | |     PLATFORM_AGENT_ID,
+19 | |     file_and_rebut,
+20 | |     inject_identity_verify,
+21 | |     inject_judge,
+22 | |     ruling_payload,
+23 | |     token_body,
+24 | | )
+25 | | from tests.helpers import make_ruling_acknowledgment
+   | |____________________________________________________^
+26 |
+27 |   if TYPE_CHECKING:
+   |
+help: Organize imports
+
+Found 2 errors.
+[*] 1 fixable with the `--fix` option (1 hidden fix can be enabled with the `--unsafe-fixes` option).

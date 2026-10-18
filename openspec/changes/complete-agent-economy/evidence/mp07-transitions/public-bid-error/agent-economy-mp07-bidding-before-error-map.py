@@ -1,0 +1,321 @@
+"""Bidding lifecycle: submit, list, accept (WP-11, B16 god-class decomposition).
+
+Extracted from task_manager.py. See task_creation.py's module docstring for
+why coordinators read dependencies through ``self._manager`` rather than a
+constructor-time snapshot.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
+
+from service_commons.exceptions import ServiceError
+
+from task_board_service.services.task_helpers import is_positive_int, task_to_response
+from task_board_service.services.task_operations import public_operation_identity
+from task_board_service.task_operation_contract import (
+    MAX_INTEGER,
+    invalid_gateway_response,
+)
+
+if TYPE_CHECKING:
+    from task_board_service.services.task_manager import TaskManager
+
+
+def _operation_result(envelope: dict[str, Any], command: str) -> dict[str, Any]:
+    result = envelope.get("result")
+    if envelope.get("operation_state") != "completed" or not isinstance(result, dict):
+        raise invalid_gateway_response()
+    if result.get("command") != command:
+        raise invalid_gateway_response()
+    return result
+
+
+class TaskBiddingCoordinator:
+    """Handles bid submission, listing, and acceptance."""
+
+    def __init__(self, manager: TaskManager) -> None:
+        self._manager = manager
+
+    async def submit_bid(self, task_id: str, token: str) -> dict[str, Any]:
+        """
+        Submit a bid on a task.
+
+        Error precedence:
+        1-6. JWS verification
+        7.   invalid_payload — wrong action, missing fields, task_id mismatch
+        9a.  forbidden — signer != bidder_id in payload
+        10.  task_not_found
+        11.  invalid_status — not OPEN
+        12a. self_bid — bidder is the poster
+        12b. bid_already_exists — duplicate bid
+        """
+        manager = self._manager
+        # Steps 4-7a: Verify JWS, validate action
+        payload = await manager.token_validator.validate_jws_token(
+            token,
+            "submit_bid",
+            expected_resource=f"POST /tasks/{task_id}/bids",
+        )
+        signer_id: str = payload["_signer_id"]
+
+        # Step 7b: Validate required fields and caller-owned replay identity.
+        for field_name in ("task_id", "bidder_id", "amount"):
+            if field_name not in payload:
+                raise ServiceError(
+                    "invalid_payload", f"Missing required field: {field_name}", 400, {}
+                )
+        operation_id, expected_version = public_operation_identity(payload)
+
+        # Step 7c: task_id in payload must match URL path
+        if payload["task_id"] != task_id:
+            raise ServiceError(
+                "invalid_payload",
+                "task_id in payload does not match URL path",
+                400,
+                {},
+            )
+
+        # Step 7d: Validate amount at the shared SQLite integer boundary.
+        amount: object = payload["amount"]
+        if not is_positive_int(amount):
+            raise ServiceError("invalid_reward", "Bid amount must be a positive integer", 400, {})
+        amount_int = cast("int", amount)
+        if amount_int > MAX_INTEGER:
+            raise ServiceError("invalid_reward", "Bid amount must be a positive integer", 400, {})
+
+        # Step 9a: Signer must match bidder_id in payload
+        bidder_id: str = payload["bidder_id"]
+        if signer_id != bidder_id:
+            raise ServiceError("forbidden", "Signer does not match bidder_id", 403, {})
+
+        bid_id = f"bid-{operation_id[3:]}"
+        envelope = manager.store.claim_task_operation(
+            {
+                "protocol_version": 1,
+                "operation_id": operation_id,
+                "task_id": task_id,
+                "command": "submit_bid",
+                "expected_status": "open",
+                "expected_lifecycle_version": expected_version,
+                "actor_kind": "agent",
+                "actor_id": bidder_id,
+                "arguments": {
+                    "bid_id": bid_id,
+                    "bidder_id": bidder_id,
+                    "amount": amount_int,
+                },
+            }
+        )
+        result = _operation_result(envelope, "submit_bid")
+        bid = manager.store.get_bid(bid_id, task_id)
+        if bid is None or any(
+            result.get(key) != value
+            for key, value in {
+                "task_id": task_id,
+                "bid_id": bid_id,
+                "bidder_id": bidder_id,
+                "amount": amount_int,
+            }.items()
+        ):
+            raise invalid_gateway_response()
+        if any(
+            bid.get(key) != value
+            for key, value in {
+                "bid_id": bid_id,
+                "task_id": task_id,
+                "bidder_id": bidder_id,
+                "amount": amount_int,
+            }.items()
+        ):
+            raise invalid_gateway_response()
+        return {
+            "bid_id": bid_id,
+            "task_id": task_id,
+            "bidder_id": bidder_id,
+            "amount": amount_int,
+            "submitted_at": str(bid["submitted_at"]),
+        }
+
+    async def list_bids(self, task_id: str, auth_token: str | None) -> dict[str, Any]:
+        """
+        List bids for a task. Sealed during OPEN phase (requires poster auth).
+
+        Error precedence during OPEN phase:
+        4-6. JWS verification
+        7.   invalid_payload — wrong action
+        9.   forbidden — signer is not the poster
+        10.  task_not_found
+        """
+        manager = self._manager
+        # Step 10: Load task first — task_not_found takes priority over auth
+        # for non-OPEN tasks (public access). For OPEN tasks, auth errors
+        # come before task lookup in standard precedence, BUT the task_id
+        # is in the URL (not the token), so we need the task to determine
+        # if auth is required. Load task, then check status, then enforce auth.
+        task = manager.store.get_task(task_id)
+        if task is None:
+            raise ServiceError("task_not_found", "Task not found", 404, {})
+
+        # Evaluate deadline
+        task = await manager.deadline_evaluator.evaluate_deadline(task)
+
+        if task["status"] == "open":
+            # Sealed bids — require poster authentication
+            if not auth_token:
+                raise ServiceError(
+                    "invalid_jws",
+                    "Authorization required to list bids during OPEN phase",
+                    400,
+                    {},
+                )
+
+            payload = await manager.token_validator.validate_jws_token(
+                auth_token,
+                "list_bids",
+                expected_resource=f"GET /tasks/{task_id}/bids",
+            )
+            signer_id: str = payload["_signer_id"]
+
+            # Validate task_id in payload matches URL
+            if "task_id" in payload and payload["task_id"] != task_id:
+                raise ServiceError(
+                    "invalid_payload",
+                    "task_id in payload does not match URL path",
+                    400,
+                    {},
+                )
+
+            # Validate poster_id in payload
+            if "poster_id" in payload and signer_id != payload["poster_id"]:
+                raise ServiceError("forbidden", "Signer does not match poster_id", 403, {})
+
+            # Signer must be the task's poster
+            if signer_id != task["poster_id"]:
+                raise ServiceError(
+                    "forbidden",
+                    "Only the poster can list bids during OPEN phase",
+                    403,
+                    {},
+                )
+
+        # Fetch all bids for this task
+        bids = [
+            {
+                "bid_id": str(row["bid_id"]),
+                "bidder_id": str(row["bidder_id"]),
+                "amount": int(row["amount"]),
+                "submitted_at": str(row["submitted_at"]),
+            }
+            for row in manager.store.get_bids_for_task(task_id)
+        ]
+
+        return {"task_id": task_id, "bids": bids}
+
+    async def accept_bid(self, task_id: str, bid_id: str, token: str) -> dict[str, Any]:
+        """
+        Accept a bid, assigning the worker and starting the execution deadline.
+
+        Error precedence:
+        1-6. JWS verification
+        7.   invalid_payload — wrong action, missing fields, task_id/bid_id mismatch
+        9a.  forbidden — signer != poster_id in payload
+        10.  task_not_found
+        11.  invalid_status — not OPEN
+        9b.  forbidden — signer != task's poster
+        12.  bid_not_found
+        """
+        manager = self._manager
+        # Steps 4-7a: Verify JWS, validate action
+        payload = await manager.token_validator.validate_jws_token(
+            token,
+            "accept_bid",
+            expected_resource=f"POST /tasks/{task_id}/bids/{bid_id}/accept",
+        )
+        signer_id: str = payload["_signer_id"]
+
+        # Step 7b: Validate required fields and caller-owned replay identity.
+        for field_name in ["task_id", "bid_id", "poster_id"]:
+            if field_name not in payload:
+                raise ServiceError(
+                    "invalid_payload",
+                    f"Missing required field: {field_name}",
+                    400,
+                    {},
+                )
+        operation_id, expected_version = public_operation_identity(payload)
+
+        # Step 7c: task_id and bid_id must match URL path
+        if payload["task_id"] != task_id:
+            raise ServiceError(
+                "invalid_payload",
+                "task_id in payload does not match URL path",
+                400,
+                {},
+            )
+
+        if payload["bid_id"] != bid_id:
+            raise ServiceError(
+                "invalid_payload",
+                "bid_id in payload does not match URL path",
+                400,
+                {},
+            )
+
+        # Step 9a: Signer must match poster_id in payload
+        if signer_id != payload["poster_id"]:
+            raise ServiceError("forbidden", "Signer does not match poster_id", 403, {})
+
+        # Step 10: Load task
+        task = manager.store.get_task(task_id)
+        if task is None:
+            raise ServiceError("task_not_found", "Task not found", 404, {})
+
+        # Load only immutable command facts. Gateway owns mutable eligibility.
+        bid = manager.store.get_bid(bid_id, task_id)
+        if bid is None:
+            raise ServiceError("bid_not_found", "Bid not found", 404, {})
+
+        worker_id = str(bid["bidder_id"])
+        bid_amount = bid["amount"]
+        if type(bid_amount) is not int or not 0 <= bid_amount <= MAX_INTEGER:
+            raise invalid_gateway_response()
+        envelope = manager.store.claim_task_operation(
+            {
+                "protocol_version": 1,
+                "operation_id": operation_id,
+                "task_id": task_id,
+                "command": "accept_bid",
+                "expected_status": "open",
+                "expected_lifecycle_version": expected_version,
+                "actor_kind": "agent",
+                "actor_id": signer_id,
+                "arguments": {
+                    "bid_id": bid_id,
+                    "worker_id": worker_id,
+                    "escrow_id": str(task["escrow_id"]),
+                    "reward": task["reward"],
+                    "bid_amount": bid_amount,
+                },
+            }
+        )
+        result = _operation_result(envelope, "accept_bid")
+        if any(
+            result.get(key) != value
+            for key, value in {
+                "task_id": task_id,
+                "bid_id": bid_id,
+                "worker_id": worker_id,
+                "reward": task["reward"],
+                "bid_amount": bid_amount,
+            }.items()
+        ):
+            raise invalid_gateway_response()
+
+        updated = manager.store.get_task(task_id)
+        if updated is None:
+            msg = f"Task {task_id} not found after update"
+            raise RuntimeError(msg)
+        response = task_to_response(updated)
+        response["operation"] = envelope
+        return response

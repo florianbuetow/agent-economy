@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
+from collections.abc import Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from service_auth.financial_responses import SQLITE_MAX_INTEGER
+
+from base_agent.runtime_intents import RuntimeIntentError
+from base_agent.runtime_task_intent_factory import bid_intent, submission_intent
 from math_worker.history import AgentHistory, TaskOutcome
 from math_worker.parser import parse_bid_amount, parse_solution, parse_task_selection
 from math_worker.prompts import (
@@ -22,6 +28,8 @@ from math_worker.prompts import (
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
+    from base_agent.runtime_intents import FrozenTaskIntent, NewTaskIntent
+    from base_agent.runtime_task_commands import RuntimeTaskCommands
     from math_worker.config import MathWorkerConfig
     from math_worker.llm_client import LLMClient
 
@@ -54,10 +62,12 @@ class MathWorkerLoop:
         agent: BaseAgent,
         llm: LLMClient,
         config: MathWorkerConfig,
+        commands: RuntimeTaskCommands,
     ) -> None:
         self._agent = agent
         self._llm = llm
         self._config = config
+        self._commands = commands
         self._history = AgentHistory()
         self._running = True
 
@@ -96,6 +106,8 @@ class MathWorkerLoop:
     async def _cycle(self) -> None:
         """Execute one scan → bid → solve → submit cycle."""
 
+        await self._commands.replay_unfinished()
+
         # --- SCANNING ---
         task_id = await self._phase_scanning()
         if task_id is None:
@@ -104,12 +116,15 @@ class MathWorkerLoop:
             return
 
         # --- BIDDING ---
-        task = await self._agent.get_task(task_id)
-        bid_result = await self._phase_bidding(task)
-        if bid_result is None:
+        bid_intent_result = await self._phase_bidding(task_id)
+        if bid_intent_result.state != "completed":
             return
 
-        bid_id: str = bid_result["bid_id"]
+        bid_result = self._completed_body(bid_intent_result)
+        bid_id = bid_result["bid_id"]
+        if not isinstance(bid_id, str):
+            raise ValueError("Completed bid intent has no validated bid ID")
+        task = await self._agent.get_task(task_id)
 
         # --- WAITING FOR ACCEPTANCE ---
         accepted = await self._phase_waiting_for_acceptance(task_id, bid_id)
@@ -141,7 +156,9 @@ class MathWorkerLoop:
             return
 
         # --- SUBMITTING ---
-        await self._phase_submitting(task_id, solution)
+        submission_result = await self._phase_submitting(task_id, solution)
+        if submission_result.state != "completed":
+            return
 
         # --- WAITING FOR REVIEW ---
         review_outcome = await self._phase_waiting_for_review(task_id)
@@ -192,11 +209,15 @@ class MathWorkerLoop:
             return None
 
         # Filter by reward range
-        eligible = [
-            t
-            for t in tasks
-            if self._config.min_reward <= t.get("reward", 0) <= self._config.max_reward
-        ]
+        eligible = []
+        for task in tasks:
+            reward = task.get("reward")
+            if (
+                type(reward) is int
+                and 1 <= reward <= SQLITE_MAX_INTEGER
+                and self._config.min_reward <= reward <= self._config.max_reward
+            ):
+                eligible.append(task)
         if not eligible:
             logger.info(
                 "No tasks in reward range [%d, %d]",
@@ -219,29 +240,36 @@ class MathWorkerLoop:
 
         return chosen
 
-    async def _phase_bidding(self, task: dict[str, Any]) -> dict[str, Any] | None:
+    async def _phase_bidding(self, task_id: str) -> FrozenTaskIntent:
         """Ask LLM for bid amount, submit bid.
 
         Returns:
-            The bid response dict, or None on failure.
+            The durable bid intent after one transport attempt.
         """
-        task_id: str = task["task_id"]
-        reward: int = task.get("reward", 0)
-        logger.info("[BIDDING] Deciding bid for task %s (reward=%d)", task_id, reward)
 
-        balance = await self._get_balance()
-        prompt = build_bid_amount_prompt(task, balance)
-        response = await self._llm.complete(BID_AMOUNT_SYSTEM, prompt)
+        async def prepare() -> NewTaskIntent:
+            task = await self._agent.get_task(task_id)
+            reward = self._require_task_reward(task)
+            logger.info("[BIDDING] Deciding bid for task %s (reward=%d)", task_id, reward)
 
-        amount = parse_bid_amount(response.content, reward)
-        if amount is None:
-            # Fallback: bid the full reward
-            logger.warning("Could not parse bid amount, using reward as bid: %d", reward)
-            amount = reward
+            balance = await self._get_balance()
+            prompt = build_bid_amount_prompt(task, balance)
+            response = await self._llm.complete(BID_AMOUNT_SYSTEM, prompt)
 
-        logger.info("[BIDDING] Submitting bid: task=%s amount=%d", task_id, amount)
-        result = await self._agent.submit_bid(task_id, amount)
-        return result
+            amount = parse_bid_amount(response.content, reward)
+            if amount is None:
+                logger.warning("Could not parse bid amount, using reward as bid: %d", reward)
+                amount = reward
+
+            logger.info("[BIDDING] Submitting bid: task=%s amount=%d", task_id, amount)
+            return bid_intent(
+                task=task,
+                actor_id=self._require_agent_id(),
+                amount=amount,
+                operation_id=f"op-{uuid.uuid4()}",
+            )
+
+        return await self._commands.execute(task_id=task_id, slot="bid", prepare=prepare)
 
     async def _phase_waiting_for_acceptance(
         self,
@@ -299,16 +327,24 @@ class MathWorkerLoop:
 
         return answer
 
-    async def _phase_submitting(self, task_id: str, solution: str) -> None:
-        """Upload the solution as an asset and submit for review."""
-        logger.info("[SUBMITTING] Uploading solution for task %s", task_id)
+    async def _phase_submitting(self, task_id: str, solution: str) -> FrozenTaskIntent:
+        """Upload a new solution and durably submit it for review."""
 
-        content = solution.encode("utf-8")
-        filename = f"{task_id}_solution.txt"
-        await self._agent.upload_asset(task_id, filename, content)
+        async def prepare() -> NewTaskIntent:
+            logger.info("[SUBMITTING] Uploading solution for task %s", task_id)
+            content = solution.encode("utf-8")
+            filename = f"{task_id}_solution.txt"
+            await self._agent.upload_asset(task_id, filename, content)
 
-        logger.info("[SUBMITTING] Submitting deliverable for task %s", task_id)
-        await self._agent.submit_deliverable(task_id)
+            task = await self._agent.get_task(task_id)
+            logger.info("[SUBMITTING] Submitting deliverable for task %s", task_id)
+            return submission_intent(
+                task=task,
+                actor_id=self._require_agent_id(),
+                operation_id=f"op-{uuid.uuid4()}",
+            )
+
+        return await self._commands.execute(task_id=task_id, slot="submission", prepare=prepare)
 
     async def _phase_waiting_for_review(self, task_id: str) -> str:
         """Poll until the poster approves, disputes, or the review times out.
@@ -403,6 +439,32 @@ class MathWorkerLoop:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _require_agent_id(self) -> str:
+        agent_id = self._agent.agent_id
+        if not isinstance(agent_id, str) or not agent_id.strip():
+            raise ValueError("Math worker must be registered before task mutation")
+        return agent_id
+
+    @staticmethod
+    def _require_task_reward(task: Mapping[str, Any]) -> int:
+        reward = task.get("reward")
+        if type(reward) is not int or not 1 <= reward <= SQLITE_MAX_INTEGER:
+            raise RuntimeIntentError(
+                "invalid_input",
+                "task reward must be a positive SQLite-safe integer",
+            )
+        return reward
+
+    @staticmethod
+    def _completed_body(intent: FrozenTaskIntent) -> Mapping[str, Any]:
+        result = intent.result
+        if result is None:
+            raise ValueError("Completed task intent has no normalized result")
+        body = result.get("body")
+        if not isinstance(body, Mapping):
+            raise ValueError("Completed task intent has no normalized response body")
+        return body
 
     async def _resolve_dispute_id(self, task_id: str, task: dict[str, Any]) -> str | None:
         """Resolve the Court dispute id for a disputed task."""

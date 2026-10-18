@@ -1,0 +1,16 @@
+{
+  "run_id": "a2a9ef241ee04fd98e20de1f521df703",
+  "source_manifest": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/runtime.json",
+  "checked_process_groups": [
+    88359,
+    88361,
+    88363,
+    88365,
+    88367,
+    88369,
+    88371,
+    88373
+  ],
+  "remaining_processes": [],
+  "clean": true
+}

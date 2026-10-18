@@ -1,0 +1,579 @@
+"""T-122 public-command replay and optimistic-version baseline proofs.
+
+Board routes and Gateway persistence are real. Task posting uses a persisted
+Gateway escrow lock receipt for setup; these tests make no claim about remote
+Bank or Court outcomes.
+"""
+
+from __future__ import annotations
+
+import sqlite3
+import uuid
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+from unittest.mock import AsyncMock
+
+import httpx
+import pytest
+from service_auth.financial_identity import operation_id_for
+
+from task_board_service.core.state import get_app_state
+from tests.integration.conftest import make_jws_token, register_identity_agent
+
+if TYPE_CHECKING:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from fastapi import FastAPI
+    from httpx import AsyncClient, Request, Response
+
+pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
+
+
+class _DropSuccessfulResponseTransport(httpx.AsyncBaseTransport):
+    """Complete one real ASGI request, retain success, then discard its response."""
+
+    def __init__(self, app: FastAPI) -> None:
+        self._inner = httpx.ASGITransport(app=app)
+        self.retained_response: Response | None = None
+
+    async def handle_async_request(self, request: Request) -> Response:
+        response = await self._inner.handle_async_request(request)
+        content = await response.aread()
+        self.retained_response = httpx.Response(
+            status_code=response.status_code,
+            headers=response.headers,
+            content=content,
+            request=request,
+            extensions=response.extensions,
+        )
+        await response.aclose()
+        if 200 <= response.status_code < 300:
+            raise httpx.ReadError(
+                "injected response loss after committed Board reply",
+                request=request,
+            )
+        return self.retained_response
+
+    async def aclose(self) -> None:
+        await self._inner.aclose()
+
+
+@dataclass(frozen=True)
+class _TaskSetup:
+    task_id: str
+    poster_id: str
+    worker_id: str
+
+
+@dataclass(frozen=True)
+class _BidSetup:
+    task: _TaskSetup
+    bid_id: str
+    amount: int
+    operation_id: str
+
+
+def _read_rows(
+    db_path: str,
+    query: str,
+    params: tuple[object, ...] = (),
+) -> list[dict[str, object]]:
+    connection = sqlite3.connect(db_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        return [dict(row) for row in connection.execute(query, params).fetchall()]
+    finally:
+        connection.close()
+
+
+async def _seed_funded_escrow(
+    gateway_client: httpx.AsyncClient,
+    *,
+    payer_id: str,
+    task_id: str,
+    escrow_id: str,
+) -> dict[str, object]:
+    await register_identity_agent(gateway_client, payer_id)
+    account_response = await gateway_client.post(
+        "/bank/accounts",
+        json={
+            "operation_id": f"op-{uuid.uuid4()}",
+            "account_id": payer_id,
+            "created_at": "2026-10-17T09:00:00Z",
+            "balance": 100,
+            "event": {
+                "event_source": "central-bank",
+                "event_type": "account.created",
+                "timestamp": "2026-10-17T09:00:00Z",
+                "agent_id": payer_id,
+                "summary": f"Created account for {payer_id}",
+                "payload": "{}",
+            },
+            "initial_credit": {
+                "tx_id": f"tx-{uuid.uuid4()}",
+                "amount": 100,
+                "reference": "initial_balance",
+                "timestamp": "2026-10-17T09:00:00Z",
+            },
+        },
+    )
+    assert account_response.status_code == 201, account_response.text
+
+    lock_response = await gateway_client.post(
+        "/bank/escrow/lock",
+        json={
+            "operation_id": operation_id_for("task-lock", (task_id, payer_id)),
+            "escrow_id": escrow_id,
+            "payer_account_id": payer_id,
+            "amount": 100,
+            "task_id": task_id,
+            "created_at": "2026-10-17T09:00:01Z",
+            "tx_id": f"tx-{uuid.uuid4()}",
+            "event": {
+                "event_source": "central-bank",
+                "event_type": "escrow.locked",
+                "timestamp": "2026-10-17T09:00:01Z",
+                "agent_id": payer_id,
+                "summary": f"Escrow locked for {task_id}",
+                "payload": "{}",
+            },
+        },
+    )
+    assert lock_response.status_code == 201, lock_response.text
+    envelope = lock_response.json()
+    assert isinstance(envelope, dict)
+    assert envelope["outcome"] == "native_receipt"
+    return envelope
+
+
+async def _create_open_task(
+    client: httpx.AsyncClient,
+    gateway_client: httpx.AsyncClient,
+    poster_key: Ed25519PrivateKey,
+) -> _TaskSetup:
+    poster_id = f"a-mp07-replay-poster-{uuid.uuid4()}"
+    worker_id = f"a-mp07-replay-worker-{uuid.uuid4()}"
+    task_id = f"t-{uuid.uuid4()}"
+    escrow_id = f"esc-{uuid.uuid4()}"
+    await register_identity_agent(gateway_client, worker_id)
+    lock_envelope = await _seed_funded_escrow(
+        gateway_client,
+        payer_id=poster_id,
+        task_id=task_id,
+        escrow_id=escrow_id,
+    )
+    state = get_app_state()
+    assert state.central_bank_client is not None
+    state.central_bank_client.escrow_lock = AsyncMock(return_value=lock_envelope)
+
+    task_payload = {
+        "action": "create_task",
+        "task_id": task_id,
+        "poster_id": poster_id,
+        "title": "MP-07 public command replay",
+        "spec": "Persist exact command identity and replay immutable results.",
+        "reward": 100,
+        "bidding_deadline_seconds": 86400,
+        "acceptance_window_seconds": 86400,
+        "execution_deadline_seconds": 86400,
+        "review_deadline_seconds": 86400,
+    }
+    escrow_payload = {
+        "action": "escrow_lock",
+        "operation_id": operation_id_for("task-lock", (task_id, poster_id)),
+        "task_id": task_id,
+        "agent_id": poster_id,
+        "amount": 100,
+    }
+    response = await client.post(
+        "/tasks",
+        json={
+            "task_token": make_jws_token(poster_key, poster_id, task_payload),
+            "escrow_token": make_jws_token(poster_key, poster_id, escrow_payload),
+        },
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["status"] == "open"
+    return _TaskSetup(task_id, poster_id, worker_id)
+
+
+def _bid_payload(
+    setup: _TaskSetup,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
+    amount: int,
+) -> dict[str, Any]:
+    return {
+        "action": "submit_bid",
+        "operation_id": operation_id,
+        "expected_lifecycle_version": expected_lifecycle_version,
+        "task_id": setup.task_id,
+        "bidder_id": setup.worker_id,
+        "amount": amount,
+    }
+
+
+def _accept_payload(
+    bid: _BidSetup,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
+) -> dict[str, Any]:
+    return {
+        "action": "accept_bid",
+        "operation_id": operation_id,
+        "expected_lifecycle_version": expected_lifecycle_version,
+        "task_id": bid.task.task_id,
+        "bid_id": bid.bid_id,
+        "poster_id": bid.task.poster_id,
+    }
+
+
+async def _post_signed(
+    client: httpx.AsyncClient,
+    *,
+    path: str,
+    private_key: Ed25519PrivateKey,
+    signer_id: str,
+    payload: dict[str, Any],
+) -> httpx.Response:
+    return await client.post(
+        path,
+        json={"token": make_jws_token(private_key, signer_id, payload)},
+    )
+
+
+async def _post_with_discarded_success(
+    app: FastAPI,
+    *,
+    path: str,
+    private_key: Ed25519PrivateKey,
+    signer_id: str,
+    payload: dict[str, Any],
+) -> httpx.Response:
+    transport = _DropSuccessfulResponseTransport(app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as lossy_client:
+        with pytest.raises(httpx.ReadError, match="injected response loss"):
+            await _post_signed(
+                lossy_client,
+                path=path,
+                private_key=private_key,
+                signer_id=signer_id,
+                payload=payload,
+            )
+    retained = transport.retained_response
+    assert retained is not None
+    assert 200 <= retained.status_code < 300, retained.text
+    return retained
+
+
+async def _create_bid(
+    client: httpx.AsyncClient,
+    worker_key: Ed25519PrivateKey,
+    setup: _TaskSetup,
+    *,
+    operation_id: str,
+    amount: int,
+) -> _BidSetup:
+    response = await _post_signed(
+        client,
+        path=f"/tasks/{setup.task_id}/bids",
+        private_key=worker_key,
+        signer_id=setup.worker_id,
+        payload=_bid_payload(
+            setup,
+            operation_id=operation_id,
+            expected_lifecycle_version=0,
+            amount=amount,
+        ),
+    )
+    assert response.status_code == 201, response.text
+    return _BidSetup(setup, str(response.json()["bid_id"]), amount, operation_id)
+
+
+def _task_rows(db_path: str, task_id: str) -> list[dict[str, object]]:
+    return _read_rows(
+        db_path,
+        "SELECT status, reward, bid_count, worker_id, accepted_bid_id, accepted_at "
+        "FROM board_tasks WHERE task_id = ?",
+        (task_id,),
+    )
+
+
+def _bid_rows(db_path: str, task_id: str) -> list[dict[str, object]]:
+    return _read_rows(
+        db_path,
+        "SELECT bid_id, bidder_id, amount, submitted_at FROM board_bids "
+        "WHERE task_id = ? ORDER BY bid_id",
+        (task_id,),
+    )
+
+
+def _command_events(db_path: str, task_id: str) -> list[dict[str, object]]:
+    return _read_rows(
+        db_path,
+        "SELECT event_id, event_type FROM events WHERE task_id = ? "
+        "AND event_type IN ('bid.submitted', 'task.accepted') ORDER BY event_id",
+        (task_id,),
+    )
+
+
+async def test_exact_submit_bid_replay_after_response_loss_returns_original_result(
+    app: FastAPI,
+    client: AsyncClient,
+    gateway_client: AsyncClient,
+    poster_keypair: tuple[Ed25519PrivateKey, str],
+    worker_keypair: tuple[Ed25519PrivateKey, str],
+    gateway_db_path: str,
+) -> None:
+    setup = await _create_open_task(client, gateway_client, poster_keypair[0])
+    operation_id = f"op-{uuid.uuid4()}"
+    payload = _bid_payload(
+        setup,
+        operation_id=operation_id,
+        expected_lifecycle_version=0,
+        amount=90,
+    )
+    path = f"/tasks/{setup.task_id}/bids"
+    retained = await _post_with_discarded_success(
+        app,
+        path=path,
+        private_key=worker_keypair[0],
+        signer_id=setup.worker_id,
+        payload=payload,
+    )
+    original = retained.json()
+    replay = await _post_signed(
+        client,
+        path=path,
+        private_key=worker_keypair[0],
+        signer_id=setup.worker_id,
+        payload=payload,
+    )
+    tasks = _task_rows(gateway_db_path, setup.task_id)
+    bids = _bid_rows(gateway_db_path, setup.task_id)
+    events = _command_events(gateway_db_path, setup.task_id)
+    diagnostics = {
+        "original": original,
+        "replay_status": replay.status_code,
+        "replay": replay.json(),
+        "tasks": tasks,
+        "bids": bids,
+        "events": events,
+    }
+
+    assert replay.status_code == 201, diagnostics
+    replayed = replay.json()
+    assert replayed["bid_id"] == original["bid_id"], diagnostics
+    assert replayed["task_id"] == setup.task_id, diagnostics
+    assert replayed["bidder_id"] == setup.worker_id, diagnostics
+    assert replayed["amount"] == 90, diagnostics
+    assert tasks[0]["status"] == "open", diagnostics
+    assert tasks[0]["bid_count"] == 1, diagnostics
+    assert len(bids) == 1, diagnostics
+    assert bids[0]["bid_id"] == original["bid_id"], diagnostics
+    assert bids[0]["bidder_id"] == setup.worker_id, diagnostics
+    assert bids[0]["amount"] == 90, diagnostics
+    assert [event["event_type"] for event in events] == ["bid.submitted"], diagnostics
+
+
+async def test_exact_accept_bid_replay_after_response_loss_returns_original_terms(
+    app: FastAPI,
+    client: AsyncClient,
+    gateway_client: AsyncClient,
+    poster_keypair: tuple[Ed25519PrivateKey, str],
+    worker_keypair: tuple[Ed25519PrivateKey, str],
+    gateway_db_path: str,
+) -> None:
+    setup = await _create_open_task(client, gateway_client, poster_keypair[0])
+    bid = await _create_bid(
+        client,
+        worker_keypair[0],
+        setup,
+        operation_id=f"op-{uuid.uuid4()}",
+        amount=90,
+    )
+    operation_id = f"op-{uuid.uuid4()}"
+    payload = _accept_payload(
+        bid,
+        operation_id=operation_id,
+        expected_lifecycle_version=0,
+    )
+    path = f"/tasks/{setup.task_id}/bids/{bid.bid_id}/accept"
+    retained = await _post_with_discarded_success(
+        app,
+        path=path,
+        private_key=poster_keypair[0],
+        signer_id=setup.poster_id,
+        payload=payload,
+    )
+    original = retained.json()
+    replay = await _post_signed(
+        client,
+        path=path,
+        private_key=poster_keypair[0],
+        signer_id=setup.poster_id,
+        payload=payload,
+    )
+    tasks = _task_rows(gateway_db_path, setup.task_id)
+    bids = _bid_rows(gateway_db_path, setup.task_id)
+    events = _command_events(gateway_db_path, setup.task_id)
+    diagnostics = {
+        "original": original,
+        "replay_status": replay.status_code,
+        "replay": replay.json(),
+        "tasks": tasks,
+        "bids": bids,
+        "events": events,
+    }
+
+    assert replay.status_code == 200, diagnostics
+    replayed = replay.json()
+    assert replayed["task_id"] == original["task_id"] == setup.task_id, diagnostics
+    assert replayed["status"] == original["status"] == "accepted", diagnostics
+    assert replayed["accepted_bid_id"] == original["accepted_bid_id"] == bid.bid_id, diagnostics
+    assert replayed["worker_id"] == original["worker_id"] == setup.worker_id, diagnostics
+    assert tasks[0]["status"] == "accepted", diagnostics
+    assert tasks[0]["reward"] == 100, diagnostics
+    assert tasks[0]["bid_count"] == 1, diagnostics
+    assert tasks[0]["worker_id"] == setup.worker_id, diagnostics
+    assert tasks[0]["accepted_bid_id"] == bid.bid_id, diagnostics
+    assert tasks[0]["accepted_at"] is not None, diagnostics
+    assert len(bids) == 1 and bids[0]["amount"] == bid.amount, diagnostics
+    assert [event["event_type"] for event in events] == [
+        "bid.submitted",
+        "task.accepted",
+    ], diagnostics
+
+
+async def test_changed_bid_amount_under_same_operation_id_conflicts_without_changes(
+    client: AsyncClient,
+    gateway_client: AsyncClient,
+    poster_keypair: tuple[Ed25519PrivateKey, str],
+    worker_keypair: tuple[Ed25519PrivateKey, str],
+    gateway_db_path: str,
+) -> None:
+    setup = await _create_open_task(client, gateway_client, poster_keypair[0])
+    operation_id = f"op-{uuid.uuid4()}"
+    bid = await _create_bid(
+        client,
+        worker_keypair[0],
+        setup,
+        operation_id=operation_id,
+        amount=90,
+    )
+    before = (_task_rows(gateway_db_path, setup.task_id), _bid_rows(gateway_db_path, setup.task_id))
+    changed = await _post_signed(
+        client,
+        path=f"/tasks/{setup.task_id}/bids",
+        private_key=worker_keypair[0],
+        signer_id=setup.worker_id,
+        payload=_bid_payload(
+            setup,
+            operation_id=operation_id,
+            expected_lifecycle_version=0,
+            amount=80,
+        ),
+    )
+    after = (_task_rows(gateway_db_path, setup.task_id), _bid_rows(gateway_db_path, setup.task_id))
+    events = _command_events(gateway_db_path, setup.task_id)
+    diagnostics = {
+        "status_code": changed.status_code,
+        "response": changed.json(),
+        "before": before,
+        "after": after,
+        "events": events,
+    }
+
+    assert changed.status_code == 409, diagnostics
+    assert changed.json()["error"] == "operation_id_conflict", diagnostics
+    assert before == after, diagnostics
+    assert after[1][0]["bid_id"] == bid.bid_id, diagnostics
+    assert after[1][0]["amount"] == 90, diagnostics
+    assert [event["event_type"] for event in events] == ["bid.submitted"], diagnostics
+
+
+async def test_cross_command_operation_id_reuse_conflicts_without_accepting(
+    client: AsyncClient,
+    gateway_client: AsyncClient,
+    poster_keypair: tuple[Ed25519PrivateKey, str],
+    worker_keypair: tuple[Ed25519PrivateKey, str],
+    gateway_db_path: str,
+) -> None:
+    setup = await _create_open_task(client, gateway_client, poster_keypair[0])
+    operation_id = f"op-{uuid.uuid4()}"
+    bid = await _create_bid(
+        client,
+        worker_keypair[0],
+        setup,
+        operation_id=operation_id,
+        amount=90,
+    )
+    before = _task_rows(gateway_db_path, setup.task_id)
+    reused = await _post_signed(
+        client,
+        path=f"/tasks/{setup.task_id}/bids/{bid.bid_id}/accept",
+        private_key=poster_keypair[0],
+        signer_id=setup.poster_id,
+        payload=_accept_payload(
+            bid,
+            operation_id=operation_id,
+            expected_lifecycle_version=0,
+        ),
+    )
+    after = _task_rows(gateway_db_path, setup.task_id)
+    events = _command_events(gateway_db_path, setup.task_id)
+    diagnostics = {
+        "status_code": reused.status_code,
+        "response": reused.json(),
+        "before": before,
+        "after": after,
+        "events": events,
+    }
+
+    assert reused.status_code == 409, diagnostics
+    assert reused.json()["error"] == "operation_id_conflict", diagnostics
+    assert before == after, diagnostics
+    assert after[0]["status"] == "open", diagnostics
+    assert after[0]["worker_id"] is None, diagnostics
+    assert after[0]["accepted_bid_id"] is None, diagnostics
+    assert [event["event_type"] for event in events] == ["bid.submitted"], diagnostics
+
+
+async def test_wrong_expected_lifecycle_version_rejects_bid_without_changes(
+    client: AsyncClient,
+    gateway_client: AsyncClient,
+    poster_keypair: tuple[Ed25519PrivateKey, str],
+    worker_keypair: tuple[Ed25519PrivateKey, str],
+    gateway_db_path: str,
+) -> None:
+    setup = await _create_open_task(client, gateway_client, poster_keypair[0])
+    before = _task_rows(gateway_db_path, setup.task_id)
+    response = await _post_signed(
+        client,
+        path=f"/tasks/{setup.task_id}/bids",
+        private_key=worker_keypair[0],
+        signer_id=setup.worker_id,
+        payload=_bid_payload(
+            setup,
+            operation_id=f"op-{uuid.uuid4()}",
+            expected_lifecycle_version=99,
+            amount=90,
+        ),
+    )
+    after = _task_rows(gateway_db_path, setup.task_id)
+    bids = _bid_rows(gateway_db_path, setup.task_id)
+    events = _command_events(gateway_db_path, setup.task_id)
+    diagnostics = {
+        "status_code": response.status_code,
+        "response": response.json(),
+        "before": before,
+        "after": after,
+        "bids": bids,
+        "events": events,
+    }
+
+    assert response.status_code == 409, diagnostics
+    assert before == after, diagnostics
+    assert bids == [], diagnostics
+    assert events == [], diagnostics

@@ -1,0 +1,285 @@
+FFFFFFFFFFF                                                              [100%]
+=================================== FAILURES ===================================
+_ test_unsigned_domain_write_is_rejected_without_state_or_event_changes[identity] _
+
+domain = 'identity'
+app_with_writer = <starlette.testclient.TestClient object at 0x10aac2120>
+db_writer = <db_gateway_service.services.db_writer.DbWriter object at 0x10aa102f0>
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("domain", ["identity", "bank", "board", "reputation", "court"])
+    def test_unsigned_domain_write_is_rejected_without_state_or_event_changes(
+        domain: str,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        graph = _seed_domain_graph(app_with_writer)
+        path, body, table = _write_case(domain, graph)
+>       row_count = db_writer.connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       sqlite3.OperationalError: no such table: agents
+
+tests/unit/test_mp02_gateway_authority.py:162: OperationalError
+_ test_unsigned_domain_write_is_rejected_without_state_or_event_changes[bank] __
+
+domain = 'bank'
+app_with_writer = <starlette.testclient.TestClient object at 0x10ac2e0d0>
+db_writer = <db_gateway_service.services.db_writer.DbWriter object at 0x10aba60d0>
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("domain", ["identity", "bank", "board", "reputation", "court"])
+    def test_unsigned_domain_write_is_rejected_without_state_or_event_changes(
+        domain: str,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        graph = _seed_domain_graph(app_with_writer)
+        path, body, table = _write_case(domain, graph)
+        row_count = db_writer.connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+        event_count = db_writer.connection.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    
+        response = app_with_writer.post(path, json=body, auth=None)
+    
+>       assert response.status_code == 401
+E       assert 200 == 401
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:167: AssertionError
+_ test_unsigned_domain_write_is_rejected_without_state_or_event_changes[board] _
+
+domain = 'board'
+app_with_writer = <starlette.testclient.TestClient object at 0x10ac7e490>
+db_writer = <db_gateway_service.services.db_writer.DbWriter object at 0x10abd8c30>
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("domain", ["identity", "bank", "board", "reputation", "court"])
+    def test_unsigned_domain_write_is_rejected_without_state_or_event_changes(
+        domain: str,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        graph = _seed_domain_graph(app_with_writer)
+        path, body, table = _write_case(domain, graph)
+        row_count = db_writer.connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+        event_count = db_writer.connection.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    
+        response = app_with_writer.post(path, json=body, auth=None)
+    
+>       assert response.status_code == 401
+E       assert 201 == 401
+E        +  where 201 = <Response [201 Created]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:167: AssertionError
+_ test_unsigned_domain_write_is_rejected_without_state_or_event_changes[reputation] _
+
+domain = 'reputation'
+app_with_writer = <starlette.testclient.TestClient object at 0x10aabfe10>
+db_writer = <db_gateway_service.services.db_writer.DbWriter object at 0x10abd6cf0>
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("domain", ["identity", "bank", "board", "reputation", "court"])
+    def test_unsigned_domain_write_is_rejected_without_state_or_event_changes(
+        domain: str,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        graph = _seed_domain_graph(app_with_writer)
+        path, body, table = _write_case(domain, graph)
+        row_count = db_writer.connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+        event_count = db_writer.connection.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    
+        response = app_with_writer.post(path, json=body, auth=None)
+    
+>       assert response.status_code == 401
+E       assert 201 == 401
+E        +  where 201 = <Response [201 Created]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:167: AssertionError
+_ test_unsigned_domain_write_is_rejected_without_state_or_event_changes[court] _
+
+domain = 'court'
+app_with_writer = <starlette.testclient.TestClient object at 0x10abd9e00>
+db_writer = <db_gateway_service.services.db_writer.DbWriter object at 0x10ac1d550>
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("domain", ["identity", "bank", "board", "reputation", "court"])
+    def test_unsigned_domain_write_is_rejected_without_state_or_event_changes(
+        domain: str,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        graph = _seed_domain_graph(app_with_writer)
+        path, body, table = _write_case(domain, graph)
+        row_count = db_writer.connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+        event_count = db_writer.connection.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    
+        response = app_with_writer.post(path, json=body, auth=None)
+    
+>       assert response.status_code == 401
+E       assert 201 == 401
+E        +  where 201 = <Response [201 Created]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:167: AssertionError
+________ test_unsigned_domain_read_is_rejected[/identity/agents/count] _________
+
+path = '/identity/agents/count'
+app_with_writer = <starlette.testclient.TestClient object at 0x10ad8cdd0>
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/identity/agents/count",
+            "/bank/accounts/count",
+            "/board/tasks/count",
+            "/reputation/feedback/count",
+            "/court/claims/count",
+        ],
+    )
+    def test_unsigned_domain_read_is_rejected(path: str, app_with_writer: TestClient) -> None:
+        response = app_with_writer.get(path, auth=None)
+    
+>       assert response.status_code == 401
+E       assert 503 == 401
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:186: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-15 19:36:41", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "service_not_ready", "status_code": 503, "path": "/identity/agents/count"}}
+_________ test_unsigned_domain_read_is_rejected[/bank/accounts/count] __________
+
+path = '/bank/accounts/count'
+app_with_writer = <starlette.testclient.TestClient object at 0x10ad727a0>
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/identity/agents/count",
+            "/bank/accounts/count",
+            "/board/tasks/count",
+            "/reputation/feedback/count",
+            "/court/claims/count",
+        ],
+    )
+    def test_unsigned_domain_read_is_rejected(path: str, app_with_writer: TestClient) -> None:
+        response = app_with_writer.get(path, auth=None)
+    
+>       assert response.status_code == 401
+E       assert 503 == 401
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:186: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-15 19:36:41", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "service_not_ready", "status_code": 503, "path": "/bank/accounts/count"}}
+__________ test_unsigned_domain_read_is_rejected[/board/tasks/count] ___________
+
+path = '/board/tasks/count'
+app_with_writer = <starlette.testclient.TestClient object at 0x10acb6140>
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/identity/agents/count",
+            "/bank/accounts/count",
+            "/board/tasks/count",
+            "/reputation/feedback/count",
+            "/court/claims/count",
+        ],
+    )
+    def test_unsigned_domain_read_is_rejected(path: str, app_with_writer: TestClient) -> None:
+        response = app_with_writer.get(path, auth=None)
+    
+>       assert response.status_code == 401
+E       assert 503 == 401
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:186: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-15 19:36:41", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "service_not_ready", "status_code": 503, "path": "/board/tasks/count"}}
+______ test_unsigned_domain_read_is_rejected[/reputation/feedback/count] _______
+
+path = '/reputation/feedback/count'
+app_with_writer = <starlette.testclient.TestClient object at 0x10abd49e0>
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/identity/agents/count",
+            "/bank/accounts/count",
+            "/board/tasks/count",
+            "/reputation/feedback/count",
+            "/court/claims/count",
+        ],
+    )
+    def test_unsigned_domain_read_is_rejected(path: str, app_with_writer: TestClient) -> None:
+        response = app_with_writer.get(path, auth=None)
+    
+>       assert response.status_code == 401
+E       assert 503 == 401
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:186: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-15 19:36:41", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "service_not_ready", "status_code": 503, "path": "/reputation/feedback/count"}}
+__________ test_unsigned_domain_read_is_rejected[/court/claims/count] __________
+
+path = '/court/claims/count'
+app_with_writer = <starlette.testclient.TestClient object at 0x10abd6360>
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/identity/agents/count",
+            "/bank/accounts/count",
+            "/board/tasks/count",
+            "/reputation/feedback/count",
+            "/court/claims/count",
+        ],
+    )
+    def test_unsigned_domain_read_is_rejected(path: str, app_with_writer: TestClient) -> None:
+        response = app_with_writer.get(path, auth=None)
+    
+>       assert response.status_code == 401
+E       assert 503 == 401
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:186: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-15 19:36:41", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "service_not_ready", "status_code": 503, "path": "/court/claims/count"}}
+_____________________ test_health_is_the_only_public_route _____________________
+
+app_with_writer = <starlette.testclient.TestClient object at 0x10acb48d0>
+
+    @pytest.mark.unit
+    def test_health_is_the_only_public_route(app_with_writer: TestClient) -> None:
+        assert app_with_writer.get("/health", auth=None).status_code == 200
+>       assert app_with_writer.head("/health", auth=None).status_code == 401
+E       AssertionError: assert 405 == 401
+E        +  where 405 = <Response [405 Method Not Allowed]>.status_code
+E        +    where <Response [405 Method Not Allowed]> = head('/health', auth=None)
+E        +      where head = <starlette.testclient.TestClient object at 0x10acb48d0>.head
+
+tests/unit/test_mp02_gateway_authority.py:192: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp02_gateway_authority.py::test_unsigned_domain_write_is_rejected_without_state_or_event_changes[identity]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_unsigned_domain_write_is_rejected_without_state_or_event_changes[bank]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_unsigned_domain_write_is_rejected_without_state_or_event_changes[board]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_unsigned_domain_write_is_rejected_without_state_or_event_changes[reputation]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_unsigned_domain_write_is_rejected_without_state_or_event_changes[court]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_unsigned_domain_read_is_rejected[/identity/agents/count]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_unsigned_domain_read_is_rejected[/bank/accounts/count]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_unsigned_domain_read_is_rejected[/board/tasks/count]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_unsigned_domain_read_is_rejected[/reputation/feedback/count]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_unsigned_domain_read_is_rejected[/court/claims/count]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_health_is_the_only_public_route
+11 failed, 1 warning in 0.25s

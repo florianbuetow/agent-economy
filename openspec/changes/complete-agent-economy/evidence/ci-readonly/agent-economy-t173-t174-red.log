@@ -1,0 +1,665 @@
+FFFFFFFFFFFFFF.....................                                      [100%]
+=================================== FAILURES ===================================
+___ test_ci_rejects_formatting_defects_without_rewriting_source[ci-identity] ___
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def0')
+service_name = 'identity', recipe = 'ci'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: 
+E         [0;34m=== Running CI Checks for Identity Service ===[0m
+E         
+E         
+E         [0;34m=== Formatting Code ===[0m
+E         All checks passed!
+E         
+E         1 file reformatted
+E         
+E         [0;32m✓ Code formatted[0m
+E         
+E         
+E         [0;34m=== Checking Code Style ===[0m
+E         All checks passed!
+E         
+E         1 file already formatted
+E         
+E         [0;32m✓ Style checks passed[0m
+E         
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/identity/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/identity/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/identity/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/identity/.venv` and will be ignored; use `--active` to target the active environment instead
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...agent-economy/services/identity/.venv` and will be ignored; use `--active` to target the active environment instead\n').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+_ test_ci_rejects_formatting_defects_without_rewriting_source[ci-central-bank] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def1')
+service_name = 'central-bank', recipe = 'ci'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: 
+E         [0;34m=== Running CI Checks for Central Bank Service ===[0m
+E         
+E         
+E         [0;34m=== Formatting Code ===[0m
+E         All checks passed!
+E         
+E         1 file reformatted
+E         
+E         [0;32m✓ Code formatted[0m
+E         
+E         
+E         [0;34m=== Checking Code Style ===[0m
+E         All checks passed!
+E         
+E         1 file already formatted
+E         
+E         [0;32m✓ Style checks passed[0m
+E         
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/central-bank/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/central-bank/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/central-bank/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/central-bank/.venv` and will be ignored; use `--active` to target the active environment instead
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...t-economy/services/central-bank/.venv` and will be ignored; use `--active` to target the active environment instead\n').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+__ test_ci_rejects_formatting_defects_without_rewriting_source[ci-task-board] __
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def2')
+service_name = 'task-board', recipe = 'ci'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: 
+E         [0;34m=== Running CI Checks for Task Board Service ===[0m
+E         
+E         
+E         [0;34m=== Formatting Code ===[0m
+E         All checks passed!
+E         
+E         1 file reformatted
+E         
+E         [0;32m✓ Code formatted[0m
+E         
+E         
+E         [0;34m=== Checking Code Style ===[0m
+E         All checks passed!
+E         
+E         1 file already formatted
+E         
+E         [0;32m✓ Style checks passed[0m
+E         
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/task-board/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/task-board/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/task-board/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/task-board/.venv` and will be ignored; use `--active` to target the active environment instead
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...ent-economy/services/task-board/.venv` and will be ignored; use `--active` to target the active environment instead\n').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+__ test_ci_rejects_formatting_defects_without_rewriting_source[ci-reputation] __
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def3')
+service_name = 'reputation', recipe = 'ci'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: 
+E         [0;34m=== Running CI Checks for Reputation Service ===[0m
+E         
+E         
+E         [0;34m=== Formatting Code ===[0m
+E         All checks passed!
+E         
+E         1 file reformatted
+E         
+E         [0;32m✓ Code formatted[0m
+E         
+E         
+E         [0;34m=== Checking Code Style ===[0m
+E         All checks passed!
+E         
+E         1 file already formatted
+E         
+E         [0;32m✓ Style checks passed[0m
+E         
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/reputation/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/reputation/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/reputation/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/reputation/.venv` and will be ignored; use `--active` to target the active environment instead
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...ent-economy/services/reputation/.venv` and will be ignored; use `--active` to target the active environment instead\n').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+____ test_ci_rejects_formatting_defects_without_rewriting_source[ci-court] _____
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def4')
+service_name = 'court', recipe = 'ci'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: 
+E         [0;34m=== Running CI Checks for Court Service ===[0m
+E         
+E         
+E         [0;34m=== Formatting Code ===[0m
+E         All checks passed!
+E         
+E         1 file reformatted
+E         
+E         [0;32m✓ Code formatted[0m
+E         
+E         
+E         [0;34m=== Checking Code Style ===[0m
+E         All checks passed!
+E         
+E         1 file already formatted
+E         
+E         [0;32m✓ Style checks passed[0m
+E         
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/court/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/court/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/court/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/court/.venv` and will be ignored; use `--active` to target the active environment instead
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...ub/agent-economy/services/court/.venv` and will be ignored; use `--active` to target the active environment instead\n').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+__ test_ci_rejects_formatting_defects_without_rewriting_source[ci-db-gateway] __
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def5')
+service_name = 'db-gateway', recipe = 'ci'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: 
+E         [0;34m=== Running CI Checks for Db Gateway Service ===[0m
+E         
+E         
+E         [0;34m=== Formatting Code ===[0m
+E         All checks passed!
+E         
+E         1 file reformatted
+E         
+E         [0;32m✓ Code formatted[0m
+E         
+E         
+E         [0;34m=== Checking Code Style ===[0m
+E         All checks passed!
+E         
+E         1 file already formatted
+E         
+E         [0;32m✓ Style checks passed[0m
+E         
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...ready formatted\n\n\x1b[0;32m✓ Style checks passed\x1b[0m\n\n\n\x1b[0;32m✓ All CI checks passed\x1b[0m\n\n', stderr='').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+______ test_ci_rejects_formatting_defects_without_rewriting_source[ci-ui] ______
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def6')
+service_name = 'ui', recipe = 'ci'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: 
+E         [0;34m=== Running CI Checks for Ui Service ===[0m
+E         
+E         
+E         [0;34m=== Formatting Code ===[0m
+E         All checks passed!
+E         
+E         1 file reformatted
+E         
+E         [0;32m✓ Code formatted[0m
+E         
+E         
+E         [0;34m=== Checking Code Style ===[0m
+E         All checks passed!
+E         
+E         1 file already formatted
+E         
+E         [0;32m✓ Style checks passed[0m
+E         
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/ui/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/ui/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/ui/.venv` and will be ignored; use `--active` to target the active environment instead
+E         warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `/Users/flo/Developer/github/agent-economy/services/ui/.venv` and will be ignored; use `--active` to target the active environment instead
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...ithub/agent-economy/services/ui/.venv` and will be ignored; use `--active` to target the active environment instead\n').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+_ test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-identity] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def7')
+service_name = 'identity', recipe = 'ci-quiet'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [0;34m=== Running CI Checks (Quiet Mode) ===[0m
+E         [0;32m✓ Init passed[0m
+E         [0;32m✓ Test prerequisites passed[0m
+E         [0;32m✓ Code-format passed[0m
+E         [0;32m✓ Code-style passed[0m
+E         [0;32m✓ Code-typecheck passed[0m
+E         [0;32m✓ Code-security passed[0m
+E         [0;32m✓ Code-deptry passed[0m
+E         [0;32m✓ Code-spell passed[0m
+E         [0;32m✓ Code-semgrep passed[0m
+E         [0;32m✓ Code-audit passed[0m
+E         [0;32m✓ Unit tests passed[0m
+E         [0;32m✓ Architecture tests passed[0m
+E         [0;32m✓ Code-lspchecks passed[0m
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...sts passed\x1b[0m\n\x1b[0;32m✓ Code-lspchecks passed\x1b[0m\n\n\x1b[0;32m✓ All CI checks passed\x1b[0m\n\n', stderr='').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+_ test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-central-bank] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def8')
+service_name = 'central-bank', recipe = 'ci-quiet'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [0;34m=== Running CI Checks (Quiet Mode) ===[0m
+E         [0;32m✓ Init passed[0m
+E         [0;32m✓ Test prerequisites passed[0m
+E         [0;32m✓ Code-format passed[0m
+E         [0;32m✓ Code-style passed[0m
+E         [0;32m✓ Code-typecheck passed[0m
+E         [0;32m✓ Code-security passed[0m
+E         [0;32m✓ Code-deptry passed[0m
+E         [0;32m✓ Code-spell passed[0m
+E         [0;32m✓ Code-semgrep passed[0m
+E         [0;32m✓ Code-audit passed[0m
+E         [0;32m✓ Unit tests passed[0m
+E         [0;32m✓ Architecture tests passed[0m
+E         [0;32m✓ Code-lspchecks passed[0m
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...sts passed\x1b[0m\n\x1b[0;32m✓ Code-lspchecks passed\x1b[0m\n\n\x1b[0;32m✓ All CI checks passed\x1b[0m\n\n', stderr='').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+_ test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-task-board] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def9')
+service_name = 'task-board', recipe = 'ci-quiet'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [0;34m=== Running CI Checks (Quiet Mode) ===[0m
+E         [0;32m✓ Init passed[0m
+E         [0;32m✓ Test prerequisites passed[0m
+E         [0;32m✓ Code-format passed[0m
+E         [0;32m✓ Code-style passed[0m
+E         [0;32m✓ Code-typecheck passed[0m
+E         [0;32m✓ Code-security passed[0m
+E         [0;32m✓ Code-deptry passed[0m
+E         [0;32m✓ Code-spell passed[0m
+E         [0;32m✓ Code-semgrep passed[0m
+E         [0;32m✓ Code-audit passed[0m
+E         [0;32m✓ Unit tests passed[0m
+E         [0;32m✓ Architecture tests passed[0m
+E         [0;32m✓ Code-lspchecks passed[0m
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...sts passed\x1b[0m\n\x1b[0;32m✓ Code-lspchecks passed\x1b[0m\n\n\x1b[0;32m✓ All CI checks passed\x1b[0m\n\n', stderr='').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+_ test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-reputation] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def10')
+service_name = 'reputation', recipe = 'ci-quiet'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [0;34m=== Running CI Checks (Quiet Mode) ===[0m
+E         [0;32m✓ Init passed[0m
+E         [0;32m✓ Test prerequisites passed[0m
+E         [0;32m✓ Code-format passed[0m
+E         [0;32m✓ Code-style passed[0m
+E         [0;32m✓ Code-typecheck passed[0m
+E         [0;32m✓ Code-security passed[0m
+E         [0;32m✓ Code-deptry passed[0m
+E         [0;32m✓ Code-spell passed[0m
+E         [0;32m✓ Code-semgrep passed[0m
+E         [0;32m✓ Code-audit passed[0m
+E         [0;32m✓ Unit tests passed[0m
+E         [0;32m✓ Architecture tests passed[0m
+E         [0;32m✓ Code-lspchecks passed[0m
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...sts passed\x1b[0m\n\x1b[0;32m✓ Code-lspchecks passed\x1b[0m\n\n\x1b[0;32m✓ All CI checks passed\x1b[0m\n\n', stderr='').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+_ test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-court] __
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def11')
+service_name = 'court', recipe = 'ci-quiet'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [0;34m=== Running CI Checks (Quiet Mode) ===[0m
+E         [0;32m✓ Init passed[0m
+E         [0;32m✓ Test prerequisites passed[0m
+E         [0;32m✓ Code-format passed[0m
+E         [0;32m✓ Code-style passed[0m
+E         [0;32m✓ Code-typecheck passed[0m
+E         [0;32m✓ Code-security passed[0m
+E         [0;32m✓ Code-deptry passed[0m
+E         [0;32m✓ Code-spell passed[0m
+E         [0;32m✓ Code-semgrep passed[0m
+E         [0;32m✓ Code-audit passed[0m
+E         [0;32m✓ Unit tests passed[0m
+E         [0;32m✓ Architecture tests passed[0m
+E         [0;32m✓ Code-lspchecks passed[0m
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...sts passed\x1b[0m\n\x1b[0;32m✓ Code-lspchecks passed\x1b[0m\n\n\x1b[0;32m✓ All CI checks passed\x1b[0m\n\n', stderr='').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+_ test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-db-gateway] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def12')
+service_name = 'db-gateway', recipe = 'ci-quiet'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [0;34m=== Running CI Checks (Quiet Mode) ===[0m
+E         [0;32m✓ Init passed[0m
+E         [0;32m✓ Test prerequisites passed[0m
+E         [0;32m✓ Code-format passed[0m
+E         [0;32m✓ Code-style passed[0m
+E         [0;32m✓ Code-typecheck passed[0m
+E         [0;32m✓ Code-security passed[0m
+E         [0;32m✓ Code-deptry passed[0m
+E         [0;32m✓ Code-spell passed[0m
+E         [0;32m✓ Code-semgrep passed[0m
+E         [0;32m✓ Code-audit passed[0m
+E         [0;32m✓ Unit tests passed[0m
+E         [0;32m✓ Architecture tests passed[0m
+E         [0;32m✓ Code-lspchecks passed[0m
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...sts passed\x1b[0m\n\x1b[0;32m✓ Code-lspchecks passed\x1b[0m\n\n\x1b[0;32m✓ All CI checks passed\x1b[0m\n\n', stderr='').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+___ test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-ui] ___
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1185/test_ci_rejects_formatting_def13')
+service_name = 'ui', recipe = 'ci-quiet'
+
+    @pytest.mark.parametrize("service_name", SERVICE_NAMES)
+    @pytest.mark.parametrize("recipe", CI_RECIPES)
+    def test_ci_rejects_formatting_defects_without_rewriting_source(
+        tmp_path: Path,
+        service_name: str,
+        recipe: str,
+    ) -> None:
+        sandbox, env = _ci_sandbox(tmp_path, service_name)
+        source = sandbox / "sample.py"
+        original = b"value={'answer':[1,2,3]}\n"
+        source.write_bytes(original)
+    
+        result = _run_recipe(sandbox, env, recipe)
+    
+>       assert result.returncode != 0, result.stdout + result.stderr
+E       AssertionError: [0;34m=== Running CI Checks (Quiet Mode) ===[0m
+E         [0;32m✓ Init passed[0m
+E         [0;32m✓ Test prerequisites passed[0m
+E         [0;32m✓ Code-format passed[0m
+E         [0;32m✓ Code-style passed[0m
+E         [0;32m✓ Code-typecheck passed[0m
+E         [0;32m✓ Code-security passed[0m
+E         [0;32m✓ Code-deptry passed[0m
+E         [0;32m✓ Code-spell passed[0m
+E         [0;32m✓ Code-semgrep passed[0m
+E         [0;32m✓ Code-audit passed[0m
+E         [0;32m✓ Unit tests passed[0m
+E         [0;32m✓ Architecture tests passed[0m
+E         [0;32m✓ Code-lspchecks passed[0m
+E         
+E         [0;32m✓ All CI checks passed[0m
+E         
+E         
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=('/opt/homebrew/bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn...sts passed\x1b[0m\n\x1b[0;32m✓ Code-lspchecks passed\x1b[0m\n\n\x1b[0;32m✓ All CI checks passed\x1b[0m\n\n', stderr='').returncode
+
+../../tests/runtime/test_ci_readonly.py:105: AssertionError
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-identity]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-central-bank]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-task-board]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-reputation]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-court]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-db-gateway]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-ui]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-identity]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-central-bank]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-task-board]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-reputation]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-court]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-db-gateway]
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-ui]
+14 failed, 21 passed in 33.05s

@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-commons
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 9 items
+
+tests/unit/test_config_bytes.py .........                                [100%]
+
+============================== 9 passed in 0.10s ===============================

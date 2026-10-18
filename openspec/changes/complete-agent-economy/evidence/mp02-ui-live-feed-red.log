@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /tmp/agent-economy-mp02-ui-baseline/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 14 items / 13 deselected / 1 selected
+
+../../../../../../../tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py F [100%]
+
+=================================== FAILURES ===================================
+______________ test_new_sse_summary_is_literal_after_history_load ______________
+/tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py:84: in test_new_sse_summary_is_literal_after_history_load
+    assert live_item.locator('[data-mp02-xss="stored"]').count() == 0
+E   assert 1 == 0
+E    +  where 1 = count()
+E    +    where count = <Locator frame=<Frame name= url='http://127.0.0.1:60736/observatory.html'> selector='.feed-item >> internal:has-text="MP02 live "i >> [data-mp02-xss="stored"]'>.count
+E    +      where <Locator frame=<Frame name= url='http://127.0.0.1:60736/observatory.html'> selector='.feed-item >> internal:has-text="MP02 live "i >> [data-mp02-xss="stored"]'> = locator('[data-mp02-xss="stored"]')
+E    +        where locator = <Locator frame=<Frame name= url='http://127.0.0.1:60736/observatory.html'> selector='.feed-item >> internal:has-text="MP02 live "i'>.locator
+=========================== short test summary info ============================
+FAILED ../../../../../../../tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py::test_new_sse_summary_is_literal_after_history_load
+======================= 1 failed, 13 deselected in 2.94s =======================

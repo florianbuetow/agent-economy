@@ -30,6 +30,7 @@ task_feeder:
   feed_interval_seconds: 15
   max_open_tasks: 5
   bidding_deadline_seconds: 120
+  acceptance_window_seconds: 120
   execution_deadline_seconds: 300
   review_deadline_seconds: 120
   review_interval_seconds: 30

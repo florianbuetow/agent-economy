@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-18T03:07:11.933547+02:00",
+  "artifact_sha256": {
+    "agent-economy-mp07-original-atomic-parent-green.log": "ad7c3a404d1f64fdcfded8908d7c211d440e1ffecb6e4a3a5bfb0c32157e520a",
+    "agent-economy-mp07-original-six-races-parent-green.log": "ccf9e08b555d092bd242d72ab4fcd4986dbad680d748043c332ea63121148677",
+    "agent-economy-mp07-original-six-races-parent-final.log": "35c70151c04b7b0f265a617b73dc5fe34593f6b2700feac6c6dedc02c2a3fb58",
+    "agent-economy-mp07-original-races-config-statics.log": "81c429454f15bcbcc839ac10488c45dd1c286137439008bb91fc48b58d1cee77",
+    "agent-economy-mp07-original-races-config-statics-final.log": "9022265859f88700b1015548e969afb4b236f04d8a40d4d245341a99eb6126bc"
+  },
+  "source_sha256": {
+    "services/task-board/tests/integration/test_mp07_atomic_task_transitions.py": "6b44cf0e573f6c09ebe6d6ceacb6c3e2142114fb28a54e43a7b37fbde150d62c",
+    "services/task-board/tests/integration/test_mp07_deadline_transition_races.py": "b5e28a36b81c8ac8fc5fc389f42748697963bcc20e30f6c5b4522110831bae6b",
+    "docs/plans/2026-10-18-mp07-original-race-reconciliation.md": "fb52c2bb75b3ac04f98312c0794de98ea0fc1b1ff3163e63ed91ab5a300e2048"
+  },
+  "classification": [
+    "The original pre-implementation product-red race evidence remains in the preceding MP07 checkpoint bundle.",
+    "This continuation first observed3 atomic setup failures for missing acceptance windows, and3 deadline setup failures from a removed datetime seam. The intermediate shim failure lacked fromtimestamp. None executed its target race; these are fixture drift, not new product reds.",
+    "Author setup/intermediate/green runs were tool-output-only, not redirected or retained as raw logs. This bundle does not claim to contain them.",
+    "Parent independently retained3 atomic passes, then6 combined passes, then6 final combined passes after two strict override signature fixes and a stale docstring correction.",
+    "Final Ruff, formatting and Pyright pass. The earlier Pyright log retains the Generator return-type and payload-parameter override errors separately."
+  ],
+  "independent_review": {
+    "agent": "/root/mp07_board_rollout_review",
+    "verdict": "APPROVE both bounded race suites",
+    "scope": "Two real managers/clients and live Gateway; atomic barrier, native pre-claim gate, shared microsecond cutoff clock, actual authenticated receipts/legs/escrow/claim facts, one operation/event and no losing effects. Stale deadline docstring was corrected after review."
+  },
+  "limitations": [
+    "Three deadline scenarios intentionally force deadline winners; they do not prove both execution orders.",
+    "Acceptance-window/bid-admission/accept-expiry suites and remaining migration/restart/finalizer races remain pending.",
+    "No root CI or MP07/full-goal completion is claimed."
+  ]
+}

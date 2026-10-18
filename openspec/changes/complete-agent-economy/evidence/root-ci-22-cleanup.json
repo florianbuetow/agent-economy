@@ -1,0 +1,168 @@
+[
+  {
+    "manifest": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-6629f257bb0d4df9813eb2f6ed420b38-exv2p8mh/runtime.json",
+    "saved": "/private/tmp/agent-economy-root-ci-22-runtime-1.json",
+    "sha256": "7851cb47e9b0c518b4100f019a23a6cb46880a2db67c5b9808679ba2c56546c6",
+    "groups": [
+      {
+        "pid": 84425,
+        "pgid": 84425,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 84430,
+        "pgid": 84430,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 84432,
+        "pgid": 84432,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 84435,
+        "pgid": 84435,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 84439,
+        "pgid": 84439,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 84447,
+        "pgid": 84447,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 84543,
+        "pgid": 84543,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 84545,
+        "pgid": 84545,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 84422,
+        "pgid": 84422,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      }
+    ]
+  },
+  {
+    "manifest": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-6c0714cabc00472782f18f9be976586e-ac5lhyfv/runtime.json",
+    "saved": "/private/tmp/agent-economy-root-ci-22-runtime-2.json",
+    "sha256": "b10dad7752ce5cfc695c761d987f84a8f31eda64ef8f088431e44b5d153aa2c7",
+    "groups": [
+      {
+        "pid": 45193,
+        "pgid": 45193,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 45199,
+        "pgid": 45199,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 45201,
+        "pgid": 45201,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 45206,
+        "pgid": 45206,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 45208,
+        "pgid": 45208,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 45213,
+        "pgid": 45213,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 45311,
+        "pgid": 45311,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 45316,
+        "pgid": 45316,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 45318,
+        "pgid": 45318,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pid": 45122,
+        "pgid": 45122,
+        "observed": "absent",
+        "running": false,
+        "drained": true,
+        "cleanup_error": null
+      }
+    ]
+  }
+]

@@ -1,0 +1,48 @@
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/integration/conftest.py:20:1
+   |
+18 |   """
+19 |
+20 | / from __future__ import annotations
+21 | |
+22 | | import asyncio
+23 | | import os
+24 | | import socket
+25 | | import sqlite3
+26 | | import tempfile
+27 | | import threading
+28 | | import uuid
+29 | | from dataclasses import dataclass
+30 | | from pathlib import Path
+31 | | from typing import TYPE_CHECKING, Any
+32 | | from unittest.mock import patch
+33 | |
+34 | | import httpx
+35 | | import pytest
+36 | | import uvicorn
+37 | | from db_gateway_service.app import create_app as create_gateway_app
+38 | | from db_gateway_service.config import clear_settings_cache as clear_gateway_settings_cache
+39 | | from db_gateway_service.core.state import init_app_state as init_gateway_state
+40 | | from db_gateway_service.core.state import reset_app_state as reset_gateway_state
+41 | | from db_gateway_service.services.db_reader import DbReader
+42 | | from db_gateway_service.services.db_writer import DbWriter
+43 | | from db_gateway_service.task_time import parse_utc_text_to_epoch_us
+44 | | from db_gateway_service import task_time
+45 | | from httpx import ASGITransport, AsyncClient
+46 | | from service_auth.gateway import GatewayRequestSigner, GatewaySignerConfig
+47 | | from service_auth.platform import PlatformAgent
+48 | | from service_auth.signing import generate_keypair
+49 | |
+50 | | from court_service.app import create_app
+51 | | from court_service.config import clear_settings_cache
+52 | | from court_service.core.state import get_app_state, reset_app_state
+53 | | from court_service.judges import MockJudge
+54 | | from tests.helpers import make_mock_platform_agent, make_ruling_acknowledgment
+   | |______________________________________________________________________________^
+55 |
+56 |   if TYPE_CHECKING:
+   |
+help: Organize imports
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.

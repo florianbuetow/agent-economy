@@ -1,0 +1,17 @@
+{
+  "services/db-gateway/src/db_gateway_service/services/board_writer.py": "b16624643fd0081594170243bb111e35608b2ef1ff9d13ff2fadd4332e1b49ef",
+  "services/db-gateway/src/db_gateway_service/services/court_writer.py": "9e4cb7cab51534c5921e76d47e17ebe86b614a54b38e1c1e3193d8c9f5a1181a",
+  "services/db-gateway/src/db_gateway_service/task_operation_requests.py": "f3e5c6de115ed55e07a61da78cae512a3f3b8ccc02c221959ca2b1ccabfb99a3",
+  "services/task-board/src/task_board_service/services/task_ruling.py": "951652d0c1ae5d6d53430d69d6a68501a47f525f8a7b30ad0d6f25c2ab347fcb",
+  "services/db-gateway/tests/unit/test_mp07_native_write_boundary.py": "11a9e354da49b4b09b756d3cb596239dfaf1dd60ac70a0d70a3b94792f040509",
+  "services/db-gateway/tests/unit/test_mp07_rebuttal_projection.py": "7127d24155c44c66cbb5c5e479e41386b60b6912327a36072ff7942f5ea4f773",
+  "services/db-gateway/tests/unit/test_mp07_rebuttal_linkage.py": "51ee89e43a75ba22c53ba14445968268fae36fd4beb5ba174b09bb1e534728e5",
+  "services/db-gateway/tests/unit/test_mp07_writer_transaction_cleanup.py": "0a110a533a0caace24983fb8d84b7f2f36a424d6d07d7401332021c392eafc3a",
+  "services/db-gateway/tests/unit/test_mp07_operation_regressions.py": "aabbf8f4fd3ceab9db39a8e31fc723951ad64517a4f3ba497ef9ae7b5f2d8d63",
+  "services/db-gateway/tests/unit/test_mp07_court_operation_contract.py": "6efe226167b8413d07b2b3add5482a1fe2ff2fd1db89f8896cb4e7b4276df74b",
+  "services/db-gateway/tests/unit/test_mp07_pure_finalization.py": "8722006c3408290e98a99c5616f769b5deaaacd14f252f357a2eb0995dc57321",
+  "services/db-gateway/tests/unit/routers/test_mp07_task_operation_boundary.py": "2a12c8ebfd2c44e1abb66c15fdc86a9fce0284ae7483ff735d4203eb85de6a46",
+  "services/task-board/tests/integration/test_mp07_rebuttal_bridge.py": "282b0c731bf868f9a001aa03fc7d78fc868fc0d289a38774d2ed81d18d1813ad",
+  "services/task-board/tests/integration/test_mp07_rebuttal_ack_decode.py": "0ab3a3c21424be2cd02a0dabc46f53b1f5642d36dff8004fd56eb1b8ea27a36d",
+  "docs/plans/2026-10-18-mp07-writer-retirement.md": "4c16d587c99e7cb1d775da76ccd52190f74191eb57a6a7d015759aa454920a31"
+}

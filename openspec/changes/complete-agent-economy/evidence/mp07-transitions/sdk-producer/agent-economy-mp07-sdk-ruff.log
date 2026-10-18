@@ -1,0 +1,10 @@
+E501 Line too long (107 > 100)
+   --> tests/unit/test_mp07_task_board_producer.py:218:101
+    |
+218 | @pytest.mark.parametrize("operation_id", [None, True, "op-bad", "op-AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"])
+    |                                                                                                     ^^^^^^^
+219 | async def test_invalid_operation_id_is_rejected_before_signing(operation_id: object) -> None:
+220 |     captured: list[httpx.Request] = []
+    |
+
+Found 1 error.

@@ -1,0 +1,6 @@
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/money_audit.py:122
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/money_audit.py:122
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/money_audit.py:315
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/money_audit.py:316
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/money_audit.py:316
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/money_audit.py:317

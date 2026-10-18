@@ -1,0 +1,75 @@
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;31m✗ Code-semgrep failed[0m
+
+[0;34m=== Running Semgrep Static Analysis ===[0m
+Rule config.semgrep.no-direct-sql-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-direct-sql-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 105 files tracked by git with 10 Code rules:
+  Scanning 102 files with 5 python rules.
+Rule config.semgrep.no-direct-sql-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-direct-sql-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 2 (2 blocking)
+ • Rules run: 5
+ • Targets scanned: 102
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 5 rules on 102 files: 2 findings.
+                   
+                   
+┌─────────────────┐
+│ 2 Code Findings │
+└─────────────────┘
+                                       
+    src/db_gateway_service/migration.py
+   ❯❯❱ config.semgrep.agent-economy.no-default-parameter-values
+          ❰❰ Blocking ❱❱
+          Default parameter values hide configuration errors. Use explicit required parameters and validate at
+          the call site instead or raise an error when a parameter unexpectedly is missing or not set.        
+                                                                                                              
+           61┆ def __init__(
+           62┆     self,
+           63┆     reason: str,
+           64┆     message: str,
+           65┆     safe_details: dict[str, object] | None = None,
+           66┆ ) -> None:
+           67┆     self.reason = reason
+           68┆     self.message = message
+           69┆     self.safe_details = {} if safe_details is None else safe_details
+           70┆     super().__init__(message)
+   
+   ❯❯❱ config.semgrep.python.no-type-ignore
+          ❰❰ Blocking ❱❱
+          Type-suppression is not allowed. Do NOT add or keep: '# type: ignore' (including '[code]'). Fix the
+          underlying typing issue instead.                                                                   
+                                                                                                             
+          692┆ return sqlite3.connect(  # type: ignore[call-overload,no-any-return]
+
+error: recipe `code-semgrep` failed on line 278 with exit code 1
+error: recipe `ci-quiet` failed with exit code 1

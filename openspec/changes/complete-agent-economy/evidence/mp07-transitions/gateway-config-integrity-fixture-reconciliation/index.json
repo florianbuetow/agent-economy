@@ -1,0 +1,20 @@
+{
+  "parent_handle": 43544,
+  "exit_code": 0,
+  "passed": 18,
+  "warnings": 1,
+  "scope": "Required authority supplied to valid config-only construction; Court integrity publication gets explicit window/coherent cutoff. All original domain assertions unchanged. Occurred AFTER latest full discovery2376; do not report its full counts as currentallgreen.",
+  "review": "Mechanical bounded fixture repair; broader finalreview/rootgate pending.",
+  "sources": {
+    "services/db-gateway/tests/unit/test_config.py": "8e674d8c29fa4f6312f80ba728773e68a4a83c0419d6ae2780cb13460f435dd7",
+    "services/db-gateway/tests/unit/test_write_integrity.py": "108874377e5ab49713af20d93f35799d088e4fc9f56c462844606c3d0623e774",
+    "docs/plans/2026-10-18-mp07-gateway-config-integrity-fixtures.md": "108dde5c53f2f03e869026d29571111ea8acadb98cbe2dec655ad6d089028366"
+  },
+  "artifacts": {
+    "agent-economy-mp07-gateway-config-integrity-fixtures-format.log": "3bc53bf3e981a98a34a852e175bf9b77af841edea74fca595d9aedcbaf9a4938",
+    "agent-economy-mp07-gateway-config-integrity-fixtures-green.log": "921370d2f877a9bb0f4fac0699115f1a1f2845d45f000a0132b20936a85f0870",
+    "agent-economy-mp07-gateway-config-integrity-fixtures-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "baseline/test_config.py": "920f352ce3eb4080e40c74c8684331cc7ccfdb8ead26a4844aa7e8a062ff7db8",
+    "baseline/test_write_integrity.py": "762ec0d45acb5176fe602a8a31439e9b651e2d2237d88b1e4216f70457726297"
+  }
+}

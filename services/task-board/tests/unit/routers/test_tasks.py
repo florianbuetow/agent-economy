@@ -3,24 +3,75 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from freezegun import freeze_time
 from service_auth.financial_identity import operation_id_for
 
 from task_board_service.core.state import get_app_state
+from tests.fakes.gateway_task_store import GatewayTaskStore
 from tests.helpers import make_jws_token, tamper_jws
 from tests.unit.routers.conftest import (
     ALICE_AGENT_ID,
     BOB_AGENT_ID,
     create_task,
     make_task_id,
+    new_operation_fields,
     setup_task_in_execution,
 )
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
+
+
+def _bank() -> AsyncMock:
+    bank = get_app_state().central_bank_client
+    assert isinstance(bank, AsyncMock)
+    return bank
+
+
+def _platform() -> MagicMock:
+    platform = get_app_state().platform_agent
+    assert isinstance(platform, MagicMock)
+    return platform
+
+
+def _store() -> GatewayTaskStore:
+    store = get_app_state().store
+    assert isinstance(store, GatewayTaskStore)
+    return store
+
+
+def _cancel_snapshot(task_id: str) -> tuple[Any, ...]:
+    store = _store()
+    task = store.get_task(task_id)
+    assert task is not None
+    connection = store.writer.connection
+    return (
+        task,
+        store.writer.get_total_events(),
+        tuple(
+            tuple(row)
+            for row in connection.execute("SELECT * FROM bank_accounts ORDER BY account_id")
+        ),
+        tuple(
+            tuple(row)
+            for row in connection.execute(
+                "SELECT * FROM bank_transactions WHERE reference=? ORDER BY tx_id",
+                (task["escrow_id"],),
+            )
+        ),
+        tuple(
+            tuple(row)
+            for row in connection.execute(
+                "SELECT * FROM board_task_operations WHERE task_id=? ORDER BY operation_id",
+                (task_id,),
+            )
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +196,7 @@ class TestTaskCreation:
         private_key = alice_keypair[0]
         task_id = make_task_id()
         task_payload = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -212,6 +264,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload = {
+            "acceptance_window_seconds": 3600,
             "action": "submit_bid",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -222,9 +275,12 @@ class TestTaskCreation:
             "execution_deadline_seconds": 86400,
             "review_deadline_seconds": 86400,
         }
-        task_token = make_jws_token(private_key, alice_agent_id, task_payload)
+        task_token = make_jws_token(
+            private_key, alice_agent_id, task_payload, resource="POST /tasks"
+        )
 
         escrow_payload = {
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
             "action": "escrow_lock",
             "task_id": task_id,
             "agent_id": alice_agent_id,
@@ -257,6 +313,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload: dict[str, Any] = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -272,6 +329,9 @@ class TestTaskCreation:
         task_token = make_jws_token(private_key, alice_agent_id, task_payload)
 
         escrow_payload = {
+            "operation_id": operation_id_for(
+                "task-lock", (task_payload.get("task_id", task_id), alice_agent_id)
+            ),
             "action": "escrow_lock",
             "task_id": task_payload.get("task_id", task_id),
             "agent_id": alice_agent_id,
@@ -298,6 +358,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": bob_agent_id,
@@ -311,6 +372,7 @@ class TestTaskCreation:
         task_token = make_jws_token(private_key, ALICE_AGENT_ID, task_payload)
 
         escrow_payload = {
+            "operation_id": operation_id_for("task-lock", (task_id, bob_agent_id)),
             "action": "escrow_lock",
             "task_id": task_id,
             "agent_id": bob_agent_id,
@@ -338,6 +400,7 @@ class TestTaskCreation:
         task_id_b = make_task_id()
 
         task_payload = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id_a,
             "poster_id": alice_agent_id,
@@ -351,6 +414,7 @@ class TestTaskCreation:
         task_token = make_jws_token(private_key, alice_agent_id, task_payload)
 
         escrow_payload = {
+            "operation_id": operation_id_for("task-lock", (task_id_b, alice_agent_id)),
             "action": "escrow_lock",
             "task_id": task_id_b,
             "agent_id": alice_agent_id,
@@ -377,6 +441,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -390,6 +455,7 @@ class TestTaskCreation:
         task_token = make_jws_token(private_key, alice_agent_id, task_payload)
 
         escrow_payload = {
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
             "action": "escrow_lock",
             "task_id": task_id,
             "agent_id": alice_agent_id,
@@ -422,6 +488,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload: dict[str, Any] = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -435,6 +502,7 @@ class TestTaskCreation:
         task_token = make_jws_token(private_key, alice_agent_id, task_payload)
 
         escrow_payload: dict[str, Any] = {
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
             "action": "escrow_lock",
             "task_id": task_id,
             "agent_id": alice_agent_id,
@@ -467,6 +535,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload: dict[str, Any] = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -480,6 +549,7 @@ class TestTaskCreation:
         task_token = make_jws_token(private_key, alice_agent_id, task_payload)
 
         escrow_payload = {
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
             "action": "escrow_lock",
             "task_id": task_id,
             "agent_id": alice_agent_id,
@@ -512,6 +582,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload: dict[str, Any] = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -525,6 +596,7 @@ class TestTaskCreation:
         task_token = make_jws_token(private_key, alice_agent_id, task_payload)
 
         escrow_payload = {
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
             "action": "escrow_lock",
             "task_id": task_id,
             "agent_id": alice_agent_id,
@@ -557,6 +629,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload: dict[str, Any] = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -570,6 +643,7 @@ class TestTaskCreation:
         task_token = make_jws_token(private_key, alice_agent_id, task_payload)
 
         escrow_payload = {
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
             "action": "escrow_lock",
             "task_id": task_id,
             "agent_id": alice_agent_id,
@@ -592,10 +666,7 @@ class TestTaskCreation:
         alice_agent_id: str,
     ) -> None:
         """TC-15: Insufficient funds returns 402 insufficient_funds."""
-        state = get_app_state()
-        state.central_bank_client.escrow_lock = AsyncMock(
-            side_effect=Exception("insufficient_funds")
-        )
+        _bank().escrow_lock = AsyncMock(side_effect=Exception("insufficient_funds"))
 
         resp = await create_task(client, alice_keypair, alice_agent_id, reward=10000)
         assert resp.status_code == 402
@@ -609,10 +680,7 @@ class TestTaskCreation:
         alice_agent_id: str,
     ) -> None:
         """TC-16: Central Bank unavailable returns 502 central_bank_unavailable."""
-        state = get_app_state()
-        state.central_bank_client.escrow_lock = AsyncMock(
-            side_effect=ConnectionError("Central Bank unreachable")
-        )
+        _bank().escrow_lock = AsyncMock(side_effect=ConnectionError("Central Bank unreachable"))
 
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 502
@@ -668,6 +736,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -682,6 +751,7 @@ class TestTaskCreation:
         tampered_token = tamper_jws(task_token)
 
         escrow_payload = {
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
             "action": "escrow_lock",
             "task_id": task_id,
             "agent_id": alice_agent_id,
@@ -710,6 +780,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -723,6 +794,7 @@ class TestTaskCreation:
         task_token = make_jws_token(alice_key, alice_agent_id, task_payload)
 
         escrow_payload = {
+            "operation_id": operation_id_for("task-lock", (task_id, alice_agent_id)),
             "action": "escrow_lock",
             "task_id": task_id,
             "agent_id": alice_agent_id,
@@ -745,8 +817,7 @@ class TestTaskCreation:
         alice_agent_id: str,
     ) -> None:
         """TC-22: Identity service unavailable returns 502."""
-        state = get_app_state()
-        state.platform_agent.validate_certificate = MagicMock(
+        _platform().validate_certificate = MagicMock(
             side_effect=ConnectionError("Identity service unreachable")
         )
 
@@ -800,6 +871,7 @@ class TestTaskCreation:
         task_id = make_task_id()
 
         task_payload: dict[str, Any] = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -970,6 +1042,7 @@ class TestTaskQueries:
 
         private_key = alice_keypair[0]
         cancel_payload = {
+            **new_operation_fields(task_id_2),
             "action": "cancel_task",
             "task_id": task_id_2,
             "poster_id": alice_agent_id,
@@ -1107,6 +1180,7 @@ class TestTaskCancellation:
 
         private_key = alice_keypair[0]
         cancel_payload = {
+            **new_operation_fields(task_id),
             "action": "cancel_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -1134,6 +1208,7 @@ class TestTaskCancellation:
 
         private_key = alice_keypair[0]
         cancel_payload = {
+            **new_operation_fields(task_id),
             "action": "cancel_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -1143,8 +1218,35 @@ class TestTaskCancellation:
         resp = await client.post(f"/tasks/{task_id}/cancel", json={"token": cancel_token})
         assert resp.status_code == 200
 
-        state = get_app_state()
-        state.central_bank_client.escrow_release.assert_called()
+        _bank().escrow_release.assert_awaited_once()
+        operation_id = resp.json()["operation"]["operation_id"]
+        legs = (
+            _store()
+            .writer.connection.execute(
+                "SELECT account_id,direction,amount FROM bank_operation_legs WHERE operation_id=?",
+                (operation_id,),
+            )
+            .fetchall()
+        )
+        assert [tuple(row) for row in legs] == [(alice_agent_id, "credit", 100)]
+        assert (
+            _store()
+            .writer.connection.execute(
+                "SELECT COUNT(*) FROM bank_operation_receipts WHERE operation_id=?",
+                (operation_id,),
+            )
+            .fetchone()[0]
+            == 1
+        )
+        assert (
+            _store()
+            .writer.connection.execute(
+                "SELECT COUNT(*) FROM events WHERE task_id=? AND event_type='task.cancelled'",
+                (task_id,),
+            )
+            .fetchone()[0]
+            == 1
+        )
 
     @pytest.mark.unit
     async def test_can03_non_poster_forbidden(
@@ -1162,6 +1264,7 @@ class TestTaskCancellation:
 
         bob_key = bob_keypair[0]
         cancel_payload = {
+            **new_operation_fields(task_id),
             "action": "cancel_task",
             "task_id": task_id,
             "poster_id": bob_agent_id,
@@ -1183,6 +1286,7 @@ class TestTaskCancellation:
         private_key = alice_keypair[0]
         fake_task_id = "t-00000000-0000-0000-0000-000000000000"
         cancel_payload = {
+            **new_operation_fields(fake_task_id),
             "action": "cancel_task",
             "task_id": fake_task_id,
             "poster_id": alice_agent_id,
@@ -1206,6 +1310,7 @@ class TestTaskCancellation:
 
         private_key = alice_keypair[0]
         cancel_payload = {
+            **new_operation_fields(task_id),
             "action": "cancel_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -1215,10 +1320,20 @@ class TestTaskCancellation:
         resp1 = await client.post(f"/tasks/{task_id}/cancel", json={"token": cancel_token})
         assert resp1.status_code == 200
 
-        cancel_token_2 = make_jws_token(private_key, alice_agent_id, cancel_payload)
+        before = _cancel_snapshot(task_id)
+        replay_token = make_jws_token(private_key, alice_agent_id, cancel_payload)
+        replay = await client.post(f"/tasks/{task_id}/cancel", json={"token": replay_token})
+        assert replay.status_code == 200
+        assert replay.json()["operation"] == resp1.json()["operation"]
+        assert _cancel_snapshot(task_id) == before
+        _bank().escrow_release.assert_awaited_once()
+
+        new_payload = {**cancel_payload, **new_operation_fields(task_id)}
+        cancel_token_2 = make_jws_token(private_key, alice_agent_id, new_payload)
         resp2 = await client.post(f"/tasks/{task_id}/cancel", json={"token": cancel_token_2})
         assert resp2.status_code == 409
         assert resp2.json()["error"] == "invalid_status"
+        assert _cancel_snapshot(task_id) == before
 
     @pytest.mark.unit
     async def test_can06_wrong_action_in_cancel_token(
@@ -1233,11 +1348,14 @@ class TestTaskCancellation:
 
         private_key = alice_keypair[0]
         bad_payload = {
+            **new_operation_fields(task_id),
             "action": "approve_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
         }
-        bad_token = make_jws_token(private_key, alice_agent_id, bad_payload)
+        bad_token = make_jws_token(
+            private_key, alice_agent_id, bad_payload, resource=f"POST /tasks/{task_id}/cancel"
+        )
 
         resp = await client.post(f"/tasks/{task_id}/cancel", json={"token": bad_token})
         assert resp.status_code == 400
@@ -1259,6 +1377,7 @@ class TestTaskCancellation:
 
         private_key = alice_keypair[0]
         cancel_payload = {
+            **new_operation_fields(task_id),
             "action": "cancel_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -1285,32 +1404,66 @@ class TestTaskCancellation:
         assert resp.json()["error"] == "invalid_jws"
 
     @pytest.mark.unit
-    async def test_can09_cancel_with_expired_bidding_deadline(
+    async def test_can09_cancel_before_short_bidding_deadline(
         self,
         client: AsyncClient,
         alice_keypair: Any,
         alice_agent_id: str,
     ) -> None:
-        """CAN-09: Cancel with expired bidding deadline still works."""
-        task_id = make_task_id()
-        create_resp = await create_task(
-            client,
-            alice_keypair,
-            alice_agent_id,
-            task_id=task_id,
-            bidding_deadline_seconds=1,
-        )
-        assert create_resp.status_code == 201
+        """CAN-09: A short bidding window still permits cancellation before its cutoff."""
+        with freeze_time("2026-10-18T12:00:00Z"):
+            task_id = make_task_id()
+            created = await create_task(
+                client,
+                alice_keypair,
+                alice_agent_id,
+                task_id=task_id,
+                bidding_deadline_seconds=1,
+            )
+            assert created.status_code == 201
+            payload = {
+                "action": "cancel_task",
+                **new_operation_fields(task_id),
+                "task_id": task_id,
+                "poster_id": alice_agent_id,
+            }
+            token = make_jws_token(alice_keypair[0], alice_agent_id, payload)
+            response = await client.post(f"/tasks/{task_id}/cancel", json={"token": token})
+            assert response.status_code == 200
+            assert response.json()["status"] == "cancelled"
 
-        # Even if deadline is very short, poster should still be able to cancel
-        private_key = alice_keypair[0]
-        cancel_payload = {
-            "action": "cancel_task",
-            "task_id": task_id,
-            "poster_id": alice_agent_id,
-        }
-        cancel_token = make_jws_token(private_key, alice_agent_id, cancel_payload)
-
-        resp = await client.post(f"/tasks/{task_id}/cancel", json={"token": cancel_token})
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "cancelled"
+    @pytest.mark.unit
+    @pytest.mark.parametrize("past_cutoff_microseconds", [0, 1])
+    async def test_cancel_at_or_after_bidding_cutoff_has_no_effect(
+        self,
+        client: AsyncClient,
+        alice_keypair: Any,
+        alice_agent_id: str,
+        past_cutoff_microseconds: int,
+    ) -> None:
+        """Cancellation at equality or after cutoff cannot steal the expiry transition."""
+        with freeze_time("2026-10-18T12:00:00Z") as clock:
+            task_id = make_task_id()
+            created = await create_task(
+                client,
+                alice_keypair,
+                alice_agent_id,
+                task_id=task_id,
+                bidding_deadline_seconds=1,
+            )
+            assert created.status_code == 201
+            before = _cancel_snapshot(task_id)
+            clock.tick(delta=timedelta(seconds=1, microseconds=past_cutoff_microseconds))
+            payload = {
+                "action": "cancel_task",
+                **new_operation_fields(task_id),
+                "task_id": task_id,
+                "poster_id": alice_agent_id,
+            }
+            token = make_jws_token(alice_keypair[0], alice_agent_id, payload)
+            response = await client.post(f"/tasks/{task_id}/cancel", json={"token": token})
+            assert response.status_code == 409
+            assert response.json()["error"] == "cutoff_reached"
+            assert _cancel_snapshot(task_id) == before
+            _bank().escrow_release.assert_not_awaited()
+            _bank().escrow_split.assert_not_awaited()

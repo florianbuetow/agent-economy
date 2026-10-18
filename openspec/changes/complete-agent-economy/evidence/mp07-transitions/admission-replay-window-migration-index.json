@@ -1,0 +1,87 @@
+{
+  "baseline_commit": "a6af0bed5e0475f63b271329bb7f8ea683da9bc3",
+  "earlier_races_index": "six-races-proof-index.json",
+  "entries": [
+    {
+      "slice": "bid-admission",
+      "session_id": 67072,
+      "exit_code": 1,
+      "failed": 1,
+      "passed": 2,
+      "failure_kind": "intended product assertion",
+      "files": [
+        {
+          "file": "bid-admission.py.txt",
+          "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_bid_admission_races.py",
+          "sha256": "1185db9fc286636820cb5de452b98ed458ad9ccdbae00a69c6aae8f2733f3e7e"
+        },
+        {
+          "file": "bid-admission-parent-red.log",
+          "source": "/private/tmp/agent-economy-mp07-bid-admission-parent-red.log",
+          "sha256": "7ae28421f2329ae9fcfb4b1a1f92ec5d04f95ab572cacf31a8137cf09936acd7"
+        }
+      ]
+    },
+    {
+      "slice": "public-replay",
+      "session_id": 99428,
+      "exit_code": 1,
+      "failed": 5,
+      "passed": 0,
+      "failure_kind": "intended product assertion",
+      "files": [
+        {
+          "file": "public-replay.py.txt",
+          "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_public_command_replay.py",
+          "sha256": "b15c8890c7271adff333410768889d3c17aaf91ae067c103d06bf1199673cb6b"
+        },
+        {
+          "file": "public-replay-parent-red.log",
+          "source": "/private/tmp/agent-economy-mp07-public-replay-parent-red.log",
+          "sha256": "7f435050b7d55597232fdcdc5ac2848853dbaab49ed157e89fcdb32431856db3"
+        }
+      ]
+    },
+    {
+      "slice": "acceptance-window",
+      "session_id": 38927,
+      "exit_code": 1,
+      "failed": 11,
+      "passed": 2,
+      "failure_kind": "intended product assertion",
+      "files": [
+        {
+          "file": "acceptance-window.py.txt",
+          "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_acceptance_window.py",
+          "sha256": "761244c5fa53b378808fbaec8488a092619d54cd42d58d95aaf846305cd2d67c"
+        },
+        {
+          "file": "acceptance-window-parent-red.log",
+          "source": "/private/tmp/agent-economy-mp07-acceptance-window-parent-red.log",
+          "sha256": "3bfd77df7e19c0636359050ced72bdc574a883a7ef313269cfa9e821163a5fbf"
+        }
+      ]
+    },
+    {
+      "slice": "migration-contract",
+      "session_id": 55355,
+      "exit_code": 1,
+      "failed": 1,
+      "passed": 1,
+      "failure_kind": "missing migration capability; preservation assertions not reached",
+      "files": [
+        {
+          "file": "migration-contract.py.txt",
+          "source": "/Users/flo/Developer/github/agent-economy/services/db-gateway/tests/unit/test_mp07_migration_contract.py",
+          "sha256": "b60f1ab796a6f4a2d4da3f255740af3f629a10db9476a99be5132f55f7c4f916"
+        },
+        {
+          "file": "migration-contract-parent-red.log",
+          "source": "/private/tmp/agent-economy-mp07-migration-parent-red.log",
+          "sha256": "5b47e02dd2e9f1e17844302257e500ba343ef3975024b7c6b60121659df050eb"
+        }
+      ]
+    }
+  ],
+  "production_changed": false
+}

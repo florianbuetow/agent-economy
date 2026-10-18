@@ -1,0 +1,442 @@
+E501 Line too long (104 > 100)
+   --> tests/fakes/native_task_fixture.py:366:101
+    |
+364 |         assert (
+365 |             self.store.writer.connection.execute(
+366 |                 "SELECT COUNT(*) FROM events WHERE task_id=? AND event_source='board' AND event_type=?",
+    |                                                                                                     ^^^^
+367 |                 (task_id, event_type),
+368 |             ).fetchone()[0]
+    |
+
+PLC0414 Import alias does not rename original package
+  --> tests/unit/test_deadline_evaluator.py:13:45
+   |
+11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 |
+15 | if TYPE_CHECKING:
+   |
+help: Remove import alias
+
+F811 Redefinition of unused `native_tasks` from line 13
+  --> tests/unit/test_deadline_evaluator.py:30:58
+   |
+30 | async def test_evaluate_deadline_terminal_status_skipped(native_tasks: NativeTaskFixture) -> None:
+   |                                                          ^^^^^^^^^^^^ `native_tasks` redefined here
+31 |     native_tasks.open_task("t-1", _TERMS)
+32 |     native_tasks.bid("t-1", 90)
+   |
+  ::: tests/unit/test_deadline_evaluator.py:13:61
+   |
+11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+14 |
+15 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+  --> tests/unit/test_deadline_evaluator.py:49:55
+   |
+49 | async def test_evaluate_deadline_open_no_bids_expired(native_tasks: NativeTaskFixture) -> None:
+   |                                                       ^^^^^^^^^^^^ `native_tasks` redefined here
+50 |     native_tasks.open_task("t-1", _TERMS)
+51 |     native_tasks.clock.at_seconds(3600)
+   |
+  ::: tests/unit/test_deadline_evaluator.py:13:61
+   |
+11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+14 |
+15 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+  --> tests/unit/test_deadline_evaluator.py:69:57
+   |
+69 | async def test_evaluate_deadline_open_with_bids_expires(native_tasks: NativeTaskFixture) -> None:
+   |                                                         ^^^^^^^^^^^^ `native_tasks` redefined here
+70 |     """Native bids retain the poster's acceptance window, then refund at its cutoff."""
+71 |     native_tasks.open_task("t-1", _TERMS)
+   |
+  ::: tests/unit/test_deadline_evaluator.py:13:61
+   |
+11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+14 |
+15 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+  --> tests/unit/test_deadline_evaluator.py:93:5
+   |
+92 | async def test_legacy_timing_contract_keeps_original_acceptance_cutoff(
+93 |     native_tasks: NativeTaskFixture,
+   |     ^^^^^^^^^^^^ `native_tasks` redefined here
+94 | ) -> None:
+95 |     """A labeled historical sidecar fixture has no newly invented acceptance window."""
+   |
+  ::: tests/unit/test_deadline_evaluator.py:13:61
+   |
+11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+14 |
+15 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+   --> tests/unit/test_deadline_evaluator.py:112:58
+    |
+112 | async def test_evaluate_deadline_accepted_past_execution(native_tasks: NativeTaskFixture) -> None:
+    |                                                          ^^^^^^^^^^^^ `native_tasks` redefined here
+113 |     native_tasks.open_task("t-1", _TERMS)
+114 |     native_tasks.bid("t-1", 90)
+    |
+   ::: tests/unit/test_deadline_evaluator.py:13:61
+    |
+ 11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+ 12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+ 13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+    |                                                             ------------ previous definition of `native_tasks` here
+ 14 |
+ 15 | if TYPE_CHECKING:
+    |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+   --> tests/unit/test_deadline_evaluator.py:134:56
+    |
+134 | async def test_evaluate_deadline_submitted_past_review(native_tasks: NativeTaskFixture) -> None:
+    |                                                        ^^^^^^^^^^^^ `native_tasks` redefined here
+135 |     native_tasks.open_task("t-1", _TERMS)
+136 |     native_tasks.bid("t-1", 90)
+    |
+   ::: tests/unit/test_deadline_evaluator.py:13:61
+    |
+ 11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+ 12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+ 13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+    |                                                             ------------ previous definition of `native_tasks` here
+ 14 |
+ 15 | if TYPE_CHECKING:
+    |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+   --> tests/unit/test_deadline_evaluator.py:157:52
+    |
+157 | async def test_evaluate_deadline_not_past_deadline(native_tasks: NativeTaskFixture) -> None:
+    |                                                    ^^^^^^^^^^^^ `native_tasks` redefined here
+158 |     native_tasks.open_task("t-1", _TERMS)
+159 |     task = native_tasks.task("t-1")
+    |
+   ::: tests/unit/test_deadline_evaluator.py:13:61
+    |
+ 11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+ 12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+ 13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+    |                                                             ------------ previous definition of `native_tasks` here
+ 14 |
+ 15 | if TYPE_CHECKING:
+    |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+   --> tests/unit/test_deadline_evaluator.py:169:57
+    |
+169 | async def test_evaluate_deadline_retries_pending_escrow(native_tasks: NativeTaskFixture) -> None:
+    |                                                         ^^^^^^^^^^^^ `native_tasks` redefined here
+170 |     """A failed automatic delivery retries the exact stored owner, not a bare flag."""
+171 |     native_tasks.open_task("t-1", _TERMS)
+    |
+   ::: tests/unit/test_deadline_evaluator.py:13:61
+    |
+ 11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+ 12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+ 13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+    |                                                             ------------ previous definition of `native_tasks` here
+ 14 |
+ 15 | if TYPE_CHECKING:
+    |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+   --> tests/unit/test_deadline_evaluator.py:205:5
+    |
+204 | async def test_bare_pending_flag_cannot_authorize_early_release(
+205 |     native_tasks: NativeTaskFixture,
+    |     ^^^^^^^^^^^^ `native_tasks` redefined here
+206 | ) -> None:
+207 |     native_tasks.open_task("t-1", _TERMS)
+    |
+   ::: tests/unit/test_deadline_evaluator.py:13:61
+    |
+ 11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+ 12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+ 13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+    |                                                             ------------ previous definition of `native_tasks` here
+ 14 |
+ 15 | if TYPE_CHECKING:
+    |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+   --> tests/unit/test_deadline_evaluator.py:219:55
+    |
+219 | async def test_evaluate_deadlines_batch_processes_all(native_tasks: NativeTaskFixture) -> None:
+    |                                                       ^^^^^^^^^^^^ `native_tasks` redefined here
+220 |     native_tasks.open_task("t-1", _TERMS)
+221 |     native_tasks.open_task("t-2", _TERMS)
+    |
+   ::: tests/unit/test_deadline_evaluator.py:13:61
+    |
+ 11 | from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+ 12 | from tests.fakes.native_task_fixture import START_US, TaskTerms
+ 13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+    |                                                             ------------ previous definition of `native_tasks` here
+ 14 |
+ 15 | if TYPE_CHECKING:
+    |
+help: Remove definition: `native_tasks`
+
+PLC0414 Import alias does not rename original package
+  --> tests/unit/test_deadline_sweep.py:13:45
+   |
+12 | from tests.fakes.native_task_fixture import TaskTerms
+13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 |
+15 | if TYPE_CHECKING:
+   |
+help: Remove import alias
+
+F811 Redefinition of unused `native_tasks` from line 13
+  --> tests/unit/test_deadline_sweep.py:38:5
+   |
+37 | async def test_sweep_expires_open_task_without_any_api_read(
+38 |     native_tasks: NativeTaskFixture,
+   |     ^^^^^^^^^^^^ `native_tasks` redefined here
+39 | ) -> None:
+40 |     native_tasks.open_task("t-1", _SHORT_TERMS)
+   |
+  ::: tests/unit/test_deadline_sweep.py:13:61
+   |
+12 | from tests.fakes.native_task_fixture import TaskTerms
+13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+14 |
+15 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+  --> tests/unit/test_deadline_sweep.py:59:5
+   |
+58 | async def test_sweep_visits_accepted_submitted_and_disputed_statuses(
+59 |     native_tasks: NativeTaskFixture,
+   |     ^^^^^^^^^^^^ `native_tasks` redefined here
+60 | ) -> None:
+61 |     for task_id in ("t-open", "t-accepted", "t-submitted", "t-disputed"):
+   |
+  ::: tests/unit/test_deadline_sweep.py:13:61
+   |
+12 | from tests.fakes.native_task_fixture import TaskTerms
+13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+14 |
+15 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+   --> tests/unit/test_deadline_sweep.py:102:5
+    |
+101 | async def test_sweep_leaves_task_not_past_deadline_untouched(
+102 |     native_tasks: NativeTaskFixture,
+    |     ^^^^^^^^^^^^ `native_tasks` redefined here
+103 | ) -> None:
+104 |     native_tasks.open_task("t-1", _LONG_TERMS)
+    |
+   ::: tests/unit/test_deadline_sweep.py:13:61
+    |
+ 12 | from tests.fakes.native_task_fixture import TaskTerms
+ 13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+    |                                                             ------------ previous definition of `native_tasks` here
+ 14 |
+ 15 | if TYPE_CHECKING:
+    |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+   --> tests/unit/test_deadline_sweep.py:114:5
+    |
+113 | async def test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation(
+114 |     native_tasks: NativeTaskFixture,
+    |     ^^^^^^^^^^^^ `native_tasks` redefined here
+115 | ) -> None:
+116 |     """Overlapping deliveries reuse one claim and produce one settlement/event."""
+    |
+   ::: tests/unit/test_deadline_sweep.py:13:61
+    |
+ 12 | from tests.fakes.native_task_fixture import TaskTerms
+ 13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+    |                                                             ------------ previous definition of `native_tasks` here
+ 14 |
+ 15 | if TYPE_CHECKING:
+    |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 13
+   --> tests/unit/test_deadline_sweep.py:172:5
+    |
+171 | async def test_sweep_survives_a_failing_task_and_continues_with_others(
+172 |     native_tasks: NativeTaskFixture,
+    |     ^^^^^^^^^^^^ `native_tasks` redefined here
+173 |     monkeypatch: pytest.MonkeyPatch,
+174 | ) -> None:
+    |
+   ::: tests/unit/test_deadline_sweep.py:13:61
+    |
+ 12 | from tests.fakes.native_task_fixture import TaskTerms
+ 13 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+    |                                                             ------------ previous definition of `native_tasks` here
+ 14 |
+ 15 | if TYPE_CHECKING:
+    |
+help: Remove definition: `native_tasks`
+
+PLC0414 Import alias does not rename original package
+  --> tests/unit/test_wp06_ruling_trigger.py:15:45
+   |
+14 | from tests.fakes.native_task_fixture import TaskTerms
+15 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+16 |
+17 | if TYPE_CHECKING:
+   |
+help: Remove import alias
+
+F811 Redefinition of unused `native_tasks` from line 15
+  --> tests/unit/test_wp06_ruling_trigger.py:26:20
+   |
+26 | def _disputed_task(native_tasks: NativeTaskFixture) -> None:
+   |                    ^^^^^^^^^^^^ `native_tasks` redefined here
+27 |     native_tasks.open_task("t-wp06", _TERMS)
+28 |     native_tasks.bid("t-wp06", 90)
+   |
+  ::: tests/unit/test_wp06_ruling_trigger.py:15:61
+   |
+14 | from tests.fakes.native_task_fixture import TaskTerms
+15 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+16 |
+17 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 15
+  --> tests/unit/test_wp06_ruling_trigger.py:34:54
+   |
+34 | async def test_trigger_fires_when_rebuttal_submitted(native_tasks: NativeTaskFixture) -> None:
+   |                                                      ^^^^^^^^^^^^ `native_tasks` redefined here
+35 |     _disputed_task(native_tasks)
+36 |     native_tasks.rebut("t-wp06")
+   |
+  ::: tests/unit/test_wp06_ruling_trigger.py:15:61
+   |
+14 | from tests.fakes.native_task_fixture import TaskTerms
+15 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+16 |
+17 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 15
+  --> tests/unit/test_wp06_ruling_trigger.py:47:60
+   |
+47 | async def test_trigger_fires_when_rebuttal_deadline_passed(native_tasks: NativeTaskFixture) -> None:
+   |                                                            ^^^^^^^^^^^^ `native_tasks` redefined here
+48 |     _disputed_task(native_tasks)
+49 |     native_tasks.clock.at_seconds(3600)
+   |
+  ::: tests/unit/test_wp06_ruling_trigger.py:15:61
+   |
+14 | from tests.fakes.native_task_fixture import TaskTerms
+15 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+16 |
+17 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 15
+  --> tests/unit/test_wp06_ruling_trigger.py:60:53
+   |
+60 | async def test_trigger_not_fired_inside_open_window(native_tasks: NativeTaskFixture) -> None:
+   |                                                     ^^^^^^^^^^^^ `native_tasks` redefined here
+61 |     _disputed_task(native_tasks)
+62 |     native_tasks.clock.at_seconds(1800)
+   |
+  ::: tests/unit/test_wp06_ruling_trigger.py:15:61
+   |
+14 | from tests.fakes.native_task_fixture import TaskTerms
+15 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+16 |
+17 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 15
+  --> tests/unit/test_wp06_ruling_trigger.py:70:44
+   |
+70 | async def test_failed_trigger_is_retryable(native_tasks: NativeTaskFixture) -> None:
+   |                                            ^^^^^^^^^^^^ `native_tasks` redefined here
+71 |     _disputed_task(native_tasks)
+72 |     native_tasks.rebut("t-wp06")
+   |
+  ::: tests/unit/test_wp06_ruling_trigger.py:15:61
+   |
+14 | from tests.fakes.native_task_fixture import TaskTerms
+15 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+16 |
+17 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+F811 Redefinition of unused `native_tasks` from line 15
+  --> tests/unit/test_wp06_ruling_trigger.py:94:50
+   |
+94 | async def test_no_trigger_without_platform_agent(native_tasks: NativeTaskFixture) -> None:
+   |                                                  ^^^^^^^^^^^^ `native_tasks` redefined here
+95 |     _disputed_task(native_tasks)
+96 |     native_tasks.rebut("t-wp06")
+   |
+  ::: tests/unit/test_wp06_ruling_trigger.py:15:61
+   |
+14 | from tests.fakes.native_task_fixture import TaskTerms
+15 | from tests.fakes.native_task_fixture import native_tasks as native_tasks
+   |                                                             ------------ previous definition of `native_tasks` here
+16 |
+17 | if TYPE_CHECKING:
+   |
+help: Remove definition: `native_tasks`
+
+Found 25 errors.
+No fixes available (3 hidden fixes can be enabled with the `--unsafe-fixes` option).

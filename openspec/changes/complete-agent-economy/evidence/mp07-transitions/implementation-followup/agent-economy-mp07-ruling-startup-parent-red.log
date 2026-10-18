@@ -1,0 +1,49 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 6 items
+
+tests/unit/test_mp07_ruling_startup.py FFF...                            [100%]
+
+=================================== FAILURES ===================================
+___ test_board_first_ruling_without_court_row_survives_audit_and_restart[0] ____
+tests/unit/test_mp07_ruling_startup.py:159: in test_board_first_ruling_without_court_row_survives_audit_and_restart
+    assert {
+E   AssertionError: assert {'audit': {'c...status': 500}} == {'audit': {'c...': 'success'}}
+E     
+E     Differing items:
+E     {'reopened': {'details': {'finding_codes': ['dispute_claim_linkage_invalid']}, 'error': 'database_task_contract_failed', 'kind': 'service_error', 'status': 500}} != {'reopened': {'contracts_clean': True, 'findings': (), 'kind': 'success'}}
+E     {'audit': {'contracts_clean': False, 'findings': (('dispute_claim_linkage_invalid', 't-d31427ef-6115-4de8-acca-2a9ad21aeb02'),)}} != {'audit': {'contracts_clean': True, 'findings': ()}}
+E     Use -v to get more diff
+___ test_board_first_ruling_without_court_row_survives_audit_and_restart[50] ___
+tests/unit/test_mp07_ruling_startup.py:159: in test_board_first_ruling_without_court_row_survives_audit_and_restart
+    assert {
+E   AssertionError: assert {'audit': {'c...status': 500}} == {'audit': {'c...': 'success'}}
+E     
+E     Differing items:
+E     {'reopened': {'details': {'finding_codes': ['dispute_claim_linkage_invalid']}, 'error': 'database_task_contract_failed', 'kind': 'service_error', 'status': 500}} != {'reopened': {'contracts_clean': True, 'findings': (), 'kind': 'success'}}
+E     {'audit': {'contracts_clean': False, 'findings': (('dispute_claim_linkage_invalid', 't-2a7e1dce-67f8-4751-b49e-3eb852859e05'),)}} != {'audit': {'contracts_clean': True, 'findings': ()}}
+E     Use -v to get more diff
+__ test_board_first_ruling_without_court_row_survives_audit_and_restart[100] ___
+tests/unit/test_mp07_ruling_startup.py:159: in test_board_first_ruling_without_court_row_survives_audit_and_restart
+    assert {
+E   AssertionError: assert {'audit': {'c...status': 500}} == {'audit': {'c...': 'success'}}
+E     
+E     Differing items:
+E     {'reopened': {'details': {'finding_codes': ['dispute_claim_linkage_invalid']}, 'error': 'database_task_contract_failed', 'kind': 'service_error', 'status': 500}} != {'reopened': {'contracts_clean': True, 'findings': (), 'kind': 'success'}}
+E     {'audit': {'contracts_clean': False, 'findings': (('dispute_claim_linkage_invalid', 't-4767e40b-640b-44a9-9695-99b98ca5cdf9'),)}} != {'audit': {'contracts_clean': True, 'findings': ()}}
+E     Use -v to get more diff
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_ruling_startup.py::test_board_first_ruling_without_court_row_survives_audit_and_restart[0]
+FAILED tests/unit/test_mp07_ruling_startup.py::test_board_first_ruling_without_court_row_survives_audit_and_restart[50]
+FAILED tests/unit/test_mp07_ruling_startup.py::test_board_first_ruling_without_court_row_survives_audit_and_restart[100]
+==================== 3 failed, 3 passed, 1 warning in 0.96s ====================

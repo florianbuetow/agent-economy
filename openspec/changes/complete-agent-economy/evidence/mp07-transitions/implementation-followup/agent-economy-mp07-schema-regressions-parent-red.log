@@ -1,0 +1,74 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 12 items
+
+tests/unit/test_mp07_schema_regressions.py F...FFFFFFFF                  [100%]
+
+=================================== FAILURES ===================================
+_ test_resolved_legacy_observation_keeps_immutable_fact_but_audits_current_projection _
+tests/unit/test_mp07_schema_regressions.py:84: in test_resolved_legacy_observation_keeps_immutable_fact_but_audits_current_projection
+    assert result.contracts_clean, result.findings
+E   AssertionError: (TaskContractAuditFinding(code='legacy_observation_invalid', task_id='t-1'),)
+E   assert False
+E    +  where False = TaskContractAuditResult(contracts_clean=False, findings=(TaskContractAuditFinding(code='legacy_observation_invalid', task_id='t-1'),), task_count=2, contract_count=2, operation_count=0, legacy_observation_count=1).contracts_clean
+_________ test_submit_bid_operation_cannot_increment_lifecycle_version _________
+tests/unit/test_mp07_schema_regressions.py:179: in test_submit_bid_operation_cannot_increment_lifecycle_version
+    with pytest.raises(sqlite3.IntegrityError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'sqlite3.IntegrityError'>
+_ test_task_contract_audit_rejects_phase_and_cutoff_inconsistency[shifted_bidding] _
+tests/unit/test_mp07_schema_regressions.py:225: in test_task_contract_audit_rejects_phase_and_cutoff_inconsistency
+    assert not result.contracts_clean
+E   assert not True
+E    +  where True = TaskContractAuditResult(contracts_clean=True, findings=(), task_count=2, contract_count=2, operation_count=0, legacy_observation_count=0).contracts_clean
+_ test_task_contract_audit_rejects_phase_and_cutoff_inconsistency[missing_acceptance] _
+tests/unit/test_mp07_schema_regressions.py:225: in test_task_contract_audit_rejects_phase_and_cutoff_inconsistency
+    assert not result.contracts_clean
+E   assert not True
+E    +  where True = TaskContractAuditResult(contracts_clean=True, findings=(), task_count=2, contract_count=2, operation_count=0, legacy_observation_count=0).contracts_clean
+_ test_task_contract_audit_rejects_phase_and_cutoff_inconsistency[missing_submission] _
+tests/unit/test_mp07_schema_regressions.py:225: in test_task_contract_audit_rejects_phase_and_cutoff_inconsistency
+    assert not result.contracts_clean
+E   assert not True
+E    +  where True = TaskContractAuditResult(contracts_clean=True, findings=(), task_count=2, contract_count=2, operation_count=0, legacy_observation_count=0).contracts_clean
+_ test_migration_rejects_terminal_locked_escrow_without_pending_or_receipt[approved] _
+tests/unit/test_mp07_schema_regressions.py:253: in test_migration_rejects_terminal_locked_escrow_without_pending_or_receipt
+    with pytest.raises(migration.MigrationError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'db_gateway_service.migration.MigrationError'>
+_ test_migration_rejects_terminal_locked_escrow_without_pending_or_receipt[expired] _
+tests/unit/test_mp07_schema_regressions.py:253: in test_migration_rejects_terminal_locked_escrow_without_pending_or_receipt
+    with pytest.raises(migration.MigrationError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'db_gateway_service.migration.MigrationError'>
+_ test_migration_rejects_terminal_locked_escrow_without_pending_or_receipt[cancelled] _
+tests/unit/test_mp07_schema_regressions.py:253: in test_migration_rejects_terminal_locked_escrow_without_pending_or_receipt
+    with pytest.raises(migration.MigrationError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'db_gateway_service.migration.MigrationError'>
+____________ test_migration_rejects_approved_receipt_paid_to_poster ____________
+tests/unit/test_mp07_schema_regressions.py:329: in test_migration_rejects_approved_receipt_paid_to_poster
+    with pytest.raises(migration.MigrationError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'db_gateway_service.migration.MigrationError'>
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_schema_regressions.py::test_resolved_legacy_observation_keeps_immutable_fact_but_audits_current_projection
+FAILED tests/unit/test_mp07_schema_regressions.py::test_submit_bid_operation_cannot_increment_lifecycle_version
+FAILED tests/unit/test_mp07_schema_regressions.py::test_task_contract_audit_rejects_phase_and_cutoff_inconsistency[shifted_bidding]
+FAILED tests/unit/test_mp07_schema_regressions.py::test_task_contract_audit_rejects_phase_and_cutoff_inconsistency[missing_acceptance]
+FAILED tests/unit/test_mp07_schema_regressions.py::test_task_contract_audit_rejects_phase_and_cutoff_inconsistency[missing_submission]
+FAILED tests/unit/test_mp07_schema_regressions.py::test_migration_rejects_terminal_locked_escrow_without_pending_or_receipt[approved]
+FAILED tests/unit/test_mp07_schema_regressions.py::test_migration_rejects_terminal_locked_escrow_without_pending_or_receipt[expired]
+FAILED tests/unit/test_mp07_schema_regressions.py::test_migration_rejects_terminal_locked_escrow_without_pending_or_receipt[cancelled]
+FAILED tests/unit/test_mp07_schema_regressions.py::test_migration_rejects_approved_receipt_paid_to_poster
+=================== 9 failed, 3 passed, 1 warning in 15.26s ====================

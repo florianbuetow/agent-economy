@@ -1,0 +1,209 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 14 items
+
+tests/unit/test_mp07_gateway_store_parity.py EEEEEEEEEEEEFF              [100%]
+
+==================================== ERRORS ====================================
+______ ERROR at setup of test_empty_adapter_does_not_invent_fixture_facts ______
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+_____ ERROR at setup of test_native_bid_replay_preserves_one_bid_and_event _____
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+_ ERROR at setup of test_native_finalization_requires_persisted_bank_evidence __
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+_ ERROR at setup of test_changed_command_identity_is_rejected_without_new_bid __
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+____ ERROR at setup of test_malformed_operation_id_never_reaches_storage[] _____
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+_ ERROR at setup of test_malformed_operation_id_never_reaches_storage[wrong-prefix] _
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+__ ERROR at setup of test_malformed_operation_id_never_reaches_storage[True] ___
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+_ ERROR at setup of test_malformed_operation_id_never_reaches_storage[op-has space] _
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+_____ ERROR at setup of test_missing_finalize_identity_is_typed_not_silent _____
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+____ ERROR at setup of test_legacy_status_writer_cannot_steal_native_claim _____
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+_ ERROR at setup of test_missing_contract_is_reported_without_filling_defaults _
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+_ ERROR at setup of test_malformed_projection_still_uses_real_client_validation _
+tests/unit/test_mp07_gateway_store_parity.py:55: in store
+    adapter = _new_store(
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+=================================== FAILURES ===================================
+__________ test_close_reopen_and_other_caller_preserve_owned_database __________
+tests/unit/test_mp07_gateway_store_parity.py:328: in test_close_reopen_and_other_caller_preserve_owned_database
+    first = _new_store(path, load_schema_sql(SchemaState.CURRENT_V3), "gateway-task-board")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:42: in _new_store
+    return _adapter_class()(
+           ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+__________________ test_explicit_clock_controls_native_cutoff __________________
+tests/unit/test_mp07_gateway_store_parity.py:354: in test_explicit_clock_controls_native_cutoff
+    adapter = _adapter_class()(
+              ^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_gateway_store_parity.py:35: in _adapter_class
+    assert importlib.util.find_spec(module_name) is not None, (
+E   AssertionError: Gateway-backed test storage is missing; the dictionary fake has no native commands
+E   assert None is not None
+E    +  where None = <function find_spec at 0x100ea2520>('tests.fakes.gateway_task_store')
+E    +    where <function find_spec at 0x100ea2520> = <module 'importlib.util' (frozen)>.find_spec
+E    +      where <module 'importlib.util' (frozen)> = importlib.util
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_close_reopen_and_other_caller_preserve_owned_database
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_explicit_clock_controls_native_cutoff
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_empty_adapter_does_not_invent_fixture_facts
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_native_bid_replay_preserves_one_bid_and_event
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_native_finalization_requires_persisted_bank_evidence
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_changed_command_identity_is_rejected_without_new_bid
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_malformed_operation_id_never_reaches_storage[]
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_malformed_operation_id_never_reaches_storage[wrong-prefix]
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_malformed_operation_id_never_reaches_storage[True]
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_malformed_operation_id_never_reaches_storage[op-has space]
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_missing_finalize_identity_is_typed_not_silent
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_legacy_status_writer_cannot_steal_native_claim
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_missing_contract_is_reported_without_filling_defaults
+ERROR tests/unit/test_mp07_gateway_store_parity.py::test_malformed_projection_still_uses_real_client_validation
+========================= 2 failed, 12 errors in 0.45s =========================

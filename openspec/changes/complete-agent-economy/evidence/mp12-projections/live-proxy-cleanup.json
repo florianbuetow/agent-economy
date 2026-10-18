@@ -1,0 +1,19 @@
+{
+  "checked_at_utc": "2026-10-16T03:02:04.244556+00:00",
+  "run_id": "127f2fde34c64db1bf9466a0f99caf4f",
+  "source_manifest": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/runtime.json",
+  "owned_groups": [
+    89371,
+    89373,
+    89375,
+    89377,
+    89384,
+    89387,
+    89399,
+    89413,
+    89415,
+    89420
+  ],
+  "recorded_drained": true,
+  "remaining_members": []
+}

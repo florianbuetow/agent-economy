@@ -1,0 +1,217 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 636 items
+
+tests/unit/routers/test_action_aliases.py ..                             [  0%]
+tests/unit/routers/test_assets.py .................                      [  2%]
+tests/unit/routers/test_auth.py ........................................ [  9%]
+.                                                                        [  9%]
+tests/unit/routers/test_bid_count_after_accept.py .                      [  9%]
+tests/unit/routers/test_bids.py ....................................     [ 15%]
+tests/unit/routers/test_court_resilience.py ........                     [ 16%]
+tests/unit/routers/test_dispute_court_handoff.py .                       [ 16%]
+tests/unit/routers/test_disputes.py ...........................          [ 20%]
+tests/unit/routers/test_expiry_with_bids.py ......                       [ 21%]
+tests/unit/routers/test_health.py ....                                   [ 22%]
+tests/unit/routers/test_lifecycle.py ............                        [ 24%]
+tests/unit/routers/test_mp04_legacy_posting_guard.py ..                  [ 24%]
+tests/unit/routers/test_mp07_router_storage.py ....                      [ 25%]
+tests/unit/routers/test_rebuttal_dispute_binding.py ......               [ 26%]
+tests/unit/routers/test_rebuttal_middleware.py ...                       [ 26%]
+tests/unit/routers/test_rebuttals.py ..                                  [ 27%]
+tests/unit/routers/test_security.py .................................... [ 32%]
+                                                                         [ 32%]
+tests/unit/routers/test_submission.py ..................                 [ 35%]
+tests/unit/routers/test_t072_assets_gaps.py .                            [ 35%]
+tests/unit/routers/test_t072_bids_gaps.py .....                          [ 36%]
+tests/unit/routers/test_t072_disputes_gaps.py ...                        [ 36%]
+tests/unit/routers/test_t072_health_gaps.py .                            [ 37%]
+tests/unit/routers/test_t072_submission_gaps.py ......                   [ 38%]
+tests/unit/routers/test_t072_tasks_gaps.py ............                  [ 39%]
+tests/unit/routers/test_tasks.py ....................................... [ 46%]
+.......................................                                  [ 52%]
+tests/unit/routers/test_two_tier_ruling.py ..                            [ 52%]
+tests/unit/routers/test_validation.py ................                   [ 55%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py .......         [ 56%]
+tests/unit/test_asset_manager.py .............                           [ 58%]
+tests/unit/test_config.py F..F                                           [ 58%]
+tests/unit/test_deadline_evaluation_config.py ...                        [ 59%]
+tests/unit/test_deadline_evaluator.py ............                       [ 61%]
+tests/unit/test_deadline_sweep.py .....                                  [ 61%]
+tests/unit/test_escrow_coordinator.py .............                      [ 63%]
+tests/unit/test_lifecycle_events.py .........                            [ 65%]
+tests/unit/test_mp01_integration_log_isolation.py ..                     [ 65%]
+tests/unit/test_mp01_unit_log_isolation.py ..                            [ 66%]
+tests/unit/test_mp02_gateway_signing.py .                                [ 66%]
+tests/unit/test_mp03_platform_agent_startup.py F.F                       [ 66%]
+tests/unit/test_mp03_receiver_context.py .......                         [ 67%]
+tests/unit/test_mp04_financial_intents.py ............                   [ 69%]
+tests/unit/test_mp04_ruling_replay.py ..............                     [ 71%]
+tests/unit/test_mp06_maintenance_lock.py F...                            [ 72%]
+tests/unit/test_mp07_bid_presence_read.py ................               [ 75%]
+tests/unit/test_mp07_bid_projection_validation.py ..........             [ 76%]
+tests/unit/test_mp07_creation_cutoff_bounds.py ...                       [ 77%]
+tests/unit/test_mp07_creation_window.py .........                        [ 78%]
+tests/unit/test_mp07_deadline_actor_config.py .........                  [ 79%]
+tests/unit/test_mp07_deadline_precision.py .....                         [ 80%]
+tests/unit/test_mp07_gateway_store_parity.py .................           [ 83%]
+tests/unit/test_mp07_native_effect_delivery.py .............             [ 85%]
+tests/unit/test_mp07_public_task_projection.py ........................  [ 89%]
+tests/unit/test_mp07_public_whole_second_cutoffs.py .                    [ 89%]
+tests/unit/test_mp07_router_verifier_errors.py .......                   [ 90%]
+tests/unit/test_mp07_task_operation_client.py ....                       [ 91%]
+tests/unit/test_mp07_task_operation_client_regressions.py .........      [ 92%]
+tests/unit/test_mp07_unbuildable_approval.py ......                      [ 93%]
+tests/unit/test_mp12_public_bid_events.py .                              [ 93%]
+tests/unit/test_no_base_agent_imports.py .                               [ 93%]
+tests/unit/test_placeholder.py .                                         [ 93%]
+tests/unit/test_response_contracts.py ..FF.                              [ 94%]
+tests/unit/test_state.py ......                                          [ 95%]
+tests/unit/test_task_db_client_normalization.py ....                     [ 96%]
+tests/unit/test_task_store.py ....                                       [ 96%]
+tests/unit/test_token_validator.py ...............                       [ 99%]
+tests/unit/test_wp06_ruling_trigger.py .....                             [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_config_loads_from_yaml __________________________
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   deadline_evaluation.actor_id
+E     Field required [type=missing, input_value={'evaluation_interval_seconds': 10}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_config.py:65: in test_config_loads_from_yaml
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   deadline_evaluation.actor_id
+E     Field required [type=missing, input_value={'evaluation_interval_seconds': 10}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+____________________ test_config_platform_agent_id_present _____________________
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   deadline_evaluation.actor_id
+E     Field required [type=missing, input_value={'evaluation_interval_seconds': 10}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_config.py:209: in test_config_platform_agent_id_present
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   deadline_evaluation.actor_id
+E     Field required [type=missing, input_value={'evaluation_interval_seconds': 10}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+________ test_startup_reuses_registered_platform_agent_as_token_signer _________
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   deadline_evaluation.actor_id
+E     Field required [type=missing, input_value={'evaluation_interval_seconds': 3600}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp03_platform_agent_startup.py:148: in test_startup_reuses_registered_platform_agent_as_token_signer
+    async with lifespan(FastAPI()):
+               ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/core/lifespan.py:38: in lifespan
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   deadline_evaluation.actor_id
+E     Field required [type=missing, input_value={'evaluation_interval_seconds': 3600}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+__________ test_damaged_agent_key_fails_without_legacy_key_generation __________
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   deadline_evaluation.actor_id
+E     Field required [type=missing, input_value={'evaluation_interval_seconds': 3600}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp03_platform_agent_startup.py:204: in test_damaged_agent_key_fails_without_legacy_key_generation
+    async with lifespan(FastAPI()):
+               ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/core/lifespan.py:38: in lifespan
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   deadline_evaluation.actor_id
+E     Field required [type=missing, input_value={'evaluation_interval_seconds': 3600}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+__________ test_task_board_holds_shared_maintenance_lock_while_active __________
+tests/unit/test_mp06_maintenance_lock.py:131: in test_task_board_holds_shared_maintenance_lock_while_active
+    async with lifespan(FastAPI()):
+               ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/core/lifespan.py:132: in lifespan
+    deadline_actor_id=settings.deadline_evaluation.actor_id,
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'types.SimpleNamespace' object has no attribute 'actor_id'
+___________________ test_task_endpoints_wire_response_model ____________________
+tests/unit/test_response_contracts.py:123: in test_task_endpoints_wire_response_model
+    assert _route_response_model(app, "/tasks/{task_id}/cancel", "POST") is TaskResponse
+E   AssertionError: assert <class 'task_board_service.schemas.TaskMutationResponse'> is TaskResponse
+E    +  where <class 'task_board_service.schemas.TaskMutationResponse'> = _route_response_model(<fastapi.applications.FastAPI object at 0x10bdb34d0>, '/tasks/{task_id}/cancel', 'POST')
+____________________ test_bid_endpoints_wire_response_model ____________________
+tests/unit/test_response_contracts.py:134: in test_bid_endpoints_wire_response_model
+    assert (
+E   AssertionError: assert <class 'task_board_service.schemas.TaskMutationResponse'> is TaskResponse
+E    +  where <class 'task_board_service.schemas.TaskMutationResponse'> = _route_response_model(<fastapi.applications.FastAPI object at 0x10c161950>, '/tasks/{task_id}/bids/{bid_id}/accept', 'POST')
+=========================== short test summary info ============================
+FAILED tests/unit/test_config.py::test_config_loads_from_yaml - service_commo...
+FAILED tests/unit/test_config.py::test_config_platform_agent_id_present - ser...
+FAILED tests/unit/test_mp03_platform_agent_startup.py::test_startup_reuses_registered_platform_agent_as_token_signer
+FAILED tests/unit/test_mp03_platform_agent_startup.py::test_damaged_agent_key_fails_without_legacy_key_generation
+FAILED tests/unit/test_mp06_maintenance_lock.py::test_task_board_holds_shared_maintenance_lock_while_active
+FAILED tests/unit/test_response_contracts.py::test_task_endpoints_wire_response_model
+FAILED tests/unit/test_response_contracts.py::test_bid_endpoints_wire_response_model
+================== 7 failed, 629 passed in 195.93s (0:03:15) ===================

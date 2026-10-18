@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tests.helpers import make_jws_token
-from tests.unit.routers.conftest import create_task, make_task_id
+from tests.unit.routers.conftest import create_task, make_task_id, new_operation_fields
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -39,6 +39,7 @@ class TestHealthStatusBreakdownGap:
 
         cancel_payload = {
             "action": "cancel_task",
+            **new_operation_fields(task_id_2),
             "task_id": task_id_2,
             "poster_id": alice_agent_id,
         }

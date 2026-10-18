@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-18T02:56:38.839364+02:00",
+  "artifact_sha256": {
+    "agent-economy-mp07-store-adapter-red.log": "f16db2cfb1fb13173cd9ed67e6f89852e9870cec08c56fe2d10fd751cf7340ee",
+    "agent-economy-mp07-store-adapter-first.log": "d41e51ba08780d1af5612a7f5515585a7f86291afe974ff8cd9e6e66d5fdfc47",
+    "agent-economy-mp07-store-adapter-second.log": "d828f0f4a2bec25355854e92737a0d64a5dee0491b10fb0f0828da119301a67c",
+    "agent-economy-mp07-store-adapter-cleanup-red.log": "f9da6dba0973ed4e10a3c89695cce4a59944b3edad25dfb46b7a1c5cddae3507",
+    "agent-economy-mp07-store-adapter-final2-green.log": "7bd82203c2355d7466f33f91a59a75fc6cb0dfd88a761b1d012fa2f50cfc10f4",
+    "agent-economy-mp07-store-adapter-parent-green.log": "cb60f15342d7ea9bdcdb595bfe29a3b26550011dfcb994a02015004718780f91",
+    "agent-economy-mp07-store-adapter-mypy-final.log": "f9b031e5c45aa702cd4fef028d465551cb20a2c4698e0913c7b00766b20ac4d8",
+    "agent-economy-mp07-store-adapter-pyright-final.log": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+  },
+  "source_sha256": {
+    "services/task-board/tests/fakes/gateway_task_store.py": "bccea17de4cee5bd17900747a9eff687850a1b8c25bfbc895cce24b5d0f43d48",
+    "services/task-board/tests/unit/test_mp07_gateway_store_parity.py": "bfa7eef7ca880466103ac70d7c33600fb608f0c3fec36977e2c2239de074802b",
+    "docs/plans/2026-10-18-mp07-test-store-adapter.md": "95859944e88789703bafec2c94ca33439a250ec605c869b2c1a73934a1bfc5e6"
+  },
+  "classification": [
+    "Initial capability probe:2 assertion failures and12 fixture assertion errors because adapter was absent. This is one missing capability; downstream behavior was not executed.",
+    "First implementation failures caused by noncanonical fixture operation IDs; second by an incorrect new-test expectation that a pure command can finalize. These are fixture errors, not additional product reds.",
+    "Constructor cleanup regression:1 genuine failure and16 controls; opened connection was not closed after dependent initialization failed.",
+    "Final author17passes and independent parent17passes; overlapping runs not summed.",
+    "Ruff/format, Mypy with local source paths and Pyright passed; type-check logs retained."
+  ],
+  "independent_review": {
+    "agent": "/root/mp07_board_rollout_review",
+    "verdict": "APPROVE for controlled storage-fixture adoption",
+    "scope": "Three frozen files; explicit paths/authority/clock, real writers/readers/native commands, persistent close/reopen, initialization cleanup and17 parity cases."
+  },
+  "limitations": [
+    "No HTTP authentication, router/middleware or multi-process proof is provided by this in-process adapter.",
+    "Legacy dictionary fake and other consumers are not replaced by this adapter-only checkpoint; adoption proceeds separately.",
+    "Full MP-07 and root gate remain open."
+  ]
+}

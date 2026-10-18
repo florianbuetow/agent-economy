@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -11,9 +12,24 @@ import yaml
 from rich.console import Console
 from rich.panel import Panel
 from service_auth.financial_identity import operation_id_for
-from service_auth.financial_responses import LegacyFinancialEnvelope, NativeFinancialEnvelope
+from service_auth.financial_responses import (
+    SQLITE_MAX_INTEGER,
+    LegacyFinancialEnvelope,
+    NativeFinancialEnvelope,
+)
 
 from demo_replay import clients
+from demo_replay.task_operations import (
+    PHASES,
+    TaskIntent,
+    canonical_json,
+    completed_bid,
+    completed_mutation,
+    exact_integer,
+    posting_terms,
+    required_text,
+    step_identity,
+)
 from demo_replay.wallet import DemoAgent
 
 if TYPE_CHECKING:
@@ -36,6 +52,9 @@ def load_scenario(path: Path) -> dict[str, Any]:
         if required not in raw:
             msg = f"Scenario missing required key: {required}"
             raise ValueError(msg)
+    for step in raw["steps"]:
+        if isinstance(step, dict) and step.get("action") == "post_task":
+            posting_terms(step)
     return raw
 
 
@@ -58,6 +77,74 @@ class ReplayEngine:
         self._worker_task: dict[str, str] = {}
         # task_id -> Court dispute_id
         self._disputes: dict[str, str] = {}
+        self._scenario_steps = tuple(scenario["steps"])
+        self._intents: dict[int, TaskIntent] = {}
+        self._active_step_index: int | None = None
+
+    def _step_index(self, step: dict[str, Any]) -> int:
+        if self._active_step_index is not None:
+            index = self._active_step_index
+            if self._scenario_steps[index] is not step:
+                raise ValueError("Active scenario step identity changed")
+            return index
+        matches = [
+            index for index, candidate in enumerate(self._scenario_steps) if candidate is step
+        ]
+        if len(matches) != 1:
+            raise ValueError("A native mutation must identify one loaded scenario step")
+        return matches[0]
+
+    def _existing_intent(self, step: dict[str, Any], action: str) -> TaskIntent | None:
+        intent = self._intents.get(self._step_index(step))
+        if intent is not None:
+            if intent.action != action or intent.step_json != step_identity(step):
+                raise ValueError(
+                    "The original scenario step intent changed; refusing a new request"
+                )
+            intent.verify_actor()
+        return intent
+
+    async def _remember_intent(
+        self,
+        http: httpx.AsyncClient,
+        step: dict[str, Any],
+        action: str,
+        actor: DemoAgent,
+        task_id: str,
+        arguments: dict[str, Any],
+    ) -> TaskIntent:
+        if actor.agent_id is None:
+            raise ValueError("Task operation actor must be registered")
+        observed = await clients.get_task(http, task_id, self._config.task_board_url)
+        if not isinstance(observed, dict) or observed.get("task_id") != task_id:
+            raise ValueError("Observed task identity does not match the intended task")
+        version = exact_integer(
+            observed.get("lifecycle_version"), "lifecycle_version", 0, SQLITE_MAX_INTEGER
+        )
+        if observed.get("status") != PHASES[action][1]:
+            raise RuntimeError("Observed task is not in the source phase for a new intent")
+        if observed.get("pending_transition") is not None or observed.get("legacy_reconciliations"):
+            raise RuntimeError("Observed task has unresolved recovery ownership")
+        for field in ("poster_id", "escrow_id"):
+            required_text(observed, field)
+        exact_integer(observed.get("reward"), "reward", 1, SQLITE_MAX_INTEGER)
+        if action in {"submit_deliverable", "approve", "dispute"}:
+            required_text(observed, "worker_id")
+            exact_integer(observed.get("accepted_reward"), "accepted_reward", 1, SQLITE_MAX_INTEGER)
+        intent = TaskIntent(
+            action=action,
+            step_json=step_identity(step),
+            operation_id=f"op-{uuid.uuid4()}",
+            expected_lifecycle_version=version,
+            actor=actor,
+            actor_id=actor.agent_id,
+            actor_public_key=actor.public_key_string(),
+            task_id=task_id,
+            arguments_json=canonical_json(arguments),
+            observed_task_json=canonical_json(observed),
+        )
+        self._intents[self._step_index(step)] = intent
+        return intent
 
     def _resolve_task_id(self, step: dict[str, Any], agent_handle: str) -> str:
         """Resolve task_id from explicit task_ref, poster's latest, or worker assignment."""
@@ -107,13 +194,49 @@ class ReplayEngine:
                 delay = float(step.get("delay", self.default_delay))
 
                 console.print(f"\n[bold][{i}/{total}][/bold] [yellow]{action}[/yellow]")
-                await self._execute_step(http, step)
+                await self._execute_step(http, step, step_index=i - 1)
                 console.print(f"  [dim]waiting {delay}s...[/dim]")
                 await asyncio.sleep(delay)
 
         console.print(Panel("[bold green]Demo complete![/bold green]"))
 
-    async def _execute_step(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
+    async def _execute_step(
+        self,
+        http: httpx.AsyncClient,
+        step: dict[str, Any],
+        *,
+        step_index: int | None = None,
+    ) -> None:
+        """Dispatch one sequential scenario position while retaining its retry owner."""
+        previous = self._active_step_index
+        if step_index is not None:
+            if (
+                not 0 <= step_index < len(self._scenario_steps)
+                or self._scenario_steps[step_index] is not step
+            ):
+                raise ValueError("Scenario step position does not identify this step")
+        else:
+            matches = [
+                index for index, candidate in enumerate(self._scenario_steps) if candidate is step
+            ]
+            if len(matches) > 1:
+                raise ValueError("An aliased scenario step requires its explicit position")
+            if matches:
+                step_index = matches[0]
+        if step_index is not None and step_index in self._intents:
+            original = self._intents[step_index]
+            if original.step_json != step_identity(step):
+                raise ValueError(
+                    "The original scenario step intent changed; refusing a new request"
+                )
+            original.verify_actor()
+        self._active_step_index = step_index
+        try:
+            await self._dispatch_step(http, step)
+        finally:
+            self._active_step_index = previous
+
+    async def _dispatch_step(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         """Dispatch a single step to the appropriate handler."""
         action = step["action"]
         match action:
@@ -197,69 +320,96 @@ class ReplayEngine:
         )
 
     async def _do_post_task(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
-        poster_handle = step["poster"]
+        terms = posting_terms(step)
+        poster_handle = required_text(step, "poster")
         poster = self.agents[poster_handle]
         result = await clients.post_task(
             http,
             poster,
-            title=step["title"],
-            spec=step.get("spec", step["title"]),
-            reward=int(step["reward"]),
+            title=required_text(step, "title"),
+            spec=required_text(step, "spec"),
+            reward=exact_integer(step.get("reward"), "reward", 1, SQLITE_MAX_INTEGER),
             task_board_url=self._config.task_board_url,
+            **terms,
         )
-        task_id = result["task_id"]
+        task_id = required_text(result, "task_id")
         self._latest_task[poster_handle] = task_id
         if "ref" in step:
             self._refs[step["ref"]] = task_id
         console.print(
-            f"  [green]Task posted:[/green]"
-            f' "{step["title"]}" for {step["reward"]} coins -> {task_id}'
+            f'  [green]Task posted:[/green] "{step["title"]}" for {step["reward"]} coins -> {task_id}'
         )
 
     async def _do_bid(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
-        bidder_handle = step["bidder"]
-        bidder = self.agents[bidder_handle]
-        # Resolve task: check task_ref, then poster, then any latest task
-        if "task_ref" in step:
-            task_id = self._refs[step["task_ref"]]
-        elif "poster" in step:
-            task_id = self._latest_task[step["poster"]]
-        else:
-            # Find most recent task from any poster
-            task_id = list(self._latest_task.values())[-1]
-        amount = int(step["amount"])
-        result = await clients.submit_bid(
-            http, bidder, task_id, amount, self._config.task_board_url
+        intent = self._existing_intent(step, "bid")
+        if intent is None:
+            bidder = self.agents[required_text(step, "bidder")]
+            if "task_ref" in step:
+                task_id = self._refs[step["task_ref"]]
+            elif "poster" in step:
+                task_id = self._latest_task[step["poster"]]
+            else:
+                task_id = list(self._latest_task.values())[-1]
+            amount = exact_integer(step.get("amount"), "amount", 1, SQLITE_MAX_INTEGER)
+            intent = await self._remember_intent(
+                http, step, "bid", bidder, task_id, {"amount": amount}
+            )
+        amount = intent.arguments()["amount"]
+        response = await clients.submit_bid(
+            http,
+            intent.actor,
+            intent.task_id,
+            amount,
+            self._config.task_board_url,
+            operation_id=intent.operation_id,
+            expected_lifecycle_version=intent.expected_lifecycle_version,
         )
-        bid_id = result.get("bid_id", "?")
-        self._bids.setdefault(task_id, []).append(result)
+        bid = completed_bid(intent, response)
+        tracked = self._bids.setdefault(intent.task_id, [])
+        if all(item["bid_id"] != bid["bid_id"] for item in tracked):
+            tracked.append(bid)
         console.print(
-            f"  [green]{bidder.name} bid {amount} coins[/green] on task -> bid_id={bid_id}"
+            f"  [green]{intent.actor.name} bid {amount} coins[/green] on task -> bid_id={bid['bid_id']}"
         )
 
     async def _do_accept_bid(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
-        poster_handle = step["poster"]
-        poster = self.agents[poster_handle]
-        bidder_handle = step["bidder"]
-        task_id = self._resolve_task_id(step, poster_handle)
-
-        # Find the bid_id for this bidder
-        bids = await clients.list_bids(http, poster, task_id, self._config.task_board_url)
-        bidder = self.agents[bidder_handle]
-        bid_id: str | None = None
-        for bid in bids:
-            if bid.get("bidder_id") == bidder.agent_id:
-                bid_id = bid["bid_id"]
-                break
-        if bid_id is None:
-            console.print(f"  [red]No bid found from {bidder_handle}[/red]")
-            return
-
-        await clients.accept_bid(http, poster, task_id, bid_id, self._config.task_board_url)
-        # Track which task this worker is assigned to
-        self._worker_task[bidder_handle] = task_id
+        intent = self._existing_intent(step, "accept_bid")
+        if intent is None:
+            poster_handle = required_text(step, "poster")
+            bidder_handle = required_text(step, "bidder")
+            poster, bidder = self.agents[poster_handle], self.agents[bidder_handle]
+            task_id = self._resolve_task_id(step, poster_handle)
+            bids = await clients.list_bids(http, poster, task_id, self._config.task_board_url)
+            matches = [bid for bid in bids if bid.get("bidder_id") == bidder.agent_id]
+            if len(matches) != 1 or bidder.agent_id is None:
+                raise RuntimeError(f"Exactly one registered bid from {bidder_handle} is required")
+            selected = matches[0]
+            arguments: dict[str, Any] = {
+                "bid_id": required_text(selected, "bid_id"),
+                "worker_id": bidder.agent_id,
+                "bidder_handle": bidder_handle,
+                "bid_amount": exact_integer(
+                    selected.get("amount"), "bid amount", 1, SQLITE_MAX_INTEGER
+                ),
+            }
+            intent = await self._remember_intent(
+                http, step, "accept_bid", poster, task_id, arguments
+            )
+        arguments = intent.arguments()
+        response = await clients.accept_bid(
+            http,
+            intent.actor,
+            intent.task_id,
+            arguments["bid_id"],
+            self._config.task_board_url,
+            operation_id=intent.operation_id,
+            expected_lifecycle_version=intent.expected_lifecycle_version,
+        )
+        completed_mutation(intent, response)
+        bidder_handle = arguments["bidder_handle"]
+        self._worker_task[bidder_handle] = intent.task_id
         console.print(
-            f"  [green]{poster.name} accepted {bidder.name}'s bid[/green] -> contract formed"
+            f"  [green]{intent.actor.name} accepted {bidder_handle}'s bid[/green] -> contract formed"
         )
 
     async def _do_upload_asset(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
@@ -275,31 +425,70 @@ class ReplayEngine:
         console.print(f"  [green]{worker.name} uploaded[/green] '{filename}'")
 
     async def _do_submit_deliverable(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
-        worker_handle = step["worker"]
-        worker = self.agents[worker_handle]
-        task_id = self._resolve_task_id(step, worker_handle)
-        await clients.submit_deliverable(http, worker, task_id, self._config.task_board_url)
-        console.print(f"  [green]{worker.name} submitted deliverables[/green] for review")
+        intent = self._existing_intent(step, "submit_deliverable")
+        if intent is None:
+            handle = required_text(step, "worker")
+            task_id = self._resolve_task_id(step, handle)
+            intent = await self._remember_intent(
+                http, step, "submit_deliverable", self.agents[handle], task_id, {}
+            )
+        response = await clients.submit_deliverable(
+            http,
+            intent.actor,
+            intent.task_id,
+            self._config.task_board_url,
+            operation_id=intent.operation_id,
+            expected_lifecycle_version=intent.expected_lifecycle_version,
+        )
+        completed_mutation(intent, response)
+        console.print(f"  [green]{intent.actor.name} submitted deliverables[/green] for review")
 
     async def _do_approve(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
-        poster_handle = step["poster"]
-        poster = self.agents[poster_handle]
-        task_id = self._resolve_task_id(step, poster_handle)
-        await clients.approve_task(http, poster, task_id, self._config.task_board_url)
-        console.print(f"  [green]{poster.name} approved task[/green] -> payout released!")
+        intent = self._existing_intent(step, "approve")
+        if intent is None:
+            handle = required_text(step, "poster")
+            task_id = self._resolve_task_id(step, handle)
+            intent = await self._remember_intent(
+                http, step, "approve", self.agents[handle], task_id, {}
+            )
+        response = await clients.approve_task(
+            http,
+            intent.actor,
+            intent.task_id,
+            self._config.task_board_url,
+            operation_id=intent.operation_id,
+            expected_lifecycle_version=intent.expected_lifecycle_version,
+        )
+        completed_mutation(intent, response)
+        console.print(f"  [green]{intent.actor.name} approved task[/green] -> payout released!")
 
     async def _do_dispute(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
-        poster_handle = step["poster"]
-        poster = self.agents[poster_handle]
-        task_id = self._resolve_task_id(step, poster_handle)
-        reason = step.get("reason", "Deliverable does not meet specification")
-        result = await clients.dispute_task(
-            http, poster, task_id, reason, self._config.task_board_url
+        intent = self._existing_intent(step, "dispute")
+        if intent is None:
+            handle = required_text(step, "poster")
+            task_id = self._resolve_task_id(step, handle)
+            intent = await self._remember_intent(
+                http,
+                step,
+                "dispute",
+                self.agents[handle],
+                task_id,
+                {"reason": required_text(step, "reason")},
+            )
+        response = await clients.dispute_task(
+            http,
+            intent.actor,
+            intent.task_id,
+            intent.arguments()["reason"],
+            self._config.task_board_url,
+            operation_id=intent.operation_id,
+            expected_lifecycle_version=intent.expected_lifecycle_version,
         )
-        dispute_id = result.get("dispute_id")
-        if isinstance(dispute_id, str) and dispute_id:
-            self._disputes[task_id] = dispute_id
-        console.print(f'  [green]{poster.name} disputed task:[/green] "{reason}"')
+        result, _current = completed_mutation(intent, response)
+        self._disputes[intent.task_id] = required_text(result, "dispute_id")
+        console.print(
+            f'  [green]{intent.actor.name} disputed task:[/green] "{intent.arguments()["reason"]}"'
+        )
 
     async def _resolve_dispute_id(self, http: httpx.AsyncClient, task_id: str) -> str:
         if task_id in self._disputes:

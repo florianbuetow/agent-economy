@@ -1,0 +1,135 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 81 items / 67 deselected / 14 selected
+
+tests/unit/test_mp03_jws_core.py FFFFFFFFFF....                          [100%]
+
+=================================== FAILURES ===================================
+_______ test_bad_signature_precedes_action_content_validation[payload0] ________
+tests/unit/test_mp03_jws_core.py:606: in test_bad_signature_precedes_action_content_validation
+    verify_jws(token, expected_key.public_key(), policy=POLICY)
+src/service_auth/jws.py:376: in verify_jws
+    parsed = parse_jws(token)
+             ^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:313: in parse_jws
+    payload=_parse_payload(payload_raw),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+_______ test_bad_signature_precedes_action_content_validation[payload1] ________
+tests/unit/test_mp03_jws_core.py:606: in test_bad_signature_precedes_action_content_validation
+    verify_jws(token, expected_key.public_key(), policy=POLICY)
+src/service_auth/jws.py:376: in verify_jws
+    parsed = parse_jws(token)
+             ^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:313: in parse_jws
+    payload=_parse_payload(payload_raw),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+_______ test_bad_signature_precedes_action_content_validation[payload2] ________
+tests/unit/test_mp03_jws_core.py:606: in test_bad_signature_precedes_action_content_validation
+    verify_jws(token, expected_key.public_key(), policy=POLICY)
+src/service_auth/jws.py:376: in verify_jws
+    parsed = parse_jws(token)
+             ^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:313: in parse_jws
+    payload=_parse_payload(payload_raw),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+_______ test_bad_signature_precedes_action_content_validation[payload3] ________
+tests/unit/test_mp03_jws_core.py:606: in test_bad_signature_precedes_action_content_validation
+    verify_jws(token, expected_key.public_key(), policy=POLICY)
+src/service_auth/jws.py:376: in verify_jws
+    parsed = parse_jws(token)
+             ^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:313: in parse_jws
+    payload=_parse_payload(payload_raw),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+_______ test_unverified_structural_parse_does_not_admit_action[payload0] _______
+tests/unit/test_mp03_jws_core.py:613: in test_unverified_structural_parse_does_not_admit_action
+    parsed = parse_jws(_raw_token(HEADER, payload, key))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:313: in parse_jws
+    payload=_parse_payload(payload_raw),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+_______ test_unverified_structural_parse_does_not_admit_action[payload1] _______
+tests/unit/test_mp03_jws_core.py:613: in test_unverified_structural_parse_does_not_admit_action
+    parsed = parse_jws(_raw_token(HEADER, payload, key))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:313: in parse_jws
+    payload=_parse_payload(payload_raw),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+_______ test_unverified_structural_parse_does_not_admit_action[payload2] _______
+tests/unit/test_mp03_jws_core.py:613: in test_unverified_structural_parse_does_not_admit_action
+    parsed = parse_jws(_raw_token(HEADER, payload, key))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:313: in parse_jws
+    payload=_parse_payload(payload_raw),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+_______ test_unverified_structural_parse_does_not_admit_action[payload3] _______
+tests/unit/test_mp03_jws_core.py:613: in test_unverified_structural_parse_does_not_admit_action
+    parsed = parse_jws(_raw_token(HEADER, payload, key))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:313: in parse_jws
+    payload=_parse_payload(payload_raw),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+_ test_temporal_rejection_precedes_authenticated_action_validation[1893456031-1893456091-TokenNotYetValidError] _
+tests/unit/test_mp03_jws_core.py:633: in test_temporal_rejection_precedes_authenticated_action_validation
+    verify_jws(token, key.public_key(), policy=POLICY)
+src/service_auth/jws.py:376: in verify_jws
+    parsed = parse_jws(token)
+             ^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:313: in parse_jws
+    payload=_parse_payload(payload_raw),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+_ test_temporal_rejection_precedes_authenticated_action_validation[1893455900-1893455970-TokenExpiredError] _
+tests/unit/test_mp03_jws_core.py:633: in test_temporal_rejection_precedes_authenticated_action_validation
+    verify_jws(token, key.public_key(), policy=POLICY)
+src/service_auth/jws.py:376: in verify_jws
+    parsed = parse_jws(token)
+             ^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:313: in parse_jws
+    payload=_parse_payload(payload_raw),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload0]
+FAILED tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload1]
+FAILED tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload2]
+FAILED tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload3]
+FAILED tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload0]
+FAILED tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload1]
+FAILED tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload2]
+FAILED tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload3]
+FAILED tests/unit/test_mp03_jws_core.py::test_temporal_rejection_precedes_authenticated_action_validation[1893456031-1893456091-TokenNotYetValidError]
+FAILED tests/unit/test_mp03_jws_core.py::test_temporal_rejection_precedes_authenticated_action_validation[1893455900-1893455970-TokenExpiredError]
+================= 10 failed, 4 passed, 67 deselected in 0.12s ==================

@@ -1,0 +1,51 @@
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/bin/pysemgrep", line 10, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/semgrep/console_scripts/pysemgrep.py", line 64, in main
+    sys.exit(semgrep.main.main())
+             ~~~~~~~~~~~~~~~~~^^
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/semgrep/main.py", line 146, in main
+    cli(prog_name="semgrep")
+    ~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/click/core.py", line 1569, in __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/click/core.py", line 1490, in main
+    rv = self.invoke(ctx)
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/click/core.py", line 1967, in invoke
+    super().invoke(ctx)
+    ~~~~~~~~~~~~~~^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/click/core.py", line 1353, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/click/core.py", line 907, in invoke
+    return callback(*args, **kwargs)
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/click/decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/semgrep/cli.py", line 74, in cli
+    state = get_state()
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/semgrep/state.py", line 170, in get_state
+    return ctx.ensure_object(SemgrepState)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/click/core.py", line 754, in ensure_object
+    self.obj = rv = object_type()
+                    ~~~~~~~~~~~^^
+  File "<attrs generated methods semgrep.state.SemgrepState>", line 67, in __init__
+    _setattr('terminal', __attr_factory_terminal())
+                         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "<attrs generated methods semgrep.terminal.Terminal>", line 28, in __init__
+    self.__attrs_post_init__()
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/semgrep/terminal.py", line 38, in __attrs_post_init__
+    self.configure()
+    ~~~~~~~~~~~~~~^^
+  File "/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/semgrep/terminal.py", line 92, in configure
+    file_handler = logging.FileHandler(env.user_log_file, "w", encoding="utf-8")
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py", line 1219, in __init__
+    StreamHandler.__init__(self, self._open())
+                                 ~~~~~~~~~~^^
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py", line 1248, in _open
+    return open_func(self.baseFilename, self.mode,
+                     encoding=self.encoding, errors=self.errors)
+PermissionError: [Errno 1] Operation not permitted: '/Users/flo/.semgrep/semgrep.log'

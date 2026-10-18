@@ -1,0 +1,12 @@
+ARG001 Unused function argument: `gateway_db_path`
+   --> tests/integration/test_mp07_bid_admission_races.py:254:5
+    |
+252 |     gateway_client: Any,
+253 |     *,
+254 |     gateway_db_path: str,
+    |     ^^^^^^^^^^^^^^^
+255 |     task_id: str,
+256 |     operation_id: str,
+    |
+
+Found 1 error.

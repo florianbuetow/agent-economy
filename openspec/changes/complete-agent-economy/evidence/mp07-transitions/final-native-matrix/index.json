@@ -1,0 +1,32 @@
+{
+  "scope": "final-native-matrix",
+  "limits": "Each log proves its recorded source version and scope; earlier passes do not certify later harness changes. Root gate and full goal remain open.",
+  "artifacts": [
+    {
+      "origin": "/private/tmp/agent-economy-mp07-board-native-matrix-final.log",
+      "artifact": "agent-economy-mp07-board-native-matrix-final.log",
+      "sha256": "e44d12baffc9d7c648d49ad7f94951ba2c9962f88dacab44d9150b8a3779c8ff"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-board-event-fixture-red.log",
+      "artifact": "agent-economy-mp07-board-event-fixture-red.log",
+      "sha256": "000dd072cbe3e5e3dd2e584c2bf7cd21cdd5ae574cd097db8d750cf2f8673361"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-board-native-matrix.log",
+      "artifact": "agent-economy-mp07-board-native-matrix.log",
+      "sha256": "9fa37acac9ca1b004021d08edc524562175cba64e1ae734af49603c9fe6b9664"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-board-deadline-event-green.log",
+      "artifact": "agent-economy-mp07-board-deadline-event-green.log",
+      "sha256": "a9f2340f5f47502fe598a8c9693b02ec13c4cee7977335dd63f43a6b394b0954"
+    },
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-board-event-fixture-reconciliation.md",
+      "artifact": "2026-10-18-mp07-board-event-fixture-reconciliation.md",
+      "sha256": "61718c0341b299d8e86aea05eea993b2703f85faf537e6428299392672a43269"
+    }
+  ],
+  "current_sources": {}
+}

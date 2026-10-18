@@ -1,0 +1,31 @@
+Isolated runtime: /private/tmp/agent-economy-mp02-gateway-runtime/runtime-1f10d612f5244aaab1c1eeb3232bc238-1tvijelz
+provisioned handle=alice fingerprint_sha256=f33451c217e7fda584300fbfbb6c1bc21fe60cf2b7b7f2b7698406d4e3bbf6dd
+provisioned handle=bob fingerprint_sha256=2c124bbf4d6555e024db5fa69caa0ddf50aad0831d7507e4d358787e904efc8b
+provisioned handle=feeder fingerprint_sha256=63fc0946a5fbad0fe295217449edf7be846d7e7ad6d2d36e2b0a76f28afc8a7c
+provisioned handle=mathbot fingerprint_sha256=5979d10585947fa09670d8861915962db291eaa890b0cdbea920c0fb7da06982
+provisioned handle=mathbot_mistral fingerprint_sha256=e8ca9cf4a1a3a358aa2741cea151e28ef4ede5add0331bdcaab8cd42c740e826
+provisioned handle=mathbot_openai fingerprint_sha256=6e12969e41437a3317c0e4c36c906ffc79b2cff76a575eb847890c9bc344013b
+provisioned handle=operator fingerprint_sha256=6c2a654ffa126372d533be745e68c7ce5e7139f0902cad177d5cae0ad3cb2680
+provisioned handle=platform fingerprint_sha256=b06e7075558c5685ce4f65f410e0d0298a3e981f25fb36a097a78cefde227971
+provisioned handle=gateway-central-bank fingerprint_sha256=689b8915fa120e6c0495cd34bb62574869d38e3fdcf1fd87ce24ed440ac2f8fa
+provisioned handle=gateway-court fingerprint_sha256=9112dd54ba2f052bd5fa98935f388c849c5907b53c900abaf8a71ca39ad3d7e9
+provisioned handle=gateway-identity fingerprint_sha256=b7a8e2da5245f2fd869b12f45cd26859ac664684bb5d5b3a940262266f0c5c97
+provisioned handle=gateway-reputation fingerprint_sha256=d9ac6f64ecebec71928c7e68d021df259ffaa8e91bedc58eef92f81d734474b8
+provisioned handle=gateway-task-board fingerprint_sha256=b6b9f7e458555fc937e5557ecefb075b3780d693fb6be9a5c63a3e8db43944c9
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 6 items
+
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_register_then_read_round_trips_over_live_http PASSED [ 16%]
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_duplicate_public_key_returns_409_over_live_http PASSED [ 33%]
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_health_total_events_increments_after_live_write PASSED [ 50%]
+tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_exactly_one_201_among_five_racing_distinct_agents PASSED [ 66%]
+tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_winner_is_readable_and_no_duplicate_rows_exist PASSED [ 83%]
+tests/integration/test_endpoints.py::TestHealthIntegration::test_health_check PASSED [100%]
+
+============================== 6 passed in 0.42s ===============================

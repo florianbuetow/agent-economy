@@ -1,0 +1,278 @@
+{
+  "limits": "Retained matching migration/restore manifests only; source-runtime artifacts intentionally removed by restore tests are not reconstructed. Passing tests additionally assert owned cleanup.",
+  "runtimes": [
+    {
+      "origin": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/runtime.json",
+      "copy": "/private/tmp/agent-economy-root-ci-22-runtime-artifacts/pytest-3003-test_process_death_preserves_l0-0.json",
+      "sha256": "1fd85b985e7670004648c1e18b7f3aef6ac186b516476f68e0afafbd4151ee92",
+      "groups": [
+        {
+          "pgid": 98558,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98561,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98563,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98565,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98570,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98572,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98577,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98530,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98543,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98545,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98550,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98504,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        }
+      ]
+    },
+    {
+      "origin": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l1/runtime-754a37c9619a41ebbd92b6404a50752c-mwykutn6/runtime.json",
+      "copy": "/private/tmp/agent-economy-root-ci-22-runtime-artifacts/pytest-3003-test_process_death_preserves_l1-1.json",
+      "sha256": "7b584245ba75f2b08a9cab65eb6a2c9cd8ca1a9d982c33f9521dfa2e86c82d81",
+      "groups": [
+        {
+          "pgid": 98863,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98865,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98867,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98872,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98874,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98877,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98885,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98616,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98763,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98804,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98858,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98591,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        }
+      ]
+    },
+    {
+      "origin": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/runtime.json",
+      "copy": "/private/tmp/agent-economy-root-ci-22-runtime-artifacts/pytest-3003-test_migration_cli_preserves_l0-2.json",
+      "sha256": "7b4554c12d1a92e02344d7246566cae6ae9866924e91f5703290913e4ae4d474",
+      "groups": [
+        {
+          "pgid": 98327,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98331,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98334,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98336,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98340,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98398,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98496,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98307,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98315,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98320,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98324,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        },
+        {
+          "pgid": 98274,
+          "observed": "absent",
+          "running": false,
+          "drained": true,
+          "cleanup_error": null
+        }
+      ]
+    }
+  ]
+}

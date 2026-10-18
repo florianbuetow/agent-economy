@@ -1,0 +1,158 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 16 items
+
+tests/unit/math_worker/test_mp07_native_intents.py .FFFFFFFFFFFFFFF      [100%]
+
+=================================== FAILURES ===================================
+_____________ test_loop_constructor_requires_runtime_task_commands _____________
+tests/unit/math_worker/test_mp07_native_intents.py:401: in test_loop_constructor_requires_runtime_task_commands
+    assert tuple(signature.parameters) == ("agent", "llm", "config", "commands")
+E   AssertionError: assert ('agent', 'llm', 'config') == ('agent', 'll...', 'commands')
+E     
+E     Right contains one more item: 'commands'
+E     Use -v to get more diff
+_____ test_stored_bid_reopens_and_replays_without_task_balance_or_llm_read _____
+tests/unit/math_worker/test_mp07_native_intents.py:430: in test_stored_bid_reopens_and_replays_without_task_balance_or_llm_read
+    observed = await _call_bidding(_loop(worker_agent, llm, commands), _TASK_ID)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/math_worker/test_mp07_native_intents.py:174: in _call_bidding
+    return cast("FrozenTaskIntent", await cast("Any", loop._phase_bidding)(argument))
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/math_worker/loop.py:234: in _phase_bidding
+    response = await self._llm.complete(BID_AMOUNT_SYSTEM, prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2321: in _execute_mock_call
+    raise effect
+E   AssertionError: stored bid called LLM
+------------------------------ Captured log call -------------------------------
+WARNING  math_worker.loop:loop.py:427 Could not fetch balance, using 0
+____ test_absent_bid_reads_once_and_persists_frozen_terms_before_transport _____
+tests/unit/math_worker/test_mp07_native_intents.py:471: in test_absent_bid_reads_once_and_persists_frozen_terms_before_transport
+    observed = await _call_bidding(_loop(worker_agent, llm, commands), _TASK_ID)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/math_worker/test_mp07_native_intents.py:174: in _call_bidding
+    return cast("FrozenTaskIntent", await cast("Any", loop._phase_bidding)(argument))
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/math_worker/loop.py:243: in _phase_bidding
+    result = await self._agent.submit_bid(task_id, amount)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2332: in _execute_mock_call
+    result = await effect(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: test_absent_bid_reads_once_and_persists_frozen_terms_before_transport.<locals>.send() missing 2 required keyword-only arguments: 'operation_id' and 'expected_lifecycle_version'
+__________ test_bid_storage_failure_blocks_public_mutation_transport ___________
+tests/unit/math_worker/test_mp07_native_intents.py:497: in test_bid_storage_failure_blocks_public_mutation_transport
+    with pytest.raises(RuntimeIntentError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'base_agent.runtime_intent_models.RuntimeIntentError'>
+____ test_stored_submission_reopens_and_replays_without_upload_or_task_read ____
+tests/unit/math_worker/test_mp07_native_intents.py:520: in test_stored_submission_reopens_and_replays_without_upload_or_task_read
+    observed = await _call_submitting(_loop(worker_agent, _llm(), commands), _TASK_ID, "42")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/math_worker/test_mp07_native_intents.py:184: in _call_submitting
+    await cast("Any", loop._phase_submitting)(task_id, solution),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/math_worker/loop.py:308: in _phase_submitting
+    await self._agent.upload_asset(task_id, filename, content)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2321: in _execute_mock_call
+    raise effect
+E   AssertionError: stored submission uploaded
+_ test_absent_submission_uploads_then_freezes_current_version_before_transport _
+tests/unit/math_worker/test_mp07_native_intents.py:567: in test_absent_submission_uploads_then_freezes_current_version_before_transport
+    observed = await _call_submitting(_loop(worker_agent, _llm(), commands), _TASK_ID, "42")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/math_worker/test_mp07_native_intents.py:184: in _call_submitting
+    await cast("Any", loop._phase_submitting)(task_id, solution),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/math_worker/loop.py:311: in _phase_submitting
+    await self._agent.submit_deliverable(task_id)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2332: in _execute_mock_call
+    result = await effect(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: test_absent_submission_uploads_then_freezes_current_version_before_transport.<locals>.submit() missing 2 required keyword-only arguments: 'operation_id' and 'expected_lifecycle_version'
+_______ test_only_completed_bid_enters_acceptance_polling[pending-False] _______
+tests/unit/math_worker/test_mp07_native_intents.py:601: in test_only_completed_bid_enters_acceptance_polling
+    await loop._cycle()
+src/math_worker/loop.py:112: in _cycle
+    bid_id: str = bid_result["bid_id"]
+                  ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'FrozenTaskIntent' object is not subscriptable
+_______ test_only_completed_bid_enters_acceptance_polling[blocked-False] _______
+tests/unit/math_worker/test_mp07_native_intents.py:601: in test_only_completed_bid_enters_acceptance_polling
+    await loop._cycle()
+src/math_worker/loop.py:112: in _cycle
+    bid_id: str = bid_result["bid_id"]
+                  ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'FrozenTaskIntent' object is not subscriptable
+_ test_only_completed_bid_enters_acceptance_polling[attention_required-False] __
+tests/unit/math_worker/test_mp07_native_intents.py:601: in test_only_completed_bid_enters_acceptance_polling
+    await loop._cycle()
+src/math_worker/loop.py:112: in _cycle
+    bid_id: str = bid_result["bid_id"]
+                  ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'FrozenTaskIntent' object is not subscriptable
+______ test_only_completed_bid_enters_acceptance_polling[completed-True] _______
+tests/unit/math_worker/test_mp07_native_intents.py:601: in test_only_completed_bid_enters_acceptance_polling
+    await loop._cycle()
+src/math_worker/loop.py:112: in _cycle
+    bid_id: str = bid_result["bid_id"]
+                  ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'FrozenTaskIntent' object is not subscriptable
+___ test_only_completed_submission_enters_review_and_can_earn[pending-False] ___
+tests/unit/math_worker/test_mp07_native_intents.py:640: in test_only_completed_submission_enters_review_and_can_earn
+    await loop._cycle()
+src/math_worker/loop.py:112: in _cycle
+    bid_id: str = bid_result["bid_id"]
+                  ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'FrozenTaskIntent' object is not subscriptable
+___ test_only_completed_submission_enters_review_and_can_earn[blocked-False] ___
+tests/unit/math_worker/test_mp07_native_intents.py:640: in test_only_completed_submission_enters_review_and_can_earn
+    await loop._cycle()
+src/math_worker/loop.py:112: in _cycle
+    bid_id: str = bid_result["bid_id"]
+                  ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'FrozenTaskIntent' object is not subscriptable
+_ test_only_completed_submission_enters_review_and_can_earn[attention_required-False] _
+tests/unit/math_worker/test_mp07_native_intents.py:640: in test_only_completed_submission_enters_review_and_can_earn
+    await loop._cycle()
+src/math_worker/loop.py:112: in _cycle
+    bid_id: str = bid_result["bid_id"]
+                  ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'FrozenTaskIntent' object is not subscriptable
+__ test_only_completed_submission_enters_review_and_can_earn[completed-True] ___
+tests/unit/math_worker/test_mp07_native_intents.py:640: in test_only_completed_submission_enters_review_and_can_earn
+    await loop._cycle()
+src/math_worker/loop.py:112: in _cycle
+    bid_id: str = bid_result["bid_id"]
+                  ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: 'FrozenTaskIntent' object is not subscriptable
+_____ test_cycle_replays_known_pending_once_before_new_filtered_discovery ______
+tests/unit/math_worker/test_mp07_native_intents.py:678: in test_cycle_replays_known_pending_once_before_new_filtered_discovery
+    assert events == ["replay", "discover"]
+E   AssertionError: assert ['discover'] == ['replay', 'discover']
+E     
+E     At index 0 diff: 'discover' != 'replay'
+E     Right contains one more item: 'discover'
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_loop_constructor_requires_runtime_task_commands
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_stored_bid_reopens_and_replays_without_task_balance_or_llm_read
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_absent_bid_reads_once_and_persists_frozen_terms_before_transport
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_bid_storage_failure_blocks_public_mutation_transport
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_stored_submission_reopens_and_replays_without_upload_or_task_read
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_absent_submission_uploads_then_freezes_current_version_before_transport
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_only_completed_bid_enters_acceptance_polling[pending-False]
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_only_completed_bid_enters_acceptance_polling[blocked-False]
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_only_completed_bid_enters_acceptance_polling[attention_required-False]
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_only_completed_bid_enters_acceptance_polling[completed-True]
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_only_completed_submission_enters_review_and_can_earn[pending-False]
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_only_completed_submission_enters_review_and_can_earn[blocked-False]
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_only_completed_submission_enters_review_and_can_earn[attention_required-False]
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_only_completed_submission_enters_review_and_can_earn[completed-True]
+FAILED tests/unit/math_worker/test_mp07_native_intents.py::test_cycle_replays_known_pending_once_before_new_filtered_discovery
+========================= 15 failed, 1 passed in 1.53s =========================

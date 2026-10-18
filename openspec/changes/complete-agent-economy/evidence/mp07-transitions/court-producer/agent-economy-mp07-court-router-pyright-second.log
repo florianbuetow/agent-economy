@@ -1,0 +1,22 @@
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_court_resilience.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_court_resilience.py:30:46 - error: "_fixture_bank" is private and used outside of the module in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_court_resilience.py:30:61 - error: "_fixture_platform" is private and used outside of the module in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_court_resilience.py:30:80 - error: "_stored_task" is private and used outside of the module in which it is declared (reportPrivateUsage)
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_dispute_court_handoff.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_dispute_court_handoff.py:12:46 - error: "_fixture_platform" is private and used outside of the module in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_dispute_court_handoff.py:12:65 - error: "_stored_task" is private and used outside of the module in which it is declared (reportPrivateUsage)
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_disputes.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_disputes.py:34:5 - error: Function "_fixture_platform" is not accessed (reportUnusedFunction)
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_rebuttal_dispute_binding.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_rebuttal_dispute_binding.py:14:46 - error: "_fixture_bank" is private and used outside of the module in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_rebuttal_dispute_binding.py:14:61 - error: "_fixture_platform" is private and used outside of the module in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_rebuttal_dispute_binding.py:14:80 - error: "_stored_dispute_id" is private and used outside of the module in which it is declared (reportPrivateUsage)
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_rebuttals.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_rebuttals.py:12:46 - error: "_fixture_platform" is private and used outside of the module in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_rebuttals.py:12:65 - error: "_stored_task" is private and used outside of the module in which it is declared (reportPrivateUsage)
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_t072_disputes_gaps.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_t072_disputes_gaps.py:17:46 - error: "_stored_dispute_id" is private and used outside of the module in which it is declared (reportPrivateUsage)
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_wp06_record_ruling_idempotent.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_wp06_record_ruling_idempotent.py:10:46 - error: "_fixture_bank" is private and used outside of the module in which it is declared (reportPrivateUsage)
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/routers/test_wp06_record_ruling_idempotent.py:10:61 - error: "_stored_dispute_id" is private and used outside of the module in which it is declared (reportPrivateUsage)
+14 errors, 0 warnings, 0 informations

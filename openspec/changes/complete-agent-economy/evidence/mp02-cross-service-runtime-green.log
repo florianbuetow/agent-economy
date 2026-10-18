@@ -1,0 +1,63 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/tests
+configfile: pytest.ini
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 52 items
+
+../../tests/integration/test_bank_gateway_writes.py::TestBankGatewayWrites::test_create_account_and_initial_credit_write_rows PASSED [  1%]
+../../tests/integration/test_bank_gateway_writes.py::TestBankGatewayWrites::test_credit_updates_balance_and_logs_transaction PASSED [  3%]
+../../tests/integration/test_bank_gateway_writes.py::TestBankGatewayWrites::test_escrow_lock_release_and_split_write_rows PASSED [  5%]
+../../tests/integration/test_court_gateway_writes.py::TestCourtGatewayWrites::test_file_claim_writes_claim_row PASSED [  7%]
+../../tests/integration/test_court_gateway_writes.py::TestCourtGatewayWrites::test_submit_rebuttal_writes_rebuttal_row PASSED [  9%]
+../../tests/integration/test_court_gateway_writes.py::TestCourtGatewayWrites::test_record_ruling_writes_ruling_row PASSED [ 11%]
+../../tests/integration/test_gateway_helper_cleanup.py::test_setup_failure_removes_keys_config_and_restores_globals PASSED [ 13%]
+../../tests/integration/test_gateway_helper_cleanup.py::test_context_exception_removes_keys_config_and_restores_globals PASSED [ 15%]
+../../tests/integration/test_gateway_helper_cleanup.py::test_closing_replaced_client_preserves_current_global_state PASSED [ 17%]
+../../tests/integration/test_gateway_helper_cleanup.py::test_writer_close_failure_still_completes_owned_cleanup PASSED [ 19%]
+../../tests/integration/test_gateway_helper_cleanup.py::test_writer_close_cancellation_is_preserved_after_cleanup PASSED [ 21%]
+../../tests/integration/test_identity_gateway_writes.py::TestIdentityGatewayWrites::test_register_agent_creates_identity_row PASSED [ 23%]
+../../tests/integration/test_identity_gateway_writes.py::TestIdentityGatewayWrites::test_register_agent_creates_event_row PASSED [ 25%]
+../../tests/integration/test_identity_gateway_writes.py::TestIdentityGatewayWrites::test_duplicate_public_key_returns_409_and_no_extra_row PASSED [ 26%]
+../../tests/integration/test_reputation_gateway_writes.py::TestReputationGatewayWrites::test_submit_feedback_writes_sealed_row PASSED [ 28%]
+../../tests/integration/test_reputation_gateway_writes.py::TestReputationGatewayWrites::test_second_feedback_reveals_both_rows PASSED [ 30%]
+../../tests/integration/test_services_without_gateway.py::test_identity_endpoint_unreachable PASSED [ 32%]
+../../tests/integration/test_services_without_gateway.py::test_bank_endpoint_unreachable PASSED [ 34%]
+../../tests/integration/test_services_without_gateway.py::test_board_endpoint_unreachable PASSED [ 36%]
+../../tests/integration/test_services_without_gateway.py::test_reputation_endpoint_unreachable PASSED [ 38%]
+../../tests/integration/test_services_without_gateway.py::test_court_endpoint_unreachable PASSED [ 40%]
+../../tests/integration/test_startup_order_regression.py::test_dependent_fails_cleanly_without_identity_then_recovers_once_identity_is_up PASSED [ 42%]
+../../tests/integration/test_taskboard_gateway_writes.py::TestTaskBoardGatewayWrites::test_create_task_writes_board_task_row PASSED [ 44%]
+../../tests/integration/test_taskboard_gateway_writes.py::TestTaskBoardGatewayWrites::test_submit_bid_writes_bid_row PASSED [ 46%]
+../../tests/integration/test_taskboard_gateway_writes.py::TestTaskBoardGatewayWrites::test_update_task_status_writes_updated_fields PASSED [ 48%]
+../../tests/integration/test_taskboard_gateway_writes.py::TestTaskBoardGatewayWrites::test_record_asset_writes_asset_row PASSED [ 50%]
+../../tests/runtime/test_gateway_key_bootstrap.py::test_runtime_gateway_trust_paths_are_owned PASSED [ 51%]
+../../tests/runtime/test_gateway_key_bootstrap.py::test_runtime_bootstraps_gateway_pairs_without_roster_entries PASSED [ 53%]
+../../tests/runtime/test_gateway_key_bootstrap.py::test_runtime_rejects_inconsistent_gateway_signer_before_key_bootstrap[signer_override0-audience] PASSED [ 55%]
+../../tests/runtime/test_gateway_key_bootstrap.py::test_runtime_rejects_inconsistent_gateway_signer_before_key_bootstrap[signer_override1-token_ttl_seconds] PASSED [ 57%]
+../../tests/runtime/test_isolated_test_runtime.py::test_two_minimal_stacks_are_isolated_and_preserve_unrelated_listener PASSED [ 59%]
+../../tests/runtime/test_isolated_test_runtime.py::test_startup_failure_is_nonzero_and_reports_the_owned_log PASSED [ 61%]
+../../tests/runtime/test_isolated_test_runtime.py::test_phase_command_receives_generated_runtime_environment PASSED [ 63%]
+../../tests/runtime/test_isolated_test_runtime.py::test_generated_mock_court_import_uses_no_external_model_metadata PASSED [ 65%]
+../../tests/runtime/test_isolated_test_runtime.py::test_phase_command_drains_background_descendants_after_leader_exit[0] PASSED [ 67%]
+../../tests/runtime/test_isolated_test_runtime.py::test_phase_command_drains_background_descendants_after_leader_exit[7] PASSED [ 69%]
+../../tests/runtime/test_isolated_test_runtime.py::test_supervisor_sigterm_stops_only_its_owned_process_groups PASSED [ 71%]
+../../tests/runtime/test_isolated_test_runtime.py::test_shutdown_requested_before_command_registration_is_drained PASSED [ 73%]
+../../tests/runtime/test_isolated_test_runtime.py::test_sigterm_during_command_drain_wins_over_captured_zero_exit PASSED [ 75%]
+../../tests/runtime/test_isolated_test_runtime.py::test_command_drain_failure_preserves_handle_and_manifest_until_retry PASSED [ 76%]
+../../tests/runtime/test_isolated_test_runtime.py::test_stop_attempts_other_services_and_preserves_failed_handle_for_retry PASSED [ 78%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_requires_successful_empty_exact_group_probe[0--True] PASSED [ 80%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_requires_successful_empty_exact_group_probe[0-123 1 123 123 Z\n-False] PASSED [ 82%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_requires_successful_empty_exact_group_probe[1--False] PASSED [ 84%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_requires_successful_empty_exact_group_probe[0-malformed process row\n-False] PASSED [ 86%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_reaps_leader_that_exits_after_initial_poll PASSED [ 88%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_propagates_process_probe_timeout PASSED [ 90%]
+../../tests/runtime/test_key_bootstrap.py::test_direct_start_service_bootstraps_only_disposable_configured_keys PASSED [ 92%]
+../../tests/runtime/test_key_bootstrap.py::test_concurrent_platform_registration_converges_per_runtime_and_isolates_runtimes PASSED [ 94%]
+../../tests/runtime/test_key_bootstrap.py::test_runtime_bootstrap_failure_prevents_service_launch PASSED [ 96%]
+../../tests/runtime/test_key_bootstrap.py::test_bootstrap_owned_runner_drains_child_after_parent_exit PASSED [ 98%]
+../../tests/runtime/test_key_bootstrap.py::test_start_all_checks_keys_before_first_service_launch PASSED [100%]
+
+============================= 52 passed in 28.31s ==============================

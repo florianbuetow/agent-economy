@@ -1,0 +1,33 @@
+{
+  "baseline": "17failed11passed; all missing_field publication cascades",
+  "author_green": 28,
+  "parent": {
+    "handle": 44028,
+    "exit_code": 0,
+    "combined_passed": 51,
+    "warnings": 1
+  },
+  "review": "Parent independently reviewed allfive diffs: only publication fixture inputs/cutoff and positive setup201 assertion changed. All original test/class definitions AST-identical. Author28pass; parent combined51pass with Boardreadpair. Courtstatus/rulingdeletion assertions and semantics unchanged. APPROVE boundedfixturechange.",
+  "sources": {
+    "services/db-gateway/tests/unit/routers/test_reputation.py": "92de715f8e877d0fc211dfea2d519b828a9689c112ab22286bc3ab7dc446856b",
+    "services/db-gateway/tests/unit/routers/test_reputation_reads.py": "bec491afd1005a2f050c2fbb0cff516a99e67042ec0a1c4cae532478dcfc9c01",
+    "services/db-gateway/tests/unit/routers/test_t072_reputation_reads_gaps.py": "3ff84842d75bcbc9d8b2455aab37f7d14565cbeabc2f8b9a04e87afec91960e6",
+    "services/db-gateway/tests/unit/routers/test_court_status_update_integrity.py": "995e093a6ad5f0299a9e9773e1abe03518d89fdab4bf035f57382e264121b851",
+    "services/db-gateway/tests/unit/routers/test_t072_court_status_and_ruling_delete_gaps.py": "daa7a11a49ec222370d976d6cff9d29127b02021ea00292ff14e1fbfc403f7d8",
+    "docs/plans/2026-10-18-mp07-gateway-read-fixture-reconciliation.md": "e10befacfe04361432feb278f174be864eeb6b90bab8997c37626ca0669ad69c"
+  },
+  "artifacts": {
+    "agent-economy-mp07-gateway-read-fixtures-after.log": "dda9819f0410c6743b791c371217f8d1877496eb4ea30850c0840f6501351ba9",
+    "agent-economy-mp07-gateway-read-fixtures-after.sha256": "af10c3eb11255fe69da7c3831ac0a2ffd958240888c4c845644ee15e5dd088cd",
+    "agent-economy-mp07-gateway-read-fixtures-baseline.log": "594f045d02ba8e64e9a28e31c746c7c09d7c4075d9d6809b75440ee0f70f493b",
+    "agent-economy-mp07-gateway-read-fixtures-before.sha256": "fcd645bb668cf11a18cf30a62458160bbb4926887e52cd359e2c506e685058b7",
+    "agent-economy-mp07-gateway-read-fixtures-format.log": "f114d83b30c5c657ee43a847a45bafccaea255d82673feb87c26d252c61e29c1",
+    "agent-economy-mp07-gateway-read-fixtures-parent-combined.log": "5b34ebf26c9927b105634bbdd99f4174b170849ff239e969dcd2218b37203931",
+    "agent-economy-mp07-gateway-read-fixtures-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "baseline/test_court_status_update_integrity.py": "0c78561f6f1436939a1d4b24ce272bf40d4ad77f26d8a4cc58168c4f027f3a60",
+    "baseline/test_reputation.py": "c57e8f07e6db7cc91fc6e2436114261eb0a16d15ce1a726b266de5f6aa1ce7ec",
+    "baseline/test_reputation_reads.py": "ecbe450ff2e116ef9a9f9212b2a42e44f71b0df644d44b5da9a8b3ea0340dcc3",
+    "baseline/test_t072_court_status_and_ruling_delete_gaps.py": "38dc42fdb3e0e82cf005137378c5f0f7448912fa164fdfbf69f16931b48c305a",
+    "baseline/test_t072_reputation_reads_gaps.py": "765fe95b8e7af760c942748227d8f8ae04c949edd88f3f1ce2ceff03ab8a7382"
+  }
+}

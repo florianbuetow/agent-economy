@@ -11,7 +11,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+from task_board_service.task_contract_projection import TaskContractProjection
 
 # Regex for task_id format: t-<uuid4>
 TASK_ID_RE = re.compile(
@@ -40,17 +40,28 @@ def is_valid_worker_pct(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 100
 
 
+def _contract_projection(row: dict[str, Any]) -> dict[str, Any]:
+    values = {field: row[field] for field in TaskContractProjection.model_fields}
+    return TaskContractProjection.model_validate(values).model_dump()
+
+
+def _cutoff_iso(cutoff_us: int | None) -> str | None:
+    if cutoff_us is None:
+        return None
+    if type(cutoff_us) is not int or cutoff_us < 0:
+        raise ValueError("Task cutoff must be a nonnegative integer")
+    seconds, microseconds = divmod(cutoff_us, 1_000_000)
+    return (
+        datetime.fromtimestamp(seconds, UTC)
+        .replace(microsecond=microseconds)
+        .isoformat(timespec="auto")
+        .replace("+00:00", "Z")
+    )
+
+
 def task_to_response(row: dict[str, Any]) -> dict[str, Any]:
     """Convert a DB row dict to a full task response dict."""
-    bidding_deadline = DeadlineEvaluator.compute_deadline(
-        row["created_at"], row["bidding_deadline_seconds"]
-    )
-    execution_deadline = DeadlineEvaluator.compute_deadline(
-        row["accepted_at"], row["deadline_seconds"]
-    )
-    review_deadline = DeadlineEvaluator.compute_deadline(
-        row["submitted_at"], row["review_deadline_seconds"]
-    )
+    contract = _contract_projection(row)
     return {
         "task_id": row["task_id"],
         "poster_id": row["poster_id"],
@@ -73,29 +84,25 @@ def task_to_response(row: dict[str, Any]) -> dict[str, Any]:
         "disputed_at": row["disputed_at"],
         "dispute_reason": row["dispute_reason"],
         "dispute_id": row["dispute_id"],
+        "rebuttal_deadline": row["rebuttal_deadline"],
+        "rebuttal_submitted_at": row["rebuttal_submitted_at"],
         "ruling_id": row["ruling_id"],
         "ruled_at": row["ruled_at"],
         "worker_pct": row["worker_pct"],
         "ruling_summary": row["ruling_summary"],
         "expired_at": row["expired_at"],
         "escrow_pending": bool(row["escrow_pending"]),
-        "bidding_deadline": bidding_deadline,
-        "execution_deadline": execution_deadline,
-        "review_deadline": review_deadline,
+        **contract,
+        "bidding_deadline": _cutoff_iso(contract["bidding_cutoff_us"]),
+        "acceptance_deadline": _cutoff_iso(contract["acceptance_cutoff_us"]),
+        "execution_deadline": _cutoff_iso(contract["execution_cutoff_us"]),
+        "review_deadline": _cutoff_iso(contract["review_cutoff_us"]),
     }
 
 
 def task_to_summary(row: dict[str, Any]) -> dict[str, Any]:
     """Convert a DB row dict to a summary dict for list views."""
-    bidding_deadline = DeadlineEvaluator.compute_deadline(
-        row["created_at"], row["bidding_deadline_seconds"]
-    )
-    execution_deadline = DeadlineEvaluator.compute_deadline(
-        row["accepted_at"], row["deadline_seconds"]
-    )
-    review_deadline = DeadlineEvaluator.compute_deadline(
-        row["submitted_at"], row["review_deadline_seconds"]
-    )
+    contract = _contract_projection(row)
     return {
         "task_id": row["task_id"],
         "poster_id": row["poster_id"],
@@ -105,7 +112,9 @@ def task_to_summary(row: dict[str, Any]) -> dict[str, Any]:
         "bid_count": row["bid_count"],
         "worker_id": row["worker_id"],
         "created_at": row["created_at"],
-        "bidding_deadline": bidding_deadline,
-        "execution_deadline": execution_deadline,
-        "review_deadline": review_deadline,
+        **contract,
+        "bidding_deadline": _cutoff_iso(contract["bidding_cutoff_us"]),
+        "acceptance_deadline": _cutoff_iso(contract["acceptance_cutoff_us"]),
+        "execution_deadline": _cutoff_iso(contract["execution_cutoff_us"]),
+        "review_deadline": _cutoff_iso(contract["review_cutoff_us"]),
     }

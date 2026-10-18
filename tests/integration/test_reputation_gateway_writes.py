@@ -10,6 +10,12 @@ import pytest_asyncio
 
 from tests.integration.conftest import read_db, read_one
 from tests.integration.gateway_helpers import create_gateway_client
+from tests.integration.native_task_fixtures import (
+    advance_task_to_submitted,
+    approve_with_bank_receipt,
+    freeze_task_clock,
+    publish_open_task,
+)
 
 if TYPE_CHECKING:
     import httpx
@@ -107,40 +113,61 @@ async def _setup_prerequisite_data(client: httpx.AsyncClient) -> str:
     assert lock_envelope["receipt"]["source_reference"] == task_id
     assert lock_envelope["current_escrow"]["status"] == "locked"
 
-    task_response = await client.post(
-        "/board/tasks",
-        json={
+    task_response = await publish_open_task(
+        client,
+        task_id=task_id,
+        poster_id="a-poster",
+        title="Task for feedback",
+        spec="Do something",
+        reward=200,
+        escrow_id=f"esc-{task_id}",
+        created_at="2026-03-02T05:31:00Z",
+        bidding_deadline="2026-03-02T06:31:00Z",
+        bidding_deadline_seconds=3600,
+        acceptance_window_seconds=1800,
+        execution_deadline_seconds=7200,
+        review_deadline_seconds=3600,
+        event={
+            "event_source": "board",
+            "event_type": "task.created",
+            "timestamp": "2026-03-02T05:31:00Z",
+            "agent_id": "a-poster",
             "task_id": task_id,
-            "poster_id": "a-poster",
-            "title": "Task for feedback",
-            "spec": "Do something",
-            "reward": 200,
-            "status": "approved",
-            "bidding_deadline_seconds": 3600,
-            "deadline_seconds": 7200,
-            "review_deadline_seconds": 3600,
-            "bidding_deadline": "2026-03-02T06:30:00Z",
-            "bid_count": 0,
-            "escrow_pending": 0,
-            "escrow_id": f"esc-{task_id}",
-            "created_at": "2026-03-02T05:31:00Z",
-            "event": {
-                "event_source": "board",
-                "event_type": "task.created",
-                "timestamp": "2026-03-02T05:31:00Z",
-                "agent_id": "a-poster",
-                "task_id": task_id,
-                "summary": "Task created",
-                "payload": "{}",
-            },
+            "summary": "Task created",
+            "payload": "{}",
         },
     )
     assert task_response.status_code == 201
+    await advance_task_to_submitted(
+        client,
+        task_id=task_id,
+        poster_id="a-poster",
+        worker_id="a-worker",
+        escrow_id=f"esc-{task_id}",
+        reward=200,
+        operation_suffix="0000000303",
+        timestamp="2026-03-02T05:40:00Z",
+    )
+    approval_claim, release_receipt, approval = await approve_with_bank_receipt(
+        client,
+        task_id=task_id,
+        poster_id="a-poster",
+        worker_id="a-worker",
+        escrow_id=f"esc-{task_id}",
+        reward=200,
+        operation_id="op-00000000-0000-4000-8000-000000030304",
+        timestamp="2026-03-02T05:40:00Z",
+    )
+    assert approval_claim.status_code == 202, approval_claim.text
+    assert release_receipt.status_code == 200, release_receipt.text
+    assert approval.status_code == 200, approval.text
+    assert approval.json()["result"]["status"] == "approved"
     return task_id
 
 
 @pytest_asyncio.fixture
-async def gw_client(initialized_db: str):
+async def gw_client(initialized_db: str, monkeypatch: pytest.MonkeyPatch):
+    freeze_task_clock(monkeypatch, "2026-03-02T05:40:00Z")
     client = create_gateway_client(initialized_db)
     async with client:
         yield client

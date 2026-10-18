@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-18T03:03:45.996410+02:00",
+  "artifact_sha256": {
+    "agent-economy-mp07-first-store-consumer-before.log": "f0f1fad0e88e14dc8f3bbbb7bf8c116f31505a278dd85998980cc572de09b9f9",
+    "agent-economy-mp07-first-store-consumer-final-green.log": "a1e4cc3a966e8900f5e579a8a8bd2a3b6652a5312081b1ee2a3d70c977464f0f",
+    "agent-economy-mp07-first-store-consumer-parent-green.log": "937348d6e8a3e7b410bb01daa885b08d373783a0dc55f3b0e6c4b14a19d4091b",
+    "agent-economy-mp07-deadline-config-reconciliation-before.log": "dcfbed4ef3e878ed5556fec64f7ce78acbd45a249822ddab9446562f92510f14",
+    "agent-economy-mp07-deadline-config-reconciliation-green.log": "3607bb9166c861960ae9891a0caf489c5cf892aae09ac9ac3fafd9513a99978c"
+  },
+  "source_sha256": {
+    "services/task-board/tests/unit/test_task_store.py": "19ea28eb7bab1ce15bd9050f8183b2c5d3ffd85a32542826132b0d9af062cddb",
+    "docs/plans/2026-10-18-mp07-store-consumer-reconciliation.md": "c2140cde91f077ca244e5aadcebb0ed2f955f04e965bcb46b2305edc42dd178a",
+    "services/task-board/tests/unit/test_deadline_evaluation_config.py": "29c48e90234960802558f2d86b003e8d561a9e4fed4a7e3bca159e32da6b1eac",
+    "docs/plans/2026-10-17-mp07-test-contract-reconciliation.md": "ac09164bc2f95814d569ace8b48899c8dd84dc89e9b224dc75bb1bb05ea139fc"
+  },
+  "classification": [
+    "Original dictionary-fake consumer 4 passes is historical fake behavior only, not native storage proof and not product-red evidence.",
+    "Converted original 4 cases plus 17 adapter parity cases: author 21 passes and independent parent 21 passes, overlapping.",
+    "Four original suites preserve task get/list/count/status, duplicate bid rejection/count/identity, asset reads/count and close using funded native histories. Explicit 409 invalid_status/bid_exists replaces obsolete fake-only return 0/exception class expectations.",
+    "Pre-existing deadline configuration group had 1 fixture failure/2 passes because otherwise valid input omitted required actor. Valid and missing-interval inputs now explicitly supply actor; missing-section negative and original assertions unchanged.",
+    "Deadline configuration 3 plus actor validation 9 plus owned log 2 cases pass 14. This is fixture reconciliation, not new product red."
+  ],
+  "independent_review": {
+    "agent": "/root/mp07_board_rollout_review",
+    "verdict": "APPROVE first storage consumer adoption",
+    "scope": "Native funded setup, equivalent observable coverage, explicit typed rejection and resource close; other consumers remain pending."
+  },
+  "limitations": [
+    "Remaining router/deadline/asset/legacyfake consumers require separate migration.",
+    "No full root gate or MP-07 closure is claimed."
+  ]
+}

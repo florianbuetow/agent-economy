@@ -1,0 +1,53 @@
+{
+  "checked_at_utc": "2026-10-16T06:41:05.281978+00:00",
+  "runtime_manifests": [
+    "/private/tmp/agent-economy-mp06-process-crash-1/test_process_death_preserves_l0/runtime-before-crash.json",
+    "/private/tmp/agent-economy-mp06-process-crash-1/test_process_death_preserves_l1/runtime-before-crash.json",
+    "/private/tmp/agent-economy-mp06-process-crash-1/test_process_death_preserves_l0/runtime-df1019fc6cd5415bab35afc0adead0e2-pgt7ane4/runtime.json",
+    "/private/tmp/agent-economy-mp06-process-crash-1/test_process_death_preserves_l1/runtime-9e66fed7dd3f43cfb9d5d6fa0664b42e-fhw_enle/runtime.json"
+  ],
+  "crash_records": [
+    "/private/tmp/agent-economy-mp06-process-crash-1/test_process_death_preserves_l0/crash-process.json",
+    "/private/tmp/agent-economy-mp06-process-crash-1/test_process_death_preserves_l1/crash-process.json"
+  ],
+  "owned_groups": [
+    15996,
+    15998,
+    16000,
+    16018,
+    16020,
+    16022,
+    16024,
+    16026,
+    16032,
+    16063,
+    16065,
+    16067,
+    16070,
+    16072,
+    16074,
+    16076,
+    16078,
+    16080,
+    16170,
+    16172,
+    16174,
+    16191,
+    16196,
+    16198,
+    16200,
+    16204,
+    16207,
+    17146,
+    17538,
+    17897,
+    18088,
+    18296,
+    18514,
+    18603,
+    18607,
+    18611
+  ],
+  "recorded_drained": true,
+  "remaining_members": []
+}

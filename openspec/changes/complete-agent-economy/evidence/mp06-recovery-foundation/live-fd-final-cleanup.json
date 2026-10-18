@@ -1,0 +1,18 @@
+{
+  "run_id": "f83eac71e86840f59dbd3763ef688e9d",
+  "source_manifest": "/private/tmp/agent-economy-recovery-fd-proof.paucrZ/test_full_runtime_artifact_res0/runtime-f83eac71e86840f59dbd3763ef688e9d-quceum95/runtime.json",
+  "checked_at_utc": "2026-10-16T01:30:44.664154+00:00",
+  "checked_groups": [
+    9739,
+    9742,
+    9744,
+    9747,
+    9755,
+    9757,
+    9867,
+    11277,
+    11286
+  ],
+  "recorded_drained": true,
+  "remaining_processes": []
+}

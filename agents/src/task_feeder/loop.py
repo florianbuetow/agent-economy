@@ -106,6 +106,7 @@ class TaskFeederLoop:
             spec=raw_task.spec,
             reward=reward,
             bidding_deadline_seconds=self._config.bidding_deadline_seconds,
+            acceptance_window_seconds=self._config.acceptance_window_seconds,
             execution_deadline_seconds=self._config.execution_deadline_seconds,
             review_deadline_seconds=self._config.review_deadline_seconds,
         )

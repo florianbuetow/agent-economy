@@ -1,0 +1,86 @@
+Artifacts: /var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-dual-task-proof-yh8z55xw
+provisioned handle=alice fingerprint_sha256=b0a1f71e4c6ddf33b6b362f178a7f990a116dfefaeae783803bf12396c22173f
+provisioned handle=bob fingerprint_sha256=6ab6c0245852f9100b70b01c8c64ee72ab96eb9251817d75cdc90fe46e37abbe
+provisioned handle=feeder fingerprint_sha256=981e2218a3800b382d268e4bc33de9ed7faf82020df0342014f66220619139d8
+provisioned handle=mathbot fingerprint_sha256=ed0fab8410fd698229ffc8ffadcead4c802ba357fddabdd0d8d2fb742e971aee
+provisioned handle=mathbot_mistral fingerprint_sha256=3d1e427ce09274afb5370d3330b1016e2705c1d4cf43af93e69eca1091c8b502
+provisioned handle=mathbot_openai fingerprint_sha256=7244aae29983988c316ded6fee91c6ab68f49f7dc25f5d2d697affb7dc086e75
+provisioned handle=operator fingerprint_sha256=8373c7242dcef2236a8419f6f575f94810da8164b2a68479e34d2cbfbc3d6704
+provisioned handle=platform fingerprint_sha256=602f479869ad005159da671e009c685182dee8a6bad7e3885263d13d7dcbcfec
+provisioned handle=alice fingerprint_sha256=ac63a576f35b5e7f35b2cc830101f8c45026707850c16e05eb674a4e5e0f3fca
+provisioned handle=bob fingerprint_sha256=e1f7f7007685d01c7e047ff13f1be11f28e17678791e0d83b326fada0eb5ab9d
+provisioned handle=feeder fingerprint_sha256=d6cb4f51266359385e2b8f89d31ffc205110fe2709657ee1bc0302b9346fb2c7
+provisioned handle=mathbot fingerprint_sha256=bed71e1dea993a0d78ff2c58b7cbc3bf6b205a5aeb36b90efae075c2105a8d66
+provisioned handle=mathbot_mistral fingerprint_sha256=d89b605a661cba0b65c44a0ddd15eb23195681998d159264dbaea5a249141c80
+provisioned handle=mathbot_openai fingerprint_sha256=c9ca538301e4804d1aae7e5889c429f5cbca34f3ffd4d6576db346be1b81b90e
+provisioned handle=operator fingerprint_sha256=7091b46fdce702c2d983fee2d99b3ccae44c930334caee8d3c96941a9f8097da
+provisioned handle=platform fingerprint_sha256=ad6bd7f75af9394853a220a6abd57dc1f5f34358d7159929a6f7739614be6bf0
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49808/agents/register "HTTP/1.1 409 Conflict"
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49815/agents/register "HTTP/1.1 409 Conflict"
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49808/agents "HTTP/1.1 200 OK"
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49815/agents "HTTP/1.1 200 OK"
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49808/agents/a-2637c7d2-13d6-4cd1-b893-1777bf3102ad "HTTP/1.1 200 OK"
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49815/agents/a-50ef3442-27c3-4f37-bf9e-bb43fb5deeb9 "HTTP/1.1 200 OK"
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49808/agents/a-2637c7d2-13d6-4cd1-b893-1777bf3102ad "HTTP/1.1 200 OK"
+2026-10-15T21:22:44 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-2637c7d2-13d6-4cd1-b893-1777bf3102ad
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49815/agents/a-50ef3442-27c3-4f37-bf9e-bb43fb5deeb9 "HTTP/1.1 200 OK"
+2026-10-15T21:22:44 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-50ef3442-27c3-4f37-bf9e-bb43fb5deeb9
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49808/agents/register "HTTP/1.1 201 Created"
+2026-10-15T21:22:44 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-4c54d2da-8e47-413d-a961-b6143ab9619c
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49815/agents/register "HTTP/1.1 201 Created"
+2026-10-15T21:22:44 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-df99a4b2-fa83-4be4-9918-3a7356810bab
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49816/accounts "HTTP/1.1 201 Created"
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49809/accounts "HTTP/1.1 201 Created"
+2026-10-15T21:22:44 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-15T21:22:44 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49816/accounts/a-df99a4b2-fa83-4be4-9918-3a7356810bab/credit "HTTP/1.1 200 OK"
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:49809/accounts/a-4c54d2da-8e47-413d-a961-b6143ab9619c/credit "HTTP/1.1 200 OK"
+2026-10-15T21:22:44 [INFO] treasury_provision_cli: Treasury provisioned (tx_id=tx-9168ddf2-8c92-4c14-95a9-eadd6c5ed62a, balance_after=1000000)
+2026-10-15T21:22:44 [INFO] treasury_provision_cli: Treasury provisioned (tx_id=tx-342666ad-f2b4-48b4-8290-4c617b9aa791, balance_after=1000000)
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49809/accounts/a-4c54d2da-8e47-413d-a961-b6143ab9619c "HTTP/1.1 200 OK"
+2026-10-15T21:22:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:49816/accounts/a-df99a4b2-fa83-4be4-9918-3a7356810bab "HTTP/1.1 200 OK"
+agent_id=a-df99a4b2-fa83-4be4-9918-3a7356810bab
+genesis_amount=1000000
+balance=1000000
+agent_id=a-4c54d2da-8e47-413d-a961-b6143ab9619c
+genesis_amount=1000000
+balance=1000000
+{
+  "first": {
+    "agent_id": "a-4c54d2da-8e47-413d-a961-b6143ab9619c",
+    "task_id": "t-8a114295-1cb1-47aa-8800-d275de4c410c",
+    "status": "open",
+    "balance": {
+      "account_id": "a-4c54d2da-8e47-413d-a961-b6143ab9619c",
+      "balance": 999990,
+      "created_at": "2026-10-15T19:22:44Z"
+    }
+  },
+  "second": {
+    "agent_id": "a-df99a4b2-fa83-4be4-9918-3a7356810bab",
+    "task_id": "t-5d2fba96-6fea-45d9-88f4-23136a6b8339",
+    "status": "open",
+    "balance": {
+      "account_id": "a-df99a4b2-fa83-4be4-9918-3a7356810bab",
+      "balance": 999990,
+      "created_at": "2026-10-15T19:22:44Z"
+    }
+  },
+  "second_after_first_stop": {
+    "agent_id": "a-df99a4b2-fa83-4be4-9918-3a7356810bab",
+    "task_id": "t-36c16ec6-b326-4ff0-9c05-4cbbfdef5276",
+    "status": "open",
+    "balance": {
+      "account_id": "a-df99a4b2-fa83-4be4-9918-3a7356810bab",
+      "balance": 999980,
+      "created_at": "2026-10-15T19:22:44Z"
+    },
+    "foreign_task_status": 404
+  },
+  "sentinel_survived": true,
+  "runtime_dirs": [
+    "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-dual-task-proof-yh8z55xw/runtime-fc8208b847ef4d63bfb374bb611d5354-fcitbdwl",
+    "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-dual-task-proof-yh8z55xw/runtime-4ed8770a2b8747ed8b03435f93c5b133-jt_8m71e"
+  ]
+}
+PASS: separate identities/tasks/data, surviving peer and sentinel, complete owned cleanup

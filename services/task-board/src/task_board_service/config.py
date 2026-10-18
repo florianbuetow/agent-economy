@@ -172,6 +172,15 @@ class DeadlineEvaluationConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     evaluation_interval_seconds: int
+    actor_id: str = Field(strict=True)
+
+    @field_validator("actor_id")
+    @classmethod
+    def validate_actor_id(cls, value: str) -> str:
+        """Keep automatic transitions bound to the explicit configured identity."""
+        if not value.strip() or value != value.strip():
+            raise ValueError("actor_id must be a nonblank canonical string")
+        return value
 
 
 class RecoveryConfig(BaseModel):

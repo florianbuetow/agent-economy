@@ -1,0 +1,8 @@
+c6e1a074d53125659712e7943130c9cf80277fbf42697a098812340b21504885  agents/tests/unit/math_worker/test_mp07_native_intents.py
+8f83cf2b95ec1a1819315c3f13b3b8559fda0a73646fa4450b876d91d2541510  docs/plans/2026-10-18-mp07-worker-intent-tests.md
+9d74f49c67aba9c826333c32481c1ab40ce88c88562a8692989f6221b3651029  /private/tmp/agent-economy-mp07-worker-intents-product-sha256.log
+69cb249acae370a81a74d42e837ee1bb90d5d823092881a96755148bfa139c67  /private/tmp/agent-economy-mp07-worker-intents-red-final.log
+82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18  /private/tmp/agent-economy-mp07-worker-intents-ruff-final.log
+fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50  /private/tmp/agent-economy-mp07-worker-intents-format-final.log
+5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e  /private/tmp/agent-economy-mp07-worker-intents-mypy-final.log
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  /private/tmp/agent-economy-mp07-worker-intents-codespell-final.log

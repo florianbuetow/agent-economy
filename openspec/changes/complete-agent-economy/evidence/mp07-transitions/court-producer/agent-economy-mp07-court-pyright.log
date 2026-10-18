@@ -1,0 +1,5 @@
+/Users/flo/Developer/github/agent-economy/services/court/src/court_service/services/ruling_acknowledgment.py
+  /Users/flo/Developer/github/agent-economy/services/court/src/court_service/services/ruling_acknowledgment.py:223:50 - error: Argument of type "Any | str | None" cannot be assigned to parameter "message" of type "str" in function "__init__"
+    Type "Any | str | None" is not assignable to type "str"
+      "None" is not assignable to "str" (reportArgumentType)
+1 error, 0 warnings, 0 informations

@@ -14,13 +14,16 @@ from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 from task_board_service.core.state import get_app_state
+from tests.fakes.gateway_task_store import GatewayTaskStore
 from tests.helpers import make_fake_jws, make_jws_token
 from tests.unit.routers.conftest import (
     accept_bid,
     create_task,
     make_task_id,
+    new_operation_fields,
     submit_bid,
 )
 
@@ -82,6 +85,7 @@ class TestTaskCreationGaps:
         unregistered_agent_id = "a-never-registered-00000000"
         task_id = make_task_id()
         task_payload = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
             "task_id": task_id,
             "poster_id": unregistered_agent_id,
@@ -95,6 +99,7 @@ class TestTaskCreationGaps:
         task_token = make_fake_jws(task_payload, kid=unregistered_agent_id)
         escrow_payload = {
             "action": "escrow_lock",
+            "operation_id": operation_id_for("task-lock", (task_id, unregistered_agent_id)),
             "task_id": task_id,
             "agent_id": unregistered_agent_id,
             "amount": 100,
@@ -114,51 +119,60 @@ class TestTaskCreationGaps:
         client: AsyncClient,
         alice_keypair,
         alice_agent_id: str,
+        bob_keypair,
+        bob_agent_id: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """TC-28: DB insert-time duplicate (a race past the pre-check) rolls back escrow.
-
-        Simulates the race deterministically, per the spec's own setup
-        ("pre-inserting a row ... without going through the API's duplicate
-        check"): pre-insert the row directly into the store, then force the
-        pre-check's ``get_task`` to report "not found" for this one call so the
-        request proceeds to ``insert_task``, which raises ``DuplicateTaskError``
-        against the pre-inserted row -- exactly the constraint-violation path
-        the production rollback code (task_creation.py) exists to handle.
-
-        (A true ``asyncio.gather`` race, as TC-27 uses, is not reliable here:
-        the mocked Central Bank call does not suspend long enough to guarantee
-        both requests clear the pre-check before either inserts.)
-        """
+        """TC-28: A real insert collision refunds the new poster's escrow only."""
         state = get_app_state()
         task_id = make_task_id()
 
-        state.store.insert_task(
-            {
-                "task_id": task_id,
-                "poster_id": alice_agent_id,
-                "title": "Existing",
-                "spec": "Existing spec",
-                "reward": 100,
-                "bidding_deadline_seconds": 3600,
-                "deadline_seconds": 86400,
-                "review_deadline_seconds": 86400,
-                "status": "open",
-                "escrow_id": "esc-existing",
-                "bid_count": 0,
-                "worker_id": None,
-                "created_at": "2025-01-01T00:00:00+00:00",
-                "escrow_pending": 0,
-            }
+        existing = await create_task(
+            client, bob_keypair, bob_agent_id, task_id=task_id, title="Existing"
         )
-        monkeypatch.setattr(state.store, "get_task", MagicMock(return_value=None))
+        assert existing.status_code == 201, existing.text
+        store = state.store
+        assert isinstance(store, GatewayTaskStore)
+        existing_task = store.reader.get_task(task_id)
+        assert existing_task is not None
+        balance_before = store.writer.connection.execute(
+            "SELECT balance FROM bank_accounts WHERE account_id=?", (alice_agent_id,)
+        ).fetchone()[0]
+        assert state.central_bank_client is not None
+        lock = state.central_bank_client.escrow_lock
+        release = state.central_bank_client.escrow_release
+        assert isinstance(lock, AsyncMock) and isinstance(release, AsyncMock)
+        lock.reset_mock()
+        release.reset_mock()
+        monkeypatch.setattr(store, "get_task", MagicMock(return_value=None))
 
         resp = await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
 
-        assert resp.status_code != 201
+        assert resp.status_code == 409
         assert resp.json()["error"] == "task_already_exists"
-        state.central_bank_client.escrow_lock.assert_awaited_once()
-        state.central_bank_client.escrow_release.assert_awaited_once()
+        lock.assert_awaited_once()
+        release.assert_awaited_once()
+        assert release.await_args is not None
+        assert release.await_args.kwargs["recipient_account_id"] == alice_agent_id
+        refund = store.writer.connection.execute(
+            "SELECT r.operation_kind,l.account_id,l.direction,l.amount,t.balance_after "
+            "FROM bank_operation_receipts AS r JOIN bank_operation_legs AS l "
+            "ON l.operation_id=r.operation_id JOIN bank_transactions AS t "
+            "ON t.tx_id=l.transaction_id WHERE r.operation_id=?",
+            (release.await_args.kwargs["operation_id"],),
+        ).fetchall()
+        assert [tuple(row) for row in refund] == [
+            ("escrow_release", alice_agent_id, "credit", 100, balance_before)
+        ]
+        assert store.reader.get_task(task_id) == existing_task
+        escrows = store.writer.connection.execute(
+            "SELECT payer_account_id,status FROM bank_escrow WHERE task_id=? "
+            "ORDER BY payer_account_id",
+            (task_id,),
+        ).fetchall()
+        assert [tuple(row) for row in escrows] == sorted(
+            [(alice_agent_id, "released"), (bob_agent_id, "locked")]
+        )
 
 
 class TestTaskQueryGaps:
@@ -225,6 +239,7 @@ class TestTaskQueryGaps:
         task_id_3 = make_task_id()
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id_3)
         cancel_payload = {
+            **new_operation_fields(task_id_3),
             "action": "cancel_task",
             "task_id": task_id_3,
             "poster_id": alice_agent_id,
@@ -278,6 +293,7 @@ class TestTaskCancellationGaps:
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
 
         cancel_payload = {
+            **new_operation_fields(task_id),
             "action": "cancel_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -304,6 +320,7 @@ class TestTaskCancellationGaps:
         )
 
         cancel_payload = {
+            **new_operation_fields(task_id),
             "action": "cancel_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -312,6 +329,16 @@ class TestTaskCancellationGaps:
         resp = await client.post(f"/tasks/{task_id}/cancel", json={"token": cancel_token})
         assert resp.status_code == 502
         assert resp.json()["error"] == "central_bank_unavailable"
+        store = state.store
+        assert isinstance(store, GatewayTaskStore)
+        row = store.writer.connection.execute(
+            "SELECT o.command,o.operation_state,o.effect_state,t.status,e.status "
+            "FROM board_task_operations AS o JOIN board_tasks AS t ON t.task_id=o.task_id "
+            "JOIN bank_escrow AS e ON e.escrow_id=t.escrow_id WHERE o.operation_id=?",
+            (cancel_payload["operation_id"],),
+        ).fetchone()
+        assert row is not None
+        assert tuple(row) == ("cancel_task", "claimed", "pending", "open", "locked")
 
     @pytest.mark.unit
     async def test_can09_task_id_payload_must_match_url(
@@ -327,6 +354,7 @@ class TestTaskCancellationGaps:
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id_2)
 
         cancel_payload = {
+            **new_operation_fields(task_id_2),
             "action": "cancel_task",
             "task_id": task_id_2,
             "poster_id": alice_agent_id,

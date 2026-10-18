@@ -184,6 +184,25 @@ def _insert_board_task(
             None,
         ),
     )
+    lifecycle_version = {"open": 0, "accepted": 1, "submitted": 2, "approved": 3}[status]
+    conn.execute(
+        "INSERT INTO board_task_contracts "
+        "(task_id, lifecycle_version, timing_contract_version, acceptance_window_seconds, "
+        "bidding_cutoff_us, acceptance_cutoff_us, execution_cutoff_us, review_cutoff_us, "
+        "accepted_reward, accepted_bid_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            task_id,
+            lifecycle_version,
+            1,
+            None,
+            1,
+            1,
+            None,
+            None,
+            reward if worker_id is not None else None,
+            0 if worker_id is not None else None,
+        ),
+    )
     conn.commit()
 
 

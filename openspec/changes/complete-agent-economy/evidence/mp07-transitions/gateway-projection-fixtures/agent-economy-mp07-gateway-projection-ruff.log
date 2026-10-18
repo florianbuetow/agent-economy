@@ -1,0 +1,29 @@
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/unit/test_gap_e13_bid_count.py:21:1
+   |
+19 |   """
+20 |
+21 | / from __future__ import annotations
+22 | |
+23 | | from typing import TYPE_CHECKING
+24 | | from uuid import uuid4
+25 | |
+26 | | import pytest
+27 | |
+28 | | from db_gateway_service.core.state import get_app_state
+29 | | from db_gateway_service.services.db_reader import DbReader
+30 | | from db_gateway_service.task_time import parse_utc_text_to_epoch_us
+31 | | from tests.conftest import make_event
+32 | | from tests.fakes.native_board_history import (
+33 | |     BusinessClock,
+34 | |     TaskGraph,
+35 | |     submit_bid as submit_native_bid,
+36 | | )
+   | |_^
+37 |
+38 |   if TYPE_CHECKING:
+   |
+help: Organize imports
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.

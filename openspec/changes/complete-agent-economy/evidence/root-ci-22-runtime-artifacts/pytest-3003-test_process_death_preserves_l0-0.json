@@ -1,0 +1,1762 @@
+{
+  "run_id": "eea7f47ab2034a7b9ca60521df5606a4",
+  "run_dir": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+  "ports": {
+    "db-gateway": 53093,
+    "identity": 53094,
+    "central-bank": 53095,
+    "task-board": 53096,
+    "reputation": 53097,
+    "court": 53098,
+    "ui": 53099
+  },
+  "config_paths": {
+    "db-gateway": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/db-gateway.yaml",
+    "identity": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/identity.yaml",
+    "central-bank": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/central-bank.yaml",
+    "task-board": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/task-board.yaml",
+    "reputation": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/reputation.yaml",
+    "court": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/court.yaml",
+    "ui": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/ui.yaml"
+  },
+  "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+  "gateway_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/db-gateway.yaml",
+  "log_paths": {
+    "db-gateway": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs/db-gateway.log",
+    "identity": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs/identity.log",
+    "central-bank": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs/central-bank.log",
+    "task-board": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs/task-board.log",
+    "reputation": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs/reputation.log",
+    "court": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs/court.log",
+    "ui": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs/ui.log"
+  },
+  "processes": {
+    "db-gateway": {
+      "pid": 98558,
+      "pgid": 98558,
+      "sid": 98558,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "identity": {
+      "pid": 98561,
+      "pgid": 98561,
+      "sid": 98561,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "central-bank": {
+      "pid": 98563,
+      "pgid": 98563,
+      "sid": 98563,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "task-board": {
+      "pid": 98565,
+      "pgid": 98565,
+      "sid": 98565,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "reputation": {
+      "pid": 98570,
+      "pgid": 98570,
+      "sid": 98570,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "court": {
+      "pid": 98572,
+      "pgid": 98572,
+      "sid": 98572,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "ui": {
+      "pid": 98577,
+      "pgid": 98577,
+      "sid": 98577,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "treasury_provision_cli"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/agents",
+      "pid": 98530,
+      "pgid": 98530,
+      "sid": 98530,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "db_gateway_service.recovery_cli",
+        "migrate",
+        "--inventory",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/recovery-inventory.json",
+        "--backup-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/backups",
+        "--backup-id",
+        "after-crash",
+        "--work-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/crash-work",
+        "--busy-timeout-ms",
+        "5000"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+      "pid": 98543,
+      "pgid": 98543,
+      "sid": 98543,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "db_gateway_service.recovery_cli",
+        "migrate-v1-to-v2",
+        "--inventory",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/recovery-inventory.json",
+        "--backup-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/backups",
+        "--backup-id",
+        "before-receipt-migration",
+        "--work-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/crash-work",
+        "--busy-timeout-ms",
+        "5000"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+      "pid": 98545,
+      "pgid": 98545,
+      "sid": 98545,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "db_gateway_service.recovery_cli",
+        "migrate-v2-to-v3",
+        "--inventory",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/recovery-inventory.json",
+        "--backup-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/backups",
+        "--backup-id",
+        "before-task-migration",
+        "--work-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/crash-work",
+        "--busy-timeout-ms",
+        "5000"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+      "pid": 98550,
+      "pgid": 98550,
+      "sid": 98550,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "bootstrap_commands": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "python",
+        "-m",
+        "key_provision_cli",
+        "provision",
+        "--config",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+        "--gateway-config",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/db-gateway.yaml"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/agents",
+      "pid": 98504,
+      "pgid": 98504,
+      "sid": 98504,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "startup_inputs": {
+    "db-gateway": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/db-gateway.yaml",
+      "config_sha256": "4bdf24888aa4f93c247eee4e9aee13d7c97d6c18b97180aeadd82421f3fbaeb4",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+      "agent_config_sha256": "5678a6e9107052ef09e34188110da7bd7741bb03ca4c3ca3d18454b73a184210",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway"
+    },
+    "identity": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/identity.yaml",
+      "config_sha256": "18c62ce4eeb4bcf8a47b899a3d5b693d9348b452c3de27025de24e8c68087d27",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+      "agent_config_sha256": "5678a6e9107052ef09e34188110da7bd7741bb03ca4c3ca3d18454b73a184210",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/identity"
+    },
+    "central-bank": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/central-bank.yaml",
+      "config_sha256": "25987af3560e78eecb5ceeddf94456f105629cefaf2c8276a105f3cab4969109",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+      "agent_config_sha256": "5678a6e9107052ef09e34188110da7bd7741bb03ca4c3ca3d18454b73a184210",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/central-bank"
+    },
+    "task-board": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/task-board.yaml",
+      "config_sha256": "3e7edf680a32faf4b3cd76a45aaddf9097cc29ef6e81c60288b859b6da962b01",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+      "agent_config_sha256": "5678a6e9107052ef09e34188110da7bd7741bb03ca4c3ca3d18454b73a184210",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/task-board"
+    },
+    "reputation": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/reputation.yaml",
+      "config_sha256": "7910807e4201e97e28821e206b25b45a8b15a34a1d39a7cc213d24d62dfb9519",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+      "agent_config_sha256": "5678a6e9107052ef09e34188110da7bd7741bb03ca4c3ca3d18454b73a184210",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/reputation"
+    },
+    "court": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/court.yaml",
+      "config_sha256": "3e3ec1c01bd6b15699cf73316eda783ae97ef0d817079224530ac87b832fd7d7",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+      "agent_config_sha256": "5678a6e9107052ef09e34188110da7bd7741bb03ca4c3ca3d18454b73a184210",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/court"
+    },
+    "ui": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/ui.yaml",
+      "config_sha256": "486326fbccf9fe803f7482f6e6049257747c449b38ed6294df1f043e7669c460",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+      "agent_config_sha256": "5678a6e9107052ef09e34188110da7bd7741bb03ca4c3ca3d18454b73a184210",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/ui"
+    }
+  },
+  "maintenance_identity": {
+    "device": 16777234,
+    "inode": 334928240
+  },
+  "recovery": {
+    "state": "ready",
+    "inventory_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/recovery-inventory.json",
+    "inventory_sha256": "db7cb2af314ea48837cc2ffb49acb14fce8a9dba4d782bd83b28afd9dee48176",
+    "inventory": {
+      "contract_version": 1,
+      "runtime_id": "eea7f47ab2034a7b9ca60521df5606a4",
+      "source_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+      "agents_package_root": "/Users/flo/Developer/github/agent-economy/agents",
+      "maintenance_lock_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/maintenance.lock",
+      "maintenance_lock_identity": {
+        "device": 16777234,
+        "inode": 334928240
+      },
+      "resources": [
+        {
+          "logical_id": "agents.roster",
+          "kind": "file",
+          "capture_kind": "copy",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/roster.yaml"
+        },
+        {
+          "logical_id": "agents.runtime_state",
+          "kind": "directory",
+          "capture_kind": "absent_directory",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/agent-runtime"
+        },
+        {
+          "logical_id": "agents.tasks",
+          "kind": "file",
+          "capture_kind": "absent_file",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/math_tasks.jsonl"
+        },
+        {
+          "logical_id": "assets.root",
+          "kind": "directory",
+          "capture_kind": "copy",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/assets"
+        },
+        {
+          "logical_id": "config.agents",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml"
+        },
+        {
+          "logical_id": "config.central-bank",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/central-bank.yaml"
+        },
+        {
+          "logical_id": "config.court",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/court.yaml"
+        },
+        {
+          "logical_id": "config.db-gateway",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/db-gateway.yaml"
+        },
+        {
+          "logical_id": "config.identity",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/identity.yaml"
+        },
+        {
+          "logical_id": "config.reputation",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/reputation.yaml"
+        },
+        {
+          "logical_id": "config.task-board",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/task-board.yaml"
+        },
+        {
+          "logical_id": "config.ui",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/ui.yaml"
+        },
+        {
+          "logical_id": "database.legacy.task-board",
+          "kind": "file",
+          "capture_kind": "absent_file",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/task-board.db"
+        },
+        {
+          "logical_id": "database.primary",
+          "kind": "file",
+          "capture_kind": "copy",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/economy.db"
+        },
+        {
+          "logical_id": "database.schema",
+          "kind": "file",
+          "capture_kind": "copy",
+          "capture_root": "/Users/flo/Developer/github/agent-economy",
+          "captured_path": "/Users/flo/Developer/github/agent-economy/docs/specifications/schema.sql"
+        },
+        {
+          "logical_id": "frontend.web",
+          "kind": "directory",
+          "capture_kind": "copy",
+          "capture_root": "/Users/flo/Developer/github/agent-economy",
+          "captured_path": "/Users/flo/Developer/github/agent-economy/services/ui/data/web"
+        },
+        {
+          "logical_id": "key.alice.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/alice.key"
+        },
+        {
+          "logical_id": "key.alice.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/alice.pub"
+        },
+        {
+          "logical_id": "key.bob.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/bob.key"
+        },
+        {
+          "logical_id": "key.bob.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/bob.pub"
+        },
+        {
+          "logical_id": "key.feeder.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/feeder.key"
+        },
+        {
+          "logical_id": "key.feeder.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/feeder.pub"
+        },
+        {
+          "logical_id": "key.gateway-central-bank.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-central-bank.key"
+        },
+        {
+          "logical_id": "key.gateway-central-bank.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-central-bank.pub"
+        },
+        {
+          "logical_id": "key.gateway-court.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-court.key"
+        },
+        {
+          "logical_id": "key.gateway-court.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-court.pub"
+        },
+        {
+          "logical_id": "key.gateway-identity.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-identity.key"
+        },
+        {
+          "logical_id": "key.gateway-identity.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-identity.pub"
+        },
+        {
+          "logical_id": "key.gateway-reputation.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-reputation.key"
+        },
+        {
+          "logical_id": "key.gateway-reputation.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-reputation.pub"
+        },
+        {
+          "logical_id": "key.gateway-task-board.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-task-board.key"
+        },
+        {
+          "logical_id": "key.gateway-task-board.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-task-board.pub"
+        },
+        {
+          "logical_id": "key.mathbot.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/mathbot.key"
+        },
+        {
+          "logical_id": "key.mathbot.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/mathbot.pub"
+        },
+        {
+          "logical_id": "key.mathbot_mistral.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/mathbot_mistral.key"
+        },
+        {
+          "logical_id": "key.mathbot_mistral.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/mathbot_mistral.pub"
+        },
+        {
+          "logical_id": "key.mathbot_openai.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/mathbot_openai.key"
+        },
+        {
+          "logical_id": "key.mathbot_openai.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/mathbot_openai.pub"
+        },
+        {
+          "logical_id": "key.operator.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/operator.key"
+        },
+        {
+          "logical_id": "key.operator.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/operator.pub"
+        },
+        {
+          "logical_id": "key.platform.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/platform.key"
+        },
+        {
+          "logical_id": "key.platform.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/platform.pub"
+        },
+        {
+          "logical_id": "keys.root",
+          "kind": "directory",
+          "capture_kind": "directory_only",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys"
+        },
+        {
+          "logical_id": "logs.root",
+          "kind": "directory",
+          "capture_kind": "directory_only",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs"
+        },
+        {
+          "logical_id": "recovery.backups",
+          "kind": "directory",
+          "capture_kind": "directory_only",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/backups"
+        },
+        {
+          "logical_id": "runtime.maintenance_lock",
+          "kind": "file",
+          "capture_kind": "runtime_lock",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/maintenance.lock"
+        }
+      ],
+      "configs": [
+        {
+          "logical_id": "agents",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/agents",
+          "sha256": "5678a6e9107052ef09e34188110da7bd7741bb03ca4c3ca3d18454b73a184210"
+        },
+        {
+          "logical_id": "central-bank",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/central-bank.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/central-bank",
+          "sha256": "25987af3560e78eecb5ceeddf94456f105629cefaf2c8276a105f3cab4969109"
+        },
+        {
+          "logical_id": "court",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/court.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/court",
+          "sha256": "3e3ec1c01bd6b15699cf73316eda783ae97ef0d817079224530ac87b832fd7d7"
+        },
+        {
+          "logical_id": "db-gateway",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/db-gateway.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+          "sha256": "4bdf24888aa4f93c247eee4e9aee13d7c97d6c18b97180aeadd82421f3fbaeb4"
+        },
+        {
+          "logical_id": "identity",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/identity.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/identity",
+          "sha256": "18c62ce4eeb4bcf8a47b899a3d5b693d9348b452c3de27025de24e8c68087d27"
+        },
+        {
+          "logical_id": "reputation",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/reputation.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/reputation",
+          "sha256": "7910807e4201e97e28821e206b25b45a8b15a34a1d39a7cc213d24d62dfb9519"
+        },
+        {
+          "logical_id": "task-board",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/task-board.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/task-board",
+          "sha256": "3e7edf680a32faf4b3cd76a45aaddf9097cc29ef6e81c60288b859b6da962b01"
+        },
+        {
+          "logical_id": "ui",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/ui.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/ui",
+          "sha256": "486326fbccf9fe803f7482f6e6049257747c449b38ed6294df1f043e7669c460"
+        }
+      ],
+      "field_bindings": [
+        {
+          "binding_id": "agents:platform.identity_url",
+          "config_id": "agents",
+          "field_path": [
+            "platform",
+            "identity_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53094",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:platform.bank_url",
+          "config_id": "agents",
+          "field_path": [
+            "platform",
+            "bank_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53095",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:platform.task_board_url",
+          "config_id": "agents",
+          "field_path": [
+            "platform",
+            "task_board_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53096",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:platform.reputation_url",
+          "config_id": "agents",
+          "field_path": [
+            "platform",
+            "reputation_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53097",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:platform.court_url",
+          "config_id": "agents",
+          "field_path": [
+            "platform",
+            "court_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53098",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:runtime_state.directory",
+          "config_id": "agents",
+          "field_path": [
+            "runtime_state",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/agent-runtime",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/agent-runtime",
+          "resource_id": "agents.runtime_state"
+        },
+        {
+          "binding_id": "agents:data.keys_dir",
+          "config_id": "agents",
+          "field_path": [
+            "data",
+            "keys_dir"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys",
+          "resource_id": "keys.root"
+        },
+        {
+          "binding_id": "agents:data.roster_path",
+          "config_id": "agents",
+          "field_path": [
+            "data",
+            "roster_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/roster.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/roster.yaml",
+          "resource_id": "agents.roster"
+        },
+        {
+          "binding_id": "agents:task_feeder.tasks_file",
+          "config_id": "agents",
+          "field_path": [
+            "task_feeder",
+            "tasks_file"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/math_tasks.jsonl",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/math_tasks.jsonl",
+          "resource_id": "agents.tasks"
+        },
+        {
+          "binding_id": "agents:workers.mathbot.llm.base_url",
+          "config_id": "agents",
+          "field_path": [
+            "workers",
+            "mathbot",
+            "llm",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:1234/v1",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:workers.mathbot_openai.llm.base_url",
+          "config_id": "agents",
+          "field_path": [
+            "workers",
+            "mathbot_openai",
+            "llm",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "https://api.openai.com/v1",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:workers.mathbot_mistral.llm.base_url",
+          "config_id": "agents",
+          "field_path": [
+            "workers",
+            "mathbot_mistral",
+            "llm",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "https://api.mistral.ai/v1",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "central-bank:server.port",
+          "config_id": "central-bank",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53095,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "central-bank:logging.directory",
+          "config_id": "central-bank",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "central-bank:db_gateway.url",
+          "config_id": "central-bank",
+          "field_path": [
+            "db_gateway",
+            "url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53093",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "central-bank:db_gateway.signing.private_key_path",
+          "config_id": "central-bank",
+          "field_path": [
+            "db_gateway",
+            "signing",
+            "private_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-central-bank.key",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-central-bank.key",
+          "resource_id": "key.gateway-central-bank.private"
+        },
+        {
+          "binding_id": "central-bank:platform.agent_config_path",
+          "config_id": "central-bank",
+          "field_path": [
+            "platform",
+            "agent_config_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "resource_id": "config.agents"
+        },
+        {
+          "binding_id": "central-bank:identity.base_url",
+          "config_id": "central-bank",
+          "field_path": [
+            "identity",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53094",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "court:server.port",
+          "config_id": "court",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53098,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "court:logging.directory",
+          "config_id": "court",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "court:db_gateway.url",
+          "config_id": "court",
+          "field_path": [
+            "db_gateway",
+            "url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53093",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "court:db_gateway.signing.private_key_path",
+          "config_id": "court",
+          "field_path": [
+            "db_gateway",
+            "signing",
+            "private_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-court.key",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-court.key",
+          "resource_id": "key.gateway-court.private"
+        },
+        {
+          "binding_id": "court:platform.agent_config_path",
+          "config_id": "court",
+          "field_path": [
+            "platform",
+            "agent_config_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "resource_id": "config.agents"
+        },
+        {
+          "binding_id": "db-gateway:server.port",
+          "config_id": "db-gateway",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53093,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "db-gateway:logging.directory",
+          "config_id": "db-gateway",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "db-gateway:recovery.maintenance_lock_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "recovery",
+            "maintenance_lock_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/maintenance.lock",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/maintenance.lock",
+          "resource_id": "runtime.maintenance_lock"
+        },
+        {
+          "binding_id": "db-gateway:database.path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "database",
+            "path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/economy.db",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/economy.db",
+          "resource_id": "database.primary"
+        },
+        {
+          "binding_id": "db-gateway:database.schema_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "database",
+            "schema_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/Users/flo/Developer/github/agent-economy/docs/specifications/schema.sql",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/Users/flo/Developer/github/agent-economy/docs/specifications/schema.sql",
+          "resource_id": "database.schema"
+        },
+        {
+          "binding_id": "db-gateway:recovery.backup_root",
+          "config_id": "db-gateway",
+          "field_path": [
+            "recovery",
+            "backup_root"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/backups",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/backups",
+          "resource_id": "recovery.backups"
+        },
+        {
+          "binding_id": "db-gateway:board_authority.platform_public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "board_authority",
+            "platform_public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/platform.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/platform.pub",
+          "resource_id": "key.platform.public"
+        },
+        {
+          "binding_id": "db-gateway:auth.trusted_callers.gateway-identity.public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "auth",
+            "trusted_callers",
+            "gateway-identity",
+            "public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-identity.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-identity.pub",
+          "resource_id": "key.gateway-identity.public"
+        },
+        {
+          "binding_id": "db-gateway:auth.trusted_callers.gateway-central-bank.public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "auth",
+            "trusted_callers",
+            "gateway-central-bank",
+            "public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-central-bank.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-central-bank.pub",
+          "resource_id": "key.gateway-central-bank.public"
+        },
+        {
+          "binding_id": "db-gateway:auth.trusted_callers.gateway-task-board.public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "auth",
+            "trusted_callers",
+            "gateway-task-board",
+            "public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-task-board.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-task-board.pub",
+          "resource_id": "key.gateway-task-board.public"
+        },
+        {
+          "binding_id": "db-gateway:auth.trusted_callers.gateway-reputation.public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "auth",
+            "trusted_callers",
+            "gateway-reputation",
+            "public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-reputation.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-reputation.pub",
+          "resource_id": "key.gateway-reputation.public"
+        },
+        {
+          "binding_id": "db-gateway:auth.trusted_callers.gateway-court.public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "auth",
+            "trusted_callers",
+            "gateway-court",
+            "public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-court.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-court.pub",
+          "resource_id": "key.gateway-court.public"
+        },
+        {
+          "binding_id": "identity:server.port",
+          "config_id": "identity",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53094,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "identity:logging.directory",
+          "config_id": "identity",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "identity:db_gateway.url",
+          "config_id": "identity",
+          "field_path": [
+            "db_gateway",
+            "url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53093",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "identity:db_gateway.signing.private_key_path",
+          "config_id": "identity",
+          "field_path": [
+            "db_gateway",
+            "signing",
+            "private_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-identity.key",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-identity.key",
+          "resource_id": "key.gateway-identity.private"
+        },
+        {
+          "binding_id": "reputation:server.port",
+          "config_id": "reputation",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53097,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "reputation:logging.directory",
+          "config_id": "reputation",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "reputation:db_gateway.url",
+          "config_id": "reputation",
+          "field_path": [
+            "db_gateway",
+            "url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53093",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "reputation:db_gateway.signing.private_key_path",
+          "config_id": "reputation",
+          "field_path": [
+            "db_gateway",
+            "signing",
+            "private_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-reputation.key",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-reputation.key",
+          "resource_id": "key.gateway-reputation.private"
+        },
+        {
+          "binding_id": "reputation:platform.agent_config_path",
+          "config_id": "reputation",
+          "field_path": [
+            "platform",
+            "agent_config_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "resource_id": "config.agents"
+        },
+        {
+          "binding_id": "reputation:identity.base_url",
+          "config_id": "reputation",
+          "field_path": [
+            "identity",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53094",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "task-board:server.port",
+          "config_id": "task-board",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53096,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "task-board:logging.directory",
+          "config_id": "task-board",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "task-board:db_gateway.url",
+          "config_id": "task-board",
+          "field_path": [
+            "db_gateway",
+            "url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53093",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "task-board:db_gateway.signing.private_key_path",
+          "config_id": "task-board",
+          "field_path": [
+            "db_gateway",
+            "signing",
+            "private_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-task-board.key",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/keys/gateway-task-board.key",
+          "resource_id": "key.gateway-task-board.private"
+        },
+        {
+          "binding_id": "task-board:platform.agent_config_path",
+          "config_id": "task-board",
+          "field_path": [
+            "platform",
+            "agent_config_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "resource_id": "config.agents"
+        },
+        {
+          "binding_id": "task-board:identity.base_url",
+          "config_id": "task-board",
+          "field_path": [
+            "identity",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53094",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "task-board:recovery.maintenance_lock_path",
+          "config_id": "task-board",
+          "field_path": [
+            "recovery",
+            "maintenance_lock_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/maintenance.lock",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/maintenance.lock",
+          "resource_id": "runtime.maintenance_lock"
+        },
+        {
+          "binding_id": "task-board:database.path",
+          "config_id": "task-board",
+          "field_path": [
+            "database",
+            "path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/task-board.db",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/task-board.db",
+          "resource_id": "database.legacy.task-board"
+        },
+        {
+          "binding_id": "task-board:central_bank.base_url",
+          "config_id": "task-board",
+          "field_path": [
+            "central_bank",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53095",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "task-board:assets.storage_path",
+          "config_id": "task-board",
+          "field_path": [
+            "assets",
+            "storage_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/assets",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/assets",
+          "resource_id": "assets.root"
+        },
+        {
+          "binding_id": "ui:server.port",
+          "config_id": "ui",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53099,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "ui:logging.directory",
+          "config_id": "ui",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "ui:recovery.maintenance_lock_path",
+          "config_id": "ui",
+          "field_path": [
+            "recovery",
+            "maintenance_lock_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/maintenance.lock",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/maintenance.lock",
+          "resource_id": "runtime.maintenance_lock"
+        },
+        {
+          "binding_id": "ui:database.path",
+          "config_id": "ui",
+          "field_path": [
+            "database",
+            "path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/economy.db",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/data/economy.db",
+          "resource_id": "database.primary"
+        },
+        {
+          "binding_id": "ui:frontend.web_root",
+          "config_id": "ui",
+          "field_path": [
+            "frontend",
+            "web_root"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/Users/flo/Developer/github/agent-economy/services/ui/data/web",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/Users/flo/Developer/github/agent-economy/services/ui/data/web",
+          "resource_id": "frontend.web"
+        },
+        {
+          "binding_id": "ui:user_agent.agent_config_path",
+          "config_id": "ui",
+          "field_path": [
+            "user_agent",
+            "agent_config_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/configs/agents.yaml",
+          "resource_id": "config.agents"
+        },
+        {
+          "binding_id": "ui:browser_security.allowed_origins",
+          "config_id": "ui",
+          "field_path": [
+            "browser_security",
+            "allowed_origins"
+          ],
+          "binding_kind": "origins",
+          "captured_value": [
+            "http://127.0.0.1:53099",
+            "http://localhost:53099"
+          ],
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        }
+      ],
+      "keypairs": [
+        {
+          "handle": "alice",
+          "role": "economic",
+          "private_resource_id": "key.alice.private",
+          "public_resource_id": "key.alice.public",
+          "expected_public_fingerprint_sha256": "9cc608d6f4b840a2c9dd188f315e744fabadca4c37a061ee545661810d469c88",
+          "registration_requirement": "optional",
+          "captured_registration_state": "registered",
+          "expected_registered_agent_id": "a-e89f2b20-a875-45a3-8257-87e5536be330"
+        },
+        {
+          "handle": "bob",
+          "role": "economic",
+          "private_resource_id": "key.bob.private",
+          "public_resource_id": "key.bob.public",
+          "expected_public_fingerprint_sha256": "c5864e26059f0775280f46f97dc6ba50eacc370e1a2241bdc4afd485ff0c719f",
+          "registration_requirement": "optional",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "feeder",
+          "role": "economic",
+          "private_resource_id": "key.feeder.private",
+          "public_resource_id": "key.feeder.public",
+          "expected_public_fingerprint_sha256": "f783e640ebd13d04966437a83bf5ebd27fda9938ec325646d433f63f5247e64f",
+          "registration_requirement": "optional",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "gateway-central-bank",
+          "role": "gateway",
+          "private_resource_id": "key.gateway-central-bank.private",
+          "public_resource_id": "key.gateway-central-bank.public",
+          "expected_public_fingerprint_sha256": "63c059cef30deb83a04ee7ace62483b7bf0ee2d76328466b530ea09a05840348",
+          "registration_requirement": "forbidden",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "gateway-court",
+          "role": "gateway",
+          "private_resource_id": "key.gateway-court.private",
+          "public_resource_id": "key.gateway-court.public",
+          "expected_public_fingerprint_sha256": "0818660cd80aee473ae0419a207fc7b0026d17ba5fe963641fbf11ea26b2c5fc",
+          "registration_requirement": "forbidden",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "gateway-identity",
+          "role": "gateway",
+          "private_resource_id": "key.gateway-identity.private",
+          "public_resource_id": "key.gateway-identity.public",
+          "expected_public_fingerprint_sha256": "c4f1fe348a62a2c3895db8045c5916f67e5ec03d058ad6091033cb17e0673844",
+          "registration_requirement": "forbidden",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "gateway-reputation",
+          "role": "gateway",
+          "private_resource_id": "key.gateway-reputation.private",
+          "public_resource_id": "key.gateway-reputation.public",
+          "expected_public_fingerprint_sha256": "82f8fb875cb4f607522e9a9f4e97ec766942d5154b9b4cf844dba969dba6bff7",
+          "registration_requirement": "forbidden",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "gateway-task-board",
+          "role": "gateway",
+          "private_resource_id": "key.gateway-task-board.private",
+          "public_resource_id": "key.gateway-task-board.public",
+          "expected_public_fingerprint_sha256": "d6a12a06ce62e882c0122a825a79281a6dfe641be1a59cc90b0d099c758bf7a2",
+          "registration_requirement": "forbidden",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "mathbot",
+          "role": "economic",
+          "private_resource_id": "key.mathbot.private",
+          "public_resource_id": "key.mathbot.public",
+          "expected_public_fingerprint_sha256": "ef51b1e0fc3605f9540132188951425ced10fa1a918270b0ee33601c7c1573bb",
+          "registration_requirement": "optional",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "mathbot_mistral",
+          "role": "economic",
+          "private_resource_id": "key.mathbot_mistral.private",
+          "public_resource_id": "key.mathbot_mistral.public",
+          "expected_public_fingerprint_sha256": "84041a59324e59b1f02af63ddc915cbe3121b4917b26b0db3307165bf904f125",
+          "registration_requirement": "optional",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "mathbot_openai",
+          "role": "economic",
+          "private_resource_id": "key.mathbot_openai.private",
+          "public_resource_id": "key.mathbot_openai.public",
+          "expected_public_fingerprint_sha256": "d2a9ea9170d96fe83d023f625287b4841e6ac5df193d83217c6ae46bcc7d2671",
+          "registration_requirement": "optional",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "operator",
+          "role": "economic",
+          "private_resource_id": "key.operator.private",
+          "public_resource_id": "key.operator.public",
+          "expected_public_fingerprint_sha256": "13ec3b3b2f0466ef5b66627e83e9a555780fd7ad07b5ea3f35a033db30ca0eb8",
+          "registration_requirement": "required",
+          "captured_registration_state": "registered",
+          "expected_registered_agent_id": "a-708037a8-65c0-400f-8ac2-4b2661464b6a"
+        },
+        {
+          "handle": "platform",
+          "role": "economic",
+          "private_resource_id": "key.platform.private",
+          "public_resource_id": "key.platform.public",
+          "expected_public_fingerprint_sha256": "e0bac42b93237e1ca3218fd9d113e7eda8334eeacc7368197d94d91aabd2f273",
+          "registration_requirement": "required",
+          "captured_registration_state": "registered",
+          "expected_registered_agent_id": "a-7e76ce2b-5b96-4f2a-b1f5-02d7e96258b7"
+        }
+      ],
+      "process_ownership": [
+        {
+          "logical_id": "db-gateway",
+          "config_id": "db-gateway",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+          "agents_package_root": null,
+          "pid": 98506,
+          "pgid": 98506,
+          "sid": 98506,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "identity",
+          "config_id": "identity",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/identity",
+          "agents_package_root": null,
+          "pid": 98510,
+          "pgid": 98510,
+          "sid": 98510,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "central-bank",
+          "config_id": "central-bank",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/central-bank",
+          "agents_package_root": null,
+          "pid": 98514,
+          "pgid": 98514,
+          "sid": 98514,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "task-board",
+          "config_id": "task-board",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/task-board",
+          "agents_package_root": null,
+          "pid": 98516,
+          "pgid": 98516,
+          "sid": 98516,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "reputation",
+          "config_id": "reputation",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/reputation",
+          "agents_package_root": null,
+          "pid": 98520,
+          "pgid": 98520,
+          "sid": 98520,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "court",
+          "config_id": "court",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/court",
+          "agents_package_root": null,
+          "pid": 98523,
+          "pgid": 98523,
+          "sid": 98523,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "ui",
+          "config_id": "ui",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/ui",
+          "agents_package_root": null,
+          "pid": 98528,
+          "pgid": 98528,
+          "sid": 98528,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "key-bootstrap-0",
+          "config_id": null,
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/agents",
+          "agents_package_root": "/Users/flo/Developer/github/agent-economy/agents",
+          "pid": 98504,
+          "pgid": 98504,
+          "sid": 98504,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 0,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "phase-command-0",
+          "config_id": null,
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/agents",
+          "agents_package_root": "/Users/flo/Developer/github/agent-economy/agents",
+          "pid": 98530,
+          "pgid": 98530,
+          "sid": 98530,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 0,
+          "cleanup_error": null
+        }
+      ]
+    }
+  }
+}

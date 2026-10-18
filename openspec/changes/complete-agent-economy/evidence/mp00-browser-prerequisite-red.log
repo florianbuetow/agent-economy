@@ -1,0 +1,78 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+________ test_missing_browser_has_actionable_prerequisite_error[empty] _________
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-36/test_missing_browser_has_actio0')
+cache_state = 'empty'
+
+    @pytest.mark.parametrize("cache_state", ["empty", "stale"])
+    def test_missing_browser_has_actionable_prerequisite_error(
+        tmp_path: Path, cache_state: str
+    ) -> None:
+        """An absent or obsolete browser cache must never produce a green preflight."""
+        browser_cache = tmp_path / "browsers"
+        browser_cache.mkdir()
+        if cache_state == "stale":
+            (browser_cache / "chromium_headless_shell-1").mkdir()
+    
+        environment = os.environ.copy()
+        environment["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_cache)
+        environment["UV_NO_SYNC"] = "1"
+        environment["UV_OFFLINE"] = "1"
+        result = subprocess.run(
+            ["just", "test-prerequisites"],
+            cwd=SERVICE_ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    
+        assert result.returncode != 0
+>       assert "uv run playwright install chromium" in result.stdout + result.stderr
+E       AssertionError: assert 'uv run playwright install chromium' in ('' + 'error: justfile does not contain recipe `test-prerequisites`\n')
+E        +  where '' = CompletedProcess(args=['just', 'test-prerequisites'], returncode=1, stdout='', stderr='error: justfile does not contain recipe `test-prerequisites`\n').stdout
+E        +  and   'error: justfile does not contain recipe `test-prerequisites`\n' = CompletedProcess(args=['just', 'test-prerequisites'], returncode=1, stdout='', stderr='error: justfile does not contain recipe `test-prerequisites`\n').stderr
+
+tests/unit/test_browser_prerequisites.py:41: AssertionError
+________ test_missing_browser_has_actionable_prerequisite_error[stale] _________
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-36/test_missing_browser_has_actio1')
+cache_state = 'stale'
+
+    @pytest.mark.parametrize("cache_state", ["empty", "stale"])
+    def test_missing_browser_has_actionable_prerequisite_error(
+        tmp_path: Path, cache_state: str
+    ) -> None:
+        """An absent or obsolete browser cache must never produce a green preflight."""
+        browser_cache = tmp_path / "browsers"
+        browser_cache.mkdir()
+        if cache_state == "stale":
+            (browser_cache / "chromium_headless_shell-1").mkdir()
+    
+        environment = os.environ.copy()
+        environment["PLAYWRIGHT_BROWSERS_PATH"] = str(browser_cache)
+        environment["UV_NO_SYNC"] = "1"
+        environment["UV_OFFLINE"] = "1"
+        result = subprocess.run(
+            ["just", "test-prerequisites"],
+            cwd=SERVICE_ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    
+        assert result.returncode != 0
+>       assert "uv run playwright install chromium" in result.stdout + result.stderr
+E       AssertionError: assert 'uv run playwright install chromium' in ('' + 'error: justfile does not contain recipe `test-prerequisites`\n')
+E        +  where '' = CompletedProcess(args=['just', 'test-prerequisites'], returncode=1, stdout='', stderr='error: justfile does not contain recipe `test-prerequisites`\n').stdout
+E        +  and   'error: justfile does not contain recipe `test-prerequisites`\n' = CompletedProcess(args=['just', 'test-prerequisites'], returncode=1, stdout='', stderr='error: justfile does not contain recipe `test-prerequisites`\n').stderr
+
+tests/unit/test_browser_prerequisites.py:41: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_browser_prerequisites.py::test_missing_browser_has_actionable_prerequisite_error[empty]
+FAILED tests/unit/test_browser_prerequisites.py::test_missing_browser_has_actionable_prerequisite_error[stale]
+2 failed in 0.04s

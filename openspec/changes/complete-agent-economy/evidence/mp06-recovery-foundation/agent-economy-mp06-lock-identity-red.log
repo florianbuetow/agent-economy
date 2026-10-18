@@ -1,0 +1,23 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-commons
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+________ ERROR collecting tests/unit/test_maintenance_lock_identity.py _________
+ImportError while importing test module '/Users/flo/Developer/github/agent-economy/libs/service-commons/tests/unit/test_maintenance_lock_identity.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_maintenance_lock_identity.py:11: in <module>
+    from service_commons.maintenance_lock import (
+E   ImportError: cannot import name 'HeldMaintenanceLock' from 'service_commons.maintenance_lock' (/Users/flo/Developer/github/agent-economy/libs/service-commons/src/service_commons/maintenance_lock.py). Did you mean: 'maintenance_lock'?
+=========================== short test summary info ============================
+ERROR tests/unit/test_maintenance_lock_identity.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 0.05s ===============================

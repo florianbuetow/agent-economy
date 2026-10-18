@@ -97,7 +97,7 @@ server:
 
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{key_dir / "logs"}"
   format: "json"
 
 database:
@@ -108,6 +108,10 @@ database:
 
 request:
   max_body_size: 1048576
+
+board_authority:
+  platform_public_key_path: "{key_dir / "contract-platform.pub"}"
+  deadline_actor_id: "system-contract-deadlines"
 
 recovery:
   maintenance_lock_path: "{key_dir / "maintenance.lock"}"
@@ -143,6 +147,7 @@ async def _gateway_backed_client(db_path: str) -> AsyncIterator[LedgerDbClient]:
     key_dir = Path(db_path).parent
     generate_keypair("gateway-identity", key_dir)
     generate_keypair("gateway-central-bank", key_dir)
+    generate_keypair("contract-platform", key_dir)
     async with AsyncExitStack() as cleanup:
         config_path = _write_gateway_config(db_path, key_dir)
         cleanup.callback(Path(config_path).unlink, missing_ok=True)

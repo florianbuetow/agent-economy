@@ -1,0 +1,71 @@
+[
+  {
+    "manifest": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-bb2dfcc773494f73806fcfdf22515469-rqnw2ggv/runtime.json",
+    "manifest_sha256": "e4040764b6d6b41d51461fa503f0ac2bc34f730bdc89da705c38986a4c8ca997",
+    "groups": [
+      {
+        "pgid": 67294,
+        "observed": "absent",
+        "recorded_running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pgid": 67296,
+        "observed": "absent",
+        "recorded_running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pgid": 67299,
+        "observed": "absent",
+        "recorded_running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pgid": 67303,
+        "observed": "absent",
+        "recorded_running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pgid": 67305,
+        "observed": "absent",
+        "recorded_running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pgid": 67310,
+        "observed": "absent",
+        "recorded_running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pgid": 67318,
+        "observed": "absent",
+        "recorded_running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pgid": 67320,
+        "observed": "absent",
+        "recorded_running": false,
+        "drained": true,
+        "cleanup_error": null
+      },
+      {
+        "pgid": 67288,
+        "observed": "absent",
+        "recorded_running": false,
+        "drained": true,
+        "cleanup_error": null
+      }
+    ]
+  }
+]

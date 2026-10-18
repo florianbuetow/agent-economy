@@ -1,0 +1,122 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 36 items
+
+tests/unit/test_escrow_coordinator.py .............                      [ 36%]
+tests/unit/test_mp04_financial_intents.py ..........                     [ 63%]
+tests/unit/test_mp04_ruling_replay.py FFFFFFFFFFFFF                      [100%]
+
+=================================== FAILURES ===================================
+___ test_identical_stored_ruling_replay_returns_original_without_settlement ____
+tests/unit/test_mp04_ruling_replay.py:92: in test_identical_stored_ruling_replay_returns_original_without_settlement
+    result = await coordinator.record_ruling("t-one", "verified-platform-token")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_ruling.py:210: in record_ruling
+    operation_id, expected_version = public_operation_identity(payload)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_operations.py:45: in public_operation_identity
+    raise ServiceError("invalid_payload", f"Missing required field: {field}", 400, {})
+E   service_commons.exceptions.ServiceError: Missing required field: operation_id
+___ test_changed_stored_ruling_terms_conflict_without_effect[0-Split ruling] ___
+tests/unit/test_mp04_ruling_replay.py:115: in test_changed_stored_ruling_terms_conflict_without_effect
+    assert (error.value.status_code, error.value.error) == (409, "ruling_conflict")
+E   AssertionError: assert (400, 'invalid_payload') == (409, 'ruling_conflict')
+E     
+E     At index 0 diff: 400 != 409
+E     Use -v to get more diff
+__ test_changed_stored_ruling_terms_conflict_without_effect[100-Split ruling] __
+tests/unit/test_mp04_ruling_replay.py:115: in test_changed_stored_ruling_terms_conflict_without_effect
+    assert (error.value.status_code, error.value.error) == (409, "ruling_conflict")
+E   AssertionError: assert (400, 'invalid_payload') == (409, 'ruling_conflict')
+E     
+E     At index 0 diff: 400 != 409
+E     Use -v to get more diff
+__ test_changed_stored_ruling_terms_conflict_without_effect[49-Split ruling] ___
+tests/unit/test_mp04_ruling_replay.py:115: in test_changed_stored_ruling_terms_conflict_without_effect
+    assert (error.value.status_code, error.value.error) == (409, "ruling_conflict")
+E   AssertionError: assert (400, 'invalid_payload') == (409, 'ruling_conflict')
+E     
+E     At index 0 diff: 400 != 409
+E     Use -v to get more diff
+_ test_changed_stored_ruling_terms_conflict_without_effect[50-Changed verdict] _
+tests/unit/test_mp04_ruling_replay.py:115: in test_changed_stored_ruling_terms_conflict_without_effect
+    assert (error.value.status_code, error.value.error) == (409, "ruling_conflict")
+E   AssertionError: assert (400, 'invalid_payload') == (409, 'ruling_conflict')
+E     
+E     At index 0 diff: 400 != 409
+E     Use -v to get more diff
+______ test_invalid_stored_ruling_percentage_is_not_an_exact_retry[True] _______
+tests/unit/test_mp04_ruling_replay.py:130: in test_invalid_stored_ruling_percentage_is_not_an_exact_retry
+    assert (error.value.status_code, error.value.error) == (400, "invalid_worker_pct")
+E   AssertionError: assert (400, 'invalid_payload') == (400, 'invalid_worker_pct')
+E     
+E     At index 1 diff: 'invalid_payload' != 'invalid_worker_pct'
+E     Use -v to get more diff
+______ test_invalid_stored_ruling_percentage_is_not_an_exact_retry[False] ______
+tests/unit/test_mp04_ruling_replay.py:130: in test_invalid_stored_ruling_percentage_is_not_an_exact_retry
+    assert (error.value.status_code, error.value.error) == (400, "invalid_worker_pct")
+E   AssertionError: assert (400, 'invalid_payload') == (400, 'invalid_worker_pct')
+E     
+E     At index 1 diff: 'invalid_payload' != 'invalid_worker_pct'
+E     Use -v to get more diff
+______ test_invalid_stored_ruling_percentage_is_not_an_exact_retry[None] _______
+tests/unit/test_mp04_ruling_replay.py:130: in test_invalid_stored_ruling_percentage_is_not_an_exact_retry
+    assert (error.value.status_code, error.value.error) == (400, "invalid_worker_pct")
+E   AssertionError: assert (400, 'invalid_payload') == (400, 'invalid_worker_pct')
+E     
+E     At index 1 diff: 'invalid_payload' != 'invalid_worker_pct'
+E     Use -v to get more diff
+_______ test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50] ________
+tests/unit/test_mp04_ruling_replay.py:130: in test_invalid_stored_ruling_percentage_is_not_an_exact_retry
+    assert (error.value.status_code, error.value.error) == (400, "invalid_worker_pct")
+E   AssertionError: assert (400, 'invalid_payload') == (400, 'invalid_worker_pct')
+E     
+E     At index 1 diff: 'invalid_payload' != 'invalid_worker_pct'
+E     Use -v to get more diff
+______ test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50.0] _______
+tests/unit/test_mp04_ruling_replay.py:130: in test_invalid_stored_ruling_percentage_is_not_an_exact_retry
+    assert (error.value.status_code, error.value.error) == (400, "invalid_worker_pct")
+E   AssertionError: assert (400, 'invalid_payload') == (400, 'invalid_worker_pct')
+E     
+E     At index 1 diff: 'invalid_payload' != 'invalid_worker_pct'
+E     Use -v to get more diff
+_______ test_invalid_stored_ruling_percentage_is_not_an_exact_retry[-1] ________
+tests/unit/test_mp04_ruling_replay.py:130: in test_invalid_stored_ruling_percentage_is_not_an_exact_retry
+    assert (error.value.status_code, error.value.error) == (400, "invalid_worker_pct")
+E   AssertionError: assert (400, 'invalid_payload') == (400, 'invalid_worker_pct')
+E     
+E     At index 1 diff: 'invalid_payload' != 'invalid_worker_pct'
+E     Use -v to get more diff
+_______ test_invalid_stored_ruling_percentage_is_not_an_exact_retry[101] _______
+tests/unit/test_mp04_ruling_replay.py:130: in test_invalid_stored_ruling_percentage_is_not_an_exact_retry
+    assert (error.value.status_code, error.value.error) == (400, "invalid_worker_pct")
+E   AssertionError: assert (400, 'invalid_payload') == (400, 'invalid_worker_pct')
+E     
+E     At index 1 diff: 'invalid_payload' != 'invalid_worker_pct'
+E     Use -v to get more diff
+________ test_other_ruling_preserves_status_precedence_and_stored_terms ________
+tests/unit/test_mp04_ruling_replay.py:144: in test_other_ruling_preserves_status_precedence_and_stored_terms
+    assert (error.value.status_code, error.value.error) == (409, "invalid_status")
+E   AssertionError: assert (400, 'invalid_payload') == (409, 'invalid_status')
+E     
+E     At index 0 diff: 400 != 409
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp04_ruling_replay.py::test_identical_stored_ruling_replay_returns_original_without_settlement
+FAILED tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[0-Split ruling]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[100-Split ruling]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[49-Split ruling]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[50-Changed verdict]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[True]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[False]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[None]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50.0]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[-1]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[101]
+FAILED tests/unit/test_mp04_ruling_replay.py::test_other_ruling_preserves_status_precedence_and_stored_terms
+======================== 13 failed, 23 passed in 0.56s =========================

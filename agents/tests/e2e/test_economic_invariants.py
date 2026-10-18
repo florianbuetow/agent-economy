@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from service_auth.financial_identity import operation_id_for
 
+from .native_task_contract import lifecycle_version, new_operation_id
+
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
     from base_agent.platform import PlatformAgent
@@ -27,15 +29,49 @@ async def _drive_dispute_to_ruling(
         spec="Implement the feature",
         reward=reward,
         bidding_deadline_seconds=3600,
+        acceptance_window_seconds=3600,
         execution_deadline_seconds=7200,
         review_deadline_seconds=3600,
     )
-    bid = await worker.submit_bid(task_id=task["task_id"], amount=reward)
-    await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+    bid_response = await worker.submit_bid(
+        task_id=task["task_id"],
+        amount=reward,
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(task),
+    )
+    assert bid_response.status_code == 201
+    bid = bid_response.body
+    accept_response = await poster.accept_bid(
+        task_id=task["task_id"],
+        bid_id=bid["bid_id"],
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(task),
+    )
+    assert accept_response.status_code == 200
+    accepted_task = accept_response.body
+    assert accepted_task["status"] == "accepted"
     await worker.upload_asset(task["task_id"], "work.txt", b"Completed work")
-    await worker.submit_deliverable(task["task_id"])
+    submit_response = await worker.submit_deliverable(
+        task["task_id"],
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(accepted_task),
+    )
+    assert submit_response.status_code == 200
+    submitted_task = submit_response.body
+    assert submitted_task["status"] == "submitted"
 
-    await poster.dispute_task(task_id=task["task_id"], reason="Does not meet spec")
+    dispute_response = await poster.dispute_task(
+        task_id=task["task_id"],
+        reason="Does not meet spec",
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(submitted_task),
+    )
+
+    assert dispute_response.status_code == 200
+
+    disputed_command_task = dispute_response.body
+
+    assert disputed_command_task["status"] == "disputed"
 
     disputed_task = await poster.get_task(task["task_id"])
     assert disputed_task["status"] == "disputed"
@@ -152,14 +188,44 @@ async def test_economic_cycle_with_dispute_partial_payout(
             spec="Do more work",
             reward=reward_2,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid_2 = await agent_a.submit_bid(task_id=task_2["task_id"], amount=reward_2)
-        await agent_b.accept_bid(task_id=task_2["task_id"], bid_id=bid_2["bid_id"])
+        bid_2_response = await agent_a.submit_bid(
+            task_id=task_2["task_id"],
+            amount=reward_2,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task_2),
+        )
+        assert bid_2_response.status_code == 201
+        bid_2 = bid_2_response.body
+        accept_response = await agent_b.accept_bid(
+            task_id=task_2["task_id"],
+            bid_id=bid_2["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task_2),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
         await agent_a.upload_asset(task_2["task_id"], "work2.txt", b"Round 2 work")
-        await agent_a.submit_deliverable(task_2["task_id"])
-        await agent_b.approve_task(task_2["task_id"])
+        submit_response = await agent_a.submit_deliverable(
+            task_2["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(accepted_task),
+        )
+        assert submit_response.status_code == 200
+        submitted_task = submit_response.body
+        assert submitted_task["status"] == "submitted"
+        approve_response = await agent_b.approve_task(
+            task_2["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(submitted_task),
+        )
+        assert approve_response.status_code == 200
+        approved_command_task = approve_response.body
+        assert approved_command_task["status"] == "approved"
 
         # Final balance check
         final_a = await agent_a.get_balance()
@@ -194,6 +260,7 @@ async def test_insufficient_funds_cannot_post_task(make_funded_agent) -> None:
                         "spec": "Do something expensive",
                         "reward": 500,
                         "bidding_deadline_seconds": 3600,
+                        "acceptance_window_seconds": 3600,
                         "execution_deadline_seconds": 7200,
                         "review_deadline_seconds": 3600,
                     },

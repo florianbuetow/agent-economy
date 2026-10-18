@@ -1,0 +1,104 @@
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/unit/routers/test_court_resilience.py:15:1
+   |
+13 |   """
+14 |
+15 | / from __future__ import annotations
+16 | |
+17 | | from json import JSONDecodeError
+18 | | from typing import TYPE_CHECKING
+19 | | from unittest.mock import AsyncMock
+20 | |
+21 | | import httpx
+22 | | import pytest
+23 | |
+24 | | from task_board_service.core.state import get_app_state
+25 | | from tests.helpers import make_jws_token
+26 | | from tests.unit.routers.conftest import (
+27 | |     new_operation_fields, setup_task_in_dispute, setup_task_in_review,
+28 | | )
+   | |_^
+29 |
+30 |   if TYPE_CHECKING:
+   |
+help: Organize imports
+
+E501 Line too long (101 > 100)
+  --> tests/unit/routers/test_t072_disputes_gaps.py:51:101
+   |
+49 |         }
+50 |         token = make_jws_token(
+51 |             platform_keypair[0], platform_agent_id, payload, resource=f"POST /tasks/{task_id}/ruling"
+   |                                                                                                     ^
+52 |         )
+53 |         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
+   |
+
+E501 Line too long (101 > 100)
+  --> tests/unit/routers/test_t072_disputes_gaps.py:82:101
+   |
+80 |         }
+81 |         token = make_jws_token(
+82 |             platform_keypair[0], platform_agent_id, payload, resource=f"POST /tasks/{task_id}/ruling"
+   |                                                                                                     ^
+83 |         )
+84 |         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
+   |
+
+E501 Line too long (101 > 100)
+   --> tests/unit/routers/test_t072_disputes_gaps.py:114:101
+    |
+112 |         }
+113 |         token = make_jws_token(
+114 |             platform_keypair[0], platform_agent_id, payload, resource=f"POST /tasks/{task_id}/ruling"
+    |                                                                                                     ^
+115 |         )
+116 |         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
+    |
+
+E501 Line too long (102 > 100)
+  --> tests/unit/routers/test_wp06_record_ruling_idempotent.py:44:101
+   |
+42 |     connection = store.writer.connection
+43 |     return (
+44 |         tuple(connection.execute("SELECT * FROM board_tasks WHERE task_id=?", (task_id,)).fetchone()),
+   |                                                                                                     ^^
+45 |         tuple(tuple(row) for row in connection.execute(
+46 |             "SELECT * FROM board_task_operations WHERE task_id=? ORDER BY operation_id", (task_id,)
+   |
+
+E501 Line too long (105 > 100)
+  --> tests/unit/routers/test_wp06_record_ruling_idempotent.py:49:101
+   |
+47 |         )),
+48 |         tuple(tuple(row) for row in connection.execute(
+49 |             "SELECT * FROM bank_operation_receipts WHERE escrow_id=? ORDER BY operation_id", (escrow_id,)
+   |                                                                                                     ^^^^^
+50 |         )),
+51 |         tuple(tuple(row) for row in connection.execute(
+   |
+
+E501 Line too long (101 > 100)
+  --> tests/unit/routers/test_wp06_record_ruling_idempotent.py:92:101
+   |
+90 |     payouts = store.writer.connection.execute(
+91 |         "SELECT account_id,amount FROM bank_transactions "
+92 |         "WHERE reference=? AND type='escrow_release' ORDER BY account_id", (first_body["escrow_id"],)
+   |                                                                                                     ^
+93 |     ).fetchall()
+94 |     assert [tuple(row) for row in payouts] == sorted([(alice_agent_id, 50), (bob_agent_id, 50)])
+   |
+
+E501 Line too long (103 > 100)
+   --> tests/unit/routers/test_wp06_record_ruling_idempotent.py:112:101
+    |
+110 |         client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
+111 |     )
+112 |     first = await _record_ruling(client, platform_keypair, platform_agent_id, _ruling_payload(task_id))
+    |                                                                                                     ^^^
+113 |     assert first.status_code == 200
+114 |     escrow_id = first.json()["escrow_id"]
+    |
+
+Found 8 errors.
+[*] 1 fixable with the `--fix` option.

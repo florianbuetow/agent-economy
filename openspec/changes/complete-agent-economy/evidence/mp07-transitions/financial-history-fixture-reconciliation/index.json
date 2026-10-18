@@ -1,0 +1,33 @@
+{
+  "claims": {
+    "focused_parent": 48934,
+    "focused_exit_code": 0,
+    "focused_passed": 32,
+    "controls_parent": 60885,
+    "controls_exit_code": 0,
+    "controls_passed": 58,
+    "warnings": 1,
+    "scope": "Explicit v1-v2-v3 migration with backups; all financial rows/events unchanged by task-fixture prep and v2-v3 migration; original test functions AST-identical. Both canonical source typing gates pass; extra tests-inclusive Mypy has same130 diagnostics as original baseline, not a passing test-typing gate."
+  },
+  "review": "APPROVE by /root/mp07_board_rollout_review after archived-diff inspection; no substantive findings. Wider Gateway failures remain open.",
+  "artifacts": {
+    "agent-economy-mp07-financial-history-fixture-controls.log": "abe466f711f5541f5b29f308418eefdf11673cee3b057704aefc709cc160c3e2",
+    "agent-economy-mp07-financial-history-fixture-green.log": "e3d6b944605b61dcdb5b06922b9e4d00e0004331ffe45148e737554a158f3d32",
+    "agent-economy-mp07-financial-history-fixture-mypy-baseline.log": "4796c0cd2f58c67a66a8d85616819a03d96bb465d9e858b248f68f910d442eca",
+    "agent-economy-mp07-financial-history-fixture-mypy-path.log": "8c65751bd4dd961f10c6a281a9378d67a759670add2a937cc2618eae4475cbfd",
+    "agent-economy-mp07-financial-history-fixture-mypy-source-explicit.log": "93f0378c777a8f059ecaf5ae08f4880a761f399f44e9db3c2e5d9a2665dbc0ae",
+    "agent-economy-mp07-financial-history-fixture-mypy.log": "8c65751bd4dd961f10c6a281a9378d67a759670add2a937cc2618eae4475cbfd",
+    "agent-economy-mp07-financial-history-fixture-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-financial-history-test-preservation.json": "a3dcf424f246278e0c19c9df81e5484e59dc21ddd543da6c738b129ea174fc8d",
+    "agent-economy-mp07-financial-history-type-comparison.json": "fb421cd8e5d87f2aacd3d33114cb6fd1ab3caef4c27f78e76f60d6b854140d47",
+    "agent-economy-mp07-gateway-fixture-pyright.log": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332",
+    "agent-economy-mp07-gateway-fixture-source-mypy.log": "d65cae0083d77ec23a4483dfe03fa5cbfde2ebbad3bc4205bfa20ae5ff3edceb",
+    "baseline/test_mp04_legacy_observations.py": "b2e3abf53f80087a079983d516435eb94808ce695e785c78c0950f9849566218",
+    "agent-economy-mp07-gateway-three-fixtures-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-gateway-three-fixtures-format.log": "177f260a5645724013185e4b140c7045cc39e56c0c97b120f5cb23599f85f0de"
+  },
+  "sources": {
+    "services/db-gateway/tests/unit/test_mp04_legacy_observations.py": "5af52bc099640ffbdf7ed34140e125845e9cc442da9ef708362a81771dfef559",
+    "docs/plans/2026-10-18-mp07-financial-history-fixture-reconciliation.md": "2f0819c88dde387f1a5a41a29add1f2963a3c2aaf3afa25bbee5354b8850170e"
+  }
+}

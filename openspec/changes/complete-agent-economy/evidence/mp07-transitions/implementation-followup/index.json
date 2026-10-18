@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-18T00:30:09+0200",
+  "change": "complete-agent-economy",
+  "package": "MP-07 implementation follow-up",
+  "commit_at_capture": "a6af0bed5e0475f63b271329bb7f8ea683da9bc3",
+  "copy_verification": "Every archived raw artifact compared byte-for-byte with its /private/tmp source before indexing.",
+  "artifacts": [
+    {"file": "agent-economy-mp07-schema-regressions-parent-red.log", "sha256": "17fa8dfad4dcd5990ea8020927fe68ca0e2603cb7e7df6fc321437fc89f029b1", "result": "Historical pre-fix parent proof: 9 failed, 3 passed."},
+    {"file": "agent-economy-mp07-audit-startup-parent-green.log", "sha256": "bcc5aca16e1ef90d5771d31ea40cc52000423a08ba65c65feb577aa25bab03af", "result": "Historical parent follow-up: 42 passed across schema, migration, audit and ruling-startup tests."},
+    {"file": "agent-economy-mp07-command-regressions-parent-red.log", "sha256": "def4679e2b73b004397609c168bdf03ba62ebae08a942cb129d3682fe41d1056", "result": "Historical pre-fix parent proof: 17 failed, 4 passed."},
+    {"file": "agent-economy-mp07-claimed-writes-parent-green.log", "sha256": "52e9a223254957a8bb0df8a6505c3d3dbd3614576adc32f58c1e3209046ecb1a", "result": "Historical parent follow-up: 41 passed; this selection included the two operation-boundary tests in addition to command, receipt, Court and write-guard tests."},
+    {"file": "agent-economy-mp07-commands-continuation-green.log", "sha256": "5290683bf4cc057b892fe79288018d6ed38c9198bfc09afc94ac38929aba431e", "result": "Fresh continuation proof: 39 passed, 1 warning in 16.58 seconds; operation regressions, receipt view, Court contract and claim-write exclusion only."},
+    {"file": "agent-economy-mp07-court-operation-parent-red.log", "sha256": "aa73b7a720fa71e5582dcf52f7a6d1ab3c98a3b50db2c7ae416fe8431718a455", "result": "Historical Court capability proof: 1 failed, 6 passed."},
+    {"file": "agent-economy-mp07-court-operation-fixture-green.log", "sha256": "e1896ec13c51c0236e858e6f33a31bb787cf00146f7a573cc94a229350121dc1", "result": "Court operation follow-up: 7 passed."},
+    {"file": "agent-economy-mp07-receipt-current-view-red-final.log", "sha256": "79bce6ce25a2c00dba22ae79bf0fe23bc9e98241e9b97aecc7e5ddc4abe5da3c", "result": "Historical receipt-current-view proof: 1 failed."},
+    {"file": "agent-economy-mp07-receipt-timestamps-red.log", "sha256": "c056647af32d530df35a261982e73481b56237569a1e108d3ccc538c880b7f60", "result": "Historical receipt timestamp proof: 3 failed, 1 passed."},
+    {"file": "agent-economy-mp07-claim-exclusion-parent-red.log", "sha256": "37e1a0c14b07270fb3ac04fe4beeba4b910b957c38e6336da50f2bae98992fa9", "result": "Historical generic-write guard proof: 7 failed."},
+    {"file": "agent-economy-mp07-ruling-startup-parent-red.log", "sha256": "566a31ef9fab485beb5f5de5d7dd3a408690c388a80012d8268047f6b32fc007", "result": "Historical ruling-startup proof: 3 failed, 3 passed."},
+    {"file": "agent-economy-mp07-deadline-actor-canonical-red.log", "sha256": "3f7524c63ad70a57bee6b1e713afb89f9e490efe84128ecf7a0ef18f1e3a8278", "result": "Historical canonical actor proof: 2 failed, 7 passed."},
+    {"file": "agent-economy-mp07-deadline-actor-green-final.log", "sha256": "ce0de7290d106fae6c6e89914be2297d6c38dee2aa580216a161594ead15e652", "result": "Canonical actor follow-up: 9 passed."},
+    {"file": "agent-economy-mp07-runtime-authority-red.log", "sha256": "722e599a4777ef15c7e78f5c35652fc7e175ede2b8a0aa5900a1a0bc3d743bdd", "result": "Historical runtime authority proof: 3 failed."},
+    {"file": "agent-economy-mp07-runtime-authority-parent-green.log", "sha256": "87f32c6285fd13b4f2fd3dc6dfadc029493f63986f0fe2f5474665649d9860a4", "result": "Historical parent runtime/recovery follow-up: 39 passed in 13.33 seconds."},
+    {"file": "agent-economy-mp07-runtime-parent-cleanup.json", "sha256": "60774a83e91762214aa22af5c40368096d939ccf519fb387fb81bf741e8e6a45", "result": "Cleanup proof for run 2bad8c6e6888478386362a15fca682ed: 9 recorded groups, all stopped and drained, no cleanup errors, no live or unverified groups."},
+    {"file": "runtime-parent-live-manifest.json", "sha256": "a2565c3b054b8088975bb9c3974b598c0a5f6942a8b2341c484c64e7860c7f3c", "result": "Exact live-runtime manifest for run 2bad8c6e6888478386362a15fca682ed; contains metadata and paths, no key bytes."}
+  ],
+  "source_snapshot": "source-hashes.json",
+  "source_snapshot_sha256": "d3eba5880d2177f48c0852f8910ad0a705cb5ce7436a3632d480ec79bbbe3aaa",
+  "limitations": [
+    "Red logs are historical failure evidence and do not describe the current working tree after repairs.",
+    "The source snapshot records current bytes at capture time and is not a reconstruction of pre-fix sources.",
+    "Gateway producer tests do not prove Task Board client/coordinator rollout or real multi-service lifecycle histories.",
+    "Root19 remains the latest repository-wide green gate; the current MP-07 working tree has not passed a fresh root gate.",
+    "No OpenSpec task or ticket was closed by this evidence archive."
+  ]
+}

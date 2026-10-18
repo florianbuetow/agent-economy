@@ -1,0 +1,22 @@
+{
+  "src/db_gateway_service/money_audit.py": {
+    "source_sha256": "f7bbe8f139386b2512606055c5e6856621b2e5b1845e44c15d6dbcb0436ef4d0",
+    "ast_sha256": "f17e2eb1a2b0b4b392a9ae55279a2ea3aeff33c3f715d5ef538f750b8ec81bd4"
+  },
+  "src/db_gateway_service/schema.py": {
+    "source_sha256": "42151649f951b636eaccafd877408b92a1a530f068ece914eb6b4658b0bee451",
+    "ast_sha256": "3e50715d2a56b5dbc5ec59526e76a7006fa1681d462f5dd48a5f9caf1abc42c0"
+  },
+  "tests/unit/test_migration_money_audit.py": {
+    "source_sha256": "74445880c6c50777007bdc809ae85ac17e101a0b828a6db3f196b2e8adbc2b3c",
+    "ast_sha256": "5051ff2900a317666c0343fecafcae6e06953533c4404cca9f8ba40e581cebb8"
+  },
+  "tests/unit/test_migration_source.py": {
+    "source_sha256": "cb2f7a3270445697d5b147afafeec1cbfdf970a621c052116abcd8f45fdf4481",
+    "ast_sha256": "7fa2ab0165751921faa66523522587f296c88cdae8f3bc6131fc440a5a794402"
+  },
+  "tests/unit/test_mp06_schema.py": {
+    "source_sha256": "389e811fefa5f0e243daadea84e33a7459e49ae4161354326066fb845f1dff23",
+    "ast_sha256": "4a9d286c052c1d438aef8c1b368ba04a0076c9b7b9c004ca31e52b0d9e21ab00"
+  }
+}

@@ -30,10 +30,11 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service import task_time
 from db_gateway_service.receipt_audit import audit_receipt_ownership
 from db_gateway_service.schema import (
     SchemaClassification,
@@ -46,6 +47,12 @@ from db_gateway_service.services.board_writer import BoardWriter
 from db_gateway_service.services.court_writer import CourtWriter
 from db_gateway_service.services.identity_writer import IdentityWriter
 from db_gateway_service.services.reputation_writer import ReputationWriter
+from db_gateway_service.services.task_operation_writer import TaskOperationWriter
+from db_gateway_service.task_contract_audit import audit_task_contracts
+
+if TYPE_CHECKING:
+    from db_gateway_service.board_authority import BoardAuthority
+    from db_gateway_service.task_operation_requests import TaskOperationRequest
 
 
 def _schema_statements(schema_sql: str) -> tuple[str, ...]:
@@ -140,6 +147,7 @@ class DbWriter:
             self._admit_existing_schema(classification)
             self._admit_database_health()
             self._admit_receipt_ownership()
+            self._admit_task_contracts()
 
             self._configure_connection(busy_timeout_ms, journal_mode)
 
@@ -210,8 +218,20 @@ class DbWriter:
             },
         )
 
+    def _admit_task_contracts(self) -> None:
+        """Reject missing or inconsistent task ownership before serving writes."""
+        result = audit_task_contracts(self._db)
+        if result.contracts_clean:
+            return
+        raise ServiceError(
+            "database_task_contract_failed",
+            "Task contract admission failed",
+            500,
+            {"finding_codes": sorted({finding.code for finding in result.findings})},
+        )
+
     def _bootstrap_schema(self, schema_sql: str | None) -> SchemaClassification:
-        """Create the exact current v2 schema atomically without implicit commits."""
+        """Create the exact current v3 schema atomically without implicit commits."""
         if schema_sql is None:
             raise ServiceError(
                 "schema_required",
@@ -228,6 +248,7 @@ class DbWriter:
             self._admit_existing_schema(classification)
             self._admit_database_health()
             self._admit_receipt_ownership()
+            self._admit_task_contracts()
             self._db.commit()
             return classification
         except BaseException as primary:
@@ -269,7 +290,7 @@ class DbWriter:
 
     @staticmethod
     def _admit_existing_schema(classification: SchemaClassification) -> None:
-        if classification.state is SchemaState.CURRENT_V2:
+        if classification.state is SchemaState.CURRENT_V3:
             return
         details: dict[str, object] = {
             "state": classification.state.value,
@@ -278,7 +299,11 @@ class DbWriter:
         }
         if classification.version is not None:
             details["version"] = classification.version
-        if classification.state in {SchemaState.SUPPORTED_V0, SchemaState.CURRENT_V1}:
+        if classification.state in {
+            SchemaState.SUPPORTED_V0,
+            SchemaState.CURRENT_V1,
+            SchemaState.CURRENT_V2,
+        }:
             raise ServiceError(
                 "migration_required",
                 "The older schema requires an explicit verified migration",
@@ -373,6 +398,36 @@ class DbWriter:
     def create_task(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new task."""
         return self._board.create_task(data)
+
+    def claim_task_operation(
+        self,
+        command: TaskOperationRequest,
+        caller_kid: str,
+        authority: BoardAuthority,
+    ) -> dict[str, Any]:
+        """Claim or replay one command with receiver-owned authority anchors."""
+        writer = TaskOperationWriter(
+            self._db,
+            task_time.utc_now_us,
+            authority.deadline_actor_id,
+            authority.platform_public_key,
+        )
+        return writer.claim_operation(command, caller_kid)
+
+    def finalize_task_operation(
+        self,
+        operation_id: str,
+        caller_kid: str,
+        authority: BoardAuthority,
+    ) -> dict[str, Any]:
+        """Resolve a claimed effect from persisted evidence using the same owner."""
+        writer = TaskOperationWriter(
+            self._db,
+            task_time.utc_now_us,
+            authority.deadline_actor_id,
+            authority.platform_public_key,
+        )
+        return writer.finalize_operation(operation_id, caller_kid)
 
     def submit_bid(
         self,

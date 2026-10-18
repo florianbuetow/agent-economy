@@ -1,0 +1,12 @@
+TC001 Move application import `tests.fakes.gateway_task_store.GatewayTaskStore` into a type-checking block
+  --> tests/unit/test_asset_manager.py:14:44
+   |
+13 | from task_board_service.services.asset_manager import AssetManager
+14 | from tests.fakes.gateway_task_store import GatewayTaskStore
+   |                                            ^^^^^^^^^^^^^^^^
+15 | from tests.fakes.native_task_fixture import NativeTaskFixture, TaskTerms, native_task_context
+   |
+help: Move into type-checking block
+
+Found 1 error.
+No fixes available (1 hidden fix can be enabled with the `--unsafe-fixes` option).

@@ -1,0 +1,2 @@
+tests/fakes/native_task_fixture.py:385: error: Return type "datetime" of "now" incompatible with return type "ClockDateTime" in supertype "datetime.datetime"  [override]
+Found 1 error in 1 file (checked 4 source files)

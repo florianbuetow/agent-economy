@@ -11,6 +11,7 @@ from service_commons.exceptions import ServiceError
 from court_service.judges.base import MockJudge
 from court_service.services.ruling_orchestrator import RulingOrchestrator
 from tests.fakes.in_memory_dispute_store import InMemoryDisputeStore as DisputeStore
+from tests.helpers import make_ruling_acknowledgment
 
 
 def _make_mock_platform_agent(agent_id: str = "agent-platform") -> MagicMock:
@@ -18,7 +19,21 @@ def _make_mock_platform_agent(agent_id: str = "agent-platform") -> MagicMock:
     mock = MagicMock()
     mock.agent_id = agent_id
     mock.split_escrow = AsyncMock(return_value={"status": "ok"})
-    mock.record_ruling = AsyncMock(return_value={"status": "ok"})
+
+    async def _record_ruling(
+        _task_id: str,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        return make_ruling_acknowledgment(
+            payload,
+            poster_id="agent-claimant",
+            worker_id="agent-worker",
+            escrow_id="escrow-1",
+            reward=100,
+            event_id=1,
+        )
+
+    mock.record_ruling = AsyncMock(side_effect=_record_ruling)
     mock.submit_platform_feedback = AsyncMock(return_value={"status": "ok"})
     return mock
 
@@ -59,6 +74,7 @@ async def test_execute_ruling_with_mock_judges(tmp_path) -> None:
             "deliverables": ["artifact-a"],
             "title": "Task 1",
             "reward": 100,
+            "lifecycle_version": 3,
         },
         platform_agent=platform_agent,
     )

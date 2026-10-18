@@ -1,0 +1,28 @@
+Command:
+UV_FROZEN=1 UV_CACHE_DIR=/tmp/agent-economy-review-uv PYTHONPATH=/Users/flo/Developer/github/agent-economy/libs/service-auth/src uv run --project /Users/flo/Developer/github/agent-economy/libs/service-auth pytest -c /Users/flo/Developer/github/agent-economy/openspec/changes/complete-agent-economy/evidence/mp06-key-lock-red/pytest.ini /Users/flo/Developer/github/agent-economy/openspec/changes/complete-agent-economy/evidence/mp06-key-lock-red/test_mp06_key_lock_red.py
+
+Exit: 1 (expected fail-first result)
+
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-auth/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/openspec/changes/complete-agent-economy/evidence/mp06-key-lock-red
+configfile: pytest.ini
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+openspec/changes/complete-agent-economy/evidence/mp06-key-lock-red/test_mp06_key_lock_red.py::test_load_keypair_rejects_lock_path_replacement_after_open FAILED [ 33%]
+openspec/changes/complete-agent-economy/evidence/mp06-key-lock-red/test_mp06_key_lock_red.py::test_load_keypair_control_loads_an_ordinary_generated_pair PASSED [ 66%]
+openspec/changes/complete-agent-economy/evidence/mp06-key-lock-red/test_mp06_key_lock_red.py::test_load_keypair_exception_releases_the_shared_lock PASSED [100%]
+
+=================================== FAILURES ===================================
+__________ test_load_keypair_rejects_lock_path_replacement_after_open __________
+openspec/changes/complete-agent-economy/evidence/mp06-key-lock-red/test_mp06_key_lock_red.py:58: in test_load_keypair_rejects_lock_path_replacement_after_open
+    with pytest.raises(KeyMaterialError) as caught:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE KeyMaterialError
+=========================== short test summary info ============================
+FAILED openspec/changes/complete-agent-economy/evidence/mp06-key-lock-red/test_mp06_key_lock_red.py::test_load_keypair_rejects_lock_path_replacement_after_open
+========================= 1 failed, 2 passed in 0.44s ==========================
+

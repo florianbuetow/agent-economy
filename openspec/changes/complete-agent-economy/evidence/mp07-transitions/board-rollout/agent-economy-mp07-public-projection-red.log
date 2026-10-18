@@ -1,0 +1,159 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 24 items
+
+tests/unit/test_mp07_public_task_projection.py FFFFFFFFFFFFFFFFFFFFFFFF  [100%]
+
+=================================== FAILURES ===================================
+_____ test_native_full_and_summary_projections_use_exact_persisted_cutoffs _____
+tests/unit/test_mp07_public_task_projection.py:120: in test_native_full_and_summary_projections_use_exact_persisted_cutoffs
+    _assert_common_projection(response)
+tests/unit/test_mp07_public_task_projection.py:100: in _assert_common_projection
+    assert {field: projected[field] for field in _CONTRACT_FIELDS} == {
+                   ^^^^^^^^^^^^^^^^
+E   KeyError: 'lifecycle_version'
+__ test_migrated_timing_v1_preserves_null_window_and_separate_reconciliation ___
+tests/unit/test_mp07_public_task_projection.py:138: in test_migrated_timing_v1_preserves_null_window_and_separate_reconciliation
+    assert projected["timing_contract_version"] == 1
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'timing_contract_version'
+_ test_public_projection_requires_every_contract_field_without_fallback[lifecycle_version-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[lifecycle_version-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[timing_contract_version-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[timing_contract_version-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[acceptance_window_seconds-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[acceptance_window_seconds-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[bidding_cutoff_us-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[bidding_cutoff_us-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[acceptance_cutoff_us-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[acceptance_cutoff_us-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[execution_cutoff_us-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[execution_cutoff_us-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[review_cutoff_us-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[review_cutoff_us-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[accepted_reward-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[accepted_reward-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[accepted_bid_amount-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[accepted_bid_amount-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[pending_transition-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[pending_transition-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[legacy_reconciliations-task_to_response] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+_ test_public_projection_requires_every_contract_field_without_fallback[legacy_reconciliations-task_to_summary] _
+tests/unit/test_mp07_public_task_projection.py:159: in test_public_projection_requires_every_contract_field_without_fallback
+    with pytest.raises(KeyError, match=field):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'KeyError'>
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_public_task_projection.py::test_native_full_and_summary_projections_use_exact_persisted_cutoffs
+FAILED tests/unit/test_mp07_public_task_projection.py::test_migrated_timing_v1_preserves_null_window_and_separate_reconciliation
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[lifecycle_version-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[lifecycle_version-task_to_summary]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[timing_contract_version-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[timing_contract_version-task_to_summary]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[acceptance_window_seconds-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[acceptance_window_seconds-task_to_summary]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[bidding_cutoff_us-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[bidding_cutoff_us-task_to_summary]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[acceptance_cutoff_us-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[acceptance_cutoff_us-task_to_summary]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[execution_cutoff_us-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[execution_cutoff_us-task_to_summary]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[review_cutoff_us-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[review_cutoff_us-task_to_summary]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[accepted_reward-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[accepted_reward-task_to_summary]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[accepted_bid_amount-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[accepted_bid_amount-task_to_summary]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[pending_transition-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[pending_transition-task_to_summary]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[legacy_reconciliations-task_to_response]
+FAILED tests/unit/test_mp07_public_task_projection.py::test_public_projection_requires_every_contract_field_without_fallback[legacy_reconciliations-task_to_summary]
+============================== 24 failed in 0.08s ==============================

@@ -1,0 +1,40 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 251 items
+
+tests/integration/test_agents.py .........................               [  9%]
+tests/integration/test_economy_phase_stalled.py ...                      [ 11%]
+tests/integration/test_events.py ......................                  [ 19%]
+tests/integration/test_gdp_history_bucketed.py ...                       [ 21%]
+tests/integration/test_health.py ............                            [ 25%]
+tests/integration/test_list_agents_query_count.py .                      [ 26%]
+tests/integration/test_metrics.py ......................                 [ 35%]
+tests/integration/test_metrics_delta.py .......                          [ 37%]
+tests/integration/test_metrics_history.py .......                        [ 40%]
+tests/integration/test_metrics_sparklines.py ..........                  [ 44%]
+tests/integration/test_mp02_browser_authority.py ....                    [ 46%]
+tests/integration/test_mp12_sealed_projections.py ..................     [ 53%]
+tests/integration/test_quarterly.py .................                    [ 60%]
+tests/integration/test_request_body_size_limit.py ...                    [ 61%]
+tests/integration/test_reward_bucket_boundary.py ..                      [ 62%]
+tests/integration/test_sparkline_data.py ......                          [ 64%]
+tests/integration/test_sparklines_unemployment.py ....                   [ 66%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py ....          [ 67%]
+tests/integration/test_t072_events_default_and_sse_gaps.py ...           [ 68%]
+tests/integration/test_t072_gdp_history_default_gap.py ..                [ 69%]
+tests/integration/test_t072_metrics_shape_and_delta_gaps.py ..           [ 70%]
+tests/integration/test_t072_pagination_and_error_code_gaps.py ...        [ 71%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py ........... [ 76%]
+.........                                                                [ 79%]
+tests/integration/test_t072_quarterly_default_value_gap.py .             [ 80%]
+tests/integration/test_task_drilldown_contract.py .........              [ 83%]
+tests/integration/test_task_list.py .........                            [ 87%]
+tests/integration/test_tasks.py ...................                      [ 94%]
+tests/integration/test_ticker_deltas.py .....                            [ 96%]
+tests/integration/test_unemployment_calculation.py ........              [100%]
+
+============================= 251 passed in 28.72s =============================

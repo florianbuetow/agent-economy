@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from base_agent.runtime_task_commands import RuntimeTaskCommands
 from math_worker.config import MathWorkerConfig
 from math_worker.loop import MathWorkerLoop
 
@@ -24,7 +25,8 @@ def _make_config(**overrides: object) -> MathWorkerConfig:
 
 def _make_loop(agent: MagicMock) -> MathWorkerLoop:
     llm = MagicMock()
-    return MathWorkerLoop(agent=agent, llm=llm, config=_make_config())
+    commands = MagicMock(spec=RuntimeTaskCommands)
+    return MathWorkerLoop(agent=agent, llm=llm, config=_make_config(), commands=commands)
 
 
 @pytest.mark.unit
@@ -107,7 +109,13 @@ class TestMathWorkerDisputeRebuttal:
 
         llm = MagicMock()
         llm.complete = AsyncMock(return_value=MagicMock(content="The submitted answer is correct."))
-        loop = MathWorkerLoop(agent=agent, llm=llm, config=_make_config())
+        commands = MagicMock(spec=RuntimeTaskCommands)
+        loop = MathWorkerLoop(
+            agent=agent,
+            llm=llm,
+            config=_make_config(),
+            commands=commands,
+        )
         loop._phase_waiting_for_ruling = AsyncMock(return_value={"payout": 50, "status": "ruled"})
 
         await loop._phase_disputed(

@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import yaml
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from service_auth.financial_responses import SQLITE_MAX_INTEGER
 from service_commons.config import get_config_path as resolve_config_path
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ class TaskFeederConfig(BaseModel):
     feed_interval_seconds: int
     max_open_tasks: int
     bidding_deadline_seconds: int
+    acceptance_window_seconds: int = Field(strict=True, ge=1, le=SQLITE_MAX_INTEGER // 1_000_000)
     execution_deadline_seconds: int
     review_deadline_seconds: int
     review_interval_seconds: int = 30
@@ -109,7 +111,7 @@ def load_task_feeder_settings(
         stripped = {k: v for k, v in section.items() if k not in _ACCEPTANCE_ONLY_KEYS}
         raw = {**raw, "task_feeder": stripped}
 
-    settings = _FileSettings(**raw)
+    settings = _FileSettings.model_validate(raw)
     return settings.task_feeder
 
 

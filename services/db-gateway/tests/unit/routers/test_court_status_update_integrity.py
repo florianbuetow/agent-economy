@@ -74,7 +74,7 @@ def _create_task(client: TestClient, poster_id: str) -> str:
             "event": make_event(source="bank", event_type="escrow.locked", task_id=tid),
         },
     )
-    client.post(
+    response = client.post(
         "/board/tasks",
         json={
             "task_id": tid,
@@ -84,14 +84,16 @@ def _create_task(client: TestClient, poster_id: str) -> str:
             "reward": 100,
             "status": "open",
             "bidding_deadline_seconds": 86400,
+            "acceptance_window_seconds": 3600,
             "deadline_seconds": 172800,
             "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:00:00Z",
+            "bidding_deadline": "2026-03-01T10:15:00Z",
             "escrow_id": eid,
             "created_at": "2026-02-28T10:15:00Z",
             "event": make_event(source="board", event_type="task.created", task_id=tid),
         },
     )
+    assert response.status_code == 201
     return tid
 
 

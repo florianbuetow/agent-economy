@@ -1,0 +1,16 @@
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;31m✗ Code-style failed[0m
+
+[0;34m=== Checking Code Style ===[0m
+All checks passed!
+
+Would reformat: src/db_gateway_service/money_audit.py
+Would reformat: src/db_gateway_service/schema.py
+Would reformat: tests/unit/test_migration_money_audit.py
+Would reformat: tests/unit/test_migration_source.py
+Would reformat: tests/unit/test_mp06_schema.py
+5 files would be reformatted, 91 files already formatted
+error: recipe `code-style` failed on line 184 with exit code 1
+error: recipe `ci-quiet` failed with exit code 1

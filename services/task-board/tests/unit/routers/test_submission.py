@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from freezegun import freeze_time
@@ -22,6 +22,82 @@ from tests.unit.routers.conftest import (
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
+
+    from tests.fakes.gateway_task_store import GatewayTaskStore
+
+
+def _store() -> GatewayTaskStore:
+    state = get_app_state()
+    assert state.store is not None
+    return cast("GatewayTaskStore", state.store)
+
+
+def _assert_release(
+    task_id: str,
+    *,
+    command: str,
+    event_type: str,
+    recipient_id: str,
+    expected_balance: int,
+) -> None:
+    store = _store()
+    task = store.get_task(task_id)
+    assert task is not None
+    operations = store.writer.connection.execute(
+        "SELECT operation_id,operation_state,effect_state,event_id FROM board_task_operations "
+        "WHERE task_id=? AND command=?",
+        (task_id, command),
+    ).fetchall()
+    assert len(operations) == 1
+    operation_id, state, effect, event_id = operations[0]
+    assert (state, effect) == ("completed", "succeeded")
+    action = {
+        "approve_task": "approved",
+        "auto_approve": "approved",
+        "cancel_task": "cancelled",
+        "expire_bidding": "expired",
+        "expire_acceptance": "expired",
+        "expire_execution": "expired",
+    }[command]
+    receipt = store.writer.connection.execute(
+        "SELECT operation_kind,source_reference,escrow_id FROM bank_operation_receipts "
+        "WHERE operation_id=?",
+        (operation_id,),
+    ).fetchone()
+    assert receipt is not None
+    assert tuple(receipt) == ("escrow_release", f"task:{task_id}:{action}", task["escrow_id"])
+    assert (
+        store.writer.connection.execute(
+            "SELECT event_type FROM events WHERE event_id=?", (event_id,)
+        ).fetchone()[0]
+        == event_type
+    )
+    assert [
+        tuple(row)
+        for row in store.writer.connection.execute(
+            "SELECT account_id,amount,balance_after FROM bank_operation_legs WHERE operation_id=?",
+            (operation_id,),
+        ).fetchall()
+    ] == [(recipient_id, task["reward"], expected_balance)]
+    assert (
+        store.writer.connection.execute(
+            "SELECT status FROM bank_escrow WHERE escrow_id=?", (task["escrow_id"],)
+        ).fetchone()[0]
+        == "released"
+    )
+    assert (
+        store.writer.connection.execute(
+            "SELECT balance FROM bank_accounts WHERE account_id=?", (recipient_id,)
+        ).fetchone()[0]
+        == expected_balance
+    )
+    transaction = store.writer.connection.execute(
+        "SELECT account_id,amount,balance_after FROM bank_transactions "
+        "WHERE reference=? AND type='escrow_release'",
+        (task["escrow_id"],),
+    ).fetchone()
+    assert transaction is not None
+    assert tuple(transaction) == (recipient_id, task["reward"], expected_balance)
 
 
 class TestDeliverableSubmission:
@@ -194,7 +270,7 @@ class TestDeliverableSubmission:
         bob_keypair,
         bob_agent_id,
     ):
-        """SUB-08: Submit after execution deadline expired -- 409 invalid_status."""
+        """SUB-08: Gateway rejects late submit, then automatic expiry refunds poster."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -204,9 +280,21 @@ class TestDeliverableSubmission:
         future_time = datetime.now(tz=UTC) + timedelta(seconds=86400 + 3600)
         with freeze_time(future_time):
             resp = await submit_deliverable(client, bob_keypair, bob_agent_id, task_id)
+            source = _store().get_task(task_id)
+            expired = await client.get(f"/tasks/{task_id}")
 
         assert resp.status_code == 409
-        assert resp.json()["error"] == "invalid_status"
+        assert resp.json()["error"] == "cutoff_reached"
+        assert source is not None and source["status"] == "accepted"
+        assert expired.status_code == 200
+        assert expired.json()["status"] == "expired"
+        _assert_release(
+            task_id,
+            command="expire_execution",
+            event_type="task.expired",
+            recipient_id=alice_agent_id,
+            expected_balance=1_000_000,
+        )
 
     @pytest.mark.unit
     async def test_sub_09_missing_payload_fields(
@@ -308,7 +396,7 @@ class TestApproval:
         bob_keypair,
         bob_agent_id,
     ):
-        """APP-04: Approve releases escrow to worker (Central Bank mock confirms release)."""
+        """APP-04: Approve persists worker payout and its semantic event."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -319,6 +407,13 @@ class TestApproval:
         # Verify escrow_release was called on the Central Bank mock
         state = get_app_state()
         state.central_bank_client.escrow_release.assert_called()
+        _assert_release(
+            task_id,
+            command="approve_task",
+            event_type="task.approved",
+            recipient_id=bob_agent_id,
+            expected_balance=1_000_100,
+        )
 
     @pytest.mark.unit
     async def test_app_05_sets_approved_at(
@@ -400,7 +495,7 @@ class TestApproval:
         bob_keypair,
         bob_agent_id,
     ):
-        """APP-08: Review deadline auto-approval -- after deadline, GET shows completed/approved."""
+        """APP-08: Review deadline auto-approval makes GET show exactly approved."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -413,7 +508,14 @@ class TestApproval:
         assert resp.status_code == 200
         data = resp.json()
         # After review deadline, task should be auto-approved
-        assert data["status"] in ("approved", "completed")
+        assert data["status"] == "approved"
+        _assert_release(
+            task_id,
+            command="auto_approve",
+            event_type="task.auto_approved",
+            recipient_id=bob_agent_id,
+            expected_balance=1_000_100,
+        )
 
     @pytest.mark.unit
     async def test_app_09_missing_payload_fields(

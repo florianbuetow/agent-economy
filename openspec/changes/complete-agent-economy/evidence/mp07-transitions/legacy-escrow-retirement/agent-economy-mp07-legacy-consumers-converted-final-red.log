@@ -1,0 +1,57 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 39 items
+
+tests/unit/test_escrow_coordinator.py FFFFFF.......                      [ 33%]
+tests/unit/test_mp04_financial_intents.py ........F...                   [ 64%]
+tests/unit/test_mp04_ruling_replay.py ..............                     [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_release_escrow_success __________________________
+tests/unit/test_escrow_coordinator.py:96: in test_release_escrow_success
+    coordinator = EscrowCoordinator(central_bank_client=cast("BankClient", mock_bank))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: EscrowCoordinator.__init__() missing 1 required positional argument: 'store'
+_________________ test_release_escrow_service_error_propagates _________________
+tests/unit/test_escrow_coordinator.py:119: in test_release_escrow_service_error_propagates
+    coordinator = EscrowCoordinator(central_bank_client=cast("BankClient", mock_bank))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: EscrowCoordinator.__init__() missing 1 required positional argument: 'store'
+___________________ test_release_escrow_generic_error_wraps ____________________
+tests/unit/test_escrow_coordinator.py:137: in test_release_escrow_generic_error_wraps
+    coordinator = EscrowCoordinator(central_bank_client=cast("BankClient", mock_bank))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: EscrowCoordinator.__init__() missing 1 required positional argument: 'store'
+__________________________ test_split_escrow_success ___________________________
+tests/unit/test_escrow_coordinator.py:155: in test_split_escrow_success
+    coordinator = EscrowCoordinator(central_bank_client=cast("BankClient", mock_bank))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: EscrowCoordinator.__init__() missing 1 required positional argument: 'store'
+__________________ test_split_escrow_service_error_propagates __________________
+tests/unit/test_escrow_coordinator.py:182: in test_split_escrow_service_error_propagates
+    coordinator = EscrowCoordinator(central_bank_client=cast("BankClient", mock_bank))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: EscrowCoordinator.__init__() missing 1 required positional argument: 'store'
+____________________ test_split_escrow_generic_error_wraps _____________________
+tests/unit/test_escrow_coordinator.py:202: in test_split_escrow_generic_error_wraps
+    coordinator = EscrowCoordinator(central_bank_client=cast("BankClient", mock_bank))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: EscrowCoordinator.__init__() missing 1 required positional argument: 'store'
+________ test_opposing_task_settlements_have_distinct_financial_intents ________
+tests/unit/test_mp04_financial_intents.py:257: in test_opposing_task_settlements_have_distinct_financial_intents
+    await native_tasks.escrow.release_posting_compensation(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'EscrowCoordinator' object has no attribute 'release_posting_compensation'
+=========================== short test summary info ============================
+FAILED tests/unit/test_escrow_coordinator.py::test_release_escrow_success - T...
+FAILED tests/unit/test_escrow_coordinator.py::test_release_escrow_service_error_propagates
+FAILED tests/unit/test_escrow_coordinator.py::test_release_escrow_generic_error_wraps
+FAILED tests/unit/test_escrow_coordinator.py::test_split_escrow_success - Typ...
+FAILED tests/unit/test_escrow_coordinator.py::test_split_escrow_service_error_propagates
+FAILED tests/unit/test_escrow_coordinator.py::test_split_escrow_generic_error_wraps
+FAILED tests/unit/test_mp04_financial_intents.py::test_opposing_task_settlements_have_distinct_financial_intents
+========================= 7 failed, 32 passed in 9.59s =========================

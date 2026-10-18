@@ -40,12 +40,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from base_agent.runtime_config import RuntimeStateConfig
+from base_agent.runtime_intents import FileTaskIntentStore
+from base_agent.runtime_task_commands import RuntimeTaskCommands, runtime_owner_from_agent
 from math_worker.config import LLMConfig, MathWorkerConfig
 from math_worker.llm_client import LLMClient
 from math_worker.loop import MathWorkerLoop
@@ -90,7 +95,9 @@ class _Rig:
     worker_wrong_balance_before: int
     feed_loop: TaskFeederLoop
     loops: list[Any]
+    llm_clients: list[LLMClient]
     background_tasks: list[asyncio.Task[None]]
+    journal_stack: ExitStack
 
 
 def _write_tasks_jsonl(path: Path) -> None:
@@ -135,13 +142,18 @@ def _placeholder_llm_config() -> LLMConfig:
     )
 
 
-def _build_feeder_loops(feeder: BaseAgent, tasks_path: Path) -> tuple[TaskFeederLoop, list[Any]]:
+def _build_feeder_loops(
+    feeder: BaseAgent,
+    tasks_path: Path,
+    commands: RuntimeTaskCommands,
+) -> tuple[TaskFeederLoop, list[Any]]:
     feeder_config = TaskFeederConfig(
         handle="wp09_feeder",
         tasks_file=str(tasks_path),
         feed_interval_seconds=1,
         max_open_tasks=2,
         bidding_deadline_seconds=BIDDING_DEADLINE_SECONDS,
+        acceptance_window_seconds=120,
         execution_deadline_seconds=EXECUTION_DEADLINE_SECONDS,
         review_deadline_seconds=REVIEW_DEADLINE_SECONDS,
         review_interval_seconds=1,
@@ -158,9 +170,12 @@ def _build_feeder_loops(feeder: BaseAgent, tasks_path: Path) -> tuple[TaskFeeder
 
     feed_loop = TaskFeederLoop(agent=feeder, config=feeder_config)
     acceptance_loop = AcceptanceLoop(
-        agent=feeder, config=acceptance_config, now=lambda: datetime.now(UTC)
+        agent=feeder,
+        config=acceptance_config,
+        now=lambda: datetime.now(UTC),
+        commands=commands,
     )
-    review_loop = ReviewLoop(agent=feeder, task_map=feed_loop.task_map)
+    review_loop = ReviewLoop(agent=feeder, task_map=feed_loop.task_map, commands=commands)
     return feed_loop, [feed_loop, acceptance_loop, review_loop]
 
 
@@ -177,8 +192,11 @@ def _worker_config(handle: str, reward: int) -> MathWorkerConfig:
 
 
 def _build_worker_loops(
-    worker_correct: BaseAgent, worker_wrong: BaseAgent
-) -> tuple[MathWorkerLoop, MathWorkerLoop]:
+    worker_correct: BaseAgent,
+    worker_wrong: BaseAgent,
+    commands_correct: RuntimeTaskCommands,
+    commands_wrong: RuntimeTaskCommands,
+) -> tuple[MathWorkerLoop, MathWorkerLoop, LLMClient, LLMClient]:
     llm_correct = LLMClient(
         _placeholder_llm_config(), transport=DeterministicArithmeticTransport(correct=True)
     )
@@ -189,47 +207,128 @@ def _build_worker_loops(
         agent=worker_correct,
         llm=llm_correct,
         config=_worker_config("wp09_worker_correct", CORRECT_REWARD),
+        commands=commands_correct,
     )
     loop_wrong = MathWorkerLoop(
         agent=worker_wrong,
         llm=llm_wrong,
         config=_worker_config("wp09_worker_wrong", WRONG_REWARD),
+        commands=commands_wrong,
     )
-    return loop_correct, loop_wrong
+    return loop_correct, loop_wrong, llm_correct, llm_wrong
+
+
+def _runtime_config(runtime_directory: Path) -> RuntimeStateConfig:
+    runtime_directory.mkdir(mode=0o700)
+    return RuntimeStateConfig(
+        environment_id=os.environ["ISOLATED_RUNTIME_ID"],
+        directory=runtime_directory,
+        diagnostic_limit=8,
+        max_record_bytes=65_536,
+    )
+
+
+def _leased_commands(
+    *,
+    agent: BaseAgent,
+    runtime_config: RuntimeStateConfig,
+    role: str,
+    profile: str,
+    handle: str,
+    journal_stack: ExitStack,
+) -> RuntimeTaskCommands:
+    owner = runtime_owner_from_agent(
+        runtime_config=runtime_config,
+        agent=agent,
+        role=role,
+        profile=profile,
+        handle=handle,
+    )
+    store = journal_stack.enter_context(
+        FileTaskIntentStore(
+            root_directory=runtime_config.directory,
+            owner=owner,
+            diagnostic_limit=runtime_config.diagnostic_limit,
+            max_record_bytes=runtime_config.max_record_bytes,
+        )
+    )
+    return RuntimeTaskCommands(agent, store)
 
 
 async def _build_rig(make_funded_agent: Any, tasks_path: Path) -> _Rig:
-    feeder = await make_funded_agent(name="WP09 Feeder", balance=5000)
-    worker_correct = await make_funded_agent(name="WP09 Worker Correct", balance=1000)
-    worker_wrong = await make_funded_agent(name="WP09 Worker Wrong", balance=1000)
+    journal_stack = ExitStack()
+    agents: list[BaseAgent] = []
+    llm_clients: list[LLMClient] = []
+    try:
+        feeder = await make_funded_agent(name="WP09 Feeder", balance=5000)
+        agents.append(feeder)
+        worker_correct = await make_funded_agent(name="WP09 Worker Correct", balance=1000)
+        agents.append(worker_correct)
+        worker_wrong = await make_funded_agent(name="WP09 Worker Wrong", balance=1000)
+        agents.append(worker_wrong)
+        runtime_config = _runtime_config(tasks_path.parent / "runtime-state")
+        feeder_commands = _leased_commands(
+            agent=feeder,
+            runtime_config=runtime_config,
+            role="task-feeder",
+            profile="wp09_feeder",
+            handle="wp09_feeder",
+            journal_stack=journal_stack,
+        )
+        correct_commands = _leased_commands(
+            agent=worker_correct,
+            runtime_config=runtime_config,
+            role="math-worker",
+            profile="wp09_worker_correct",
+            handle="wp09_worker_correct",
+            journal_stack=journal_stack,
+        )
+        wrong_commands = _leased_commands(
+            agent=worker_wrong,
+            runtime_config=runtime_config,
+            role="math-worker",
+            profile="wp09_worker_wrong",
+            handle="wp09_worker_wrong",
+            journal_stack=journal_stack,
+        )
+        worker_correct_balance_before = (await worker_correct.get_balance())["balance"]
+        worker_wrong_balance_before = (await worker_wrong.get_balance())["balance"]
 
-    worker_correct_balance_before = (await worker_correct.get_balance())["balance"]
-    worker_wrong_balance_before = (await worker_wrong.get_balance())["balance"]
+        _write_tasks_jsonl(tasks_path)
+        feed_loop, feeder_loops = _build_feeder_loops(feeder, tasks_path, feeder_commands)
+        acceptance_loop, review_loop = feeder_loops[1], feeder_loops[2]
+        worker_loop_correct, worker_loop_wrong, llm_correct, llm_wrong = _build_worker_loops(
+            worker_correct,
+            worker_wrong,
+            correct_commands,
+            wrong_commands,
+        )
+        llm_clients.extend([llm_correct, llm_wrong])
+        loops = [*feeder_loops, worker_loop_correct, worker_loop_wrong]
 
-    _write_tasks_jsonl(tasks_path)
-    feed_loop, feeder_loops = _build_feeder_loops(feeder, tasks_path)
-    acceptance_loop, review_loop = feeder_loops[1], feeder_loops[2]
-    worker_loop_correct, worker_loop_wrong = _build_worker_loops(worker_correct, worker_wrong)
-    loops = [*feeder_loops, worker_loop_correct, worker_loop_wrong]
+        background_tasks = [
+            asyncio.create_task(feed_loop.run()),
+            asyncio.create_task(acceptance_loop.run()),
+            asyncio.create_task(review_loop.run(1)),
+            asyncio.create_task(worker_loop_correct.run()),
+            asyncio.create_task(worker_loop_wrong.run()),
+        ]
 
-    background_tasks = [
-        asyncio.create_task(feed_loop.run()),
-        asyncio.create_task(acceptance_loop.run()),
-        asyncio.create_task(review_loop.run(1)),
-        asyncio.create_task(worker_loop_correct.run()),
-        asyncio.create_task(worker_loop_wrong.run()),
-    ]
-
-    return _Rig(
-        feeder=feeder,
-        worker_correct=worker_correct,
-        worker_wrong=worker_wrong,
-        worker_correct_balance_before=worker_correct_balance_before,
-        worker_wrong_balance_before=worker_wrong_balance_before,
-        feed_loop=feed_loop,
-        loops=loops,
-        background_tasks=background_tasks,
-    )
+        return _Rig(
+            feeder=feeder,
+            worker_correct=worker_correct,
+            worker_wrong=worker_wrong,
+            worker_correct_balance_before=worker_correct_balance_before,
+            worker_wrong_balance_before=worker_wrong_balance_before,
+            feed_loop=feed_loop,
+            loops=loops,
+            llm_clients=llm_clients,
+            background_tasks=background_tasks,
+            journal_stack=journal_stack,
+        )
+    except BaseException:
+        await _close_clients_and_journals(llm_clients, agents, journal_stack)
+        raise
 
 
 async def _wait_for_both_tasks_posted(feed_loop: TaskFeederLoop) -> tuple[str, str]:
@@ -287,14 +386,48 @@ async def _wait_for_terminal_states(
     return approved_task, ruled_task
 
 
+def _non_cancelled_failures(results: list[Any]) -> list[BaseException]:
+    return [
+        result
+        for result in results
+        if isinstance(result, BaseException) and not isinstance(result, asyncio.CancelledError)
+    ]
+
+
+async def _close_clients_and_journals(
+    llm_clients: list[LLMClient],
+    agents: list[BaseAgent],
+    journal_stack: ExitStack,
+    *,
+    prior_failures: list[BaseException] | None = None,
+) -> None:
+    results = await asyncio.gather(
+        *(client.close() for client in llm_clients),
+        *(agent.close() for agent in agents),
+        return_exceptions=True,
+    )
+    failures = list(prior_failures) if prior_failures is not None else []
+    failures.extend(result for result in results if isinstance(result, BaseException))
+    try:
+        journal_stack.close()
+    except BaseException as exc:
+        failures.append(exc)
+    if failures:
+        raise BaseExceptionGroup("unattended economy cleanup failed", failures)
+
+
 async def _teardown(rig: _Rig) -> None:
     for loop in rig.loops:
         loop.stop()
     for task in rig.background_tasks:
         task.cancel()
-    await asyncio.gather(*rig.background_tasks, return_exceptions=True)
-    for agent in (rig.feeder, rig.worker_correct, rig.worker_wrong):
-        await agent.close()
+    background_results = await asyncio.gather(*rig.background_tasks, return_exceptions=True)
+    await _close_clients_and_journals(
+        rig.llm_clients,
+        [rig.feeder, rig.worker_correct, rig.worker_wrong],
+        rig.journal_stack,
+        prior_failures=_non_cancelled_failures(background_results),
+    )
 
 
 @pytest.mark.e2e

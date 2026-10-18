@@ -1,0 +1,39 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 21 items / 17 deselected / 4 selected
+
+tests/unit/test_mp07_native_proxy_browser.py F.FF                        [100%]
+
+=================================== FAILURES ===================================
+___ test_create_rejects_non_integral_or_nonpositive_acceptance_window[45.5] ____
+tests/unit/test_mp07_native_proxy_browser.py:556: in test_create_rejects_non_integral_or_nonpositive_acceptance_window
+    assert create_requests == []
+E   assert ['{"title":"N...seconds":90}'] == []
+E     
+E     Left contains one more item: '{"title":"Native UI task","spec":"Keep the caller intent explicit.","reward":75,"bidding_deadline_seconds":120,"acceptance_window_seconds":45,"execution_deadline_seconds":300,"review_deadline_seconds":90}'
+E     Use -v to get more diff
+____ test_create_rejects_non_integral_or_nonpositive_acceptance_window[-1] _____
+tests/unit/test_mp07_native_proxy_browser.py:556: in test_create_rejects_non_integral_or_nonpositive_acceptance_window
+    assert create_requests == []
+E   assert ['{"title":"N...seconds":90}'] == []
+E     
+E     Left contains one more item: '{"title":"Native UI task","spec":"Keep the caller intent explicit.","reward":75,"bidding_deadline_seconds":120,"acceptance_window_seconds":-1,"execution_deadline_seconds":300,"review_deadline_seconds":90}'
+E     Use -v to get more diff
+___ test_operator_can_acknowledge_definite_rejection_then_start_fresh_intent ___
+tests/unit/test_mp07_native_proxy_browser.py:1007: in test_operator_can_acknowledge_definite_rejection_then_start_fresh_intent
+    expect(reset).to_be_visible()
+E   AssertionError: Locator expected to be visible
+E   Actual value: None
+E   Error: element(s) not found 
+E   Call log:
+E     - Expect "to_be_visible" with timeout 5000ms
+E     - waiting for locator("[data-operation-rejection-reset]")
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_native_proxy_browser.py::test_create_rejects_non_integral_or_nonpositive_acceptance_window[45.5]
+FAILED tests/unit/test_mp07_native_proxy_browser.py::test_create_rejects_non_integral_or_nonpositive_acceptance_window[-1]
+FAILED tests/unit/test_mp07_native_proxy_browser.py::test_operator_can_acknowledge_definite_rejection_then_start_fresh_intent
+================== 3 failed, 1 passed, 17 deselected in 8.83s ==================

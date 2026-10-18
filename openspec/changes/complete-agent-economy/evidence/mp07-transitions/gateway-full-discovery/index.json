@@ -1,0 +1,163 @@
+{
+  "log": "agent-economy-mp07-gateway-unit-full.log",
+  "sha256": "97e0a341d5ccf6e97dd03f4ffb97358f24ab3a8e7f1d87cb4cb0519b11edb961",
+  "parent_handle": 12311,
+  "exit_code": 1,
+  "passed": 925,
+  "failed": 214,
+  "errors": 19,
+  "warning_count": 1,
+  "failures_by_file": [
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_board.py",
+      "count": 23
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_board_reads.py",
+      "count": 7
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_court.py",
+      "count": 15
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_court_reads.py",
+      "count": 6
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_court_status_update_integrity.py",
+      "count": 2
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_reputation.py",
+      "count": 7
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_reputation_reads.py",
+      "count": 3
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_t072_board_reads_gaps.py",
+      "count": 7
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_t072_court_reads_gaps.py",
+      "count": 3
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_t072_court_status_and_ruling_delete_gaps.py",
+      "count": 4
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/routers/test_t072_reputation_reads_gaps.py",
+      "count": 1
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_config.py",
+      "count": 1
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_constraints.py",
+      "count": 7
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_cross_cutting.py",
+      "count": 2
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_feedback_reveal_atomicity.py",
+      "count": 1
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_gap_c7_error_mapping.py",
+      "count": 2
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_gap_e13_bid_count.py",
+      "count": 4
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_mp02_gateway_authority.py",
+      "count": 6
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_mp02_gateway_write_admission.py",
+      "count": 55
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_mp04_legacy_observations.py",
+      "count": 25
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_mp04_startup.py",
+      "count": 4
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_mp06_schema.py",
+      "count": 6
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_schema_additions.py",
+      "count": 6
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_schema_review_regressions.py",
+      "count": 1
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_schema_startup_health.py",
+      "count": 7
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_t072_constraints_gaps.py",
+      "count": 6
+    },
+    {
+      "kind": "FAILED",
+      "file": "tests/unit/test_task_dispute_id_column.py",
+      "count": 3
+    },
+    {
+      "kind": "ERROR",
+      "file": "tests/unit/test_feedback_reveal_atomicity.py",
+      "count": 8
+    },
+    {
+      "kind": "ERROR",
+      "file": "tests/unit/test_mp04_legacy_observations.py",
+      "count": 7
+    },
+    {
+      "kind": "ERROR",
+      "file": "tests/unit/test_write_integrity.py",
+      "count": 4
+    }
+  ],
+  "scope": "Discovery only; not all failures individually classified. Confirmed families: retired generic writers; missing publication window; raw task seeds without contracts; old v2 runtime admission and version3 future fixtures. No blanket fixture-only claim."
+}

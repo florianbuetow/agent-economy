@@ -1,0 +1,36 @@
+{
+  "exit": 1,
+  "source_count": 1059,
+  "ordinary_log_count": 202,
+  "limits": "Stopped at Bank fixture startup; no package closure. No root-owned full-stack phase was reached.",
+  "artifacts": [
+    {
+      "file": "root-ci-20.log",
+      "sha256": "46f953ab51d30f79274432cdb4d806ea7b857c466b6995d1d69bfeade2a06592"
+    },
+    {
+      "file": "root-ci-20.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "root-ci-20-before.json",
+      "sha256": "ddfaeca0624f3874551788356226a622ebd64b50edb6198fb93063069f0eb127"
+    },
+    {
+      "file": "root-ci-20-after.json",
+      "sha256": "ddfaeca0624f3874551788356226a622ebd64b50edb6198fb93063069f0eb127"
+    },
+    {
+      "file": "root-ci-20-log-before.json",
+      "sha256": "647cf1bdfc2056118c02c96f195187c93a50ce48adef9828b42a4ac71ec787da"
+    },
+    {
+      "file": "root-ci-20-log-after.json",
+      "sha256": "647cf1bdfc2056118c02c96f195187c93a50ce48adef9828b42a4ac71ec787da"
+    },
+    {
+      "file": "root-ci-20-comparison.json",
+      "sha256": "f740c9e583c26a36c2429d26c259dbd772f01ae8e2961e398d1515b714201e86"
+    }
+  ]
+}

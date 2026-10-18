@@ -1,0 +1,147 @@
+{
+  "scope": "legacy-escrow-retirement",
+  "artifacts": [
+    {
+      "file": "agent-economy-mp07-legacy-consumers-before.log",
+      "sha256": "71ef4277073e32837a6f33b011e48c874e2477761c790da1fa95467375b96aef"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-converted-final-red.log",
+      "sha256": "d46cfab1aa819a0b187b7c33a192e370c0750f9acb7f66acd6fc38b195ff1209"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-converted-red.log",
+      "sha256": "71300af7e63a13f7e9215766b1ffba60cd0591613c701af61c33a020b9a8263b"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-final-green.log",
+      "sha256": "081c16f321208305da35f39110723d15cc10893930b92adc28115359e40cb825"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-format-final-red.log",
+      "sha256": "eee76f865de5a9f2456950f710ae5d5f9b5bd0ea02aa54f614c5eed6642a0bfd"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-format-green.log",
+      "sha256": "eee76f865de5a9f2456950f710ae5d5f9b5bd0ea02aa54f614c5eed6642a0bfd"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-format-red.log",
+      "sha256": "878d50bf4ab752ab41ae942ac518b87e744d994b21bb15dca142ed7a470b3b3a"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-mypy-green.log",
+      "sha256": "8228fcc5ce46d42d01caf3cd941f4e9c5f2bcc372bb5b147a2f0572d2dd675a8"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-parent-green.log",
+      "sha256": "557aea5bca9023f16f6b925820b2910531cc6b7f9898141a3f7223175bdb71ba"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-parent-green2.log",
+      "sha256": "0d17e00a371f505b84dc38a809b9cd6fab7c0f6008f158a994d7d4ca03fe3447"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-pyright-green.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-ruff-final-red.log",
+      "sha256": "6f4e3c8cb6a43f32a8b47add0b65207f17bd814c84308623b3720ad789c0d769"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-ruff-green.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-consumers-ruff-red.log",
+      "sha256": "6c65779a1e2348ec7bea358be85c406b44dc1ae01505a3246e3eb07d23a8bc54"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-bandit.log",
+      "sha256": "de88f763379b0307cf68f0a60f36cf5c5a9039f55931f579bf4187a1863d37e2"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-codespell.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-format.log",
+      "sha256": "def7d5fe293998feda91cfaff6149deb141c94f9f83de6ae65bf83b362fab66d"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-live-regression.log",
+      "sha256": "32c954d4219a446554f26864b2452faec1ffd05ca44b92f06477ad360893c484"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-mypy.log",
+      "sha256": "2964f4e84ac77897e510c8d7fa5b664a688c51c01f2c3733e4c2fa20c1f6c174"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-pyright.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-regression.log",
+      "sha256": "c69b4a75cf0aa33a8867395d3d564670ca9d082e2d37a9eb16f277601a558a89"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-router-controls.log",
+      "sha256": "34def665c5c1f492079b24cbb302b829f7e0bd5158cf07d92dddcb46b515155a"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-ruff.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-semgrep-all.log",
+      "sha256": "6cae5a8b77c8f1f3340480581c07d21401f975524b1aebf9516f8b5fd29d4a7a"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-semgrep.log",
+      "sha256": "ce828c48b1015c5a03410487e59422978cc50f8bb4fdedb08ac103b19e670238"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-semgrep2.log",
+      "sha256": "6a6b0e396e8565551efddb71cf05d50ddf88f6954d2157695f5362b6cf6b2a1f"
+    },
+    {
+      "file": "agent-economy-mp07-legacy-retirement-semgrep3.log",
+      "sha256": "38fc9cd5c44e85d21b37f4b6ae78ee6cf05ab4ff6c1a4fef039793197b357f2c"
+    },
+    {
+      "file": "review-verdict.md",
+      "sha256": "19cbb9fb10afdbf2eb1f33e4584cf3202503ab9ff3b9c07d67cec79785379bc9"
+    }
+  ],
+  "sources": {
+    "services/task-board/src/task_board_service/services/escrow_coordinator.py": "79d8ae57cf0f588d1f85cdfec9485de520f5a3a591214c102029b3daf2303a03",
+    "services/task-board/src/task_board_service/services/task_creation.py": "dc08cccb913c7c8914f8056b2ea5b8e20e11c9d0dcf5fef2297f2cc4eb39dd44",
+    "services/task-board/src/task_board_service/core/lifespan.py": "9a983b0e177d5c09722b37fa156e8cf367cdc668a4d251c8027b82074f7e1671",
+    "services/task-board/tests/unit/test_escrow_coordinator.py": "18161142cdb8199c381c6641265f3989bc39078d60df5fc5dd12cd7f1ad625dc",
+    "services/task-board/tests/unit/test_mp04_financial_intents.py": "fefd0e7b86e0d96fd003b152a953d3c8daa7f2aad6ae92cc23abddfe21a1b870",
+    "services/task-board/tests/unit/test_mp04_ruling_replay.py": "c2a3393f5ac624e78da6d6412268b1ec87cfaa523e351bb83951641d2221d377",
+    "services/task-board/tests/unit/test_mp07_creation_window.py": "541591a1e0d57d932de56a944e3d003764b5ebf923e3147485172e0b7a0a4ef2",
+    "services/task-board/tests/fakes/native_task_fixture.py": "d94895687855276f54c0a54c0c1dfc353f3074694bd2a44d41c4ff007e6c7444",
+    "services/task-board/tests/unit/routers/conftest.py": "9ad31ee9d5b3f28562a0eb2a288c43e53c78c3cb8f98bd9641db8dc4945a9060",
+    "services/task-board/tests/integration/test_mp07_bid_admission_races.py": "46e10ff7aecc3d5d091240e9bcde428a98fa2dd1859235b7a7fc278dc93d5492",
+    "services/task-board/tests/integration/test_mp07_accept_expiry_race.py": "6f02c44157072766c011aa5e33cb1369e49590089167a1692faab7d23098ed7e",
+    "services/task-board/tests/integration/test_mp07_atomic_task_transitions.py": "e11bb4999e865c1c6503b2668a66e0f4c7649adaab4bd8b341c637d1f7476832",
+    "services/task-board/tests/integration/test_mp07_deadline_transition_races.py": "0800aca892edfb4c8eef225cdd463899d5d86270bdd905399d88f834079fd3f8",
+    "services/task-board/tests/integration/conftest.py": "2d507cf4a7bc48f01923fec57e52480e3cb1c848da60d5b6b53cb48abbba1148",
+    "services/task-board/tests/integration/test_endpoints.py": "78e9a6fdf1c7f47ea2e9a637b63348b8878a7f7d729d6ff7d8ba606b052388a3",
+    "services/db-gateway/tests/unit/test_gap_e13_bid_count.py": "d10e081ec50f7165b85bfcd269a92913a2751e5522f0b960fac038b3bbdcd127",
+    "docs/plans/2026-10-18-mp07-legacy-escrow-retirement.md": "9172001ccd878386612d05f279dc6a1d42b1355fcc26d283a305e4cbb827d204",
+    "docs/plans/2026-10-18-mp07-legacy-test-reconciliation.md": "66be7f9d1befe2a95be0abd44d2127871fc74ad75c8c62b2e3bac773c87fc80a"
+  },
+  "notes": [
+    "Untouched legacy baseline: 13 failed, 23 passed; missing native ruling identity was fixture-contract drift.",
+    "Converted final red: 7 failed, 32 passed; six Bank-only constructor capability failures and one missing compensation method. Three test sources unchanged through final green39.",
+    "Parent first green: 22 passed, 26 setup errors from stale removed-logger monkeypatch. Fixture patch removed; parent green2: 48 passed including creation window.",
+    "Broader sandbox run: 39 passed, 14 setup errors because localhost bind was denied. Same14 integration cases passed with local socket permission; no product failure was inferred.",
+    "Nine additional posting/storage/cutoff controls passed. Mypy34 source files, Pyright0 errors, Ruff/format/Bandit/codespell passed.",
+    "Dictionary store deleted after no executable imports remained. Raw Bank transport and exact posting-compensation identity preserved. MP05 ambiguous publication recovery remains open.",
+    "These groups overlap, do not sum. Full Board unit run and fresh root CI not represented by this bundle."
+  ],
+  "review": "Independent reviewer /root/mp07_board_rollout_review: APPROVE bounded escrow retirement after unused fake deletion and stale prose repair. Parent Semgrep initially failed environmental certificate/log-path setup; configured local CA and temporary tool paths enabled scan0 findings/139targets/9rules. Second scan --no-git-ignore also0 findings. This does not replace root CI.\n"
+}

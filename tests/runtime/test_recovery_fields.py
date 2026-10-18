@@ -39,6 +39,7 @@ def test_every_generated_runtime_binding_is_enumerated(tmp_path: Path) -> None:
             "database.schema_path",
             "recovery.maintenance_lock_path",
             "recovery.backup_root",
+            "board_authority.platform_public_key_path",
             *{
                 f"auth.trusted_callers.gateway-{name}.public_key_path"
                 for name in ("identity", "central-bank", "task-board", "reputation", "court")
@@ -98,6 +99,7 @@ def test_every_generated_runtime_binding_is_enumerated(tmp_path: Path) -> None:
             "platform.court_url",
             "data.keys_dir",
             "data.roster_path",
+            "runtime_state.directory",
             "task_feeder.tasks_file",
             "workers.mathbot.llm.base_url",
             "workers.mathbot_openai.llm.base_url",

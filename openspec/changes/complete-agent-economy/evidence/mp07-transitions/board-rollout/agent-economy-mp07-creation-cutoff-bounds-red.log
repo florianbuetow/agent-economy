@@ -1,0 +1,36 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/unit/test_mp07_creation_cutoff_bounds.py FF.                       [100%]
+
+=================================== FAILURES ===================================
+_ test_unrepresentable_composed_cutoff_fails_before_effects[sqlite-integer-sized] _
+tests/unit/test_mp07_creation_cutoff_bounds.py:39: in test_unrepresentable_composed_cutoff_fails_before_effects
+    await coordinator.create_task("task-token", "escrow-token")
+src/task_board_service/services/task_creation.py:416: in create_task
+    return task_to_response(task)
+           ^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_helpers.py:64: in task_to_response
+    contract = _contract_projection(row)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_helpers.py:45: in _contract_projection
+    return TaskContractProjection.model_validate(values).model_dump()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for TaskContractProjection
+E   acceptance_cutoff_us
+E     Input should be less than or equal to 9223372036854775807 [type=less_than_equal, input_value=9223372036855000000, input_type=int]
+E       For further information visit https://errors.pydantic.dev/2.12/v/less_than_equal
+____ test_unrepresentable_composed_cutoff_fails_before_effects[year-10000] _____
+tests/unit/test_mp07_creation_cutoff_bounds.py:38: in test_unrepresentable_composed_cutoff_fails_before_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_creation_cutoff_bounds.py::test_unrepresentable_composed_cutoff_fails_before_effects[sqlite-integer-sized]
+FAILED tests/unit/test_mp07_creation_cutoff_bounds.py::test_unrepresentable_composed_cutoff_fails_before_effects[year-10000]
+========================= 2 failed, 1 passed in 0.05s ==========================

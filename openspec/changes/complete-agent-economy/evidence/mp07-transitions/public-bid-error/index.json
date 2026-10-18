@@ -1,0 +1,41 @@
+{
+  "scope": "public-bid-error",
+  "limits": "Logs prove only their recorded source version and scope; current source hashes do not retroactively certify earlier gates. No full root or package closure.",
+  "artifacts": [
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-public-bid-error.md",
+      "artifact": "2026-10-18-mp07-public-bid-error.md",
+      "sha256": "e826dbf207893c0de885e928c970422a226d8ccae2eecb5e7ec9445ac63226b7"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-bid-error-green.log",
+      "artifact": "agent-economy-mp07-bid-error-green.log",
+      "sha256": "fb7f6f033da97987435838dad9dc6d17275453bf10cdab32288b81b93a6ed864"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-bid-error-red.log",
+      "artifact": "agent-economy-mp07-bid-error-red.log",
+      "sha256": "16c14787973193cc7450809d05226dbd6e897cefec27810ed5b8cc06f99202bd"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-bid-error-router-green.log",
+      "artifact": "agent-economy-mp07-bid-error-router-green.log",
+      "sha256": "8adcd52efd9ee49ed076e47f30089ea7162f09df7714366e37597893401db822"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-bidding-before-error-map.py",
+      "artifact": "agent-economy-mp07-bidding-before-error-map.py",
+      "sha256": "c92b203194bcdd7df4c3be9cacf831266b64224dfb119a7ea070af4bd4e1f783"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-router-bids-before-error-restore.py",
+      "artifact": "agent-economy-mp07-router-bids-before-error-restore.py",
+      "sha256": "e1d5d4a1bd2db710757e2e3a2cadc8e379adeb67a01870df13f9b88dbfc34a98"
+    }
+  ],
+  "current_sources": {
+    "services/task-board/src/task_board_service/services/task_bidding.py": "5fcc0abcf701524dacc03d498cec8b27b3716d50ad1fe8cb6dbdb0ef30f1d27d",
+    "services/task-board/tests/unit/test_mp07_bid_error_contract.py": "78b68d802899ab486b44801416351a56cfeecf2e9a0bbe71ac5a7f5fd079d973",
+    "services/task-board/tests/unit/routers/test_bids.py": "5df57e385a1c632e3dd6e99ab7b01a9d79fcae2d38c69512e18b44ecf86eb142"
+  }
+}

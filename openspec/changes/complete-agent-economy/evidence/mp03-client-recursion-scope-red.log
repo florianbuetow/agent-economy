@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-clients
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 15 items / 14 deselected / 1 selected
+
+tests/unit/test_identity_client.py F                                     [100%]
+
+=================================== FAILURES ===================================
+_____ test_internal_transport_recursion_is_not_an_upstream_contract_error ______
+tests/unit/test_identity_client.py:201: in broken_transport
+    raise RecursionError("injected transport programming failure")
+E   RecursionError: injected transport programming failure
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_identity_client.py:206: in test_internal_transport_recursion_is_not_an_upstream_contract_error
+    await client.verify_jws(token)
+src/service_clients/identity.py:56: in verify_jws
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Identity service returned an invalid verification response
+=========================== short test summary info ============================
+FAILED tests/unit/test_identity_client.py::test_internal_transport_recursion_is_not_an_upstream_contract_error
+======================= 1 failed, 14 deselected in 0.17s =======================

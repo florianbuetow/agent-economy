@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 2 items
+
+tests/unit/test_mp01_unit_log_isolation.py FF                            [100%]
+
+=================================== FAILURES ===================================
+______________ test_router_fixture_uses_owned_board_log_directory ______________
+tests/unit/test_mp01_unit_log_isolation.py:48: in test_router_fixture_uses_owned_board_log_directory
+    assert Path(captured[0]["logging"]["directory"]) == (
+E   AssertionError: assert PosixPath('data/logs') == ((PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2378/test_router_fixture_uses_owned0') / 'logs') / 'task-board')
+E    +  where PosixPath('data/logs') = Path('data/logs')
+_____________ test_deadline_config_uses_owned_board_log_directory ______________
+tests/unit/test_mp01_unit_log_isolation.py:68: in test_deadline_config_uses_owned_board_log_directory
+    assert Path(configuration["logging"]["directory"]) == (
+E   AssertionError: assert PosixPath('data/logs') == ((PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2378/test_deadline_config_uses_owne0') / 'logs') / 'task-board')
+E    +  where PosixPath('data/logs') = Path('data/logs')
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp01_unit_log_isolation.py::test_router_fixture_uses_owned_board_log_directory
+FAILED tests/unit/test_mp01_unit_log_isolation.py::test_deadline_config_uses_owned_board_log_directory
+============================== 2 failed in 1.00s ===============================

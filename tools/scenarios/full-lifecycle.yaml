@@ -55,6 +55,10 @@ steps:
     title: "Implement login page"
     spec: "Build a responsive login form with email and password fields."
     reward: 200
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 3.0
 
   - action: bid
@@ -115,6 +119,10 @@ steps:
     title: "Design REST API specification"
     spec: "Design a complete RESTful API spec for a todo application."
     reward: 150
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 3.0
 
   - action: bid

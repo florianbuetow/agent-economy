@@ -12,6 +12,13 @@ data:
   keys_dir: "../data/keys"
   roster_path: "roster.yaml"
 
+# Caller-owned journals; every setting is explicit and validated before startup.
+runtime_state:
+  environment_id: "local-agent-economy"
+  directory: "../data/agent-runtime"
+  diagnostic_limit: 8
+  max_record_bytes: 65536
+
 # JWS token signing (WP-02 / Q-10)
 signing:
   # Lifetime stamped into each signed token's iat/exp header claims (seconds).
@@ -34,6 +41,8 @@ task_feeder:
   feed_interval_seconds: 15
   max_open_tasks: 5
   bidding_deadline_seconds: 120
+  # Poster-selected duration after bidding closes; distinct from selection delay below.
+  acceptance_window_seconds: 120
   execution_deadline_seconds: 300
   review_deadline_seconds: 120
   review_interval_seconds: 30

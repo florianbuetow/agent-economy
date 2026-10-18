@@ -1,0 +1,12 @@
+E501 Line too long (104 > 100)
+   --> tests/unit/routers/test_t072_tasks_gaps.py:152:101
+    |
+150 |         assert store.reader.get_task(task_id) == existing_task
+151 |         escrows = store.writer.connection.execute(
+152 |             "SELECT payer_account_id,status FROM bank_escrow WHERE task_id=? ORDER BY payer_account_id",
+    |                                                                                                     ^^^^
+153 |             (task_id,),
+154 |         ).fetchall()
+    |
+
+Found 1 error.

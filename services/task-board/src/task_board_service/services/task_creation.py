@@ -10,6 +10,7 @@ public methods still exist with identical signatures and just delegate here.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 
 from service_auth.financial_identity import operation_id_for
@@ -24,9 +25,53 @@ from task_board_service.services.task_helpers import (
     task_to_response,
     task_to_summary,
 )
+from task_board_service.services.task_operations import (
+    complete_bank_operation,
+    operation_response,
+    public_operation_identity,
+)
+from task_board_service.task_operation_contract import MAX_INTEGER
 
 if TYPE_CHECKING:
     from task_board_service.services.task_manager import TaskManager
+
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+_MICROSECONDS_PER_SECOND = 1_000_000
+
+
+def _invalid_acceptance_window() -> ServiceError:
+    return ServiceError(
+        "invalid_deadline",
+        "acceptance_window_seconds must produce a representable cutoff",
+        400,
+        {},
+    )
+
+
+def _validate_acceptance_cutoff(
+    created_at: str,
+    bidding_deadline_seconds: int,
+    acceptance_window_seconds: int,
+) -> None:
+    try:
+        created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        if created.tzinfo is None or created.utcoffset() != UTC.utcoffset(created):
+            raise ValueError("created_at must use UTC")
+        delta = created - _EPOCH
+        created_us = (
+            delta.days * 86_400 * _MICROSECONDS_PER_SECOND
+            + delta.seconds * _MICROSECONDS_PER_SECOND
+            + delta.microseconds
+        )
+        duration_seconds = bidding_deadline_seconds + acceptance_window_seconds
+        if (
+            created_us < 0
+            or duration_seconds > (MAX_INTEGER - created_us) // _MICROSECONDS_PER_SECOND
+        ):
+            raise OverflowError("cutoff exceeds the SQLite integer range")
+        _ = created + timedelta(seconds=duration_seconds)
+    except (OverflowError, ValueError):
+        raise _invalid_acceptance_window() from None
 
 
 def _invalid_lock_response() -> ServiceError:
@@ -125,6 +170,7 @@ class TaskCreationCoordinator:
             "spec",
             "reward",
             "bidding_deadline_seconds",
+            "acceptance_window_seconds",
             "review_deadline_seconds",
         ]
         for field_name in required_fields:
@@ -163,6 +209,7 @@ class TaskCreationCoordinator:
         spec_obj: object = payload["spec"]
         reward: object = payload["reward"]
         bidding_deadline_seconds: object = payload["bidding_deadline_seconds"]
+        acceptance_window_seconds: object = payload["acceptance_window_seconds"]
         deadline_seconds: object = payload[deadline_seconds_field]
         review_deadline_seconds: object = payload["review_deadline_seconds"]
 
@@ -228,11 +275,25 @@ class TaskCreationCoordinator:
                     400,
                     {},
                 )
+        if not is_positive_int(acceptance_window_seconds):
+            raise ServiceError(
+                "invalid_deadline",
+                "acceptance_window_seconds must be a positive representable integer",
+                400,
+                {},
+            )
+        acceptance_window_seconds_int = cast("int", acceptance_window_seconds)
 
         reward_int = cast("int", reward)
         bidding_deadline_seconds_int = cast("int", bidding_deadline_seconds)
         deadline_seconds_int = cast("int", deadline_seconds)
         review_deadline_seconds_int = cast("int", review_deadline_seconds)
+        created_at = now_iso()
+        _validate_acceptance_cutoff(
+            created_at,
+            bidding_deadline_seconds_int,
+            acceptance_window_seconds_int,
+        )
 
         # Step 8: Cross-validate escrow_token payload (decoded without sig verification)
         escrow_payload = manager.token_validator.decode_escrow_token_payload(escrow_token)
@@ -336,7 +397,6 @@ class TaskCreationCoordinator:
         )
 
         # Insert task into DB
-        created_at = now_iso()
         try:
             manager.store.insert_task(
                 {
@@ -346,6 +406,7 @@ class TaskCreationCoordinator:
                     "spec": spec,
                     "reward": reward_int,
                     "bidding_deadline_seconds": bidding_deadline_seconds_int,
+                    "acceptance_window_seconds": acceptance_window_seconds_int,
                     "deadline_seconds": deadline_seconds_int,
                     "review_deadline_seconds": review_deadline_seconds_int,
                     "status": "open",
@@ -360,6 +421,9 @@ class TaskCreationCoordinator:
                     "cancelled_at": None,
                     "disputed_at": None,
                     "dispute_reason": None,
+                    "dispute_id": None,
+                    "rebuttal_deadline": None,
+                    "rebuttal_submitted_at": None,
                     "ruling_id": None,
                     "ruled_at": None,
                     "worker_pct": None,
@@ -372,9 +436,8 @@ class TaskCreationCoordinator:
             # DB insert failed (e.g., race condition on duplicate task_id)
             # Rollback escrow: release back to poster
             try:
-                await manager.escrow_coordinator.release_task_escrow(
+                await manager.escrow_coordinator.release_posting_compensation(
                     task_id,
-                    "posting_compensation",
                     escrow_id,
                     poster_id,
                 )
@@ -466,6 +529,8 @@ class TaskCreationCoordinator:
         if "poster_id" not in payload:
             raise ServiceError("invalid_payload", "Missing required field: poster_id", 400, {})
 
+        operation_id, expected_version = public_operation_identity(payload)
+
         # Step 7c: task_id in payload must match URL path
         if payload["task_id"] != task_id:
             raise ServiceError(
@@ -484,40 +549,29 @@ class TaskCreationCoordinator:
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
 
-        # Evaluate deadline first (task may have expired)
-        task = await manager.deadline_evaluator.evaluate_deadline(task)
-
-        # Step 11: Check status
-        if task["status"] != "open":
-            raise ServiceError(
-                "invalid_status",
-                f"Cannot cancel task in '{task['status']}' status, must be 'open'",
-                409,
-                {},
-            )
-
-        # Step 9b: Signer must be the task's poster
-        if signer_id != task["poster_id"]:
-            raise ServiceError("forbidden", "Only the poster can cancel this task", 403, {})
-
-        # Step 13: Release escrow to poster
-        await manager.escrow_coordinator.release_task_escrow(
-            task_id,
-            "cancelled",
-            task["escrow_id"],
-            task["poster_id"],
+        # Gateway rechecks actual bid existence if a bid races this strict read.
+        has_bids = bool(manager.store.get_bids_for_task(task_id))
+        cutoff = task["acceptance_cutoff_us"] if has_bids else task["bidding_cutoff_us"]
+        envelope = manager.store.claim_task_operation(
+            {
+                "protocol_version": 1,
+                "operation_id": operation_id,
+                "task_id": task_id,
+                "command": "cancel_task",
+                "expected_status": "open",
+                "expected_lifecycle_version": expected_version,
+                "actor_kind": "agent",
+                "actor_id": signer_id,
+                "arguments": {
+                    "poster_id": task["poster_id"],
+                    "escrow_id": task["escrow_id"],
+                    "reward": task["reward"],
+                    "source_reference": f"task:{task_id}:cancelled",
+                    "cutoff_us": cutoff,
+                },
+            }
         )
-
-        # Update task status
-        cancelled_at = now_iso()
-        manager.store.update_task(
-            task_id,
-            {"status": "cancelled", "cancelled_at": cancelled_at},
-            expected_status=None,
+        finalized = await complete_bank_operation(
+            manager.store, manager.escrow_coordinator, envelope
         )
-
-        updated = manager.store.get_task(task_id)
-        if updated is None:
-            msg = f"Task {task_id} not found after update"
-            raise RuntimeError(msg)
-        return task_to_response(updated)
+        return operation_response(manager.store, finalized)

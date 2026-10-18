@@ -1,0 +1,35 @@
+{
+  "baseline_provenance": "Recovered after edits using read-only git show HEAD:services/db-gateway/tests/unit/routers/test_board.py. Exact SHA256 matches independently preserved pre-edit full-discovery snapshot and author original hash; not claimed as an original byte-copy capture. No git mutation.",
+  "baseline_sha256": "7c39a3cd68f50ba8d7569cde80aef2289fcebf202d71feb4b51e7bfc69bdf3af",
+  "baseline_result": "23failed14passed;37cases",
+  "parent_gate": {
+    "handle": 76495,
+    "exit_code": 0,
+    "passed": 97,
+    "warning_count": 1
+  },
+  "limits": "Intermediate runs are diagnostic; author noted possible live-source overlap in preliminary8282. Finalfocused37 and parent97 are frozen-source proof. FullGateway/rootstillpending.",
+  "review": "APPROVE by /root/mp07_board_rollout_review after current-vs-archived-source comparison; originalobservables preserved, nativecontract supersessions explicitlymapped, no fabricatedoperationprovenance.",
+  "sources": {
+    "services/db-gateway/tests/unit/routers/test_board.py": "a5c6af741ca7a698800facc3fb84339d9391f91fa0a61bcb2285e3038a14a302",
+    "services/db-gateway/tests/fakes/native_board_history.py": "290f136b3e186c1609309d933cec2aa6fcb646ac29b8339d43d57eaad291d133",
+    "services/db-gateway/tests/fakes/__init__.py": "d1472008dcc8b7623f71bc86d4f9d98fd2d0ce56685641eadfbf62620213de44",
+    "docs/plans/2026-10-18-mp07-gateway-board-router-reconciliation.md": "c09d1c745c2fd9255b37082424ce016268b2003a71eb4fb2c2a27e84c19aef58"
+  },
+  "artifacts": {
+    "agent-economy-mp07-gateway-board-router-after-bids.log": "8373e71776811bd059b574c15b62ddd444d237f9f223395812cf954fcbed3cd7",
+    "agent-economy-mp07-gateway-board-router-after-fixture-wiring.log": "c63cebc9a0c6f07a1b0fdf6a23d0e14a555aed173e52f46e6b4e4936d7c26e1b",
+    "agent-economy-mp07-gateway-board-router-after-helper.log": "7bbe72d346f6868d78d24f2e313456c4b329ed202ea01edb0c16e9d11cb1cec7",
+    "agent-economy-mp07-gateway-board-router-after-publication.log": "25d7796451f92190c62081e522dbdcccc4e35484ff026c7a40bf2deea6f92416",
+    "agent-economy-mp07-gateway-board-router-baseline.log": "fa314aef97967eeb4155d5f0165aa897f3a8b5f344a512a66b2319918a0e5c4b",
+    "agent-economy-mp07-gateway-board-router-broader.log": "bd9e34bdf66dc60ca7f1371fd879c15f4c9e90956fb08a09a7900f00d73f2d4c",
+    "agent-economy-mp07-gateway-board-router-codespell.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agent-economy-mp07-gateway-board-router-final.log": "2c491497a3397c52ff153ead600253a600420aba58613f9dffcfbf5be5863944",
+    "agent-economy-mp07-gateway-board-router-format.log": "eee76f865de5a9f2456950f710ae5d5f9b5bd0ea02aa54f614c5eed6642a0bfd",
+    "agent-economy-mp07-gateway-board-router-native-full-first.log": "9ec8bd7018acf5252a13a66326099987f8060ad54e682d7ad18965c7c9f52562",
+    "agent-economy-mp07-gateway-board-router-parent.log": "d8032743fcbad516b0454c5778d7292828db86cdceddd570a39d9a99b97b22e8",
+    "agent-economy-mp07-gateway-board-router-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-gateway-board-router-sha256.log": "3cdf31651b2eac53d5869f5cb0803abf10c6b4e94066871f19e6be53c3b1ec0b",
+    "baseline/test_board.py": "7c39a3cd68f50ba8d7569cde80aef2289fcebf202d71feb4b51e7bfc69bdf3af"
+  }
+}

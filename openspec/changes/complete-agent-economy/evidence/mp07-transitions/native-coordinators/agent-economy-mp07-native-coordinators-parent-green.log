@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 19 items
+
+tests/integration/test_mp07_native_court_handoff.py F...                 [ 21%]
+tests/integration/test_mp07_native_effect_recovery.py ....               [ 42%]
+tests/integration/test_mp07_native_deadlines.py ......                   [ 73%]
+tests/integration/test_mp07_native_public_lifecycle.py .....             [100%]
+
+=================================== FAILURES ===================================
+____ test_persisted_claim_finalizes_with_actual_claim_identity_and_deadline ____
+tests/integration/test_mp07_native_court_handoff.py:226: in test_persisted_claim_finalizes_with_actual_claim_identity_and_deadline
+    assert result["rebuttal_deadline"] == "2026-10-17T10:00:20Z"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'rebuttal_deadline'
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:30:00", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-b1360e6f-e822-4db8-b366-666da961e72d"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_native_court_handoff.py::test_persisted_claim_finalizes_with_actual_claim_identity_and_deadline
+======================== 1 failed, 18 passed in 11.16s =========================

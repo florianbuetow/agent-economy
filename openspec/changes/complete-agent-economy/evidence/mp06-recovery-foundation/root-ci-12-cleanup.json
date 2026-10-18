@@ -1,0 +1,30 @@
+{
+  "checked_at_utc": "2026-10-16T01:48:34.947546+00:00",
+  "source_manifests": [
+    "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-8ce96c78e7814aadb870321ec5dbf312-6hyo5ex9/runtime.json",
+    "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-7d05c99df5024d848292ee8f917590de-7zydm4xx/runtime.json"
+  ],
+  "owned_groups": [
+    65651,
+    65665,
+    65667,
+    65669,
+    65671,
+    65685,
+    65783,
+    65815,
+    65817,
+    68445,
+    68447,
+    68449,
+    68451,
+    68453,
+    68456,
+    68458,
+    68460,
+    68462,
+    68474
+  ],
+  "recorded_drained": true,
+  "remaining_members": []
+}

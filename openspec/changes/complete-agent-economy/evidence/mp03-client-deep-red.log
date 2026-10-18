@@ -1,0 +1,41 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-clients
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 14 items / 13 deselected / 1 selected
+
+tests/unit/test_identity_client.py F                                     [100%]
+
+=================================== FAILURES ===================================
+____________ test_unparseable_deep_identity_success_is_unavailable _____________
+tests/unit/test_identity_client.py:189: in test_unparseable_deep_identity_success_is_unavailable
+    await client.verify_jws(token)
+src/service_clients/identity.py:48: in verify_jws
+    response = await self._post(
+src/service_clients/base.py:39: in _post
+    return self._response_dict(response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_clients/base.py:128: in _response_dict
+    payload = self._safe_json_object(response)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_clients/base.py:120: in _safe_json_object
+    payload = response.json()
+              ^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_models.py:832: in json
+    return jsonlib.loads(self.content, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/json/decoder.py:345: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/json/decoder.py:361: in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ^^^^^^^^^^^^^^^^^^^^^^
+E   RecursionError: maximum recursion depth exceeded while decoding a JSON array from a unicode string
+=========================== short test summary info ============================
+FAILED tests/unit/test_identity_client.py::test_unparseable_deep_identity_success_is_unavailable
+======================= 1 failed, 13 deselected in 0.18s =======================

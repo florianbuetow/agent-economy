@@ -1,0 +1,60 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 30 items
+
+tests/unit/routers/test_submission.py .......F..........                 [ 60%]
+tests/unit/routers/test_lifecycle.py ......FFFF..                        [100%]
+
+=================================== FAILURES ===================================
+____ TestDeliverableSubmission.test_sub_08_after_execution_deadline_expired ____
+tests/unit/routers/test_submission.py:209: in test_sub_08_after_execution_deadline_expired
+    assert resp.json()["error"] == "invalid_status"
+E   AssertionError: assert 'cutoff_reached' == 'invalid_status'
+E     
+E     - invalid_status
+E     + cutoff_reached
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-19 02:32:11", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-212229d2-d4fa-4f6e-b946-348d5b6ee79f/submit"}}
+________________ TestLifecycle.test_cannot_bid_on_expired_task _________________
+tests/unit/routers/test_lifecycle.py:373: in test_cannot_bid_on_expired_task
+    assert resp.json()["error"] == "invalid_status"
+E   AssertionError: assert 'cutoff_reached' == 'invalid_status'
+E     
+E     - invalid_status
+E     + cutoff_reached
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-2e640c08-3661-4cac-8c7d-f0438aa20cb7/bids"}}
+____________ TestLifecycle.test_cannot_submit_on_expired_execution _____________
+tests/unit/routers/test_lifecycle.py:420: in test_cannot_submit_on_expired_execution
+    assert resp.json()["error"] == "invalid_status"
+E   AssertionError: assert 'cutoff_reached' == 'invalid_status'
+E     
+E     - invalid_status
+E     + cutoff_reached
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-0b138b8a-51e3-4aea-9a11-ec247ebaa977/submit"}}
+___________ TestLifecycle.test_terminal_status_blocks_all_mutations ____________
+tests/unit/routers/test_lifecycle.py:448: in test_terminal_status_blocks_all_mutations
+    assert resp.status_code == 409
+E   assert 400 == 409
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:25", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-0f1c21a8-8795-40c0-aa97-b683bc202de4/cancel"}}
+_________ TestLifecycle.test_deadline_does_not_affect_terminal_states __________
+tests/unit/routers/test_lifecycle.py:502: in test_deadline_does_not_affect_terminal_states
+    assert resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:00", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-33a215dd-8fbd-4904-aab1-e63af98cf443/cancel"}}
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_08_after_execution_deadline_expired
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_cannot_bid_on_expired_task
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_cannot_submit_on_expired_execution
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_terminal_status_blocks_all_mutations
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_deadline_does_not_affect_terminal_states
+======================== 5 failed, 25 passed in 23.20s =========================

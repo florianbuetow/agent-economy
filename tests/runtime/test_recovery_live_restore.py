@@ -15,7 +15,8 @@ import yaml
 from scripts.isolated_test_runtime import SERVICE_ORDER, IsolatedRuntime
 from scripts.recovery_adoption import adopt_restored_check_only
 from scripts.recovery_targets import build_target_bindings
-from service_auth import AgentFactory
+from service_auth import AgentFactory, TaskBoardCommandResponse
+from service_auth.financial_identity import operation_id_for
 from service_commons.recovery_contract import BindingKind, RecoveryInventoryV1
 
 if TYPE_CHECKING:
@@ -34,6 +35,23 @@ from db_gateway_service.recovery import (
 pytestmark = pytest.mark.integration
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DELIVERABLE = b"Recovery acceptance: the submitted answer is forty-two.\n"
+ACCEPTANCE_WINDOW_SECONDS = 1800
+
+
+def _task_version(task: dict[str, object], *, expected_status: str) -> int:
+    assert task["status"] == expected_status
+    lifecycle_version = task["lifecycle_version"]
+    assert type(lifecycle_version) is int
+    return lifecycle_version
+
+
+def _command_body(
+    response: TaskBoardCommandResponse, *, expected_status_code: int
+) -> dict[str, object]:
+    assert isinstance(response, TaskBoardCommandResponse)
+    assert response.status_code == expected_status_code
+    assert isinstance(response.body, dict)
+    return response.body
 
 
 async def _public_workload(config_path: Path) -> dict[str, object]:
@@ -43,6 +61,8 @@ async def _public_workload(config_path: Path) -> dict[str, object]:
     try:
         await poster.register()
         await worker.register()
+        assert poster.agent_id is not None
+        assert worker.agent_id is not None
         await worker.create_account()
         task = await poster.post_task(
             title="Recover submitted work",
@@ -51,16 +71,47 @@ async def _public_workload(config_path: Path) -> dict[str, object]:
             bidding_deadline_seconds=3600,
             execution_deadline_seconds=3600,
             review_deadline_seconds=3600,
+            acceptance_window_seconds=ACCEPTANCE_WINDOW_SECONDS,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=90)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
-        asset = await worker.upload_asset(task["task_id"], "result.txt", DELIVERABLE)
-        await worker.submit_deliverable(task["task_id"])
+        task_id = task["task_id"]
+        assert isinstance(task_id, str)
+        open_version = _task_version(task, expected_status="open")
+        bid = _command_body(
+            await worker.submit_bid(
+                task_id=task_id,
+                amount=90,
+                operation_id=operation_id_for("runtime-public-bid", (task_id, worker.agent_id)),
+                expected_lifecycle_version=open_version,
+            ),
+            expected_status_code=201,
+        )
+        bid_id = bid["bid_id"]
+        assert isinstance(bid_id, str)
+        accepted = _command_body(
+            await poster.accept_bid(
+                task_id=task_id,
+                bid_id=bid_id,
+                operation_id=operation_id_for("runtime-public-accept", (task_id, bid_id)),
+                expected_lifecycle_version=open_version,
+            ),
+            expected_status_code=200,
+        )
+        accepted_version = _task_version(accepted, expected_status="accepted")
+        asset = await worker.upload_asset(task_id, "result.txt", DELIVERABLE)
+        submitted = _command_body(
+            await worker.submit_deliverable(
+                task_id,
+                operation_id=operation_id_for("runtime-public-submit", (task_id, worker.agent_id)),
+                expected_lifecycle_version=accepted_version,
+            ),
+            expected_status_code=200,
+        )
+        _task_version(submitted, expected_status="submitted")
         balance = await poster.get_balance()
         return {
             "poster_id": poster.agent_id,
             "worker_id": worker.agent_id,
-            "task_id": task["task_id"],
+            "task_id": task_id,
             "asset_id": asset["asset_id"],
             "balance": balance["balance"],
         }

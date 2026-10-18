@@ -1,0 +1,65 @@
+TC003 Move standard library import `pathlib.Path` into a type-checking block
+ --> tests/unit/test_runtime_intent_ack_regressions.py:7:21
+  |
+5 | import copy
+6 | import json
+7 | from pathlib import Path
+  |                     ^^^^
+8 |
+9 | import pytest
+  |
+help: Move into type-checking block
+
+E731 Do not assign a `lambda` expression, use a `def`
+   --> tests/unit/test_runtime_intent_ack_regressions.py:242:9
+    |
+240 | ) -> None:
+241 |     if mutation == "version":
+242 |         factory = lambda: _intent(expected_lifecycle_version=_SQLITE_MAX + 1)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+243 |     elif mutation == "amount":
+244 |         factory = lambda: _intent(
+    |
+help: Rewrite `factory` as a `def`
+
+E731 Do not assign a `lambda` expression, use a `def`
+   --> tests/unit/test_runtime_intent_ack_regressions.py:244:9
+    |
+242 |           factory = lambda: _intent(expected_lifecycle_version=_SQLITE_MAX + 1)
+243 |       elif mutation == "amount":
+244 | /         factory = lambda: _intent(
+245 | |             public_arguments={
+246 | |                 "task_id": _TASK_ID,
+247 | |                 "amount": _SQLITE_MAX + 1,
+248 | |                 "operation_id": _OPERATION_ID,
+249 | |                 "expected_lifecycle_version": 7,
+250 | |             },
+251 | |             acknowledgment_context={
+252 | |                 **dict(_intent().acknowledgment_context),
+253 | |                 "result_facts": {
+254 | |                     "bid_id": f"bid-{_OPERATION_ID[3:]}",
+255 | |                     "bidder_id": "a-worker-alice",
+256 | |                     "amount": _SQLITE_MAX + 1,
+257 | |                 },
+258 | |             },
+259 | |         )
+    | |_________^
+260 |       else:
+261 |           descriptor, _arguments, _ack = _action_case("approve_task")
+    |
+help: Rewrite `factory` as a `def`
+
+E731 Do not assign a `lambda` expression, use a `def`
+   --> tests/unit/test_runtime_intent_ack_regressions.py:269:9
+    |
+267 |             _SQLITE_MAX + 1
+268 |         )
+269 |         factory = lambda: NewTaskIntent(**descriptor)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+270 |     with pytest.raises(RuntimeIntentError) as raised:
+271 |         intent = factory()
+    |
+help: Rewrite `factory` as a `def`
+
+Found 4 errors.
+No fixes available (4 hidden fixes can be enabled with the `--unsafe-fixes` option).

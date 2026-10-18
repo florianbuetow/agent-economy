@@ -3,12 +3,33 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
 
 from tests.conftest import make_event
+from tests.fakes.native_board_history import (
+    ACCEPTANCE_CUTOFF_US,
+    BIDDING_CUTOFF_US,
+    FIXED_NOW_US,
+    BusinessClock,
+    TaskGraph,
+    accept_bid,
+    create_account,
+    create_task,
+    file_claim,
+    finalize,
+    lock_escrow,
+    operation_body,
+    prepare_submitted,
+    register_agent,
+    register_worker,
+    settle_release,
+    settle_split,
+    submit_bid,
+    task_body,
+)
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
@@ -21,23 +42,20 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _fixed_gateway_business_clock(monkeypatch: pytest.MonkeyPatch) -> BusinessClock:
+    """Hold lifecycle time fixed without changing real JWT signing time."""
+    clock = BusinessClock()
+    monkeypatch.setattr("db_gateway_service.task_time.utc_now_us", clock)
+    return clock
+
+
 def _register_agent(
     client: TestClient,
     agent_id: str | None = None,
     name: str = "Test",
 ) -> str:
-    aid = agent_id or f"a-{uuid4()}"
-    client.post(
-        "/identity/agents",
-        json={
-            "agent_id": aid,
-            "name": name,
-            "public_key": f"ed25519:{uuid4()}",
-            "registered_at": "2026-02-28T10:00:00Z",
-            "event": make_event(),
-        },
-    )
-    return aid
+    return register_agent(client, agent_id=agent_id, name=name)
 
 
 def _setup_funded_account(
@@ -45,23 +63,9 @@ def _setup_funded_account(
     agent_id: str | None = None,
     balance: int = 500,
 ) -> str:
-    aid = _register_agent(client, agent_id)
-    data: dict[str, Any] = {
-        "account_id": aid,
-        "balance": balance,
-        "created_at": "2026-02-28T10:00:00Z",
-        "event": make_event(source="bank", event_type="account.created"),
-    }
-    if balance > 0:
-        data["operation_id"] = f"op-{uuid4()}"
-        data["initial_credit"] = {
-            "tx_id": f"tx-{uuid4()}",
-            "amount": balance,
-            "reference": "initial_balance",
-            "timestamp": "2026-02-28T10:00:00Z",
-        }
-    client.post("/bank/accounts", json=data)
-    return aid
+    account_id = _register_agent(client, agent_id)
+    create_account(client, account_id, balance=balance)
+    return account_id
 
 
 def _lock_escrow(
@@ -70,22 +74,7 @@ def _lock_escrow(
     amount: int = 100,
     task_id: str | None = None,
 ) -> tuple[str, str]:
-    tid = task_id or f"t-{uuid4()}"
-    eid = f"esc-{uuid4()}"
-    client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": f"op-{uuid4()}",
-            "escrow_id": eid,
-            "payer_account_id": payer_id,
-            "amount": amount,
-            "task_id": tid,
-            "created_at": "2026-02-28T10:10:00Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=tid),
-        },
-    )
-    return eid, tid
+    return lock_escrow(client, payer_id, task_id=task_id, reward=amount)
 
 
 def _create_task(
@@ -102,46 +91,37 @@ def _create_task(
         eid = escrow_id
         tid = task_id or f"t-{uuid4()}"
     actual_tid = task_id or tid
-    client.post(
+    response = client.post(
         "/board/tasks",
-        json={
-            "task_id": actual_tid,
-            "poster_id": pid,
-            "title": "Test Task",
-            "spec": "Build a login page",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "deadline_seconds": 172800,
-            "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:00:00Z",
-            "escrow_id": eid,
-            "created_at": "2026-02-28T10:15:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=actual_tid),
-        },
+        json=task_body(actual_tid, pid, eid),
     )
+    assert response.status_code == 201, response.text
     return actual_tid, pid, eid
 
 
-def _submit_bid(
-    client: TestClient,
-    task_id: str,
-    bidder_id: str,
-    bid_id: str | None = None,
-) -> str:
-    bid = bid_id or f"bid-{uuid4()}"
-    client.post(
-        "/board/bids",
-        json={
-            "bid_id": bid,
-            "task_id": task_id,
-            "bidder_id": bidder_id,
-            "proposal": "I will build it",
-            "submitted_at": "2026-02-28T11:00:00Z",
-            "event": make_event(source="board", event_type="bid.submitted", task_id=task_id),
+def _cancel_command(graph: TaskGraph) -> dict[str, object]:
+    """Build one valid native cancellation for structural-negative tests."""
+    return operation_body(
+        operation_id=f"op-{uuid4()}",
+        task_id=graph.task_id,
+        command="cancel_task",
+        expected_status="open",
+        expected_lifecycle_version=0,
+        actor_kind="agent",
+        actor_id=graph.poster_id,
+        arguments={
+            "poster_id": graph.poster_id,
+            "escrow_id": graph.escrow_id,
+            "reward": 100,
+            "source_reference": f"task:{graph.task_id}:cancelled",
+            "cutoff_us": BIDDING_CUTOFF_US,
         },
     )
-    return bid
+
+
+def _database_snapshot(writer: DbWriter) -> tuple[str, ...]:
+    """Capture all durable rows so rejection tests prove atomic no-op behavior."""
+    return tuple(writer.connection.iterdump())
 
 
 # ===================================================================
@@ -153,7 +133,11 @@ def _submit_bid(
 class TestTaskCreation:
     """Task creation tests — TASK-01 through TASK-09."""
 
-    def test_create_valid_task(self, app_with_writer: TestClient) -> None:
+    def test_create_valid_task(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
         """TASK-01: Create a valid task returns 201 with task_id and event_id."""
         pid = _setup_funded_account(app_with_writer)
         eid, tid = _lock_escrow(app_with_writer, pid)
@@ -167,12 +151,13 @@ class TestTaskCreation:
                 "spec": "Build a login page",
                 "reward": 100,
                 "status": "open",
-                "bidding_deadline_seconds": 86400,
+                "bidding_deadline_seconds": 43200,
+                "acceptance_window_seconds": 3600,
                 "deadline_seconds": 172800,
                 "review_deadline_seconds": 43200,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
+                "bidding_deadline": "2099-01-02T00:00:00Z",
                 "escrow_id": eid,
-                "created_at": "2026-02-28T10:15:00Z",
+                "created_at": "2099-01-01T12:00:00Z",
                 "event": make_event(source="board", event_type="task.created", task_id=tid),
             },
         )
@@ -181,6 +166,18 @@ class TestTaskCreation:
         assert "task_id" in data
         assert "event_id" in data
         assert data["task_id"] == tid
+        contract = db_writer.connection.execute(
+            "SELECT lifecycle_version,timing_contract_version,acceptance_window_seconds,"
+            "bidding_cutoff_us,acceptance_cutoff_us FROM board_task_contracts WHERE task_id=?",
+            (tid,),
+        ).fetchone()
+        assert contract is not None and tuple(contract) == (
+            0,
+            2,
+            3600,
+            BIDDING_CUTOFF_US,
+            ACCEPTANCE_CUTOFF_US,
+        )
 
     def test_duplicate_task_id_rejected(self, app_with_writer: TestClient) -> None:
         """TASK-02: Duplicate task_id is rejected with 409 task_exists."""
@@ -197,12 +194,13 @@ class TestTaskCreation:
                 "spec": "Different spec",
                 "reward": 200,
                 "status": "open",
-                "bidding_deadline_seconds": 86400,
+                "bidding_deadline_seconds": 43200,
+                "acceptance_window_seconds": 3600,
                 "deadline_seconds": 172800,
                 "review_deadline_seconds": 43200,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
+                "bidding_deadline": "2099-01-02T00:00:00Z",
                 "escrow_id": eid2,
-                "created_at": "2026-02-28T10:15:00Z",
+                "created_at": "2099-01-01T12:00:00Z",
                 "event": make_event(source="board", event_type="task.created", task_id=tid),
             },
         )
@@ -224,12 +222,13 @@ class TestTaskCreation:
                 "spec": "Build a login page",
                 "reward": 100,
                 "status": "open",
-                "bidding_deadline_seconds": 86400,
+                "bidding_deadline_seconds": 43200,
+                "acceptance_window_seconds": 3600,
                 "deadline_seconds": 172800,
                 "review_deadline_seconds": 43200,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
+                "bidding_deadline": "2099-01-02T00:00:00Z",
                 "escrow_id": eid,
-                "created_at": "2026-02-28T10:15:00Z",
+                "created_at": "2099-01-01T12:00:00Z",
                 "event": make_event(source="board", event_type="task.created", task_id=tid),
             },
         )
@@ -251,12 +250,13 @@ class TestTaskCreation:
                 "spec": "Build a login page",
                 "reward": 100,
                 "status": "open",
-                "bidding_deadline_seconds": 86400,
+                "bidding_deadline_seconds": 43200,
+                "acceptance_window_seconds": 3600,
                 "deadline_seconds": 172800,
                 "review_deadline_seconds": 43200,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
+                "bidding_deadline": "2099-01-02T00:00:00Z",
                 "escrow_id": fake_escrow,
-                "created_at": "2026-02-28T10:15:00Z",
+                "created_at": "2099-01-01T12:00:00Z",
                 "event": make_event(source="board", event_type="task.created", task_id=tid),
             },
         )
@@ -277,12 +277,13 @@ class TestTaskCreation:
                 "spec": "Build a login page",
                 "reward": 100,
                 "status": "open",
-                "bidding_deadline_seconds": 86400,
+                "bidding_deadline_seconds": 43200,
+                "acceptance_window_seconds": 3600,
                 "deadline_seconds": 172800,
                 "review_deadline_seconds": 43200,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
+                "bidding_deadline": "2099-01-02T00:00:00Z",
                 "escrow_id": eid,
-                "created_at": "2026-02-28T10:15:00Z",
+                "created_at": "2099-01-01T12:00:00Z",
                 "event": make_event(source="board", event_type="task.created", task_id=tid),
             },
         )
@@ -303,12 +304,13 @@ class TestTaskCreation:
                 # spec omitted
                 "reward": 100,
                 "status": "open",
-                "bidding_deadline_seconds": 86400,
+                "bidding_deadline_seconds": 43200,
+                "acceptance_window_seconds": 3600,
                 "deadline_seconds": 172800,
                 "review_deadline_seconds": 43200,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
+                "bidding_deadline": "2099-01-02T00:00:00Z",
                 "escrow_id": eid,
-                "created_at": "2026-02-28T10:15:00Z",
+                "created_at": "2099-01-01T12:00:00Z",
                 "event": make_event(source="board", event_type="task.created", task_id=tid),
             },
         )
@@ -329,12 +331,13 @@ class TestTaskCreation:
                 "spec": "Build a login page",
                 "reward": 100,
                 "status": "open",
-                "bidding_deadline_seconds": 86400,
+                "bidding_deadline_seconds": 43200,
+                "acceptance_window_seconds": 3600,
                 "deadline_seconds": 172800,
                 "review_deadline_seconds": 43200,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
+                "bidding_deadline": "2099-01-02T00:00:00Z",
                 "escrow_id": eid,
-                "created_at": "2026-02-28T10:15:00Z",
+                "created_at": "2099-01-01T12:00:00Z",
                 # event omitted
             },
         )
@@ -374,12 +377,13 @@ class TestTaskCreation:
                 "spec": "Build a login page",
                 "reward": -1,
                 "status": "open",
-                "bidding_deadline_seconds": 86400,
+                "bidding_deadline_seconds": 43200,
+                "acceptance_window_seconds": 3600,
                 "deadline_seconds": 172800,
                 "review_deadline_seconds": 43200,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
+                "bidding_deadline": "2099-01-02T00:00:00Z",
                 "escrow_id": eid,
-                "created_at": "2026-02-28T10:15:00Z",
+                "created_at": "2099-01-01T12:00:00Z",
                 "event": make_event(source="board", event_type="task.created", task_id=tid),
             },
         )
@@ -388,516 +392,685 @@ class TestTaskCreation:
 
 
 # ===================================================================
-# Category 8: Bid Submission (POST /board/bids)
+# Category 8: Bid Submission (POST /board/task-operations)
 # ===================================================================
 
 
 @pytest.mark.unit
 class TestBidSubmission:
-    """Bid submission tests — BID-01 through BID-07."""
+    """Native bid submission tests — reconciled BID-01 through BID-07."""
 
-    def test_submit_valid_bid(self, app_with_writer: TestClient) -> None:
-        """BID-01: Submit a valid bid returns 201 with bid_id and event_id."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        bidder = _register_agent(app_with_writer, name="Bob")
-        bid_id = f"bid-{uuid4()}"
+    def test_submit_valid_bid(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """BID-01: Native bid commits one operation, bid, counter and event."""
+        graph = create_task(app_with_writer)
+        bidder = register_agent(app_with_writer, name="Bob")
 
-        resp = app_with_writer.post(
-            "/board/bids",
-            json={
-                "bid_id": bid_id,
-                "task_id": tid,
-                "bidder_id": bidder,
-                "proposal": "I will build a responsive login page",
-                "submitted_at": "2026-02-28T11:00:00Z",
-                "event": make_event(source="board", event_type="bid.submitted", task_id=tid),
-            },
-        )
-        assert resp.status_code == 201
-        data = resp.json()
-        assert "bid_id" in data
-        assert "event_id" in data
-        assert data["bid_id"] == bid_id
+        bid_id, response = submit_bid(app_with_writer, graph, bidder)
+
+        assert response.status_code == 200
+        envelope = response.json()
+        assert envelope["operation_state"] == "completed"
+        assert envelope["command"] == "submit_bid"
+        assert envelope["result"]["bid_id"] == bid_id
+        bid = db_writer.connection.execute(
+            "SELECT task_id,bidder_id,amount FROM board_bids WHERE bid_id=?",
+            (bid_id,),
+        ).fetchone()
+        event = db_writer.connection.execute(
+            "SELECT event_type,task_id,agent_id FROM events WHERE event_id=?",
+            (envelope["event_id"],),
+        ).fetchone()
+        task = db_writer.connection.execute(
+            "SELECT bid_count FROM board_tasks WHERE task_id=?",
+            (graph.task_id,),
+        ).fetchone()
+        assert bid is not None and tuple(bid) == (graph.task_id, bidder, 90)
+        assert event is not None and tuple(event) == ("bid.submitted", graph.task_id, bidder)
+        assert task is not None and tuple(task) == (1,)
 
     def test_duplicate_bid_rejected(self, app_with_writer: TestClient) -> None:
-        """BID-02: Duplicate bid (same bidder, same task) is rejected with 409 bid_exists."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        bidder = _register_agent(app_with_writer, name="Bob")
+        """BID-02: A second bid from the same worker is still `bid_exists`."""
+        graph = create_task(app_with_writer)
+        bidder = register_agent(app_with_writer, name="Bob")
+        _bid_id, first = submit_bid(app_with_writer, graph, bidder)
+        assert first.status_code == 200
 
-        _submit_bid(app_with_writer, tid, bidder)
+        _duplicate_id, duplicate = submit_bid(app_with_writer, graph, bidder)
 
-        resp = app_with_writer.post(
-            "/board/bids",
-            json={
-                "bid_id": f"bid-{uuid4()}",
-                "task_id": tid,
-                "bidder_id": bidder,
-                "proposal": "Different proposal",
-                "submitted_at": "2026-02-28T11:30:00Z",
-                "event": make_event(source="board", event_type="bid.submitted", task_id=tid),
-            },
-        )
-        assert resp.status_code == 409
-        assert resp.json()["error"] == "bid_exists"
+        assert duplicate.status_code == 409
+        assert duplicate.json()["error"] == "bid_exists"
 
     def test_different_bidders_succeed(self, app_with_writer: TestClient) -> None:
-        """BID-03: Different bidders on same task both succeed with 201."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        bob = _register_agent(app_with_writer, name="Bob")
-        carol = _register_agent(app_with_writer, name="Carol")
+        """BID-03: Different registered bidders complete independent operations."""
+        graph = create_task(app_with_writer)
+        bob = register_agent(app_with_writer, name="Bob")
+        carol = register_agent(app_with_writer, name="Carol")
 
-        resp1 = app_with_writer.post(
-            "/board/bids",
-            json={
-                "bid_id": f"bid-{uuid4()}",
-                "task_id": tid,
-                "bidder_id": bob,
-                "proposal": "Bob proposes",
-                "submitted_at": "2026-02-28T11:00:00Z",
-                "event": make_event(source="board", event_type="bid.submitted", task_id=tid),
-            },
-        )
-        resp2 = app_with_writer.post(
-            "/board/bids",
-            json={
-                "bid_id": f"bid-{uuid4()}",
-                "task_id": tid,
-                "bidder_id": carol,
-                "proposal": "Carol proposes",
-                "submitted_at": "2026-02-28T11:05:00Z",
-                "event": make_event(source="board", event_type="bid.submitted", task_id=tid),
-            },
-        )
-        assert resp1.status_code == 201
-        assert resp2.status_code == 201
+        _bob_bid, bob_response = submit_bid(app_with_writer, graph, bob)
+        _carol_bid, carol_response = submit_bid(app_with_writer, graph, carol)
+
+        assert bob_response.status_code == 200
+        assert carol_response.status_code == 200
 
     def test_fk_violation_task_id(self, app_with_writer: TestClient) -> None:
-        """BID-04: Foreign key violation on task_id returns 409."""
-        bidder = _register_agent(app_with_writer)
-        fake_task = f"t-{uuid4()}"
-
-        resp = app_with_writer.post(
-            "/board/bids",
-            json={
-                "bid_id": f"bid-{uuid4()}",
-                "task_id": fake_task,
-                "bidder_id": bidder,
-                "proposal": "I will build it",
-                "submitted_at": "2026-02-28T11:00:00Z",
-                "event": make_event(source="board", event_type="bid.submitted", task_id=fake_task),
-            },
+        """BID-04: A native bid for an absent task returns `task_not_found`."""
+        bidder = register_agent(app_with_writer)
+        missing_task_id = f"t-{uuid4()}"
+        response = app_with_writer.post(
+            "/board/task-operations",
+            json=operation_body(
+                operation_id=f"op-{uuid4()}",
+                task_id=missing_task_id,
+                command="submit_bid",
+                expected_status="open",
+                expected_lifecycle_version=0,
+                actor_kind="agent",
+                actor_id=bidder,
+                arguments={
+                    "bid_id": f"bid-{uuid4()}",
+                    "bidder_id": bidder,
+                    "amount": 90,
+                },
+            ),
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"] == "foreign_key_violation"
+
+        assert response.status_code == 404
+        assert response.json()["error"] == "task_not_found"
 
     def test_fk_violation_bidder_id(self, app_with_writer: TestClient) -> None:
-        """BID-05: Foreign key violation on bidder_id returns 409."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        fake_bidder = f"a-{uuid4()}"
+        """BID-05: An unknown bidder retains the real foreign-key conflict."""
+        graph = create_task(app_with_writer)
+        unknown_bidder = f"a-{uuid4()}"
 
-        resp = app_with_writer.post(
-            "/board/bids",
-            json={
-                "bid_id": f"bid-{uuid4()}",
-                "task_id": tid,
-                "bidder_id": fake_bidder,
-                "proposal": "I will build it",
-                "submitted_at": "2026-02-28T11:00:00Z",
-                "event": make_event(source="board", event_type="bid.submitted", task_id=tid),
-            },
+        _bid_id, response = submit_bid(app_with_writer, graph, unknown_bidder)
+
+        assert response.status_code == 409
+        assert response.json()["error"] == "foreign_key_violation"
+
+    def test_missing_proposal(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """BID-06: Missing native `amount` is structurally rejected."""
+        graph = create_task(app_with_writer)
+        bidder = register_agent(app_with_writer)
+        payload = operation_body(
+            operation_id=f"op-{uuid4()}",
+            task_id=graph.task_id,
+            command="submit_bid",
+            expected_status="open",
+            expected_lifecycle_version=0,
+            actor_kind="agent",
+            actor_id=bidder,
+            arguments={"bid_id": f"bid-{uuid4()}", "bidder_id": bidder},
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"] == "foreign_key_violation"
 
-    def test_missing_proposal(self, app_with_writer: TestClient) -> None:
-        """BID-06: Missing proposal returns 400 missing_field."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        bidder = _register_agent(app_with_writer)
+        before = _database_snapshot(db_writer)
+        response = app_with_writer.post("/board/task-operations", json=payload)
 
-        resp = app_with_writer.post(
-            "/board/bids",
-            json={
+        assert response.status_code == 400
+        assert response.json()["error"] == "invalid_payload"
+        assert _database_snapshot(db_writer) == before
+
+    def test_missing_event(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """BID-07: Obsolete caller events cannot enter the native envelope."""
+        graph = create_task(app_with_writer)
+        bidder = register_agent(app_with_writer)
+        payload = operation_body(
+            operation_id=f"op-{uuid4()}",
+            task_id=graph.task_id,
+            command="submit_bid",
+            expected_status="open",
+            expected_lifecycle_version=0,
+            actor_kind="agent",
+            actor_id=bidder,
+            arguments={
                 "bid_id": f"bid-{uuid4()}",
-                "task_id": tid,
                 "bidder_id": bidder,
-                # proposal omitted
-                "submitted_at": "2026-02-28T11:00:00Z",
-                "event": make_event(source="board", event_type="bid.submitted", task_id=tid),
+                "amount": 90,
             },
         )
-        assert resp.status_code == 400
-        assert resp.json()["error"] == "missing_field"
-
-    def test_missing_event(self, app_with_writer: TestClient) -> None:
-        """BID-07: Missing event returns 400 missing_field."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        bidder = _register_agent(app_with_writer)
-
-        resp = app_with_writer.post(
-            "/board/bids",
-            json={
-                "bid_id": f"bid-{uuid4()}",
-                "task_id": tid,
-                "bidder_id": bidder,
-                "proposal": "I will build it",
-                "submitted_at": "2026-02-28T11:00:00Z",
-                # event omitted
-            },
+        payload["event"] = make_event(
+            source="board",
+            event_type="bid.submitted",
+            task_id=graph.task_id,
         )
-        assert resp.status_code == 400
-        assert resp.json()["error"] == "missing_field"
+
+        before = _database_snapshot(db_writer)
+        response = app_with_writer.post("/board/task-operations", json=payload)
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "invalid_payload"
+        assert _database_snapshot(db_writer) == before
 
 
 # ===================================================================
-# Category 9: Task Status Update (POST /board/tasks/{task_id}/status)
+# Category 9: Native Task Lifecycle (POST /board/task-operations)
 # ===================================================================
 
 
 @pytest.mark.unit
 class TestTaskStatusUpdate:
-    """Task status update tests — TSTAT-01 through TSTAT-14."""
+    """Native task lifecycle tests — reconciled TSTAT-01 through TSTAT-14."""
 
     def test_update_to_accepted(self, app_with_writer: TestClient) -> None:
-        """TSTAT-01: Update task to accepted returns 200 with status 'accepted'."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        worker = _register_agent(app_with_writer, name="Bob")
-        bid_id = f"bid-{uuid4()}"
+        """TSTAT-01: Acceptance completes atomically from a persisted bid."""
+        graph = create_task(app_with_writer)
+        worker = register_worker(app_with_writer, name="Bob")
+        bid_id, bid = submit_bid(app_with_writer, graph, worker, amount=50)
+        assert bid.status_code == 200
 
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "accepted",
-                    "worker_id": worker,
-                    "accepted_bid_id": bid_id,
-                    "accepted_at": "2026-02-28T12:00:00Z",
-                    "execution_deadline": "2026-03-02T06:36:00Z",
-                },
-                "event": make_event(source="board", event_type="task.accepted", task_id=tid),
-            },
+        response = accept_bid(app_with_writer, graph, worker, bid_id, bid_amount=50)
+
+        assert response.status_code == 200
+        envelope = response.json()
+        assert isinstance(envelope["event_id"], int)
+        result = envelope["result"]
+        assert result["status"] == "accepted"
+        assert result["worker_id"] == worker
+        assert result["bid_amount"] == 50
+        assert result["reward"] == 100
+
+    def test_update_to_submitted(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """TSTAT-02: Submission follows a real bid, acceptance and asset."""
+        graph = create_task(app_with_writer)
+
+        worker, _bid_id = prepare_submitted(app_with_writer, graph)
+
+        row = db_writer.connection.execute(
+            "SELECT status,worker_id,submitted_at FROM board_tasks WHERE task_id=?",
+            (graph.task_id,),
+        ).fetchone()
+        contract = db_writer.connection.execute(
+            "SELECT lifecycle_version,review_cutoff_us,accepted_reward,accepted_bid_amount "
+            "FROM board_task_contracts WHERE task_id=?",
+            (graph.task_id,),
+        ).fetchone()
+        assert row is not None and tuple(row) == (
+            "submitted",
+            worker,
+            "2099-01-01T12:00:00Z",
         )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "task_id" in data
-        assert "status" in data
-        assert "event_id" in data
-        assert data["status"] == "accepted"
-
-    def test_update_to_submitted(self, app_with_writer: TestClient) -> None:
-        """TSTAT-02: Update task to submitted returns 200."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        worker = _register_agent(app_with_writer, name="Bob")
-
-        # First accept
-        app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "accepted",
-                    "worker_id": worker,
-                    "accepted_bid_id": f"bid-{uuid4()}",
-                    "accepted_at": "2026-02-28T12:00:00Z",
-                    "execution_deadline": "2026-03-02T06:36:00Z",
-                },
-                "event": make_event(source="board", event_type="task.accepted", task_id=tid),
-            },
+        assert contract is not None and tuple(contract) == (
+            2,
+            FIXED_NOW_US + 43_200 * 1_000_000,
+            100,
+            90,
         )
 
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "submitted",
-                    "submitted_at": "2026-02-28T14:00:00Z",
-                    "review_deadline": "2026-03-01T02:00:00Z",
-                },
-                "event": make_event(source="board", event_type="task.submitted", task_id=tid),
-            },
-        )
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "submitted"
-
-    def test_update_to_approved(self, app_with_writer: TestClient) -> None:
-        """TSTAT-03: Update task to approved returns 200."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        worker = _register_agent(app_with_writer, name="Bob")
-
-        # Accept then submit
-        app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "accepted",
-                    "worker_id": worker,
-                    "accepted_bid_id": f"bid-{uuid4()}",
-                    "accepted_at": "2026-02-28T12:00:00Z",
-                    "execution_deadline": "2026-03-02T06:36:00Z",
-                },
-                "event": make_event(source="board", event_type="task.accepted", task_id=tid),
-            },
-        )
-        app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "submitted",
-                    "submitted_at": "2026-02-28T14:00:00Z",
-                    "review_deadline": "2026-03-01T02:00:00Z",
-                },
-                "event": make_event(source="board", event_type="task.submitted", task_id=tid),
+    def test_update_to_approved(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """TSTAT-03: Approval finalizes only after a matching Bank receipt."""
+        graph = create_task(app_with_writer)
+        worker, _bid_id = prepare_submitted(app_with_writer, graph)
+        operation_id = f"op-{uuid4()}"
+        source_reference = f"task:{graph.task_id}:approved"
+        command = operation_body(
+            operation_id=operation_id,
+            task_id=graph.task_id,
+            command="approve_task",
+            expected_status="submitted",
+            expected_lifecycle_version=2,
+            actor_kind="agent",
+            actor_id=graph.poster_id,
+            arguments={
+                "poster_id": graph.poster_id,
+                "worker_id": worker,
+                "escrow_id": graph.escrow_id,
+                "reward": 100,
+                "source_reference": source_reference,
             },
         )
 
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "approved",
-                    "approved_at": "2026-02-28T16:00:00Z",
-                },
-                "event": make_event(source="board", event_type="task.approved", task_id=tid),
-            },
+        pending = app_with_writer.post("/board/task-operations", json=command)
+        release = settle_release(
+            app_with_writer,
+            graph,
+            operation_id=operation_id,
+            recipient_id=worker,
+            source_reference=source_reference,
         )
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "approved"
+        completed = finalize(app_with_writer, operation_id)
 
-    def test_update_to_cancelled(self, app_with_writer: TestClient) -> None:
-        """TSTAT-04: Update task to cancelled returns 200."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "cancelled",
-                    "cancelled_at": "2026-02-28T12:00:00Z",
-                },
-                "event": make_event(source="board", event_type="task.cancelled", task_id=tid),
-            },
+        assert pending.status_code == 202
+        assert release.status_code == 200
+        assert completed.status_code == 200
+        assert completed.json()["result"]["status"] == "approved"
+        receipt = db_writer.connection.execute(
+            "SELECT operation_kind,source_reference,escrow_id FROM bank_operation_receipts "
+            "WHERE operation_id=?",
+            (operation_id,),
+        ).fetchone()
+        escrow = db_writer.connection.execute(
+            "SELECT status,resolved_at FROM bank_escrow WHERE escrow_id=?",
+            (graph.escrow_id,),
+        ).fetchone()
+        worker_balance = db_writer.connection.execute(
+            "SELECT balance FROM bank_accounts WHERE account_id=?",
+            (worker,),
+        ).fetchone()
+        assert receipt is not None and tuple(receipt) == (
+            "escrow_release",
+            source_reference,
+            graph.escrow_id,
         )
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "cancelled"
-
-    def test_update_to_disputed(self, app_with_writer: TestClient) -> None:
-        """TSTAT-05: Update task to disputed returns 200."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        worker = _register_agent(app_with_writer, name="Bob")
-
-        # Accept then submit
-        app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "accepted",
-                    "worker_id": worker,
-                    "accepted_bid_id": f"bid-{uuid4()}",
-                    "accepted_at": "2026-02-28T12:00:00Z",
-                    "execution_deadline": "2026-03-02T06:36:00Z",
-                },
-                "event": make_event(source="board", event_type="task.accepted", task_id=tid),
-            },
+        assert escrow is not None and tuple(escrow) == (
+            "released",
+            "2099-01-01T12:00:02Z",
         )
-        app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "submitted",
-                    "submitted_at": "2026-02-28T14:00:00Z",
-                    "review_deadline": "2026-03-01T02:00:00Z",
-                },
-                "event": make_event(source="board", event_type="task.submitted", task_id=tid),
-            },
-        )
+        assert worker_balance is not None and tuple(worker_balance) == (100,)
 
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "disputed",
-                    "dispute_reason": "The login page does not validate email format",
-                    "disputed_at": "2026-02-28T16:00:00Z",
-                },
-                "event": make_event(source="board", event_type="task.disputed", task_id=tid),
-            },
-        )
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "disputed"
-
-    def test_update_to_ruled(self, app_with_writer: TestClient) -> None:
-        """TSTAT-06: Update task to ruled returns 200."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-
-        # Shortcut: go directly to disputed (gateway does not validate transitions)
-        app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "disputed",
-                    "dispute_reason": "Bad work",
-                    "disputed_at": "2026-02-28T14:00:00Z",
-                },
-                "event": make_event(source="board", event_type="task.disputed", task_id=tid),
+    def test_update_to_cancelled(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """TSTAT-04: Cancellation refunds the poster through a real receipt."""
+        graph = create_task(app_with_writer)
+        operation_id = f"op-{uuid4()}"
+        source_reference = f"task:{graph.task_id}:cancelled"
+        command = operation_body(
+            operation_id=operation_id,
+            task_id=graph.task_id,
+            command="cancel_task",
+            expected_status="open",
+            expected_lifecycle_version=0,
+            actor_kind="agent",
+            actor_id=graph.poster_id,
+            arguments={
+                "poster_id": graph.poster_id,
+                "escrow_id": graph.escrow_id,
+                "reward": 100,
+                "source_reference": source_reference,
+                "cutoff_us": BIDDING_CUTOFF_US,
             },
         )
 
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "ruled",
-                    "ruling_id": f"rul-{uuid4()}",
-                    "worker_pct": 70,
-                    "ruling_summary": "Spec was ambiguous about email validation",
-                    "ruled_at": "2026-02-28T18:00:00Z",
-                },
-                "event": make_event(source="board", event_type="task.ruled", task_id=tid),
+        pending = app_with_writer.post("/board/task-operations", json=command)
+        release = settle_release(
+            app_with_writer,
+            graph,
+            operation_id=operation_id,
+            recipient_id=graph.poster_id,
+            source_reference=source_reference,
+        )
+        completed = finalize(app_with_writer, operation_id)
+
+        assert pending.status_code == 202
+        assert release.status_code == 200
+        assert completed.status_code == 200
+        assert completed.json()["result"]["status"] == "cancelled"
+        balance = db_writer.connection.execute(
+            "SELECT balance FROM bank_accounts WHERE account_id=?",
+            (graph.poster_id,),
+        ).fetchone()
+        assert balance is not None and tuple(balance) == (500,)
+
+    def test_update_to_disputed(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """TSTAT-05: Dispute finalizes from a matching persisted Court claim."""
+        graph = create_task(app_with_writer)
+        worker, _bid_id = prepare_submitted(app_with_writer, graph)
+        reason = "The login page does not validate email format"
+        operation_id = f"op-{uuid4()}"
+        command = operation_body(
+            operation_id=operation_id,
+            task_id=graph.task_id,
+            command="dispute_task",
+            expected_status="submitted",
+            expected_lifecycle_version=2,
+            actor_kind="agent",
+            actor_id=graph.poster_id,
+            arguments={
+                "poster_id": graph.poster_id,
+                "worker_id": worker,
+                "escrow_id": graph.escrow_id,
+                "reward": 100,
+                "reason": reason,
             },
         )
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "ruled"
+        claim_id = f"clm-{uuid4()}"
 
-    def test_update_to_expired(self, app_with_writer: TestClient) -> None:
-        """TSTAT-07: Update task to expired returns 200."""
-        tid, _pid, _eid = _create_task(app_with_writer)
+        pending = app_with_writer.post("/board/task-operations", json=command)
+        claim = file_claim(
+            app_with_writer,
+            graph,
+            worker_id=worker,
+            claim_id=claim_id,
+            reason=reason,
+        )
+        completed = finalize(app_with_writer, operation_id)
 
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "expired",
-                    "expired_at": "2026-03-01T10:00:00Z",
-                },
-                "event": make_event(source="board", event_type="task.expired", task_id=tid),
+        assert pending.status_code == 202
+        assert claim.status_code == 201
+        assert completed.status_code == 200
+        assert completed.json()["result"]["status"] == "disputed"
+        row = db_writer.connection.execute(
+            "SELECT status,dispute_reason,dispute_id FROM board_tasks WHERE task_id=?",
+            (graph.task_id,),
+        ).fetchone()
+        assert row is not None and tuple(row) == ("disputed", reason, claim_id)
+
+    def test_update_to_ruled(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """TSTAT-06: Ruling uses configured platform authority and split receipt."""
+        graph = create_task(app_with_writer)
+        worker, _bid_id = prepare_submitted(app_with_writer, graph)
+        reason = "Bad work"
+        dispute_operation_id = f"op-{uuid4()}"
+        dispute = operation_body(
+            operation_id=dispute_operation_id,
+            task_id=graph.task_id,
+            command="dispute_task",
+            expected_status="submitted",
+            expected_lifecycle_version=2,
+            actor_kind="agent",
+            actor_id=graph.poster_id,
+            arguments={
+                "poster_id": graph.poster_id,
+                "worker_id": worker,
+                "escrow_id": graph.escrow_id,
+                "reward": 100,
+                "reason": reason,
             },
         )
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "expired"
+        claim_id = f"clm-{uuid4()}"
+        assert app_with_writer.post("/board/task-operations", json=dispute).status_code == 202
+        claim = file_claim(
+            app_with_writer,
+            graph,
+            worker_id=worker,
+            claim_id=claim_id,
+            reason=reason,
+        )
+        assert claim.status_code == 201
+        assert finalize(app_with_writer, dispute_operation_id).status_code == 200
+        authority = app_with_writer.app.state.board_authority
+        platform_id = register_agent(
+            app_with_writer,
+            name="Economic Platform",
+            public_key=authority.platform_public_key,
+        )
+        ruling_operation_id = f"op-{uuid4()}"
+        source_reference = f"task:{graph.task_id}:ruling:{claim_id}"
+        ruling = operation_body(
+            operation_id=ruling_operation_id,
+            task_id=graph.task_id,
+            command="record_ruling",
+            expected_status="disputed",
+            expected_lifecycle_version=3,
+            actor_kind="platform",
+            actor_id=platform_id,
+            arguments={
+                "poster_id": graph.poster_id,
+                "worker_id": worker,
+                "escrow_id": graph.escrow_id,
+                "reward": 100,
+                "ruling_id": claim_id,
+                "worker_pct": 70,
+                "summary": "Spec was ambiguous about email validation",
+                "source_reference": source_reference,
+            },
+        )
+
+        pending = app_with_writer.post("/board/task-operations", json=ruling)
+        split = settle_split(
+            app_with_writer,
+            graph,
+            operation_id=ruling_operation_id,
+            worker_id=worker,
+            worker_pct=70,
+            source_reference=source_reference,
+        )
+        completed = finalize(app_with_writer, ruling_operation_id)
+
+        assert pending.status_code == 202
+        assert split.status_code == 200
+        assert completed.status_code == 200
+        assert completed.json()["result"]["status"] == "ruled"
+        assert completed.json()["result"]["worker_pct"] == 70
+        task = db_writer.connection.execute(
+            "SELECT status,ruling_id,worker_pct,ruling_summary FROM board_tasks WHERE task_id=?",
+            (graph.task_id,),
+        ).fetchone()
+        assert task is not None and tuple(task) == (
+            "ruled",
+            claim_id,
+            70,
+            "Spec was ambiguous about email validation",
+        )
+
+    def test_update_to_expired(
+        self,
+        app_with_writer: TestClient,
+        _fixed_gateway_business_clock: BusinessClock,
+    ) -> None:
+        """TSTAT-07: No-bid expiry becomes eligible exactly at its cutoff."""
+        graph = create_task(app_with_writer)
+        _fixed_gateway_business_clock.now_us = BIDDING_CUTOFF_US
+        authority = app_with_writer.app.state.board_authority
+        operation_id = f"op-{uuid4()}"
+        source_reference = f"task:{graph.task_id}:expired"
+        command = operation_body(
+            operation_id=operation_id,
+            task_id=graph.task_id,
+            command="expire_bidding",
+            expected_status="open",
+            expected_lifecycle_version=0,
+            actor_kind="system",
+            actor_id=authority.deadline_actor_id,
+            arguments={
+                "poster_id": graph.poster_id,
+                "escrow_id": graph.escrow_id,
+                "reward": 100,
+                "source_reference": source_reference,
+                "cutoff_us": BIDDING_CUTOFF_US,
+            },
+        )
+
+        pending = app_with_writer.post("/board/task-operations", json=command)
+        release = settle_release(
+            app_with_writer,
+            graph,
+            operation_id=operation_id,
+            recipient_id=graph.poster_id,
+            source_reference=source_reference,
+        )
+        completed = finalize(app_with_writer, operation_id)
+
+        assert pending.status_code == 202
+        assert release.status_code == 200
+        assert completed.status_code == 200
+        assert completed.json()["result"]["status"] == "expired"
 
     def test_task_not_found(self, app_with_writer: TestClient) -> None:
-        """TSTAT-08: Updating non-existent task returns 404 task_not_found."""
-        fake_task = f"t-{uuid4()}"
-
-        resp = app_with_writer.post(
-            f"/board/tasks/{fake_task}/status",
-            json={
-                "updates": {"status": "accepted"},
-                "event": make_event(source="board", event_type="task.accepted", task_id=fake_task),
-            },
-        )
-        assert resp.status_code == 404
-        assert resp.json()["error"] == "task_not_found"
-
-    def test_unknown_column_rejected(self, app_with_writer: TestClient) -> None:
-        """TSTAT-09: Unknown column in updates is rejected with 400 invalid_field."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "approved",
-                    "nonexistent_column": "value",
+        """TSTAT-08: A valid native command retains `task_not_found`."""
+        actor_id = register_agent(app_with_writer)
+        missing_task_id = f"t-{uuid4()}"
+        response = app_with_writer.post(
+            "/board/task-operations",
+            json=operation_body(
+                operation_id=f"op-{uuid4()}",
+                task_id=missing_task_id,
+                command="cancel_task",
+                expected_status="open",
+                expected_lifecycle_version=0,
+                actor_kind="agent",
+                actor_id=actor_id,
+                arguments={
+                    "poster_id": actor_id,
+                    "escrow_id": f"esc-{uuid4()}",
+                    "reward": 100,
+                    "source_reference": f"task:{missing_task_id}:cancelled",
+                    "cutoff_us": BIDDING_CUTOFF_US,
                 },
-                "event": make_event(source="board", event_type="task.approved", task_id=tid),
-            },
+            ),
         )
-        assert resp.status_code == 400
-        assert resp.json()["error"] == "invalid_field"
 
-    def test_empty_updates(self, app_with_writer: TestClient) -> None:
-        """TSTAT-10: Empty updates object returns 400 empty_updates."""
-        tid, _pid, _eid = _create_task(app_with_writer)
+        assert response.status_code == 404
+        assert response.json()["error"] == "task_not_found"
 
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {},
-                "event": make_event(source="board", event_type="task.approved", task_id=tid),
-            },
+    def test_unknown_column_rejected(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """TSTAT-09: Unknown native arguments are rejected before mutation."""
+        graph = create_task(app_with_writer)
+        payload = _cancel_command(graph)
+        arguments = payload["arguments"]
+        assert isinstance(arguments, dict)
+        arguments["nonexistent_column"] = "value"
+
+        before = _database_snapshot(db_writer)
+        response = app_with_writer.post("/board/task-operations", json=payload)
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "invalid_payload"
+        assert _database_snapshot(db_writer) == before
+
+    def test_empty_updates(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """TSTAT-10: Empty native arguments are rejected structurally."""
+        graph = create_task(app_with_writer)
+        payload = _cancel_command(graph)
+        payload["arguments"] = {}
+
+        before = _database_snapshot(db_writer)
+        response = app_with_writer.post("/board/task-operations", json=payload)
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "invalid_payload"
+        assert _database_snapshot(db_writer) == before
+
+    def test_missing_updates(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """TSTAT-11: Missing native arguments are rejected structurally."""
+        graph = create_task(app_with_writer)
+        payload = _cancel_command(graph)
+        del payload["arguments"]
+
+        before = _database_snapshot(db_writer)
+        response = app_with_writer.post("/board/task-operations", json=payload)
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "invalid_payload"
+        assert _database_snapshot(db_writer) == before
+
+    def test_missing_event(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """TSTAT-12: Obsolete caller events cannot enter the native envelope."""
+        graph = create_task(app_with_writer)
+        payload = _cancel_command(graph)
+        payload["event"] = make_event(
+            source="board",
+            event_type="task.cancelled",
+            task_id=graph.task_id,
         )
-        assert resp.status_code == 400
-        assert resp.json()["error"] == "empty_updates"
 
-    def test_missing_updates(self, app_with_writer: TestClient) -> None:
-        """TSTAT-11: Missing updates object returns 400 missing_field."""
-        tid, _pid, _eid = _create_task(app_with_writer)
+        before = _database_snapshot(db_writer)
+        response = app_with_writer.post("/board/task-operations", json=payload)
 
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "event": make_event(source="board", event_type="task.approved", task_id=tid),
-            },
-        )
-        assert resp.status_code == 400
-        assert resp.json()["error"] == "missing_field"
-
-    def test_missing_event(self, app_with_writer: TestClient) -> None:
-        """TSTAT-12: Missing event object returns 400 missing_field."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {"status": "approved"},
-            },
-        )
-        assert resp.status_code == 400
-        assert resp.json()["error"] == "missing_field"
+        assert response.status_code == 400
+        assert response.json()["error"] == "invalid_payload"
+        assert _database_snapshot(db_writer) == before
 
     def test_multiple_fields_updated(
-        self, app_with_writer: TestClient, db_writer: DbWriter
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
     ) -> None:
-        """TSTAT-13: Multiple fields updated in one call are all persisted."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        worker = _register_agent(app_with_writer, name="Bob")
-        bid_id = f"bid-{uuid4()}"
+        """TSTAT-13: Native acceptance persists its complete frozen state."""
+        graph = create_task(app_with_writer)
+        worker = register_worker(app_with_writer, name="Bob")
+        bid_id, bid = submit_bid(app_with_writer, graph, worker, amount=50)
+        assert bid.status_code == 200
 
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "accepted",
-                    "worker_id": worker,
-                    "accepted_bid_id": bid_id,
-                    "accepted_at": "2026-02-28T12:00:00Z",
-                    "execution_deadline": "2026-03-02T06:36:00Z",
-                },
-                "event": make_event(source="board", event_type="task.accepted", task_id=tid),
-            },
-        )
-        assert resp.status_code == 200
+        response = accept_bid(app_with_writer, graph, worker, bid_id, bid_amount=50)
 
-        conn = sqlite3.connect(db_writer._db_path)
-        conn.execute("PRAGMA foreign_keys=ON")
-        row = conn.execute(
-            "SELECT status, worker_id, accepted_bid_id, accepted_at, execution_deadline "
-            "FROM board_tasks WHERE task_id = ?",
-            (tid,),
+        assert response.status_code == 200
+        row = db_writer.connection.execute(
+            "SELECT t.status,t.worker_id,t.accepted_bid_id,t.accepted_at,t.execution_deadline,"
+            "c.lifecycle_version,c.execution_cutoff_us,c.accepted_reward,c.accepted_bid_amount "
+            "FROM board_tasks AS t JOIN board_task_contracts AS c USING(task_id) "
+            "WHERE t.task_id=?",
+            (graph.task_id,),
         ).fetchone()
-        conn.close()
-        assert row is not None
-        assert row[0] == "accepted"
-        assert row[1] == worker
-        assert row[2] == bid_id
-        assert row[3] == "2026-02-28T12:00:00Z"
-        assert row[4] == "2026-03-02T06:36:00Z"
-
-    def test_gateway_does_not_validate_transitions(self, app_with_writer: TestClient) -> None:
-        """TSTAT-14: Gateway does not validate status transitions (skip accepted/submitted)."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-
-        resp = app_with_writer.post(
-            f"/board/tasks/{tid}/status",
-            json={
-                "updates": {
-                    "status": "approved",
-                    "approved_at": "2026-02-28T16:00:00Z",
-                },
-                "event": make_event(source="board", event_type="task.approved", task_id=tid),
-            },
+        assert row is not None and tuple(row) == (
+            "accepted",
+            worker,
+            bid_id,
+            "2099-01-01T12:00:00Z",
+            "2099-01-03T12:00:00Z",
+            1,
+            FIXED_NOW_US + 172_800 * 1_000_000,
+            100,
+            50,
         )
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "approved"
+
+    def test_gateway_does_not_validate_transitions(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+    ) -> None:
+        """TSTAT-14: Gateway now rejects a skipped native transition."""
+        graph = create_task(app_with_writer)
+        worker = register_worker(app_with_writer)
+        before = tuple(db_writer.connection.iterdump())
+        response = app_with_writer.post(
+            "/board/task-operations",
+            json=operation_body(
+                operation_id=f"op-{uuid4()}",
+                task_id=graph.task_id,
+                command="approve_task",
+                expected_status="submitted",
+                expected_lifecycle_version=0,
+                actor_kind="agent",
+                actor_id=graph.poster_id,
+                arguments={
+                    "poster_id": graph.poster_id,
+                    "worker_id": worker,
+                    "escrow_id": graph.escrow_id,
+                    "reward": 100,
+                    "source_reference": f"task:{graph.task_id}:approved",
+                },
+            ),
+        )
+
+        assert response.status_code == 409
+        assert response.json()["error"] == "invalid_status"
+        assert tuple(db_writer.connection.iterdump()) == before
 
 
 # ===================================================================

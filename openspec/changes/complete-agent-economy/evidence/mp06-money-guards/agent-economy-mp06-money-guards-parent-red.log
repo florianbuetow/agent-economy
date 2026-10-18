@@ -1,0 +1,447 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 42 items
+
+tests/unit/test_mp06_money_guards.py FFFFFFFFFF..FF.FFFFFFFFFFFFFFFFFFFF [ 83%]
+FFFFFFF                                                                  [100%]
+
+=================================== FAILURES ===================================
+___________ test_split_rejects_nonpayer_poster_even_for_zero_leg[0] ____________
+tests/unit/test_mp06_money_guards.py:120: in test_split_rejects_nonpayer_poster_even_for_zero_leg
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+___________ test_split_rejects_nonpayer_poster_even_for_zero_leg[40] ___________
+tests/unit/test_mp06_money_guards.py:120: in test_split_rejects_nonpayer_poster_even_for_zero_leg
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_______________ test_account_rejects_mismatched_initial_issuance _______________
+tests/unit/test_mp06_money_guards.py:144: in test_account_rejects_mismatched_initial_issuance
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_______ test_account_rejects_invalid_money_types_signs_and_bounds[True] ________
+tests/unit/test_mp06_money_guards.py:172: in test_account_rejects_invalid_money_types_signs_and_bounds
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+________ test_account_rejects_invalid_money_types_signs_and_bounds[1.5] ________
+tests/unit/test_mp06_money_guards.py:172: in test_account_rejects_invalid_money_types_signs_and_bounds
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'account_exists' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + account_exists
+________ test_account_rejects_invalid_money_types_signs_and_bounds[-1] _________
+tests/unit/test_mp06_money_guards.py:172: in test_account_rejects_invalid_money_types_signs_and_bounds
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'account_exists' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + account_exists
+_ test_account_rejects_invalid_money_types_signs_and_bounds[9223372036854775808] _
+tests/unit/test_mp06_money_guards.py:172: in test_account_rejects_invalid_money_types_signs_and_bounds
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:105: in _assert_atomic_error
+    operation()
+tests/unit/test_mp06_money_guards.py:175: in <lambda>
+    lambda: db_writer.create_account(
+src/db_gateway_service/services/db_writer.py:335: in create_account
+    return self._bank.create_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:43: in create_account
+    cursor.execute(
+E   OverflowError: Python int too large to convert to SQLite INTEGER
+________ test_credit_overflow_is_rejected_without_sqlite_real_promotion ________
+tests/unit/test_mp06_money_guards.py:190: in test_credit_overflow_is_rejected_without_sqlite_real_promotion
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'reference_conflict' == 'amount_out_of_range'
+E     
+E     - amount_out_of_range
+E     + reference_conflict
+________ test_settled_escrow_lifetime_replay_is_atomic[exact-released] _________
+src/db_gateway_service/services/bank_writer.py:223: in escrow_lock
+    cursor.execute(
+E   sqlite3.IntegrityError: UNIQUE constraint failed: bank_escrow.payer_account_id, bank_escrow.task_id
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp06_money_guards.py:243: in test_settled_escrow_lifetime_replay_is_atomic
+    result = _lock(
+tests/unit/test_mp06_money_guards.py:58: in _lock
+    return writer.escrow_lock(
+src/db_gateway_service/services/db_writer.py:343: in escrow_lock
+    return self._bank.escrow_lock(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:290: in escrow_lock
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Escrow already locked for this (payer, task) pair
+__________ test_settled_escrow_lifetime_replay_is_atomic[exact-split] __________
+src/db_gateway_service/services/bank_writer.py:223: in escrow_lock
+    cursor.execute(
+E   sqlite3.IntegrityError: UNIQUE constraint failed: bank_escrow.payer_account_id, bank_escrow.task_id
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp06_money_guards.py:243: in test_settled_escrow_lifetime_replay_is_atomic
+    result = _lock(
+tests/unit/test_mp06_money_guards.py:58: in _lock
+    return writer.escrow_lock(
+src/db_gateway_service/services/db_writer.py:343: in escrow_lock
+    return self._bank.escrow_lock(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:290: in escrow_lock
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Escrow already locked for this (payer, task) pair
+__________________ test_release_recipient_overflow_is_atomic ___________________
+tests/unit/test_mp06_money_guards.py:272: in test_release_recipient_overflow_is_atomic
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:105: in _assert_atomic_error
+    operation()
+tests/unit/test_mp06_money_guards.py:275: in <lambda>
+    lambda: db_writer.escrow_release(
+src/db_gateway_service/services/db_writer.py:351: in escrow_release
+    return self._bank.escrow_release(data, constraints)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:339: in escrow_release
+    cursor.execute(
+E   sqlite3.IntegrityError: CHECK constraint failed: typeof(balance) = 'integer' AND balance BETWEEN 0 AND 9223372036854775807
+_____________ test_split_combined_same_account_overflow_is_atomic ______________
+tests/unit/test_mp06_money_guards.py:303: in test_split_combined_same_account_overflow_is_atomic
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:105: in _assert_atomic_error
+    operation()
+tests/unit/test_mp06_money_guards.py:306: in <lambda>
+    lambda: db_writer.escrow_split(
+src/db_gateway_service/services/db_writer.py:359: in escrow_split
+    return self._bank.escrow_split(data, constraints)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:463: in escrow_split
+    cursor.execute(
+E   sqlite3.IntegrityError: CHECK constraint failed: typeof(balance) = 'integer' AND balance BETWEEN 0 AND 9223372036854775807
+______ test_every_amount_is_validated_at_the_writer_boundary[True-credit] ______
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_______ test_every_amount_is_validated_at_the_writer_boundary[True-lock] _______
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+______ test_every_amount_is_validated_at_the_writer_boundary[True-worker] ______
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'amount_mismatch' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + amount_mismatch
+______ test_every_amount_is_validated_at_the_writer_boundary[True-poster] ______
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'amount_mismatch' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + amount_mismatch
+______ test_every_amount_is_validated_at_the_writer_boundary[1.5-credit] _______
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'reference_conflict' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + reference_conflict
+_______ test_every_amount_is_validated_at_the_writer_boundary[1.5-lock] ________
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'escrow_already_locked' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + escrow_already_locked
+______ test_every_amount_is_validated_at_the_writer_boundary[1.5-worker] _______
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'amount_mismatch' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + amount_mismatch
+______ test_every_amount_is_validated_at_the_writer_boundary[1.5-poster] _______
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'amount_mismatch' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + amount_mismatch
+_______ test_every_amount_is_validated_at_the_writer_boundary[1-credit] ________
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+________ test_every_amount_is_validated_at_the_writer_boundary[1-lock] _________
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_______ test_every_amount_is_validated_at_the_writer_boundary[1-worker] ________
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:105: in _assert_atomic_error
+    operation()
+tests/unit/test_mp06_money_guards.py:374: in attempt
+    return db_writer.escrow_split(
+src/db_gateway_service/services/db_writer.py:359: in escrow_split
+    return self._bank.escrow_split(data, constraints)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:451: in escrow_split
+    if worker_amount + poster_amount != escrow["amount"]:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: can only concatenate str (not "int") to str
+_______ test_every_amount_is_validated_at_the_writer_boundary[1-poster] ________
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:105: in _assert_atomic_error
+    operation()
+tests/unit/test_mp06_money_guards.py:374: in attempt
+    return db_writer.escrow_split(
+src/db_gateway_service/services/db_writer.py:359: in escrow_split
+    return self._bank.escrow_split(data, constraints)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:451: in escrow_split
+    if worker_amount + poster_amount != escrow["amount"]:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: unsupported operand type(s) for +: 'int' and 'str'
+_______ test_every_amount_is_validated_at_the_writer_boundary[-1-credit] _______
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'reference_conflict' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + reference_conflict
+________ test_every_amount_is_validated_at_the_writer_boundary[-1-lock] ________
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'escrow_already_locked' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + escrow_already_locked
+_______ test_every_amount_is_validated_at_the_writer_boundary[-1-worker] _______
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'amount_mismatch' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + amount_mismatch
+_______ test_every_amount_is_validated_at_the_writer_boundary[-1-poster] _______
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'amount_mismatch' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + amount_mismatch
+_ test_every_amount_is_validated_at_the_writer_boundary[9223372036854775808-credit] _
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:105: in _assert_atomic_error
+    operation()
+tests/unit/test_mp06_money_guards.py:360: in attempt
+    return db_writer.credit_account(
+src/db_gateway_service/services/db_writer.py:339: in credit_account
+    return self._bank.credit_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:109: in credit_account
+    cursor.execute(
+E   OverflowError: Python int too large to convert to SQLite INTEGER
+_ test_every_amount_is_validated_at_the_writer_boundary[9223372036854775808-lock] _
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:105: in _assert_atomic_error
+    operation()
+tests/unit/test_mp06_money_guards.py:371: in attempt
+    return _lock(db_writer, "a-payer", task_id="t-new", escrow_id="esc-new", amount=amount)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_mp06_money_guards.py:58: in _lock
+    return writer.escrow_lock(
+src/db_gateway_service/services/db_writer.py:343: in escrow_lock
+    return self._bank.escrow_lock(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:201: in escrow_lock
+    cursor.execute(
+E   OverflowError: Python int too large to convert to SQLite INTEGER
+_ test_every_amount_is_validated_at_the_writer_boundary[9223372036854775808-worker] _
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'amount_mismatch' == 'amount_out_of_range'
+E     
+E     - amount_out_of_range
+E     + amount_mismatch
+_ test_every_amount_is_validated_at_the_writer_boundary[9223372036854775808-poster] _
+tests/unit/test_mp06_money_guards.py:389: in test_every_amount_is_validated_at_the_writer_boundary
+    _assert_atomic_error(db_writer, before, attempt, expected)
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'amount_mismatch' == 'amount_out_of_range'
+E     
+E     - amount_out_of_range
+E     + amount_mismatch
+_____________ test_initial_credit_exactly_explains_balance[1-None] _____________
+tests/unit/test_mp06_money_guards.py:413: in test_initial_credit_exactly_explains_balance
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+______________ test_initial_credit_exactly_explains_balance[0-1] _______________
+tests/unit/test_mp06_money_guards.py:413: in test_initial_credit_exactly_explains_balance
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_____________ test_initial_credit_exactly_explains_balance[1-True] _____________
+tests/unit/test_mp06_money_guards.py:413: in test_initial_credit_exactly_explains_balance
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:104: in _assert_atomic_error
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+______________ test_initial_credit_exactly_explains_balance[0-0] _______________
+tests/unit/test_mp06_money_guards.py:413: in test_initial_credit_exactly_explains_balance
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:106: in _assert_atomic_error
+    assert raised.value.error == expected_error
+E   AssertionError: assert 'account_exists' == 'invalid_amount'
+E     
+E     - invalid_amount
+E     + account_exists
+__ test_credit_replay_at_maximum_returns_original_receipt_without_arithmetic ___
+src/db_gateway_service/services/bank_writer.py:109: in credit_account
+    cursor.execute(
+E   sqlite3.IntegrityError: CHECK constraint failed: typeof(balance) = 'integer' AND balance BETWEEN 0 AND 9223372036854775807
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp06_money_guards.py:421: in test_credit_replay_at_maximum_returns_original_receipt_without_arithmetic
+    result = db_writer.credit_account(
+src/db_gateway_service/services/db_writer.py:339: in credit_account
+    return self._bank.credit_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:164: in credit_account
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Transaction constraint violation
+_________ test_lock_replay_does_not_require_a_second_spendable_balance _________
+tests/unit/test_mp06_money_guards.py:441: in test_lock_replay_does_not_require_a_second_spendable_balance
+    replay = _lock(db_writer, "a-payer", task_id="t-empty", escrow_id="esc-retry", amount=100)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_mp06_money_guards.py:58: in _lock
+    return writer.escrow_lock(
+src/db_gateway_service/services/db_writer.py:343: in escrow_lock
+    return self._bank.escrow_lock(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:214: in escrow_lock
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Account balance is less than the escrow amount
+_ test_split_rolls_back_first_leg_when_combined_same_account_credit_overflows __
+tests/unit/test_mp06_money_guards.py:460: in test_split_rolls_back_first_leg_when_combined_same_account_credit_overflows
+    _assert_atomic_error(
+tests/unit/test_mp06_money_guards.py:105: in _assert_atomic_error
+    operation()
+tests/unit/test_mp06_money_guards.py:463: in <lambda>
+    lambda: db_writer.escrow_split(
+src/db_gateway_service/services/db_writer.py:359: in escrow_split
+    return self._bank.escrow_split(data, constraints)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/bank_writer.py:488: in escrow_split
+    cursor.execute(
+E   sqlite3.IntegrityError: CHECK constraint failed: typeof(balance) = 'integer' AND balance BETWEEN 0 AND 9223372036854775807
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp06_money_guards.py::test_split_rejects_nonpayer_poster_even_for_zero_leg[0]
+FAILED tests/unit/test_mp06_money_guards.py::test_split_rejects_nonpayer_poster_even_for_zero_leg[40]
+FAILED tests/unit/test_mp06_money_guards.py::test_account_rejects_mismatched_initial_issuance
+FAILED tests/unit/test_mp06_money_guards.py::test_account_rejects_invalid_money_types_signs_and_bounds[True]
+FAILED tests/unit/test_mp06_money_guards.py::test_account_rejects_invalid_money_types_signs_and_bounds[1.5]
+FAILED tests/unit/test_mp06_money_guards.py::test_account_rejects_invalid_money_types_signs_and_bounds[-1]
+FAILED tests/unit/test_mp06_money_guards.py::test_account_rejects_invalid_money_types_signs_and_bounds[9223372036854775808]
+FAILED tests/unit/test_mp06_money_guards.py::test_credit_overflow_is_rejected_without_sqlite_real_promotion
+FAILED tests/unit/test_mp06_money_guards.py::test_settled_escrow_lifetime_replay_is_atomic[exact-released]
+FAILED tests/unit/test_mp06_money_guards.py::test_settled_escrow_lifetime_replay_is_atomic[exact-split]
+FAILED tests/unit/test_mp06_money_guards.py::test_release_recipient_overflow_is_atomic
+FAILED tests/unit/test_mp06_money_guards.py::test_split_combined_same_account_overflow_is_atomic
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[True-credit]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[True-lock]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[True-worker]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[True-poster]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[1.5-credit]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[1.5-lock]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[1.5-worker]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[1.5-poster]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[1-credit]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[1-lock]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[1-worker]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[1-poster]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[-1-credit]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[-1-lock]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[-1-worker]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[-1-poster]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[9223372036854775808-credit]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[9223372036854775808-lock]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[9223372036854775808-worker]
+FAILED tests/unit/test_mp06_money_guards.py::test_every_amount_is_validated_at_the_writer_boundary[9223372036854775808-poster]
+FAILED tests/unit/test_mp06_money_guards.py::test_initial_credit_exactly_explains_balance[1-None]
+FAILED tests/unit/test_mp06_money_guards.py::test_initial_credit_exactly_explains_balance[0-1]
+FAILED tests/unit/test_mp06_money_guards.py::test_initial_credit_exactly_explains_balance[1-True]
+FAILED tests/unit/test_mp06_money_guards.py::test_initial_credit_exactly_explains_balance[0-0]
+FAILED tests/unit/test_mp06_money_guards.py::test_credit_replay_at_maximum_returns_original_receipt_without_arithmetic
+FAILED tests/unit/test_mp06_money_guards.py::test_lock_replay_does_not_require_a_second_spendable_balance
+FAILED tests/unit/test_mp06_money_guards.py::test_split_rolls_back_first_leg_when_combined_same_account_credit_overflows
+=================== 39 failed, 3 passed, 1 warning in 1.14s ====================

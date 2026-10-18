@@ -1,0 +1,7 @@
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_deadline_evaluator.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_deadline_evaluator.py:25:5 - error: Function "_native_tasks" is not accessed (reportUnusedFunction)
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_deadline_sweep.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_deadline_sweep.py:29:5 - error: Function "_native_tasks" is not accessed (reportUnusedFunction)
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_wp06_ruling_trigger.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_wp06_ruling_trigger.py:29:5 - error: Function "_native_tasks" is not accessed (reportUnusedFunction)
+3 errors, 0 warnings, 0 informations

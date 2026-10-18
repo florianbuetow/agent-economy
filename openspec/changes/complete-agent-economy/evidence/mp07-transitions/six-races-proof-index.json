@@ -1,0 +1,52 @@
+{
+  "baseline_commit": "a6af0bed5e0475f63b271329bb7f8ea683da9bc3",
+  "production_changes": false,
+  "atomic_parent": {
+    "session_id": 14225,
+    "exit_code": 1,
+    "intended_failures": 3,
+    "seconds": 1.78
+  },
+  "deadline_parent": {
+    "session_id": 93980,
+    "exit_code": 1,
+    "intended_failures": 3,
+    "seconds": 1.23
+  },
+  "deadline_controls": {
+    "author_reported_passes": 15,
+    "parent_reproduced": false
+  },
+  "limitations": [
+    "Bank and Court are recording boundaries, not actual settlement/adjudication proof.",
+    "Gateway persistence is real; deadline clock is currently injected at Board seams.",
+    "T-122 matrix and T-123 remain incomplete; root19 covers the baseline commit, not the new red tests."
+  ],
+  "files": [
+    {
+      "file": "atomic-three-cases.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_atomic_task_transitions.py",
+      "sha256": "036b9560b618fa2b921cf381bf8244aee2dcc13a8b620e61a857c1b6db74983d"
+    },
+    {
+      "file": "atomic-three-parent-red.log",
+      "source": "/private/tmp/agent-economy-mp07-open-races-parent-red-final.log",
+      "sha256": "dc1227a8b769d2080d931e103096690d37ef8d5bedcf97f02aa9c127527d7dad"
+    },
+    {
+      "file": "deadline-three-cases.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_deadline_transition_races.py",
+      "sha256": "2a48408d5fc143f06754f21813e7b527b6bc4d249f838bae43fac7a38aa40779"
+    },
+    {
+      "file": "deadline-three-parent-red.log",
+      "source": "/private/tmp/agent-economy-mp07-deadline-races-parent-red.log",
+      "sha256": "3c3e0b677912bc9fbe8dea1736efec79b5c0f9e8c8751738c6c425a0a1bfd7dc"
+    },
+    {
+      "file": "deadline-three-author-red-controls.log",
+      "source": "/private/tmp/agent-economy-mp07-deadline-races-red.log",
+      "sha256": "b096e1a2ded944f8ee78b6cda98320ba391605cf5660c1695d5d9e8498134d2b"
+    }
+  ]
+}

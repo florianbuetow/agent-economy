@@ -1,0 +1,31 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 59 items
+
+tests/unit/routers/test_t072_bids_gaps.py .....                          [  8%]
+tests/unit/routers/test_t072_tasks_gaps.py ....F.......                  [ 28%]
+tests/unit/routers/test_security.py .................................... [ 89%]
+                                                                         [ 89%]
+tests/unit/routers/test_expiry_with_bids.py ......                       [100%]
+
+=================================== FAILURES ===================================
+_______ TestTaskCreationGaps.test_tc28_escrow_rollback_on_db_insert_race _______
+tests/unit/routers/test_t072_tasks_gaps.py:149: in test_tc28_escrow_rollback_on_db_insert_race
+    assert store.reader.get_task(task_id) == existing_task
+E   AssertionError: assert {'acceptance_...t': None, ...} == {'acceptance_...t': None, ...}
+E     
+E     Omitting 40 identical items, use -vv to show
+E     Left contains 3 more items:
+E     {'bidding_deadline': '2026-10-18T02:39:53.772257Z',
+E      'execution_deadline': None,
+E      'review_deadline': None}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:39:53", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_already_exists", "status_code": 409, "path": "/tasks"}}
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc28_escrow_rollback_on_db_insert_race
+======================== 1 failed, 58 passed in 37.78s =========================

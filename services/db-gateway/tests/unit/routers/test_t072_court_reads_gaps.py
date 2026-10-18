@@ -20,10 +20,33 @@ import pytest
 
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.services.db_reader import DbReader
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
+from tests.fakes.native_board_history import (
+    BusinessClock,
+    TaskGraph,
+    accept_bid,
+    finalize,
+    operation_body,
+    submit_bid,
+)
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
+
+_BUSINESS_START_US = parse_utc_text_to_epoch_us("2026-02-28T12:00:00Z")
+_CLAIM_TIME_US = parse_utc_text_to_epoch_us("2026-02-28T16:00:00Z")
+_REBUTTAL_TIME_US = parse_utc_text_to_epoch_us("2026-02-28T17:00:00Z")
+_DISPUTE_REASON = "The login page does not validate email format"
+_REBUTTAL_DEADLINE = "2026-03-01T17:00:00Z"
+
+
+@pytest.fixture(autouse=True)
+def _fixed_gateway_business_clock(monkeypatch: pytest.MonkeyPatch) -> BusinessClock:
+    """Control Board business time without changing JWT validation time."""
+    clock = BusinessClock(now_us=_BUSINESS_START_US)
+    monkeypatch.setattr("db_gateway_service.task_time.utc_now_us", clock)
+    return clock
 
 
 def _wire_db_reader() -> None:
@@ -94,7 +117,7 @@ def _lock_escrow(
 def _create_task(client: TestClient, poster_id: str | None = None) -> tuple[str, str, str]:
     pid = poster_id or _setup_funded_account(client)
     eid, tid = _lock_escrow(client, pid)
-    client.post(
+    response = client.post(
         "/board/tasks",
         json={
             "task_id": tid,
@@ -104,14 +127,16 @@ def _create_task(client: TestClient, poster_id: str | None = None) -> tuple[str,
             "reward": 100,
             "status": "open",
             "bidding_deadline_seconds": 86400,
+            "acceptance_window_seconds": 3600,
             "deadline_seconds": 172800,
             "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:00:00Z",
+            "bidding_deadline": "2026-03-01T10:15:00Z",
             "escrow_id": eid,
             "created_at": "2026-02-28T10:15:00Z",
             "event": make_event(source="board", event_type="task.created", task_id=tid),
         },
     )
+    assert response.status_code == 201
     return tid, pid, eid
 
 
@@ -129,27 +154,109 @@ def _file_claim(
     claimant_id: str,
     respondent_id: str,
     claim_id: str | None = None,
+    rebuttal_deadline: str | None = None,
 ) -> str:
     cid = claim_id or f"clm-{uuid4()}"
-    client.post(
-        "/court/claims",
+    body: dict[str, object] = {
+        "claim_id": cid,
+        "task_id": task_id,
+        "claimant_id": claimant_id,
+        "respondent_id": respondent_id,
+        "reason": _DISPUTE_REASON,
+        "status": "filed",
+        "filed_at": "2026-02-28T16:00:00Z",
+        "event": make_event(source="court", event_type="claim.filed", task_id=task_id),
+    }
+    if rebuttal_deadline is not None:
+        body["rebuttal_deadline"] = rebuttal_deadline
+    response = client.post("/court/claims", json=body)
+    assert response.status_code == 201
+    return cid
+
+
+def _prepare_disputed_claim(
+    client: TestClient,
+    clock: BusinessClock,
+) -> tuple[str, str, str, str]:
+    """Persist a real Board history and matching Court claim for rebuttal reads."""
+    alice = _setup_funded_account(client, name="Alice")
+    bob = _register_agent(client, name="Bob")
+    task_id, _poster_id, escrow_id = _create_task(client, poster_id=alice)
+    graph = TaskGraph(task_id=task_id, poster_id=alice, escrow_id=escrow_id)
+
+    bid_id, bid = submit_bid(client, graph, bob)
+    assert bid.status_code == 200
+    accepted = accept_bid(client, graph, bob, bid_id)
+    assert accepted.status_code == 200
+    asset = client.post(
+        "/board/assets",
         json={
-            "claim_id": cid,
+            "asset_id": f"asset-{uuid4()}",
             "task_id": task_id,
-            "claimant_id": claimant_id,
-            "respondent_id": respondent_id,
-            "reason": "The login page does not validate email format",
-            "status": "filed",
-            "filed_at": "2026-02-28T16:00:00Z",
-            "event": make_event(source="court", event_type="claim.filed", task_id=task_id),
+            "uploader_id": bob,
+            "filename": "deliverable.txt",
+            "content_type": "text/plain",
+            "size_bytes": 7,
+            "storage_path": f"assets/{task_id}/deliverable.txt",
+            "content_hash": "a" * 64,
+            "uploaded_at": "2026-02-28T12:01:00Z",
+            "event": make_event(source="board", event_type="asset.uploaded", task_id=task_id),
         },
     )
-    return cid
+    assert asset.status_code == 201
+    submitted = client.post(
+        "/board/task-operations",
+        json=operation_body(
+            operation_id=f"op-{uuid4()}",
+            task_id=task_id,
+            command="submit_deliverable",
+            expected_status="accepted",
+            expected_lifecycle_version=1,
+            actor_kind="agent",
+            actor_id=bob,
+            arguments={"worker_id": bob},
+        ),
+    )
+    assert submitted.status_code == 200
+
+    dispute_operation_id = f"op-{uuid4()}"
+    pending = client.post(
+        "/board/task-operations",
+        json=operation_body(
+            operation_id=dispute_operation_id,
+            task_id=task_id,
+            command="dispute_task",
+            expected_status="submitted",
+            expected_lifecycle_version=2,
+            actor_kind="agent",
+            actor_id=alice,
+            arguments={
+                "poster_id": alice,
+                "worker_id": bob,
+                "escrow_id": escrow_id,
+                "reward": 100,
+                "reason": _DISPUTE_REASON,
+            },
+        ),
+    )
+    assert pending.status_code == 202
+    clock.now_us = _CLAIM_TIME_US
+    claim_id = _file_claim(
+        client,
+        task_id,
+        alice,
+        bob,
+        rebuttal_deadline=_REBUTTAL_DEADLINE,
+    )
+    completed = finalize(client, dispute_operation_id)
+    assert completed.status_code == 200
+    clock.now_us = _REBUTTAL_TIME_US
+    return alice, bob, task_id, claim_id
 
 
 def _submit_rebuttal(client: TestClient, claim_id: str, agent_id: str, task_id: str) -> str:
     rebuttal_id = f"reb-{uuid4()}"
-    client.post(
+    response = client.post(
         "/court/rebuttals",
         json={
             "rebuttal_id": rebuttal_id,
@@ -160,6 +267,7 @@ def _submit_rebuttal(client: TestClient, claim_id: str, agent_id: str, task_id: 
             "event": make_event(source="court", event_type="rebuttal.submitted", task_id=task_id),
         },
     )
+    assert response.status_code == 201
     return rebuttal_id
 
 
@@ -211,9 +319,14 @@ class TestReadClaimsFilterByClaimantId:
 class TestReadRebuttalByClaimId:
     """READ-29/READ-30: GET /court/claims/{claim_id}/rebuttal."""
 
-    def test_get_rebuttal_returns_the_record(self, app_with_writer: TestClient) -> None:
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
-        claim_id = _file_claim(app_with_writer, tid, alice, bob)
+    def test_get_rebuttal_returns_the_record(
+        self,
+        app_with_writer: TestClient,
+        _fixed_gateway_business_clock: BusinessClock,
+    ) -> None:
+        _alice, bob, tid, claim_id = _prepare_disputed_claim(
+            app_with_writer, _fixed_gateway_business_clock
+        )
         rebuttal_id = _submit_rebuttal(app_with_writer, claim_id, bob, tid)
         _wire_db_reader()
 

@@ -1,0 +1,49 @@
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-83167046da49446e8c390a48d181a65a-9l_wsn_2
+provisioned handle=alice fingerprint_sha256=f612e642d3cc4db9e071952d519adb49c91eec3e035154d90b290f100a1a2837
+provisioned handle=bob fingerprint_sha256=15ba106732af70ba83e18f59793801206ec8a9774c8b15026325cf37ced7fae8
+provisioned handle=feeder fingerprint_sha256=431c988424a8571b276f1072bec3d94e7b771ee60ecd114249a41c9f730edee9
+provisioned handle=mathbot fingerprint_sha256=cc864fabb91f032d32426a3f716199c1b91c8bad6677859955359c42bc7be3e8
+provisioned handle=mathbot_mistral fingerprint_sha256=d85f107a707a92664a6978f006105e093dbd43c9ad49230623db739fa8c54130
+provisioned handle=mathbot_openai fingerprint_sha256=4d3db9984606b5b0521b35fdac865af3853cb54bed1ecf22fd19493cd0b76b60
+provisioned handle=operator fingerprint_sha256=29fa53a4be6296db72f06856d980d93242f0746176ef04cfdb0540927c5e0bb7
+provisioned handle=platform fingerprint_sha256=0ade4c30ca0e2e98fa34bc8910b5b0fec80473e102cc890adaa327bf136aeca7
+provisioned handle=gateway-central-bank fingerprint_sha256=47e4be1e5fd30099abd30db17ca2691613f7c1ef82c380ad4e94140dca3e5f0e
+provisioned handle=gateway-court fingerprint_sha256=241b298e94fd253100ab99d0715b29f150bb764323f3fdabb0cc84e2c2b0f8fc
+provisioned handle=gateway-identity fingerprint_sha256=5ffe9eb64054545290780be01b950ff398c8cea2c769af723f52dec191a4472f
+provisioned handle=gateway-reputation fingerprint_sha256=020b336975e63822a73811c03677d0a200a931dbb29b366a958431c4edb0454d
+provisioned handle=gateway-task-board fingerprint_sha256=86ab4a5362235ae4c982c4e80efbc9fe998a2d3c362b6e8268588f4429a0e979
+2026-10-15T22:41:04 [INFO] httpx: HTTP Request: POST http://127.0.0.1:59285/agents/register "HTTP/1.1 409 Conflict"
+2026-10-15T22:41:04 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59285/agents "HTTP/1.1 200 OK"
+2026-10-15T22:41:04 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59285/agents/a-799b912b-8f00-47d3-8f60-cf82eaf5fe7f "HTTP/1.1 200 OK"
+2026-10-15T22:41:04 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59285/agents/a-799b912b-8f00-47d3-8f60-cf82eaf5fe7f "HTTP/1.1 200 OK"
+2026-10-15T22:41:04 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-799b912b-8f00-47d3-8f60-cf82eaf5fe7f
+2026-10-15T22:41:04 [INFO] httpx: HTTP Request: POST http://127.0.0.1:59285/agents/register "HTTP/1.1 201 Created"
+2026-10-15T22:41:04 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-e0dd5818-fc3c-45a7-9ff8-b85d2e76a136
+2026-10-15T22:41:04 [INFO] httpx: HTTP Request: POST http://127.0.0.1:59286/accounts "HTTP/1.1 201 Created"
+2026-10-15T22:41:04 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-15T22:41:04 [INFO] httpx: HTTP Request: POST http://127.0.0.1:59286/accounts/a-e0dd5818-fc3c-45a7-9ff8-b85d2e76a136/credit "HTTP/1.1 200 OK"
+2026-10-15T22:41:04 [INFO] treasury_provision_cli: Treasury provisioned (tx_id=tx-ac1189f8-08f0-4692-8d28-ed91058e46cc, balance_after=1000000)
+2026-10-15T22:41:04 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59286/accounts/a-e0dd5818-fc3c-45a7-9ff8-b85d2e76a136 "HTTP/1.1 200 OK"
+agent_id=a-e0dd5818-fc3c-45a7-9ff8-b85d2e76a136
+genesis_amount=1000000
+balance=1000000
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/e2e/test_proxy_routes.py F                                         [100%]
+
+=================================== FAILURES ===================================
+____________ test_proxy_create_task_posts_as_operator_not_platform _____________
+tests/e2e/test_proxy_routes.py:118: in test_proxy_create_task_posts_as_operator_not_platform
+    assert resp.status_code == 200, resp.text
+E   AssertionError: {"error":"forbidden_origin","message":"A same-origin Origin header is required","details":{}}
+E   assert 403 == 200
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+=========================== short test summary info ============================
+FAILED tests/e2e/test_proxy_routes.py::test_proxy_create_task_posts_as_operator_not_platform
+============================== 1 failed in 0.19s ===============================

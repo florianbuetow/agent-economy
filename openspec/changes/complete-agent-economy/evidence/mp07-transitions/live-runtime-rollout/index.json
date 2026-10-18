@@ -1,0 +1,36 @@
+{
+  "scope": "live-runtime-rollout",
+  "limits": "Each log proves its recorded source version and scope; earlier passes do not certify later harness changes. Root gate and full goal remain open.",
+  "artifacts": [
+    {
+      "origin": "/private/tmp/agent-economy-mp07-agent-live-final.log",
+      "artifact": "agent-economy-mp07-agent-live-final.log",
+      "sha256": "447e8bd297af96fa16561f26150f5ab209b790c9d1941ab87fd24a17728e977f"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-agent-live-final-cleanup.json",
+      "artifact": "agent-economy-mp07-agent-live-final-cleanup.json",
+      "sha256": "8787e490499297274cf19db494471d8fea6c978a2a45e90cd12910ed8391f44f"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-autonomous-final.log",
+      "artifact": "agent-economy-mp07-autonomous-final.log",
+      "sha256": "414d59e0c013ce958a519f46768567e9898fd168f5ff6aaba2de881296dece91"
+    },
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-agent-e2e-native-reconciliation.md",
+      "artifact": "2026-10-18-mp07-agent-e2e-native-reconciliation.md",
+      "sha256": "969c3106e9d37a3475370aa2ea0f1eb96bf64bfb58654fa553c5cd731be68f99"
+    },
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-agent-e2e-runtime-reconciliation.md",
+      "artifact": "2026-10-18-mp07-agent-e2e-runtime-reconciliation.md",
+      "sha256": "76c63533bdeb8e19c38a1bbd8918326bba33af246050e493cb11196d6fd45675"
+    }
+  ],
+  "current_sources": {
+    "agents/tests/e2e/test_autonomous_acceptance.py": "3408090b13d28963ed049ab7a0b53817c55f770347c1d491f87826fbe99c9496",
+    "agents/tests/e2e/test_unattended_economy.py": "5834c7e12a8084940ac619653e3acd8672e4edf4e596623f8a06e66932b79d2c",
+    "agents/tests/unit/test_mp07_e2e_cleanup.py": "3ae0867c015abc11f75a637750e4690cca36f7171678e1f3adc63fe0e3c4a815"
+  }
+}

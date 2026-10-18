@@ -4,15 +4,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
 from task_board_service.core.state import get_app_state
 from task_board_service.routers.validation import extract_token, parse_json_body
-from task_board_service.schemas import TaskListResponse, TaskResponse
+from task_board_service.schemas import TaskListResponse, TaskMutationResponse, TaskResponse
 
 router = APIRouter()
+
+
+def _mutation_response(result: dict[str, Any], response: Response) -> dict[str, Any]:
+    response.status_code = 202 if result["operation"]["operation_state"] == "claimed" else 200
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -99,8 +104,8 @@ async def list_tasks(request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/cancel", response_model=TaskResponse)
-async def cancel_task(task_id: str, request: Request) -> dict[str, Any]:
+@router.post("/tasks/{task_id}/cancel", response_model=TaskMutationResponse)
+async def cancel_task(task_id: str, request: Request, response: Response) -> dict[str, Any]:
     """Cancel a task and release escrow to the poster."""
     body = await request.body()
     data = parse_json_body(body)
@@ -115,7 +120,7 @@ async def cancel_task(task_id: str, request: Request) -> dict[str, Any]:
             details={},
         )
 
-    return await state.task_manager.cancel_task(task_id, token)
+    return _mutation_response(await state.task_manager.cancel_task(task_id, token), response)
 
 
 # ---------------------------------------------------------------------------
@@ -123,8 +128,8 @@ async def cancel_task(task_id: str, request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/submit", response_model=TaskResponse)
-async def submit_deliverable(task_id: str, request: Request) -> dict[str, Any]:
+@router.post("/tasks/{task_id}/submit", response_model=TaskMutationResponse)
+async def submit_deliverable(task_id: str, request: Request, response: Response) -> dict[str, Any]:
     """Submit deliverables for review."""
     body = await request.body()
     data = parse_json_body(body)
@@ -139,7 +144,7 @@ async def submit_deliverable(task_id: str, request: Request) -> dict[str, Any]:
             details={},
         )
 
-    return await state.task_manager.submit_deliverable(task_id, token)
+    return _mutation_response(await state.task_manager.submit_deliverable(task_id, token), response)
 
 
 # ---------------------------------------------------------------------------
@@ -147,8 +152,8 @@ async def submit_deliverable(task_id: str, request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/approve", response_model=TaskResponse)
-async def approve_task(task_id: str, request: Request) -> dict[str, Any]:
+@router.post("/tasks/{task_id}/approve", response_model=TaskMutationResponse)
+async def approve_task(task_id: str, request: Request, response: Response) -> dict[str, Any]:
     """Approve deliverables and release payment to the worker."""
     body = await request.body()
     data = parse_json_body(body)
@@ -163,7 +168,7 @@ async def approve_task(task_id: str, request: Request) -> dict[str, Any]:
             details={},
         )
 
-    return await state.task_manager.approve_task(task_id, token)
+    return _mutation_response(await state.task_manager.approve_task(task_id, token), response)
 
 
 # ---------------------------------------------------------------------------
@@ -171,8 +176,8 @@ async def approve_task(task_id: str, request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/dispute", response_model=TaskResponse)
-async def dispute_task(task_id: str, request: Request) -> dict[str, Any]:
+@router.post("/tasks/{task_id}/dispute", response_model=TaskMutationResponse)
+async def dispute_task(task_id: str, request: Request, response: Response) -> dict[str, Any]:
     """Dispute deliverables and send to Court for resolution."""
     body = await request.body()
     data = parse_json_body(body)
@@ -195,7 +200,9 @@ async def dispute_task(task_id: str, request: Request) -> dict[str, Any]:
             details={},
         )
 
-    return await state.task_manager.dispute_task(task_id, token, state.platform_agent)
+    return _mutation_response(
+        await state.task_manager.dispute_task(task_id, token, state.platform_agent), response
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -235,8 +242,8 @@ async def submit_rebuttal(task_id: str, request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/ruling", response_model=TaskResponse)
-async def record_ruling(task_id: str, request: Request) -> dict[str, Any]:
+@router.post("/tasks/{task_id}/ruling", response_model=TaskMutationResponse)
+async def record_ruling(task_id: str, request: Request, response: Response) -> dict[str, Any]:
     """Record a Court ruling (platform-signed operation)."""
     body = await request.body()
     data = parse_json_body(body)
@@ -251,7 +258,7 @@ async def record_ruling(task_id: str, request: Request) -> dict[str, Any]:
             details={},
         )
 
-    return await state.task_manager.record_ruling(task_id, token)
+    return _mutation_response(await state.task_manager.record_ruling(task_id, token), response)
 
 
 # ---------------------------------------------------------------------------

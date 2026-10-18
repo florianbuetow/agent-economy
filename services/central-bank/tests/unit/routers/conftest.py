@@ -199,7 +199,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "central-bank"}"
 identity:
   base_url: "http://localhost:8001"
   get_agent_path: "/agents"

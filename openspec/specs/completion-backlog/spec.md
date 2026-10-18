@@ -376,13 +376,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-02 is selected
 - **THEN** the acceptance proof demonstrates the gap: Unsigned or wrong-domain persistence requests, malicious rendered content and off-origin operator actions demonstrate the current unauthorized effects.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** CLOSED 2026-10-15 — Item-specific evidence, independent review, root attempt10 exit0 and unchanged809-input snapshot verified; see openspec/changes/complete-agent-economy/evidence/mp02-checkpoint.md, including browser baseline provenance.
+- **Status:** CLOSED 2026-10-15 — Item-specific evidence, independent review, root attempt10 exit 0 and unchanged809-input snapshot verified; see openspec/changes/complete-agent-economy/evidence/mp02-checkpoint.md, including browser baseline provenance.
 
 #### Scenario: T-113 Deliver service and browser authority
 - **WHEN** T-112 is red-proven and the prerequisites are satisfied: MP-01, MP-03
 - **THEN** Only authorized domain callers reach persistence; stored untrusted strings remain inert on every consuming page; Host/Origin and token failures make no data or event changes.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** CLOSED 2026-10-15 — Item-specific evidence, independent review, root attempt10 exit0 and unchanged809-input snapshot verified; see openspec/changes/complete-agent-economy/evidence/mp02-checkpoint.md, including browser baseline provenance.
+- **Status:** CLOSED 2026-10-15 — Item-specific evidence, independent review, root attempt10 exit 0 and unchanged809-input snapshot verified; see openspec/changes/complete-agent-economy/evidence/mp02-checkpoint.md, including browser baseline provenance.
 
 ### Requirement: MP-03 Durable identity and token validation
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-03. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -406,7 +406,7 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-04 is selected
 - **THEN** the acceptance proof demonstrates the gap: Lost responses after committed release/split and public lock replay after settlement expose duplicated or nonconvergent financial commands.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** CLOSED 2026-10-17 — Own genuine replay/identity/history red proof, green coverage, independent review and root19 exit0 verified. See evidence/mp04-receipts/completion-audit.md and evidence/root19-checkpoint.md in the active change; evidence limitations remain explicit.
+- **Status:** CLOSED 2026-10-17 — Own genuine replay/identity/history red proof, green coverage, independent review and root19 exit 0 verified. See evidence/mp04-receipts/completion-audit.md and evidence/root19-checkpoint.md in the active change; evidence limitations remain explicit.
 
 #### Scenario: T-117 Deliver financial operation receipts
 - **WHEN** T-116 is red-proven and the prerequisites are satisfied: MP-02, MP-06
@@ -451,7 +451,7 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-06 is selected
 - **THEN** the acceptance proof demonstrates the gap: Wrong escrow payer, inconsistent initial issuance, boolean/overflow values, partial schemas and invalid lifetime escrow uniqueness expose authoritative integrity gaps.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** CLOSED — Own 12 intended failures/6 controls and subsequent targeted proof are retained; independent review and root14 exit0 with 886 unchanged source/config hashes satisfy this test ticket's closure gate. T-121's additional concurrent-lock/settlement and process-death proofs were subsequently gated at root15. See evidence/root14-checkpoint.md and evidence/root15-checkpoint.md in the active change.
+- **Status:** CLOSED — Own 12 intended failures/6 controls and subsequent targeted proof are retained; independent review and root14 exit 0 with 886 unchanged source/config hashes satisfy this test ticket's closure gate. T-121's additional concurrent-lock/settlement and process-death proofs were subsequently gated at root15. See evidence/root14-checkpoint.md and evidence/root15-checkpoint.md in the active change.
 
 #### Scenario: T-121 Deliver schema and monetary integrity
 - **WHEN** T-120 is red-proven and the prerequisites are satisfied: MP-01
@@ -466,13 +466,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-07 is selected
 - **THEN** the acceptance proof demonstrates the gap: Controlled conflicting acceptance/cancellation, submission/expiry and approval/dispute histories expose incompatible successful transitions.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED — Genuine multi-instance atomic/deadline/bid/window reds, serial-history proofs and the fresh Root22 gate are independently verified. Fixture/setup failures are separately classified. [Closure evidence](../../changes/complete-agent-economy/evidence/mp07-transitions/completion-audit.md).
 
 #### Scenario: T-123 Deliver atomic task transitions
 - **WHEN** T-122 is red-proven and the prerequisites are satisfied: MP-06
 - **THEN** Each concurrent history has one valid serial outcome; losing operations return explicit conflicts with no contradictory side effects; cutoff equality and acceptance eligibility are consistent.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED — All eleven native transitions, claim-before-effect coordination, authoritative receipt/Court evidence, exact replay, selected acceptance windows, migration/audit and public producer rollout are implemented and independently verified in Root22. General posting/effect/adjudication recovery remains in its later packages. [Closure evidence](../../changes/complete-agent-economy/evidence/mp07-transitions/completion-audit.md).
 
 ### Requirement: MP-08 Pending financial effect recovery
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-08. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -835,14 +835,14 @@ The completion backlog SHALL retain a separate fail-first obligation for the dep
 - **WHEN** the service dependency audit runs with Semgrep's pinned mcp 1.29.0
 - **THEN** the gate reports GHSA-84m7-p3x7-pcfv and exits nonzero
 - **AND** official dependency/advisory evidence identifies the affected environments, patched version and compatibility constraints before any override
-- **Status:** CLOSED 2026-10-15 — Item-specific evidence, independent review, root attempt10 exit0 and unchanged809-input snapshot verified; see openspec/changes/complete-agent-economy/evidence/mp02-checkpoint.md, including browser baseline provenance.
+- **Status:** CLOSED 2026-10-15 — Item-specific evidence, independent review, root attempt10 exit 0 and unchanged809-input snapshot verified; see openspec/changes/complete-agent-economy/evidence/mp02-checkpoint.md, including browser baseline provenance.
 
 #### Scenario: T-172 Repair the affected development dependency
 - **WHEN** T-171 is red-proven and a compatible patched dependency is verified
 - **THEN** affected service environments use the patched package through reproducible uv-generated locks, their configured Semgrep rules and audits pass, and no new vulnerability ignore is added
 - **AND** any override of an upstream exact pin is explicit, limited to the development tool and documented with compatibility evidence and a removal condition
 - **AND** a fresh isolated root `just ci-quiet` exits zero before closure
-- **Status:** CLOSED 2026-10-15 — Item-specific evidence, independent review, root attempt10 exit0 and unchanged809-input snapshot verified; see openspec/changes/complete-agent-economy/evidence/mp02-checkpoint.md, including browser baseline provenance.
+- **Status:** CLOSED 2026-10-15 — Item-specific evidence, independent review, root attempt10 exit 0 and unchanged809-input snapshot verified; see openspec/changes/complete-agent-economy/evidence/mp02-checkpoint.md, including browser baseline provenance.
 
 ### Requirement: MP-01 Quarterly navigation race repair
 The quarterly report SHALL preserve every accepted Prev/Next click in order while earlier report requests are pending. Implementation T-176 depends on red-proven test ticket T-175. Existing navigation assertions and timeouts SHALL remain unchanged; the universal root closure gate applies to both tickets.
@@ -874,3 +874,37 @@ The controlled UI browser fixture SHALL tolerate transient connection and reques
 - **THEN** transient connection and timeout failures remain within the existing readiness polling budget without increasing timeout values or suppressing terminal failure
 - **AND** focused readiness tests, unchanged single-agent browser cases, full UI suite, independent review and a fresh root gate pass
 - **Status:** CLOSED 2026-10-17 — Transient timeout handling preserves the existing readiness budget and terminal diagnostics. Focused proof, independent review and root19 full298-case UI/root gate pass. See the active change's evidence/ui-readiness-checkpoint.md and evidence/root19-checkpoint.md.
+
+### Requirement: Standalone integration log isolation
+Every service test fixture that starts logging SHALL keep log writes inside its owned temporary resource directory, including when the root runtime supervisor is not used. Config-only fixtures that never start logging are not runtime-write evidence.
+
+#### Scenario: T-179 Prove standalone integration log escape
+- **WHEN** the audited Gateway, Task Board, Identity, Central Bank, Reputation and Court startup fixtures construct their service configurations
+- **THEN** tests prove whether each log directory is absolute, owned by the temporary test root and distinct from the other service directory before any service starts
+- **AND** ordinary runtime logs are not mutated by the proof itself
+- **Status:** CLOSED — All seventeen cause-specific configuration reds are archived. The formerly missing six outputs were recovered byte-for-byte from original execution records and independently verified. Root22 supplies the required fresh full gate. [Closure evidence](../../changes/complete-agent-economy/evidence/mp07-transitions/completion-audit.md).
+
+#### Scenario: T-180 Isolate standalone integration log writes
+- **WHEN** T-179 is red-proven
+- **THEN** all audited startup fixture configurations route logs to explicit service-specific directories inside their temporary root
+- **AND** live regression execution leaves ordinary runtime log bytes unchanged, while existing logs are preserved without deletion or rewriting
+- **AND** item-specific evidence and a fresh isolated root quality gate pass before closure
+- **Status:** CLOSED — Audited startup logs use owned temporary paths. Root22 passes with all202 ordinary logs byte-identical, no additions/removals, and verified owned-process cleanup. Earlier ordinary log contents were preserved. [Closure evidence](../../changes/complete-agent-economy/evidence/mp07-transitions/completion-audit.md).
+
+### Requirement: Durable caller-owned native task intents
+The built-in feeder and worker SHALL retain an immutable native mutation intent before transport and replay that intent after interruption. This independent MP-07 producer prerequisite consumes the reviewed native command contract and completed MP-01/MP-03 isolation/key foundations; it does not close the broader MP-05/MP-16/MP-17/MP-18 recovery obligations. Runtime files SHALL be caller-owned and SHALL NOT use the private Gateway or weaken direct-SQL restrictions.
+
+#### Scenario: T-181 Prove native runtime intent loss and durable replay boundaries
+- **WHEN** a feeder or worker prepares a bid, acceptance, submission, approval or dispute and transport or the process is interrupted
+- **THEN** test evidence demonstrates whether operation identity, source version, exact semantic terms and response-validation context survive before any retry
+- **AND** exact stored replay precedes current-task eligibility or decision recomputation, while foreign ownership, malformed responses and unconfirmed target state do not imply completion
+- **AND** real-filesystem and process tests cover owner/profile/key/URL binding, private file admission, concurrent identity leases and atomic publication faults without touching ordinary runtime data
+- **Status:** CLOSED — Genuine durability/ACK/caller/startup regressions are preserved separately from capability/setup reds. Owner binding, filesystem faults and all ten actual SIGKILL/restart histories pass in Root22; independent final proof audit approves. [Closure evidence](../../changes/complete-agent-economy/evidence/mp07-transitions/completion-audit.md).
+
+#### Scenario: T-182 Persist and replay native runtime task intents
+- **WHEN** T-181 is red-proven and the MP-01/MP-03 foundations and reviewed native producer fields are available
+- **THEN** one caller-owned identity lease and strict atomic JSON journal retain the original operation ID, version, public arguments and validation context before any mutation transport
+- **AND** known pending work resumes with exact replay, changed slot terms fail locally, definite rejection never silently allocates a replacement, and storage failures prevent mutation transport
+- **AND** the feeder publishes its explicitly configured acceptance window without conflating it with its selection delay or introducing a platform-wide default
+- **AND** item-specific restart/fault evidence, independent review and fresh isolated root CI pass before closure, while posting identity, asset/execution/oracle/rebuttal recovery and authoritative discovery remain mapped to their original full packages
+- **Status:** CLOSED — Owner-bound atomic journals, exact public SDK replay, typed ACK validation, leased startup/cleanup and explicit feeder windows are implemented and independently verified. Root22 passes all required gates. Posting, execution/assets/oracle/rebuttal/discovery recovery, distributed leases and external rollback detection remain outside this bounded package. [Closure evidence](../../changes/complete-agent-economy/evidence/mp07-transitions/completion-audit.md).

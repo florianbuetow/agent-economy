@@ -7,6 +7,7 @@ from fastapi.routing import APIRoute
 from service_auth.jws import TokenPolicy
 from service_auth.signing import load_public_key, public_key_to_b64
 
+from db_gateway_service.board_authority import load_board_authority
 from db_gateway_service.config import get_config_path, get_settings
 from db_gateway_service.core.exceptions import register_exception_handlers
 from db_gateway_service.core.lifespan import lifespan
@@ -46,11 +47,18 @@ def create_app() -> FastAPI:
             capabilities=frozenset(caller_config.capabilities),
         )
 
+    board_authority = load_board_authority(
+        settings.board_authority,
+        config_dir=config_dir,
+        trusted_public_key_owners=public_key_owners,
+    )
+
     app = FastAPI(
         title=f"{settings.service.name} Service",
         version=settings.service.version,
         lifespan=lifespan,
     )
+    app.state.board_authority = board_authority
 
     register_exception_handlers(app)
 

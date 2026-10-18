@@ -1,0 +1,69 @@
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;31m✗ Code-semgrep failed[0m
+
+[0;34m=== Running Semgrep Static Analysis ===[0m
+Rule config.semgrep.no-direct-sql-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-direct-sql-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 66 files tracked by git with 10 Code rules:
+  Scanning 66 files with 9 python rules.
+Rule config.semgrep.no-direct-sql-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-direct-sql-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 9
+ • Targets scanned: 66
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 9 rules on 66 files: 0 findings.
+[Errno 1] Operation not permitted: '/Users/flo/.cache/semgrep_version'
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/semgrep/commands/wrapper.py", line 49, in wrapper
+    func(*args, **kwargs)
+    ~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/semgrep/commands/scan.py", line 1231, in scan
+    version_check()
+    ~~~~~~~~~~~~~^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/semgrep/app/version.py", line 251, in version_check
+    _show_banners()
+    ~~~~~~~~~~~~~^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/semgrep/app/version.py", line 219, in _show_banners
+    banners = _get_version_filtered_banners()
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/semgrep/app/version.py", line 193, in _get_version_filtered_banners
+    latest_version_info = _get_version_info()
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/semgrep/app/version.py", line 177, in _get_version_info
+    latest_version_object = _get_latest_version()
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/semgrep/app/version.py", line 168, in _get_latest_version
+    with env.version_check_cache_path.open("w") as f:
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/pathlib/_local.py", line 537, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 1] Operation not permitted: '/Users/flo/.cache/semgrep_version'
+error: recipe `code-semgrep` failed on line 278 with exit code 2
+error: recipe `ci-quiet` failed with exit code 1

@@ -1,0 +1,5 @@
+290f136b3e186c1609309d933cec2aa6fcb646ac29b8339d43d57eaad291d133  services/db-gateway/tests/fakes/native_board_history.py
+0954d297cb3ab3f85b1dd608598f38dd6f0c6dc05d96c601ff8627889e138a71  services/db-gateway/tests/unit/test_schema_additions.py
+131871bbfa3c0670327e6915d000306819f98173e191c65e01a394945c63699d  services/db-gateway/tests/unit/test_gap_e13_bid_count.py
+9206f44337dc7f409781fbf19a6e2dfb04bac43640f1507b86754691071c1bb6  services/db-gateway/tests/unit/test_task_dispute_id_column.py
+e0f5e5e97140a2aee6808161296f22941ade55ee1b227547edc8f4e45ca83c62  docs/plans/2026-10-18-mp07-gateway-projection-fixtures.md

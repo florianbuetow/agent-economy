@@ -1,0 +1,380 @@
+
+[0;34m=== Running CI Checks for Central Bank Service ===[0m
+
+
+[0;34m=== Initializing Development Environment ===[0m
+Installing Python dependencies...
+Resolved 128 packages in 4ms
+Checked 127 packages in 2ms
+[0;32m✓ Development environment ready[0m
+
+
+[0;34m=== Formatting Code ===[0m
+All checks passed!
+
+63 files left unchanged
+
+[0;32m✓ Code formatted[0m
+
+
+[0;34m=== Checking Code Style ===[0m
+All checks passed!
+
+63 files already formatted
+
+[0;32m✓ Style checks passed[0m
+
+
+[0;34m=== Running Type Checks ===[0m
+Success: no issues found in 20 source files
+
+[0;32m✓ Type checks passed[0m
+
+
+[0;34m=== Running Security Checks ===[0m
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: B101
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	using config: pyproject.toml
+[main]	INFO	running on Python 3.13.5
+[text]	INFO	Text output written to file: reports/security/bandit.txt
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: B101
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	using config: pyproject.toml
+[main]	INFO	running on Python 3.13.5
+Run started:2026-10-15 18:52:43.583817+00:00
+
+Test results:
+	No issues identified.
+
+Code scanned:
+	Total lines of code: 1765
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+Files skipped (0):
+
+[0;32m✓ Security checks passed[0m
+
+
+[0;34m=== Checking Dependencies ===[0m
+Scanning 20 files...
+
+[1m[32mSuccess! No dependency issues found.[m
+
+[0;32m✓ Dependency checks passed[0m
+
+
+[0;34m=== Checking Spelling ===[0m
+
+[0;32m✓ Spelling checks passed[0m
+
+
+[0;34m=== Running Semgrep Static Analysis ===[0m
+Rule config.semgrep.no-direct-sql-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-direct-sql-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 63 files tracked by git with 10 Code rules:
+  Scanning 63 files with 9 python rules.
+Rule config.semgrep.no-direct-sql-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-direct-sql-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 9
+ • Targets scanned: 63
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 9 rules on 63 files: 0 findings.
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+[0;32m✓ Semgrep checks passed[0m
+
+
+[0;34m=== Scanning Dependencies for Vulnerabilities ===[0m
+No known vulnerabilities found
+Name                 Skip Reason
+-------------------- -----------------------------------------------------------------------------------
+central-bank-service Dependency not found on PyPI and could not be audited: central-bank-service (0.1.0)
+db-gateway-service   Dependency not found on PyPI and could not be audited: db-gateway-service (0.1.0)
+service-auth         Dependency not found on PyPI and could not be audited: service-auth (0.1.0)
+service-clients      Dependency not found on PyPI and could not be audited: service-clients (0.1.0)
+service-commons      Dependency not found on PyPI and could not be audited: service-commons (0.1.0)
+
+[0;32m✓ No known vulnerabilities found[0m
+
+
+[0;34m=== Running Unit Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/central-bank/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/central-bank
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 181 items
+
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_account_success PASSED [  0%]
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_account_zero_balance PASSED [  1%]
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_duplicate_account PASSED [  1%]
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_account_agent_not_found PASSED [  2%]
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_account_non_platform_forbidden PASSED [  2%]
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_account_missing_token PASSED [  3%]
+tests/unit/routers/test_accounts.py::TestCreditAccount::test_credit_success PASSED [  3%]
+tests/unit/routers/test_accounts.py::TestCreditAccount::test_credit_account_not_found PASSED [  4%]
+tests/unit/routers/test_accounts.py::TestGetBalance::test_get_balance_success PASSED [  4%]
+tests/unit/routers/test_accounts.py::TestGetBalance::test_get_balance_forbidden_other_account PASSED [  5%]
+tests/unit/routers/test_accounts.py::TestGetBalance::test_get_balance_missing_auth_header PASSED [  6%]
+tests/unit/routers/test_accounts.py::TestGetTransactions::test_get_transactions_success PASSED [  6%]
+tests/unit/routers/test_escrow.py::TestEscrowLock::test_escrow_lock_success PASSED [  7%]
+tests/unit/routers/test_escrow.py::TestEscrowLock::test_escrow_lock_insufficient_funds PASSED [  7%]
+tests/unit/routers/test_escrow.py::TestEscrowLock::test_escrow_lock_wrong_agent_forbidden PASSED [  8%]
+tests/unit/routers/test_escrow.py::TestEscrowRelease::test_escrow_release_success PASSED [  8%]
+tests/unit/routers/test_escrow.py::TestEscrowRelease::test_escrow_release_already_resolved PASSED [  9%]
+tests/unit/routers/test_escrow.py::TestEscrowRelease::test_escrow_not_found PASSED [  9%]
+tests/unit/routers/test_escrow.py::TestEscrowSplit::test_escrow_split_success PASSED [ 10%]
+tests/unit/routers/test_health.py::test_health_returns_ok PASSED         [ 11%]
+tests/unit/routers/test_health.py::test_health_post_not_allowed PASSED   [ 11%]
+tests/unit/routers/test_health_gateway_down.py::test_health_degrades_when_gateway_down PASSED [ 12%]
+tests/unit/routers/test_review_fixes.py::TestJWSVerificationFailure::test_create_account_invalid_jws_returns_403 PASSED [ 12%]
+tests/unit/routers/test_review_fixes.py::TestJWSVerificationFailure::test_escrow_lock_invalid_jws_returns_403 PASSED [ 13%]
+tests/unit/routers/test_review_fixes.py::TestJWSVerificationFailure::test_credit_invalid_jws_returns_403 PASSED [ 13%]
+tests/unit/routers/test_review_fixes.py::TestJWSVerificationFailure::test_get_balance_invalid_jws_returns_403 PASSED [ 14%]
+tests/unit/routers/test_review_fixes.py::TestPayloadMismatch::test_credit_payload_mismatch_returns_400 PASSED [ 14%]
+tests/unit/routers/test_review_fixes.py::TestPayloadMismatch::test_escrow_release_payload_mismatch_returns_400 PASSED [ 15%]
+tests/unit/routers/test_review_fixes.py::TestPayloadMismatch::test_escrow_split_payload_mismatch_returns_400 PASSED [ 16%]
+tests/unit/routers/test_review_fixes.py::TestMissingRequiredFields::test_create_account_missing_initial_balance PASSED [ 16%]
+tests/unit/routers/test_review_fixes.py::TestMissingRequiredFields::test_credit_missing_reference PASSED [ 17%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_agent_creates_own_account_with_zero_balance PASSED [ 17%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_agent_cannot_create_account_for_another_agent PASSED [ 18%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_agent_cannot_create_account_with_nonzero_balance PASSED [ 18%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_agent_duplicate_account_returns_409 PASSED [ 19%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_agent_not_found_in_identity_returns_404 PASSED [ 19%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_platform_still_creates_accounts_with_balance PASSED [ 20%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountBodyTokenValidation::test_null_token_returns_invalid_jws PASSED [ 20%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountBodyTokenValidation::test_non_string_token_returns_invalid_jws PASSED [ 21%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountMalformedJsonBody::test_malformed_json_body_returns_invalid_json PASSED [ 22%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountMalformedJsonBody::test_json_array_body_returns_invalid_json PASSED [ 22%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountPayloadShape::test_wrong_action_returns_invalid_payload PASSED [ 23%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountPayloadShape::test_missing_action_returns_invalid_payload PASSED [ 23%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountPayloadShape::test_missing_agent_id_returns_invalid_payload PASSED [ 24%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountPayloadShape::test_missing_initial_balance_returns_invalid_payload PASSED [ 24%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountInvalidAmount::test_negative_initial_balance_returns_invalid_amount PASSED [ 25%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountInvalidAmount::test_non_integer_initial_balance_returns_invalid_amount PASSED [ 25%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountSignatureBeatsPayload::test_invalid_signature_reported_even_with_malformed_payload PASSED [ 26%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditAmountValidation::test_zero_amount_returns_invalid_amount PASSED [ 27%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditAmountValidation::test_negative_amount_returns_invalid_amount PASSED [ 27%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditPayloadShape::test_missing_reference_returns_invalid_payload PASSED [ 28%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditPayloadShape::test_wrong_action_returns_invalid_payload PASSED [ 28%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditIdempotencyAndConflict::test_multiple_credits_accumulate PASSED [ 29%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditIdempotencyAndConflict::test_duplicate_reference_different_amount_returns_payload_mismatch PASSED [ 29%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditIdempotencyAndConflict::test_idempotent_credit_returns_same_tx_id PASSED [ 30%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestBearerAuthorizationHeaderShape::test_header_without_bearer_prefix_returns_invalid_jws PASSED [ 30%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestBalanceWrongActionAndMismatch::test_wrong_action_for_correct_owner_returns_invalid_payload PASSED [ 31%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestBalanceWrongActionAndMismatch::test_payload_account_id_mismatch_returns_payload_mismatch PASSED [ 32%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestBalanceQueryScenarios::test_balance_reflects_credits_and_escrow_locks PASSED [ 32%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestBalanceQueryScenarios::test_account_not_found PASSED [ 33%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_ordered_by_timestamp_then_tx_id PASSED [ 33%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_empty_list_for_zero_balance_account PASSED [ 34%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_includes_credit_escrow_lock_and_escrow_release_types PASSED [ 34%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_each_transaction_has_all_required_fields PASSED [ 35%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_account_not_found PASSED [ 35%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_wrong_agent_accessing_anothers_transactions PASSED [ 36%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_wrong_action_returns_invalid_payload PASSED [ 37%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_account_not_found PASSED [ 37%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_idempotent_lock_returns_same_escrow_id PASSED [ 38%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_duplicate_task_id_different_amount_returns_conflict PASSED [ 38%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_zero_amount_returns_invalid_amount PASSED [ 39%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_negative_amount_returns_invalid_amount PASSED [ 39%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_missing_task_id_returns_invalid_payload PASSED [ 40%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_missing_agent_id_returns_invalid_payload PASSED [ 40%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_wrong_action_returns_invalid_payload PASSED [ 41%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowReleaseScenarios::test_recipient_balance_increases_by_escrow_amount PASSED [ 41%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowReleaseScenarios::test_recipient_account_not_found PASSED [ 42%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowReleaseScenarios::test_missing_recipient_account_id_returns_invalid_payload PASSED [ 43%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowReleaseScenarios::test_malformed_payload_from_non_platform_signer_beats_forbidden PASSED [ 43%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_even_50_50_split PASSED [ 44%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_uneven_80_20_split_floor_math PASSED [ 44%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_worker_gets_all_100_0_split PASSED [ 45%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_odd_amount_floor_rounding PASSED [ 45%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_both_balances_updated_after_split PASSED [ 46%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_escrow_not_found PASSED [ 46%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_already_resolved_escrow PASSED [ 47%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_worker_pct_below_zero_returns_invalid_amount PASSED [ 48%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_non_integer_worker_pct_returns_invalid_payload PASSED [ 48%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_worker_account_not_found PASSED [ 49%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_malformed_payload_from_non_platform_signer_beats_forbidden PASSED [ 49%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHealthAccuracy::test_total_accounts_is_accurate PASSED [ 50%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHealthAccuracy::test_total_escrowed_excludes_released_escrows PASSED [ 50%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHealthAccuracy::test_uptime_is_monotonic PASSED [ 51%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[GET-/accounts] PASSED [ 51%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/accounts] PASSED [ 52%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/accounts] PASSED [ 53%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/accounts/a-x] PASSED [ 53%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/accounts/a-x] PASSED [ 54%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[POST-/accounts/a-x] PASSED [ 54%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/accounts/a-x/transactions] PASSED [ 55%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/accounts/a-x/transactions] PASSED [ 55%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[POST-/accounts/a-x/transactions] PASSED [ 56%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/accounts/a-x/credit] PASSED [ 56%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/accounts/a-x/credit] PASSED [ 57%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[GET-/escrow/lock] PASSED [ 58%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/escrow/lock] PASSED [ 58%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/escrow/lock] PASSED [ 59%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[GET-/escrow/esc-x/release] PASSED [ 59%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/escrow/esc-x/release] PASSED [ 60%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/escrow/esc-x/release] PASSED [ 60%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[GET-/escrow/esc-x/split] PASSED [ 61%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/escrow/esc-x/split] PASSED [ 61%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/escrow/esc-x/split] PASSED [ 62%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[POST-/health] PASSED [ 62%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestErrorEnvelopeConsistency::test_error_envelope_has_exactly_error_message_details PASSED [ 63%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestErrorEnvelopeConsistency::test_no_internal_error_leakage PASSED [ 64%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestIdFormatting::test_ids_are_correctly_formatted PASSED [ 64%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestAgentTierMalformedTokenPassthrough::test_empty_string_token_on_post_returns_invalid_jws PASSED [ 65%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestAgentTierMalformedTokenPassthrough::test_malformed_jws_shapes_on_post_return_invalid_jws[not-a-jws-at-all] PASSED [ 65%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestAgentTierMalformedTokenPassthrough::test_malformed_jws_shapes_on_post_return_invalid_jws[only.two-parts] PASSED [ 66%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestAgentTierMalformedTokenPassthrough::test_malformed_jws_shapes_on_post_return_invalid_jws[four.parts.is.wrong.here] PASSED [ 66%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestAgentTierMalformedTokenPassthrough::test_empty_bearer_token_returns_invalid_jws PASSED [ 67%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestOwnershipPrecedesPayloadValidation::test_wrong_owner_reported_even_with_malformed_payload PASSED [ 67%]
+tests/unit/routers/test_t072_platform_signer_gaps.py::test_non_platform_signer_on_release_is_forbidden PASSED [ 68%]
+tests/unit/routers/test_t072_platform_signer_gaps.py::test_non_platform_signer_on_split_is_forbidden PASSED [ 69%]
+tests/unit/routers/test_t072_platform_signer_gaps.py::test_create_account_fails_cleanly_when_identity_down PASSED [ 69%]
+tests/unit/routers/test_t072_platform_signer_gaps.py::test_expired_platform_token_rejected_on_credit PASSED [ 70%]
+tests/unit/routers/test_t072_platform_signer_gaps.py::test_non_expiring_token_is_rejected_before_request PASSED [ 70%]
+tests/unit/routers/test_two_tier_auth.py::test_platform_credit_succeeds_when_identity_down PASSED [ 71%]
+tests/unit/routers/test_two_tier_auth.py::test_platform_release_succeeds_when_identity_down PASSED [ 71%]
+tests/unit/routers/test_two_tier_auth.py::test_platform_split_succeeds_when_identity_down PASSED [ 72%]
+tests/unit/routers/test_two_tier_auth.py::test_agent_escrow_lock_fails_cleanly_when_identity_down PASSED [ 72%]
+tests/unit/routers/test_two_tier_auth.py::test_credit_invalid_signature_precedes_domain_payload PASSED [ 73%]
+tests/unit/routers/test_two_tier_auth.py::test_credit_wellformed_nonplatform_is_forbidden PASSED [ 74%]
+tests/unit/test_config.py::test_config_loads_from_yaml PASSED            [ 74%]
+tests/unit/test_config.py::test_config_rejects_extra_fields PASSED       [ 75%]
+tests/unit/test_ledger_audit_log.py::test_create_account_emits_audit_log PASSED [ 75%]
+tests/unit/test_ledger_audit_log.py::test_credit_emits_audit_log PASSED  [ 76%]
+tests/unit/test_ledger_audit_log.py::test_escrow_lock_emits_audit_log PASSED [ 76%]
+tests/unit/test_ledger_audit_log.py::test_escrow_release_emits_audit_log PASSED [ 77%]
+tests/unit/test_ledger_audit_log.py::test_escrow_split_emits_audit_log PASSED [ 77%]
+tests/unit/test_ledger_db_client_normalization.py::TestBankAccountsSchemaShape::test_bank_accounts_has_the_expected_columns PASSED [ 78%]
+tests/unit/test_ledger_db_client_normalization.py::TestGetAccountCoversEveryColumn::test_get_account_returns_every_schema_column PASSED [ 79%]
+tests/unit/test_ledger_db_client_normalization.py::TestGetAccountCoversEveryColumn::test_get_account_drops_unknown_fields PASSED [ 79%]
+tests/unit/test_ledger_db_client_normalization.py::TestGetTransactionsCoversNonExcludedColumns::test_returns_every_non_excluded_schema_column PASSED [ 80%]
+tests/unit/test_ledger_safety.py::test_credit_is_idempotent_by_reference PASSED [ 80%]
+tests/unit/test_ledger_safety.py::test_credit_duplicate_reference_different_amount_errors PASSED [ 81%]
+tests/unit/test_ledger_safety.py::test_escrow_lock_is_idempotent_by_task_id PASSED [ 81%]
+tests/unit/test_ledger_safety.py::test_escrow_lock_same_task_different_amount_conflicts PASSED [ 82%]
+tests/unit/test_ledger_safety.py::test_escrow_release_is_atomic PASSED   [ 82%]
+tests/unit/test_ledger_safety.py::test_escrow_split_is_atomic PASSED     [ 83%]
+tests/unit/test_ledger_store_contract.py::TestEscrowLockTransactionShape::test_writes_escrow_lock_type_with_bare_task_id_reference[in_memory] PASSED [ 83%]
+tests/unit/test_ledger_store_contract.py::TestEscrowLockTransactionShape::test_writes_escrow_lock_type_with_bare_task_id_reference[gateway] PASSED [ 84%]
+tests/unit/test_ledger_store_contract.py::TestEscrowReleaseTransactionShape::test_writes_escrow_release_type_with_bare_escrow_id_reference[in_memory] PASSED [ 85%]
+tests/unit/test_ledger_store_contract.py::TestEscrowReleaseTransactionShape::test_writes_escrow_release_type_with_bare_escrow_id_reference[gateway] PASSED [ 85%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_both_legs_write_escrow_release_type_with_bare_escrow_id_reference[in_memory] PASSED [ 86%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_both_legs_write_escrow_release_type_with_bare_escrow_id_reference[gateway] PASSED [ 86%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_worker_leg_is_not_written[in_memory] PASSED [ 87%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_worker_leg_is_not_written[gateway] PASSED [ 87%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_poster_leg_is_not_written[in_memory] PASSED [ 88%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_poster_leg_is_not_written[gateway] PASSED [ 88%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_poster_that_does_not_match_the_escrow_payer[in_memory] PASSED [ 89%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_poster_that_does_not_match_the_escrow_payer[gateway] PASSED [ 90%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_out_of_range_worker_pct_with_invalid_amount[in_memory] PASSED [ 90%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_out_of_range_worker_pct_with_invalid_amount[gateway] PASSED [ 91%]
+tests/unit/test_mp03_platform_credentials.py::test_platform_agent_config_path_is_required[] PASSED [ 91%]
+tests/unit/test_mp03_platform_credentials.py::test_platform_agent_config_path_is_required[   ] PASSED [ 92%]
+tests/unit/test_mp03_platform_credentials.py::test_platform_agent_config_path_has_no_default PASSED [ 92%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[missing] PASSED [ 93%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[partial] PASSED [ 93%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[mismatched] PASSED [ 94%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[corrupt] PASSED [ 95%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[unsafe_mode] PASSED [ 95%]
+tests/unit/test_mp03_receiver_context.py::test_remote_verifier_rejects_wrong_audience_before_caller_use PASSED [ 96%]
+tests/unit/test_mp03_receiver_context.py::test_remote_invalid_signature_maps_to_forbidden PASSED [ 96%]
+tests/unit/test_mp03_receiver_context.py::test_local_adapter_cryptographically_rejects_unregistered_kid PASSED [ 97%]
+tests/unit/test_mp03_receiver_context.py::test_wrong_authenticated_context_has_no_ledger_effect PASSED [ 97%]
+tests/unit/test_no_base_agent_imports.py::test_no_base_agent_imports PASSED [ 98%]
+tests/unit/test_placeholder.py::test_service_scaffolded PASSED           [ 98%]
+tests/unit/test_platform_integration.py::test_get_platform_agent_id_errors_when_no_platform_agent PASSED [ 99%]
+tests/unit/test_platform_integration.py::test_get_platform_agent_id_returns_runtime_platform_agent_id PASSED [100%]
+
+============================= 181 passed in 6.38s ==============================
+
+
+[0;34m=== Running Architecture Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/central-bank/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/central-bank
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 22 items
+
+tests/architecture/test_architecture.py::TestVisualization::test_generate_module_dependency_graph PASSED [  4%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_routers PASSED [  9%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_app PASSED [ 13%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_middleware PASSED [ 18%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_schemas PASSED [ 22%]
+tests/architecture/test_architecture.py::TestLeafModules::test_config_must_not_import_routers PASSED [ 27%]
+tests/architecture/test_architecture.py::TestLeafModules::test_config_must_not_import_services PASSED [ 31%]
+tests/architecture/test_architecture.py::TestLeafModules::test_config_must_not_import_core PASSED [ 36%]
+tests/architecture/test_architecture.py::TestLeafModules::test_schemas_must_not_import_services PASSED [ 40%]
+tests/architecture/test_architecture.py::TestLeafModules::test_schemas_must_not_import_routers PASSED [ 45%]
+tests/architecture/test_architecture.py::TestLeafModules::test_schemas_must_not_import_core PASSED [ 50%]
+tests/architecture/test_architecture.py::TestRouterConstraints::test_routers_must_not_import_config_directly PASSED [ 54%]
+tests/architecture/test_architecture.py::TestRouterConstraints::test_routers_must_not_import_app PASSED [ 59%]
+tests/architecture/test_architecture.py::TestRouterConstraints::test_routers_must_not_import_lifespan PASSED [ 63%]
+tests/architecture/test_architecture.py::TestLayeredArchitecture::test_services_layer_must_not_access_routers_layer PASSED [ 68%]
+tests/architecture/test_architecture.py::TestLayeredArchitecture::test_services_layer_must_not_access_core_layer PASSED [ 72%]
+tests/architecture/test_cross_service_deps.py::TestCrossServiceDependencies::test_no_forbidden_service_imports PASSED [ 77%]
+tests/architecture/test_db_client_isolation.py::TestDbClientIsolation::test_only_http_clients_import_httpx PASSED [ 81%]
+tests/architecture/test_db_client_isolation.py::TestDbClientIsolation::test_lifespan_does_not_import_legacy_stores PASSED [ 86%]
+tests/architecture/test_db_client_isolation.py::TestDbClientIsolation::test_lifespan_requires_db_gateway PASSED [ 90%]
+tests/architecture/test_shared_identity_client.py::TestSharedIdentityClient::test_lifespan_imports_shared_identity_client PASSED [ 95%]
+tests/architecture/test_shared_identity_client.py::TestSharedIdentityClient::test_no_local_identity_client_module PASSED [100%]
+
+============================== 22 passed in 0.51s ==============================
+
+[0;34m=== Running Pyright Type Checks ===[0m
+0 errors, 0 warnings, 0 informations
+WARNING: there is a new pyright version available (v1.1.408 -> v1.1.414).
+Please install the new version or set PYRIGHT_PYTHON_FORCE_VERSION to `latest`
+
+
+[0;32m✓ Pyright checks passed[0m
+  Report: reports/pyright/pyright.txt
+
+
+[0;32m✓ All CI checks passed[0m
+

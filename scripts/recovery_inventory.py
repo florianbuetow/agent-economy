@@ -258,6 +258,8 @@ def _resource_capture_kind(
     except FileNotFoundError:
         if not required and kind is ResourceKind.FILE:
             return CaptureKind.ABSENT_FILE
+        if not required and kind is ResourceKind.DIRECTORY:
+            return CaptureKind.ABSENT_DIRECTORY
         raise ValueError(f"Required recovery resource does not exist: {label}") from None
     if stat.S_ISLNK(path_stat.st_mode):
         raise ValueError(f"Recovery resource must not be a symlink: {label}")
@@ -307,6 +309,11 @@ def _binding_resource(  # noqa: PLR0911, PLR0912
         return "database.schema", ResourceKind.FILE, CaptureKind.COPY, True
     if config_id == "db-gateway" and path == ("recovery", "backup_root"):
         return "recovery.backups", ResourceKind.DIRECTORY, CaptureKind.DIRECTORY_ONLY, True
+    if config_id == "db-gateway" and path == (
+        "board_authority",
+        "platform_public_key_path",
+    ):
+        return _key_id("platform", "public"), ResourceKind.FILE, CaptureKind.KEYPAIR, True
     if (
         config_id == "db-gateway"
         and len(path) == 4
@@ -328,6 +335,8 @@ def _binding_resource(  # noqa: PLR0911, PLR0912
         return "frontend.web", ResourceKind.DIRECTORY, CaptureKind.COPY, True
     if config_id == "agents" and path == ("data", "keys_dir"):
         return "keys.root", ResourceKind.DIRECTORY, CaptureKind.DIRECTORY_ONLY, True
+    if config_id == "agents" and path == ("runtime_state", "directory"):
+        return "agents.runtime_state", ResourceKind.DIRECTORY, CaptureKind.COPY, False
     if config_id == "agents" and path == ("data", "roster_path"):
         return "agents.roster", ResourceKind.FILE, CaptureKind.COPY, True
     if config_id == "agents" and path == ("task_feeder", "tasks_file"):
@@ -596,7 +605,18 @@ def build_recovery_inventory(  # noqa: PLR0912, PLR0915
                     kind=kind,
                     capture_kind=selected_capture,
                 )
-                if logical_id.startswith("key."):
+                is_gateway_public = (
+                    config_id == "db-gateway"
+                    and len(field.field_path) == 4
+                    and field.field_path[:2] == ("auth", "trusted_callers")
+                    and field.field_path[3] == "public_key_path"
+                )
+                is_gateway_private = field.field_path == (
+                    "db_gateway",
+                    "signing",
+                    "private_key_path",
+                )
+                if is_gateway_public or is_gateway_private:
                     _record_gateway_key_path(
                         logical_id,
                         resolved_path,

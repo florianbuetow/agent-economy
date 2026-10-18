@@ -1,0 +1,4 @@
+Would reformat: tests/integration/test_mp07_accept_expiry_race.py
+Would reformat: tests/integration/test_mp07_acceptance_window.py
+Would reformat: tests/integration/test_mp07_bid_admission_races.py
+3 files would be reformatted

@@ -8,7 +8,7 @@ from scripts.isolated_test_runtime import SERVICE_ORDER, IsolatedRuntime
 from scripts.recovery_inventory import build_recovery_inventory
 from scripts.recovery_registry import capture_registry_bindings
 from service_commons.maintenance_lock import MaintenanceLockMode, hold_maintenance_lock
-from service_commons.recovery_contract import MaintenanceLockIdentityV1, OwnedProcessV1
+from service_commons.recovery_contract import CaptureKind, MaintenanceLockIdentityV1, OwnedProcessV1
 
 from db_gateway_service.recovery import PublicationState, create_backup, verify_backup
 
@@ -62,7 +62,12 @@ def test_live_full_runtime_inventory_produces_identity_complete_backup(tmp_path:
         process_ownership=processes,
     )
     assert len(inventory.configs) == 8
-    assert len(inventory.field_bindings) == 60
+    assert len(inventory.field_bindings) == 62
+    journal = next(
+        resource for resource in inventory.resources if resource.logical_id == "agents.runtime_state"
+    )
+    assert journal.capture_kind is CaptureKind.ABSENT_DIRECTORY
+    assert journal.captured_path == runtime.run_dir / "data" / "agent-runtime"
     assert all(process.group_drained and not process.running for process in processes)
 
     work_root = tmp_path / "recovery-work"

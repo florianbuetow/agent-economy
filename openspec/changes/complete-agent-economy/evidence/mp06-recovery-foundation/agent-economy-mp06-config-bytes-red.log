@@ -1,0 +1,61 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-commons
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 9 items
+
+tests/unit/test_config_bytes.py FFFFFFFF.                                [100%]
+
+=================================== FAILURES ===================================
+____ test_verified_bytes_parse_like_the_file_loader[service: {name: ui}\n] _____
+tests/unit/test_config_bytes.py:18: in test_verified_bytes_parse_like_the_file_loader
+    assert config.parse_yaml_config_bytes(content, source="captured config") == expected
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'service_commons.config' has no attribute 'parse_yaml_config_bytes'
+________ test_verified_bytes_parse_like_the_file_loader[{"port": 8008}] ________
+tests/unit/test_config_bytes.py:18: in test_verified_bytes_parse_like_the_file_loader
+    assert config.parse_yaml_config_bytes(content, source="captured config") == expected
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'service_commons.config' has no attribute 'parse_yaml_config_bytes'
+________ test_verified_bytes_parse_like_the_file_loader[flag: false\n] _________
+tests/unit/test_config_bytes.py:18: in test_verified_bytes_parse_like_the_file_loader
+    assert config.parse_yaml_config_bytes(content, source="captured config") == expected
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'service_commons.config' has no attribute 'parse_yaml_config_bytes'
+____ test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[] _____
+tests/unit/test_config_bytes.py:24: in test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration
+    config.parse_yaml_config_bytes(content, source="captured config")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'service_commons.config' has no attribute 'parse_yaml_config_bytes'
+___ test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[[]] ____
+tests/unit/test_config_bytes.py:24: in test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration
+    config.parse_yaml_config_bytes(content, source="captured config")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'service_commons.config' has no attribute 'parse_yaml_config_bytes'
+___ test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[42] ____
+tests/unit/test_config_bytes.py:24: in test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration
+    config.parse_yaml_config_bytes(content, source="captured config")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'service_commons.config' has no attribute 'parse_yaml_config_bytes'
+_ test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[broken: [] _
+tests/unit/test_config_bytes.py:24: in test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration
+    config.parse_yaml_config_bytes(content, source="captured config")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'service_commons.config' has no attribute 'parse_yaml_config_bytes'
+__ test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[\xff] ___
+tests/unit/test_config_bytes.py:24: in test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration
+    config.parse_yaml_config_bytes(content, source="captured config")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'service_commons.config' has no attribute 'parse_yaml_config_bytes'
+=========================== short test summary info ============================
+FAILED tests/unit/test_config_bytes.py::test_verified_bytes_parse_like_the_file_loader[service: {name: ui}\n]
+FAILED tests/unit/test_config_bytes.py::test_verified_bytes_parse_like_the_file_loader[{"port": 8008}]
+FAILED tests/unit/test_config_bytes.py::test_verified_bytes_parse_like_the_file_loader[flag: false\n]
+FAILED tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[]
+FAILED tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[[]]
+FAILED tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[42]
+FAILED tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[broken: []
+FAILED tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[\xff]
+========================= 8 failed, 1 passed in 0.10s ==========================

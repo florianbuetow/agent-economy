@@ -199,6 +199,26 @@ def migrate_v1_to_v2(
     )
 
 
+def migrate_v2_to_v3(
+    inventory: RecoveryInventoryV1,
+    *,
+    backup_root: Path,
+    backup_id: str,
+    work_root: Path,
+    busy_timeout_ms: int,
+) -> MigrationResult:
+    """Run the separate verified task-contract migration from v2 to v3."""
+    from db_gateway_service.task_migration import migrate_v2_to_v3 as implementation
+
+    return implementation(
+        inventory,
+        backup_root=backup_root,
+        backup_id=backup_id,
+        work_root=work_root,
+        busy_timeout_ms=busy_timeout_ms,
+    )
+
+
 def _migrate_bound_source(
     *,
     bound: BackupBoundSource,

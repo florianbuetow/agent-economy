@@ -1,0 +1,244 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 44 items
+
+tests/unit/task_feeder/test_mp07_acceptance_snapshot.py F.....           [ 13%]
+tests/unit/task_feeder/test_mp07_native_intents.py ..FF...........       [ 47%]
+tests/unit/task_feeder/test_acceptance.py ............F..FFFFFF          [ 95%]
+tests/unit/task_feeder/test_loop_statuses.py ..                          [100%]
+
+=================================== FAILURES ===================================
+___________ test_list_summary_uses_full_task_details_before_freezing ___________
+tests/unit/task_feeder/test_mp07_acceptance_snapshot.py:42: in test_list_summary_uses_full_task_details_before_freezing
+    assert saved.acknowledgment_context["frozen_task_facts"]["reward"] == 123
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'reward'
+------------------------------ Captured log call -------------------------------
+WARNING  base_agent.runtime_task_commands:runtime_task_commands.py:209 Task command acknowledgment unavailable: task=t-00000000-0000-4000-8000-000000000707 slot=acceptance operation=op-a2a9eabf-7e96-5043-b03d-b2997cb3d40b
+______ test_new_acceptance_freezes_source_and_q16_winner_before_transport ______
+tests/unit/task_feeder/test_mp07_native_intents.py:524: in test_new_acceptance_freezes_source_and_q16_winner_before_transport
+    result = await loop.accept_one(_open_task())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:193: in accept_one
+    intent = await self._commands.execute(
+src/base_agent/runtime_task_commands.py:168: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:177: in prepare
+    raise ValueError("task detail identity does not match the selected task")
+E   ValueError: task detail identity does not match the selected task
+_________________ test_only_completed_acceptance_is_finalized __________________
+tests/unit/task_feeder/test_mp07_native_intents.py:566: in test_only_completed_acceptance_is_finalized
+    result = await loop.accept_one(_open_task())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:193: in accept_one
+    intent = await self._commands.execute(
+src/base_agent/runtime_task_commands.py:168: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:177: in prepare
+    raise ValueError("task detail identity does not match the selected task")
+E   ValueError: task detail identity does not match the selected task
+_____________ TestAcceptOne.test_accepts_lowest_bid_when_eligible ______________
+tests/unit/task_feeder/test_acceptance.py:190: in test_accepts_lowest_bid_when_eligible
+    result = await loop.accept_one(_task(bid_count=2))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:193: in accept_one
+    intent = await self._commands.execute(
+src/base_agent/runtime_task_commands.py:168: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:185: in prepare
+    return acceptance_intent(
+src/base_agent/runtime_task_intent_factory.py:148: in acceptance_intent
+    task_id, source_version = _task_identity(task, "open")
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_intent_factory.py:42: in _task_identity
+    raise RuntimeIntentError("invalid_input", f"task status must be {expected_status}")
+E   base_agent.runtime_intent_models.RuntimeIntentError: task status must be open
+____ TestAcceptOne.test_acceptance_happens_strictly_before_bidding_deadline ____
+tests/unit/task_feeder/test_acceptance.py:236: in test_acceptance_happens_strictly_before_bidding_deadline
+    result = await loop.accept_one(_task(bid_count=1))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:193: in accept_one
+    intent = await self._commands.execute(
+src/base_agent/runtime_task_commands.py:168: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:185: in prepare
+    return acceptance_intent(
+src/base_agent/runtime_task_intent_factory.py:148: in acceptance_intent
+    task_id, source_version = _task_identity(task, "open")
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_intent_factory.py:42: in _task_identity
+    raise RuntimeIntentError("invalid_input", f"task status must be {expected_status}")
+E   base_agent.runtime_intent_models.RuntimeIntentError: task status must be open
+_____ TestAcceptOne.test_generic_409_remains_pending_and_does_not_finalize _____
+tests/unit/task_feeder/test_acceptance.py:255: in test_generic_409_remains_pending_and_does_not_finalize
+    result = await loop.accept_one(_task(bid_count=1))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:193: in accept_one
+    intent = await self._commands.execute(
+src/base_agent/runtime_task_commands.py:168: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:185: in prepare
+    return acceptance_intent(
+src/base_agent/runtime_task_intent_factory.py:148: in acceptance_intent
+    task_id, source_version = _task_identity(task, "open")
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_intent_factory.py:42: in _task_identity
+    raise RuntimeIntentError("invalid_input", f"task status must be {expected_status}")
+E   base_agent.runtime_intent_models.RuntimeIntentError: task status must be open
+_ TestAcceptOne.test_native_dependency_failure_is_journaled_pending_and_retried _
+tests/unit/task_feeder/test_acceptance.py:276: in test_native_dependency_failure_is_journaled_pending_and_retried
+    first = await loop.accept_one(_task(bid_count=1))
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:193: in accept_one
+    intent = await self._commands.execute(
+src/base_agent/runtime_task_commands.py:168: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:185: in prepare
+    return acceptance_intent(
+src/base_agent/runtime_task_intent_factory.py:148: in acceptance_intent
+    task_id, source_version = _task_identity(task, "open")
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_intent_factory.py:42: in _task_identity
+    raise RuntimeIntentError("invalid_input", f"task status must be {expected_status}")
+E   base_agent.runtime_intent_models.RuntimeIntentError: task status must be open
+______ TestProcessOpenTasks.test_polls_own_open_tasks_and_accepts_lowest _______
+tests/unit/task_feeder/test_acceptance.py:297: in test_polls_own_open_tasks_and_accepts_lowest
+    assert agent.accept_bid.await_args.args == (TASK_ID, "b-2")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'args'
+------------------------------ Captured log call -------------------------------
+ERROR    task_feeder.acceptance:acceptance.py:232 Failed to process task_id=t-00000000-0000-4000-8000-000000000901 for acceptance
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 230, in process_open_tasks
+    await self.accept_one(task)
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 193, in accept_one
+    intent = await self._commands.execute(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py", line 168, in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 185, in prepare
+    return acceptance_intent(
+        task=snapshot,
+    ...<2 lines>...
+        operation_id=operation_id,
+    )
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_intent_factory.py", line 148, in acceptance_intent
+    task_id, source_version = _task_identity(task, "open")
+                              ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_intent_factory.py", line 42, in _task_identity
+    raise RuntimeIntentError("invalid_input", f"task status must be {expected_status}")
+base_agent.runtime_intent_models.RuntimeIntentError: task status must be open
+______ TestProcessOpenTasks.test_amount_tie_broken_by_reputation_via_loop ______
+tests/unit/task_feeder/test_acceptance.py:314: in test_amount_tie_broken_by_reputation_via_loop
+    assert agent.accept_bid.await_args.args == (TASK_ID, "b-2")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'args'
+------------------------------ Captured log call -------------------------------
+ERROR    task_feeder.acceptance:acceptance.py:232 Failed to process task_id=t-00000000-0000-4000-8000-000000000901 for acceptance
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 230, in process_open_tasks
+    await self.accept_one(task)
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 193, in accept_one
+    intent = await self._commands.execute(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py", line 168, in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 185, in prepare
+    return acceptance_intent(
+        task=snapshot,
+    ...<2 lines>...
+        operation_id=operation_id,
+    )
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_intent_factory.py", line 148, in acceptance_intent
+    task_id, source_version = _task_identity(task, "open")
+                              ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_intent_factory.py", line 42, in _task_identity
+    raise RuntimeIntentError("invalid_input", f"task status must be {expected_status}")
+base_agent.runtime_intent_models.RuntimeIntentError: task status must be open
+____ TestProcessOpenTasks.test_definitively_rejected_task_is_not_sent_again ____
+tests/unit/task_feeder/test_acceptance.py:333: in test_definitively_rejected_task_is_not_sent_again
+    assert agent.accept_bid.await_count == 1
+E   AssertionError: assert 0 == 1
+E    +  where 0 = <AsyncMock name='mock.accept_bid' id='4489733728'>.await_count
+E    +    where <AsyncMock name='mock.accept_bid' id='4489733728'> = <MagicMock id='4490415808'>.accept_bid
+------------------------------ Captured log call -------------------------------
+ERROR    task_feeder.acceptance:acceptance.py:232 Failed to process task_id=t-00000000-0000-4000-8000-000000000901 for acceptance
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 230, in process_open_tasks
+    await self.accept_one(task)
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 193, in accept_one
+    intent = await self._commands.execute(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py", line 168, in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 185, in prepare
+    return acceptance_intent(
+        task=snapshot,
+    ...<2 lines>...
+        operation_id=operation_id,
+    )
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_intent_factory.py", line 148, in acceptance_intent
+    task_id, source_version = _task_identity(task, "open")
+                              ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_intent_factory.py", line 42, in _task_identity
+    raise RuntimeIntentError("invalid_input", f"task status must be {expected_status}")
+base_agent.runtime_intent_models.RuntimeIntentError: task status must be open
+ERROR    task_feeder.acceptance:acceptance.py:232 Failed to process task_id=t-00000000-0000-4000-8000-000000000901 for acceptance
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 230, in process_open_tasks
+    await self.accept_one(task)
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 193, in accept_one
+    intent = await self._commands.execute(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py", line 168, in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py", line 185, in prepare
+    return acceptance_intent(
+        task=snapshot,
+    ...<2 lines>...
+        operation_id=operation_id,
+    )
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_intent_factory.py", line 148, in acceptance_intent
+    task_id, source_version = _task_identity(task, "open")
+                              ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_intent_factory.py", line 42, in _task_identity
+    raise RuntimeIntentError("invalid_input", f"task status must be {expected_status}")
+base_agent.runtime_intent_models.RuntimeIntentError: task status must be open
+=========================== short test summary info ============================
+FAILED tests/unit/task_feeder/test_mp07_acceptance_snapshot.py::test_list_summary_uses_full_task_details_before_freezing
+FAILED tests/unit/task_feeder/test_mp07_native_intents.py::test_new_acceptance_freezes_source_and_q16_winner_before_transport
+FAILED tests/unit/task_feeder/test_mp07_native_intents.py::test_only_completed_acceptance_is_finalized
+FAILED tests/unit/task_feeder/test_acceptance.py::TestAcceptOne::test_accepts_lowest_bid_when_eligible
+FAILED tests/unit/task_feeder/test_acceptance.py::TestAcceptOne::test_acceptance_happens_strictly_before_bidding_deadline
+FAILED tests/unit/task_feeder/test_acceptance.py::TestAcceptOne::test_generic_409_remains_pending_and_does_not_finalize
+FAILED tests/unit/task_feeder/test_acceptance.py::TestAcceptOne::test_native_dependency_failure_is_journaled_pending_and_retried
+FAILED tests/unit/task_feeder/test_acceptance.py::TestProcessOpenTasks::test_polls_own_open_tasks_and_accepts_lowest
+FAILED tests/unit/task_feeder/test_acceptance.py::TestProcessOpenTasks::test_amount_tie_broken_by_reputation_via_loop
+FAILED tests/unit/task_feeder/test_acceptance.py::TestProcessOpenTasks::test_definitively_rejected_task_is_not_sent_again
+======================== 10 failed, 34 passed in 0.35s =========================

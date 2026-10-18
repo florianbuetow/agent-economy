@@ -1,0 +1,253 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 43 items
+
+tests/integration/test_mp07_atomic_task_transitions.py FFF               [  6%]
+tests/integration/test_mp07_deadline_transition_races.py FFF             [ 13%]
+tests/integration/test_mp07_bid_admission_races.py .F.                   [ 20%]
+tests/integration/test_mp07_public_command_replay.py FFFFF               [ 32%]
+tests/integration/test_mp07_acceptance_window.py FFFFFFFF..FFF           [ 62%]
+tests/integration/test_mp07_accept_expiry_race.py F                      [ 65%]
+tests/unit/test_mp07_deadline_precision.py .....                         [ 76%]
+tests/unit/test_deadline_evaluator.py ..........                         [100%]
+
+=================================== FAILURES ===================================
+__________ test_concurrent_approve_and_dispute_have_one_serial_winner __________
+tests/integration/test_mp07_atomic_task_transitions.py:568: in test_concurrent_approve_and_dispute_have_one_serial_winner
+    assert len(successes) == 1, diagnostics
+E   AssertionError: {'bank_release_count': 1, 'court_claim_count': 1, 'event_rows': [{'event_id': 10, 'event_type': 'task.disputed'}, {'ev... 'status_code': None}, {'error': None, 'operation': 'dispute', 'result_status': 'approved', 'status_code': None}], ...}
+E   assert 2 == 1
+E    +  where 2 = len([_Outcome(operation='approve', result={'task_id': 't-281398a5-7db8-438e-b4ac-337a1fa21e10', 'poster_id': 'a-mp07-poste...', 'execution_deadline': '2026-10-18T20:34:15.474575Z', 'review_deadline': '2026-10-18T20:34:15.481985Z'}, error=None)])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:15", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-281398a5-7db8-438e-b4ac-337a1fa21e10"}}
+______________ test_competing_acceptances_have_one_serial_winner _______________
+tests/integration/test_mp07_atomic_task_transitions.py:720: in test_competing_acceptances_have_one_serial_winner
+    assert len(successes) == 1, diagnostics
+E   AssertionError: {'bank_release_count': 0, 'court_claim_count': 0, 'event_rows': [{'event_id': 9, 'event_type': 'task.accepted'}, {'eve...us_code': None}, {'error': None, 'operation': 'accept-second', 'result_status': 'accepted', 'status_code': None}], ...}
+E   assert 2 == 1
+E    +  where 2 = len([_Outcome(operation='accept-first', result={'task_id': 't-48ace598-afa3-4576-9caf-4c98667a9037', 'poster_id': 'a-mp07-...26-10-18T20:34:15.859485Z', 'execution_deadline': '2026-10-18T20:34:15.891558Z', 'review_deadline': None}, error=None)])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:15", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-48ace598-afa3-4576-9caf-4c98667a9037"}}
+_____ test_concurrent_acceptance_and_poster_cancel_have_one_serial_winner ______
+tests/integration/test_mp07_atomic_task_transitions.py:864: in test_concurrent_acceptance_and_poster_cancel_have_one_serial_winner
+    assert len(successes) == 1, diagnostics
+E   AssertionError: {'accept_bank_release_count': 0, 'cancel_bank_release_count': 1, 'court_claim_count': 0, 'event_rows': [{'event_id': 9, 'event_type': 'task.cancelled'}, {'event_id': 10, 'event_type': 'task.accepted'}], ...}
+E   assert 2 == 1
+E    +  where 2 = len([_Outcome(operation='accept', result={'task_id': 't-456ed3a5-16ea-41bc-a2cd-1098dbf5131f', 'poster_id': 'a-mp07-poster..., 'bidding_deadline': '2026-10-18T20:34:16.242992Z', 'execution_deadline': None, 'review_deadline': None}, error=None)])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:16", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-456ed3a5-16ea-41bc-a2cd-1098dbf5131f"}}
+________ test_stale_validated_submit_cannot_overwrite_execution_expiry _________
+tests/integration/test_mp07_deadline_transition_races.py:577: in test_stale_validated_submit_cannot_overwrite_execution_expiry
+    assert outcome.error is not None and outcome.error.status_code == 409, diagnostics
+E   AssertionError: {'expiry_bank_calls': 1, 'outcome': {'error': None, 'operation': 'submit', 'result_status': 'submitted', 'status_code': None}, 'semantic_events': ['task.expired', 'task.submitted'], 'submit_bank_calls': 0, ...}
+E   assert (None is not None)
+E    +  where None = _Outcome(operation='submit', result={'task_id': 't-e5a662f6-8af9-4376-abbf-204a8becf55a', 'poster_id': 'a-mp07-deadlin...10-17T13:00:00Z', 'execution_deadline': '2026-10-17T12:00:10Z', 'review_deadline': '2026-10-17T12:00:20Z'}, error=None).error
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:16", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-e5a662f6-8af9-4376-abbf-204a8becf55a"}}
+_____ test_stale_review_action_cannot_beat_autoapproval_at_cutoff[approve] _____
+tests/integration/test_mp07_deadline_transition_races.py:706: in test_stale_review_action_cannot_beat_autoapproval_at_cutoff
+    assert outcome.error is not None and outcome.error.status_code == 409, diagnostics
+E   AssertionError: {'autoapproval_bank_calls': 1, 'manual_bank_calls': 1, 'manual_court_calls': 0, 'outcome': {'error': None, 'operation': 'approve', 'result_status': 'approved', 'status_code': None}, ...}
+E   assert (None is not None)
+E    +  where None = _Outcome(operation='approve', result={'task_id': 't-ce7d3731-8cc4-4062-99b5-9755d3ee9f88', 'poster_id': 'a-mp07-deadli...10-17T13:00:00Z', 'execution_deadline': '2026-10-17T12:00:10Z', 'review_deadline': '2026-10-17T12:00:10Z'}, error=None).error
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:17", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-ce7d3731-8cc4-4062-99b5-9755d3ee9f88"}}
+_____ test_stale_review_action_cannot_beat_autoapproval_at_cutoff[dispute] _____
+tests/integration/test_mp07_deadline_transition_races.py:706: in test_stale_review_action_cannot_beat_autoapproval_at_cutoff
+    assert outcome.error is not None and outcome.error.status_code == 409, diagnostics
+E   AssertionError: {'autoapproval_bank_calls': 1, 'manual_bank_calls': 0, 'manual_court_calls': 1, 'outcome': {'error': None, 'operation': 'dispute', 'result_status': 'disputed', 'status_code': None}, ...}
+E   assert (None is not None)
+E    +  where None = _Outcome(operation='dispute', result={'task_id': 't-70622c3a-ea19-4181-bb4f-2d7e8931f539', 'poster_id': 'a-mp07-deadli...10-17T13:00:00Z', 'execution_deadline': '2026-10-17T12:00:10Z', 'review_deadline': '2026-10-17T12:00:10Z'}, error=None).error
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:17", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-70622c3a-ea19-4181-bb4f-2d7e8931f539"}}
+__________ test_bid_validated_before_cutoff_cannot_commit_at_equality __________
+tests/integration/test_mp07_bid_admission_races.py:694: in test_bid_validated_before_cutoff_cannot_commit_at_equality
+    assert bid_outcome.error is not None, diagnostics
+E   AssertionError: {'bid_outcome': _Outcome(operation='cutoff-bid', result={'bid_id': 'bid-042688a8-90d6-4cf1-9030-16a8a114b8c4', 'task_i...dder-81b35432-dc2c-4d0d-a3a6-ac3351d5806c'}], 'events': ['bid.submitted', 'task.expired'], 'expiry_bank_calls': 1, ...}
+E   assert None is not None
+E    +  where None = _Outcome(operation='cutoff-bid', result={'bid_id': 'bid-042688a8-90d6-4cf1-9030-16a8a114b8c4', 'task_id': 't-68ed89e6-...bidder-81b35432-dc2c-4d0d-a3a6-ac3351d5806c', 'amount': 90, 'submitted_at': '2026-10-17T12:00:09.999999Z'}, error=None).error
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:18", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-68ed89e6-fd66-4bdb-ae9a-01786b38f4b8"}}
+___ test_exact_submit_bid_replay_after_response_loss_returns_original_result ___
+tests/integration/test_mp07_public_command_replay.py:365: in test_exact_submit_bid_replay_after_response_loss_returns_original_result
+    assert replay.status_code == 201, diagnostics
+E   AssertionError: {'bids': [{'amount': 90, 'bid_id': 'bid-ce2e0b35-8a04-477a-b4ca-a6030e60830d', 'bidder_id': 'a-mp07-replay-worker-0966... ...}, 'replay': {'details': {}, 'error': 'bid_already_exists', 'message': 'This agent already bid on this task'}, ...}
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:19", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-342914a9-c304-4b6c-b63f-d53c27a739b3"}}
+{"timestamp": "2026-10-17 20:34:19", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_exists", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-17 20:34:19", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_already_exists", "status_code": 409, "path": "/tasks/t-342914a9-c304-4b6c-b63f-d53c27a739b3/bids"}}
+___ test_exact_accept_bid_replay_after_response_loss_returns_original_terms ____
+tests/integration/test_mp07_public_command_replay.py:431: in test_exact_accept_bid_replay_after_response_loss_returns_original_terms
+    assert replay.status_code == 200, diagnostics
+E   AssertionError: {'bids': [{'amount': 90, 'bid_id': 'bid-cef93ed5-4e96-4a01-9ddf-91bafd909ee5', 'bidder_id': 'a-mp07-replay-worker-fb66...ils': {}, 'error': 'invalid_status', 'message': "Cannot accept bid on task in 'accepted' status, must be 'open'"}, ...}
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:19", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-1de9552c-9628-4492-8246-468a0acf578b"}}
+{"timestamp": "2026-10-17 20:34:19", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-1de9552c-9628-4492-8246-468a0acf578b/bids/bid-cef93ed5-4e96-4a01-9ddf-91bafd909ee5/accept"}}
+__ test_changed_bid_amount_under_same_operation_id_conflicts_without_changes ___
+tests/integration/test_mp07_public_command_replay.py:491: in test_changed_bid_amount_under_same_operation_id_conflicts_without_changes
+    assert changed.json()["error"] == "operation_id_conflict", diagnostics
+E   AssertionError: {'after': ([{'accepted_at': None, 'accepted_bid_id': None, 'bid_count': 1, 'reward': 100, ...}], [{'amount': 90, 'bid_...'}], 'response': {'details': {}, 'error': 'bid_already_exists', 'message': 'This agent already bid on this task'}, ...}
+E   assert 'bid_already_exists' == 'operation_id_conflict'
+E     
+E     - operation_id_conflict
+E     + bid_already_exists
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:19", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-2f1b6b1d-4eb7-4851-8b7a-fc7607f54f9f"}}
+{"timestamp": "2026-10-17 20:34:19", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_exists", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-17 20:34:19", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_already_exists", "status_code": 409, "path": "/tasks/t-2f1b6b1d-4eb7-4851-8b7a-fc7607f54f9f/bids"}}
+______ test_cross_command_operation_id_reuse_conflicts_without_accepting _______
+tests/integration/test_mp07_public_command_replay.py:536: in test_cross_command_operation_id_reuse_conflicts_without_accepting
+    assert reused.status_code == 409, diagnostics
+E   AssertionError: {'after': [{'accepted_at': '2026-10-17T20:34:20.013025Z', 'accepted_bid_id': 'bid-575b161e-2073-45c7-be51-cb8f1b9b6d1c...13025Z', 'accepted_bid_id': 'bid-575b161e-2073-45c7-be51-cb8f1b9b6d1c', 'approved_at': None, 'bid_count': 1, ...}, ...}
+E   assert 200 == 409
+E    +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:20", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-e1e7dc9f-5186-4c22-a60c-a12ab8d5badb"}}
+______ test_wrong_expected_lifecycle_version_rejects_bid_without_changes _______
+tests/integration/test_mp07_public_command_replay.py:578: in test_wrong_expected_lifecycle_version_rejects_bid_without_changes
+    assert response.status_code == 409, diagnostics
+E   AssertionError: {'after': [{'accepted_at': None, 'accepted_bid_id': None, 'bid_count': 1, 'reward': 100, ...}], 'before': [{'accepted_...c80', 'submitted_at': '2026-10-17T20:34:20.302475Z'}], 'events': [{'event_id': 6, 'event_type': 'bid.submitted'}], ...}
+E   assert 201 == 409
+E    +  where 201 = <Response [201 Created]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:20", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-6806101a-4f29-4cea-9ee5-07b4c3779f2a"}}
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[missing] _
+tests/integration/test_mp07_acceptance_window.py:337: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    assert (
+E   AssertionError: {'acceptance_window_seconds': '<object object at 0x100bf6d20>', 'bank_lock_calls': 1, 'event_rows': [{'event_id': 4}], 'response': {'accepted_at': None, 'accepted_bid_id': None, 'approved_at': None, 'bid_count': 0, ...}, ...}
+E   assert (201 == 400)
+E    +  where 201 = <Response [201 Created]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:20", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-4ecc81c7-3248-4de4-bd68-9502d5bef946"}}
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[null] _
+tests/integration/test_mp07_acceptance_window.py:337: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    assert (
+E   AssertionError: {'acceptance_window_seconds': 'None', 'bank_lock_calls': 1, 'event_rows': [{'event_id': 4}], 'response': {'accepted_at': None, 'accepted_bid_id': None, 'approved_at': None, 'bid_count': 0, ...}, ...}
+E   assert (201 == 400)
+E    +  where 201 = <Response [201 Created]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:20", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-6877a5c8-66cd-41eb-b155-3be0268b68de"}}
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[zero] _
+tests/integration/test_mp07_acceptance_window.py:337: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    assert (
+E   AssertionError: {'acceptance_window_seconds': '0', 'bank_lock_calls': 1, 'event_rows': [{'event_id': 4}], 'response': {'accepted_at': None, 'accepted_bid_id': None, 'approved_at': None, 'bid_count': 0, ...}, ...}
+E   assert (201 == 400)
+E    +  where 201 = <Response [201 Created]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:21", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-4d5ffa83-e4de-46a2-8291-d3d72f221bea"}}
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[negative] _
+tests/integration/test_mp07_acceptance_window.py:337: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    assert (
+E   AssertionError: {'acceptance_window_seconds': '-1', 'bank_lock_calls': 1, 'event_rows': [{'event_id': 4}], 'response': {'accepted_at': None, 'accepted_bid_id': None, 'approved_at': None, 'bid_count': 0, ...}, ...}
+E   assert (201 == 400)
+E    +  where 201 = <Response [201 Created]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:21", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-aaf5c587-2ebc-4245-a4aa-d0fa6f10001f"}}
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[bool] _
+tests/integration/test_mp07_acceptance_window.py:337: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    assert (
+E   AssertionError: {'acceptance_window_seconds': 'True', 'bank_lock_calls': 1, 'event_rows': [{'event_id': 4}], 'response': {'accepted_at': None, 'accepted_bid_id': None, 'approved_at': None, 'bid_count': 0, ...}, ...}
+E   assert (201 == 400)
+E    +  where 201 = <Response [201 Created]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:21", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-82d152e5-8790-4a61-a5ef-8c160f43fdeb"}}
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[float] _
+tests/integration/test_mp07_acceptance_window.py:337: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    assert (
+E   AssertionError: {'acceptance_window_seconds': '1.5', 'bank_lock_calls': 1, 'event_rows': [{'event_id': 4}], 'response': {'accepted_at': None, 'accepted_bid_id': None, 'approved_at': None, 'bid_count': 0, ...}, ...}
+E   assert (201 == 400)
+E    +  where 201 = <Response [201 Created]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:22", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-c4b17e0a-7d8a-4095-9694-c804a53aeb55"}}
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[string] _
+tests/integration/test_mp07_acceptance_window.py:337: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    assert (
+E   AssertionError: {'acceptance_window_seconds': "'20'", 'bank_lock_calls': 1, 'event_rows': [{'event_id': 4}], 'response': {'accepted_at': None, 'accepted_bid_id': None, 'approved_at': None, 'bid_count': 0, ...}, ...}
+E   assert (201 == 400)
+E    +  where 201 = <Response [201 Created]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:22", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-e40ab1ba-eb7b-4577-8596-1e0a0109d591"}}
+____ test_two_selected_windows_are_preserved_and_expose_distinct_deadlines _____
+tests/integration/test_mp07_acceptance_window.py:388: in test_two_selected_windows_are_preserved_and_expose_distinct_deadlines
+    assert observed == expected, {"observed": observed, "expected": expected}
+E   AssertionError: {'expected': [(20, '2026-10-17T12:00:30Z', 20, '2026-10-17T12:00:30Z'), (45, '2026-10-17T12:00:55Z', 45, '2026-10-17T12:00:55Z')], 'observed': [(None, None, None, None), (None, None, None, None)]}
+E   assert [(None, None,..., None, None)] == [(20, '2026-1...7T12:00:55Z')]
+E     
+E     At index 0 diff: (None, None, None, None) != (20, '2026-10-17T12:00:30Z', 20, '2026-10-17T12:00:30Z')
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:22", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-359906fb-dfad-414d-b85f-0858c593478c"}}
+{"timestamp": "2026-10-17 20:34:22", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-9bbbb3fe-86e3-4de2-888a-ad6b0c7e2347"}}
+___ test_new_bid_after_bidding_cutoff_rejects_without_closing_task_with_bid ____
+tests/integration/test_mp07_acceptance_window.py:509: in test_new_bid_after_bidding_cutoff_rejects_without_closing_task_with_bid
+    assert response.json()["error"] == "cutoff_reached", diagnostics
+E   AssertionError: {'bank_release_calls': 1, 'bid_rows': [{'bid_id': 'bid-1b568b73-eb8a-4c9f-b01e-f10000e433f8'}], 'expiry_events': [{'ev...: {'details': {}, 'error': 'invalid_status', 'message': "Cannot bid on task in 'expired' status, must be 'open'"}, ...}
+E   assert 'invalid_status' == 'cutoff_reached'
+E     
+E     - cutoff_reached
+E     + invalid_status
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:23", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-f56d3783-bcb5-48da-8c2c-ea66eefd2f6c"}}
+{"timestamp": "2026-10-17 20:34:23", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-f56d3783-bcb5-48da-8c2c-ea66eefd2f6c/bids"}}
+_______ test_poster_can_accept_at_selected_cutoff_minus_one_microsecond ________
+tests/integration/test_mp07_acceptance_window.py:552: in test_poster_can_accept_at_selected_cutoff_minus_one_microsecond
+    assert response.status_code == 200, diagnostics
+E   AssertionError: {'bank_release_calls': 1, 'response': {'details': {}, 'error': 'invalid_status', 'message': "Cannot accept bid on task...ows': [{'accepted_bid_id': None, 'expired_at': '2026-10-17T12:00:29.999999Z', 'status': 'expired', 'worker_id': None}]}
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:23", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-a0a01c08-cc4c-4514-ba83-f44a1280a2c2"}}
+{"timestamp": "2026-10-17 20:34:23", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-a0a01c08-cc4c-4514-ba83-f44a1280a2c2/bids/bid-49a70876-a07a-4f7c-94ac-591c69e8f1cb/accept"}}
+______ test_task_with_bid_expires_at_selected_acceptance_cutoff_equality _______
+tests/integration/test_mp07_acceptance_window.py:607: in test_task_with_bid_expires_at_selected_acceptance_cutoff_equality
+    assert response.json().get("acceptance_deadline") == expected_deadline, diagnostics
+E   AssertionError: {'bank_release_calls': 1, 'expiry_events': [{'event_type': 'task.expired'}], 'response': {'accepted_at': None, 'accepted_bid_id': None, 'approved_at': None, 'bid_count': 1, ...}, 'response_status': 200, ...}
+E   assert None == '2026-10-17T12:00:30Z'
+E    +  where None = <built-in method get of dict object at 0x109ff96c0>('acceptance_deadline')
+E    +    where <built-in method get of dict object at 0x109ff96c0> = {'accepted_at': None, 'accepted_bid_id': None, 'approved_at': None, 'bid_count': 1, ...}.get
+E    +      where {'accepted_at': None, 'accepted_bid_id': None, 'approved_at': None, 'bid_count': 1, ...} = json()
+E    +        where json = <Response [200 OK]>.json
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:24", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-7b70467b-b72b-4ada-bae3-4a2bbc4db28c"}}
+________ test_stale_validated_accept_cannot_overwrite_acceptance_expiry ________
+tests/integration/test_mp07_accept_expiry_race.py:540: in test_stale_validated_accept_cannot_overwrite_acceptance_expiry
+    assert outcome.error is not None and outcome.error.status_code == 409, conflict_message
+E   AssertionError: Stale accept must return 409 after acceptance expiry; result_status=accepted, error_status=None, final_status=accepted, worker_id=a-mp07-accept-expiry-worker-8a1815af-d6d7-46d6-b26c-a534af85c74f, accepted_bid_id=bid-2640e3fb-24b9-4f0a-be83-6f01be48c618, events=['task.expired', 'task.accepted'], expiry_bank_calls=1, losing_bank_calls=0, losing_court_calls=0
+E   assert (None is not None)
+E    +  where None = _Outcome(result={'task_id': 't-b5b846ef-0a99-4662-8423-e0332528d1ab', 'poster_id': 'a-mp07-accept-expiry-poster-8d1d50..._deadline': '2026-10-17T12:00:10Z', 'execution_deadline': '2026-10-17T12:01:30Z', 'review_deadline': None}, error=None).error
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:34:24", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-b5b846ef-0a99-4662-8423-e0332528d1ab"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_atomic_task_transitions.py::test_concurrent_approve_and_dispute_have_one_serial_winner
+FAILED tests/integration/test_mp07_atomic_task_transitions.py::test_competing_acceptances_have_one_serial_winner
+FAILED tests/integration/test_mp07_atomic_task_transitions.py::test_concurrent_acceptance_and_poster_cancel_have_one_serial_winner
+FAILED tests/integration/test_mp07_deadline_transition_races.py::test_stale_validated_submit_cannot_overwrite_execution_expiry
+FAILED tests/integration/test_mp07_deadline_transition_races.py::test_stale_review_action_cannot_beat_autoapproval_at_cutoff[approve]
+FAILED tests/integration/test_mp07_deadline_transition_races.py::test_stale_review_action_cannot_beat_autoapproval_at_cutoff[dispute]
+FAILED tests/integration/test_mp07_bid_admission_races.py::test_bid_validated_before_cutoff_cannot_commit_at_equality
+FAILED tests/integration/test_mp07_public_command_replay.py::test_exact_submit_bid_replay_after_response_loss_returns_original_result
+FAILED tests/integration/test_mp07_public_command_replay.py::test_exact_accept_bid_replay_after_response_loss_returns_original_terms
+FAILED tests/integration/test_mp07_public_command_replay.py::test_changed_bid_amount_under_same_operation_id_conflicts_without_changes
+FAILED tests/integration/test_mp07_public_command_replay.py::test_cross_command_operation_id_reuse_conflicts_without_accepting
+FAILED tests/integration/test_mp07_public_command_replay.py::test_wrong_expected_lifecycle_version_rejects_bid_without_changes
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[missing]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[null]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[zero]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[negative]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[bool]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[float]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[string]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_two_selected_windows_are_preserved_and_expose_distinct_deadlines
+FAILED tests/integration/test_mp07_acceptance_window.py::test_new_bid_after_bidding_cutoff_rejects_without_closing_task_with_bid
+FAILED tests/integration/test_mp07_acceptance_window.py::test_poster_can_accept_at_selected_cutoff_minus_one_microsecond
+FAILED tests/integration/test_mp07_acceptance_window.py::test_task_with_bid_expires_at_selected_acceptance_cutoff_equality
+FAILED tests/integration/test_mp07_accept_expiry_race.py::test_stale_validated_accept_cannot_overwrite_acceptance_expiry
+======================== 24 failed, 19 passed in 9.57s =========================

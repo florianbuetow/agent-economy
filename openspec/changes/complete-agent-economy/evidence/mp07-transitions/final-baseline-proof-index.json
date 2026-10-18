@@ -1,0 +1,83 @@
+{
+  "baseline_commit": "a6af0bed5e0475f63b271329bb7f8ea683da9bc3",
+  "production_changes": false,
+  "board_run": {
+    "session_id": 10809,
+    "exit_code": 1,
+    "product_assertion_failures": 24,
+    "controls_passed": 19,
+    "seconds": 9.57
+  },
+  "gateway_run": {
+    "session_id": 83232,
+    "exit_code": 1,
+    "capability_assertion_failures": 3,
+    "distinct_missing_capabilities": 2,
+    "controls_passed": 2,
+    "seconds": 0.76
+  },
+  "limits": [
+    "Missing migration entry point is asserted by two tests but is one missing capability.",
+    "Gateway claim/finalize behavior after the absent route/policy gate remains unexecuted.",
+    "No required cases skipped or xfailed.",
+    "Bank/Court recordings in Board races prove invocations, not external persistence.",
+    "Root19 is the last green baseline; current tests are intentionally failing."
+  ],
+  "files": [
+    {
+      "file": "final-test_mp07_atomic_task_transitions.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_atomic_task_transitions.py",
+      "sha256": "036b9560b618fa2b921cf381bf8244aee2dcc13a8b620e61a857c1b6db74983d"
+    },
+    {
+      "file": "final-test_mp07_deadline_transition_races.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_deadline_transition_races.py",
+      "sha256": "2a48408d5fc143f06754f21813e7b527b6bc4d249f838bae43fac7a38aa40779"
+    },
+    {
+      "file": "final-test_mp07_bid_admission_races.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_bid_admission_races.py",
+      "sha256": "1185db9fc286636820cb5de452b98ed458ad9ccdbae00a69c6aae8f2733f3e7e"
+    },
+    {
+      "file": "final-test_mp07_public_command_replay.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_public_command_replay.py",
+      "sha256": "980497dff682ab0e3d11612bf1ea3fee5916757f104ac765e34f421177a46f5c"
+    },
+    {
+      "file": "final-test_mp07_acceptance_window.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_acceptance_window.py",
+      "sha256": "b3107bac62a5bbf48d3de807df5dca7e8bdc2d4f4b9257fd06b26a40316eec27"
+    },
+    {
+      "file": "final-test_mp07_accept_expiry_race.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_accept_expiry_race.py",
+      "sha256": "034939a82f66517cc743a83ac2dad3022a712942ec45fe0c8421a9c364af20a5"
+    },
+    {
+      "file": "final-test_mp07_migration_contract.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/db-gateway/tests/unit/test_mp07_migration_contract.py",
+      "sha256": "1200d847ccb9ec2ed43bfafae4ced0179e7d2e8021ce23586500efca8854ef75"
+    },
+    {
+      "file": "final-test_mp07_migration_rejection.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/db-gateway/tests/unit/test_mp07_migration_rejection.py",
+      "sha256": "34ce93e98caac22d0cf070fc7e330ea836ce453241690d4a7bac52676da4a0d8"
+    },
+    {
+      "file": "final-test_mp07_task_operation_boundary.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/db-gateway/tests/unit/routers/test_mp07_task_operation_boundary.py",
+      "sha256": "b8e344423f7e8e610e51be3b0b5ca12e7ca8f67da25181dd59f82bc029f087fe"
+    },
+    {
+      "file": "final-board-parent-red.log",
+      "source": "/private/tmp/agent-economy-mp07-combined-parent-red-final.log",
+      "sha256": "f76e151a7d515e4971f1d819b5f41e727faef23539b08715041e9747da8b0ced"
+    },
+    {
+      "file": "final-gateway-parent-red.log",
+      "source": "/private/tmp/agent-economy-mp07-gateway-parent-red-final.log",
+      "sha256": "c419228026d28503bf2a945e3b7ec5517418c6b1df4bcb9f833192674419e7c9"
+    }
+  ]
+}

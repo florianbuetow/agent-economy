@@ -1,0 +1,137 @@
+..FFF                                                                    [100%]
+=================================== FAILURES ===================================
+_________ test_closing_replaced_client_preserves_current_global_state __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ac27570>
+initialized_db = '/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/tmp16yd6cyl.db'
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-699/test_closing_replaced_client_p0')
+schema_sql = '-- Agent Task Economy — Unified SQLite Schema\n-- Single file: data/economy.db\n-- Table prefix per service domain\n-...   ruling.delivered        { "ruling_id": "rul-...", "claim_id": "clm-...", "worker_pct": 70, "summary": "..." }\n--\n'
+
+    async def test_closing_replaced_client_preserves_current_global_state(
+        monkeypatch: pytest.MonkeyPatch,
+        initialized_db: str,
+        tmp_path: Path,
+        schema_sql: str,
+    ) -> None:
+        _configure_caller_environment(monkeypatch)
+        replacement_db = tmp_path / "replacement.db"
+        connection = sqlite3.connect(replacement_db)
+        connection.executescript(schema_sql)
+        connection.close()
+        first_client = gateway_helpers.create_gateway_client(initialized_db)
+        first_state = get_app_state()
+        second_client = gateway_helpers.create_gateway_client(str(replacement_db))
+        second_state = get_app_state()
+        assert second_state is not first_state
+    
+        await first_client.aclose()
+    
+>       assert get_app_state() is second_state
+               ^^^^^^^^^^^^^^^
+
+../../tests/integration/test_gateway_helper_cleanup.py:109: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def get_app_state() -> AppState:
+        """Get the current application state."""
+        state = _state_holder[0]
+        if state is None:
+            msg = "Application state not initialized"
+>           raise RuntimeError(msg)
+E           RuntimeError: Application state not initialized
+
+src/db_gateway_service/core/state.py:42: RuntimeError
+___________ test_writer_close_failure_still_completes_owned_cleanup ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10adffb50>
+initialized_db = '/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/tmp18l6lwp7.db'
+
+    async def test_writer_close_failure_still_completes_owned_cleanup(
+        monkeypatch: pytest.MonkeyPatch,
+        initialized_db: str,
+    ) -> None:
+        config_path = _configure_caller_environment(monkeypatch)
+        created = _track_temporary_directories(monkeypatch)
+        client = gateway_helpers.create_gateway_client(initialized_db)
+        state = get_app_state()
+        assert state.db_writer is not None
+    
+        def fail_close() -> None:
+            raise RuntimeError("forced writer close failure")
+    
+        monkeypatch.setattr(state.db_writer, "close", fail_close)
+        try:
+>           with pytest.raises(RuntimeError, match="forced writer close failure"):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE <class 'RuntimeError'>
+
+../../tests/integration/test_gateway_helper_cleanup.py:130: Failed
+__________ test_writer_close_cancellation_is_preserved_after_cleanup ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10af595e0>
+initialized_db = '/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/tmpuozvoy81.db'
+
+    async def test_writer_close_cancellation_is_preserved_after_cleanup(
+        monkeypatch: pytest.MonkeyPatch,
+        initialized_db: str,
+    ) -> None:
+        config_path = _configure_caller_environment(monkeypatch)
+        created = _track_temporary_directories(monkeypatch)
+        client = gateway_helpers.create_gateway_client(initialized_db)
+        state = get_app_state()
+        assert state.db_writer is not None
+    
+        def cancel_close() -> None:
+            raise asyncio.CancelledError
+    
+        monkeypatch.setattr(state.db_writer, "close", cancel_close)
+        try:
+            with pytest.raises(asyncio.CancelledError):
+>               await client.aclose()
+
+../../tests/integration/test_gateway_helper_cleanup.py:154: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../tests/integration/gateway_helpers.py:60: in aclose
+    self._cleanup_once()
+../../tests/integration/gateway_helpers.py:95: in _cleanup_once
+    self._cleanup()
+../../tests/integration/gateway_helpers.py:235: in <lambda>
+    cleanup=lambda: _cleanup_gateway_state(temporary_directory),
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+temporary_directory = <TemporaryDirectory '/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/gateway-integration-ps4a7ahm'>
+
+    def _cleanup_gateway_state(temporary_directory: tempfile.TemporaryDirectory[str]) -> None:
+        from db_gateway_service.config import clear_settings_cache
+        from db_gateway_service.core.state import get_app_state, reset_app_state
+    
+        cleanup_errors: list[BaseException] = []
+        try:
+            state = get_app_state()
+            if state.db_writer is not None:
+                state.db_writer.close()
+        except RuntimeError:
+            pass
+        except BaseException as exc:
+            cleanup_errors.append(exc)
+        try:
+            reset_app_state()
+            clear_settings_cache()
+        except BaseException as exc:
+            cleanup_errors.append(exc)
+        try:
+            temporary_directory.cleanup()
+        except BaseException as exc:
+            cleanup_errors.append(exc)
+        if cleanup_errors:
+>           raise ExceptionGroup("Gateway test resource cleanup failed", cleanup_errors)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: Cannot nest BaseExceptions in an ExceptionGroup
+
+../../tests/integration/gateway_helpers.py:172: TypeError
+=========================== short test summary info ============================
+FAILED ../../tests/integration/test_gateway_helper_cleanup.py::test_closing_replaced_client_preserves_current_global_state
+FAILED ../../tests/integration/test_gateway_helper_cleanup.py::test_writer_close_failure_still_completes_owned_cleanup
+FAILED ../../tests/integration/test_gateway_helper_cleanup.py::test_writer_close_cancellation_is_preserved_after_cleanup
+3 failed, 2 passed in 0.33s

@@ -1,0 +1,94 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__ test_migration_cli_preserves_live_receipts_and_allows_signed_continuation ___
+
+tmp_path = PosixPath('/private/tmp/agent-economy-mp06-migration-live-1/test_migration_cli_preserves_l0')
+
+    def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(tmp_path: Path):
+        runtime = IsolatedRuntime.create(repo_root=REPO_ROOT, artifacts_root=tmp_path)
+        try:
+            runtime.start()
+            assert runtime.provision() == 0
+            receipt = asyncio.run(_public_workload(runtime.agent_config_path))
+            prepared = runtime.prepare_recovery_and_stop(
+                registry_timeout_seconds=10.0, registry_max_attempts=2
+            )
+        finally:
+            runtime.stop()
+        (tmp_path / "runtime-before-migration.json").write_bytes(
+            (runtime.run_dir / "runtime.json").read_bytes()
+        )
+        inventory = RecoveryInventoryV1.model_validate_json(prepared.inventory_path.read_bytes())
+        assert all(
+            not record.running and record.group_drained for record in inventory.process_ownership
+        )
+        database = runtime.run_dir / "data/economy.db"
+>       original_rows = _install_legacy_fixture(database)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../../tests/runtime/test_migration_live_workload.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+database = PosixPath('/private/tmp/agent-economy-mp06-migration-live-1/test_migration_cli_preserves_l0/runtime-761820c5773f4caabe52efec5f1c2495-fl10w9lw/data/economy.db')
+
+    def _install_legacy_fixture(database):
+        """Rebuild only disposable test state in the frozen legacy schema, keeping every row."""
+        connection = sqlite3.connect(database.as_uri() + "?mode=rw", uri=True)
+        try:
+            original = _logical_rows(connection)
+            connection.execute("PRAGMA foreign_keys=OFF")
+            for (table,) in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            ).fetchall():
+                connection.execute(f'DROP TABLE "{table}"')
+            connection.commit()
+            connection.executescript(load_schema_sql(SchemaState.SUPPORTED_V0))
+            for table, (columns, rows) in original.items():
+                if table == "sqlite_sequence":
+                    continue
+                selected = ", ".join(f'"{column}"' for column in columns)
+                placeholders = ", ".join("?" for _ in range(len(columns) + 1))
+>               connection.executemany(
+                    f'INSERT INTO "{table}" (rowid, {selected}) VALUES ({placeholders})',
+                    [row[: len(columns) + 1] for row in rows],
+                )
+E               sqlite3.IntegrityError: FOREIGN KEY constraint failed
+
+../../tests/runtime/test_migration_live_workload.py:66: IntegrityError
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=647248785f5f9b4f98a6ea6443cfbc40f62f31931c1f0486d3bf403a154ba4b7
+provisioned handle=bob fingerprint_sha256=49ffe9ffc93e9acfb2c1283625532002f544d6ed2cb5348cc1be2f79f818e073
+provisioned handle=feeder fingerprint_sha256=6a84b7653f173245c67dfac93a684f72165458e7b9c1621232b951a02d9e8839
+provisioned handle=mathbot fingerprint_sha256=828b006dfd90578c43d9b089c8d4ad1272be849afa9b46bf4cc363c24a6aaf3a
+provisioned handle=mathbot_mistral fingerprint_sha256=e56a1b82e716cf94078cbf16be32acebda128ce5b832f4da0a09b1f4de43ba79
+provisioned handle=mathbot_openai fingerprint_sha256=6c3ee6c8dc35d5ce1cedf3bcd844c80987149d9545b5281c687ef771d12faf1d
+provisioned handle=operator fingerprint_sha256=8c604ac829b56907ee6c43fd02263da5ed43739536b3bd1a276e5f4801259a19
+provisioned handle=platform fingerprint_sha256=27233e122ad278c4f60ecb086b93a8bb8bb1105e942e98ba18186023698f7d82
+provisioned handle=gateway-central-bank fingerprint_sha256=b87dde846e7886e74afbe9d9ad8fa56d4c11b59e2204336db426064a381b5bbc
+provisioned handle=gateway-court fingerprint_sha256=77044580eb655fb0d435aa4d97ed2a3dccc94cd05a45552590678f6129cc2bfb
+provisioned handle=gateway-identity fingerprint_sha256=5a9b5cf06b886085a339d0ee4284b7ea1742e3db32caa8af2292e2b4b208c48c
+provisioned handle=gateway-reputation fingerprint_sha256=1c6dde550cbdd088611c24aba395d74588b750643adda4fab1b42caa250f4aef
+provisioned handle=gateway-task-board fingerprint_sha256=5db89bd07573b8f134955edad3bb6fa19cd466d2f414b64c8c0d6c4b63732296
+agent_id=a-64cda481-180e-4d32-89a3-9250110534ef
+genesis_amount=1000000
+balance=1000000
+----------------------------- Captured stderr call -----------------------------
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: POST http://127.0.0.1:54004/agents/register "HTTP/1.1 409 Conflict"
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: GET http://127.0.0.1:54004/agents "HTTP/1.1 200 OK"
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: GET http://127.0.0.1:54004/agents/a-e1e4dff6-e26a-474a-bd9c-030f783fc3fc "HTTP/1.1 200 OK"
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: GET http://127.0.0.1:54004/agents/a-e1e4dff6-e26a-474a-bd9c-030f783fc3fc "HTTP/1.1 200 OK"
+2026-10-16T06:53:35 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-e1e4dff6-e26a-474a-bd9c-030f783fc3fc
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: POST http://127.0.0.1:54004/agents/register "HTTP/1.1 409 Conflict"
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: GET http://127.0.0.1:54004/agents "HTTP/1.1 200 OK"
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: GET http://127.0.0.1:54004/agents/a-e1e4dff6-e26a-474a-bd9c-030f783fc3fc "HTTP/1.1 200 OK"
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: GET http://127.0.0.1:54004/agents/a-64cda481-180e-4d32-89a3-9250110534ef "HTTP/1.1 200 OK"
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: GET http://127.0.0.1:54004/agents/a-64cda481-180e-4d32-89a3-9250110534ef "HTTP/1.1 200 OK"
+2026-10-16T06:53:35 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-64cda481-180e-4d32-89a3-9250110534ef
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: POST http://127.0.0.1:54005/accounts "HTTP/1.1 201 Created"
+2026-10-16T06:53:35 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: POST http://127.0.0.1:54005/accounts/a-64cda481-180e-4d32-89a3-9250110534ef/credit "HTTP/1.1 200 OK"
+2026-10-16T06:53:35 [INFO] treasury_provision_cli: Treasury provisioned (tx_id=tx-0853a891-3d53-420a-86e8-469a45f1c71f, balance_after=1000000)
+2026-10-16T06:53:35 [INFO] httpx: HTTP Request: GET http://127.0.0.1:54005/accounts/a-64cda481-180e-4d32-89a3-9250110534ef "HTTP/1.1 200 OK"
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_migration_live_workload.py::test_migration_cli_preserves_live_receipts_and_allows_signed_continuation
+1 failed in 6.87s

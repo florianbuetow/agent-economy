@@ -8,12 +8,29 @@ from uuid import uuid4
 
 import pytest
 
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
+from tests.fakes.native_board_history import (
+    BusinessClock,
+    TaskGraph,
+    operation_body,
+    submit_bid,
+)
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
 
     from db_gateway_service.services.db_writer import DbWriter
+
+_BUSINESS_NOW_US = parse_utc_text_to_epoch_us("2026-03-01T10:20:00Z")
+
+
+@pytest.fixture(autouse=True)
+def _fixed_gateway_business_clock(monkeypatch: pytest.MonkeyPatch) -> BusinessClock:
+    """Keep native bid admission inside the published bidding cutoff."""
+    clock = BusinessClock(now_us=_BUSINESS_NOW_US)
+    monkeypatch.setattr("db_gateway_service.task_time.utc_now_us", clock)
+    return clock
 
 
 def _register_agent(client: TestClient, name: str = "Agent") -> str:
@@ -87,9 +104,10 @@ def _create_task(client: TestClient, *, poster_id: str) -> tuple[str, str]:
             "reward": 100,
             "status": "open",
             "bidding_deadline_seconds": 3600,
+            "acceptance_window_seconds": 3600,
             "deadline_seconds": 7200,
             "review_deadline_seconds": 1800,
-            "bidding_deadline": "2026-03-01T11:00:00Z",
+            "bidding_deadline": "2026-03-01T11:12:00Z",
             "escrow_id": escrow_id,
             "created_at": "2026-03-01T10:12:00Z",
             "event": make_event(source="board", event_type="task.created", task_id=task_id),
@@ -115,22 +133,18 @@ class TestSchemaAdditions:
         """board_bids accepts amount and persists it."""
         poster_id = _create_funded_account(app_with_writer, name="Poster", balance=500)
         bidder_id = _register_agent(app_with_writer, name="Bidder")
-        task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+        task_id, escrow_id = _create_task(app_with_writer, poster_id=poster_id)
+        graph = TaskGraph(task_id=task_id, poster_id=poster_id, escrow_id=escrow_id)
 
         bid_id = f"bid-{uuid4()}"
-        response = app_with_writer.post(
-            "/board/bids",
-            json={
-                "bid_id": bid_id,
-                "task_id": task_id,
-                "bidder_id": bidder_id,
-                "proposal": "Implement with tests",
-                "amount": 125,
-                "submitted_at": "2026-03-01T10:20:00Z",
-                "event": make_event(source="board", event_type="bid.submitted", task_id=task_id),
-            },
+        _stored_bid_id, response = submit_bid(
+            app_with_writer,
+            graph,
+            bidder_id,
+            bid_id=bid_id,
+            amount=125,
         )
-        assert response.status_code == 201
+        assert response.status_code == 200
 
         row = _read_one(
             db_writer,
@@ -140,35 +154,49 @@ class TestSchemaAdditions:
         assert row is not None
         assert row["amount"] == 125
 
-    def test_submit_bid_without_amount_uses_zero(
+    def test_submit_bid_without_amount_is_rejected(
         self, app_with_writer: TestClient, db_writer: DbWriter
     ) -> None:
-        """board_bids keeps compatibility when amount is omitted."""
+        """Native bids reject a missing amount without any persistence."""
         poster_id = _create_funded_account(app_with_writer, name="Poster", balance=500)
         bidder_id = _register_agent(app_with_writer, name="Bidder")
-        task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+        task_id, escrow_id = _create_task(app_with_writer, poster_id=poster_id)
+        graph = TaskGraph(task_id=task_id, poster_id=poster_id, escrow_id=escrow_id)
 
         bid_id = f"bid-{uuid4()}"
+        operation_id = f"op-{uuid4()}"
+        before = db_writer.connection.execute(
+            "SELECT (SELECT COUNT(*) FROM board_bids), "
+            "(SELECT COUNT(*) FROM board_task_operations), "
+            "(SELECT COUNT(*) FROM events), bid_count "
+            "FROM board_tasks WHERE task_id=?",
+            (task_id,),
+        ).fetchone()
+        assert before is not None
         response = app_with_writer.post(
-            "/board/bids",
-            json={
-                "bid_id": bid_id,
-                "task_id": task_id,
-                "bidder_id": bidder_id,
-                "proposal": "Compatible bid payload",
-                "submitted_at": "2026-03-01T10:21:00Z",
-                "event": make_event(source="board", event_type="bid.submitted", task_id=task_id),
-            },
+            "/board/task-operations",
+            json=operation_body(
+                operation_id=operation_id,
+                task_id=task_id,
+                command="submit_bid",
+                expected_status="open",
+                expected_lifecycle_version=0,
+                actor_kind="agent",
+                actor_id=bidder_id,
+                arguments={"bid_id": bid_id, "bidder_id": bidder_id},
+            ),
         )
-        assert response.status_code == 201
-
-        row = _read_one(
-            db_writer,
-            "SELECT amount FROM board_bids WHERE bid_id = ?",
-            (bid_id,),
-        )
-        assert row is not None
-        assert row["amount"] == 0
+        assert response.status_code == 400
+        assert response.json()["error"] == "invalid_payload"
+        after = db_writer.connection.execute(
+            "SELECT (SELECT COUNT(*) FROM board_bids), "
+            "(SELECT COUNT(*) FROM board_task_operations), "
+            "(SELECT COUNT(*) FROM events), bid_count "
+            "FROM board_tasks WHERE task_id=?",
+            (graph.task_id,),
+        ).fetchone()
+        assert after is not None
+        assert tuple(after) == tuple(before)
 
     def test_record_asset_with_content_hash(
         self, app_with_writer: TestClient, db_writer: DbWriter

@@ -1,0 +1,6 @@
+{
+  "status": "same_diagnostics_as_baseline",
+  "error_count": 130,
+  "scope": "Additional tests-inclusive mypy invocation, not canonical source-only gate. No new suppressions; baseline imported migration-test diagnostics remain.",
+  "source_gate": "mypy src:47files pass; pyright configured src:0errors"
+}

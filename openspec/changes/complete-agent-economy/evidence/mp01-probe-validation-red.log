@@ -1,0 +1,27 @@
+...FF                                                                    [100%]
+=================================== FAILURES ===================================
+_ test_signal_zero_permission_requires_successful_empty_exact_group_probe[0-malformed process row\n-False] _
+../../tests/runtime/test_isolated_test_runtime.py:580: in test_signal_zero_permission_requires_successful_empty_exact_group_probe
+    with pytest.raises(PermissionError, match="exact PGID"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'PermissionError'>
+_________ test_signal_zero_permission_propagates_process_probe_timeout _________
+../../tests/runtime/test_isolated_test_runtime.py:591: in _deny_signal_zero
+    raise PermissionError(1, "injected signal-zero denial")
+E   PermissionError: [Errno 1] injected signal-zero denial
+
+During handling of the above exception, another exception occurred:
+../../tests/runtime/test_isolated_test_runtime.py:599: in test_signal_zero_permission_propagates_process_probe_timeout
+    runtime_module._wait_for_owned_group_exit(process, pgid=process.pid, timeout=0.0)
+../../scripts/isolated_test_runtime.py:586: in _wait_for_owned_group_exit
+    members, inspection_error = _owned_group_members(pgid)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../scripts/isolated_test_runtime.py:598: in _owned_group_members
+    completed = subprocess.run(
+../../tests/runtime/test_isolated_test_runtime.py:594: in _timeout_probe
+    raise subprocess.TimeoutExpired(cmd=["ps"], timeout=1.0)
+E   subprocess.TimeoutExpired: Command '['ps']' timed out after 1.0 seconds
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_requires_successful_empty_exact_group_probe[0-malformed process row\n-False]
+FAILED ../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_propagates_process_probe_timeout
+2 failed, 3 passed in 0.11s

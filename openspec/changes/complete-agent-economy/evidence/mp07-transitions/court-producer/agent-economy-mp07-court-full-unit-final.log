@@ -1,0 +1,36 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 251 items
+
+tests/unit/routers/test_disputes.py .................................... [ 14%]
+........................................................................ [ 43%]
+.........                                                                [ 46%]
+tests/unit/routers/test_health.py ....                                   [ 48%]
+tests/unit/routers/test_t072_rule06_escrow_gap.py .                      [ 48%]
+tests/unit/routers/test_wp06_deliverables.py .                           [ 49%]
+tests/unit/routers/test_wp06_platform_kid.py ....                        [ 50%]
+tests/unit/routers/test_wp06_rebuttal_party.py ..                        [ 51%]
+tests/unit/routers/test_wp06_rebuttal_window.py .                        [ 51%]
+tests/unit/routers/test_wp06_retry_clean.py ...                          [ 52%]
+tests/unit/test_config.py .......                                        [ 55%]
+tests/unit/test_dispute_db_client_normalization.py .....                 [ 57%]
+tests/unit/test_dispute_store.py ......                                  [ 60%]
+tests/unit/test_llm_judge.py .......                                     [ 62%]
+tests/unit/test_mp01_fixture_log_isolation.py ...                        [ 64%]
+tests/unit/test_mp02_gateway_signing.py .                                [ 64%]
+tests/unit/test_mp03_platform_credentials.py ........                    [ 67%]
+tests/unit/test_mp03_receiver_context.py ..                              [ 68%]
+tests/unit/test_mp07_ruling_producer.py ................................ [ 81%]
+.....................                                                    [ 89%]
+tests/unit/test_no_base_agent_imports.py .                               [ 90%]
+tests/unit/test_placeholder.py .                                         [ 90%]
+tests/unit/test_ruling_orchestrator.py ......                            [ 92%]
+tests/unit/test_vagueness_rubric.py ....                                 [ 94%]
+tests/unit/test_validation.py ............                               [ 99%]
+tests/unit/test_wp06_config.py ..                                        [100%]
+
+============================= 251 passed in 43.45s =============================

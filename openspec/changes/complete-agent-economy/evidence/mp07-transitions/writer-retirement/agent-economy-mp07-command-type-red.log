@@ -1,0 +1,2 @@
+src/db_gateway_service/task_operation_requests.py:206: error: Incompatible return value type (got "str", expected "Literal['submit_bid', 'accept_bid', 'cancel_task', 'expire_bidding', 'expire_acceptance', 'submit_deliverable', 'expire_execution', 'approve_task', 'auto_approve', 'dispute_task', 'record_ruling']")  [return-value]
+Found 1 error in 1 file (checked 1 source file)

@@ -1,0 +1,201 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 14 items
+
+tests/unit/test_mp07_gateway_store_parity.py .FFF....FFFFFF              [100%]
+
+=================================== FAILURES ===================================
+______________ test_native_bid_replay_preserves_one_bid_and_event ______________
+../db-gateway/src/db_gateway_service/services/bank_writer.py:60: in _financial_request
+    operation_id = validate_operation_id(data.get("operation_id"))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/financial_requests.py:49: in validate_operation_id
+    raise ValueError("operation_id must be a canonical op-UUID string")
+E   ValueError: operation_id must be a canonical op-UUID string
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_gateway_store_parity.py:221: in test_native_bid_replay_preserves_one_bid_and_event
+    _seed_open(store)
+tests/unit/test_mp07_gateway_store_parity.py:91: in _seed_open
+    store.writer.create_account(
+../db-gateway/src/db_gateway_service/services/db_writer.py:380: in create_account
+    return self._bank.create_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/services/bank_writer.py:97: in create_account
+    operation_id, request = _financial_request(
+../db-gateway/src/db_gateway_service/services/bank_writer.py:62: in _financial_request
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: operation_id must be a canonical op-UUID string
+__________ test_native_finalization_requires_persisted_bank_evidence ___________
+../db-gateway/src/db_gateway_service/services/bank_writer.py:60: in _financial_request
+    operation_id = validate_operation_id(data.get("operation_id"))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/financial_requests.py:49: in validate_operation_id
+    raise ValueError("operation_id must be a canonical op-UUID string")
+E   ValueError: operation_id must be a canonical op-UUID string
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_gateway_store_parity.py:235: in test_native_finalization_requires_persisted_bank_evidence
+    _seed_submitted(store)
+tests/unit/test_mp07_gateway_store_parity.py:175: in _seed_submitted
+    _seed_open(store)
+tests/unit/test_mp07_gateway_store_parity.py:91: in _seed_open
+    store.writer.create_account(
+../db-gateway/src/db_gateway_service/services/db_writer.py:380: in create_account
+    return self._bank.create_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/services/bank_writer.py:97: in create_account
+    operation_id, request = _financial_request(
+../db-gateway/src/db_gateway_service/services/bank_writer.py:62: in _financial_request
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: operation_id must be a canonical op-UUID string
+__________ test_changed_command_identity_is_rejected_without_new_bid ___________
+../db-gateway/src/db_gateway_service/services/bank_writer.py:60: in _financial_request
+    operation_id = validate_operation_id(data.get("operation_id"))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/financial_requests.py:49: in validate_operation_id
+    raise ValueError("operation_id must be a canonical op-UUID string")
+E   ValueError: operation_id must be a canonical op-UUID string
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_gateway_store_parity.py:270: in test_changed_command_identity_is_rejected_without_new_bid
+    _seed_open(store)
+tests/unit/test_mp07_gateway_store_parity.py:91: in _seed_open
+    store.writer.create_account(
+../db-gateway/src/db_gateway_service/services/db_writer.py:380: in create_account
+    return self._bank.create_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/services/bank_writer.py:97: in create_account
+    operation_id, request = _financial_request(
+../db-gateway/src/db_gateway_service/services/bank_writer.py:62: in _financial_request
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: operation_id must be a canonical op-UUID string
+______________ test_missing_finalize_identity_is_typed_not_silent ______________
+tests/unit/test_mp07_gateway_store_parity.py:293: in test_missing_finalize_identity_is_typed_not_silent
+    assert (caught.value.status_code, caught.value.error) == (404, "operation_not_found")
+E   AssertionError: assert (400, 'invalid_operation_id') == (404, 'operation_not_found')
+E     
+E     At index 0 diff: 400 != 404
+E     Use -v to get more diff
+_____________ test_legacy_status_writer_cannot_steal_native_claim ______________
+../db-gateway/src/db_gateway_service/services/bank_writer.py:60: in _financial_request
+    operation_id = validate_operation_id(data.get("operation_id"))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/financial_requests.py:49: in validate_operation_id
+    raise ValueError("operation_id must be a canonical op-UUID string")
+E   ValueError: operation_id must be a canonical op-UUID string
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_gateway_store_parity.py:297: in test_legacy_status_writer_cannot_steal_native_claim
+    _seed_submitted(store)
+tests/unit/test_mp07_gateway_store_parity.py:175: in _seed_submitted
+    _seed_open(store)
+tests/unit/test_mp07_gateway_store_parity.py:91: in _seed_open
+    store.writer.create_account(
+../db-gateway/src/db_gateway_service/services/db_writer.py:380: in create_account
+    return self._bank.create_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/services/bank_writer.py:97: in create_account
+    operation_id, request = _financial_request(
+../db-gateway/src/db_gateway_service/services/bank_writer.py:62: in _financial_request
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: operation_id must be a canonical op-UUID string
+__________ test_missing_contract_is_reported_without_filling_defaults __________
+../db-gateway/src/db_gateway_service/services/bank_writer.py:60: in _financial_request
+    operation_id = validate_operation_id(data.get("operation_id"))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/financial_requests.py:49: in validate_operation_id
+    raise ValueError("operation_id must be a canonical op-UUID string")
+E   ValueError: operation_id must be a canonical op-UUID string
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_gateway_store_parity.py:305: in test_missing_contract_is_reported_without_filling_defaults
+    _seed_open(store)
+tests/unit/test_mp07_gateway_store_parity.py:91: in _seed_open
+    store.writer.create_account(
+../db-gateway/src/db_gateway_service/services/db_writer.py:380: in create_account
+    return self._bank.create_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/services/bank_writer.py:97: in create_account
+    operation_id, request = _financial_request(
+../db-gateway/src/db_gateway_service/services/bank_writer.py:62: in _financial_request
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: operation_id must be a canonical op-UUID string
+_________ test_malformed_projection_still_uses_real_client_validation __________
+../db-gateway/src/db_gateway_service/services/bank_writer.py:60: in _financial_request
+    operation_id = validate_operation_id(data.get("operation_id"))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/financial_requests.py:49: in validate_operation_id
+    raise ValueError("operation_id must be a canonical op-UUID string")
+E   ValueError: operation_id must be a canonical op-UUID string
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_gateway_store_parity.py:317: in test_malformed_projection_still_uses_real_client_validation
+    _seed_open(store)
+tests/unit/test_mp07_gateway_store_parity.py:91: in _seed_open
+    store.writer.create_account(
+../db-gateway/src/db_gateway_service/services/db_writer.py:380: in create_account
+    return self._bank.create_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/services/bank_writer.py:97: in create_account
+    operation_id, request = _financial_request(
+../db-gateway/src/db_gateway_service/services/bank_writer.py:62: in _financial_request
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: operation_id must be a canonical op-UUID string
+__________ test_close_reopen_and_other_caller_preserve_owned_database __________
+../db-gateway/src/db_gateway_service/services/bank_writer.py:60: in _financial_request
+    operation_id = validate_operation_id(data.get("operation_id"))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/financial_requests.py:49: in validate_operation_id
+    raise ValueError("operation_id must be a canonical op-UUID string")
+E   ValueError: operation_id must be a canonical op-UUID string
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_gateway_store_parity.py:329: in test_close_reopen_and_other_caller_preserve_owned_database
+    _seed_open(first)
+tests/unit/test_mp07_gateway_store_parity.py:91: in _seed_open
+    store.writer.create_account(
+../db-gateway/src/db_gateway_service/services/db_writer.py:380: in create_account
+    return self._bank.create_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/services/bank_writer.py:97: in create_account
+    operation_id, request = _financial_request(
+../db-gateway/src/db_gateway_service/services/bank_writer.py:62: in _financial_request
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: operation_id must be a canonical op-UUID string
+__________________ test_explicit_clock_controls_native_cutoff __________________
+../db-gateway/src/db_gateway_service/services/bank_writer.py:60: in _financial_request
+    operation_id = validate_operation_id(data.get("operation_id"))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/financial_requests.py:49: in validate_operation_id
+    raise ValueError("operation_id must be a canonical op-UUID string")
+E   ValueError: operation_id must be a canonical op-UUID string
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_gateway_store_parity.py:360: in test_explicit_clock_controls_native_cutoff
+    _seed_open(adapter)
+tests/unit/test_mp07_gateway_store_parity.py:91: in _seed_open
+    store.writer.create_account(
+../db-gateway/src/db_gateway_service/services/db_writer.py:380: in create_account
+    return self._bank.create_account(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/services/bank_writer.py:97: in create_account
+    operation_id, request = _financial_request(
+../db-gateway/src/db_gateway_service/services/bank_writer.py:62: in _financial_request
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: operation_id must be a canonical op-UUID string
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_native_bid_replay_preserves_one_bid_and_event
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_native_finalization_requires_persisted_bank_evidence
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_changed_command_identity_is_rejected_without_new_bid
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_missing_finalize_identity_is_typed_not_silent
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_legacy_status_writer_cannot_steal_native_claim
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_missing_contract_is_reported_without_filling_defaults
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_malformed_projection_still_uses_real_client_validation
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_close_reopen_and_other_caller_preserve_owned_database
+FAILED tests/unit/test_mp07_gateway_store_parity.py::test_explicit_clock_controls_native_cutoff
+========================= 9 failed, 5 passed in 4.15s ==========================

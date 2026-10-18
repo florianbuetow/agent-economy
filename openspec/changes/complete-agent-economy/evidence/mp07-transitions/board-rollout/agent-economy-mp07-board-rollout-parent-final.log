@@ -1,0 +1,101 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 88 items
+
+tests/unit/test_mp07_public_task_projection.py ........................  [ 27%]
+tests/unit/test_mp07_creation_window.py .........                        [ 37%]
+tests/unit/test_mp07_creation_cutoff_bounds.py EEE                       [ 40%]
+tests/unit/test_mp07_task_operation_client.py ....                       [ 45%]
+tests/unit/test_mp07_task_operation_client_regressions.py .........      [ 55%]
+tests/unit/test_mp07_deadline_actor_config.py .........                  [ 65%]
+tests/unit/test_task_db_client_normalization.py ....                     [ 70%]
+tests/architecture/test_architecture.py ....................             [ 93%]
+tests/architecture/test_cross_service_deps.py .                          [ 94%]
+tests/architecture/test_db_client_isolation.py ...                       [ 97%]
+tests/architecture/test_shared_identity_client.py ..                     [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_unrepresentable_composed_cutoff_fails_before_effects[sqlite-integer-sized] _
+file /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_mp07_creation_cutoff_bounds.py, line 28
+  @pytest.mark.parametrize(
+      "window",
+      [MAX_INTEGER // 1_000_000, _MAX_WINDOW_SECONDS + 1],
+      ids=["sqlite-integer-sized", "year-10000"],
+  )
+  async def test_unrepresentable_composed_cutoff_fails_before_effects(
+      creation_boundary: tuple[Any, Any, Any, dict[str, Any]],
+      window: int,
+  ) -> None:
+      coordinator, manager, store, payload = creation_boundary
+      payload["acceptance_window_seconds"] = window
+
+      with pytest.raises(ServiceError) as raised:
+          await coordinator.create_task("task-token", "escrow-token")
+
+      assert raised.value.status_code == 400
+      assert raised.value.error == "invalid_deadline"
+      assert "acceptance_window_seconds" in raised.value.message
+      assert manager.token_validator.decode_escrow_token_payload.call_count == 0
+      assert manager.central_bank_client.escrow_lock.await_count == 0
+      assert store.inserted == []
+E       fixture 'creation_boundary' not found
+>       available fixtures: _app, _class_scoped_runner, _clear_caches, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, cov, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_mp07_creation_cutoff_bounds.py:28
+_ ERROR at setup of test_unrepresentable_composed_cutoff_fails_before_effects[year-10000] _
+file /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_mp07_creation_cutoff_bounds.py, line 28
+  @pytest.mark.parametrize(
+      "window",
+      [MAX_INTEGER // 1_000_000, _MAX_WINDOW_SECONDS + 1],
+      ids=["sqlite-integer-sized", "year-10000"],
+  )
+  async def test_unrepresentable_composed_cutoff_fails_before_effects(
+      creation_boundary: tuple[Any, Any, Any, dict[str, Any]],
+      window: int,
+  ) -> None:
+      coordinator, manager, store, payload = creation_boundary
+      payload["acceptance_window_seconds"] = window
+
+      with pytest.raises(ServiceError) as raised:
+          await coordinator.create_task("task-token", "escrow-token")
+
+      assert raised.value.status_code == 400
+      assert raised.value.error == "invalid_deadline"
+      assert "acceptance_window_seconds" in raised.value.message
+      assert manager.token_validator.decode_escrow_token_payload.call_count == 0
+      assert manager.central_bank_client.escrow_lock.await_count == 0
+      assert store.inserted == []
+E       fixture 'creation_boundary' not found
+>       available fixtures: _app, _class_scoped_runner, _clear_caches, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, cov, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_mp07_creation_cutoff_bounds.py:28
+___ ERROR at setup of test_largest_representable_composed_cutoff_is_retained ___
+file /Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_mp07_creation_cutoff_bounds.py, line 51
+  async def test_largest_representable_composed_cutoff_is_retained(
+      creation_boundary: tuple[Any, Any, Any, dict[str, Any]],
+  ) -> None:
+      coordinator, manager, store, payload = creation_boundary
+      payload["acceptance_window_seconds"] = _MAX_WINDOW_SECONDS
+
+      await coordinator.create_task("task-token", "escrow-token")
+
+      assert manager.central_bank_client.escrow_lock.await_count == 1
+      assert len(store.inserted) == 1
+      assert store.inserted[0]["created_at"] == _NOW
+      assert store.inserted[0]["acceptance_window_seconds"] == _MAX_WINDOW_SECONDS
+E       fixture 'creation_boundary' not found
+>       available fixtures: _app, _class_scoped_runner, _clear_caches, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, cov, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/unit/test_mp07_creation_cutoff_bounds.py:51
+=========================== short test summary info ============================
+ERROR tests/unit/test_mp07_creation_cutoff_bounds.py::test_unrepresentable_composed_cutoff_fails_before_effects[sqlite-integer-sized]
+ERROR tests/unit/test_mp07_creation_cutoff_bounds.py::test_unrepresentable_composed_cutoff_fails_before_effects[year-10000]
+ERROR tests/unit/test_mp07_creation_cutoff_bounds.py::test_largest_representable_composed_cutoff_is_retained
+======================== 85 passed, 3 errors in 12.34s =========================

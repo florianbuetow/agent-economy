@@ -1,0 +1,89 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 7 items
+
+tests/unit/test_mp07_router_verifier_errors.py FFFF...                   [100%]
+
+=================================== FAILURES ===================================
+_____ test_unexpected_fixture_verifier_exception_propagates[RuntimeError] ______
+tests/unit/routers/conftest.py:497: in _delegating_verify_jws
+    verified = state_ref.platform_agent.validate_certificate(token)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1169: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1173: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1228: in _execute_mock_call
+    raise effect
+E   RuntimeError: Injected fixture programming failure
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_router_verifier_errors.py:25: in test_unexpected_fixture_verifier_exception_propagates
+    await verify("unused-token")
+tests/unit/routers/conftest.py:514: in _delegating_verify_jws
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Cannot reach Identity service
+______ test_unexpected_fixture_verifier_exception_propagates[ValueError] _______
+tests/unit/routers/conftest.py:497: in _delegating_verify_jws
+    verified = state_ref.platform_agent.validate_certificate(token)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1169: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1173: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1228: in _execute_mock_call
+    raise effect
+E   ValueError: Injected fixture programming failure
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_router_verifier_errors.py:25: in test_unexpected_fixture_verifier_exception_propagates
+    await verify("unused-token")
+tests/unit/routers/conftest.py:514: in _delegating_verify_jws
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Cannot reach Identity service
+_______ test_unexpected_fixture_verifier_exception_propagates[TypeError] _______
+tests/unit/routers/conftest.py:497: in _delegating_verify_jws
+    verified = state_ref.platform_agent.validate_certificate(token)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1169: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1173: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1228: in _execute_mock_call
+    raise effect
+E   TypeError: Injected fixture programming failure
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_router_verifier_errors.py:25: in test_unexpected_fixture_verifier_exception_propagates
+    await verify("unused-token")
+tests/unit/routers/conftest.py:514: in _delegating_verify_jws
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Cannot reach Identity service
+___ test_malformed_fixture_verifier_return_is_not_dependency_unavailability ____
+tests/unit/routers/conftest.py:498: in _delegating_verify_jws
+    action = verified.payload.get("action")
+             ^^^^^^^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'payload'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp07_router_verifier_errors.py:35: in test_malformed_fixture_verifier_return_is_not_dependency_unavailability
+    await verify("unused-token")
+tests/unit/routers/conftest.py:514: in _delegating_verify_jws
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Cannot reach Identity service
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_router_verifier_errors.py::test_unexpected_fixture_verifier_exception_propagates[RuntimeError]
+FAILED tests/unit/test_mp07_router_verifier_errors.py::test_unexpected_fixture_verifier_exception_propagates[ValueError]
+FAILED tests/unit/test_mp07_router_verifier_errors.py::test_unexpected_fixture_verifier_exception_propagates[TypeError]
+FAILED tests/unit/test_mp07_router_verifier_errors.py::test_malformed_fixture_verifier_return_is_not_dependency_unavailability
+========================= 4 failed, 3 passed in 0.67s ==========================

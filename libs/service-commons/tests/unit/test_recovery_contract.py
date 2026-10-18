@@ -275,6 +275,13 @@ def test_resource_capture_intents_cover_copy_key_config_and_directory_only() -> 
             captured_path=Path("/source/agents/optional-input.jsonl"),
         ),
         SourceResourceV1(
+            logical_id="optional-journal",
+            kind=ResourceKind.DIRECTORY,
+            capture_kind=CaptureKind.ABSENT_DIRECTORY,
+            capture_root=Path("/source/agents"),
+            captured_path=Path("/source/agents/runtime-state"),
+        ),
+        SourceResourceV1(
             logical_id="maintenance-lock",
             kind=ResourceKind.FILE,
             capture_kind=CaptureKind.RUNTIME_LOCK,

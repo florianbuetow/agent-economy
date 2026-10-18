@@ -1,0 +1,107 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 14 items
+
+tests/unit/task_feeder/test_mp07_acceptance_window.py FFFFFFFFFFFFFF     [100%]
+
+=================================== FAILURES ===================================
+___________ test_explicit_positive_sqlite_safe_window_is_retained[1] ___________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:42: in test_explicit_positive_sqlite_safe_window_is_retained
+    config = TaskFeederConfig.model_validate({**_values(), "acceptance_window_seconds": duration})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for TaskFeederConfig
+E   acceptance_window_seconds
+E     Extra inputs are not permitted [type=extra_forbidden, input_value=1, input_type=int]
+E       For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+__________ test_explicit_positive_sqlite_safe_window_is_retained[73] ___________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:42: in test_explicit_positive_sqlite_safe_window_is_retained
+    config = TaskFeederConfig.model_validate({**_values(), "acceptance_window_seconds": duration})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for TaskFeederConfig
+E   acceptance_window_seconds
+E     Extra inputs are not permitted [type=extra_forbidden, input_value=73, input_type=int]
+E       For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+_____ test_explicit_positive_sqlite_safe_window_is_retained[9223372036854] _____
+tests/unit/task_feeder/test_mp07_acceptance_window.py:42: in test_explicit_positive_sqlite_safe_window_is_retained
+    config = TaskFeederConfig.model_validate({**_values(), "acceptance_window_seconds": duration})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for TaskFeederConfig
+E   acceptance_window_seconds
+E     Extra inputs are not permitted [type=extra_forbidden, input_value=9223372036854, input_type=int]
+E       For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+____________ test_missing_window_is_rejected_for_the_missing_field _____________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:49: in test_missing_window_is_rejected_for_the_missing_field
+    with pytest.raises(ValidationError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'pydantic_core._pydantic_core.ValidationError'>
+_____________ test_invalid_window_is_rejected_as_a_duration[True] ______________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:63: in test_invalid_window_is_rejected_as_a_duration
+    assert errors[0]["type"] in {"int_type", "greater_than_equal", "less_than_equal"}
+E   AssertionError: assert 'extra_forbidden' in {'greater_than_equal', 'int_type', 'less_than_equal'}
+_____________ test_invalid_window_is_rejected_as_a_duration[False] _____________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:63: in test_invalid_window_is_rejected_as_a_duration
+    assert errors[0]["type"] in {"int_type", "greater_than_equal", "less_than_equal"}
+E   AssertionError: assert 'extra_forbidden' in {'greater_than_equal', 'int_type', 'less_than_equal'}
+______________ test_invalid_window_is_rejected_as_a_duration[73] _______________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:63: in test_invalid_window_is_rejected_as_a_duration
+    assert errors[0]["type"] in {"int_type", "greater_than_equal", "less_than_equal"}
+E   AssertionError: assert 'extra_forbidden' in {'greater_than_equal', 'int_type', 'less_than_equal'}
+______________ test_invalid_window_is_rejected_as_a_duration[1.5] ______________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:63: in test_invalid_window_is_rejected_as_a_duration
+    assert errors[0]["type"] in {"int_type", "greater_than_equal", "less_than_equal"}
+E   AssertionError: assert 'extra_forbidden' in {'greater_than_equal', 'int_type', 'less_than_equal'}
+_____________ test_invalid_window_is_rejected_as_a_duration[None] ______________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:63: in test_invalid_window_is_rejected_as_a_duration
+    assert errors[0]["type"] in {"int_type", "greater_than_equal", "less_than_equal"}
+E   AssertionError: assert 'extra_forbidden' in {'greater_than_equal', 'int_type', 'less_than_equal'}
+_______________ test_invalid_window_is_rejected_as_a_duration[0] _______________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:63: in test_invalid_window_is_rejected_as_a_duration
+    assert errors[0]["type"] in {"int_type", "greater_than_equal", "less_than_equal"}
+E   AssertionError: assert 'extra_forbidden' in {'greater_than_equal', 'int_type', 'less_than_equal'}
+______________ test_invalid_window_is_rejected_as_a_duration[-1] _______________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:63: in test_invalid_window_is_rejected_as_a_duration
+    assert errors[0]["type"] in {"int_type", "greater_than_equal", "less_than_equal"}
+E   AssertionError: assert 'extra_forbidden' in {'greater_than_equal', 'int_type', 'less_than_equal'}
+_________ test_invalid_window_is_rejected_as_a_duration[9223372036855] _________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:63: in test_invalid_window_is_rejected_as_a_duration
+    assert errors[0]["type"] in {"int_type", "greater_than_equal", "less_than_equal"}
+E   AssertionError: assert 'extra_forbidden' in {'greater_than_equal', 'int_type', 'less_than_equal'}
+___________ test_window_and_selection_delay_are_distinct_yaml_fields ___________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:81: in test_window_and_selection_delay_are_distinct_yaml_fields
+    config = load_task_feeder_settings(path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_feeder/config.py:112: in load_task_feeder_settings
+    settings = _FileSettings(**raw)
+               ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for _FileSettings
+E   task_feeder.acceptance_window_seconds
+E     Extra inputs are not permitted [type=extra_forbidden, input_value=73, input_type=int]
+E       For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+________________ test_posting_forwards_the_exact_poster_window _________________
+tests/unit/task_feeder/test_mp07_acceptance_window.py:86: in test_posting_forwards_the_exact_poster_window
+    config = TaskFeederConfig.model_validate(_values())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for TaskFeederConfig
+E   acceptance_window_seconds
+E     Extra inputs are not permitted [type=extra_forbidden, input_value=73, input_type=int]
+E       For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+=========================== short test summary info ============================
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_explicit_positive_sqlite_safe_window_is_retained[1]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_explicit_positive_sqlite_safe_window_is_retained[73]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_explicit_positive_sqlite_safe_window_is_retained[9223372036854]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_missing_window_is_rejected_for_the_missing_field
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_invalid_window_is_rejected_as_a_duration[True]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_invalid_window_is_rejected_as_a_duration[False]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_invalid_window_is_rejected_as_a_duration[73]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_invalid_window_is_rejected_as_a_duration[1.5]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_invalid_window_is_rejected_as_a_duration[None]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_invalid_window_is_rejected_as_a_duration[0]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_invalid_window_is_rejected_as_a_duration[-1]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_invalid_window_is_rejected_as_a_duration[9223372036855]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_window_and_selection_delay_are_distinct_yaml_fields
+FAILED tests/unit/task_feeder/test_mp07_acceptance_window.py::test_posting_forwards_the_exact_poster_window
+============================== 14 failed in 0.06s ==============================

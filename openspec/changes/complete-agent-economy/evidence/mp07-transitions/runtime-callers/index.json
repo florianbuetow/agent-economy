@@ -1,0 +1,102 @@
+{
+  "scope": "runtime-callers",
+  "limits": "Logs prove only their recorded source version and scope; current source hashes do not retroactively certify earlier gates. No full root or package closure.",
+  "artifacts": [
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-feeder-intent-tests.md",
+      "artifact": "2026-10-18-mp07-feeder-intent-tests.md",
+      "sha256": "a6d1a48fed9749c858f9a95b3e556b1dea7fa6edbccbae99325115530159b4f6"
+    },
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-worker-intent-tests.md",
+      "artifact": "2026-10-18-mp07-worker-intent-tests.md",
+      "sha256": "f1303ca1584efcdbec2dead0259dd0650b410b069117f354a65646da523261e7"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-feeder-intents-before-detail.py",
+      "artifact": "agent-economy-mp07-feeder-intents-before-detail.py",
+      "sha256": "8ea2ea0a16cd7ff753f2afd39f17592f20e5a61165c20a71183961663adda73f"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-intents-codespell-final.log",
+      "artifact": "agent-economy-mp07-worker-intents-codespell-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-intents-format-final.log",
+      "artifact": "agent-economy-mp07-worker-intents-format-final.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-intents-mypy-final.log",
+      "artifact": "agent-economy-mp07-worker-intents-mypy-final.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-intents-product-sha256.log",
+      "artifact": "agent-economy-mp07-worker-intents-product-sha256.log",
+      "sha256": "9d74f49c67aba9c826333c32481c1ab40ce88c88562a8692989f6221b3651029"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-intents-red-final.log",
+      "artifact": "agent-economy-mp07-worker-intents-red-final.log",
+      "sha256": "69cb249acae370a81a74d42e837ee1bb90d5d823092881a96755148bfa139c67"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-intents-ruff-final.log",
+      "artifact": "agent-economy-mp07-worker-intents-ruff-final.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-intents-sha256-final.log",
+      "artifact": "agent-economy-mp07-worker-intents-sha256-final.log",
+      "sha256": "94fba04bc77778ca0740dc96fc19a73b8cde615f3664d5c239f89dc8bedb4544"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-reward-codespell-final.log",
+      "artifact": "agent-economy-mp07-worker-reward-codespell-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-reward-controls-final.log",
+      "artifact": "agent-economy-mp07-worker-reward-controls-final.log",
+      "sha256": "85686734f0bcfeebbe4fcc37dc8683052001df943852ed5cf31c9b64b0589bbd"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-reward-format-final.log",
+      "artifact": "agent-economy-mp07-worker-reward-format-final.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-reward-mypy-final.log",
+      "artifact": "agent-economy-mp07-worker-reward-mypy-final.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-reward-product-sha256.log",
+      "artifact": "agent-economy-mp07-worker-reward-product-sha256.log",
+      "sha256": "423565cc4d5d97adb5c5e68407d4041603bb9ff76e5e907e5047c678715c9248"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-reward-red-final.log",
+      "artifact": "agent-economy-mp07-worker-reward-red-final.log",
+      "sha256": "2f5e8025902d3d7d0a530e0b43e1e4a87199b364dd0fe4d1ef1922de500e323d"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-reward-ruff-final.log",
+      "artifact": "agent-economy-mp07-worker-reward-ruff-final.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-worker-reward-sha256-final.log",
+      "artifact": "agent-economy-mp07-worker-reward-sha256-final.log",
+      "sha256": "a1869210e09559bfa9cbbdfee29f4080ee2eb3cedefe23fc0b1655c6559cfa84"
+    }
+  ],
+  "current_sources": {
+    "agents/src/math_worker/loop.py": "49f3f4286bfc7be85340fa1b2c8df7246ac91380438e34436b98022f21d8af93",
+    "agents/src/task_feeder/acceptance.py": "8c550cf15caeac5f9f7188492b47d31f81ba7bbfc9022552a256f1bd593f1571",
+    "agents/src/task_feeder/review.py": "84d25f1c42c1704c2985d66e8bd3f4f69706648437603221a2ae6b2c96083201",
+    "agents/src/base_agent/runtime_task_intent_factory.py": "4875b2ef68c3305ee0c5e9cd9dc7a2f54158ef17400d9f4f0acf4820e51f806f"
+  }
+}

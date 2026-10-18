@@ -7,8 +7,22 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import httpx
+from pydantic import ValidationError
+from service_commons.exceptions import ServiceError
 
 from task_board_service.services.errors import DuplicateBidError, DuplicateTaskError
+from task_board_service.task_contract_projection import (
+    GatewayBid,
+    TaskContractProjection,
+    validate_task_projection,
+)
+from task_board_service.task_operation_contract import (
+    GatewayError,
+    invalid_gateway_response,
+    validate_command,
+    validate_envelope,
+    validate_operation_id,
+)
 
 if TYPE_CHECKING:
     from service_auth.gateway import GatewayRequestSigner
@@ -63,6 +77,7 @@ class TaskDbClient:
         "ruling_summary",
         "expired_at",
         "escrow_pending",
+        *TaskContractProjection.model_fields,
     )
 
     def __init__(
@@ -133,6 +148,54 @@ class TaskDbClient:
     def _normalize_task(self, data: dict[str, Any]) -> dict[str, Any]:
         return {column: data.get(column) for column in self._TASK_COLUMNS}
 
+    def _strict_json(self, response: httpx.Response) -> dict[str, Any]:
+        try:
+            data = response.json()
+            if not isinstance(data, dict):
+                raise ValueError("Expected an object")
+        except (ValueError, UnicodeError) as exc:
+            raise invalid_gateway_response() from exc
+        return data
+
+    def _raise_gateway_error(self, response: httpx.Response) -> None:
+        if not 400 <= response.status_code <= 599:
+            raise invalid_gateway_response()
+        try:
+            error = GatewayError.model_validate(self._strict_json(response))
+        except ValidationError as exc:
+            raise invalid_gateway_response() from exc
+        raise ServiceError(error.error, error.message, response.status_code, error.details)
+
+    def claim_task_operation(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Claim or replay one exact native command without replacing its identity."""
+        command = validate_command(payload)
+        response = self._request(
+            "POST", "/board/task-operations", json=command.model_dump(), params=None
+        )
+        if response.status_code not in {200, 202}:
+            self._raise_gateway_error(response)
+        return validate_envelope(
+            self._strict_json(response),
+            status_code=response.status_code,
+            operation_id=command.operation_id,
+            command=command,
+        )
+
+    def finalize_task_operation(self, operation_id: str) -> dict[str, Any]:
+        """Ask Gateway to validate its persisted evidence; never forward a success body."""
+        validated_id = validate_operation_id(operation_id)
+        response = self._request(
+            "POST", f"/board/task-operations/{validated_id}/finalize", json={}, params=None
+        )
+        if response.status_code not in {200, 202}:
+            self._raise_gateway_error(response)
+        return validate_envelope(
+            self._strict_json(response),
+            status_code=response.status_code,
+            operation_id=validated_id,
+            command=None,
+        )
+
     def _event_type_for_updates(self, updates: dict[str, Any]) -> str:
         status = updates.get("status")
         if status == "approved" and updates.get("escrow_pending") == 1:
@@ -157,6 +220,7 @@ class TaskDbClient:
             "reward": task_data["reward"],
             "status": task_data["status"],
             "bidding_deadline_seconds": task_data["bidding_deadline_seconds"],
+            "acceptance_window_seconds": task_data["acceptance_window_seconds"],
             "deadline_seconds": task_data["deadline_seconds"],
             "review_deadline_seconds": task_data["review_deadline_seconds"],
             "bidding_deadline": bidding_deadline,
@@ -189,9 +253,12 @@ class TaskDbClient:
         if response.status_code == 404:
             return None
         if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
-        return self._normalize_task(self._json(response))
+            self._raise_gateway_error(response)
+        data = self._strict_json(response)
+        validate_task_projection(data)
+        if data.get("task_id") != task_id:
+            raise invalid_gateway_response()
+        return self._normalize_task(data)
 
     def update_task(
         self,
@@ -250,10 +317,16 @@ class TaskDbClient:
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
-        items = self._json(response).get("tasks", [])
+        items = self._strict_json(response).get("tasks")
         if not isinstance(items, list):
-            return []
-        return [self._normalize_task(item) for item in items if isinstance(item, dict)]
+            raise invalid_gateway_response()
+        tasks: list[dict[str, Any]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                raise invalid_gateway_response()
+            validate_task_projection(item)
+            tasks.append(self._normalize_task(item))
+        return tasks
 
     def count_tasks(self) -> int:
         response = self._request("GET", "/board/tasks/count", json=None, params=None)
@@ -303,37 +376,33 @@ class TaskDbClient:
         if response.status_code == 404:
             return None
         if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
-        data = self._json(response)
-        return {
-            "bid_id": str(data["bid_id"]),
-            "task_id": str(data["task_id"]),
-            "bidder_id": str(data["bidder_id"]),
-            "amount": int(data["amount"]),
-            "submitted_at": str(data["submitted_at"]),
-        }
+            self._raise_gateway_error(response)
+        try:
+            bid = GatewayBid.model_validate(self._strict_json(response))
+        except ValidationError as exc:
+            raise invalid_gateway_response() from exc
+        if bid.bid_id != bid_id or bid.task_id != task_id:
+            raise invalid_gateway_response()
+        return bid.model_dump(exclude={"proposal"})
 
     def get_bids_for_task(self, task_id: str) -> list[dict[str, Any]]:
         response = self._request("GET", f"/board/tasks/{task_id}/bids", json=None, params=None)
         if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+            self._raise_gateway_error(response)
 
-        items = self._json(response).get("bids", [])
-        if not isinstance(items, list):
-            return []
-        return [
-            {
-                "bid_id": str(item["bid_id"]),
-                "task_id": str(item["task_id"]),
-                "bidder_id": str(item["bidder_id"]),
-                "amount": int(item["amount"]),
-                "submitted_at": str(item["submitted_at"]),
-            }
-            for item in items
-            if isinstance(item, dict)
-        ]
+        data = self._strict_json(response)
+        if set(data) != {"bids"} or not isinstance(data["bids"], list):
+            raise invalid_gateway_response()
+        bids: list[dict[str, Any]] = []
+        for item in data["bids"]:
+            try:
+                bid = GatewayBid.model_validate(item)
+            except ValidationError as exc:
+                raise invalid_gateway_response() from exc
+            if bid.task_id != task_id:
+                raise invalid_gateway_response()
+            bids.append(bid.model_dump(exclude={"proposal"}))
+        return bids
 
     def insert_asset(self, asset_data: dict[str, Any]) -> None:
         task_id = str(asset_data["task_id"])

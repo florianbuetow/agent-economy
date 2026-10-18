@@ -1,0 +1,76 @@
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;31m✗ Architecture tests failed[0m
+
+[0;34m=== Running Architecture Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/court/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 24 items
+
+tests/architecture/test_architecture.py::TestVisualization::test_generate_module_dependency_graph PASSED [  4%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_routers PASSED [  8%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_app PASSED [ 12%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_middleware PASSED [ 16%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_schemas PASSED [ 20%]
+tests/architecture/test_architecture.py::TestJudgesLayerIndependence::test_judges_must_not_import_routers PASSED [ 25%]
+tests/architecture/test_architecture.py::TestJudgesLayerIndependence::test_judges_must_not_import_app PASSED [ 29%]
+tests/architecture/test_architecture.py::TestJudgesLayerIndependence::test_judges_must_not_import_schemas PASSED [ 33%]
+tests/architecture/test_architecture.py::TestJudgesLayerIndependence::test_routers_must_not_import_judges PASSED [ 37%]
+tests/architecture/test_architecture.py::TestLeafModules::test_config_must_not_import_routers PASSED [ 41%]
+tests/architecture/test_architecture.py::TestLeafModules::test_config_must_not_import_services PASSED [ 45%]
+tests/architecture/test_architecture.py::TestLeafModules::test_config_must_not_import_core PASSED [ 50%]
+tests/architecture/test_architecture.py::TestLeafModules::test_schemas_must_not_import_services PASSED [ 54%]
+tests/architecture/test_architecture.py::TestLeafModules::test_schemas_must_not_import_routers PASSED [ 58%]
+tests/architecture/test_architecture.py::TestLeafModules::test_schemas_must_not_import_core PASSED [ 62%]
+tests/architecture/test_architecture.py::TestRouterConstraints::test_routers_must_not_import_config_directly PASSED [ 66%]
+tests/architecture/test_architecture.py::TestRouterConstraints::test_routers_must_not_import_app PASSED [ 70%]
+tests/architecture/test_architecture.py::TestRouterConstraints::test_routers_must_not_import_lifespan PASSED [ 75%]
+tests/architecture/test_architecture.py::TestLayeredArchitecture::test_services_layer_must_not_access_routers_layer PASSED [ 79%]
+tests/architecture/test_architecture.py::TestLayeredArchitecture::test_services_layer_must_not_access_core_layer PASSED [ 83%]
+tests/architecture/test_cross_service_deps.py::TestCrossServiceDependencies::test_no_forbidden_service_imports PASSED [ 87%]
+tests/architecture/test_db_client_isolation.py::TestDbClientIsolation::test_only_http_clients_import_httpx FAILED [ 91%]
+tests/architecture/test_db_client_isolation.py::TestDbClientIsolation::test_lifespan_does_not_import_legacy_stores PASSED [ 95%]
+tests/architecture/test_db_client_isolation.py::TestDbClientIsolation::test_lifespan_requires_db_gateway PASSED [100%]
+
+=================================== FAILURES ===================================
+__________ TestDbClientIsolation.test_only_http_clients_import_httpx ___________
+tests/architecture/test_db_client_isolation.py:39: in test_only_http_clients_import_httpx
+    assert violations == [], f"Unexpected httpx import in: {violations}"
+E   AssertionError: Unexpected httpx import in: ['services/ruling_acknowledgment.py']
+E   assert ['services/ruling_acknowledgment.py'] == []
+E     
+E     Left contains one more item: 'services/ruling_acknowledgment.py'
+E     
+E     Full diff:
+E     - []
+E     + [
+E     +     'services/ruling_acknowledgment.py',
+E     + ]
+=========================== short test summary info ============================
+FAILED tests/architecture/test_db_client_isolation.py::TestDbClientIsolation::test_only_http_clients_import_httpx - AssertionError: Unexpected httpx import in: ['services/ruling_acknowledgment.py']
+assert ['services/ruling_acknowledgment.py'] == []
+  
+  Left contains one more item: 'services/ruling_acknowledgment.py'
+  
+  Full diff:
+  - []
+  + [
+  +     'services/ruling_acknowledgment.py',
+  + ]
+========================= 1 failed, 23 passed in 0.55s =========================
+error: recipe `test-architecture` failed with exit code 1
+error: recipe `ci-quiet` failed with exit code 1

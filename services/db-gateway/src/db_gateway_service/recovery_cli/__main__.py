@@ -38,7 +38,7 @@ def _parse_arguments(arguments: list[str]) -> argparse.Namespace:
     for name in ("verify", "finalize"):
         _backup_options(actions.add_parser(name))
 
-    for name in ("migrate", "migrate-v1-to-v2"):
+    for name in ("migrate", "migrate-v1-to-v2", "migrate-v2-to-v3"):
         migrate = commands.add_parser(name)
         _backup_options(migrate)
         migrate.add_argument("--inventory", type=Path, required=True)
@@ -91,9 +91,12 @@ def _execute_backup(
 
 def _execute_migration(args: argparse.Namespace) -> tuple[str, migration.MigrationResult]:
     inventory = _load_contract(args.inventory, RecoveryInventoryV1, "invalid_inventory")
-    migrate = (
-        migration.migrate_v0_to_v1 if args.command == "migrate" else migration.migrate_v1_to_v2
-    )
+    migrations = {
+        "migrate": migration.migrate_v0_to_v1,
+        "migrate-v1-to-v2": migration.migrate_v1_to_v2,
+        "migrate-v2-to-v3": migration.migrate_v2_to_v3,
+    }
+    migrate = migrations[str(args.command)]
     return str(args.command), migrate(
         inventory,
         backup_root=args.backup_root,
@@ -110,7 +113,7 @@ def _execute(
 ]:
     if args.command == "backup":
         return _execute_backup(args)
-    if args.command in {"migrate", "migrate-v1-to-v2"}:
+    if args.command in {"migrate", "migrate-v1-to-v2", "migrate-v2-to-v3"}:
         return _execute_migration(args)
     if args.command == "restore":
         bindings = _load_contract(args.target_bindings, TargetBindingsV1, "invalid_target_bindings")
@@ -165,6 +168,7 @@ def _result_exit_code(
         expected = {
             "migrate": (1, "committed_v1_verified"),
             "migrate-v1-to-v2": (2, "committed_v2_verified"),
+            "migrate-v2-to-v3": (3, "committed_v3_verified"),
         }.get(operation)
         return (
             0

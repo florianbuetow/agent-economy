@@ -1,0 +1,245 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 21 items
+
+tests/unit/test_mp07_operation_regressions.py .FFFFFFFFFFFFF.FF.FF.      [100%]
+
+=================================== FAILURES ===================================
+_ test_finalizer_rederives_intent_from_command_and_frozen_contract[wrong_recipient] _
+tests/unit/test_mp07_operation_regressions.py:548: in test_finalizer_rederives_intent_from_command_and_frozen_contract
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...eb840df12d48'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-4ceb1e20-ef95-4ac4-b1fe-93385452f0d2', ...}}} != {'outcome': {'details': {'operation_id': 'op-4ceb1e20-ef95-4ac4-b1fe-93385452f0d2'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_finalizer_rederives_intent_from_command_and_frozen_contract[wrong_amount] _
+tests/unit/test_mp07_operation_regressions.py:548: in test_finalizer_rederives_intent_from_command_and_frozen_contract
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...a3916eacf482'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-1dda9a60-42b2-476e-9a18-fb7476fa9a1d', ...}}} != {'outcome': {'details': {'operation_id': 'op-1dda9a60-42b2-476e-9a18-fb7476fa9a1d'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+______ test_completed_result_uses_accepted_reward_not_mutable_task_reward ______
+tests/unit/test_mp07_operation_regressions.py:568: in test_completed_result_uses_accepted_reward_not_mutable_task_reward
+    assert result["reward"] == 100
+E   assert 70 == 100
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_source] _
+tests/unit/test_mp07_operation_regressions.py:654: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...3590aabe971c'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-ce505111-fbba-4e17-92a3-a463e3c0be3e', ...}}} != {'outcome': {'details': {'operation_id': 'op-ce505111-fbba-4e17-92a3-a463e3c0be3e'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_type] _
+tests/unit/test_mp07_operation_regressions.py:654: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...7863d55c9c08'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-89a86016-786c-43c9-9b97-aa1056743dab', ...}}} != {'outcome': {'details': {'operation_id': 'op-89a86016-786c-43c9-9b97-aa1056743dab'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_task] _
+tests/unit/test_mp07_operation_regressions.py:654: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...9e900df63dd8'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-86293194-7591-4cbf-b967-1b3349cdeab4', ...}}} != {'outcome': {'details': {'operation_id': 'op-86293194-7591-4cbf-b967-1b3349cdeab4'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_account] _
+tests/unit/test_mp07_operation_regressions.py:654: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...6ffa30c8f32a'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-5f92c7c4-439c-4596-9b31-cd7ab8e73276', ...}}} != {'outcome': {'details': {'operation_id': 'op-5f92c7c4-439c-4596-9b31-cd7ab8e73276'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_type] _
+tests/unit/test_mp07_operation_regressions.py:654: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...244b1e5b32af'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-0cf5d25f-a758-4509-8462-7cf12b646199', ...}}} != {'outcome': {'details': {'operation_id': 'op-0cf5d25f-a758-4509-8462-7cf12b646199'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_amount] _
+tests/unit/test_mp07_operation_regressions.py:654: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...af889db32e8d'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-742e1807-4992-4b0f-8ea4-21adfa3300df', ...}}} != {'outcome': {'details': {'operation_id': 'op-742e1807-4992-4b0f-8ea4-21adfa3300df'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_reference] _
+tests/unit/test_mp07_operation_regressions.py:654: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...36f9935e524e'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-457986e3-5bfd-45e1-ae19-566998bb60ae', ...}}} != {'outcome': {'details': {'operation_id': 'op-457986e3-5bfd-45e1-ae19-566998bb60ae'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_event] _
+tests/unit/test_mp07_operation_regressions.py:654: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...5d1acbd3792e'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-60453872-2d54-4784-aee5-481c26b44c76', ...}}} != {'outcome': {'details': {'operation_id': 'op-60453872-2d54-4784-aee5-481c26b44c76'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[leg_balance] _
+tests/unit/test_mp07_operation_regressions.py:654: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _assert_rejected_finalization(v3_writer, graph, operation_id, before, outcome)
+tests/unit/test_mp07_operation_regressions.py:468: in _assert_rejected_finalization
+    assert {
+E   assert {'counters_un...', None), ...} == {'counters_un...tion"}'), ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'events_unchanged': False} != {'events_unchanged': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...41197749c431'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-7b0d8d82-b26f-4181-afcb-e65897237989', ...}}} != {'outcome': {'details': {'operation_id': 'op-7b0d8d82-b26f-4181-afcb-e65897237989'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'operation_state': ('completed', 'succeeded', None)} ...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+_____ test_foreign_settlement_conflict_persists_true_winner_across_replays _____
+tests/unit/test_mp07_operation_regressions.py:682: in test_foreign_settlement_conflict_persists_true_winner_across_replays
+    assert {
+E   AssertionError: assert {'claim_repla...s': 409}, ...} == {'claim_repla...s': 409}, ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Differing items:
+E     {'first': {'details': {'operation_id': 'op-7d889874-7750-41ec-8c28-ea4041be8054'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}} != {'first': {'details': {'operation_id': 'op-7d889874-7750-41ec-8c28-ea4041be8054', 'winning_operation_id': 'op-461bbd59-1aac-4eb0-b04b-3818cee3f6c4'}, 'error': 'effect_evidence_conflict', 'kind': 'service_error', 'status': 409}}
+E     {'claim_replay': {'details': {'operation_id': 'op-7d889874-7750-41ec-8c28-ea4041be8054'}, 'error': 'effect_evidence_conflict',...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+____ test_native_bid_collisions_are_typed_and_rollback_every_effect[bidder] ____
+tests/unit/test_mp07_operation_regressions.py:741: in test_native_bid_collisions_are_typed_and_rollback_every_effect
+    assert {
+E   AssertionError: assert {'counters_un...t': True, ...} == {'counters_un...t': True, ...}
+E     
+E     Omitting 6 identical items, use -vv to show
+E     Differing items:
+E     {'outcome': {'kind': 'exception', 'message': 'UNIQUE constraint failed: board_bids.task_id, board_bids.bidder_id', 'type': 'IntegrityError'}} != {'outcome': {'details': {}, 'error': 'bid_exists', 'kind': 'service_error', 'status': 409}}
+E     Use -v to get more diff
+____ test_native_bid_collisions_are_typed_and_rollback_every_effect[bid_id] ____
+tests/unit/test_mp07_operation_regressions.py:741: in test_native_bid_collisions_are_typed_and_rollback_every_effect
+    assert {
+E   AssertionError: assert {'counters_un...t': True, ...} == {'counters_un...t': True, ...}
+E     
+E     Omitting 6 identical items, use -vv to show
+E     Differing items:
+E     {'outcome': {'kind': 'exception', 'message': 'UNIQUE constraint failed: board_bids.bid_id', 'type': 'IntegrityError'}} != {'outcome': {'details': {}, 'error': 'bid_exists', 'kind': 'service_error', 'status': 409}}
+E     Use -v to get more diff
+_______ test_caller_cannot_choose_financial_source_reference[wrong_task] _______
+tests/unit/test_mp07_operation_regressions.py:798: in test_caller_cannot_choose_financial_source_reference
+    assert {
+E   AssertionError: assert {'counters_un...': False, ...} == {'counters_un...t': True, ...}
+E     
+E     Omitting 4 identical items, use -vv to show
+E     Differing items:
+E     {'operation_absent': False} != {'operation_absent': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...94748f567a9e'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-8e9f6ea6-fdaf-452f-86fe-64208a166bd4', ...}}} != {'outcome': {'details': {}, 'error': 'payload_mismatch', 'kind': 'service_error', 'status': 409}}
+E     {'operations_unchanged': False} != {'operations_unchanged': True}
+E     Use -v to get more diff
+______ test_caller_cannot_choose_financial_source_reference[wrong_action] ______
+tests/unit/test_mp07_operation_regressions.py:798: in test_caller_cannot_choose_financial_source_reference
+    assert {
+E   AssertionError: assert {'counters_un...': False, ...} == {'counters_un...t': True, ...}
+E     
+E     Omitting 4 identical items, use -vv to show
+E     Differing items:
+E     {'operation_absent': False} != {'operation_absent': True}
+E     {'outcome': {'kind': 'success', 'result': {'command': 'approve_task', 'effect_intent': {'expected_escrow': {'amount': ...d5b7c8e2b12c'}, 'effect_kind': 'bank_release', 'effect_operation_id': 'op-de365442-d7ee-456a-a3d6-7c9aca6afb60', ...}}} != {'outcome': {'details': {}, 'error': 'payload_mismatch', 'kind': 'service_error', 'status': 409}}
+E     {'operations_unchanged': False} != {'operations_unchanged': True}
+E     Use -v to get more diff
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rederives_intent_from_command_and_frozen_contract[wrong_recipient]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rederives_intent_from_command_and_frozen_contract[wrong_amount]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_completed_result_uses_accepted_reward_not_mutable_task_reward
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_source]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_type]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_task]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_account]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_type]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_amount]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_reference]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_event]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[leg_balance]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_foreign_settlement_conflict_persists_true_winner_across_replays
+FAILED tests/unit/test_mp07_operation_regressions.py::test_native_bid_collisions_are_typed_and_rollback_every_effect[bidder]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_native_bid_collisions_are_typed_and_rollback_every_effect[bid_id]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_caller_cannot_choose_financial_source_reference[wrong_task]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_caller_cannot_choose_financial_source_reference[wrong_action]
+=================== 17 failed, 4 passed, 1 warning in 8.41s ====================

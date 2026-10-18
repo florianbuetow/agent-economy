@@ -3,8 +3,8 @@
 Status: technical contract from the independent MP-07 pass, revised after the critic rejected
 ambiguous migration and delivery semantics. Critic re-review is OKAY for T-122 test implementation.
 T-123 remains gated on the required red proofs; this is not production completion or policy change.
-MP-04 source is frozen for its next
-root gate. This document does not close tickets or select Q-M1/Q-M2/Q-M3 policies.
+MP-04 passed root19 and was committed/pushed as a6af0be. Its source freeze is released.
+This document does not close tickets or select Q-M1/Q-M2/Q-M3 policies.
 
 ## Accepted policy and current boundary
 
@@ -14,7 +14,7 @@ tasks with bids remain acceptable until the selected window ends. Equality belon
 Existing published/accepted cutoffs receive no silent extension. Q-16 governs feeder selection,
 not human quorum or ranking. Core payout remains the posted reward, independent of bid amount.
 
-Native financial receipts and schema v2 already exist. Current task writes still lack lifecycle
+Original v2 baseline: native financial receipts and schema v2 already exist. Task writes lack lifecycle
 versions and acceptance windows. Gateway status updates accept optional constraints. Interactive
 approval/ruling move money and dispute creation calls Court before a winning state transition.
 Gateway authenticates the service but does not expose its verified caller KID to Board writers.
@@ -92,6 +92,39 @@ stays absent. Native commands on an unresolved observation return legacy_reconci
 MP-08 owns later convergence of these observations; ambiguous contradictory histories fail
 migration with actionable diagnostics instead of choosing a winner.
 
+The concrete observation fields are observation_id, task_id, observation_kind,
+observed_fact_json, observed_fact_sha256, external_reference, effect_state,
+target_outcome_hint and unresolved. Observation IDs use the obs- namespace, never native op-.
+The initial kinds are worker_settlement_succeeded, worker_settlement_pending and
+court_claim_succeeded, with succeeded/pending effect state and approved/disputed outcome hints.
+The external reference is an existing receipt/claim ID or a provable old deterministic settlement
+retry reference; it is not a recovered caller-owned Board command identity. Canonical observed-fact
+JSON and its SHA-256 bind the actual source facts. Do not infer manual approval versus autoapproval.
+Further cancellation/expiry/ruling legacy kinds require their own exact source-history proofs.
+
+V3 has exactly those nine observation columns. Observed facts use closed, flat per-kind schemas;
+they cannot hide invented native provenance in extra columns or nested JSON. Every kind records
+task_id, task_status, poster_id, worker_id, escrow_id, reward, accepted_bid_id,
+accepted_bid_amount and external_reference. The kind-specific additions are:
+
+- worker_settlement_succeeded: escrow_status, resolved_at, recipient_id, settled_amount,
+  settlement_source_reference, external_receipt_request_sha256, external_receipt_event_id and
+  external_receipt_transaction_id.
+- worker_settlement_pending: escrow_status and escrow_pending.
+- court_claim_succeeded: claimant_id, respondent_id, reason, claim_status, filed_at and
+  rebuttal_deadline.
+
+Each value must equal the actual observed source fact. Recursively reject operation_id,
+client_operation_id, caller_kid, actor_kind, actor_id, command, command_sha256 and request_sha256
+in fact JSON. Genuine financial receipt evidence remains explicitly external; it does not claim
+that the old task transition had a native Board operation. Resolution flips the separate unresolved
+flag; any later richer recovery metadata belongs to the separately tested MP-08 contract.
+
+Migration failures use source_not_v2 for a source other than exact v2; inconsistent timing,
+accepted bid/worker linkage and disputed claim linkage use task_cutoff_inconsistent,
+accepted_bid_linkage_invalid and dispute_claim_linkage_invalid with safe task_id details.
+These diagnostics do not authorize a repair or destructive reconciliation.
+
 ## Commands and signed protocol
 
 Commands: submit_bid, accept_bid, cancel_task, expire_bidding, expire_acceptance,
@@ -148,9 +181,129 @@ ID; it does not merely return pending forever. Concurrent same-operation deliver
 Bank receipt or Court unique-task protocol below. Finalizers CAS the operation; a loser reads the
 stored completed result. A proven permanent effect conflict becomes blocked/conflict durably.
 Ordinary unavailable/ambiguous effects remain claimed/pending for replay and later MP-08 scheduling.
-Reads retain source business status and expose nullable pending_transition with operation ID,
-command, target status and effect state. Unresolved legacy observations are labeled separately,
-with their observation ID and outcome hint rather than a fabricated operation ID/command.
+Reads retain source business status and expose nullable pending_transition with operation_id,
+command, target_status, target_lifecycle_version, operation_state and effect_state. Unresolved
+legacy observations are returned separately in legacy_reconciliations, sorted by observation_id,
+with observation_id, observation_kind, effect_state and target_outcome_hint. Neither projection
+includes raw observed facts, caller identity or invented native provenance. A task cannot expose
+both a native pending transition and unresolved legacy observations as competing recovery owners.
+
+Gateway get/list return the nine task-contract fields alongside these two recovery fields in one
+SQLite snapshot. The Task Board client requires every field and rejects malformed or inconsistent
+responses. Public detail/list projections preserve them and render bidding, acceptance, execution
+and review ISO cutoffs from the stored integer microseconds, not mutable timestamp/duration pairs.
+
+### Finalization uses Gateway-owned evidence
+
+The finalizer receives only the operation ID and the actual middleware-verified caller KID.
+It loads the operation, task contract and persisted Bank/Court evidence inside the same
+`BEGIN IMMEDIATE` transaction. A forwarded HTTP success body is not durable evidence and cannot
+authorize finalization. The configured Board capability and the original verified operation KID
+must match; another KID cannot take over an operation implicitly. Cross-key recovery requires a
+later explicit contract. Public JSON cannot supply or override the authenticated caller.
+
+The operation must still own its claim, with the recorded source status/version and target
+version. Missing effect evidence leaves the claim pending. Proven contradictory evidence blocks
+it with a typed conflict and no task/event transition. Matching evidence finalizes task, operation
+and one semantic event atomically. A concurrent finalizer or exact replay reads the same stored
+completed result. That immutable command result is distinct from a later current task view.
+Eligibility was established at claim time: do not reject an already-owned claim merely because
+its cutoff passes while its external effect is completing.
+
+For Bank effects, load the native receipt by the Board operation ID. Recompute the financial
+canonical request from stored intent and frozen terms, using the existing financial request
+contract. Require exact version, kind, hash, source reference, escrow, parties, percentage and
+logical amount/ledger legs. Validate the escrow task/payer/amount and resolved outcome against
+the receipt. Approval/autoapproval pays the worker; cancellation/expiry returns funds to the
+poster; ruling zero/full shares release to the poster/worker, and a partial share splits. Payout
+uses accepted_reward after acceptance and published reward before acceptance, never bid amount.
+A different native settlement receipt owning that escrow is a permanent winner-referencing conflict,
+even when this operation's receipt is absent. Historical observations cannot impersonate a
+native receipt for a native command.
+
+For a dispute, load the unique persisted court_claims row by task and compare exact task,
+claimant/poster, respondent/frozen worker and reason. Persist its actual claim ID and needed
+rebuttal cutoff. Court does not persist escrow; independently validate the Board's frozen escrow
+link, payer, amount and locked/unresolved state. A matching claim with inconsistent escrow cannot
+finalize. For record_ruling, require task.dispute_id, command.ruling_id and court_claims.claim_id
+to agree, validate the exact task/parties, and require the matching Bank receipt. Do not require
+a court_rulings row in MP-07: the current Court calls Board before persisting that row. Persisting
+an immutable Court decision before delivery belongs to MP-10.
+
+Required negative/control proofs include missing versus mismatched evidence, unrelated receipts,
+bid amount versus reward, foreign escrow winners, wrong Court parties/reason/linkage, forged
+forwarded success, unauthorized finalizers, changed replay, concurrent finalization, valid ruling
+delivery before court_rulings persistence, and claim completion after its original cutoff.
+
+### HTTP boundary for claim and finalization
+
+The reviewed narrow Gateway boundary is `POST /board/task-operations`, authenticated with
+the existing gateway.board.write capability. Its exact top-level fields are protocol_version1,
+operation_id, task_id, command, expected_status, expected_lifecycle_version, actor_kind,
+actor_id and arguments. Each command has an exact argument key set; reject coercions and
+unknown fields. Hash all these fields except operation_id. No event, caller_kid, server
+timestamp, external success body or mutable current view is accepted in the command.
+
+Resolved arguments bind the existing task facts within the transaction: acceptance includes
+bid/worker/escrow/reward/bid amount; approval includes poster/worker/escrow/reward/source
+reference; dispute includes poster/worker/escrow/reward/reason; ruling adds ruling ID,
+percentage and summary. Automatic actions include their frozen cutoff and use the fixed
+system actor. The Gateway derives the effect from that validated command.
+
+Pure completion and exact completed replay return200. An external-effect claim or exact pending
+replay returns202. Both return a versioned operation envelope with operation_id, task_id,
+command, request_sha256, operation_state, source_status/source_lifecycle_version,
+target_status/target_lifecycle_version, effect_kind/effect_state, effect_operation_id,
+effect_result_reference, effect_intent, event_id and result. Pending event/result are null.
+Bank intent contains its canonical request and hash plus expected escrow task/payer/amount.
+Court intent contains exact task/claimant/respondent/reason and the local frozen escrow
+predicate; effect_operation_id and financial request hash are null because Court has no such
+native receipt identity. A completed result contains task_id, command, status, lifecycle_version,
+event_id and only relevant frozen command-specific fields. External-effect results additionally
+contain effect_result_reference; pure-command results omit it and their envelope reference is null.
+
+`POST /board/task-operations/{operation_id}/finalize` requires body exactly `{}`. Middleware
+supplies the KID. It returns200 for completion/replay,202 for absent compatible evidence,
+403 operation_caller_mismatch for a different Board-capable KID,404 operation_not_found,
+409 effect_evidence_conflict for contradictory persisted evidence, and409
+operation_not_finalizable for a pure or otherwise ineligible operation. A completed external operation
+is replayable; that replay is checked before source task eligibility. Repeated blocked operations
+retain the original safe conflict facts; they cannot resume as ordinary pending work.
+
+The command route resolves existing identity before current status/version/cutoff: same hash
+returns the original completed/pending/blocked result, changed hash returns409
+operation_id_conflict. New commands validate active claims/legacy observations, task version,
+state, actor, linkage and transaction clock. Existing error JSON shape remains error/message/details.
+Other errors are400 invalid_payload or invalid_operation_id;403 forbidden;404 task_not_found
+or bid_not_found;409 transition_pending, task_version_conflict, invalid_status, cutoff_reached
+or legacy_reconciliation_pending. Pending/conflicting winner references use winning_operation_id
+only when an actual competing operation exists.
+
+Add both route templates to GATEWAY_ROUTE_POLICIES. Place methods on the production synchronous
+TaskDbClient, not the shared GatewayClient that currently excludes Board. Preserve task-level
+public response contracts while exposing operation identity and pending state explicitly; public
+exact bid replay returns the original bid with201 and acceptance replay returns its accepted
+command facts with200. Public authentication still runs on every retry, even when operation
+replay precedes task eligibility checks.
+
+The acceptance response keeps the current task at the top level and includes the original
+validated Gateway envelope in a separate typed operation field. After submission, replay may
+therefore show top-level status submitted/version2 while operation.result remains accepted/version1
+with its original operation and event IDs. It never relabels the later current view as the
+immutable acceptance result. Pure acceptance has no external effect intent. Other mutation
+response envelopes remain part of their caller rollout; GET/list do not acquire a command result.
+
+Creation samples one explicit timestamp before external effects, checks the composed bidding
+and acceptance cutoffs against both integer storage and ISO datetime bounds, and uses that same
+timestamp for publication. An unrepresentable acceptance window fails before escrow locking.
+
+Public create-task validation retains the established duration error vocabulary: a missing
+acceptance_window_seconds is400 invalid_payload; a supplied non-positive, boolean, non-integer
+or unrepresentable duration is400 invalid_deadline. The message identifies that field. Both
+reject before Bank or publication effects. A new bid at bidding equality is409 cutoff_reached.
+Once expiry has completed, a stale acceptance with version0 receives409 task_version_conflict
+with details expected_lifecycle_version0, actual_lifecycle_version1 and current_status expired.
+Version mismatch is checked before status for a new command after active-claim/legacy admission.
 
 ## Version, bid and cutoff rules
 
@@ -276,5 +429,5 @@ setup failures are harness/other failures, never the intended red proof.
 
 After this first case proves the harness, cover competing acceptances, accept/cancel, submit/expiry
 and the remaining contract matrix. One approve/dispute red does not satisfy all T-122 or authorize
-the complete T-123 implementation. Source edits wait until root17 is terminal and its evidence is
-captured; the existing quarterly/MP-04 verification snapshot must remain unchanged meanwhile.
+the complete T-123 implementation. Root17/root18 are historical failed/interrupted attempts;
+root19 passed and the a6af0be checkpoint is pushed. New test-only source is now intentionally red.

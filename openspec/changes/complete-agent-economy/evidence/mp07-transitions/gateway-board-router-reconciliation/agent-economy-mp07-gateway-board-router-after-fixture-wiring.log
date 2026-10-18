@@ -1,0 +1,184 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 37 items
+
+tests/unit/routers/test_board.py FFFF.....FFFFF..FFFFFFFF....FF.......   [100%]
+
+=================================== FAILURES ===================================
+___________________ TestTaskCreation.test_create_valid_task ____________________
+tests/unit/routers/test_board.py:146: in test_create_valid_task
+    assert resp.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:33", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_______________ TestTaskCreation.test_duplicate_task_id_rejected _______________
+tests/unit/routers/test_board.py:176: in test_duplicate_task_id_rejected
+    assert resp.status_code == 409
+E   assert 400 == 409
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:33", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_________________ TestTaskCreation.test_fk_violation_poster_id _________________
+tests/unit/routers/test_board.py:203: in test_fk_violation_poster_id
+    assert resp.status_code == 409
+E   assert 400 == 409
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:33", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_________________ TestTaskCreation.test_fk_violation_escrow_id _________________
+tests/unit/routers/test_board.py:230: in test_fk_violation_escrow_id
+    assert resp.status_code == 409
+E   assert 400 == 409
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+___________________ TestBidSubmission.test_submit_valid_bid ____________________
+tests/unit/routers/test_board.py:383: in test_submit_valid_bid
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+________________ TestBidSubmission.test_duplicate_bid_rejected _________________
+tests/unit/routers/test_board.py:408: in test_duplicate_bid_rejected
+    assert resp.json()["error"] == "bid_exists"
+E   AssertionError: assert 'native_operation_required' == 'bid_exists'
+E     
+E     - bid_exists
+E     + native_operation_required
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+_______________ TestBidSubmission.test_different_bidders_succeed _______________
+tests/unit/routers/test_board.py:438: in test_different_bidders_succeed
+    assert resp1.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-18 03:44:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+_________________ TestBidSubmission.test_fk_violation_task_id __________________
+tests/unit/routers/test_board.py:458: in test_fk_violation_task_id
+    assert resp.json()["error"] == "foreign_key_violation"
+E   AssertionError: assert 'native_operation_required' == 'foreign_key_violation'
+E     
+E     - foreign_key_violation
+E     + native_operation_required
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+________________ TestBidSubmission.test_fk_violation_bidder_id _________________
+tests/unit/routers/test_board.py:477: in test_fk_violation_bidder_id
+    assert resp.json()["error"] == "foreign_key_violation"
+E   AssertionError: assert 'native_operation_required' == 'foreign_key_violation'
+E     
+E     - foreign_key_violation
+E     + native_operation_required
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:36", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+_________________ TestTaskStatusUpdate.test_update_to_accepted _________________
+tests/unit/routers/test_board.py:546: in test_update_to_accepted
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:36", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-cb035584-c210-49ba-ab3c-dd517a292902/status"}}
+________________ TestTaskStatusUpdate.test_update_to_submitted _________________
+tests/unit/routers/test_board.py:584: in test_update_to_submitted
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:36", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-971d716e-c918-4cf0-a8a8-a2edf02e0e17/status"}}
+{"timestamp": "2026-10-18 03:44:36", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-971d716e-c918-4cf0-a8a8-a2edf02e0e17/status"}}
+_________________ TestTaskStatusUpdate.test_update_to_approved _________________
+tests/unit/routers/test_board.py:628: in test_update_to_approved
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:37", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-f1f7f069-cac5-430c-adc9-b05b0eb80d1f/status"}}
+{"timestamp": "2026-10-18 03:44:37", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-f1f7f069-cac5-430c-adc9-b05b0eb80d1f/status"}}
+{"timestamp": "2026-10-18 03:44:37", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-f1f7f069-cac5-430c-adc9-b05b0eb80d1f/status"}}
+________________ TestTaskStatusUpdate.test_update_to_cancelled _________________
+tests/unit/routers/test_board.py:645: in test_update_to_cancelled
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:37", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-3c0eee03-80bd-4d25-a1b3-17ef3307cd9b/status"}}
+_________________ TestTaskStatusUpdate.test_update_to_disputed _________________
+tests/unit/routers/test_board.py:690: in test_update_to_disputed
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:37", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-0a67962c-c6e4-4860-a630-dccc9b7fbaea/status"}}
+{"timestamp": "2026-10-18 03:44:37", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-0a67962c-c6e4-4860-a630-dccc9b7fbaea/status"}}
+{"timestamp": "2026-10-18 03:44:37", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-0a67962c-c6e4-4860-a630-dccc9b7fbaea/status"}}
+__________________ TestTaskStatusUpdate.test_update_to_ruled ___________________
+tests/unit/routers/test_board.py:723: in test_update_to_ruled
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:37", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-fc474ee1-c480-465f-a955-d641c2c191c5/status"}}
+{"timestamp": "2026-10-18 03:44:37", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-fc474ee1-c480-465f-a955-d641c2c191c5/status"}}
+_________________ TestTaskStatusUpdate.test_update_to_expired __________________
+tests/unit/routers/test_board.py:740: in test_update_to_expired
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:38", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-b7c92871-a7c2-484a-9ab2-d0e388a98807/status"}}
+___________________ TestTaskStatusUpdate.test_task_not_found ___________________
+tests/unit/routers/test_board.py:754: in test_task_not_found
+    assert resp.status_code == 404
+E   assert 409 == 404
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:38", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-df182d9c-4b46-4caa-b41c-09b1fe29bb62/status"}}
+______________ TestTaskStatusUpdate.test_multiple_fields_updated _______________
+tests/unit/routers/test_board.py:835: in test_multiple_fields_updated
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:39", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-cbca5b96-fe92-4d16-a24f-3ebcbdd99fd1/status"}}
+_______ TestTaskStatusUpdate.test_gateway_does_not_validate_transitions ________
+tests/unit/routers/test_board.py:866: in test_gateway_does_not_validate_transitions
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:44:39", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-6c635a13-18d3-45cd-8a88-7b3ae7187af1/status"}}
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_board.py::TestTaskCreation::test_create_valid_task
+FAILED tests/unit/routers/test_board.py::TestTaskCreation::test_duplicate_task_id_rejected
+FAILED tests/unit/routers/test_board.py::TestTaskCreation::test_fk_violation_poster_id
+FAILED tests/unit/routers/test_board.py::TestTaskCreation::test_fk_violation_escrow_id
+FAILED tests/unit/routers/test_board.py::TestBidSubmission::test_submit_valid_bid
+FAILED tests/unit/routers/test_board.py::TestBidSubmission::test_duplicate_bid_rejected
+FAILED tests/unit/routers/test_board.py::TestBidSubmission::test_different_bidders_succeed
+FAILED tests/unit/routers/test_board.py::TestBidSubmission::test_fk_violation_task_id
+FAILED tests/unit/routers/test_board.py::TestBidSubmission::test_fk_violation_bidder_id
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_accepted
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_submitted
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_approved
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_cancelled
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_disputed
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_ruled
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_expired
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_task_not_found
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_multiple_fields_updated
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_gateway_does_not_validate_transitions
+=================== 19 failed, 18 passed, 1 warning in 7.44s ===================

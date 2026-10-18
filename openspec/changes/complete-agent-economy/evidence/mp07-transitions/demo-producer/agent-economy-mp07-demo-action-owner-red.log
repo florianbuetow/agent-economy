@@ -1,0 +1,12 @@
+........................................................F                [100%]
+=================================== FAILURES ===================================
+__________ test_changed_action_cannot_escape_an_ambiguous_step_owner ___________
+tests/unit/demo_replay/test_mp07_task_operations.py:699: in test_changed_action_cannot_escape_an_ambiguous_step_owner
+    with pytest.raises(ValueError, match="intent changed"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'ValueError'>
+----------------------------- Captured stdout call -----------------------------
+  Alice submitted spec_quality feedback (satisfied)
+=========================== short test summary info ============================
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_changed_action_cannot_escape_an_ambiguous_step_owner
+1 failed, 56 passed in 1.02s

@@ -1,0 +1,19 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______ test_task_feeder_input_is_run_owned_and_explicitly_unprovisioned _______
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-913/test_task_feeder_input_is_run_0')
+
+    def test_task_feeder_input_is_run_owned_and_explicitly_unprovisioned(tmp_path: Path) -> None:
+        runtime = IsolatedRuntime.create(repo_root=REPO_ROOT, artifacts_root=tmp_path)
+        try:
+            config = yaml.safe_load(runtime.agent_config_path.read_bytes())
+            configured = Path(config["task_feeder"]["tasks_file"])
+>           assert configured == runtime.run_dir / "data" / "math_tasks.jsonl"
+E           AssertionError: assert PosixPath('../data/math_tasks.jsonl') == ((PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-913/test_task_feeder_input_is_run_0/runtime-dd6b63b9d15b444a97ba4fcc785b69b6-cfkf3_hd') / 'data') / 'math_tasks.jsonl')
+E            +  where PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-913/test_task_feeder_input_is_run_0/runtime-dd6b63b9d15b444a97ba4fcc785b69b6-cfkf3_hd') = IsolatedRuntime(repo_root=PosixPath('/Users/flo/Developer/github/agent-economy'), run_id='dd6b63b9d15b444a97ba4fcc785b... 'ui': _ReservedPort(port=63094, socket=<socket.socket fd=17, family=2, type=1, proto=0, laddr=('127.0.0.1', 63094)>)}).run_dir
+
+../../tests/runtime/test_runtime_recovery_preparation.py:18: AssertionError
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_runtime_recovery_preparation.py::test_task_feeder_input_is_run_owned_and_explicitly_unprovisioned
+1 failed in 0.08s

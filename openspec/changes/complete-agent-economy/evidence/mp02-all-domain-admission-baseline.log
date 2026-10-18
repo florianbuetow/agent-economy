@@ -1,0 +1,405 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /tmp/agent-economy-mp02-gateway-baseline/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 55 items
+
+../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py F [  1%]
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF                   [100%]
+
+=================================== FAILURES ===================================
+__ test_every_service_key_is_denied_every_other_domains_writes[identity-bank] __
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"tx_id":"tx-a32b242d-e7a6-46d0-9e79-c96fc952f53a","balance_after":405,"event_id":6}
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[identity-board] __
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"bid_id":"bid-e351bca8-8c24-4950-95bb-dd8b5914f2ee","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[identity-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"feedback_id":"fb-3dab5475-2251-435a-b226-9d637496bc16","visible":false,"event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[identity-court] __
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"claim_id":"clm-c5b470ff-ea85-44dd-b3a1-b020a13c9103","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+__ test_every_service_key_is_denied_every_other_domains_writes[bank-identity] __
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"agent_id":"a-d1f362ee-f994-4438-8847-12ba2bbe6052","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+___ test_every_service_key_is_denied_every_other_domains_writes[bank-board] ____
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"bid_id":"bid-1b692c2f-862b-4539-a691-2bbd374ab581","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[bank-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"feedback_id":"fb-83a38909-ef9a-45ca-882f-debaf874eeff","visible":false,"event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+___ test_every_service_key_is_denied_every_other_domains_writes[bank-court] ____
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"claim_id":"clm-11a68ae2-791d-4fdf-82ef-4da9c3894195","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[board-identity] __
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"agent_id":"a-d387523e-b32a-40ec-8eed-c8def6083ddd","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+___ test_every_service_key_is_denied_every_other_domains_writes[board-bank] ____
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"tx_id":"tx-fc639feb-3814-44c1-b3c4-d91b54ddfc90","balance_after":405,"event_id":6}
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[board-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"feedback_id":"fb-9c7ea585-979a-4e67-80bd-e2d5c487e649","visible":false,"event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+___ test_every_service_key_is_denied_every_other_domains_writes[board-court] ___
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"claim_id":"clm-5e3fc9b7-32ef-448f-8de6-7e70e751a8e1","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[reputation-identity] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"agent_id":"a-8a50b935-da11-4d38-a73b-58e1280f0c22","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[reputation-bank] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"tx_id":"tx-5ab104eb-8ccf-4fe3-a4a2-6a4755c99b63","balance_after":405,"event_id":6}
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[reputation-board] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"bid_id":"bid-98d0698a-542e-49f4-88a2-85e47a289813","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[reputation-court] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"claim_id":"clm-c04bde2a-a83b-4e80-935b-efb29ccf0a8c","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[court-identity] __
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"agent_id":"a-2249665e-a429-4226-ad3e-a8f4c63913af","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+___ test_every_service_key_is_denied_every_other_domains_writes[court-bank] ____
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"tx_id":"tx-64a17430-097b-4e9e-91ec-bac943b62833","balance_after":405,"event_id":6}
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+___ test_every_service_key_is_denied_every_other_domains_writes[court-board] ___
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"bid_id":"bid-16f34aa3-adb7-4e16-9fdc-a1a8c5945d32","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_every_service_key_is_denied_every_other_domains_writes[court-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:66: in test_every_service_key_is_denied_every_other_domains_writes
+    assert response.status_code == 403, response.text
+E   AssertionError: {"feedback_id":"fb-4d01c5ac-89e7-4a44-852a-dfdf3e963472","visible":false,"event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[wrong-domain-403-0-identity] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"agent_id":"a-d72a453a-b925-4221-a7cb-cca6b80c6280","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[wrong-domain-403-0-bank] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"tx_id":"tx-ef293572-5c5b-4da3-9459-5d061f28ea5d","balance_after":405,"event_id":6}
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[wrong-domain-403-0-board] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"bid_id":"bid-dce59d31-0108-4dd0-8e20-d0d948aeb8b4","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[wrong-domain-403-0-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"feedback_id":"fb-836b5390-8493-44c5-9b8b-750db4607468","visible":false,"event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[wrong-domain-403-0-court] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"claim_id":"clm-b174ba9f-b04c-42b5-997a-ffda441e5947","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[unknown-key-403-0-identity] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"agent_id":"a-b368c915-7674-4c86-8d95-3448c8919667","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[unknown-key-403-0-bank] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"tx_id":"tx-f7493f38-bf1b-472c-82ae-aa742539b4fc","balance_after":405,"event_id":6}
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[unknown-key-403-0-board] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"bid_id":"bid-f620a3d4-4789-4761-88b5-2ca4fca50f4c","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[unknown-key-403-0-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"feedback_id":"fb-fc409712-6d3c-4b20-80b5-6065fb356109","visible":false,"event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[unknown-key-403-0-court] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"claim_id":"clm-4ddc098b-8070-4a47-97ff-8447bf4426ee","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[bad-signature-403-0-identity] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"agent_id":"a-a5000ba7-e8ce-4ac4-8492-807ed8e7aa0c","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[bad-signature-403-0-bank] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"tx_id":"tx-c540cb83-9b4e-4bf8-b754-abc0c256b9a9","balance_after":405,"event_id":6}
+E   assert 200 == 403
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[bad-signature-403-0-board] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"bid_id":"bid-54f44c71-36d9-4c73-b94c-95fd96ccafe2","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[bad-signature-403-0-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"feedback_id":"fb-1a3c1841-f772-4a52-95e4-c21bd8c670ba","visible":false,"event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[bad-signature-403-0-court] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"claim_id":"clm-769984e2-c286-4a30-a6d6-7aa6f5d0291c","event_id":6}
+E   assert 201 == 403
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[expired-401--31-identity] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"agent_id":"a-1a495ad5-f708-4c08-989b-27e0cb5769a0","event_id":6}
+E   assert 201 == 401
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[expired-401--31-bank] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"tx_id":"tx-d7f8b628-57e3-44d2-8e2a-3bfd95b84792","balance_after":405,"event_id":6}
+E   assert 200 == 401
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[expired-401--31-board] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"bid_id":"bid-6b408fd5-b02f-4b71-8a2c-891710f433e2","event_id":6}
+E   assert 201 == 401
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[expired-401--31-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"feedback_id":"fb-16253f3c-8e86-4b18-9ea2-97feeba60e0a","visible":false,"event_id":6}
+E   assert 201 == 401
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[expired-401--31-court] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"claim_id":"clm-24b83a16-0c92-4d2e-9cac-4dc5684a91f5","event_id":6}
+E   assert 201 == 401
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[future-401-1-identity] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"agent_id":"a-cd0d45ce-9153-4e2b-bb0a-decb353219f7","event_id":6}
+E   assert 201 == 401
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[future-401-1-bank] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"tx_id":"tx-c9da109e-87e6-4800-af75-18b8d3122de1","balance_after":405,"event_id":6}
+E   assert 200 == 401
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[future-401-1-board] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"bid_id":"bid-42eff593-5ef1-49ed-bf97-6ebe5f69b2ba","event_id":6}
+E   assert 201 == 401
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[future-401-1-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"feedback_id":"fb-a18c68a4-6888-44ef-a8c0-60641e839a5f","visible":false,"event_id":6}
+E   assert 201 == 401
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[future-401-1-court] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"claim_id":"clm-1f1687d4-61b6-4be5-9d81-6200396d4ea7","event_id":6}
+E   assert 201 == 401
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[body-changed-400-0-identity] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"agent_id":"a-87dd17f9-392f-4303-aed3-53fd6cc275aa","event_id":6}
+E   assert 201 == 400
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[body-changed-400-0-bank] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"tx_id":"tx-34f1603b-e387-433d-b5e9-d733113c7159","balance_after":405,"event_id":6}
+E   assert 200 == 400
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[body-changed-400-0-board] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"bid_id":"bid-25c006dd-b33f-4288-9874-545c763af9d2","event_id":6}
+E   assert 201 == 400
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[body-changed-400-0-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"feedback_id":"fb-8d04b13b-e71e-4ca5-b214-96b5aec81f80","visible":false,"event_id":6}
+E   assert 201 == 400
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[body-changed-400-0-court] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"claim_id":"clm-2014b0ad-0d04-4ea7-9979-53f0c7fc0515","event_id":6}
+E   assert 201 == 400
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[query-changed-400-0-identity] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"agent_id":"a-a160db13-52c2-46ff-a2d3-6e0a0efed085","event_id":6}
+E   assert 201 == 400
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[query-changed-400-0-bank] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"tx_id":"tx-09047769-c314-4f75-aeb4-0fe8926746c1","balance_after":405,"event_id":6}
+E   assert 200 == 400
+E    +  where 200 = <Response [200 OK]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[query-changed-400-0-board] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"bid_id":"bid-174d29ec-c1b4-427e-8d35-3b0bbbf1ce54","event_id":6}
+E   assert 201 == 400
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[query-changed-400-0-reputation] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"feedback_id":"fb-2e7eebdd-2473-40bd-ad8b-8534627b69c2","visible":false,"event_id":6}
+E   assert 201 == 400
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[query-changed-400-0-court] _
+/tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py:131: in test_invalid_domain_write_has_no_effect_then_valid_control_succeeds
+    assert response.status_code == expected_status, response.text
+E   AssertionError: {"claim_id":"clm-7ade15e8-6d1e-4dda-9305-ad20dc6aaf25","event_id":6}
+E   assert 201 == 400
+E    +  where 201 = <Response [201 Created]>.status_code
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[identity-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[identity-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[identity-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[identity-court]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[bank-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[bank-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[bank-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[bank-court]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[board-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[board-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[board-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[board-court]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[reputation-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[reputation-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[reputation-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[reputation-court]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[court-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[court-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[court-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_every_service_key_is_denied_every_other_domains_writes[court-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[wrong-domain-403-0-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[wrong-domain-403-0-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[wrong-domain-403-0-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[wrong-domain-403-0-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[wrong-domain-403-0-court]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[unknown-key-403-0-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[unknown-key-403-0-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[unknown-key-403-0-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[unknown-key-403-0-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[unknown-key-403-0-court]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[bad-signature-403-0-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[bad-signature-403-0-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[bad-signature-403-0-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[bad-signature-403-0-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[bad-signature-403-0-court]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[expired-401--31-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[expired-401--31-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[expired-401--31-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[expired-401--31-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[expired-401--31-court]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[future-401-1-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[future-401-1-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[future-401-1-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[future-401-1-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[future-401-1-court]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[body-changed-400-0-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[body-changed-400-0-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[body-changed-400-0-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[body-changed-400-0-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[body-changed-400-0-court]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[query-changed-400-0-identity]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[query-changed-400-0-bank]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[query-changed-400-0-board]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[query-changed-400-0-reputation]
+FAILED ../../../../../../../tmp/agent-economy-mp02-gateway-baseline/services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py::test_invalid_domain_write_has_no_effect_then_valid_control_succeeds[query-changed-400-0-court]
+======================== 55 failed, 1 warning in 1.55s =========================

@@ -1,0 +1,148 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 19 items
+
+. FFFFFFFFFFFFFFFFFFF                                                    [100%]
+
+=================================== FAILURES ===================================
+_____ test_generate_keypair_is_idempotent_and_never_replaces_existing_pair _____
+/tmp/test_mp03_key_provisioning.py:75: in test_generate_keypair_is_idempotent_and_never_replaces_existing_pair
+    assert _fingerprint(repeated_public) == original_fingerprint
+E   AssertionError: assert '5572cc1c5eab...13bcb4f7d3a88' == '2d91195d406a...8049bba74dd6e'
+E     
+E     - 2d91195d406acf3eb0964d3b54efb0ef5240f71ff9bd9b883808049bba74dd6e
+E     + 5572cc1c5eab31452db9ca6bf797f3277057c73210fcdb3e0f813bcb4f7d3a88
+_______ test_cold_concurrent_generate_keypair_converges_across_processes _______
+/tmp/test_mp03_key_provisioning.py:108: in test_cold_concurrent_generate_keypair_converges_across_processes
+    assert len(fingerprints) == 1, outcomes
+E   AssertionError: [('ok', '11e48af06b9c16b8398135e8512b0b97bdb2d02d1712c8554193987c4aef022c'), ('ok', '89a39b474321c8c57a7f0b220eea2814f...5d6c28a746bfdca79c306c167372e73d92193873'), ('ok', '1f63714fd14118f97b04f258e2d75e903a33e3f9e08ee3ba6f8b24d9ee9d23da')]
+E   assert 4 == 1
+E    +  where 4 = len({'11e48af06b9c16b8398135e8512b0b97bdb2d02d1712c8554193987c4aef022c', '1f63714fd14118f97b04f258e2d75e903a33e3f9e08ee3ba...57a7f0b220eea2814ff28c22978727fd0a52d0989fb9763bb', 'f85e393a9bafeae1693799ce5d6c28a746bfdca79c306c167372e73d92193873'})
+____ test_partial_pair_is_refused_without_changing_surviving_bytes[private] ____
+/tmp/test_mp03_key_provisioning.py:136: in test_partial_pair_is_refused_without_changing_surviving_bytes
+    with pytest.raises(ValueError, match=r"(?i)incomplete|partial|missing"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+____ test_partial_pair_is_refused_without_changing_surviving_bytes[public] _____
+/tmp/test_mp03_key_provisioning.py:136: in test_partial_pair_is_refused_without_changing_surviving_bytes
+    with pytest.raises(ValueError, match=r"(?i)incomplete|partial|missing"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+__________ test_corrupt_pair_is_refused_without_replacement[private] ___________
+/tmp/test_mp03_key_provisioning.py:154: in test_corrupt_pair_is_refused_without_replacement
+    with pytest.raises(ValueError, match=r"(?i)invalid|corrupt|key"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+___________ test_corrupt_pair_is_refused_without_replacement[public] ___________
+/tmp/test_mp03_key_provisioning.py:154: in test_corrupt_pair_is_refused_without_replacement
+    with pytest.raises(ValueError, match=r"(?i)invalid|corrupt|key"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+____________ test_corrupt_pair_is_refused_without_replacement[both] ____________
+/tmp/test_mp03_key_provisioning.py:154: in test_corrupt_pair_is_refused_without_replacement
+    with pytest.raises(ValueError, match=r"(?i)invalid|corrupt|key"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_____________ test_mismatched_pair_is_refused_without_replacement ______________
+/tmp/test_mp03_key_provisioning.py:173: in test_mismatched_pair_is_refused_without_replacement
+    with pytest.raises(ValueError, match=r"(?i)mismatch|does not match"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+__________ test_load_keypair_rejects_mismatched_pair_without_rewrite ___________
+/tmp/test_mp03_key_provisioning.py:192: in test_load_keypair_rejects_mismatched_pair_without_rewrite
+    loader = _require_pair_loader()
+             ^^^^^^^^^^^^^^^^^^^^^^
+/tmp/test_mp03_key_provisioning.py:46: in _require_pair_loader
+    assert callable(loader), (
+E   AssertionError: MP-03 requires service_auth.signing.load_keypair(handle, keys_dir) so consumers validate both halves through one load-only API
+E   assert False
+E    +  where False = callable(None)
+______ test_fresh_private_key_mode_is_exactly_0600_under_permissive_umask ______
+/tmp/test_mp03_key_provisioning.py:208: in test_fresh_private_key_mode_is_exactly_0600_under_permissive_umask
+    assert stat.S_IMODE(private_path.stat().st_mode) == 0o600
+E   AssertionError: assert 438 == 384
+E    +  where 438 = <built-in function S_IMODE>(33206)
+E    +    where <built-in function S_IMODE> = stat.S_IMODE
+E    +    and   33206 = os.stat_result(st_mode=33206, st_ino=324106516, st_dev=16777234, st_nlink=1, st_uid=501, st_gid=20, st_size=119, st_atime=1792080981, st_mtime=1792080981, st_ctime=1792080981).st_mode
+E    +      where os.stat_result(st_mode=33206, st_ino=324106516, st_dev=16777234, st_nlink=1, st_uid=501, st_gid=20, st_size=119, st_atime=1792080981, st_mtime=1792080981, st_ctime=1792080981) = stat()
+E    +        where stat = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-159/test_fresh_private_key_mode_is0/durable-agent.key').stat
+________ test_generate_keypair_rejects_unsafe_handle_without_writing[] _________
+/tmp/test_mp03_key_provisioning.py:220: in test_generate_keypair_rejects_unsafe_handle_without_writing
+    with pytest.raises(ValueError, match=r"(?i)unsafe|invalid|handle"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+________ test_generate_keypair_rejects_unsafe_handle_without_writing[.] ________
+/tmp/test_mp03_key_provisioning.py:220: in test_generate_keypair_rejects_unsafe_handle_without_writing
+    with pytest.raises(ValueError, match=r"(?i)unsafe|invalid|handle"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_______ test_generate_keypair_rejects_unsafe_handle_without_writing[..] ________
+/tmp/test_mp03_key_provisioning.py:220: in test_generate_keypair_rejects_unsafe_handle_without_writing
+    with pytest.raises(ValueError, match=r"(?i)unsafe|invalid|handle"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+__ test_generate_keypair_rejects_unsafe_handle_without_writing[nested/agent] ___
+/tmp/test_mp03_key_provisioning.py:221: in test_generate_keypair_rejects_unsafe_handle_without_writing
+    generate_keypair(unsafe_handle, keys_dir)
+src/service_auth/signing.py:64: in generate_keypair
+    private_path.write_bytes(
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/pathlib/_abc.py:641: in write_bytes
+    with self.open(mode='wb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/pathlib/_local.py:537: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-159/test_generate_keypair_rejects_3/keys/nested/agent.key'
+__ test_generate_keypair_rejects_unsafe_handle_without_writing[nested\\agent] __
+/tmp/test_mp03_key_provisioning.py:220: in test_generate_keypair_rejects_unsafe_handle_without_writing
+    with pytest.raises(ValueError, match=r"(?i)unsafe|invalid|handle"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+______ test_generate_keypair_rejects_symlinked_key_store_entries[private] ______
+/tmp/test_mp03_key_provisioning.py:251: in test_generate_keypair_rejects_symlinked_key_store_entries
+    assert outside.read_bytes() == outside_bytes
+E   AssertionError: assert b'-----BEGIN ...TE KEY-----\n' == b'do not touch private\n'
+E     
+E     At index 0 diff: b'-' != b'd'
+E     Use -v to get more diff
+______ test_generate_keypair_rejects_symlinked_key_store_entries[public] _______
+/tmp/test_mp03_key_provisioning.py:251: in test_generate_keypair_rejects_symlinked_key_store_entries
+    assert outside.read_bytes() == outside_bytes
+E   AssertionError: assert b'-----BEGIN ...IC KEY-----\n' == b'do not touch public\n'
+E     
+E     At index 0 diff: b'-' != b'd'
+E     Use -v to get more diff
+_______ test_generate_keypair_rejects_symlinked_key_store_entries[lock] ________
+/tmp/test_mp03_key_provisioning.py:252: in test_generate_keypair_rejects_symlinked_key_store_entries
+    assert error is not None
+E   assert None is not None
+_ test_interrupted_public_first_publication_remains_partial_and_is_not_replaced _
+/tmp/test_mp03_key_provisioning.py:262: in test_interrupted_public_first_publication_remains_partial_and_is_not_replaced
+    assert signing_os is not None and hasattr(signing_os, "link"), (
+E   AssertionError: MP-03 provisioning must use no-replace same-directory publication
+E   assert (None is not None)
+=========================== short test summary info ============================
+FAILED ::test_generate_keypair_is_idempotent_and_never_replaces_existing_pair
+FAILED ::test_cold_concurrent_generate_keypair_converges_across_processes - A...
+FAILED ::test_partial_pair_is_refused_without_changing_surviving_bytes[private]
+FAILED ::test_partial_pair_is_refused_without_changing_surviving_bytes[public]
+FAILED ::test_corrupt_pair_is_refused_without_replacement[private] - Failed: ...
+FAILED ::test_corrupt_pair_is_refused_without_replacement[public] - Failed: D...
+FAILED ::test_corrupt_pair_is_refused_without_replacement[both] - Failed: DID...
+FAILED ::test_mismatched_pair_is_refused_without_replacement - Failed: DID NO...
+FAILED ::test_load_keypair_rejects_mismatched_pair_without_rewrite - Assertio...
+FAILED ::test_fresh_private_key_mode_is_exactly_0600_under_permissive_umask
+FAILED ::test_generate_keypair_rejects_unsafe_handle_without_writing[] - Fail...
+FAILED ::test_generate_keypair_rejects_unsafe_handle_without_writing[.] - Fai...
+FAILED ::test_generate_keypair_rejects_unsafe_handle_without_writing[..] - Fa...
+FAILED ::test_generate_keypair_rejects_unsafe_handle_without_writing[nested/agent]
+FAILED ::test_generate_keypair_rejects_unsafe_handle_without_writing[nested\\agent]
+FAILED ::test_generate_keypair_rejects_symlinked_key_store_entries[private]
+FAILED ::test_generate_keypair_rejects_symlinked_key_store_entries[public] - ...
+FAILED ::test_generate_keypair_rejects_symlinked_key_store_entries[lock] - as...
+FAILED ::test_interrupted_public_first_publication_remains_partial_and_is_not_replaced
+============================== 19 failed in 0.39s ==============================

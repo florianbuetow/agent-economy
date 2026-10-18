@@ -1,0 +1,215 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 36 items
+
+tests/unit/test_mp07_task_board_status.py FFFFFFFFFFFFFFFFFFFFFFFF...... [ 83%]
+......                                                                   [100%]
+
+=================================== FAILURES ===================================
+______ test_public_status_types_are_constructible_and_response_is_frozen _______
+tests/unit/test_mp07_task_board_status.py:124: in test_public_status_types_are_constructible_and_response_is_frozen
+    module = importlib.import_module("service_auth.task_board_responses")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'service_auth.task_board_responses'
+_ test_native_command_returns_status_and_preserves_signed_fields[submit_bid-args0-201-body0-expected_payload0-POST /tasks/t-1/bids] _
+tests/unit/test_mp07_task_board_status.py:252: in test_native_command_returns_status_and_preserves_signed_fields
+    assert type(result).__name__ == "TaskBoardCommandResponse"
+E   AssertionError: assert 'dict' == 'TaskBoardCommandResponse'
+E     
+E     - TaskBoardCommandResponse
+E     + dict
+_ test_native_command_returns_status_and_preserves_signed_fields[accept_bid-args1-200-body1-expected_payload1-POST /tasks/t-1/bids/bid-1/accept] _
+tests/unit/test_mp07_task_board_status.py:252: in test_native_command_returns_status_and_preserves_signed_fields
+    assert type(result).__name__ == "TaskBoardCommandResponse"
+E   AssertionError: assert 'dict' == 'TaskBoardCommandResponse'
+E     
+E     - TaskBoardCommandResponse
+E     + dict
+_ test_native_command_returns_status_and_preserves_signed_fields[submit_deliverable-args2-200-body2-expected_payload2-POST /tasks/t-1/submit] _
+tests/unit/test_mp07_task_board_status.py:252: in test_native_command_returns_status_and_preserves_signed_fields
+    assert type(result).__name__ == "TaskBoardCommandResponse"
+E   AssertionError: assert 'dict' == 'TaskBoardCommandResponse'
+E     
+E     - TaskBoardCommandResponse
+E     + dict
+_ test_native_command_returns_status_and_preserves_signed_fields[cancel_task-args3-200-body3-expected_payload3-POST /tasks/t-1/cancel] _
+tests/unit/test_mp07_task_board_status.py:252: in test_native_command_returns_status_and_preserves_signed_fields
+    assert type(result).__name__ == "TaskBoardCommandResponse"
+E   AssertionError: assert 'dict' == 'TaskBoardCommandResponse'
+E     
+E     - TaskBoardCommandResponse
+E     + dict
+_ test_native_command_returns_status_and_preserves_signed_fields[cancel_task-args4-202-body4-expected_payload4-POST /tasks/t-1/cancel] _
+tests/unit/test_mp07_task_board_status.py:252: in test_native_command_returns_status_and_preserves_signed_fields
+    assert type(result).__name__ == "TaskBoardCommandResponse"
+E   AssertionError: assert 'dict' == 'TaskBoardCommandResponse'
+E     
+E     - TaskBoardCommandResponse
+E     + dict
+_ test_native_command_returns_status_and_preserves_signed_fields[approve_task-args5-200-body5-expected_payload5-POST /tasks/t-1/approve] _
+tests/unit/test_mp07_task_board_status.py:252: in test_native_command_returns_status_and_preserves_signed_fields
+    assert type(result).__name__ == "TaskBoardCommandResponse"
+E   AssertionError: assert 'dict' == 'TaskBoardCommandResponse'
+E     
+E     - TaskBoardCommandResponse
+E     + dict
+_ test_native_command_returns_status_and_preserves_signed_fields[approve_task-args6-202-body6-expected_payload6-POST /tasks/t-1/approve] _
+tests/unit/test_mp07_task_board_status.py:252: in test_native_command_returns_status_and_preserves_signed_fields
+    assert type(result).__name__ == "TaskBoardCommandResponse"
+E   AssertionError: assert 'dict' == 'TaskBoardCommandResponse'
+E     
+E     - TaskBoardCommandResponse
+E     + dict
+_ test_native_command_returns_status_and_preserves_signed_fields[dispute_task-args7-200-body7-expected_payload7-POST /tasks/t-1/dispute] _
+tests/unit/test_mp07_task_board_status.py:252: in test_native_command_returns_status_and_preserves_signed_fields
+    assert type(result).__name__ == "TaskBoardCommandResponse"
+E   AssertionError: assert 'dict' == 'TaskBoardCommandResponse'
+E     
+E     - TaskBoardCommandResponse
+E     + dict
+_ test_native_command_returns_status_and_preserves_signed_fields[dispute_task-args8-202-body8-expected_payload8-POST /tasks/t-1/dispute] _
+tests/unit/test_mp07_task_board_status.py:252: in test_native_command_returns_status_and_preserves_signed_fields
+    assert type(result).__name__ == "TaskBoardCommandResponse"
+E   AssertionError: assert 'dict' == 'TaskBoardCommandResponse'
+E     
+E     - TaskBoardCommandResponse
+E     + dict
+_ test_native_command_rejects_unexpected_success_status[submit_bid-args0-200-body0] _
+tests/unit/test_mp07_task_board_status.py:293: in test_native_command_rejects_unexpected_success_status
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_unexpected_success_status[accept_bid-args1-201-body1] _
+tests/unit/test_mp07_task_board_status.py:293: in test_native_command_rejects_unexpected_success_status
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_unexpected_success_status[submit_deliverable-args2-202-body2] _
+tests/unit/test_mp07_task_board_status.py:293: in test_native_command_rejects_unexpected_success_status
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_unexpected_success_status[cancel_task-args3-201-body3] _
+tests/unit/test_mp07_task_board_status.py:293: in test_native_command_rejects_unexpected_success_status
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_unexpected_success_status[approve_task-args4-201-body4] _
+tests/unit/test_mp07_task_board_status.py:293: in test_native_command_rejects_unexpected_success_status
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_unexpected_success_status[dispute_task-args5-201-body5] _
+tests/unit/test_mp07_task_board_status.py:293: in test_native_command_rejects_unexpected_success_status
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_malformed_success_body[accept_bid-args0-200-{-None] _
+tests/unit/test_mp07_task_board_status.py:327: in test_native_command_rejects_malformed_success_body
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:116: in _assert_contract_error
+    assert type(exc).__name__ == "TaskBoardCommandContractError"
+E   AssertionError: assert 'JSONDecodeError' == 'TaskBoardCom...ContractError'
+E     
+E     - TaskBoardCommandContractError
+E     + JSONDecodeError
+_ test_native_command_rejects_malformed_success_body[accept_bid-args1-200-None-json_body1] _
+tests/unit/test_mp07_task_board_status.py:327: in test_native_command_rejects_malformed_success_body
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_malformed_success_body[submit_bid-args2-201-None-json_body2] _
+tests/unit/test_mp07_task_board_status.py:327: in test_native_command_rejects_malformed_success_body
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_malformed_success_body[submit_deliverable-args3-200-None-json_body3] _
+tests/unit/test_mp07_task_board_status.py:327: in test_native_command_rejects_malformed_success_body
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_malformed_success_body[approve_task-args4-202-None-json_body4] _
+tests/unit/test_mp07_task_board_status.py:327: in test_native_command_rejects_malformed_success_body
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_status_body_contradiction[approve_task-args0-200-body0] _
+tests/unit/test_mp07_task_board_status.py:351: in test_native_command_rejects_status_body_contradiction
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_status_body_contradiction[approve_task-args1-202-body1] _
+tests/unit/test_mp07_task_board_status.py:351: in test_native_command_rejects_status_body_contradiction
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+_ test_native_command_rejects_status_body_contradiction[cancel_task-args2-202-body2] _
+tests/unit/test_mp07_task_board_status.py:351: in test_native_command_rejects_status_body_contradiction
+    await _assert_contract_error(agent, method, args, status_code)
+tests/unit/test_mp07_task_board_status.py:113: in _assert_contract_error
+    with pytest.raises(Exception) as exc_info:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE Exception
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_task_board_status.py::test_public_status_types_are_constructible_and_response_is_frozen
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[submit_bid-args0-201-body0-expected_payload0-POST /tasks/t-1/bids]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[accept_bid-args1-200-body1-expected_payload1-POST /tasks/t-1/bids/bid-1/accept]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[submit_deliverable-args2-200-body2-expected_payload2-POST /tasks/t-1/submit]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[cancel_task-args3-200-body3-expected_payload3-POST /tasks/t-1/cancel]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[cancel_task-args4-202-body4-expected_payload4-POST /tasks/t-1/cancel]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[approve_task-args5-200-body5-expected_payload5-POST /tasks/t-1/approve]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[approve_task-args6-202-body6-expected_payload6-POST /tasks/t-1/approve]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[dispute_task-args7-200-body7-expected_payload7-POST /tasks/t-1/dispute]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[dispute_task-args8-202-body8-expected_payload8-POST /tasks/t-1/dispute]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[submit_bid-args0-200-body0]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[accept_bid-args1-201-body1]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[submit_deliverable-args2-202-body2]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[cancel_task-args3-201-body3]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[approve_task-args4-201-body4]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[dispute_task-args5-201-body5]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[accept_bid-args0-200-{-None]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[accept_bid-args1-200-None-json_body1]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[submit_bid-args2-201-None-json_body2]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[submit_deliverable-args3-200-None-json_body3]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[approve_task-args4-202-None-json_body4]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_status_body_contradiction[approve_task-args0-200-body0]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_status_body_contradiction[approve_task-args1-202-body1]
+FAILED tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_status_body_contradiction[cancel_task-args2-202-body2]
+======================== 24 failed, 12 passed in 0.46s =========================

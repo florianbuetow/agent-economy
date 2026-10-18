@@ -1,0 +1,21 @@
+{
+  "scope": "runtime-process",
+  "limits": "Each log proves its recorded source version and scope; earlier passes do not certify later harness changes. Root gate and full goal remain open.",
+  "artifacts": [
+    {
+      "origin": "/private/tmp/agent-economy-mp07-crash-parent-final.log",
+      "artifact": "agent-economy-mp07-crash-parent-final.log",
+      "sha256": "972ca0f551307e4cc0ebe6c06cef63b24980167674169722e80f248f249bf1df"
+    },
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-runtime-process-proof.md",
+      "artifact": "2026-10-18-mp07-runtime-process-proof.md",
+      "sha256": "335d00560e8043cc07cf0e4253c4b67e2740b1a30c624a60e2a2690fc0c38b9f"
+    }
+  ],
+  "current_sources": {
+    "agents/tests/e2e/test_mp07_runtime_crash_replay.py": "635fbc6ac35c6e70bca1240564fcac87e4409e6e56499bc311190885f3c84337",
+    "agents/tests/e2e/runtime_crash_actor.py": "f4a86bc9a7a117d5f451e3ff68ec47f65ab8bd54d500babf30aab50516861170",
+    "agents/tests/unit/test_mp07_runtime_crash_cleanup.py": "1784e606162e7dd34cff4f025190b0f7910f74b0c1ba68e4845225364784d35d"
+  }
+}

@@ -1,0 +1,40 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/integration/test_mp07_deadline_transition_races.py FFF             [100%]
+
+=================================== FAILURES ===================================
+________ test_stale_validated_submit_cannot_overwrite_execution_expiry _________
+tests/integration/test_mp07_deadline_transition_races.py:577: in test_stale_validated_submit_cannot_overwrite_execution_expiry
+    assert outcome.error is not None and outcome.error.status_code == 409, diagnostics
+E   AssertionError: {'expiry_bank_calls': 1, 'outcome': {'error': None, 'operation': 'submit', 'result_status': 'submitted', 'status_code': None}, 'semantic_events': ['task.expired', 'task.submitted'], 'submit_bank_calls': 0, ...}
+E   assert (None is not None)
+E    +  where None = _Outcome(operation='submit', result={'task_id': 't-b76c5684-f200-4f2c-8065-431b3b428d08', 'poster_id': 'a-mp07-deadlin...10-17T13:00:00Z', 'execution_deadline': '2026-10-17T12:00:10Z', 'review_deadline': '2026-10-17T12:00:20Z'}, error=None).error
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:18:44", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-b76c5684-f200-4f2c-8065-431b3b428d08"}}
+_____ test_stale_review_action_cannot_beat_autoapproval_at_cutoff[approve] _____
+tests/integration/test_mp07_deadline_transition_races.py:706: in test_stale_review_action_cannot_beat_autoapproval_at_cutoff
+    assert outcome.error is not None and outcome.error.status_code == 409, diagnostics
+E   AssertionError: {'autoapproval_bank_calls': 1, 'manual_bank_calls': 1, 'manual_court_calls': 0, 'outcome': {'error': None, 'operation': 'approve', 'result_status': 'approved', 'status_code': None}, ...}
+E   assert (None is not None)
+E    +  where None = _Outcome(operation='approve', result={'task_id': 't-033a0547-bf4a-4e5f-b978-6012d68a5f37', 'poster_id': 'a-mp07-deadli...10-17T13:00:00Z', 'execution_deadline': '2026-10-17T12:00:10Z', 'review_deadline': '2026-10-17T12:00:10Z'}, error=None).error
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:18:44", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-033a0547-bf4a-4e5f-b978-6012d68a5f37"}}
+_____ test_stale_review_action_cannot_beat_autoapproval_at_cutoff[dispute] _____
+tests/integration/test_mp07_deadline_transition_races.py:706: in test_stale_review_action_cannot_beat_autoapproval_at_cutoff
+    assert outcome.error is not None and outcome.error.status_code == 409, diagnostics
+E   AssertionError: {'autoapproval_bank_calls': 1, 'manual_bank_calls': 0, 'manual_court_calls': 1, 'outcome': {'error': None, 'operation': 'dispute', 'result_status': 'disputed', 'status_code': None}, ...}
+E   assert (None is not None)
+E    +  where None = _Outcome(operation='dispute', result={'task_id': 't-35462ed9-9fd2-4e76-8c9a-15c0ec278e21', 'poster_id': 'a-mp07-deadli...10-17T13:00:00Z', 'execution_deadline': '2026-10-17T12:00:10Z', 'review_deadline': '2026-10-17T12:00:10Z'}, error=None).error
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:18:45", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-35462ed9-9fd2-4e76-8c9a-15c0ec278e21"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_deadline_transition_races.py::test_stale_validated_submit_cannot_overwrite_execution_expiry
+FAILED tests/integration/test_mp07_deadline_transition_races.py::test_stale_review_action_cannot_beat_autoapproval_at_cutoff[approve]
+FAILED tests/integration/test_mp07_deadline_transition_races.py::test_stale_review_action_cannot_beat_autoapproval_at_cutoff[dispute]
+============================== 3 failed in 1.23s ===============================

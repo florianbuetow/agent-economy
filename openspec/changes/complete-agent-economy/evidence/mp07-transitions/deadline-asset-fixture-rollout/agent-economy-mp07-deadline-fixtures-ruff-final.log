@@ -1,0 +1,14 @@
+TC002 Move third-party import `pytest` into a type-checking block
+  --> tests/fakes/native_task_fixture.py:12:8
+   |
+10 | from unittest.mock import AsyncMock
+11 |
+12 | import pytest
+   |        ^^^^^^
+13 | from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+14 | from db_gateway_service.board_authority import BoardAuthority
+   |
+help: Move into type-checking block
+
+Found 1 error.
+No fixes available (1 hidden fix can be enabled with the `--unsafe-fixes` option).

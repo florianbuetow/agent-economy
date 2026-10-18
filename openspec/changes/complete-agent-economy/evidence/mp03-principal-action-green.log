@@ -1,0 +1,19 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 149 items
+
+tests/unit/test_key_bootstrap.py ......                                  [  4%]
+tests/unit/test_key_loading.py ...........                               [ 11%]
+tests/unit/test_key_provisioning.py .......................              [ 26%]
+tests/unit/test_mp03_jws_core.py ....................................... [ 53%]
+..........................................                               [ 81%]
+tests/unit/test_mp03_outbound_matrix.py ..                               [ 82%]
+tests/unit/test_mp03_producers.py .......                                [ 87%]
+tests/unit/test_platform_signer_keys.py ....                             [ 89%]
+tests/unit/test_signing.py ...............                               [100%]
+
+============================= 149 passed in 0.73s ==============================

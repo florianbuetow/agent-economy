@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-18T03:02:13.380163+02:00",
+  "artifact_sha256": {
+    "agent-economy-mp01-identity-log-isolation-parent-green.log": "4d2d6b13a9595d44513dd04dcf81d564a22668b69e4e1f72b5c457993069d81a",
+    "agent-economy-mp01-central-bank-log-isolation-parent-green.log": "bf93a1e103085261c7caa0be4322e2d591f5491069266c58eb3fe75aba635415",
+    "agent-economy-mp01-reputation-log-isolation-parent-green.log": "5e653a7693a36e1bc98283daf4106617d871b51509c4bd52097a00961b1a1b68",
+    "agent-economy-mp01-court-log-isolation-parent-green.log": "d605c1c22dbe3da1748e93075d0c780c719273ffa3b4d7fccd970d09fe3de2cb",
+    "agent-economy-mp01-db-gateway-log-isolation-parent-green.log": "7f25ee34a44ecc823e5f1a48b6fa2b1a8d6e168076d26a68aa89c6108b75bca6",
+    "agent-economy-mp01-task-board-log-isolation-parent-green.log": "6d62c5ec49be2ddbad3e7459480e19d9a69484e768ce52fdc9f1809710862393",
+    "agent-economy-mp01-identity-log-isolation-red.log": "750f159d981a681c5054740a87fd3b29eb654573a7fc753a99f841746122bb84",
+    "agent-economy-mp01-central-bank-log-isolation-red.log": "9482db75c5182fe42722c0fbc38fccc32a81ebc1fd11abdc4575b52ac7693afd",
+    "agent-economy-mp01-reputation-log-isolation-red.log": "061e374dfb124b300d4d5d67036fedabf48d176317b82ce8737b994a2bd61eab",
+    "agent-economy-mp01-standalone-log-isolation-red.log": "af970e0b8626ba7e1769ac30cb9c4b6bbaf1ecbb3df87a3f1ecd8c0e07325ef5",
+    "agent-economy-mp01-broader-log-isolation-manifest.json": "a0b55a5a49b99e98ce56a7194d729d21e1dec59b8398bfaf21af51674919d9d2",
+    "agent-economy-mp07-writer-log-before.json": "9fb6e00140fcb47d604b08d90047f2c1c0a916262376030d6845a97f62c17216",
+    "agent-economy-mp07-writer-log-after.json": "3bf4163c530d543fd6f246a4bdc734069a9ea1a57234a600f68b17b1a4dcb2cd"
+  },
+  "proof": [
+    "Original Board integration two-path red plus Identity2, Bank3, Reputation4 reds are retained in this bundle.",
+    "Earlier worker execution reported Gateway1, Court3 and Board unit2 cause-specific reds before those edits; their raw red outputs are not retained in this local bundle. Preserve this archival gap rather than claiming a complete local red log set.",
+    "Parent independently reran all17 configuration probes: Identity2, Bank3, Reputation4, Court3, Gateway1, Board4 including the prior integration pair.",
+    "The subsequent40-case Board native live tranche left202 observed ordinary log files unchanged with zero additions/removals; its test log is in mp07-transitions/writer-retirement.",
+    "No ordinary log content was removed or rewritten. Prior entries from the earlier flawed Board runs remain intact."
+  ],
+  "limitations": [
+    "Configuration probes capture generated paths before startup; they do not prove every broader service runtime.",
+    "Broader live service unchanged-log checks, red-evidence archival gap resolution and fresh root CI remain closure requirements.",
+    "T-179/T-180 remain open."
+  ]
+}

@@ -138,6 +138,10 @@ steps:
     title: "Build authentication system"
     spec: "Implement JWT-based auth with login, register, and password reset. Include rate limiting and brute-force protection."
     reward: 500
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 2.0
 
   - action: post_task
@@ -146,6 +150,10 @@ steps:
     title: "Design admin dashboard"
     spec: "Create a responsive admin dashboard with user management table, activity charts, and system health indicators."
     reward: 300
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 2.0
 
   # Competitive bidding on auth_system
@@ -200,6 +208,10 @@ steps:
     title: "Set up CI/CD pipeline"
     spec: "Configure GitHub Actions with build, test, lint, and deploy stages. Include Docker image building and staging deployment."
     reward: 400
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 1.5
 
   - action: post_task
@@ -208,6 +220,10 @@ steps:
     title: "Implement API gateway"
     spec: "Build a lightweight API gateway with rate limiting, request routing, API key validation, and request/response logging."
     reward: 600
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 1.5
 
   - action: bid
@@ -338,6 +354,10 @@ steps:
     title: "Set up monitoring and alerting"
     spec: "Configure Prometheus metrics, Grafana dashboards, and PagerDuty alerting for all production services."
     reward: 350
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 1.5
 
   - action: bid

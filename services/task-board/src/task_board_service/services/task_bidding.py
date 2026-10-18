@@ -7,18 +7,28 @@ constructor-time snapshot.
 
 from __future__ import annotations
 
-import uuid
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
 
 from service_commons.exceptions import ServiceError
 
-from task_board_service.services.deadline_evaluator import DeadlineEvaluator
-from task_board_service.services.errors import DuplicateBidError
-from task_board_service.services.task_helpers import is_positive_int, now_iso, task_to_response
+from task_board_service.services.task_helpers import is_positive_int, task_to_response
+from task_board_service.services.task_operations import public_operation_identity
+from task_board_service.task_operation_contract import (
+    MAX_INTEGER,
+    invalid_gateway_response,
+)
 
 if TYPE_CHECKING:
     from task_board_service.services.task_manager import TaskManager
+
+
+def _operation_result(envelope: dict[str, Any], command: str) -> dict[str, Any]:
+    result = envelope.get("result")
+    if envelope.get("operation_state") != "completed" or not isinstance(result, dict):
+        raise invalid_gateway_response()
+    if result.get("command") != command:
+        raise invalid_gateway_response()
+    return result
 
 
 class TaskBiddingCoordinator:
@@ -49,12 +59,13 @@ class TaskBiddingCoordinator:
         )
         signer_id: str = payload["_signer_id"]
 
-        # Step 7b: Validate required fields
-        if "task_id" not in payload:
-            raise ServiceError("invalid_payload", "Missing required field: task_id", 400, {})
-
-        if "bidder_id" not in payload:
-            raise ServiceError("invalid_payload", "Missing required field: bidder_id", 400, {})
+        # Step 7b: Validate required fields and caller-owned replay identity.
+        for field_name in ("task_id", "bidder_id", "amount"):
+            if field_name not in payload:
+                raise ServiceError(
+                    "invalid_payload", f"Missing required field: {field_name}", 400, {}
+                )
+        operation_id, expected_version = public_operation_identity(payload)
 
         # Step 7c: task_id in payload must match URL path
         if payload["task_id"] != task_id:
@@ -65,83 +76,72 @@ class TaskBiddingCoordinator:
                 {},
             )
 
-        # Step 7d: Validate amount
-        if "amount" not in payload:
-            raise ServiceError("invalid_payload", "Missing required field: amount", 400, {})
-
+        # Step 7d: Validate amount at the shared SQLite integer boundary.
         amount: object = payload["amount"]
         if not is_positive_int(amount):
             raise ServiceError("invalid_reward", "Bid amount must be a positive integer", 400, {})
         amount_int = cast("int", amount)
+        if amount_int > MAX_INTEGER:
+            raise ServiceError("invalid_reward", "Bid amount must be a positive integer", 400, {})
 
         # Step 9a: Signer must match bidder_id in payload
         bidder_id: str = payload["bidder_id"]
         if signer_id != bidder_id:
             raise ServiceError("forbidden", "Signer does not match bidder_id", 403, {})
 
-        # Step 10: Load task
-        task = manager.store.get_task(task_id)
-        if task is None:
-            raise ServiceError("task_not_found", "Task not found", 404, {})
-
-        # Evaluate deadline first
-        task = await manager.deadline_evaluator.evaluate_deadline(task)
-
-        # Step 11: Check status
-        if task["status"] != "open":
-            raise ServiceError(
-                "invalid_status",
-                f"Cannot bid on task in '{task['status']}' status, must be 'open'",
-                409,
-                {},
-            )
-
-        bidding_deadline = DeadlineEvaluator.compute_deadline(
-            task["created_at"],
-            task["bidding_deadline_seconds"],
-        )
-        if bidding_deadline is not None:
-            deadline_dt = datetime.fromisoformat(bidding_deadline.replace("Z", "+00:00"))
-            if datetime.now(UTC) >= deadline_dt:
-                raise ServiceError(
-                    "invalid_status",
-                    "Bidding deadline has passed",
-                    409,
-                    {},
-                )
-
-        # Step 12a: Bidder must not be the poster (self_bid, not forbidden)
-        if bidder_id == task["poster_id"]:
-            raise ServiceError("self_bid", "Cannot bid on your own task", 400, {})
-
-        # Step 12b: Check for duplicate bid
-        bid_id = f"bid-{uuid.uuid4()}"
-        submitted_at = now_iso()
-
+        bid_id = f"bid-{operation_id[3:]}"
         try:
-            manager.store.insert_bid(
+            envelope = manager.store.claim_task_operation(
                 {
-                    "bid_id": bid_id,
+                    "protocol_version": 1,
+                    "operation_id": operation_id,
                     "task_id": task_id,
-                    "bidder_id": bidder_id,
-                    "amount": amount_int,
-                    "submitted_at": submitted_at,
+                    "command": "submit_bid",
+                    "expected_status": "open",
+                    "expected_lifecycle_version": expected_version,
+                    "actor_kind": "agent",
+                    "actor_id": bidder_id,
+                    "arguments": {
+                        "bid_id": bid_id,
+                        "bidder_id": bidder_id,
+                        "amount": amount_int,
+                    },
                 }
             )
-        except DuplicateBidError as exc:
-            raise ServiceError(
-                "bid_already_exists",
-                "This agent already bid on this task",
-                409,
-                {},
-            ) from exc
-
+        except ServiceError as exc:
+            if exc.status_code == 409 and exc.error == "bid_exists":
+                raise ServiceError(
+                    "bid_already_exists", exc.message, exc.status_code, exc.details
+                ) from exc
+            raise
+        result = _operation_result(envelope, "submit_bid")
+        bid = manager.store.get_bid(bid_id, task_id)
+        if bid is None or any(
+            result.get(key) != value
+            for key, value in {
+                "task_id": task_id,
+                "bid_id": bid_id,
+                "bidder_id": bidder_id,
+                "amount": amount_int,
+            }.items()
+        ):
+            raise invalid_gateway_response()
+        if any(
+            bid.get(key) != value
+            for key, value in {
+                "bid_id": bid_id,
+                "task_id": task_id,
+                "bidder_id": bidder_id,
+                "amount": amount_int,
+            }.items()
+        ):
+            raise invalid_gateway_response()
         return {
             "bid_id": bid_id,
             "task_id": task_id,
             "bidder_id": bidder_id,
             "amount": amount_int,
-            "submitted_at": submitted_at,
+            "submitted_at": str(bid["submitted_at"]),
         }
 
     async def list_bids(self, task_id: str, auth_token: str | None) -> dict[str, Any]:
@@ -241,7 +241,7 @@ class TaskBiddingCoordinator:
         )
         signer_id: str = payload["_signer_id"]
 
-        # Step 7b: Validate required fields
+        # Step 7b: Validate required fields and caller-owned replay identity.
         for field_name in ["task_id", "bid_id", "poster_id"]:
             if field_name not in payload:
                 raise ServiceError(
@@ -250,6 +250,7 @@ class TaskBiddingCoordinator:
                     400,
                     {},
                 )
+        operation_id, expected_version = public_operation_identity(payload)
 
         # Step 7c: task_id and bid_id must match URL path
         if payload["task_id"] != task_id:
@@ -277,44 +278,51 @@ class TaskBiddingCoordinator:
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
 
-        # Evaluate deadline
-        task = await manager.deadline_evaluator.evaluate_deadline(task)
-
-        # Step 11: Check status
-        if task["status"] != "open":
-            raise ServiceError(
-                "invalid_status",
-                f"Cannot accept bid on task in '{task['status']}' status, must be 'open'",
-                409,
-                {},
-            )
-
-        # Step 9b: Signer must be the task's poster
-        if signer_id != task["poster_id"]:
-            raise ServiceError("forbidden", "Only the poster can accept bids", 403, {})
-
-        # Step 12: Find the bid
+        # Load only immutable command facts. Gateway owns mutable eligibility.
         bid = manager.store.get_bid(bid_id, task_id)
         if bid is None:
             raise ServiceError("bid_not_found", "Bid not found", 404, {})
 
         worker_id = str(bid["bidder_id"])
-        accepted_at = now_iso()
-
-        # Update task
-        manager.store.update_task(
-            task_id,
+        bid_amount = bid["amount"]
+        if type(bid_amount) is not int or not 0 <= bid_amount <= MAX_INTEGER:
+            raise invalid_gateway_response()
+        envelope = manager.store.claim_task_operation(
             {
-                "status": "accepted",
-                "worker_id": worker_id,
-                "accepted_bid_id": bid_id,
-                "accepted_at": accepted_at,
-            },
-            expected_status=None,
+                "protocol_version": 1,
+                "operation_id": operation_id,
+                "task_id": task_id,
+                "command": "accept_bid",
+                "expected_status": "open",
+                "expected_lifecycle_version": expected_version,
+                "actor_kind": "agent",
+                "actor_id": signer_id,
+                "arguments": {
+                    "bid_id": bid_id,
+                    "worker_id": worker_id,
+                    "escrow_id": str(task["escrow_id"]),
+                    "reward": task["reward"],
+                    "bid_amount": bid_amount,
+                },
+            }
         )
+        result = _operation_result(envelope, "accept_bid")
+        if any(
+            result.get(key) != value
+            for key, value in {
+                "task_id": task_id,
+                "bid_id": bid_id,
+                "worker_id": worker_id,
+                "reward": task["reward"],
+                "bid_amount": bid_amount,
+            }.items()
+        ):
+            raise invalid_gateway_response()
 
         updated = manager.store.get_task(task_id)
         if updated is None:
             msg = f"Task {task_id} not found after update"
             raise RuntimeError(msg)
-        return task_to_response(updated)
+        response = task_to_response(updated)
+        response["operation"] = envelope
+        return response

@@ -1,0 +1,98 @@
+E501 Line too long (102 > 100)
+  --> tests/fakes/router_gateway_effects.py:85:101
+   |
+83 |                 "created_at": epoch_us_to_utc_text(self.clock_us()),
+84 |                 "tx_id": f"tx-{uuid.uuid4()}",
+85 |                 "event": self.event("bank", "escrow.locked", payload["task_id"], payload["agent_id"]),
+   |                                                                                                     ^^
+86 |             }
+87 |         )
+   |
+
+E501 Line too long (101 > 100)
+   --> tests/fakes/router_gateway_effects.py:109:101
+    |
+107 |                 "resolved_at": epoch_us_to_utc_text(self.clock_us()),
+108 |                 "tx_id": f"tx-{uuid.uuid4()}",
+109 |                 "event": self.event("bank", "escrow.released", str(escrow[0]), recipient_account_id),
+    |                                                                                                     ^
+110 |             }
+111 |         )
+    |
+
+E501 Line too long (102 > 100)
+   --> tests/fakes/router_gateway_effects.py:149:101
+    |
+147 |         claim_id = f"clm-{uuid.uuid4()}"
+148 |         now_us = self.clock_us()
+149 |         deadline = epoch_us_to_utc_text(add_seconds_to_epoch_us(now_us, self.rebuttal_window_seconds))
+    |                                                                                                     ^^
+150 |         self.store.writer.file_claim(
+151 |             {
+    |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/unit/routers/conftest.py:3:1
+   |
+ 1 |   """Router test fixtures with mocked PlatformAgent and Central Bank services."""
+ 2 |
+ 3 | / from __future__ import annotations
+ 4 | |
+ 5 | | import os
+ 6 | | import uuid
+ 7 | | from contextlib import closing
+ 8 | | from typing import TYPE_CHECKING, Any
+ 9 | | from unittest.mock import AsyncMock, MagicMock
+10 | |
+11 | | import pytest
+12 | | import yaml
+13 | | from db_gateway_service.board_authority import BoardAuthority
+14 | | from db_gateway_service.schema import SchemaState, load_schema_sql
+15 | | from db_gateway_service.task_time import utc_now_us
+16 | | from cryptography.exceptions import InvalidSignature as _InvalidSignature
+17 | | from httpx import ASGITransport, AsyncClient
+18 | | from service_auth.financial_identity import operation_id_for
+19 | | from service_auth.jws import JwsAdmissionError, VerifiedJws, parse_jws, verify_jws_for_signer
+20 | | from service_auth.platform import PlatformAgent
+21 | | from service_auth.signing import generate_keypair as provision_keypair
+22 | | from service_auth.signing import public_key_to_b64
+23 | | from service_commons.exceptions import ServiceError
+24 | |
+25 | | from task_board_service.app import create_app
+26 | | from task_board_service.config import clear_settings_cache
+27 | | from task_board_service.core.lifespan import lifespan
+28 | | from task_board_service.core.state import get_app_state, reset_app_state
+29 | | from tests.fakes.gateway_task_store import GatewayTaskStore
+30 | | from tests.fakes.router_gateway_effects import RouterGatewayEffects
+31 | | from tests.helpers import generate_keypair, make_jws_token, verify_compact_jws
+   | |______________________________________________________________________________^
+32 |
+33 |   if TYPE_CHECKING:
+   |
+help: Organize imports
+
+F401 [*] `tests.helpers.verify_compact_jws` imported but unused
+  --> tests/unit/routers/conftest.py:31:61
+   |
+29 | from tests.fakes.gateway_task_store import GatewayTaskStore
+30 | from tests.fakes.router_gateway_effects import RouterGatewayEffects
+31 | from tests.helpers import generate_keypair, make_jws_token, verify_compact_jws
+   |                                                             ^^^^^^^^^^^^^^^^^^
+32 |
+33 | if TYPE_CHECKING:
+   |
+help: Remove unused import: `tests.helpers.verify_compact_jws`
+
+E501 Line too long (101 > 100)
+   --> tests/unit/routers/conftest.py:290:101
+    |
+288 |                 mock_platform.file_claim = AsyncMock(side_effect=effects.file_claim)
+289 |                 mock_platform.submit_rebuttal = AsyncMock(side_effect=effects.submit_rebuttal)
+290 |                 mock_platform.trigger_ruling = AsyncMock(return_value={"status": "rebuttal_pending"})
+    |                                                                                                     ^
+291 |                 mock_platform.close = AsyncMock()
+292 |                 state.platform_agent = mock_platform
+    |
+
+Found 6 errors.
+[*] 2 fixable with the `--fix` option.

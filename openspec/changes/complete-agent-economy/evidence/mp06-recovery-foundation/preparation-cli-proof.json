@@ -1,0 +1,21 @@
+{
+  "run_id": "b5793130cda24f8ba44d5be33947059a",
+  "recovery_state": "ready",
+  "digest_matches": true,
+  "failed_phase_exit": 1,
+  "recorded_drained": true,
+  "inventory_process_records": 10,
+  "checked_groups": [
+    58739,
+    58749,
+    58918,
+    59135,
+    59143,
+    59351,
+    59615,
+    59893,
+    59896,
+    59899
+  ],
+  "remaining_processes": []
+}

@@ -1,0 +1,77 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 24 items
+
+tests/unit/test_migration_money_audit.py ............FFFFFFFFFF.F        [100%]
+
+=================================== FAILURES ===================================
+_______ test_balanced_lock_and_release_legs_without_escrows_are_rejected _______
+tests/unit/test_migration_money_audit.py:517: in test_balanced_lock_and_release_legs_without_escrows_are_rejected
+    assert {"lock_without_escrow", "release_without_escrow"}.issubset(codes)
+E   AssertionError: assert False
+E    +  where False = <built-in method issubset of set object at 0x10ab5bd80>(set())
+E    +    where <built-in method issubset of set object at 0x10ab5bd80> = {'lock_without_escrow', 'release_without_escrow'}.issubset
+______ test_exact_escrow_lock_leg_must_match_payer_task_and_amount[payer] ______
+tests/unit/test_migration_money_audit.py:571: in test_exact_escrow_lock_leg_must_match_payer_task_and_amount
+    assert f"escrow_lock_{damage}_mismatch" in codes
+E   AssertionError: assert 'escrow_lock_payer_mismatch' in {'account_ledger_drift', 'supply_mismatch'}
+____ test_exact_escrow_lock_leg_must_match_payer_task_and_amount[reference] ____
+tests/unit/test_migration_money_audit.py:571: in test_exact_escrow_lock_leg_must_match_payer_task_and_amount
+    assert f"escrow_lock_{damage}_mismatch" in codes
+E   AssertionError: assert 'escrow_lock_reference_mismatch' in set()
+_____ test_exact_escrow_lock_leg_must_match_payer_task_and_amount[amount] ______
+tests/unit/test_migration_money_audit.py:571: in test_exact_escrow_lock_leg_must_match_payer_task_and_amount
+    assert f"escrow_lock_{damage}_mismatch" in codes
+E   AssertionError: assert 'escrow_lock_amount_mismatch' in {'supply_mismatch'}
+_ test_locked_release_and_missing_resolved_release_can_balance_but_are_rejected _
+tests/unit/test_migration_money_audit.py:624: in test_locked_release_and_missing_resolved_release_can_balance_but_are_rejected
+    assert "locked_escrow_has_release" in codes
+E   AssertionError: assert 'locked_escrow_has_release' in set()
+__ test_two_resolved_escrows_with_under_and_over_release_totals_are_rejected ___
+tests/unit/test_migration_money_audit.py:679: in test_two_resolved_escrows_with_under_and_over_release_totals_are_rejected
+    assert len(amount_findings) == 2
+E   assert 0 == 2
+E    +  where 0 = len([])
+___________ test_existing_board_task_must_match_its_escrow[missing] ____________
+tests/unit/test_migration_money_audit.py:729: in test_existing_board_task_must_match_its_escrow
+    assert expected_code in {finding.code for finding in result.findings}
+E   AssertionError: assert 'task_escrow_missing' in set()
+____________ test_existing_board_task_must_match_its_escrow[payer] _____________
+tests/unit/test_migration_money_audit.py:729: in test_existing_board_task_must_match_its_escrow
+    assert expected_code in {finding.code for finding in result.findings}
+E   AssertionError: assert 'task_escrow_payer_mismatch' in set()
+_____________ test_existing_board_task_must_match_its_escrow[task] _____________
+tests/unit/test_migration_money_audit.py:729: in test_existing_board_task_must_match_its_escrow
+    assert expected_code in {finding.code for finding in result.findings}
+E   AssertionError: assert 'task_escrow_task_mismatch' in set()
+____________ test_existing_board_task_must_match_its_escrow[reward] ____________
+tests/unit/test_migration_money_audit.py:729: in test_existing_board_task_must_match_its_escrow
+    assert expected_code in {finding.code for finding in result.findings}
+E   AssertionError: assert 'task_escrow_reward_mismatch' in set()
+________ test_blob_identifier_is_invalid_and_never_used_as_identity_key ________
+tests/unit/test_migration_money_audit.py:793: in test_blob_identifier_is_invalid_and_never_used_as_identity_key
+    assert "invalid_identifier_storage" in {finding.code for finding in result.findings}
+E   AssertionError: assert 'invalid_identifier_storage' in set()
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_migration_money_audit.py::test_balanced_lock_and_release_legs_without_escrows_are_rejected
+FAILED tests/unit/test_migration_money_audit.py::test_exact_escrow_lock_leg_must_match_payer_task_and_amount[payer]
+FAILED tests/unit/test_migration_money_audit.py::test_exact_escrow_lock_leg_must_match_payer_task_and_amount[reference]
+FAILED tests/unit/test_migration_money_audit.py::test_exact_escrow_lock_leg_must_match_payer_task_and_amount[amount]
+FAILED tests/unit/test_migration_money_audit.py::test_locked_release_and_missing_resolved_release_can_balance_but_are_rejected
+FAILED tests/unit/test_migration_money_audit.py::test_two_resolved_escrows_with_under_and_over_release_totals_are_rejected
+FAILED tests/unit/test_migration_money_audit.py::test_existing_board_task_must_match_its_escrow[missing]
+FAILED tests/unit/test_migration_money_audit.py::test_existing_board_task_must_match_its_escrow[payer]
+FAILED tests/unit/test_migration_money_audit.py::test_existing_board_task_must_match_its_escrow[task]
+FAILED tests/unit/test_migration_money_audit.py::test_existing_board_task_must_match_its_escrow[reward]
+FAILED tests/unit/test_migration_money_audit.py::test_blob_identifier_is_invalid_and_never_used_as_identity_key
+=================== 11 failed, 13 passed, 1 warning in 0.15s ===================

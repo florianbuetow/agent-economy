@@ -1,0 +1,394 @@
+
+[0;34m=== Running CI Checks for Court Service ===[0m
+
+
+[0;34m=== Initializing Development Environment ===[0m
+Installing Python dependencies...
+Resolved 158 packages in 4ms
+Checked 157 packages in 3ms
+[0;32m✓ Development environment ready[0m
+
+
+[0;34m=== Formatting Code ===[0m
+All checks passed!
+
+62 files left unchanged
+
+[0;32m✓ Code formatted[0m
+
+
+[0;34m=== Checking Code Style ===[0m
+All checks passed!
+
+62 files already formatted
+
+[0;32m✓ Style checks passed[0m
+
+
+[0;34m=== Running Type Checks ===[0m
+Success: no issues found in 24 source files
+
+[0;32m✓ Type checks passed[0m
+
+
+[0;34m=== Running Security Checks ===[0m
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: B101
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	using config: pyproject.toml
+[main]	INFO	running on Python 3.13.5
+[text]	INFO	Text output written to file: reports/security/bandit.txt
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: B101
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	using config: pyproject.toml
+[main]	INFO	running on Python 3.13.5
+Run started:2026-10-15 18:52:44.763430+00:00
+
+Test results:
+	No issues identified.
+
+Code scanned:
+	Total lines of code: 2067
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 1
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+Files skipped (0):
+
+[0;32m✓ Security checks passed[0m
+
+
+[0;34m=== Checking Dependencies ===[0m
+Scanning 24 files...
+
+[1m[32mSuccess! No dependency issues found.[m
+
+[0;32m✓ Dependency checks passed[0m
+
+
+[0;34m=== Checking Spelling ===[0m
+
+[0;32m✓ Spelling checks passed[0m
+
+
+[0;34m=== Running Semgrep Static Analysis ===[0m
+Rule config.semgrep.no-direct-sql-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-direct-sql-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 62 files tracked by git with 10 Code rules:
+  Scanning 62 files with 9 python rules.
+Rule config.semgrep.no-direct-sql-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-direct-sql-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-direct-sql-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/db_gateway_service/' that will soon be interpreted as '/src/db_gateway_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/db_gateway_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/db_gateway_service/'.
+Rule config.semgrep.no-aiosqlite-from-import contains an exclude pattern 'src/ui_service/' that will soon be interpreted as '/src/ui_service/' to comply with the Semgrepignore v2 and Gitignore specifications. To make this pattern permanently unanchored, edit rule config.semgrep.no-aiosqlite-from-import and change it to '**/src/ui_service/'. To confirm the anchored behavior and avoid this warning, change it to '/src/ui_service/'.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 9
+ • Targets scanned: 62
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 9 rules on 62 files: 0 findings.
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+[0;32m✓ Semgrep checks passed[0m
+
+
+[0;34m=== Scanning Dependencies for Vulnerabilities ===[0m
+No known vulnerabilities found
+Name               Skip Reason
+------------------ ---------------------------------------------------------------------------------
+court-service      Dependency not found on PyPI and could not be audited: court-service (0.1.0)
+db-gateway-service Dependency not found on PyPI and could not be audited: db-gateway-service (0.1.0)
+service-auth       Dependency not found on PyPI and could not be audited: service-auth (0.1.0)
+service-commons    Dependency not found on PyPI and could not be audited: service-commons (0.1.0)
+
+[0;32m✓ No known vulnerabilities found[0m
+
+
+[0;34m=== Running Unit Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/court/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 194 items
+
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_01_valid_dispute PASSED [  0%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_02_response_includes_all_fields PASSED [  1%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_03_rebuttal_deadline_calculated PASSED [  1%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_04_duplicate_task_rejected PASSED [  2%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_05_task_not_found PASSED [  2%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_06_missing_claim PASSED [  3%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_07_empty_claim PASSED [  3%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_08_claim_too_long PASSED [  4%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_09_missing_task_id PASSED [  4%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_10_missing_claimant_id PASSED [  5%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_11_missing_respondent_id PASSED [  5%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_12_missing_escrow_id PASSED [  6%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_13_wrong_action PASSED [  6%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_14_non_platform_signer PASSED [  7%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_15_tampered_jws PASSED [  7%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_16_missing_token PASSED [  8%]
+tests/unit/routers/test_disputes.py::TestFileDispute::test_file_17_task_board_unavailable PASSED [  8%]
+tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_01_valid_rebuttal PASSED [  9%]
+tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_02_dispute_not_found PASSED [  9%]
+tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_03_duplicate_rebuttal PASSED [ 10%]
+tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_04_rebuttal_after_ruling PASSED [ 10%]
+tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_05_missing_rebuttal_field PASSED [ 11%]
+tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_06_empty_rebuttal PASSED [ 11%]
+tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_07_rebuttal_too_long PASSED [ 12%]
+tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_08_wrong_action PASSED [ 12%]
+tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_09_non_platform_signer PASSED [ 13%]
+tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_10_status_after_rebuttal PASSED [ 13%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_01_valid_ruling PASSED [ 14%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_02_median_single_judge PASSED [ 14%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_03_status_after_ruling PASSED [ 15%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_04_ruled_at_timestamp PASSED [ 15%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_05_vote_structure PASSED [ 16%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_06_central_bank_called PASSED [ 17%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_07_reputation_called PASSED [ 17%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_08_worker_pct_zero PASSED [ 18%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_09_worker_pct_hundred PASSED [ 18%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_10_worker_pct_fifty PASSED [ 19%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_11_worker_pct_arbitrary PASSED [ 19%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_12_dispute_not_found PASSED [ 20%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_13_already_ruled_after_rebuttal PASSED [ 20%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_14_already_ruled_without_rebuttal PASSED [ 21%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_15_judge_unavailable PASSED [ 21%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_16_central_bank_unavailable PASSED [ 22%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_17_reputation_unavailable PASSED [ 22%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_18_wrong_action PASSED [ 23%]
+tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_19_ruling_without_rebuttal PASSED [ 23%]
+tests/unit/routers/test_disputes.py::TestGetDispute::test_get_01_pending_dispute PASSED [ 24%]
+tests/unit/routers/test_disputes.py::TestGetDispute::test_get_02_ruled_dispute PASSED [ 24%]
+tests/unit/routers/test_disputes.py::TestGetDispute::test_get_03_vote_structure PASSED [ 25%]
+tests/unit/routers/test_disputes.py::TestGetDispute::test_get_04_not_found PASSED [ 25%]
+tests/unit/routers/test_disputes.py::TestGetDispute::test_get_05_public_endpoint PASSED [ 26%]
+tests/unit/routers/test_disputes.py::TestListDisputes::test_list_01_empty_system PASSED [ 26%]
+tests/unit/routers/test_disputes.py::TestListDisputes::test_list_02_multiple_disputes PASSED [ 27%]
+tests/unit/routers/test_disputes.py::TestListDisputes::test_list_03_filter_by_task_id PASSED [ 27%]
+tests/unit/routers/test_disputes.py::TestListDisputes::test_list_04_filter_by_status PASSED [ 28%]
+tests/unit/routers/test_disputes.py::TestListDisputes::test_list_05_filter_by_task_id_and_status PASSED [ 28%]
+tests/unit/routers/test_disputes.py::TestListDisputes::test_list_06_public_endpoint PASSED [ 29%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[GET-/disputes/file] PASSED [ 29%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[PUT-/disputes/file] PASSED [ 30%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[DELETE-/disputes/file] PASSED [ 30%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[PUT-/disputes/disp-00000000-0000-0000-0000-000000000000] PASSED [ 31%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[DELETE-/disputes/disp-00000000-0000-0000-0000-000000000000] PASSED [ 31%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[PATCH-/disputes/disp-00000000-0000-0000-0000-000000000000] PASSED [ 32%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[GET-/disputes/disp-00000000-0000-0000-0000-000000000000/rebuttal] PASSED [ 32%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[PUT-/disputes/disp-00000000-0000-0000-0000-000000000000/rebuttal] PASSED [ 33%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[DELETE-/disputes/disp-00000000-0000-0000-0000-000000000000/rebuttal] PASSED [ 34%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[GET-/disputes/disp-00000000-0000-0000-0000-000000000000/rule] PASSED [ 34%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[PUT-/disputes/disp-00000000-0000-0000-0000-000000000000/rule] PASSED [ 35%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[DELETE-/disputes/disp-00000000-0000-0000-0000-000000000000/rule] PASSED [ 35%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[POST-/disputes] PASSED [ 36%]
+tests/unit/routers/test_disputes.py::TestHTTPMethods::test_http_01_method_not_allowed[POST-/health] PASSED [ 36%]
+tests/unit/routers/test_disputes.py::TestCrossCuttingSecurity::test_sec_01_error_response_format PASSED [ 37%]
+tests/unit/routers/test_disputes.py::TestCrossCuttingSecurity::test_sec_02_no_sensitive_info_in_errors PASSED [ 37%]
+tests/unit/routers/test_disputes.py::TestCrossCuttingSecurity::test_sec_03_id_formats PASSED [ 38%]
+tests/unit/routers/test_disputes.py::TestDisputeLifecycle::test_life_01_full_lifecycle PASSED [ 38%]
+tests/unit/routers/test_disputes.py::TestDisputeLifecycle::test_life_02_skip_rebuttal PASSED [ 39%]
+tests/unit/routers/test_disputes.py::TestDisputeLifecycle::test_life_03_duplicate_task_dispute PASSED [ 39%]
+tests/unit/routers/test_disputes.py::TestDisputeLifecycle::test_life_04_rebuttal_after_ruling_rejected PASSED [ 40%]
+tests/unit/routers/test_disputes.py::TestDisputeLifecycle::test_life_05_double_ruling_rejected PASSED [ 40%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_01_valid_jws_file PASSED [ 41%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_02_valid_jws_rebuttal PASSED [ 41%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_03_valid_jws_rule PASSED [ 42%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_04_no_token_field PASSED [ 42%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_05_null_token PASSED [ 43%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_06_wrong_token_type[int] PASSED [ 43%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_06_wrong_token_type[list] PASSED [ 44%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_06_wrong_token_type[dict] PASSED [ 44%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_06_wrong_token_type[bool] PASSED [ 45%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_07_empty_token PASSED [ 45%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_08_malformed_jws[no-dots] PASSED [ 46%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_08_malformed_jws[two-parts] PASSED [ 46%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_08_malformed_jws[four-parts] PASSED [ 47%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_09_tampered_jws PASSED [ 47%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_10_non_platform_signer_file PASSED [ 48%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_11_non_platform_signer_rebuttal PASSED [ 48%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_12_non_platform_signer_rule PASSED [ 49%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_13_wrong_action_on_file PASSED [ 50%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_14_missing_action_field PASSED [ 50%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_15_malformed_json PASSED [ 51%]
+tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_16_non_object_json PASSED [ 51%]
+tests/unit/routers/test_disputes.py::TestPublicEndpoints::test_pub_01_get_dispute_public PASSED [ 52%]
+tests/unit/routers/test_disputes.py::TestPublicEndpoints::test_pub_02_list_disputes_public PASSED [ 52%]
+tests/unit/routers/test_disputes.py::TestPublicEndpoints::test_pub_03_health_public PASSED [ 53%]
+tests/unit/routers/test_disputes.py::TestIdentityDependency::test_idep_01_connection_error PASSED [ 53%]
+tests/unit/routers/test_disputes.py::TestIdentityDependency::test_idep_02_timeout_error PASSED [ 54%]
+tests/unit/routers/test_disputes.py::TestIdentityDependency::test_idep_03_runtime_error PASSED [ 54%]
+tests/unit/routers/test_disputes.py::TestTokenReplay::test_replay_01_rebuttal_action_on_file PASSED [ 55%]
+tests/unit/routers/test_disputes.py::TestTokenReplay::test_replay_02_file_action_on_rule PASSED [ 55%]
+tests/unit/routers/test_disputes.py::TestErrorPrecedence::test_prec_01_content_type_before_jws PASSED [ 56%]
+tests/unit/routers/test_disputes.py::TestErrorPrecedence::test_prec_02_payload_too_large PASSED [ 56%]
+tests/unit/routers/test_disputes.py::TestErrorPrecedence::test_prec_03_invalid_json_before_jws PASSED [ 57%]
+tests/unit/routers/test_disputes.py::TestErrorPrecedence::test_prec_04_jws_type_before_payload PASSED [ 57%]
+tests/unit/routers/test_disputes.py::TestErrorPrecedence::test_prec_05_action_checked_before_signer PASSED [ 58%]
+tests/unit/routers/test_disputes.py::TestErrorPrecedence::test_prec_06_identity_checked_before_payload PASSED [ 58%]
+tests/unit/routers/test_disputes.py::TestAuthSecurity::test_sec_auth_01_error_format PASSED [ 59%]
+tests/unit/routers/test_disputes.py::TestAuthSecurity::test_sec_auth_02_no_leaks_in_messages PASSED [ 59%]
+tests/unit/routers/test_disputes.py::TestAuthSecurity::test_sec_auth_03_central_bank_action_rejected PASSED [ 60%]
+tests/unit/routers/test_health.py::TestHealth::test_hlth_01_health_schema PASSED [ 60%]
+tests/unit/routers/test_health.py::TestHealth::test_hlth_02_total_disputes_accurate PASSED [ 61%]
+tests/unit/routers/test_health.py::TestHealth::test_hlth_03_active_disputes_excludes_ruled PASSED [ 61%]
+tests/unit/routers/test_health.py::TestHealth::test_hlth_04_uptime_monotonic PASSED [ 62%]
+tests/unit/routers/test_t072_rule06_escrow_gap.py::test_rule_06_court_makes_no_direct_central_bank_call PASSED [ 62%]
+tests/unit/routers/test_wp06_deliverables.py::test_judge_context_contains_uploaded_deliverable PASSED [ 63%]
+tests/unit/routers/test_wp06_platform_kid.py::TestPlatformKidAssertion::test_file_wrong_kid_rejected PASSED [ 63%]
+tests/unit/routers/test_wp06_platform_kid.py::TestPlatformKidAssertion::test_rebuttal_wrong_kid_rejected PASSED [ 64%]
+tests/unit/routers/test_wp06_platform_kid.py::TestPlatformKidAssertion::test_rule_wrong_kid_rejected PASSED [ 64%]
+tests/unit/routers/test_wp06_platform_kid.py::TestPlatformKidAssertion::test_correct_kid_still_accepted PASSED [ 65%]
+tests/unit/routers/test_wp06_rebuttal_party.py::TestRebuttalPartyAssertion::test_mismatched_respondent_rejected PASSED [ 65%]
+tests/unit/routers/test_wp06_rebuttal_party.py::TestRebuttalPartyAssertion::test_matching_respondent_accepted PASSED [ 66%]
+tests/unit/routers/test_wp06_rebuttal_window.py::test_rule_without_rebuttal_before_deadline_returns_dispute_not_ready PASSED [ 67%]
+tests/unit/routers/test_wp06_retry_clean.py::test_feedback_exists_treated_as_success PASSED [ 67%]
+tests/unit/routers/test_wp06_retry_clean.py::test_kill_between_tb_record_and_dispute_persist_converges_on_retry PASSED [ 68%]
+tests/unit/routers/test_wp06_retry_clean.py::test_reentrant_rule_call_during_task_fetch_fails_fast PASSED [ 68%]
+tests/unit/test_config.py::TestJudgePanelConfig::test_judge_01_even_panel_size_rejected PASSED [ 69%]
+tests/unit/test_config.py::TestJudgePanelConfig::test_judge_02_panel_size_zero_rejected PASSED [ 69%]
+tests/unit/test_config.py::TestJudgePanelConfig::test_judge_03_negative_panel_size_rejected PASSED [ 70%]
+tests/unit/test_config.py::TestJudgePanelConfig::test_judge_04_vote_count_equals_panel_size PASSED [ 70%]
+tests/unit/test_config.py::TestJudgePanelConfig::test_judge_05_panel_size_one_valid PASSED [ 71%]
+tests/unit/test_config.py::TestConfigLoading::test_valid_config_loads PASSED [ 71%]
+tests/unit/test_config.py::TestConfigLoading::test_extra_fields_rejected PASSED [ 72%]
+tests/unit/test_dispute_db_client_normalization.py::TestCourtTablesSchemaShape::test_court_claims_has_the_expected_columns PASSED [ 72%]
+tests/unit/test_dispute_db_client_normalization.py::TestCourtTablesSchemaShape::test_court_rebuttals_has_the_expected_columns PASSED [ 73%]
+tests/unit/test_dispute_db_client_normalization.py::TestCourtTablesSchemaShape::test_court_rulings_has_the_expected_columns PASSED [ 73%]
+tests/unit/test_dispute_db_client_normalization.py::TestComposeDisputeCoversEveryNonRedundantColumn::test_get_dispute_surfaces_every_non_redundant_column PASSED [ 74%]
+tests/unit/test_dispute_db_client_normalization.py::TestComposeDisputeCoversEveryNonRedundantColumn::test_get_dispute_with_no_rebuttal_or_ruling_yet PASSED [ 74%]
+tests/unit/test_dispute_store.py::test_insert_and_get_dispute PASSED     [ 75%]
+tests/unit/test_dispute_store.py::test_update_rebuttal_updates_dispute PASSED [ 75%]
+tests/unit/test_dispute_store.py::test_set_status_updates_dispute_status PASSED [ 76%]
+tests/unit/test_dispute_store.py::test_persist_ruling_updates_dispute_and_votes PASSED [ 76%]
+tests/unit/test_dispute_store.py::test_list_disputes_and_counts PASSED   [ 77%]
+tests/unit/test_dispute_store.py::test_close_succeeds PASSED             [ 77%]
+tests/unit/test_llm_judge.py::TestLLMJudgeHappyPath::test_evaluate_parses_valid_json_response PASSED [ 78%]
+tests/unit/test_llm_judge.py::TestLLMJudgeHappyPath::test_evaluate_strips_markdown_code_fences PASSED [ 78%]
+tests/unit/test_llm_judge.py::TestLLMJudgeHappyPath::test_evaluate_passes_model_and_prompts_to_litellm PASSED [ 79%]
+tests/unit/test_llm_judge.py::TestLLMJudgeErrorHandling::test_evaluate_raises_judge_unavailable_on_missing_json PASSED [ 79%]
+tests/unit/test_llm_judge.py::TestLLMJudgeErrorHandling::test_evaluate_raises_judge_unavailable_on_out_of_range_worker_pct PASSED [ 80%]
+tests/unit/test_llm_judge.py::TestLLMJudgeErrorHandling::test_evaluate_raises_judge_unavailable_on_empty_reasoning PASSED [ 80%]
+tests/unit/test_llm_judge.py::TestLLMJudgeErrorHandling::test_evaluate_wraps_transport_failure_as_judge_unavailable PASSED [ 81%]
+tests/unit/test_mp03_platform_credentials.py::test_platform_agent_config_path_is_required[] PASSED [ 81%]
+tests/unit/test_mp03_platform_credentials.py::test_platform_agent_config_path_is_required[   ] PASSED [ 82%]
+tests/unit/test_mp03_platform_credentials.py::test_platform_agent_config_path_has_no_default PASSED [ 82%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[missing] PASSED [ 83%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[partial] PASSED [ 84%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[mismatched] PASSED [ 84%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[corrupt] PASSED [ 85%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[unsafe_mode] PASSED [ 85%]
+tests/unit/test_mp03_receiver_context.py::test_local_verifier_rejects_wrong_resource PASSED [ 86%]
+tests/unit/test_mp03_receiver_context.py::test_local_adapter_cryptographically_rejects_unregistered_kid PASSED [ 86%]
+tests/unit/test_no_base_agent_imports.py::test_no_base_agent_imports PASSED [ 87%]
+tests/unit/test_placeholder.py::test_service_scaffolded PASSED           [ 87%]
+tests/unit/test_ruling_orchestrator.py::test_execute_ruling_with_mock_judges PASSED [ 88%]
+tests/unit/test_ruling_orchestrator.py::test_validate_ruling_preconditions_dispute_not_found PASSED [ 88%]
+tests/unit/test_ruling_orchestrator.py::test_validate_ruling_preconditions_wrong_status PASSED [ 89%]
+tests/unit/test_ruling_orchestrator.py::test_normalize_vote_clamps_worker_pct PASSED [ 89%]
+tests/unit/test_ruling_orchestrator.py::test_delivery_rating_mapping PASSED [ 90%]
+tests/unit/test_ruling_orchestrator.py::test_spec_rating_mapping PASSED  [ 90%]
+tests/unit/test_vagueness_rubric.py::TestVaguenessRubricIsWritten::test_prompt_still_states_the_core_principle PASSED [ 91%]
+tests/unit/test_vagueness_rubric.py::TestVaguenessRubricIsWritten::test_prompt_defines_concrete_ambiguity_criteria PASSED [ 91%]
+tests/unit/test_vagueness_rubric.py::TestVaguenessRubricIsWritten::test_prompt_gives_scoring_guidance PASSED [ 92%]
+tests/unit/test_vagueness_rubric.py::TestVaguenessRubricReachesTheLLMCall::test_evaluate_sends_the_rubric_as_the_system_message PASSED [ 92%]
+tests/unit/test_validation.py::test_parse_json_body_valid PASSED         [ 93%]
+tests/unit/test_validation.py::test_parse_json_body_invalid_json PASSED  [ 93%]
+tests/unit/test_validation.py::test_parse_json_body_not_object PASSED    [ 94%]
+tests/unit/test_validation.py::test_extract_jws_token_valid PASSED       [ 94%]
+tests/unit/test_validation.py::test_extract_jws_token_missing_field PASSED [ 95%]
+tests/unit/test_validation.py::test_extract_jws_token_not_string PASSED  [ 95%]
+tests/unit/test_validation.py::test_require_action_correct PASSED        [ 96%]
+tests/unit/test_validation.py::test_require_action_wrong PASSED          [ 96%]
+tests/unit/test_validation.py::test_require_action_missing PASSED        [ 97%]
+tests/unit/test_validation.py::test_require_non_empty_string_valid PASSED [ 97%]
+tests/unit/test_validation.py::test_require_non_empty_string_missing PASSED [ 98%]
+tests/unit/test_validation.py::test_require_non_empty_string_empty PASSED [ 98%]
+tests/unit/test_wp06_config.py::test_mock_judge_uses_configured_worker_pct PASSED [ 99%]
+tests/unit/test_wp06_config.py::test_max_deliverable_bytes_is_required_config PASSED [100%]
+
+============================= 194 passed in 7.02s ==============================
+
+
+[0;34m=== Running Architecture Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/court/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 24 items
+
+tests/architecture/test_architecture.py::TestVisualization::test_generate_module_dependency_graph PASSED [  4%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_routers PASSED [  8%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_app PASSED [ 12%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_middleware PASSED [ 16%]
+tests/architecture/test_architecture.py::TestServicesLayerIndependence::test_services_must_not_import_schemas PASSED [ 20%]
+tests/architecture/test_architecture.py::TestJudgesLayerIndependence::test_judges_must_not_import_routers PASSED [ 25%]
+tests/architecture/test_architecture.py::TestJudgesLayerIndependence::test_judges_must_not_import_app PASSED [ 29%]
+tests/architecture/test_architecture.py::TestJudgesLayerIndependence::test_judges_must_not_import_schemas PASSED [ 33%]
+tests/architecture/test_architecture.py::TestJudgesLayerIndependence::test_routers_must_not_import_judges PASSED [ 37%]
+tests/architecture/test_architecture.py::TestLeafModules::test_config_must_not_import_routers PASSED [ 41%]
+tests/architecture/test_architecture.py::TestLeafModules::test_config_must_not_import_services PASSED [ 45%]
+tests/architecture/test_architecture.py::TestLeafModules::test_config_must_not_import_core PASSED [ 50%]
+tests/architecture/test_architecture.py::TestLeafModules::test_schemas_must_not_import_services PASSED [ 54%]
+tests/architecture/test_architecture.py::TestLeafModules::test_schemas_must_not_import_routers PASSED [ 58%]
+tests/architecture/test_architecture.py::TestLeafModules::test_schemas_must_not_import_core PASSED [ 62%]
+tests/architecture/test_architecture.py::TestRouterConstraints::test_routers_must_not_import_config_directly PASSED [ 66%]
+tests/architecture/test_architecture.py::TestRouterConstraints::test_routers_must_not_import_app PASSED [ 70%]
+tests/architecture/test_architecture.py::TestRouterConstraints::test_routers_must_not_import_lifespan PASSED [ 75%]
+tests/architecture/test_architecture.py::TestLayeredArchitecture::test_services_layer_must_not_access_routers_layer PASSED [ 79%]
+tests/architecture/test_architecture.py::TestLayeredArchitecture::test_services_layer_must_not_access_core_layer PASSED [ 83%]
+tests/architecture/test_cross_service_deps.py::TestCrossServiceDependencies::test_no_forbidden_service_imports PASSED [ 87%]
+tests/architecture/test_db_client_isolation.py::TestDbClientIsolation::test_only_http_clients_import_httpx PASSED [ 91%]
+tests/architecture/test_db_client_isolation.py::TestDbClientIsolation::test_lifespan_does_not_import_legacy_stores PASSED [ 95%]
+tests/architecture/test_db_client_isolation.py::TestDbClientIsolation::test_lifespan_requires_db_gateway PASSED [100%]
+
+============================== 24 passed in 0.55s ==============================
+
+[0;34m=== Running Pyright Type Checks ===[0m
+0 errors, 0 warnings, 0 informations
+WARNING: there is a new pyright version available (v1.1.408 -> v1.1.414).
+Please install the new version or set PYRIGHT_PYTHON_FORCE_VERSION to `latest`
+
+
+[0;32m✓ Pyright checks passed[0m
+  Report: reports/pyright/pyright.txt
+
+
+[0;32m✓ All CI checks passed[0m
+

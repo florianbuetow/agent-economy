@@ -20,12 +20,75 @@ from tests.unit.routers.conftest import (
     create_task,
     file_dispute,
     make_task_id,
+    new_operation_fields,
     setup_task_in_review,
     submit_bid,
     submit_deliverable,
     submit_ruling,
     upload_asset,
 )
+from tests.unit.routers.test_submission import _assert_release, _store
+
+
+def _assert_split_ruling(task_id: str, worker_id: str, poster_id: str) -> None:
+    store = _store()
+    task = store.get_task(task_id)
+    assert task is not None
+    operation = store.writer.connection.execute(
+        "SELECT operation_id,operation_state,effect_state,event_id FROM board_task_operations "
+        "WHERE task_id=? AND command='record_ruling'",
+        (task_id,),
+    ).fetchone()
+    assert operation is not None
+    operation_id, state, effect, event_id = operation
+    assert (state, effect) == ("completed", "succeeded")
+    assert (
+        store.writer.connection.execute(
+            "SELECT operation_kind FROM bank_operation_receipts WHERE operation_id=?",
+            (operation_id,),
+        ).fetchone()[0]
+        == "escrow_split"
+    )
+    assert [
+        tuple(row)
+        for row in store.writer.connection.execute(
+            "SELECT account_id,amount,balance_after FROM bank_operation_legs "
+            "WHERE operation_id=? ORDER BY leg_index",
+            (operation_id,),
+        ).fetchall()
+    ] == [(worker_id, 60, 1_000_060), (poster_id, 40, 999_940)]
+    assert (
+        store.writer.connection.execute(
+            "SELECT status FROM bank_escrow WHERE escrow_id=?", (task["escrow_id"],)
+        ).fetchone()[0]
+        == "split"
+    )
+    assert (
+        store.writer.connection.execute(
+            "SELECT balance FROM bank_accounts WHERE account_id=?", (worker_id,)
+        ).fetchone()[0]
+        == 1_000_060
+    )
+    assert (
+        store.writer.connection.execute(
+            "SELECT balance FROM bank_accounts WHERE account_id=?", (poster_id,)
+        ).fetchone()[0]
+        == 999_940
+    )
+    assert [
+        tuple(row)
+        for row in store.writer.connection.execute(
+            "SELECT account_id,amount,balance_after FROM bank_transactions "
+            "WHERE reference=? AND type='escrow_release' ORDER BY account_id DESC",
+            (task["escrow_id"],),
+        ).fetchall()
+    ] == [(worker_id, 60, 1_000_060), (poster_id, 40, 999_940)]
+    assert (
+        store.writer.connection.execute(
+            "SELECT event_type FROM events WHERE event_id=?", (event_id,)
+        ).fetchone()[0]
+        == "task.ruled"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -41,6 +104,7 @@ async def cancel_task(
     private_key = poster_keypair[0]
     payload = {
         "action": "cancel_task",
+        **new_operation_fields(task_id),
         "task_id": task_id,
         "poster_id": poster_id,
     }
@@ -100,6 +164,13 @@ class TestLifecycle:
         body = resp.json()
         assert body["status"] == "approved"
         assert body["approved_at"] is not None
+        _assert_release(
+            task_id,
+            command="approve_task",
+            event_type="task.approved",
+            recipient_id=bob_agent_id,
+            expected_balance=1_000_100,
+        )
 
     # -----------------------------------------------------------------------
     # LIFE-02  Dispute flow
@@ -170,6 +241,7 @@ class TestLifecycle:
         assert body["worker_pct"] == 60
         assert body["ruling_summary"] == "Partial delivery accepted"
         assert body["ruled_at"] is not None
+        _assert_split_ruling(task_id, bob_agent_id, alice_agent_id)
 
     # -----------------------------------------------------------------------
     # LIFE-03  Bidding deadline expiry
@@ -205,6 +277,13 @@ class TestLifecycle:
             body = resp.json()
             assert body["status"] == "expired"
             assert body["expired_at"] is not None
+            _assert_release(
+                task_id,
+                command="expire_bidding",
+                event_type="task.expired",
+                recipient_id=alice_agent_id,
+                expected_balance=1_000_000,
+            )
 
     # -----------------------------------------------------------------------
     # LIFE-04  Execution deadline expiry
@@ -250,6 +329,13 @@ class TestLifecycle:
             body = resp.json()
             assert body["status"] == "expired"
             assert body["expired_at"] is not None
+            _assert_release(
+                task_id,
+                command="expire_execution",
+                event_type="task.expired",
+                recipient_id=alice_agent_id,
+                expected_balance=1_000_000,
+            )
 
     # -----------------------------------------------------------------------
     # LIFE-05  Review deadline auto-approves
@@ -302,6 +388,13 @@ class TestLifecycle:
             body = resp.json()
             assert body["status"] == "approved"
             assert body["approved_at"] is not None
+            _assert_release(
+                task_id,
+                command="auto_approve",
+                event_type="task.auto_approved",
+                recipient_id=bob_agent_id,
+                expected_balance=1_000_100,
+            )
 
     # -----------------------------------------------------------------------
     # LIFE-06  Expired tasks in GET /tasks listing
@@ -367,10 +460,22 @@ class TestLifecycle:
             # Advance past deadline
             frozen.tick(delta=datetime.timedelta(seconds=2))
 
-            # Bob tries to bid - should fail with 409 invalid_status
+            # Native command enforces cutoff without requiring a prior sweep.
             resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
             assert resp.status_code == 409
-            assert resp.json()["error"] == "invalid_status"
+            assert resp.json()["error"] == "cutoff_reached"
+            source = _store().get_task(task_id)
+            assert source is not None and source["status"] == "open"
+            expired = await client.get(f"/tasks/{task_id}")
+            assert expired.status_code == 200
+            assert expired.json()["status"] == "expired"
+            _assert_release(
+                task_id,
+                command="expire_bidding",
+                event_type="task.expired",
+                recipient_id=alice_agent_id,
+                expected_balance=1_000_000,
+            )
 
     # -----------------------------------------------------------------------
     # LIFE-08  Cannot submit on expired execution deadline
@@ -417,7 +522,19 @@ class TestLifecycle:
             # Bob tries to submit - should fail
             resp = await submit_deliverable(client, bob_keypair, bob_agent_id, task_id)
             assert resp.status_code == 409
-            assert resp.json()["error"] == "invalid_status"
+            assert resp.json()["error"] == "cutoff_reached"
+            source = _store().get_task(task_id)
+            assert source is not None and source["status"] == "accepted"
+            expired = await client.get(f"/tasks/{task_id}")
+            assert expired.status_code == 200
+            assert expired.json()["status"] == "expired"
+            _assert_release(
+                task_id,
+                command="expire_execution",
+                event_type="task.expired",
+                recipient_id=alice_agent_id,
+                expected_balance=1_000_000,
+            )
 
     # -----------------------------------------------------------------------
     # LIFE-09  Terminal status permanence
@@ -441,6 +558,13 @@ class TestLifecycle:
         resp = await approve_task(client, alice_keypair, alice_agent_id, task_id)
         assert resp.status_code == 200
         assert resp.json()["status"] == "approved"
+        _assert_release(
+            task_id,
+            command="approve_task",
+            event_type="task.approved",
+            recipient_id=bob_agent_id,
+            expected_balance=1_000_100,
+        )
 
         # All mutations on a terminal (approved) task should return 409
         # 1. Cancel
@@ -501,6 +625,13 @@ class TestLifecycle:
             resp = await cancel_task(client, alice_keypair, alice_agent_id, task_id)
             assert resp.status_code == 200
             assert resp.json()["status"] == "cancelled"
+            _assert_release(
+                task_id,
+                command="cancel_task",
+                event_type="task.cancelled",
+                recipient_id=alice_agent_id,
+                expected_balance=1_000_000,
+            )
 
             # Advance past the bidding deadline
             frozen.tick(delta=datetime.timedelta(seconds=120))
@@ -554,6 +685,14 @@ class TestLifecycle:
             assert resp.json()["status"] == "expired"
             assert resp.json()["expired_at"] == first_expired_at
 
+            _assert_release(
+                task_id,
+                command="expire_bidding",
+                event_type="task.expired",
+                recipient_id=alice_agent_id,
+                expected_balance=1_000_000,
+            )
+
             # Third GET - same result
             resp = await client.get(f"/tasks/{task_id}")
             assert resp.status_code == 200
@@ -587,6 +726,13 @@ class TestLifecycle:
         resp = await approve_task(client, alice_keypair, alice_agent_id, task_id)
         assert resp.status_code == 200
         assert resp.json()["status"] == "approved"
+        _assert_release(
+            task_id,
+            command="approve_task",
+            event_type="task.approved",
+            recipient_id=bob_agent_id,
+            expected_balance=1_000_100,
+        )
 
         # Alice tries to dispute after approval -- should fail with 409
         resp = await file_dispute(client, alice_keypair, alice_agent_id, task_id)

@@ -1,0 +1,100 @@
+{
+  "status": "Independent review APPROVE after genuine cross-coordinator stale_revision red and shared weak-lock fix. Included in parent307 final gate; loops/startup not yet wired.",
+  "boundary": "Component checkpoint, not full goal, package, autonomous workflow or root CI completion. Raw initial missing-module failures do not prove unexecuted downstream behavior.",
+  "sources": [
+    {
+      "path": "agents/src/base_agent/runtime_task_commands.py",
+      "sha256": "e3912b4e554f737b13bcb20aaef1bf8fd19651277a8339b874e12a09fc5d82c3"
+    },
+    {
+      "path": "agents/tests/unit/test_runtime_task_commands.py",
+      "sha256": "c5584639fa9f8c38751f1865b5635322e18d386388b09f9a52706ceb3044682e"
+    },
+    {
+      "path": "agents/tests/unit/test_runtime_task_command_concurrency.py",
+      "sha256": "89edb6771227eaba3dd6c0e7b38234f59ef1f4dd79cbcb301047437cd31ce625"
+    },
+    {
+      "path": "docs/plans/2026-10-18-mp07-runtime-task-commands-tests.md",
+      "sha256": "899596cb40df2769bd5991016b0923248e6a11211ba44965cd6e69543635a70d"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "agent-economy-mp07-runtime-coordinator-before-shared-locks.py",
+      "sha256": "9d544f2c856c84d1dbe3ea17bd71574b17cc55c550a121e663162544c49917ab"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-coordinator-concurrency-green.log",
+      "sha256": "87d50e0dab6da46888d5cd13baebbd70462effe6ec6785b871b235163842b6e4"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-coordinator-concurrency-red.log",
+      "sha256": "d66ee5fa3337bb8239d5c02b494168eca191d9758e088117881d6228327b53f3"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-25case-source.py",
+      "sha256": "0bd52f0b2e7b7c4d962b771ec52427a1aafd57138971d3af83af06a2e621c29d"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-25case-source.sha256",
+      "sha256": "fcbf544ba12d94143fff4d3c07c9322b68c8b8538ddd7454a563204db33bef41"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-owner-sha256-final.log",
+      "sha256": "ee4282f735c0024bb574809c20764de054a4d055dbff0333dddac15bbeffc9bc"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-parent-current.log",
+      "sha256": "caabb50365e470b7291c51944dd9f70ff3a7416c85217c40aefcb945a0363d5f"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-parent-first.log",
+      "sha256": "b8d82994737450d6cbb24e763e323a8c9a965b6e47805e98c28d8e493dcd7309"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-parent-mypy-final.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-parent-mypy.log",
+      "sha256": "f7ab536fa9cf3769cc399e04e14b561d37d401dcb9eddc6dcd4e7cbcab3761e9"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-parent-pyright-final.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-parent-pyright.log",
+      "sha256": "02f440734366525f9c833b866f090d2d6e3422c572fbe2102e18e9419718b082"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-parent-red.log",
+      "sha256": "ff5d95016970ec36c252ef88838bedbd13f7d8852521c351a987c9681cc614a3"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-prerequisite.log",
+      "sha256": "931a8202a1f0234ef572bdec365e35be987280d3efb4cc2bed07fc98851fead6"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-red-binding-final.log",
+      "sha256": "9d28f1b44b898596896342b667600066d7046398b9c84ddf7c61279f2edba10e"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-red-final.log",
+      "sha256": "5d977515ac0da8c30649f4a9a45361389ec1af077cc94d29854d417bd3134097"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-red-owner-final.log",
+      "sha256": "abcea261c1e2514660d0d0c3eb07dca59358289d6892add3fba0e14fc587fb3e"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-red.log",
+      "sha256": "1739e68fda150d144511df1fc1728296c101fc84202c90b4170ca0cbc286c58f"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-task-commands-sha256-final.log",
+      "sha256": "7038cddc2449eb7e915bdb1c2ee53d605ae3175f3f6bf3ed671bda0faeb5c118"
+    }
+  ]
+}

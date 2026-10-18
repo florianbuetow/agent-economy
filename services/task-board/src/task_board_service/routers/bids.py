@@ -13,7 +13,7 @@ from task_board_service.routers.validation import (
     extract_token,
     parse_json_body,
 )
-from task_board_service.schemas import BidListResponse, BidResponse, TaskResponse
+from task_board_service.schemas import BidListResponse, BidResponse, TaskMutationResponse
 
 router = APIRouter()
 
@@ -72,7 +72,7 @@ async def list_bids(task_id: str, request: Request) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks/{task_id}/bids/{bid_id}/accept", response_model=TaskResponse)
+@router.post("/tasks/{task_id}/bids/{bid_id}/accept", response_model=TaskMutationResponse)
 async def accept_bid(task_id: str, bid_id: str, request: Request) -> dict[str, Any]:
     """Accept a bid, assign worker, start execution deadline."""
     body = await request.body()

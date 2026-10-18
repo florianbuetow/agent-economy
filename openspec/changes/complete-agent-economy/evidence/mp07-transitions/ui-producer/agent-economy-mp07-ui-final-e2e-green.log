@@ -1,0 +1,34 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 298 items
+
+tests/e2e/test_agent_page.py ......                                      [  2%]
+tests/e2e/test_cross_page.py ..............                              [  6%]
+tests/e2e/test_infrastructure.py .......                                 [  9%]
+tests/e2e/test_landing.py .............................................. [ 24%]
+............                                                             [ 28%]
+tests/e2e/test_mp02_browser_security.py ...............                  [ 33%]
+tests/e2e/test_mp12_sealed_task_page.py .......                          [ 35%]
+tests/e2e/test_observatory.py .......................................... [ 50%]
+.......................................                                  [ 63%]
+tests/e2e/test_quarterly_navigation_concurrency.py ...                   [ 64%]
+tests/e2e/test_quarterly_report_page.py ....                             [ 65%]
+tests/e2e/test_smoke.py .....                                            [ 67%]
+tests/e2e/test_task_lifecycle.py ................F...................... [ 80%]
+...........................................................              [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_t13_t18_post_phase[T17] _________________________
+tests/e2e/test_task_lifecycle.py:453: in test_t13_t18_post_phase
+    assert err == "All fields are required."
+E   AssertionError: assert 'Acceptance w...whole number.' == 'All fields are required.'
+E     
+E     - All fields are required.
+E     + Acceptance window must be a positive whole number.
+=========================== short test summary info ============================
+FAILED tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T17] - Asser...
+================== 1 failed, 297 passed in 385.10s (0:06:25) ===================

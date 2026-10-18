@@ -4,7 +4,7 @@
 
 **Reviewed baseline:** branch `refactor`, HEAD `d4148401f4e3e5749d878e560a742c4ccb2aa68c`, including the tracked staged and unstaged changes present at review start. Three detached review worktrees received the complete `git diff HEAD --binary` snapshot. Existing user changes were preserved. Findings therefore describe more than the committed HEAD; recheck their cited functions before implementing on a different revision.
 
-**Assessment:** the normal economic lifecycle exists, but the platform is not ready for trusted financial/adjudication use. The most urgent repairs are lifecycle races and lost-acknowledgment settlement, immutable recoverable Court rulings, unauthenticated gateway access, unsafe asset filenames, stored browser script injection, and sealed-market data leaks. Then finish artifact handling, restart-safe agents, external onboarding and the complete human UI journey. This document contains 56 finding entries (54 from the original audit plus the reported UI CI and reproduced deadline-precision gaps; some corroborate the same root cause), 27 work packages, 66 paired test/implementation tickets, three tracked decision tickets and 25 release scenarios.
+**Assessment:** the normal economic lifecycle exists, but the platform is not ready for trusted financial/adjudication use. The most urgent repairs are lifecycle races and lost-acknowledgment settlement, immutable recoverable Court rulings, unauthenticated gateway access, unsafe asset filenames, stored browser script injection, and sealed-market data leaks. Then finish artifact handling, restart-safe agents, external onboarding and the complete human UI journey. This document contains 57 finding entries (54 from the original audit plus the reported UI CI, reproduced deadline-precision and standalone log-isolation gaps; some corroborate the same root cause), 27 work packages, 68 paired test/implementation tickets, three tracked decision tickets and 25 release scenarios.
 
 **Additional baseline finding (2026-10-17):** the MP-04 browser gate exposed a quarterly-report race:
 two rapid Prev clicks read the same settled quarter and request it twice, losing one navigation.
@@ -1068,6 +1068,19 @@ The three tests in `services/ui/tests/unit/test_trend_visual_js.py` fail at `p.c
 
 **Repair:** reconcile valid test fixtures with the required `user_agent` contract using explicit isolated test values and stubs; retain every existing behavior assertion and the negative missing-section tests. Record the narrow fixture-only correction in the test specification before changing those existing test files. Add an early explicit Playwright browser prerequisite/install path matching the locked package version, preserving all three trend tests. Do not restore a production default, skip browser tests, weaken assertions or mask failures. **Work:** MP-00, T-165–T-168. The supplied log is historical red evidence; execution must reproduce the relevant failure against its current baseline before applying a repair.
 
+#### F-O08 — Standalone Task Board integration logs escape temporary resources (P1; reproduced)
+
+The standalone Gateway and Task Board fixtures in `services/task-board/tests/integration/conftest.py`
+used `logging.directory: data/logs`. The shared logging setup interprets it relative to the process
+working directory, so otherwise disposable tests appended to ordinary service logs. Two configuration
+boundary tests reproduce the escape before starting any service; existing test-tagged entries in the
+ordinary log confirm the effect. Database, key, asset and port isolation does not establish log isolation.
+
+**Repair:** set distinct absolute log directories below each fixture's temporary root, retain the
+ordinary logs untouched, and verify a live regression run leaves their hashes unchanged. Historical
+behavioral runs remain valid for their assertions but do not prove full resource isolation. **Work:**
+MP-01, T-179/T-180; both closed after the original red archive was completed and Root22 passed with unchanged ordinary logs.
+
 ## 5. Execution plan and task tracking
 
 **Current working instruction:** prepare and implement in the existing `refactor` workspace. The latest owner instruction permits commits and pushes at any time on Saturday and Sunday and outside 08:00–18:00 on weekdays, in Europe/Amsterdam time, superseding the initial goal's all-hours prohibition for these two actions only. They remain forbidden Monday through Friday from 08:00 inclusive until 18:00 exclusive. Branch switches, merges, cherry-picks and rebases remain prohibited; read-only Git inspection is allowed. This overrides every later commit/push step in this document. Verify local time before any permitted Git write and preserve unrelated changes. No new delivery branch is required.
@@ -1131,6 +1144,8 @@ The arrows are dependencies, not permission handoffs. MP-20's response schemas s
 - [x] **Navigation repair and root verification (T-176):** preserve each accepted quarter shift with ordered requests. Seven focused cases, independent review and root19's full298-case browser/root gate pass, without changing original assertions or timeouts.
 - [x] **Discovered readiness red (T-177):** prove premature ReadTimeout failure before the existing readiness budget; preserve persistent-timeout and child-exit diagnostic controls. Two intended reds/two controls were independently reproduced.
 - [x] **Readiness repair and root verification (T-178):** keep transient timeouts in the existing polling loop. Four unit and ten focused browser cases, independent review and root19 full UI/root gates pass without longer timeout values; see the active change's evidence/ui-readiness-checkpoint.md.
+- [x] **Standalone log isolation red (T-179):** seventeen cause-specific configuration reds are archived and independently verified, including the recovered original Gateway/Court/Board outputs; Root22 passes.
+- [x] **Standalone log isolation repair (T-180):** all audited startup paths are absolute and temporary. Root22 passes all phases with 202 ordinary logs byte-identical, no additions/removals, and verified owned-process cleanup.
 
 #### MP-02 — Enforce persistence authority and the local browser boundary
 
@@ -1200,11 +1215,28 @@ Durable settlement receipts remain MP-04 and operational restored-runtime recove
 
 **Tickets:** T-122 → T-123. **Priority:** P0. **Depends on:** MP-06. **Owner:** Task Board/gateway transition contract. **Findings:** F-L01, F-L09; Q-16 cutoff interaction.
 
-- [ ] **Red proof:** barrier-scheduled accept vs cancel/expire, submit vs expiry, approve vs dispute/auto-approve, duplicate acceptance and bid vs deadline. Execute through separate service instances/connections, not only one object's lock.
-- [ ] **Implement:** required expected version/status predicates in authoritative writes; atomically claim an operation before external effects; validate bid/task/worker membership and cutoff in the transaction. Define exact deadline equality and the acceptance-window policy in the spec. A stale action cannot unconditionally replace a terminal state.
-- [ ] **Implement:** reconcile Q-16 with the owner's 2026-10-16 decision: each poster explicitly selects an acceptance window following bidding close. Preserve early poster acceptance; stop new bids at bidding cutoff; expire zero-bid tasks immediately; tasks with bids remain acceptable until the selected cutoff. Do not impose feeder quorum/ranking on human selection or introduce a silent duration. Freeze published timing and accepted reward/offer terms; preserve existing contractual cutoffs during migration.
-- [ ] **Files:** task creation/bidding/submission/review/ruling/deadline services, gateway board writer/routes, schemas/protocols, state-machine tests.
-- [ ] **Green proof:** every concurrent history is equivalent to one valid serial history; losing commands return explicit conflicts and no money/claim/asset side effects; events name the actual winning transition.
+- [x] **Red proof:** barrier-scheduled accept vs cancel/expire, submit vs expiry, approve vs dispute/auto-approve, duplicate acceptance and bid vs deadline. Execute through separate service instances/connections, not only one object's lock.
+- [x] **Implement:** required expected version/status predicates in authoritative writes; atomically claim an operation before external effects; validate bid/task/worker membership and cutoff in the transaction. Define exact deadline equality and the acceptance-window policy in the spec. A stale action cannot unconditionally replace a terminal state.
+- [x] **Implement:** reconcile Q-16 with the owner's 2026-10-16 decision: each poster explicitly selects an acceptance window following bidding close. Preserve early poster acceptance; stop new bids at bidding cutoff; expire zero-bid tasks immediately; tasks with bids remain acceptable until the selected cutoff. Do not impose feeder quorum/ranking on human selection or introduce a silent duration. Freeze published timing and accepted reward/offer terms; preserve existing contractual cutoffs during migration.
+- [x] **Files:** task creation/bidding/submission/review/ruling/deadline services, gateway board writer/routes, schemas/protocols, state-machine tests.
+- [x] **Green proof:** every concurrent history is equivalent to one valid serial history; losing commands return explicit conflicts and no money/claim/asset side effects; events name the actual winning transition.
+
+MP-07 closure (2026-10-18): T-122/T-123 and runtime prerequisite T-181/T-182
+are independently verified complete at Root22. All eleven native command histories,
+atomic/deadline/bid races, explicit owner-selected acceptance windows and exact caller
+replay pass. Root22 passed all quality and integration phases with 1,059 unchanged
+source/config files and 202 unchanged ordinary logs, including 65 Board integration,
+211 cross/runtime, 298 browser and 104 live-agent cases. The ten reviewed real-process
+crash histories pass within that live gate. All 19 root-owned process groups and 36
+retained nested records are absent with clean metadata.
+
+See `openspec/changes/complete-agent-economy/evidence/root22-checkpoint.md` and
+`evidence/mp07-transitions/completion-audit.md` within that change for exact proof,
+historical-red classifications and review. The three existing credential-dependent
+provider skips do not prove real Court quality. Posting, general pending-effect,
+asset/execution/oracle/rebuttal/discovery and full restored-runtime recovery remain
+MP-05/08/09/10/16/17/18/21. Local journals do not claim distributed leases or external
+cross-restart rollback detection. The entire Core and Vision goal remains active.
 
 #### MP-08 — Recover pending effects independently of task status
 
@@ -1609,7 +1641,7 @@ Recovery artifact foundation checkpoint (root attempt 12): **27/117 tasks**, inc
 
 Subsequent progress: **29/117 tasks**. T-173's CI mutation proof and T-132's sealed-projection proof are verified. Read-only CI repair passes 35 focused cases, independently rerun by the parent; its full unchanged-source root gate remains pending. MP-12 has 12 independently reproduced failures and three controls, with implementation now underway. Schema/bootstrap and backup-bound offline source checks are independently owned active MP-06 slices; neither constitutes migration authorization or closes task 5.2.
 
-Verified root13 checkpoint: **32/117 tasks**. T-132/T-133 (MP-12 sealed projections) and T-173/T-174 (read-only CI) are closed with their own red/green/review evidence plus fresh root CI exit0. All875 source/config hashes are unchanged;200 cross/runtime,295 browser and94 economy tests pass;19 CLI-owned groups are drained and absent. Three credential-dependent skips remain outside real-provider proof. MP-06 schema/bootstrap, financial audit and backup-bound source prerequisites are reviewed and gated, but actual migration/authoritative writer work is still open. All Core/Vision scope and unresolved policy/provider requirements remain active. No Git mutation occurred.
+Verified root13 checkpoint: **32/117 tasks**. T-132/T-133 (MP-12 sealed projections) and T-173/T-174 (read-only CI) are closed with their own red/green/review evidence plus fresh root CI exit 0. All875 source/config hashes are unchanged;200 cross/runtime,295 browser and94 economy tests pass;19 CLI-owned groups are drained and absent. Three credential-dependent skips remain outside real-provider proof. MP-06 schema/bootstrap, financial audit and backup-bound source prerequisites are reviewed and gated, but actual migration/authoritative writer work is still open. All Core/Vision scope and unresolved policy/provider requirements remain active. No Git mutation occurred.
 
 Verified root15 checkpoint: **36/117 tasks**. MP-06/T-120/T-121 is complete, including actual
 migration process-death recovery and maximum-bound concurrency through independent writers.

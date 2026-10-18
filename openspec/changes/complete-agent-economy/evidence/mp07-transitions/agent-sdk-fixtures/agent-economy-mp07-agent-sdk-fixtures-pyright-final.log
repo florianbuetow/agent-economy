@@ -1,0 +1,9 @@
+/Users/flo/Developer/github/agent-economy/agents/src/math_worker/loop.py
+  /Users/flo/Developer/github/agent-economy/agents/src/math_worker/loop.py:243:24 - error: Arguments missing for parameters "operation_id", "expected_lifecycle_version" (reportCallIssue)
+  /Users/flo/Developer/github/agent-economy/agents/src/math_worker/loop.py:311:15 - error: Arguments missing for parameters "operation_id", "expected_lifecycle_version" (reportCallIssue)
+/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py
+  /Users/flo/Developer/github/agent-economy/agents/src/task_feeder/acceptance.py:155:19 - error: Arguments missing for parameters "operation_id", "expected_lifecycle_version" (reportCallIssue)
+/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/review.py
+  /Users/flo/Developer/github/agent-economy/agents/src/task_feeder/review.py:54:19 - error: Arguments missing for parameters "operation_id", "expected_lifecycle_version" (reportCallIssue)
+  /Users/flo/Developer/github/agent-economy/agents/src/task_feeder/review.py:58:15 - error: Arguments missing for parameters "operation_id", "expected_lifecycle_version" (reportCallIssue)
+5 errors, 0 warnings, 0 informations

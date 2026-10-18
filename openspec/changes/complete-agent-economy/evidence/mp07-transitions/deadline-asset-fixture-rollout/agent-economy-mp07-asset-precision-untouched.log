@@ -1,0 +1,40 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 18 items
+
+tests/unit/test_asset_manager.py .............                           [ 72%]
+tests/unit/test_mp07_deadline_precision.py ..FFF                         [100%]
+
+=================================== FAILURES ===================================
+__________ test_gateway_create_payload_preserves_fractional_deadline ___________
+tests/unit/test_mp07_deadline_precision.py:84: in test_gateway_create_payload_preserves_fractional_deadline
+    client.insert_task(_open_task())
+src/task_board_service/services/task_db_client.py:223: in insert_task
+    "acceptance_window_seconds": task_data["acceptance_window_seconds"],
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'acceptance_window_seconds'
+___________ test_fractional_deadline_remains_open_just_before_cutoff ___________
+tests/unit/test_mp07_deadline_precision.py:98: in test_fractional_deadline_remains_open_just_before_cutoff
+    evaluator, store, escrow_coordinator = _evaluator()
+                                           ^^^^^^^^^^^^
+tests/unit/test_mp07_deadline_precision.py:41: in _evaluator
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=escrow_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+_______________ test_fractional_deadline_expires_at_exact_cutoff _______________
+tests/unit/test_mp07_deadline_precision.py:111: in test_fractional_deadline_expires_at_exact_cutoff
+    evaluator, store, escrow_coordinator = _evaluator()
+                                           ^^^^^^^^^^^^
+tests/unit/test_mp07_deadline_precision.py:41: in _evaluator
+    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=escrow_coordinator)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: DeadlineEvaluator.__init__() missing 2 required keyword-only arguments: 'platform_agent' and 'deadline_actor_id'
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_deadline_precision.py::test_gateway_create_payload_preserves_fractional_deadline
+FAILED tests/unit/test_mp07_deadline_precision.py::test_fractional_deadline_remains_open_just_before_cutoff
+FAILED tests/unit/test_mp07_deadline_precision.py::test_fractional_deadline_expires_at_exact_cutoff
+========================= 3 failed, 15 passed in 0.21s =========================

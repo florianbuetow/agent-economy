@@ -1,0 +1,23 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_____ test_runtime_state_directory_is_one_config_parent_filesystem_binding _____
+../../tests/runtime/test_mp07_agent_journal_inventory.py:42: in test_runtime_state_directory_is_one_config_parent_filesystem_binding
+    assert len(selected) == 1
+E   assert 0 == 1
+E    +  where 0 = len([])
+________ test_present_runtime_state_directory_has_copy_inventory_policy ________
+../../tests/runtime/test_mp07_agent_journal_inventory.py:59: in test_present_runtime_state_directory_has_copy_inventory_policy
+    logical_id, kind, capture_kind, required = recovery_inventory._binding_resource(
+../../scripts/recovery_inventory.py:340: in _binding_resource
+    raise ValueError(
+E   ValueError: Filesystem field has no recovery resource policy: agents.runtime_state.directory
+___ test_absent_runtime_state_directory_has_explicit_absent_directory_policy ___
+../../tests/runtime/test_mp07_agent_journal_inventory.py:75: in test_absent_runtime_state_directory_has_explicit_absent_directory_policy
+    assert absent_kind is not None, (
+E   AssertionError: T-181 capability missing: CaptureKind.ABSENT_DIRECTORY is required
+E   assert None is not None
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_mp07_agent_journal_inventory.py::test_runtime_state_directory_is_one_config_parent_filesystem_binding
+FAILED ../../tests/runtime/test_mp07_agent_journal_inventory.py::test_present_runtime_state_directory_has_copy_inventory_policy
+FAILED ../../tests/runtime/test_mp07_agent_journal_inventory.py::test_absent_runtime_state_directory_has_explicit_absent_directory_policy
+3 failed in 0.21s

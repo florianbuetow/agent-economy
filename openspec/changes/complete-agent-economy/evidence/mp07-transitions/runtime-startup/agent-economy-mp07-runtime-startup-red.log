@@ -1,0 +1,73 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 7 items
+
+tests/unit/test_mp07_runtime_startup.py FFFFFF.                          [100%]
+
+=================================== FAILURES ===================================
+_______ test_worker_bundle_contract_returns_inputs_without_prebuilt_loop _______
+tests/unit/test_mp07_runtime_startup.py:286: in test_worker_bundle_contract_returns_inputs_without_prebuilt_loop
+    assert set(fields) == {"agent", "llm", "config", "profile_name", "runtime_config"}
+E   AssertionError: assert {'agent', 'llm', 'loop'} == {'agent', 'co...ntime_config'}
+E     
+E     Extra items in the left set:
+E     'loop'
+E     Extra items in the right set:
+E     'profile_name'
+E     'runtime_config'
+E     'config'
+E     Use -v to get more diff
+______ test_worker_factory_uses_one_config_for_profile_agent_and_runtime _______
+tests/unit/test_mp07_runtime_startup.py:307: in test_worker_factory_uses_one_config_for_profile_agent_and_runtime
+    bundle = WorkerFactory(config_path=config_path, keys_dir=keys_dir).create_math_worker(
+src/base_agent/worker_factory.py:120: in create_math_worker
+    loop = MathWorkerLoop(agent=agent, llm=llm, config=worker_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1169: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1173: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:1228: in _execute_mock_call
+    raise effect
+E   AssertionError: loop constructed before registration
+____ test_worker_startup_replays_under_lease_before_loop_and_releases_after ____
+tests/unit/test_mp07_runtime_startup.py:424: in test_worker_startup_replays_under_lease_before_loop_and_releases_after
+    await math_worker_main._main_factory("actual-profile")
+src/math_worker/__main__.py:84: in _main_factory
+    factory = WorkerFactory()
+              ^^^^^^^^^^^^^^^
+E   TypeError: test_worker_startup_replays_under_lease_before_loop_and_releases_after.<locals>.Factory.__init__() missing 1 required keyword-only argument: 'config_path'
+___ test_worker_corrupt_runtime_fails_before_replay_mutation_or_loop[owner] ____
+tests/unit/test_mp07_runtime_startup.py:511: in test_worker_corrupt_runtime_fails_before_replay_mutation_or_loop
+    await math_worker_main._main_factory("actual-profile")
+src/math_worker/__main__.py:84: in _main_factory
+    factory = WorkerFactory()
+              ^^^^^^^^^^^^^^^
+E   TypeError: test_worker_corrupt_runtime_fails_before_replay_mutation_or_loop.<locals>.Factory.__init__() missing 1 required keyword-only argument: 'config_path'
+__ test_worker_corrupt_runtime_fails_before_replay_mutation_or_loop[journal] ___
+tests/unit/test_mp07_runtime_startup.py:511: in test_worker_corrupt_runtime_fails_before_replay_mutation_or_loop
+    await math_worker_main._main_factory("actual-profile")
+src/math_worker/__main__.py:84: in _main_factory
+    factory = WorkerFactory()
+              ^^^^^^^^^^^^^^^
+E   TypeError: test_worker_corrupt_runtime_fails_before_replay_mutation_or_loop.<locals>.Factory.__init__() missing 1 required keyword-only argument: 'config_path'
+_______ test_feeder_resolves_one_config_shares_commands_and_holds_lease ________
+tests/unit/test_mp07_runtime_startup.py:622: in test_feeder_resolves_one_config_shares_commands_and_holds_lease
+    await task_feeder_main._main()
+src/task_feeder/__main__.py:64: in _main
+    acceptance = AcceptanceLoop(
+E   TypeError: test_feeder_resolves_one_config_shares_commands_and_holds_lease.<locals>.AcceptanceLoop.__init__() missing 1 required keyword-only argument: 'commands'
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_runtime_startup.py::test_worker_bundle_contract_returns_inputs_without_prebuilt_loop
+FAILED tests/unit/test_mp07_runtime_startup.py::test_worker_factory_uses_one_config_for_profile_agent_and_runtime
+FAILED tests/unit/test_mp07_runtime_startup.py::test_worker_startup_replays_under_lease_before_loop_and_releases_after
+FAILED tests/unit/test_mp07_runtime_startup.py::test_worker_corrupt_runtime_fails_before_replay_mutation_or_loop[owner]
+FAILED tests/unit/test_mp07_runtime_startup.py::test_worker_corrupt_runtime_fails_before_replay_mutation_or_loop[journal]
+FAILED tests/unit/test_mp07_runtime_startup.py::test_feeder_resolves_one_config_shares_commands_and_holds_lease
+========================= 6 failed, 1 passed in 0.18s ==========================

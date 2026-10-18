@@ -1,0 +1,41 @@
+{
+  "exit": 0,
+  "source_config_files": 1059,
+  "ordinary_logs": 202,
+  "source_changes": [],
+  "ordinary_log_changes": [],
+  "root_owned_groups_absent": 19,
+  "retained_nested_group_records_absent": 36,
+  "phases": {
+    "project_structure": "passed",
+    "libraries": {
+      "service-commons": 177,
+      "service-clients": 104,
+      "service-auth": 379
+    },
+    "service_ci": "all seven passed",
+    "service_integration": {
+      "identity": 7,
+      "central-bank": 25,
+      "task-board": 65,
+      "reputation": 12,
+      "court": 1,
+      "db-gateway": 6,
+      "ui": 251
+    },
+    "agents": {
+      "passed": 770,
+      "credential_skips": 3,
+      "e2e_deselected_then_run": 104
+    },
+    "tools": 202,
+    "cross_service_runtime": 211,
+    "ui_browser": 298,
+    "live_agent_e2e": 104
+  },
+  "limits": [
+    "Core and Vision goal remains incomplete; later packages and owner policies remain open.",
+    "Three existing credential-dependent agent provider checks were skipped; no real Court profile proof is inferred.",
+    "Retained nested runtime manifests are a subset; deleted source-runtime artifacts were not reconstructed."
+  ]
+}

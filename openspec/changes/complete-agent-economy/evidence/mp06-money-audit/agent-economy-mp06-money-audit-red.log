@@ -1,0 +1,111 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 10 items
+
+tests/unit/test_migration_money_audit.py FFFFFFFFFF                      [100%]
+
+=================================== FAILURES ===================================
+____________ test_money_audit_api_exists_without_collection_failure ____________
+tests/unit/test_migration_money_audit.py:72: in test_money_audit_api_exists_without_collection_failure
+    module = importlib.import_module("db_gateway_service.money_audit")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1324: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'db_gateway_service.money_audit'
+
+During handling of the above exception, another exception occurred:
+tests/unit/test_migration_money_audit.py:74: in test_money_audit_api_exists_without_collection_failure
+    pytest.fail("money audit API is not implemented")
+E   Failed: money audit API is not implemented
+__________________ test_zero_account_legacy_database_is_clean __________________
+tests/unit/test_migration_money_audit.py:81: in test_zero_account_legacy_database_is_clean
+    result = _audit(connection)
+             ^^^^^^^^^^^^^^^^^^
+tests/unit/test_migration_money_audit.py:22: in _audit
+    from db_gateway_service.money_audit import audit_money
+E   ModuleNotFoundError: No module named 'db_gateway_service.money_audit'
+___ test_python_integer_aggregation_exceeds_sqlite_integer_without_overflow ____
+tests/unit/test_migration_money_audit.py:109: in test_python_integer_aggregation_exceeds_sqlite_integer_without_overflow
+    result = _audit(connection)
+             ^^^^^^^^^^^^^^^^^^
+tests/unit/test_migration_money_audit.py:22: in _audit
+    from db_gateway_service.money_audit import audit_money
+E   ModuleNotFoundError: No module named 'db_gateway_service.money_audit'
+________________ test_normal_lock_and_split_release_reconciles _________________
+tests/unit/test_migration_money_audit.py:163: in test_normal_lock_and_split_release_reconciles
+    result = _audit(connection)
+             ^^^^^^^^^^^^^^^^^^
+tests/unit/test_migration_money_audit.py:22: in _audit
+    from db_gateway_service.money_audit import audit_money
+E   ModuleNotFoundError: No module named 'db_gateway_service.money_audit'
+_______________________ test_supply_mismatch_is_reported _______________________
+tests/unit/test_migration_money_audit.py:186: in test_supply_mismatch_is_reported
+    result = _audit(connection)
+             ^^^^^^^^^^^^^^^^^^
+tests/unit/test_migration_money_audit.py:22: in _audit
+    from db_gateway_service.money_audit import audit_money
+E   ModuleNotFoundError: No module named 'db_gateway_service.money_audit'
+______ test_per_account_drift_is_found_when_global_supply_still_balances _______
+tests/unit/test_migration_money_audit.py:222: in test_per_account_drift_is_found_when_global_supply_still_balances
+    result = _audit(connection)
+             ^^^^^^^^^^^^^^^^^^
+tests/unit/test_migration_money_audit.py:22: in _audit
+    from db_gateway_service.money_audit import audit_money
+E   ModuleNotFoundError: No module named 'db_gateway_service.money_audit'
+_____ test_invalid_storage_signs_bounds_and_vocab_make_totals_unavailable ______
+tests/unit/test_migration_money_audit.py:257: in test_invalid_storage_signs_bounds_and_vocab_make_totals_unavailable
+    result = _audit(connection)
+             ^^^^^^^^^^^^^^^^^^
+tests/unit/test_migration_money_audit.py:22: in _audit
+    from db_gateway_service.money_audit import audit_money
+E   ModuleNotFoundError: No module named 'db_gateway_service.money_audit'
+__ test_orphan_account_references_and_lifetime_duplicate_escrows_are_reported __
+tests/unit/test_migration_money_audit.py:293: in test_orphan_account_references_and_lifetime_duplicate_escrows_are_reported
+    result = _audit(connection)
+             ^^^^^^^^^^^^^^^^^^
+tests/unit/test_migration_money_audit.py:22: in _audit
+    from db_gateway_service.money_audit import audit_money
+E   ModuleNotFoundError: No module named 'db_gateway_service.money_audit'
+_______ test_missing_money_column_is_explicit_and_totals_are_unavailable _______
+tests/unit/test_migration_money_audit.py:320: in test_missing_money_column_is_explicit_and_totals_are_unavailable
+    result = _audit(connection)
+             ^^^^^^^^^^^^^^^^^^
+tests/unit/test_migration_money_audit.py:22: in _audit
+    from db_gateway_service.money_audit import audit_money
+E   ModuleNotFoundError: No module named 'db_gateway_service.money_audit'
+_________ test_audit_does_not_mutate_connection_rows_or_database_file __________
+tests/unit/test_migration_money_audit.py:356: in test_audit_does_not_mutate_connection_rows_or_database_file
+    result = _audit(connection)
+             ^^^^^^^^^^^^^^^^^^
+tests/unit/test_migration_money_audit.py:22: in _audit
+    from db_gateway_service.money_audit import audit_money
+E   ModuleNotFoundError: No module named 'db_gateway_service.money_audit'
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_migration_money_audit.py::test_money_audit_api_exists_without_collection_failure
+FAILED tests/unit/test_migration_money_audit.py::test_zero_account_legacy_database_is_clean
+FAILED tests/unit/test_migration_money_audit.py::test_python_integer_aggregation_exceeds_sqlite_integer_without_overflow
+FAILED tests/unit/test_migration_money_audit.py::test_normal_lock_and_split_release_reconciles
+FAILED tests/unit/test_migration_money_audit.py::test_supply_mismatch_is_reported
+FAILED tests/unit/test_migration_money_audit.py::test_per_account_drift_is_found_when_global_supply_still_balances
+FAILED tests/unit/test_migration_money_audit.py::test_invalid_storage_signs_bounds_and_vocab_make_totals_unavailable
+FAILED tests/unit/test_migration_money_audit.py::test_orphan_account_references_and_lifetime_duplicate_escrows_are_reported
+FAILED tests/unit/test_migration_money_audit.py::test_missing_money_column_is_explicit_and_totals_are_unavailable
+FAILED tests/unit/test_migration_money_audit.py::test_audit_does_not_mutate_connection_rows_or_database_file
+======================== 10 failed, 1 warning in 0.09s =========================

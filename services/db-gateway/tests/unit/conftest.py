@@ -123,6 +123,7 @@ def _create_gateway_keys(config_dir: Path) -> dict[str, GatewayRequestSigner]:
 
 def _create_test_config(db_path: str, config_path: Path) -> None:
     """Write a temporary config.yaml for testing."""
+    generate_keypair("platform", config_path.parent)
     config_content = f"""
 service:
   name: "db-gateway-test"
@@ -135,7 +136,7 @@ server:
 
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{config_path.parent / "logs" / "db-gateway"}"
   format: "json"
 
 database:
@@ -150,6 +151,10 @@ request:
 recovery:
   maintenance_lock_path: "maintenance.lock"
   backup_root: "backups"
+
+board_authority:
+  platform_public_key_path: "platform.pub"
+  deadline_actor_id: "system-task-board-deadline"
 
 auth:
   audience: "db-gateway"

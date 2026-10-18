@@ -1,0 +1,43 @@
+{
+  "parent_baseline": {
+    "handle": 4633,
+    "exit_code": 1,
+    "passed": 629,
+    "failed": 7
+  },
+  "parent_final": {
+    "handle": 48223,
+    "exit_code": 0,
+    "passed": 636
+  },
+  "snapshot_verification": "214 scoped Python source hashes and202 ordinary log hashes unchanged within each full run. No claim that baseline and final source trees match each other.",
+  "focused": {
+    "passed": 25,
+    "handle": 76175,
+    "exit_code": 0
+  },
+  "review": "Independent reviewer /root/mp07_board_rollout_review: APPROVE four Board fixture reconciliations. Explicit actor added without weakening original assertions. Exactly six mutation response-model expectations updated; creation/read/bid/asset expectations retained. Parent final636 passes; both full runs preserve214 scoped sources and202 logs within the run.\n",
+  "artifacts": {
+    "agent-economy-mp07-board-unit-final-after.json": "c2089a88d43bf644d62f984def2de182a73076a470f709ca50eaa9ffb4a01b9f",
+    "agent-economy-mp07-board-unit-final-before.json": "c2089a88d43bf644d62f984def2de182a73076a470f709ca50eaa9ffb4a01b9f",
+    "agent-economy-mp07-board-unit-final.log": "d7e6e874d5ca0946fd3d344a4390990141c2befc9f5b08fde0f53a87506238e8",
+    "agent-economy-mp07-board-unit-fixture-focused.log": "90a72e90f619aa5e5991772ace329389d253e8a922e2cb0b577504bdceffa15f",
+    "agent-economy-mp07-board-unit-fixture-format.log": "177f260a5645724013185e4b140c7045cc39e56c0c97b120f5cb23599f85f0de",
+    "agent-economy-mp07-board-unit-fixture-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-board-unit-full-after.json": "ecf4ddb0ac6dff10928dc270a45cc5ebc084f20bd3f1c65067d885dfe1a96f36",
+    "agent-economy-mp07-board-unit-full-before.json": "ecf4ddb0ac6dff10928dc270a45cc5ebc084f20bd3f1c65067d885dfe1a96f36",
+    "agent-economy-mp07-board-unit-full.log": "dc6e3be69114acf4753e79d0b3aa57fac732d4aaf2bd97a1088da1a0583fc7b2",
+    "baseline/test_config.py": "9a2ec36aec45dbdeb16e0288d45c0ab97412a4b6a98253fb9679bc719021a319",
+    "baseline/test_mp03_platform_agent_startup.py": "f8dd15accae30866589f76ebf33b604a5d58932af91d31bb56d21f414eeb00a1",
+    "baseline/test_mp06_maintenance_lock.py": "f41e2043fbdd6435a40158ad98a6cfb38c274169004cab233451a1d4c2369596",
+    "baseline/test_response_contracts.py": "2262e0e21e50d9558e805bc7c2cf2e17d955f1e79f63f4d2bc31d2a35c9d349a",
+    "review-verdict.md": "51c3e1eda23a3855a8a1f007a1ee5103052612e86460256bed8d4f75ee66f14a"
+  },
+  "sources": {
+    "services/task-board/tests/unit/test_config.py": "33c2d2e997df43cc6ff67668c64d581902a52d441e05a7559002bbe250ef368b",
+    "services/task-board/tests/unit/test_mp03_platform_agent_startup.py": "017fe306234ea0c0a5db561c7e441ce8d1afad67a412277eb25709325d1ffe75",
+    "services/task-board/tests/unit/test_mp06_maintenance_lock.py": "7784f22a8b96f2ea02842f3b2880e473a6585c444e46571232ffd5f633912047",
+    "services/task-board/tests/unit/test_response_contracts.py": "627e8418d86288308488af1b2cef1bc558c2ac11cd2f5880ab02e6a386cd955d",
+    "docs/plans/2026-10-18-mp07-board-unit-contract-reconciliation.md": "49c468e09d9df3038f84f5381cd1043f51e038f77e4dcce31164a0896df0ba25"
+  }
+}

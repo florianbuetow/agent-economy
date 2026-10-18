@@ -1,0 +1,210 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 57 items
+
+tests/unit/test_schema_review_regressions.py FFFFFFFFF                   [ 15%]
+tests/unit/test_mp06_schema.py ..................................FFFFFFF [ 87%]
+FFFFFFF                                                                  [100%]
+
+=================================== FAILURES ===================================
+_________________ test_current_schema_requires_its_version_row _________________
+tests/unit/test_schema_review_regressions.py:25: in test_current_schema_requires_its_version_row
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c852a70>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+_______ test_future_version_in_exact_current_table_shape_is_not_admitted _______
+tests/unit/test_schema_review_regressions.py:37: in test_future_version_in_exact_current_table_shape_is_not_admitted
+    assert classify_schema(connection).state is SchemaState.FUTURE
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is <SchemaState.FUTURE: 'future'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c9548b0>)
+E    +  and   <SchemaState.FUTURE: 'future'> = SchemaState.FUTURE
+_ test_sql_semantic_changes_do_not_match_current_schema[typeof(balance) = 'integer'-typeof(balance) = 'INTEGER'] _
+tests/unit/test_schema_review_regressions.py:65: in test_sql_semantic_changes_do_not_match_current_schema
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c954e50>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+_ test_sql_semantic_changes_do_not_match_current_schema[DEFAULT 'locked'-DEFAULT 'LOCKED'] _
+tests/unit/test_schema_review_regressions.py:65: in test_sql_semantic_changes_do_not_match_current_schema
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c9553f0>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+_ test_sql_semantic_changes_do_not_match_current_schema[account_id     TEXT PRIMARY KEY,-account_id     TEXT PRIMARY KEY ON CONFLICT REPLACE,] _
+tests/unit/test_schema_review_regressions.py:65: in test_sql_semantic_changes_do_not_match_current_schema
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c955210>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+_ test_sql_semantic_changes_do_not_match_current_schema[FOREIGN KEY (account_id) REFERENCES identity_agents (agent_id)-FOREIGN KEY (account_id) REFERENCES identity_agents (agent_id) DEFERRABLE INITIALLY DEFERRED] _
+tests/unit/test_schema_review_regressions.py:65: in test_sql_semantic_changes_do_not_match_current_schema
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c9555d0>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+___________ test_commented_out_money_check_is_not_a_real_constraint ____________
+tests/unit/test_schema_review_regressions.py:82: in test_commented_out_money_check_is_not_a_real_constraint
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c9548b0>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+_____ test_commented_transaction_control_cannot_escape_bootstrap_rollback ______
+tests/unit/test_schema_review_regressions.py:101: in test_commented_transaction_control_cannot_escape_bootstrap_rollback
+    assert objects == []
+E   AssertionError: assert [('schema_metadata',)] == []
+E     
+E     Left contains one more item: ('schema_metadata',)
+E     Use -v to get more diff
+_______ test_failed_admission_keeps_primary_error_when_close_also_fails ________
+src/db_gateway_service/services/db_writer.py:124: in __init__
+    self._admit_existing_schema(classification)
+src/db_gateway_service/services/db_writer.py:186: in _admit_existing_schema
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: The database schema is incomplete or unknown
+
+During handling of the above exception, another exception occurred:
+tests/unit/test_schema_review_regressions.py:127: in test_failed_admission_keeps_primary_error_when_close_also_fails
+    DbWriter(str(path), busy_timeout_ms=5000, journal_mode="wal", schema_sql=None)
+src/db_gateway_service/services/db_writer.py:136: in __init__
+    self._db.close()
+tests/unit/test_schema_review_regressions.py:118: in close
+    raise RuntimeError("secondary close failure")
+E   RuntimeError: secondary close failure
+__________ test_current_schema_requires_exact_metadata_row[singleton] __________
+tests/unit/test_mp06_schema.py:527: in test_current_schema_requires_exact_metadata_row
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c957c40>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+________ test_current_schema_requires_exact_metadata_row[version-type] _________
+tests/unit/test_mp06_schema.py:527: in test_current_schema_requires_exact_metadata_row
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c957790>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+____ test_current_schema_requires_exact_metadata_row[incomplete-provenance] ____
+tests/unit/test_mp06_schema.py:527: in test_current_schema_requires_exact_metadata_row
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c9573d0>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+__________ test_current_schema_requires_exact_metadata_row[extra-row] __________
+tests/unit/test_mp06_schema.py:527: in test_current_schema_requires_exact_metadata_row
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c956e30>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+_______________ test_current_v1_requires_canonical_column_order ________________
+tests/unit/test_mp06_schema.py:549: in test_current_v1_requires_canonical_column_order
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c956890>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+_________________ test_changed_column_collation_is_not_current _________________
+tests/unit/test_mp06_schema.py:564: in test_changed_column_collation_is_not_current
+    assert classify_schema(connection).state is not SchemaState.CURRENT_V1
+E   AssertionError: assert <SchemaState.CURRENT_V1: 'current_v1'> is not <SchemaState.CURRENT_V1: 'current_v1'>
+E    +  where <SchemaState.CURRENT_V1: 'current_v1'> = SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()).state
+E    +    where SchemaClassification(state=<SchemaState.CURRENT_V1: 'current_v1'>, version=1, signature_sha256='a3ebac77165c2f38009f700c9e98564f2b44d64d3db95142208d80c4ef875654', findings=()) = classify_schema(<sqlite3.Connection object at 0x10c9562f0>)
+E    +  and   <SchemaState.CURRENT_V1: 'current_v1'> = SchemaState.CURRENT_V1
+_______ test_constructor_rejects_invalid_pragma_configuration[True-wal] ________
+tests/unit/test_mp06_schema.py:588: in test_constructor_rejects_invalid_pragma_configuration
+    with pytest.raises(ServiceError, match="database configuration"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+________ test_constructor_rejects_invalid_pragma_configuration[-1-wal] _________
+tests/unit/test_mp06_schema.py:588: in test_constructor_rejects_invalid_pragma_configuration
+    with pytest.raises(ServiceError, match="database configuration"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+____ test_constructor_rejects_invalid_pragma_configuration[3000000000-wal] _____
+tests/unit/test_mp06_schema.py:588: in test_constructor_rejects_invalid_pragma_configuration
+    with pytest.raises(ServiceError, match="database configuration"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+______ test_constructor_rejects_invalid_pragma_configuration[5000-bogus] _______
+tests/unit/test_mp06_schema.py:588: in test_constructor_rejects_invalid_pragma_configuration
+    with pytest.raises(ServiceError, match="database configuration"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_______ test_constructor_rejects_invalid_pragma_configuration[5000-WAL] ________
+tests/unit/test_mp06_schema.py:588: in test_constructor_rejects_invalid_pragma_configuration
+    with pytest.raises(ServiceError, match="database configuration"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+___ test_constructor_verifies_effective_pragma_postconditions[journal_mode] ____
+tests/unit/test_mp06_schema.py:622: in test_constructor_verifies_effective_pragma_postconditions
+    with pytest.raises(ServiceError, match="database configuration"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+___ test_constructor_verifies_effective_pragma_postconditions[foreign_keys] ____
+tests/unit/test_mp06_schema.py:622: in test_constructor_verifies_effective_pragma_postconditions
+    with pytest.raises(ServiceError, match="database configuration"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_____ test_bootstrap_preserves_primary_error_when_rollback_and_close_fail ______
+src/db_gateway_service/services/db_writer.py:152: in _bootstrap_schema
+    self._db.execute(statement)
+E   sqlite3.OperationalError: no such table: absent
+
+During handling of the above exception, another exception occurred:
+tests/unit/test_mp06_schema.py:636: in rollback
+    raise RuntimeError("secondary rollback failure")
+E   RuntimeError: secondary rollback failure
+
+During handling of the above exception, another exception occurred:
+tests/unit/test_mp06_schema.py:650: in test_bootstrap_preserves_primary_error_when_rollback_and_close_fail
+    DbWriter(str(path), busy_timeout_ms=5000, journal_mode="wal", schema_sql=candidate)
+src/db_gateway_service/services/db_writer.py:136: in __init__
+    self._db.close()
+tests/unit/test_mp06_schema.py:640: in close
+    raise RuntimeError("secondary close failure")
+E   RuntimeError: secondary close failure
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_schema_review_regressions.py::test_current_schema_requires_its_version_row
+FAILED tests/unit/test_schema_review_regressions.py::test_future_version_in_exact_current_table_shape_is_not_admitted
+FAILED tests/unit/test_schema_review_regressions.py::test_sql_semantic_changes_do_not_match_current_schema[typeof(balance) = 'integer'-typeof(balance) = 'INTEGER']
+FAILED tests/unit/test_schema_review_regressions.py::test_sql_semantic_changes_do_not_match_current_schema[DEFAULT 'locked'-DEFAULT 'LOCKED']
+FAILED tests/unit/test_schema_review_regressions.py::test_sql_semantic_changes_do_not_match_current_schema[account_id     TEXT PRIMARY KEY,-account_id     TEXT PRIMARY KEY ON CONFLICT REPLACE,]
+FAILED tests/unit/test_schema_review_regressions.py::test_sql_semantic_changes_do_not_match_current_schema[FOREIGN KEY (account_id) REFERENCES identity_agents (agent_id)-FOREIGN KEY (account_id) REFERENCES identity_agents (agent_id) DEFERRABLE INITIALLY DEFERRED]
+FAILED tests/unit/test_schema_review_regressions.py::test_commented_out_money_check_is_not_a_real_constraint
+FAILED tests/unit/test_schema_review_regressions.py::test_commented_transaction_control_cannot_escape_bootstrap_rollback
+FAILED tests/unit/test_schema_review_regressions.py::test_failed_admission_keeps_primary_error_when_close_also_fails
+FAILED tests/unit/test_mp06_schema.py::test_current_schema_requires_exact_metadata_row[singleton]
+FAILED tests/unit/test_mp06_schema.py::test_current_schema_requires_exact_metadata_row[version-type]
+FAILED tests/unit/test_mp06_schema.py::test_current_schema_requires_exact_metadata_row[incomplete-provenance]
+FAILED tests/unit/test_mp06_schema.py::test_current_schema_requires_exact_metadata_row[extra-row]
+FAILED tests/unit/test_mp06_schema.py::test_current_v1_requires_canonical_column_order
+FAILED tests/unit/test_mp06_schema.py::test_changed_column_collation_is_not_current
+FAILED tests/unit/test_mp06_schema.py::test_constructor_rejects_invalid_pragma_configuration[True-wal]
+FAILED tests/unit/test_mp06_schema.py::test_constructor_rejects_invalid_pragma_configuration[-1-wal]
+FAILED tests/unit/test_mp06_schema.py::test_constructor_rejects_invalid_pragma_configuration[3000000000-wal]
+FAILED tests/unit/test_mp06_schema.py::test_constructor_rejects_invalid_pragma_configuration[5000-bogus]
+FAILED tests/unit/test_mp06_schema.py::test_constructor_rejects_invalid_pragma_configuration[5000-WAL]
+FAILED tests/unit/test_mp06_schema.py::test_constructor_verifies_effective_pragma_postconditions[journal_mode]
+FAILED tests/unit/test_mp06_schema.py::test_constructor_verifies_effective_pragma_postconditions[foreign_keys]
+FAILED tests/unit/test_mp06_schema.py::test_bootstrap_preserves_primary_error_when_rollback_and_close_fail
+=================== 23 failed, 34 passed, 1 warning in 1.87s ===================

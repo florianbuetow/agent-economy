@@ -206,7 +206,18 @@ async def test_post_task_derives_lock_identity_from_allocated_task_intent() -> N
 
     poster = _agent("poster", "a-poster")
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
-        await clients.post_task(http, poster, "Title", "Spec", 10, "https://board")
+        await clients.post_task(
+            http,
+            poster,
+            "Title",
+            "Spec",
+            10,
+            "https://board",
+            bidding_deadline_seconds=3600,
+            execution_deadline_seconds=7200,
+            review_deadline_seconds=3600,
+            acceptance_window_seconds=300,
+        )
 
     body = json.loads(requests[0].content)
     task = parse_jws(body["task_token"])
