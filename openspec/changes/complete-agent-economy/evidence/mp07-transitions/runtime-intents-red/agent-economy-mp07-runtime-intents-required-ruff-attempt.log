@@ -1,0 +1,27 @@
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/unit/test_runtime_intents.py:3:1
+   |
+ 1 |   """T-181 durable caller-owned runtime intent contract."""
+ 2 |
+ 3 | / from __future__ import annotations
+ 4 | |
+ 5 | | import importlib
+ 6 | | import importlib.util
+ 7 | | import hashlib
+ 8 | | import json
+ 9 | | import multiprocessing
+10 | | import os
+11 | | import stat
+12 | | from pathlib import Path
+13 | | from typing import Any
+14 | | from unittest.mock import Mock
+15 | |
+16 | | import pytest
+   | |_____________^
+17 |
+18 |   pytestmark = pytest.mark.unit
+   |
+help: Organize imports
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.

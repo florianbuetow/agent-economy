@@ -1,0 +1,105 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 68 items
+
+tests/unit/test_mp07_task_board_status.py .............................. [ 44%]
+......                                                                   [ 52%]
+tests/unit/test_mp07_task_board_producer.py FFFFFF...................... [ 94%]
+...F                                                                     [100%]
+
+=================================== FAILURES ===================================
+_ test_mutation_preserves_explicit_identity_across_caller_retry[cancel_task-args0-business0-POST /tasks/t-1/cancel] _
+tests/unit/test_mp07_task_board_producer.py:118: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+src/service_auth/mixins/task_board.py:170: in cancel_task
+    return await _send_task_board_command(
+src/service_auth/mixins/task_board.py:65: in _send_task_board_command
+    return parse_task_board_command_response(
+src/service_auth/task_board_responses.py:53: in parse_task_board_command_response
+    _validate_operation_state(body, status_code=status_code, effect_kind=effect_kind)
+src/service_auth/task_board_responses.py:70: in _validate_operation_state
+    raise TaskBoardCommandContractError(
+E   service_auth.task_board_responses.TaskBoardCommandContractError: Task Board operation state contradicts the HTTP command response
+_ test_mutation_preserves_explicit_identity_across_caller_retry[submit_bid-args1-business1-POST /tasks/t-1/bids] _
+tests/unit/test_mp07_task_board_producer.py:118: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+src/service_auth/mixins/task_board.py:203: in submit_bid
+    return await _send_task_board_command(
+src/service_auth/mixins/task_board.py:65: in _send_task_board_command
+    return parse_task_board_command_response(
+src/service_auth/task_board_responses.py:39: in parse_task_board_command_response
+    raise TaskBoardCommandContractError(
+E   service_auth.task_board_responses.TaskBoardCommandContractError: Unexpected Task Board command success status
+_ test_mutation_preserves_explicit_identity_across_caller_retry[accept_bid-args2-business2-POST /tasks/t-1/bids/bid-1/accept] _
+tests/unit/test_mp07_task_board_producer.py:118: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+src/service_auth/mixins/task_board.py:251: in accept_bid
+    return await _send_task_board_command(
+src/service_auth/mixins/task_board.py:65: in _send_task_board_command
+    return parse_task_board_command_response(
+src/service_auth/task_board_responses.py:53: in parse_task_board_command_response
+    _validate_operation_state(body, status_code=status_code, effect_kind=effect_kind)
+src/service_auth/task_board_responses.py:70: in _validate_operation_state
+    raise TaskBoardCommandContractError(
+E   service_auth.task_board_responses.TaskBoardCommandContractError: Task Board operation state contradicts the HTTP command response
+_ test_mutation_preserves_explicit_identity_across_caller_retry[submit_deliverable-args3-business3-POST /tasks/t-1/submit] _
+tests/unit/test_mp07_task_board_producer.py:118: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+src/service_auth/mixins/task_board.py:302: in submit_deliverable
+    return await _send_task_board_command(
+src/service_auth/mixins/task_board.py:65: in _send_task_board_command
+    return parse_task_board_command_response(
+src/service_auth/task_board_responses.py:53: in parse_task_board_command_response
+    _validate_operation_state(body, status_code=status_code, effect_kind=effect_kind)
+src/service_auth/task_board_responses.py:70: in _validate_operation_state
+    raise TaskBoardCommandContractError(
+E   service_auth.task_board_responses.TaskBoardCommandContractError: Task Board operation state contradicts the HTTP command response
+_ test_mutation_preserves_explicit_identity_across_caller_retry[approve_task-args4-business4-POST /tasks/t-1/approve] _
+tests/unit/test_mp07_task_board_producer.py:118: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+src/service_auth/mixins/task_board.py:333: in approve_task
+    return await _send_task_board_command(
+src/service_auth/mixins/task_board.py:65: in _send_task_board_command
+    return parse_task_board_command_response(
+src/service_auth/task_board_responses.py:53: in parse_task_board_command_response
+    _validate_operation_state(body, status_code=status_code, effect_kind=effect_kind)
+src/service_auth/task_board_responses.py:70: in _validate_operation_state
+    raise TaskBoardCommandContractError(
+E   service_auth.task_board_responses.TaskBoardCommandContractError: Task Board operation state contradicts the HTTP command response
+_ test_mutation_preserves_explicit_identity_across_caller_retry[dispute_task-args5-business5-POST /tasks/t-1/dispute] _
+tests/unit/test_mp07_task_board_producer.py:118: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+src/service_auth/mixins/task_board.py:366: in dispute_task
+    return await _send_task_board_command(
+src/service_auth/mixins/task_board.py:65: in _send_task_board_command
+    return parse_task_board_command_response(
+src/service_auth/task_board_responses.py:53: in parse_task_board_command_response
+    _validate_operation_state(body, status_code=status_code, effect_kind=effect_kind)
+src/service_auth/task_board_responses.py:70: in _validate_operation_state
+    raise TaskBoardCommandContractError(
+E   service_auth.task_board_responses.TaskBoardCommandContractError: Task Board operation state contradicts the HTTP command response
+________________ test_sqlite_boundary_values_are_signed_exactly ________________
+tests/unit/test_mp07_task_board_producer.py:273: in test_sqlite_boundary_values_are_signed_exactly
+    await agent.cancel_task(
+src/service_auth/mixins/task_board.py:170: in cancel_task
+    return await _send_task_board_command(
+src/service_auth/mixins/task_board.py:65: in _send_task_board_command
+    return parse_task_board_command_response(
+src/service_auth/task_board_responses.py:53: in parse_task_board_command_response
+    _validate_operation_state(body, status_code=status_code, effect_kind=effect_kind)
+src/service_auth/task_board_responses.py:70: in _validate_operation_state
+    raise TaskBoardCommandContractError(
+E   service_auth.task_board_responses.TaskBoardCommandContractError: Task Board operation state contradicts the HTTP command response
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[cancel_task-args0-business0-POST /tasks/t-1/cancel]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[submit_bid-args1-business1-POST /tasks/t-1/bids]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[accept_bid-args2-business2-POST /tasks/t-1/bids/bid-1/accept]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[submit_deliverable-args3-business3-POST /tasks/t-1/submit]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[approve_task-args4-business4-POST /tasks/t-1/approve]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[dispute_task-args5-business5-POST /tasks/t-1/dispute]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_sqlite_boundary_values_are_signed_exactly
+========================= 7 failed, 61 passed in 0.67s =========================

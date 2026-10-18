@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .native_task_contract import lifecycle_version, new_operation_id
+
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
     from base_agent.platform import PlatformAgent
@@ -45,19 +47,52 @@ async def test_disputed_task_reaches_ruled_via_polling(
             spec="Implement the addition function as specified",
             reward=reward,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
         task_id = str(task["task_id"])
 
-        bid = await worker.submit_bid(task_id=task_id, amount=reward)
-        await poster.accept_bid(task_id=task_id, bid_id=str(bid["bid_id"]))
+        bid_response = await worker.submit_bid(
+            task_id=task_id,
+            amount=reward,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+
+        assert bid_response.status_code == 201
+
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task_id,
+            bid_id=str(bid["bid_id"]),
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
         await worker.upload_asset(task_id, "solution.txt", b"def add(a, b):\n    return a + b\n")
-        await worker.submit_deliverable(task_id)
+        submit_response = await worker.submit_deliverable(
+            task_id,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(accepted_task),
+        )
+        assert submit_response.status_code == 200
+        submitted_task = submit_response.body
+        assert submitted_task["status"] == "submitted"
 
         # Poster disputes; Task Board files the Court claim and persists the dispute id
         # plus the rebuttal deadline.
-        await poster.dispute_task(task_id=task_id, reason="Deliverable does not meet spec")
+        dispute_response = await poster.dispute_task(
+            task_id=task_id,
+            reason="Deliverable does not meet spec",
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(submitted_task),
+        )
+        assert dispute_response.status_code == 200
+        disputed_command_task = dispute_response.body
+        assert disputed_command_task["status"] == "disputed"
         disputed = await poster.get_task(task_id)
         assert disputed["status"] == "disputed"
         dispute_id = str(disputed["dispute_id"])

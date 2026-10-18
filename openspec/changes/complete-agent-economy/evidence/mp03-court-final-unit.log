@@ -1,0 +1,34 @@
+21:07:15 - LiteLLM:WARNING: get_model_cost_map.py:315 - LiteLLM: model cost map fetch attempt 1/3 failed (ConnectError fetching https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: [Errno 8] nodename nor servname provided, or not known); retrying in 2.9s
+21:07:15 - LiteLLM:WARNING: get_model_cost_map.py:672 - LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: ConnectError fetching https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: [Errno 8] nodename nor servname provided, or not known. Falling back to local backup.
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 194 items
+
+tests/unit/routers/test_disputes.py .................................... [ 18%]
+........................................................................ [ 55%]
+.........                                                                [ 60%]
+tests/unit/routers/test_health.py ....                                   [ 62%]
+tests/unit/routers/test_t072_rule06_escrow_gap.py .                      [ 62%]
+tests/unit/routers/test_wp06_deliverables.py .                           [ 63%]
+tests/unit/routers/test_wp06_platform_kid.py ....                        [ 65%]
+tests/unit/routers/test_wp06_rebuttal_party.py ..                        [ 66%]
+tests/unit/routers/test_wp06_rebuttal_window.py .                        [ 67%]
+tests/unit/routers/test_wp06_retry_clean.py ...                          [ 68%]
+tests/unit/test_config.py .......                                        [ 72%]
+tests/unit/test_dispute_db_client_normalization.py .....                 [ 74%]
+tests/unit/test_dispute_store.py ......                                  [ 77%]
+tests/unit/test_llm_judge.py .......                                     [ 81%]
+tests/unit/test_mp03_platform_credentials.py ........                    [ 85%]
+tests/unit/test_mp03_receiver_context.py ..                              [ 86%]
+tests/unit/test_no_base_agent_imports.py .                               [ 87%]
+tests/unit/test_placeholder.py .                                         [ 87%]
+tests/unit/test_ruling_orchestrator.py ......                            [ 90%]
+tests/unit/test_vagueness_rubric.py ....                                 [ 92%]
+tests/unit/test_validation.py ............                               [ 98%]
+tests/unit/test_wp06_config.py ..                                        [100%]
+
+============================= 194 passed in 7.41s ==============================

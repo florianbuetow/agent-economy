@@ -46,6 +46,7 @@ class CaptureKind(StrEnum):
     CONFIG = "config"
     DIRECTORY_ONLY = "directory_only"
     ABSENT_FILE = "absent_file"
+    ABSENT_DIRECTORY = "absent_directory"
     RUNTIME_LOCK = "runtime_lock"
 
 
@@ -176,7 +177,11 @@ class SourceResourceV1(_ContractModel):
             CaptureKind.ABSENT_FILE,
             CaptureKind.RUNTIME_LOCK,
         }
-        directory_capture_kinds = {CaptureKind.COPY, CaptureKind.DIRECTORY_ONLY}
+        directory_capture_kinds = {
+            CaptureKind.COPY,
+            CaptureKind.DIRECTORY_ONLY,
+            CaptureKind.ABSENT_DIRECTORY,
+        }
         allowed = file_capture_kinds if self.kind is ResourceKind.FILE else directory_capture_kinds
         if self.capture_kind not in allowed:
             raise ValueError("capture_kind is incompatible with the resource filesystem shape")
@@ -495,10 +500,10 @@ class RecoveryInventoryV1(_ContractModel):
 
     @model_validator(mode="after")
     def validate_references_and_resolution(self) -> Self:
-        resources = _unique_by_id(self.resources, "resource")
-        configs = _unique_by_id(self.configs, "config")
+        resources = _unique_by_id(self.resources, "resource", id_field="logical_id")
+        configs = _unique_by_id(self.configs, "config", id_field="logical_id")
         _unique_by_id(self.field_bindings, "binding", id_field="binding_id")
-        _unique_by_id(self.process_ownership, "process")
+        _unique_by_id(self.process_ownership, "process", id_field="logical_id")
         self._validate_resource_topology()
         self._validate_keypairs(resources)
 
@@ -728,7 +733,7 @@ def _unique_by_id[ItemT: object](
     items: tuple[ItemT, ...],
     item_name: str,
     *,
-    id_field: str = "logical_id",
+    id_field: str,
 ) -> dict[str, ItemT]:
     indexed: dict[str, ItemT] = {}
     for item in items:

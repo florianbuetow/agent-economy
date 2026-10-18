@@ -1,0 +1,562 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 48 items
+
+tests/unit/test_escrow_coordinator.py ......EEEEEEE                      [ 27%]
+tests/unit/test_mp04_financial_intents.py .......EEEEE                   [ 52%]
+tests/unit/test_mp04_ruling_replay.py EEEEEEEEEEEEEE                     [ 81%]
+tests/unit/test_mp07_creation_window.py .........                        [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_claimed_expiry_completes_only_after_persisted_release _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_escrow_coordinator.py:34: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_______ ERROR at setup of test_failed_delivery_does_not_complete_expiry ________
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_escrow_coordinator.py:34: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+______ ERROR at setup of test_unowned_open_state_has_no_implicit_release _______
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_escrow_coordinator.py:34: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+____ ERROR at setup of test_pending_retry_completes_the_same_owner[expiry] _____
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_escrow_coordinator.py:34: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+___ ERROR at setup of test_pending_retry_completes_the_same_owner[approval] ____
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_escrow_coordinator.py:34: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+___ ERROR at setup of test_repeated_delivery_failure_keeps_native_ownership ____
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_escrow_coordinator.py:34: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_______ ERROR at setup of test_disputed_state_has_no_implicit_bank_retry _______
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_escrow_coordinator.py:34: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_approval_and_pending_retry_reuse_one_financial_intent _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_financial_intents.py:167: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_opposing_task_settlements_have_distinct_financial_intents _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_financial_intents.py:167: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_ruling_release_and_split_retain_the_claimed_operation_identity[0] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_financial_intents.py:167: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_ruling_release_and_split_retain_the_claimed_operation_identity[50] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_financial_intents.py:167: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_ruling_release_and_split_retain_the_claimed_operation_identity[100] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_financial_intents.py:167: in native_tasks_fixture
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_identical_stored_ruling_replay_returns_original_without_settlement _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_changed_stored_ruling_terms_conflict_without_effect[0-Split ruling] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_changed_stored_ruling_terms_conflict_without_effect[100-Split ruling] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_changed_stored_ruling_terms_conflict_without_effect[49-Split ruling] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_changed_stored_ruling_terms_conflict_without_effect[50-Changed verdict] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[True] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[False] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[None] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50.0] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[-1] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_invalid_stored_ruling_percentage_is_not_an_exact_retry[101] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_malformed_other_ruling_fails_shape_validation_without_effect _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+_ ERROR at setup of test_other_ruling_preserves_status_precedence_and_stored_terms _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.escrow_coordinator' has no attribute 'get_logger'
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_ruling_replay.py:97: in stored_ruling
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/fakes/native_task_fixture.py:403: in native_task_context
+    monkeypatch.setattr("task_board_service.services.escrow_coordinator.get_logger", _logger)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.escrow_coordinator has no attribute 'get_logger'
+=========================== short test summary info ============================
+ERROR tests/unit/test_escrow_coordinator.py::test_claimed_expiry_completes_only_after_persisted_release
+ERROR tests/unit/test_escrow_coordinator.py::test_failed_delivery_does_not_complete_expiry
+ERROR tests/unit/test_escrow_coordinator.py::test_unowned_open_state_has_no_implicit_release
+ERROR tests/unit/test_escrow_coordinator.py::test_pending_retry_completes_the_same_owner[expiry]
+ERROR tests/unit/test_escrow_coordinator.py::test_pending_retry_completes_the_same_owner[approval]
+ERROR tests/unit/test_escrow_coordinator.py::test_repeated_delivery_failure_keeps_native_ownership
+ERROR tests/unit/test_escrow_coordinator.py::test_disputed_state_has_no_implicit_bank_retry
+ERROR tests/unit/test_mp04_financial_intents.py::test_approval_and_pending_retry_reuse_one_financial_intent
+ERROR tests/unit/test_mp04_financial_intents.py::test_opposing_task_settlements_have_distinct_financial_intents
+ERROR tests/unit/test_mp04_financial_intents.py::test_ruling_release_and_split_retain_the_claimed_operation_identity[0]
+ERROR tests/unit/test_mp04_financial_intents.py::test_ruling_release_and_split_retain_the_claimed_operation_identity[50]
+ERROR tests/unit/test_mp04_financial_intents.py::test_ruling_release_and_split_retain_the_claimed_operation_identity[100]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_identical_stored_ruling_replay_returns_original_without_settlement
+ERROR tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[0-Split ruling]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[100-Split ruling]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[49-Split ruling]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_changed_stored_ruling_terms_conflict_without_effect[50-Changed verdict]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[True]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[False]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[None]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[50.0]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[-1]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_invalid_stored_ruling_percentage_is_not_an_exact_retry[101]
+ERROR tests/unit/test_mp04_ruling_replay.py::test_malformed_other_ruling_fails_shape_validation_without_effect
+ERROR tests/unit/test_mp04_ruling_replay.py::test_other_ruling_preserves_status_precedence_and_stored_terms
+======================== 22 passed, 26 errors in 1.51s =========================

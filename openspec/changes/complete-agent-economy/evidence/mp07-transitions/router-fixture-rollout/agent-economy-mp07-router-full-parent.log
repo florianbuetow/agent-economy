@@ -1,0 +1,51 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 357 items
+
+tests/unit/routers/test_action_aliases.py ..                             [  0%]
+tests/unit/routers/test_assets.py .................                      [  5%]
+tests/unit/routers/test_auth.py ........................................ [ 16%]
+.                                                                        [ 16%]
+tests/unit/routers/test_bid_count_after_accept.py .                      [ 17%]
+tests/unit/routers/test_bids.py ....................................     [ 27%]
+tests/unit/routers/test_court_resilience.py ........                     [ 29%]
+tests/unit/routers/test_dispute_court_handoff.py .                       [ 29%]
+tests/unit/routers/test_disputes.py ...........................          [ 37%]
+tests/unit/routers/test_expiry_with_bids.py ......                       [ 38%]
+tests/unit/routers/test_health.py ....                                   [ 40%]
+tests/unit/routers/test_lifecycle.py ............                        [ 43%]
+tests/unit/routers/test_mp04_legacy_posting_guard.py ..                  [ 43%]
+tests/unit/routers/test_mp07_router_storage.py ....                      [ 45%]
+tests/unit/routers/test_rebuttal_dispute_binding.py ......               [ 46%]
+tests/unit/routers/test_rebuttal_middleware.py ...                       [ 47%]
+tests/unit/routers/test_rebuttals.py ..                                  [ 48%]
+tests/unit/routers/test_security.py .................................... [ 58%]
+                                                                         [ 58%]
+tests/unit/routers/test_submission.py ..................                 [ 63%]
+tests/unit/routers/test_t072_assets_gaps.py .                            [ 63%]
+tests/unit/routers/test_t072_bids_gaps.py .....                          [ 64%]
+tests/unit/routers/test_t072_disputes_gaps.py ...                        [ 65%]
+tests/unit/routers/test_t072_health_gaps.py F                            [ 66%]
+tests/unit/routers/test_t072_submission_gaps.py ......                   [ 67%]
+tests/unit/routers/test_t072_tasks_gaps.py ............                  [ 71%]
+tests/unit/routers/test_tasks.py ....................................... [ 82%]
+.......................................                                  [ 92%]
+tests/unit/routers/test_two_tier_ruling.py ..                            [ 93%]
+tests/unit/routers/test_validation.py ................                   [ 98%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py .......         [100%]
+
+=================================== FAILURES ===================================
+_ TestHealthStatusBreakdownGap.test_health04_tasks_by_status_reflects_actual_state _
+tests/unit/routers/test_t072_health_gaps.py:47: in test_health04_tasks_by_status_reflects_actual_state
+    assert cancel_resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:49:34", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-bd7a66e0-7f5e-4192-b5d6-e0b3bec3d5ba/cancel"}}
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_t072_health_gaps.py::TestHealthStatusBreakdownGap::test_health04_tasks_by_status_reflects_actual_state
+================== 1 failed, 356 passed in 238.70s (0:03:58) ===================

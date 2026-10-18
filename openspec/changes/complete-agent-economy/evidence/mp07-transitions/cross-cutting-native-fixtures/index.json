@@ -1,0 +1,35 @@
+{
+  "claims": {
+    "baseline": {
+      "handle": 35045,
+      "failed": 4,
+      "passed": 23
+    },
+    "final": {
+      "handle": 39210,
+      "exit_code": 0,
+      "passed": 27
+    },
+    "fault_scope": "ActualSQLiteFK at actualeventwriter after asserted in-flight rebuttal/Boardprojection/claimstatus; fullDBrollback proven; not aclaimnormalcaller controlsnormalizedeventidentity"
+  },
+  "review": "APPROVE by /root/mp07_gateway_atomic_review: contractmapping preserves/strengthens originalobservables, supportedconstraints unchanged; ATOM05actualSQLiteFKafterin-flightwrites/fullrollback is honestfaultprobe; architectureclear.",
+  "sources": {
+    "services/db-gateway/tests/unit/test_cross_cutting.py": "ce91f7bf09e5557118a03a0796a4325227bb510bde7696e27611d0c986b5ce50",
+    "services/db-gateway/tests/unit/test_gap_c7_error_mapping.py": "c3ec20b0fe5c735603b9e650cfa0d4fe3f9f957c21c861401be3578af6fa7b92",
+    "docs/plans/2026-10-18-mp07-cross-cutting-native-fixtures.md": "8b2742cb84071839a62b4e9abed38b8a6b9eeb5815c5f5b0e2343a0874b878ee"
+  },
+  "artifacts": {
+    "agent-economy-mp07-cross-cutting-fixture-baseline.log": "9396c01e7d750ebe8a5ddfc45d657bc8e10e34fb9c7d067d1da9ec0c5a7b2695",
+    "agent-economy-mp07-cross-cutting-fixture-green.log": "128528067611336e1fdd3c0c9dc6494819284e847bdff63fa611e2433c98e80c",
+    "baseline/test_cross_cutting.py": "7b367fb9c73d6b470f188c0ee392493c79c0e51311477e0248affde7ad331e30",
+    "baseline/test_gap_c7_error_mapping.py": "ae13600db1e516b01abf019c94967187ec9cb3203fe85477756d4c19637e7fe0",
+    "agent-economy-mp07-gateway-final-fixtures-parent.log": "3df3e1a1c683ed96d0358c566f44c724a2ff3c0834410111b06a8a113fa67a1f"
+  },
+  "combined_parent_gate": {
+    "handle": 49591,
+    "exit_code": 0,
+    "passed": 65,
+    "warnings": 1,
+    "scope": "Combined constraints/projection/feedback/crosscutting; overlapping scopes must not be summed"
+  }
+}

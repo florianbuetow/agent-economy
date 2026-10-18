@@ -152,7 +152,7 @@ server:
 
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{Path(db_path).parent / "logs" / "db-gateway"}"
   format: "json"
 
 database:
@@ -166,6 +166,9 @@ request:
 recovery:
   maintenance_lock_path: "{Path(db_path).parent / "maintenance.lock"}"
   backup_root: "{Path(db_path).parent / "backups"}"
+board_authority:
+  platform_public_key_path: "{Path(db_path).parent / "agent-keys" / "platform.pub"}"
+  deadline_actor_id: "system-task-board-deadline"
 auth:
   audience: "db-gateway"
   max_lifetime_seconds: 300
@@ -186,6 +189,10 @@ auth:
       capabilities:
         - "gateway.board.read"
         - "gateway.board.write"
+    gateway-court:
+      public_key_path: "{Path(db_path).parent / "gateway-court.pub"}"
+      capabilities:
+        - "gateway.court.write"
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(content)
@@ -227,9 +234,11 @@ async def _start_live_gateway(db_path: str) -> tuple[_LiveGateway, DbWriter]:
     era) makes sharing the DbWriter across threads safe.
     """
     key_dir = Path(db_path).parent
+    provision_keypair("platform", key_dir / "agent-keys")
     provision_keypair("gateway-identity", key_dir)
     provision_keypair("gateway-central-bank", key_dir)
     provision_keypair("gateway-task-board", key_dir)
+    provision_keypair("gateway-court", key_dir)
     config_path = _write_gateway_config(db_path)
     reset_gateway_state()
     state = init_gateway_state()
@@ -310,6 +319,7 @@ async def gateway_client(
             "identity": "gateway-identity",
             "bank": "gateway-central-bank",
             "board": "gateway-task-board",
+            "court": "gateway-court",
         }.items()
     }
     async with httpx.AsyncClient(
@@ -366,8 +376,8 @@ async def app(
     monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncIterator[FastAPI]:
     """Real task-board app; its production TaskDbClient talks to a real, live,
-    fully-isolated in-process DB Gateway instead of the InMemoryTaskStore fake
-    unit tests use. Central Bank/Identity/platform-agent stay mocked."""
+    fully-isolated in-process DB Gateway over HTTP. Unit fixtures exercise the
+    same persistence without HTTP. Central Bank/Identity/platform-agent stay mocked."""
     db_path = tmp_path / "test.db"
     agent_config_path = _write_platform_agent_config(tmp_path)
     config_content = f"""
@@ -380,7 +390,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "task-board"}"
 database:
   path: "{db_path}"
 identity:
@@ -414,6 +424,7 @@ db_gateway:
     token_ttl_seconds: 300
 deadline_evaluation:
   evaluation_interval_seconds: 3600
+  actor_id: "system-task-board-deadline"
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)

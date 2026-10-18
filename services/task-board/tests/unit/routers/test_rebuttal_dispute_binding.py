@@ -1,24 +1,17 @@
-"""Rebuttal-to-dispute binding (GAP-B9).
-
-A worker may only rebut the dispute that the Court opened for their own task.
-Task Board is the authorization layer, so it must bind the rebuttal's dispute_id
-to the dispute_id it persisted when the task was disputed.
-"""
+"""Workers can rebut only the actual Court claim bound to their own task."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from functools import partial
+from json import JSONDecodeError
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
 import pytest
 
-from task_board_service.core.state import get_app_state
 from tests.helpers import make_jws_token
-from tests.unit.routers.conftest import (
-    file_dispute,
-    setup_task_in_dispute,
-    setup_task_in_review,
-)
+from tests.unit.routers.conftest import file_dispute, setup_task_in_dispute, setup_task_in_review
+from tests.unit.routers.test_disputes import fixture_bank, fixture_platform, stored_dispute_id
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -26,20 +19,15 @@ if TYPE_CHECKING:
 REBUTTAL_TEXT = "The deliverable meets the task specification."
 
 
-def _court_claim(dispute_id: str) -> dict[str, str]:
-    return {"dispute_id": dispute_id, "status": "rebuttal_pending"}
-
-
 async def _submit_rebuttal(
     client: AsyncClient,
-    worker_keypair,
+    worker_keypair: Any,
     worker_id: str,
     task_id: str,
     *,
     dispute_id: str,
     rebuttal: str = REBUTTAL_TEXT,
-):
-    """POST a signed rebuttal naming an explicit dispute_id."""
+) -> Any:
     payload = {
         "action": "submit_rebuttal",
         "task_id": task_id,
@@ -55,132 +43,179 @@ async def _submit_rebuttal(
 class TestRebuttalDisputeBinding:
     async def test_worker_cannot_inject_rebuttal_into_another_tasks_dispute(
         self,
+        app: Any,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        carol_keypair,
-        carol_agent_id,
+        alice_keypair: Any,
+        alice_agent_id: str,
+        bob_keypair: Any,
+        bob_agent_id: str,
+        carol_keypair: Any,
+        carol_agent_id: str,
     ) -> None:
-        """GAP-B9 regression: Bob rebuts his own task while naming Carol's dispute_id."""
-        state = get_app_state()
-        state.platform_agent.file_claim = AsyncMock(
-            side_effect=[_court_claim("disp-A"), _court_claim("disp-B")]
-        )
-
         task_a = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
-        # Task B belongs to Carol; the Court opened dispute "disp-B" for it.
-        await setup_task_in_dispute(
+        task_b = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, carol_keypair, carol_agent_id
         )
-
-        state.platform_agent.submit_rebuttal = AsyncMock(return_value=_court_claim("disp-B"))
-
+        dispute_b = stored_dispute_id(task_b)
+        before_a = app.state.gateway_store.get_task(task_a)
+        before_b = app.state.gateway_store.get_task(task_b)
         response = await _submit_rebuttal(
-            client, bob_keypair, bob_agent_id, task_a, dispute_id="disp-B"
+            client, bob_keypair, bob_agent_id, task_a, dispute_id=dispute_b
         )
-
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
-        state.platform_agent.submit_rebuttal.assert_not_awaited()
+        fixture_platform().submit_rebuttal.assert_not_awaited()
+        assert app.state.gateway_store.get_task(task_a) == before_a
+        assert app.state.gateway_store.get_task(task_b) == before_b
+        assert (
+            app.state.gateway_store.writer.connection.execute(
+                "SELECT COUNT(*) FROM court_rebuttals"
+            ).fetchone()[0]
+            == 0
+        )
 
     async def test_task_with_no_recorded_dispute_is_rejected(
         self,
+        app: Any,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
+        alice_keypair: Any,
+        alice_agent_id: str,
+        bob_keypair: Any,
+        bob_agent_id: str,
     ) -> None:
-        """A disputed task with no stored dispute_id cannot be rebutted."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
-        state = get_app_state()
-        state.store.update_task(task_id, {"dispute_id": None}, expected_status=None)
-        state.platform_agent.submit_rebuttal = AsyncMock(return_value=_court_claim("disp-1"))
-
-        response = await _submit_rebuttal(
-            client, bob_keypair, bob_agent_id, task_id, dispute_id="disp-1"
+        dispute_id = stored_dispute_id(task_id)
+        store = app.state.gateway_store
+        # Deliberate fixture corruption: normal writers cannot erase lifecycle ownership.
+        store.writer.connection.execute(
+            "UPDATE board_tasks SET dispute_id=NULL WHERE task_id=?", (task_id,)
         )
-
+        store.writer.connection.commit()
+        before = store.get_task(task_id)
+        response = await _submit_rebuttal(
+            client, bob_keypair, bob_agent_id, task_id, dispute_id=dispute_id
+        )
         assert response.status_code == 409
         assert response.json()["error"] == "invalid_status"
-        state.platform_agent.submit_rebuttal.assert_not_awaited()
+        fixture_platform().submit_rebuttal.assert_not_awaited()
+        assert store.get_task(task_id) == before
 
     async def test_matching_dispute_id_is_forwarded_once(
         self,
+        app: Any,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
+        alice_keypair: Any,
+        alice_agent_id: str,
+        bob_keypair: Any,
+        bob_agent_id: str,
     ) -> None:
-        """A matching dispute_id forwards the server-stored id to the platform agent once."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
-        state = get_app_state()
-        state.platform_agent.submit_rebuttal = AsyncMock(
-            return_value={"dispute_id": "disp-1", "status": "rebuttal_pending"}
-        )
-
+        dispute_id = stored_dispute_id(task_id)
         response = await _submit_rebuttal(
-            client, bob_keypair, bob_agent_id, task_id, dispute_id="disp-1"
+            client, bob_keypair, bob_agent_id, task_id, dispute_id=dispute_id
         )
-
         assert response.status_code == 200
         assert response.json()["status"] == "rebuttal_pending"
-        state.platform_agent.submit_rebuttal.assert_awaited_once_with("disp-1", REBUTTAL_TEXT)
+        fixture_platform().submit_rebuttal.assert_awaited_once_with(dispute_id, REBUTTAL_TEXT)
+        task = app.state.gateway_store.get_task(task_id)
+        assert task["rebuttal_submitted_at"] is not None
+        rows = app.state.gateway_store.writer.connection.execute(
+            "SELECT claim_id,agent_id,content,submitted_at FROM court_rebuttals"
+        ).fetchall()
+        assert [tuple(row) for row in rows] == [
+            (dispute_id, bob_agent_id, REBUTTAL_TEXT, task["rebuttal_submitted_at"])
+        ]
 
     async def test_dispute_task_persists_court_dispute_id(
         self,
+        app: Any,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
+        alice_keypair: Any,
+        alice_agent_id: str,
+        bob_keypair: Any,
+        bob_agent_id: str,
     ) -> None:
-        """dispute_task stores the Court-issued dispute_id on the task."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
-        state = get_app_state()
-        state.platform_agent.file_claim = AsyncMock(return_value=_court_claim("disp-xyz"))
-
+        fixture_platform().file_claim = AsyncMock(
+            side_effect=partial(app.state.gateway_effects.persist_claim, claim_id="disp-xyz")
+        )
         response = await file_dispute(
             client, alice_keypair, alice_agent_id, task_id, reason="Spec not met."
         )
-
         assert response.status_code == 200
         assert response.json()["dispute_id"] == "disp-xyz"
-        assert state.store.get_task(task_id)["dispute_id"] == "disp-xyz"
+        assert app.state.gateway_store.get_task(task_id)["dispute_id"] == "disp-xyz"
 
     async def test_court_without_dispute_id_leaves_task_undisputed(
         self,
+        app: Any,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
+        alice_keypair: Any,
+        alice_agent_id: str,
+        bob_keypair: Any,
+        bob_agent_id: str,
     ) -> None:
-        """If Court returns no dispute_id, the task must not be marked disputed."""
+        """An acknowledgment without committed evidence leaves a visible pending claim."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
-        state = get_app_state()
-        state.platform_agent.file_claim = AsyncMock(return_value={"status": "rebuttal_pending"})
-
+        fixture_platform().file_claim = AsyncMock(return_value={"status": "rebuttal_pending"})
         response = await file_dispute(
             client, alice_keypair, alice_agent_id, task_id, reason="Spec not met."
         )
-
-        assert response.status_code == 502
-        assert response.json()["error"] == "court_unavailable"
-
-        task = state.store.get_task(task_id)
+        assert response.status_code == 202
+        assert response.json()["operation"]["operation_state"] == "claimed"
+        task = app.state.gateway_store.get_task(task_id)
         assert task["status"] == "submitted"
         assert task["dispute_id"] is None
+        assert task["pending_transition"]["command"] == "dispute_task"
+        assert (
+            app.state.gateway_store.writer.connection.execute(
+                "SELECT COUNT(*) FROM court_claims WHERE task_id=?", (task_id,)
+            ).fetchone()[0]
+            == 0
+        )
+        assert (
+            app.state.gateway_store.writer.connection.execute(
+                "SELECT COUNT(*) FROM events WHERE task_id=? AND event_type='task.disputed'",
+                (task_id,),
+            ).fetchone()[0]
+            == 0
+        )
+        fixture_bank().escrow_release.assert_not_awaited()
+        fixture_bank().escrow_split.assert_not_awaited()
+
+    async def test_persisted_claim_survives_malformed_acknowledgment(
+        self,
+        app: Any,
+        client: AsyncClient,
+        alice_keypair: Any,
+        alice_agent_id: str,
+        bob_keypair: Any,
+        bob_agent_id: str,
+    ) -> None:
+        task_id = await setup_task_in_review(
+            client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
+        )
+
+        async def _persist_then_fail(**kwargs: Any) -> dict[str, Any]:
+            await app.state.gateway_effects.persist_claim(claim_id="disp-ack-lost", **kwargs)
+            raise JSONDecodeError("Lost Court acknowledgment", "broken", 0)
+
+        fixture_platform().file_claim = AsyncMock(side_effect=_persist_then_fail)
+        response = await file_dispute(
+            client, alice_keypair, alice_agent_id, task_id, reason="Spec not met."
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "disputed"
+        assert response.json()["dispute_id"] == "disp-ack-lost"
+        assert response.json()["operation"]["operation_state"] == "completed"
+        fixture_platform().file_claim.assert_awaited_once()

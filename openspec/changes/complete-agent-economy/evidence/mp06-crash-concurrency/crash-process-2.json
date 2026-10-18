@@ -1,0 +1,9 @@
+{
+  "point": "after_copy:bank_transactions",
+  "pid": 17153,
+  "pgid": 17146,
+  "supervisor_pid": 17146,
+  "signal": 9,
+  "return_code": 137,
+  "group_absent": true
+}

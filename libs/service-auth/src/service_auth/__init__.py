@@ -35,6 +35,10 @@ from service_auth.signing import (
     snapshot_keypairs,
     verify_jws,
 )
+from service_auth.task_board_responses import (
+    TaskBoardCommandContractError,
+    TaskBoardCommandResponse,
+)
 from service_auth.user_agent import UserAgent
 
 __version__ = "0.1.0"
@@ -53,6 +57,8 @@ __all__ = [
     "ParsedJws",
     "PlatformAgent",
     "PlatformSigner",
+    "TaskBoardCommandContractError",
+    "TaskBoardCommandResponse",
     "TokenExpiredError",
     "TokenNotYetValidError",
     "TokenPolicy",

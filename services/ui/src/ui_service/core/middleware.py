@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 _JSON_VALIDATION_ENDPOINTS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("POST", re.compile(r"^/api/proxy/tasks$")),
+    ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/bids/[^/]+/accept$")),
+    ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/approve$")),
     ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/dispute$")),
 )
 
@@ -206,16 +208,6 @@ class RequestValidationMiddleware:
         headers: dict[bytes, bytes] = dict(raw_headers)
         content_type = headers.get(b"content-type", b"").decode().lower()
 
-        if expects_json and not content_type.startswith("application/json"):
-            response = middleware_error_response(
-                error="unsupported_media_type",
-                message="Content-Type must be application/json",
-                status_code=415,
-                details={},
-            )
-            await response(scope, receive, send)
-            return
-
         # Read and buffer body, checking size
         body_parts: list[bytes] = []
         body_size = 0
@@ -240,6 +232,16 @@ class RequestValidationMiddleware:
 
             if not message.get("more_body", False):
                 break
+
+        if expects_json and not content_type.startswith("application/json"):
+            response = middleware_error_response(
+                error="unsupported_media_type",
+                message="Content-Type must be application/json",
+                status_code=415,
+                details={},
+            )
+            await response(scope, receive, send)
+            return
 
         # Replay buffered body for downstream app
         full_body = b"".join(body_parts)

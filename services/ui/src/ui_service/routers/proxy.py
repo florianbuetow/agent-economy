@@ -11,6 +11,7 @@ from ui_service.schemas import (
     BidItem,
     CreateTaskRequest,
     FileDisputeRequest,
+    NativeMutationRequest,
     OperatorBidListResponse,
     ProxyIdentityResponse,
 )
@@ -45,6 +46,7 @@ async def create_task(body: CreateTaskRequest) -> dict[str, Any]:
         spec=body.spec,
         reward=body.reward,
         bidding_deadline_seconds=body.bidding_deadline_seconds,
+        acceptance_window_seconds=body.acceptance_window_seconds,
         execution_deadline_seconds=body.execution_deadline_seconds,
         review_deadline_seconds=body.review_deadline_seconds,
     )
@@ -66,18 +68,45 @@ async def list_bids(task_id: str, db: DbConn) -> JSONResponse:
 
 
 @router.post("/proxy/tasks/{task_id}/bids/{bid_id}/accept")
-async def accept_bid(task_id: str, bid_id: str) -> dict[str, Any]:
+async def accept_bid(
+    task_id: str,
+    bid_id: str,
+    body: NativeMutationRequest,
+) -> JSONResponse:
     """Accept a bid on a task."""
-    return await proxy_service.accept_bid(task_id=task_id, bid_id=bid_id)
+    result = await proxy_service.accept_bid(
+        task_id=task_id,
+        bid_id=bid_id,
+        operation_id=body.operation_id,
+        expected_lifecycle_version=body.expected_lifecycle_version,
+    )
+    return JSONResponse(status_code=result.status_code, content=result.body)
 
 
 @router.post("/proxy/tasks/{task_id}/approve")
-async def approve_task(task_id: str) -> dict[str, Any]:
+async def approve_task(
+    task_id: str,
+    body: NativeMutationRequest,
+) -> JSONResponse:
     """Approve a submitted task."""
-    return await proxy_service.approve_task(task_id=task_id)
+    result = await proxy_service.approve_task(
+        task_id=task_id,
+        operation_id=body.operation_id,
+        expected_lifecycle_version=body.expected_lifecycle_version,
+    )
+    return JSONResponse(status_code=result.status_code, content=result.body)
 
 
 @router.post("/proxy/tasks/{task_id}/dispute")
-async def file_dispute(task_id: str, body: FileDisputeRequest) -> dict[str, Any]:
+async def file_dispute(
+    task_id: str,
+    body: FileDisputeRequest,
+) -> JSONResponse:
     """File a dispute on a task."""
-    return await proxy_service.file_dispute(task_id=task_id, reason=body.reason)
+    result = await proxy_service.file_dispute(
+        task_id=task_id,
+        reason=body.reason,
+        operation_id=body.operation_id,
+        expected_lifecycle_version=body.expected_lifecycle_version,
+    )
+    return JSONResponse(status_code=result.status_code, content=result.body)

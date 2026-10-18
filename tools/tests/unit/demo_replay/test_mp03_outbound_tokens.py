@@ -37,7 +37,18 @@ async def test_demo_bank_and_two_token_task_post_contexts() -> None:
     poster.agent_id = "a-poster"
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         await create_account(client, platform, "a-worker", "https://bank")
-        await post_task(client, poster, "Title", "Spec", 10, "https://board")
+        await post_task(
+            client,
+            poster,
+            "Title",
+            "Spec",
+            10,
+            "https://board",
+            bidding_deadline_seconds=3600,
+            execution_deadline_seconds=7200,
+            review_deadline_seconds=3600,
+            acceptance_window_seconds=300,
+        )
 
     account = parse_jws(json.loads(requests[0].content)["token"])
     assert account.header.aud == "central-bank"

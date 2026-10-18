@@ -90,7 +90,7 @@ def _default_resource(payload: dict[str, Any]) -> str:
         "record_ruling": f"POST /tasks/{task_id}/ruling",
         "escrow_lock": "POST /escrow/lock",
     }
-    resource = resources.get(action)
+    resource = resources.get(action) if isinstance(action, str) else None
     if resource is None or "None" in resource:
         raise ValueError(f"Test token requires explicit resource for action {action!r}")
     return resource

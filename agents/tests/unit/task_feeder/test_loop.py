@@ -13,6 +13,7 @@ def _make_config(**overrides: object) -> TaskFeederConfig:
         "feed_interval_seconds": 15,
         "max_open_tasks": 5,
         "bidding_deadline_seconds": 120,
+        "acceptance_window_seconds": 120,
         "execution_deadline_seconds": 300,
         "review_deadline_seconds": 120,
         "base_reward": 10,

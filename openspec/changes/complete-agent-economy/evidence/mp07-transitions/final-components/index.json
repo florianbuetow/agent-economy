@@ -1,0 +1,47 @@
+{
+  "scope": "final-components",
+  "limits": "Each log proves its recorded source version and scope; earlier passes do not certify later harness changes. Root gate and full goal remain open.",
+  "artifacts": [
+    {
+      "origin": "/private/tmp/agent-economy-mp07-gateway-reconciled-ci.log",
+      "artifact": "agent-economy-mp07-gateway-reconciled-ci.log",
+      "sha256": "7292462d160c9b628366654574915ea4ce336d941670b11acc54977d7c43e5a2"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-board-reconciled-ci.log",
+      "artifact": "agent-economy-mp07-board-reconciled-ci.log",
+      "sha256": "7292462d160c9b628366654574915ea4ce336d941670b11acc54977d7c43e5a2"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-component-reconciled-before.json",
+      "artifact": "agent-economy-mp07-component-reconciled-before.json",
+      "sha256": "647cf1bdfc2056118c02c96f195187c93a50ce48adef9828b42a4ac71ec787da"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-component-reconciled-after.json",
+      "artifact": "agent-economy-mp07-component-reconciled-after.json",
+      "sha256": "647cf1bdfc2056118c02c96f195187c93a50ce48adef9828b42a4ac71ec787da"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-gateway-final-ci.log",
+      "artifact": "agent-economy-mp07-gateway-final-ci.log",
+      "sha256": "ac9f82740409b998821f22de67e9f01670b110941e5b68c3cd056dc0bb89d658"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-board-final-ci.log",
+      "artifact": "agent-economy-mp07-board-final-ci.log",
+      "sha256": "46b8b9e7aca34ca642994d4acf461830f572a534804b3dc73b960bb123c946cd"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-component-final-before.json",
+      "artifact": "agent-economy-mp07-component-final-before.json",
+      "sha256": "c10c48f2020904fc586732ce22839a3a4943117b1fa8fd1ae79a16e2609dc10f"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-component-final-after.json",
+      "artifact": "agent-economy-mp07-component-final-after.json",
+      "sha256": "c10c48f2020904fc586732ce22839a3a4943117b1fa8fd1ae79a16e2609dc10f"
+    }
+  ],
+  "current_sources": {}
+}

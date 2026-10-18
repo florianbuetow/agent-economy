@@ -1,0 +1,37 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 58 items
+
+tests/e2e/test_landing.py F
+
+=================================== FAILURES ===================================
+___________ TestLandingNavigation.test_l01_root_route_loads_landing ____________
+tests/e2e/test_landing.py:366: in test_l01_root_route_loads_landing
+    landing_page = _load_landing(e2e_page, e2e_server)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/e2e/test_landing.py:111: in _load_landing
+    e2e_page.wait_for_function(
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:11599: in wait_for_function
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_page.py:1110: in wait_for_function
+    return await self._main_frame.wait_for_function(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/_impl/_frame.py:878: in wait_for_function
+    await self._channel.send("waitForFunction", self._timeout, params)
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.Error: Page.wait_for_function: EvalError: Evaluating a string as JavaScript violates the following Content Security Policy directive because 'unsafe-eval' is not an allowed source of script: script-src 'self'".
+E   
+E       at eval (<anonymous>)
+E       at predicate (eval at evaluate (:290:30), <anonymous>:4:56)
+E       at next (eval at evaluate (:290:30), <anonymous>:29:29)
+=========================== short test summary info ============================
+FAILED tests/e2e/test_landing.py::TestLandingNavigation::test_l01_root_route_loads_landing
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+============================== 1 failed in 1.53s ===============================

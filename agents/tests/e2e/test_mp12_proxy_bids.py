@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 import httpx
 import pytest
 
+from .native_task_contract import lifecycle_version, new_operation_id
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
@@ -40,6 +42,7 @@ def _task_input(title: str) -> dict[str, object]:
         "spec": "MP-12 signed bid authorization and public projection proof.",
         "reward": 100,
         "bidding_deadline_seconds": 3600,
+        "acceptance_window_seconds": 3600,
         "execution_deadline_seconds": 7200,
         "review_deadline_seconds": 3600,
     }
@@ -58,9 +61,24 @@ async def test_real_operator_bids_stay_sealed_then_reveal_losing_bidder_history(
             "/api/proxy/tasks", json=_task_input("MP12 operator-owned task")
         )
         assert created.status_code == 200, created.text
-        task_id = created.json()["task_id"]
-        winning_bid = await winner.submit_bid(task_id=task_id, amount=73)
-        losing_bid = await loser.submit_bid(task_id=task_id, amount=65)
+        task = created.json()
+        task_id = task["task_id"]
+        winning_bid_response = await winner.submit_bid(
+            task_id=task_id,
+            amount=73,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert winning_bid_response.status_code == 201
+        winning_bid = winning_bid_response.body
+        losing_bid_response = await loser.submit_bid(
+            task_id=task_id,
+            amount=65,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert losing_bid_response.status_code == 201
+        losing_bid = losing_bid_response.body
 
         public = await bid_proxy_client.get(f"/api/tasks/{task_id}")
         assert public.status_code == 200, public.text
@@ -89,7 +107,11 @@ async def test_real_operator_bids_stay_sealed_then_reveal_losing_bidder_history(
         assert sealed_history.json()["events"] == []
 
         accepted = await bid_proxy_client.post(
-            f"/api/proxy/tasks/{task_id}/bids/{winning_bid['bid_id']}/accept"
+            f"/api/proxy/tasks/{task_id}/bids/{winning_bid['bid_id']}/accept",
+            json={
+                "operation_id": new_operation_id(),
+                "expected_lifecycle_version": lifecycle_version(task),
+            },
         )
         assert accepted.status_code == 200, accepted.text
         revealed = await bid_proxy_client.get(f"/api/tasks/{task_id}")
@@ -115,7 +137,14 @@ async def test_real_operator_cannot_list_another_posters_open_bids(
         worker = await make_funded_agent(name="MP12 private bidder", balance=0)
         resources.push_async_callback(worker.close)
         task = await poster.post_task(**_task_input("MP12 independent task"))
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=31)
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=31,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
 
         denied = await bid_proxy_client.get(f"/api/proxy/tasks/{task['task_id']}/bids")
 

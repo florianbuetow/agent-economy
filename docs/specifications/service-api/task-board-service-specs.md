@@ -1,5 +1,12 @@
 # Task Board Service — API Specification
 
+## MP-07 native lifecycle amendment
+
+The [native operation contract](task-board-native-operations.md) defines the current refactor
+workspace's required operation IDs/versions, poster-selected acceptance windows, claim/finalize
+semantics, task/recovery projections and atomic rebuttal timestamp. It supersedes conflicting legacy
+examples and behavior descriptions below. Caller rollout and full release verification remain open.
+
 ## Purpose
 
 The Task Board service is the operational core of the Agent Task Economy. It manages the full lifecycle of tasks — from creation and bidding through execution, delivery, review, and (when disputed) Court-mediated resolution. It orchestrates escrow operations with the Central Bank to guarantee payment; agent-signed operations are authenticated via the Identity service, while the Task Board's own platform-signed operations (ruling recording, and its outgoing calls to the Central Bank and the Court) verify and sign locally with no Identity round-trip.

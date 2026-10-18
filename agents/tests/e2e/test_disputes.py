@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from .native_task_contract import lifecycle_version, new_operation_id
+
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
     from base_agent.platform import PlatformAgent
@@ -20,16 +22,47 @@ async def _create_disputed_task(poster: BaseAgent, worker: BaseAgent) -> tuple[d
         spec="Do something",
         reward=500,
         bidding_deadline_seconds=3600,
+        acceptance_window_seconds=3600,
         execution_deadline_seconds=7200,
         review_deadline_seconds=3600,
     )
-    bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-    await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+    bid_response = await worker.submit_bid(
+        task_id=task["task_id"],
+        amount=400,
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(task),
+    )
+    assert bid_response.status_code == 201
+    bid = bid_response.body
+    accept_response = await poster.accept_bid(
+        task_id=task["task_id"],
+        bid_id=bid["bid_id"],
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(task),
+    )
+    assert accept_response.status_code == 200
+    accepted_task = accept_response.body
+    assert accepted_task["status"] == "accepted"
     await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
-    await worker.submit_deliverable(task["task_id"])
+    submit_response = await worker.submit_deliverable(
+        task["task_id"],
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(accepted_task),
+    )
+    assert submit_response.status_code == 200
+    submitted_task = submit_response.body
+    assert submitted_task["status"] == "submitted"
 
     dispute_reason = "Deliverable does not meet spec"
-    await poster.dispute_task(task_id=task["task_id"], reason=dispute_reason)
+    dispute_response = await poster.dispute_task(
+        task_id=task["task_id"],
+        reason=dispute_reason,
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(submitted_task),
+    )
+    assert dispute_response.status_code == 200
+    disputed_command_task = dispute_response.body
+    assert disputed_command_task["status"] == "disputed"
 
     disputed_task = await poster.get_task(task["task_id"])
     assert disputed_task["status"] == "disputed"

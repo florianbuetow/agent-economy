@@ -7,12 +7,19 @@ from uuid import uuid4
 
 import pytest
 
+from db_gateway_service import task_time
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.services.db_reader import DbReader
 from tests.conftest import make_event
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
+
+
+@pytest.fixture(autouse=True)
+def _task_business_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    now_us = task_time.parse_utc_text_to_epoch_us("2026-02-28T15:00:00Z")
+    monkeypatch.setattr(task_time, "utc_now_us", lambda: now_us)
 
 
 # ---------------------------------------------------------------------------
@@ -101,7 +108,7 @@ def _create_task(
     """Create a full task with all prerequisites. Returns (task_id, poster_id, escrow_id)."""
     pid = poster_id or _setup_funded_account(client)
     eid, tid = _lock_escrow(client, pid)
-    client.post(
+    response = client.post(
         "/board/tasks",
         json={
             "task_id": tid,
@@ -111,14 +118,16 @@ def _create_task(
             "reward": 100,
             "status": "open",
             "bidding_deadline_seconds": 86400,
+            "acceptance_window_seconds": 3600,
             "deadline_seconds": 172800,
             "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:00:00Z",
+            "bidding_deadline": "2026-03-01T10:15:00Z",
             "escrow_id": eid,
             "created_at": "2026-02-28T10:15:00Z",
             "event": make_event(source="board", event_type="task.created", task_id=tid),
         },
     )
+    assert response.status_code == 201, response.text
     return tid, pid, eid
 
 
@@ -129,17 +138,22 @@ def _submit_bid(
     bid_id: str | None = None,
 ) -> str:
     bid = bid_id or f"bid-{uuid4()}"
-    client.post(
-        "/board/bids",
+    response = client.post(
+        "/board/task-operations",
         json={
-            "bid_id": bid,
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid4()}",
             "task_id": task_id,
-            "bidder_id": bidder_id,
-            "proposal": "I will build it",
-            "submitted_at": "2026-02-28T11:00:00Z",
-            "event": make_event(source="board", event_type="bid.submitted", task_id=task_id),
+            "command": "submit_bid",
+            "expected_status": "open",
+            "expected_lifecycle_version": 0,
+            "actor_kind": "agent",
+            "actor_id": bidder_id,
+            "arguments": {"bid_id": bid, "bidder_id": bidder_id, "amount": 50},
         },
     )
+    assert response.status_code == 200, response.text
+    assert response.json()["operation_state"] == "completed"
     return bid
 
 

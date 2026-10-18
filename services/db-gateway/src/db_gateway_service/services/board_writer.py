@@ -12,12 +12,12 @@ from typing import TYPE_CHECKING, Any
 from service_commons.exceptions import ServiceError
 
 from db_gateway_service.services.db_writer_helpers import (
-    check_constraint_violation,
-    compile_constraints,
     insert_event,
     is_foreign_key_violation,
     verify_cross_table_constraint,
 )
+from db_gateway_service.services.task_operation_guards import assert_no_competing_task_work
+from db_gateway_service.task_time import add_seconds_to_epoch_us, parse_utc_text_to_epoch_us
 
 if TYPE_CHECKING:
     from db_gateway_service.services.db_writer import DbWriter
@@ -48,6 +48,92 @@ TASK_UPDATE_COLUMNS: frozenset[str] = frozenset(
     }
 )
 
+_PUBLICATION_NULL_FIELDS: frozenset[str] = frozenset(
+    {
+        "execution_deadline",
+        "review_deadline",
+        "worker_id",
+        "accepted_bid_id",
+        "dispute_reason",
+        "dispute_id",
+        "rebuttal_deadline",
+        "rebuttal_submitted_at",
+        "ruling_id",
+        "worker_pct",
+        "ruling_summary",
+        "accepted_at",
+        "submitted_at",
+        "approved_at",
+        "cancelled_at",
+        "disputed_at",
+        "ruled_at",
+        "expired_at",
+        "execution_cutoff_us",
+        "review_cutoff_us",
+        "accepted_reward",
+        "accepted_bid_amount",
+    }
+)
+
+
+def _validate_publication_initial_state(data: dict[str, Any]) -> None:
+    """Reject caller-supplied state that would bypass native lifecycle commands."""
+    if "status" in data and (type(data["status"]) is not str or data["status"] != "open"):
+        raise ServiceError(
+            "invalid_payload",
+            "Task publication status must be open",
+            400,
+            {"field": "status"},
+        )
+    for field in ("bid_count", "escrow_pending", "lifecycle_version"):
+        if field in data and (type(data[field]) is not int or data[field] != 0):
+            raise ServiceError(
+                "invalid_payload",
+                f"Task publication {field} must be integer zero",
+                400,
+                {"field": field},
+            )
+    for field in _PUBLICATION_NULL_FIELDS:
+        if field in data and data[field] is not None:
+            raise ServiceError(
+                "invalid_payload",
+                f"Task publication {field} must be null",
+                400,
+                {"field": field},
+            )
+
+
+def _publication_cutoffs(data: dict[str, Any]) -> tuple[int, int, int]:
+    """Validate explicit task timing and derive its immutable native cutoffs."""
+    for name in (
+        "bidding_deadline_seconds",
+        "deadline_seconds",
+        "review_deadline_seconds",
+        "acceptance_window_seconds",
+    ):
+        if name not in data:
+            raise ServiceError(
+                "missing_field", f"Missing required field: {name}", 400, {"field": name}
+            )
+        if type(data[name]) is not int or data[name] <= 0:
+            raise ServiceError(
+                "invalid_deadline", f"{name} must be a positive integer", 400, {"field": name}
+            )
+    try:
+        created_us = parse_utc_text_to_epoch_us(data["created_at"])
+        bidding_us = add_seconds_to_epoch_us(created_us, data["bidding_deadline_seconds"])
+        supplied_bidding_us = parse_utc_text_to_epoch_us(data["bidding_deadline"])
+        acceptance_us = add_seconds_to_epoch_us(bidding_us, data["acceptance_window_seconds"])
+    except ValueError as exc:
+        raise ServiceError(
+            "invalid_deadline", "Task timing is invalid or out of range", 400, {}
+        ) from exc
+    if bidding_us != supplied_bidding_us:
+        raise ServiceError(
+            "invalid_deadline", "Bidding cutoff does not match the published duration", 400, {}
+        )
+    return data["acceptance_window_seconds"], bidding_us, acceptance_us
+
 
 class BoardWriter:
     """Handles task creation, bidding, status updates, and asset record writes."""
@@ -66,6 +152,8 @@ class BoardWriter:
         cursor = db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
+            _validate_publication_initial_state(data)
+            window_seconds, bidding_us, acceptance_us = _publication_cutoffs(data)
             cursor.execute(
                 "INSERT INTO board_tasks "
                 "(task_id, poster_id, title, spec, reward, status, "
@@ -79,17 +167,25 @@ class BoardWriter:
                     data["title"],
                     data["spec"],
                     data["reward"],
-                    data["status"],
+                    "open",
                     data["bidding_deadline_seconds"],
                     data["deadline_seconds"],
                     data["review_deadline_seconds"],
                     data["bidding_deadline"],
-                    data.get("bid_count", 0),
-                    data.get("escrow_pending", 0),
+                    0,
+                    0,
                     data["escrow_id"],
                     data["created_at"],
-                    data.get("dispute_id"),
+                    None,
                 ),
+            )
+            cursor.execute(
+                "INSERT INTO board_task_contracts (task_id, lifecycle_version, "
+                "timing_contract_version, acceptance_window_seconds, bidding_cutoff_us, "
+                "acceptance_cutoff_us, execution_cutoff_us, review_cutoff_us, "
+                "accepted_reward, accepted_bid_amount) "
+                "VALUES (?, 0, 2, ?, ?, ?, NULL, NULL, NULL, NULL)",
+                (data["task_id"], window_seconds, bidding_us, acceptance_us),
             )
             event_id = insert_event(cursor, data["event"])
             db.commit()
@@ -118,62 +214,19 @@ class BoardWriter:
         data: dict[str, Any],
         constraints: dict[str, Any] | None,
     ) -> dict[str, Any]:
-        """
-        Submit a bid on a task.
-
-        INSERT INTO board_bids + increment board_tasks.bid_count + INSERT INTO events,
-        all in the same transaction. bid_count is a materialized counter (GAP-E13,
-        T-101) updated at write time, matching how every other board_tasks field in
-        this schema works — not derived on read.
-        Idempotency: idx_board_bids_one_per_agent on (task_id, bidder_id) — a
-        rejected duplicate bid rolls the whole transaction back, so it never reaches
-        the increment below.
-        """
+        """Reject the retired unversioned bid writer after owner admission checks."""
+        del constraints
         db = self._writer.connection
         cursor = db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
-            if constraints is not None:
-                verify_cross_table_constraint(
-                    cursor,
-                    "board_tasks",
-                    {"task_id": data["task_id"], **constraints},
-                )
-            cursor.execute(
-                "INSERT INTO board_bids "
-                "(bid_id, task_id, bidder_id, proposal, amount, submitted_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    data["bid_id"],
-                    data["task_id"],
-                    data["bidder_id"],
-                    data["proposal"],
-                    data.get("amount", 0),
-                    data["submitted_at"],
-                ),
-            )
-            cursor.execute(
-                "UPDATE board_tasks SET bid_count = bid_count + 1 WHERE task_id = ?",
-                (data["task_id"],),
-            )
-            event_id = insert_event(cursor, data["event"])
-            db.commit()
-            return {"bid_id": data["bid_id"], "event_id": event_id}
-        except sqlite3.IntegrityError as exc:
-            db.rollback()
-            if is_foreign_key_violation(exc):
-                raise ServiceError(
-                    "foreign_key_violation",
-                    "Foreign key constraint failed",
-                    409,
-                    {},
-                ) from exc
+            assert_no_competing_task_work(cursor, str(data["task_id"]))
             raise ServiceError(
-                "bid_exists",
-                "This agent already bid on this task",
+                "native_operation_required",
+                "Bid submission requires a native task operation",
                 409,
                 {},
-            ) from exc
+            )
         except Exception:
             db.rollback()
             raise
@@ -184,75 +237,42 @@ class BoardWriter:
         data: dict[str, Any],
         constraints: dict[str, Any] | None,
     ) -> dict[str, Any]:
-        """
-        Update task status and associated fields.
-
-        Dynamically builds SET clause from allowed columns.
-        Does NOT validate status transitions — caller is responsible.
-        """
+        """Reject the retired generic lifecycle writer after structural checks."""
+        del constraints
         db = self._writer.connection
-        updates = data["updates"]
         cursor = db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
-            # Build dynamic SET clause from whitelist
-            set_parts: list[str] = []
-            values: list[Any] = []
-            for col, val in updates.items():
+            assert_no_competing_task_work(cursor, task_id)
+            updates = data.get("updates")
+            if updates is None or not isinstance(updates, dict):
+                raise ServiceError(
+                    "missing_field",
+                    "Field 'updates' must be an object",
+                    400,
+                    {"field": "updates"},
+                )
+            if not updates:
+                raise ServiceError(
+                    "empty_updates",
+                    "updates object contains no fields",
+                    400,
+                    {},
+                )
+            for col in updates:
                 if col not in TASK_UPDATE_COLUMNS:
-                    db.rollback()
                     raise ServiceError(
                         "invalid_field",
                         f"Unknown column: {col}",
                         400,
                         {"field": col},
                     )
-                set_parts.append(f"{col} = ?")
-                values.append(val)
-
-            set_clause = ", ".join(set_parts)
-            if constraints is not None:
-                where_clause, where_params = compile_constraints(
-                    "board_tasks",
-                    "task_id",
-                    task_id,
-                    constraints,
-                )
-                cursor.execute(
-                    f"UPDATE board_tasks SET {set_clause} WHERE {where_clause}",  # nosec B608
-                    [*values, *where_params],
-                )
-            else:
-                values.append(task_id)
-                cursor.execute(
-                    f"UPDATE board_tasks SET {set_clause} WHERE task_id = ?",  # nosec B608
-                    values,
-                )
-            if cursor.rowcount == 0:
-                if constraints is not None:
-                    try:
-                        check_constraint_violation(
-                            cursor,
-                            "board_tasks",
-                            "task_id",
-                            task_id,
-                            constraints,
-                        )
-                    except ServiceError:
-                        db.rollback()
-                        raise
-                db.rollback()
-                raise ServiceError("task_not_found", "No task with this task_id", 404, {})
-            event_id = insert_event(cursor, data["event"])
-            db.commit()
-            new_status = updates.get("status", "")
-            return {
-                "task_id": task_id,
-                "status": new_status,
-                "event_id": event_id,
-            }
-        except ServiceError:
-            raise
+            raise ServiceError(
+                "native_operation_required",
+                "Task lifecycle mutation requires a native task operation",
+                409,
+                {},
+            )
         except Exception:
             db.rollback()
             raise
@@ -272,6 +292,7 @@ class BoardWriter:
         cursor = db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
+            assert_no_competing_task_work(cursor, str(data["task_id"]))
             if constraints is not None:
                 verify_cross_table_constraint(
                     cursor,

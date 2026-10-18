@@ -1,0 +1,65 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 17 items
+
+tests/integration/test_mp07_acceptance_window.py .........F..F           [ 76%]
+tests/integration/test_mp07_bid_admission_races.py .F.                   [ 94%]
+tests/integration/test_mp07_accept_expiry_race.py F                      [100%]
+
+=================================== FAILURES ===================================
+______________ test_zero_bid_task_expires_at_exact_bidding_cutoff ______________
+tests/integration/test_mp07_acceptance_window.py:606: in test_zero_bid_task_expires_at_exact_bidding_cutoff
+    _assert_refund_completion(
+tests/integration/test_mp07_acceptance_window.py:201: in _assert_refund_completion
+    assert _read_rows(
+E   AssertionError: assert [] == [{'amount': 1...xpired', ...}]
+E     
+E     Right contains one more item: {'amount': 100, 'balance': 100, 'balance_after': 100, 'reference': 'task:t-e2b816d6-c434-46f0-813c-52a477c543fc:expired', ...}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:16", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-e2b816d6-c434-46f0-813c-52a477c543fc"}}
+______ test_task_with_bid_expires_at_selected_acceptance_cutoff_equality _______
+tests/integration/test_mp07_acceptance_window.py:816: in test_task_with_bid_expires_at_selected_acceptance_cutoff_equality
+    _assert_refund_completion(
+tests/integration/test_mp07_acceptance_window.py:201: in _assert_refund_completion
+    assert _read_rows(
+E   AssertionError: assert [] == [{'amount': 1...xpired', ...}]
+E     
+E     Right contains one more item: {'amount': 100, 'balance': 100, 'balance_after': 100, 'reference': 'task:t-389e754e-f66e-45f1-879f-436bd44f9645:expired', ...}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:18", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-389e754e-f66e-45f1-879f-436bd44f9645"}}
+__________ test_bid_validated_before_cutoff_cannot_commit_at_equality __________
+tests/integration/test_mp07_bid_admission_races.py:870: in test_bid_validated_before_cutoff_cannot_commit_at_equality
+    _assert_refund_completion(
+tests/integration/test_mp07_acceptance_window.py:201: in _assert_refund_completion
+    assert _read_rows(
+E   AssertionError: assert [] == [{'amount': 1...xpired', ...}]
+E     
+E     Right contains one more item: {'amount': 100, 'balance': 100, 'balance_after': 100, 'reference': 'task:t-9ebafc92-9970-4c92-8f2d-99c763b2025d:expired', ...}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:19", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-9ebafc92-9970-4c92-8f2d-99c763b2025d"}}
+{"timestamp": "2026-10-18 01:22:19", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/board/task-operations"}}
+________ test_stale_validated_accept_cannot_overwrite_acceptance_expiry ________
+tests/integration/test_mp07_accept_expiry_race.py:701: in test_stale_validated_accept_cannot_overwrite_acceptance_expiry
+    _assert_refund_completion(
+tests/integration/test_mp07_acceptance_window.py:201: in _assert_refund_completion
+    assert _read_rows(
+E   AssertionError: assert [] == [{'amount': 1...xpired', ...}]
+E     
+E     Right contains one more item: {'amount': 100, 'balance': 100, 'balance_after': 100, 'reference': 'task:t-02a630af-ffce-443c-8ffb-d03e2d7b1d8f:expired', ...}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:20", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-02a630af-ffce-443c-8ffb-d03e2d7b1d8f"}}
+{"timestamp": "2026-10-18 01:22:20", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_version_conflict", "status_code": 409, "path": "/board/task-operations"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_acceptance_window.py::test_zero_bid_task_expires_at_exact_bidding_cutoff
+FAILED tests/integration/test_mp07_acceptance_window.py::test_task_with_bid_expires_at_selected_acceptance_cutoff_equality
+FAILED tests/integration/test_mp07_bid_admission_races.py::test_bid_validated_before_cutoff_cannot_commit_at_equality
+FAILED tests/integration/test_mp07_accept_expiry_race.py::test_stale_validated_accept_cannot_overwrite_acceptance_expiry
+========================= 4 failed, 13 passed in 9.32s =========================

@@ -1,0 +1,4 @@
+{
+  "test_function_count": 19,
+  "test_functions_and_decorators": "AST-identical to archived original source; only fixture/snapshot helpers changed"
+}

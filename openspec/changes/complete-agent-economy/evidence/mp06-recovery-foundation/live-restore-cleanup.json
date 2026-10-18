@@ -1,0 +1,18 @@
+{
+  "run_id": "19bd23eab4ee4405898fc1429ed2269e",
+  "source_manifest": "/private/tmp/agent-economy-live-restore-proof.DEXF6k/test_full_runtime_artifact_res0/runtime-19bd23eab4ee4405898fc1429ed2269e-tv2q93an/runtime.json",
+  "checked_process_groups": [
+    87748,
+    87751,
+    87753,
+    87756,
+    87762,
+    87766,
+    87769,
+    87773,
+    87775
+  ],
+  "remaining_processes": [],
+  "recorded_drained": true,
+  "clean": true
+}

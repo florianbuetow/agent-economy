@@ -1,0 +1,11 @@
+44bbfe8dfe2d2c5185bdc851fc0c1f45a60ff34b69f83574cebc44a6b5ac70e1  agents/tests/unit/test_task_board_mixin.py
+91f16a5f57bfbc66b13f097532f4bfaf132fb111596a0f05ca131c22a1c45cdf  agents/tests/unit/test_mp03_outbound_tokens.py
+67debb3d764e30b7fa2d7f9c7c6e5403525b0a99bd95a2fa923b03bc94db47c2  docs/plans/2026-10-18-mp07-agent-sdk-fixture-reconciliation.md
+731f862d74a54bfc993c022da044810f5b7bb7e90a4e2edb9db4242ac4828d53  /private/tmp/agent-economy-mp07-agent-sdk-fixtures-original-sha256.log
+bd68c847348c9fd8987af2bc067509e4601f4294523c4fe9671d41cda7113e67  /private/tmp/agent-economy-mp07-agent-sdk-fixtures-baseline.log
+6da0b788bfc295d15d01d104fb82c1ebad65cd94a96e4aafca6bad304fe02611  /private/tmp/agent-economy-mp07-agent-sdk-fixtures-focused-final.log
+82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18  /private/tmp/agent-economy-mp07-agent-sdk-fixtures-ruff-final.log
+3bc53bf3e981a98a34a852e175bf9b77af841edea74fca595d9aedcbaf9a4938  /private/tmp/agent-economy-mp07-agent-sdk-fixtures-format-final.log
+6f1775b0abe201ebd711d1674cc2cdf730bf1f490b47905c725df436d9641b8a  /private/tmp/agent-economy-mp07-agent-sdk-fixtures-mypy-final.log
+1df34e53d23044b6c0bd7596ed298ae55c1806a371fd31e4c89a8dea28174fb8  /private/tmp/agent-economy-mp07-agent-sdk-fixtures-pyright-final.log
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  /private/tmp/agent-economy-mp07-agent-sdk-fixtures-codespell-final.log

@@ -353,7 +353,7 @@ async def test_task_posting_derives_the_lock_identity_from_its_existing_intent(
     transport = AsyncMock(return_value={"task_id": "transport-task-probe"})
     monkeypatch.setattr(agent, "_request", transport)
     try:
-        await agent.post_task("Title", "Spec", 100, 10, 20, 30)
+        await agent.post_task("Title", "Spec", 100, 10, 20, 30, acceptance_window_seconds=40)
         transport.assert_awaited_once()
         assert transport.await_args is not None
         body = transport.await_args.kwargs["json"]

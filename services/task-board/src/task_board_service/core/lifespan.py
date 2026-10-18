@@ -115,7 +115,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             state.store = store
             escrow_coordinator = EscrowCoordinator(
                 central_bank_client=central_bank_client,
-                store=store,
             )
             state.escrow_coordinator = escrow_coordinator
             token_validator = TokenValidator(
@@ -123,15 +122,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 identity_client=identity_client,
             )
             state.token_validator = token_validator
+            if settings.deadline_evaluation is None:
+                msg = "deadline_evaluation configuration is required"
+                raise RuntimeError(msg)
             deadline_evaluator = DeadlineEvaluator(
                 store=store,
                 escrow_coordinator=escrow_coordinator,
                 platform_agent=state.platform_agent,
+                deadline_actor_id=settings.deadline_evaluation.actor_id,
             )
-
-            if settings.deadline_evaluation is None:
-                msg = "deadline_evaluation configuration is required"
-                raise RuntimeError(msg)
             deadline_sweep_task = asyncio.create_task(
                 deadline_evaluator.run_periodic_sweep(
                     settings.deadline_evaluation.evaluation_interval_seconds

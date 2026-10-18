@@ -43,8 +43,9 @@ def test_every_service_key_is_denied_every_other_domains_writes(
     app_with_writer: TestClient,
     gateway_test_signers: dict[str, GatewayRequestSigner],
     db_writer: DbWriter,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    graph = _seed_domain_graph(app_with_writer)
+    graph = _seed_domain_graph(app_with_writer, monkeypatch)
     path, data, _table = _write_case(domain, graph)
     body = json.dumps(data, separators=(",", ":")).encode()
     authorization = _signed_authorization(
@@ -93,7 +94,7 @@ def test_invalid_domain_write_has_no_effect_then_valid_control_succeeds(
 ) -> None:
     now = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
     monkeypatch.setattr(jws, "_clock", lambda: now)
-    graph = _seed_domain_graph(app_with_writer)
+    graph = _seed_domain_graph(app_with_writer, monkeypatch)
     path, data, table = _write_case(domain, graph)
     body = json.dumps(data, separators=(",", ":")).encode()
     signer = gateway_test_signers[domain]
@@ -143,7 +144,7 @@ def test_invalid_domain_write_has_no_effect_then_valid_control_succeeds(
         headers={"Authorization": valid_authorization, "Content-Type": "application/json"},
         auth=None,
     )
-    assert control.status_code == (200 if domain == "bank" else 201), control.text
+    assert control.status_code == (200 if domain in {"bank", "board"} else 201), control.text
     assert (
         db_writer.connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
         == count_before + 1

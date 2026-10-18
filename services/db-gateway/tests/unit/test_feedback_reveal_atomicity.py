@@ -14,9 +14,16 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from service_auth.signing import public_key_to_b64
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service.money_audit import audit_money
+from db_gateway_service.receipt_audit import audit_receipt_ownership
 from db_gateway_service.services.db_writer import DbWriter
+from db_gateway_service.services.task_operation_writer import TaskOperationWriter
+from db_gateway_service.task_operation_requests import parse_task_operation_request
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
 
 if TYPE_CHECKING:
@@ -27,8 +34,7 @@ JOURNAL_MODE = "wal"
 
 
 # ---------------------------------------------------------------------------
-# Seeding — raw inserts satisfy the FK chain
-# identity_agents -> bank_accounts -> bank_escrow -> board_tasks
+# Seeding — identity fixture rows plus real financial and native task writers
 # ---------------------------------------------------------------------------
 
 
@@ -40,27 +46,135 @@ def _seed_agent(conn: sqlite3.Connection, agent_id: str, name: str) -> None:
     )
 
 
-def _seed_task(conn: sqlite3.Connection, task_id: str, poster_id: str, escrow_id: str) -> None:
-    conn.execute(
-        "INSERT INTO board_tasks "
-        "(task_id, poster_id, title, spec, reward, status, bidding_deadline_seconds, "
-        "deadline_seconds, review_deadline_seconds, bidding_deadline, escrow_id, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (
-            task_id,
-            poster_id,
-            "Test Task",
-            "Build a login page",
-            100,
-            "approved",
-            86400,
-            172800,
-            43200,
-            "2026-03-01T10:00:00Z",
-            escrow_id,
-            "2026-02-28T10:15:00Z",
-        ),
+def _seed_task(
+    writer: DbWriter, task_id: str, poster_id: str, worker_id: str, escrow_id: str
+) -> None:
+    """Complete a real approved history before the original reveal/race checks."""
+    now_text = "2026-02-28T10:16:00Z"
+    now_us = parse_utc_text_to_epoch_us(now_text)
+    writer.create_task(
+        {
+            "task_id": task_id,
+            "poster_id": poster_id,
+            "title": "Test Task",
+            "spec": "Build a login page",
+            "reward": 100,
+            "status": "open",
+            "bidding_deadline_seconds": 86400,
+            "acceptance_window_seconds": 3600,
+            "deadline_seconds": 172800,
+            "review_deadline_seconds": 43200,
+            "bidding_deadline": "2026-03-01T10:15:00Z",
+            "escrow_id": escrow_id,
+            "created_at": "2026-02-28T10:15:00Z",
+            "event": make_event(source="board", event_type="task.created", task_id=task_id),
+        }
     )
+    platform_key = Ed25519PrivateKey.generate().public_key()
+    operations = TaskOperationWriter(
+        writer.connection,
+        lambda: now_us,
+        "system-feedback-fixture-deadline",
+        f"ed25519:{public_key_to_b64(platform_key)}",
+    )
+
+    def claim(
+        command: str, status: str, version: int, actor_id: str, arguments: dict[str, object]
+    ) -> dict[str, Any]:
+        return operations.claim_operation(
+            parse_task_operation_request(
+                {
+                    "protocol_version": 1,
+                    "operation_id": f"op-{uuid4()}",
+                    "task_id": task_id,
+                    "command": command,
+                    "expected_status": status,
+                    "expected_lifecycle_version": version,
+                    "actor_kind": "agent",
+                    "actor_id": actor_id,
+                    "arguments": arguments,
+                }
+            ),
+            "gateway-task-board",
+        )
+
+    bid_id = f"bid-{uuid4()}"
+    bid = claim(
+        "submit_bid",
+        "open",
+        0,
+        worker_id,
+        {"bid_id": bid_id, "bidder_id": worker_id, "amount": 50},
+    )
+    assert bid["operation_state"] == "completed"
+    accepted = claim(
+        "accept_bid",
+        "open",
+        0,
+        poster_id,
+        {
+            "bid_id": bid_id,
+            "worker_id": worker_id,
+            "escrow_id": escrow_id,
+            "reward": 100,
+            "bid_amount": 50,
+        },
+    )
+    assert accepted["operation_state"] == "completed"
+    writer.record_asset(
+        {
+            "asset_id": f"asset-{uuid4()}",
+            "task_id": task_id,
+            "uploader_id": worker_id,
+            "filename": "answer.txt",
+            "content_type": "text/plain",
+            "size_bytes": 1,
+            "storage_path": f"{task_id}/answer.txt",
+            "uploaded_at": now_text,
+            "event": make_event(source="board", event_type="asset.uploaded", task_id=task_id),
+        },
+        None,
+    )
+    submitted = claim("submit_deliverable", "accepted", 1, worker_id, {"worker_id": worker_id})
+    assert submitted["operation_state"] == "completed"
+    approval = claim(
+        "approve_task",
+        "submitted",
+        2,
+        poster_id,
+        {
+            "poster_id": poster_id,
+            "worker_id": worker_id,
+            "escrow_id": escrow_id,
+            "reward": 100,
+            "source_reference": f"task:{task_id}:approved",
+        },
+    )
+    assert approval["operation_state"] == "claimed"
+    financial = approval["effect_intent"]["financial_request"]
+    event = make_event(source="central-bank", event_type="escrow.released", task_id=task_id)
+    event["timestamp"] = now_text
+    settled = writer.escrow_release(
+        {
+            "operation_id": approval["operation_id"],
+            "escrow_id": financial["escrow_id"],
+            "recipient_account_id": financial["recipient_account_id"],
+            "source_reference": financial["source_reference"],
+            "tx_id": f"tx-{uuid4()}",
+            "resolved_at": now_text,
+            "event": event,
+        }
+    )
+    assert settled["outcome"] == "native_receipt"
+    finalized = operations.finalize_operation(approval["operation_id"], "gateway-task-board")
+    assert finalized["operation_state"] == "completed"
+    assert finalized["effect_result_reference"] == approval["operation_id"]
+    row = writer.connection.execute(
+        "SELECT status,worker_id,escrow_pending FROM board_tasks WHERE task_id=?", (task_id,)
+    ).fetchone()
+    assert row is not None and tuple(row) == ("approved", worker_id, 0)
+    assert audit_money(writer.connection).financially_clean
+    assert audit_receipt_ownership(writer.connection).ownership_clean
 
 
 class _Fixture:
@@ -86,41 +200,47 @@ class _Fixture:
             journal_mode=JOURNAL_MODE,
             schema_sql=None,
         )
-        writer.create_account(
-            {
-                "operation_id": f"op-{uuid4()}",
-                "account_id": self.alice,
-                "balance": 500,
-                "created_at": "2026-02-28T10:00:00Z",
-                "initial_credit": {
+        try:
+            writer.create_account(
+                {
+                    "operation_id": f"op-{uuid4()}",
+                    "account_id": self.alice,
+                    "balance": 500,
+                    "created_at": "2026-02-28T10:00:00Z",
+                    "initial_credit": {
+                        "tx_id": f"tx-{uuid4()}",
+                        "amount": 500,
+                        "reference": "initial_balance",
+                        "timestamp": "2026-02-28T10:00:00Z",
+                    },
+                    "event": make_event(source="bank", event_type="account.created"),
+                }
+            )
+            writer.escrow_lock(
+                {
+                    "operation_id": f"op-{uuid4()}",
+                    "escrow_id": escrow_id,
+                    "payer_account_id": self.alice,
+                    "amount": 100,
+                    "task_id": self.task_id,
+                    "created_at": "2026-02-28T10:10:00Z",
                     "tx_id": f"tx-{uuid4()}",
-                    "amount": 500,
-                    "reference": "initial_balance",
-                    "timestamp": "2026-02-28T10:00:00Z",
-                },
-                "event": make_event(source="bank", event_type="account.created"),
-            }
-        )
-        writer.escrow_lock(
-            {
-                "operation_id": f"op-{uuid4()}",
-                "escrow_id": escrow_id,
-                "payer_account_id": self.alice,
-                "amount": 100,
-                "task_id": self.task_id,
-                "created_at": "2026-02-28T10:10:00Z",
-                "tx_id": f"tx-{uuid4()}",
-                "event": make_event(
-                    source="bank", event_type="escrow.locked", task_id=self.task_id
-                ),
-            }
-        )
-        writer.close()
-        conn = sqlite3.connect(db_path)
-        conn.execute("PRAGMA foreign_keys=ON")
-        _seed_task(conn, self.task_id, self.alice, escrow_id)
-        conn.commit()
-        conn.close()
+                    "event": make_event(
+                        source="bank", event_type="escrow.locked", task_id=self.task_id
+                    ),
+                }
+            )
+            writer.create_account(
+                {
+                    "account_id": self.bob,
+                    "balance": 0,
+                    "created_at": "2026-02-28T10:00:00Z",
+                    "event": make_event(source="bank", event_type="account.created"),
+                }
+            )
+            _seed_task(writer, self.task_id, self.alice, self.bob, escrow_id)
+        finally:
+            writer.close()
 
 
 @pytest.fixture

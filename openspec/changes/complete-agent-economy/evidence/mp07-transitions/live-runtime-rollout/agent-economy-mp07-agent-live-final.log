@@ -1,0 +1,145 @@
+Isolated runtime: /private/tmp/agent-economy-mp07-agent-live-final/runtime-b07676853a174c568cbbf108bf7e857f-ge285g_8
+provisioned handle=alice fingerprint_sha256=acdd9fb1a13e47ab7863b19000084efa4c2a0dd450556eb7a9a030f2a507efaa
+provisioned handle=bob fingerprint_sha256=afc58f67a557d689748ec055e5514645c10080469eeb6563632fc3aee6fb2e81
+provisioned handle=feeder fingerprint_sha256=174d0a9bb5177e68393819c97b649cfffed88c71db20849e2dbd4efdda876c65
+provisioned handle=mathbot fingerprint_sha256=e2203c8a717f459c36aa8c9a9a5b407eda6a0658982c0b3d46f0f580c1df9d70
+provisioned handle=mathbot_mistral fingerprint_sha256=b307f26fa6b2b72c5775b98b5b62ce285a4206a3c4e594fe8b233971919d524c
+provisioned handle=mathbot_openai fingerprint_sha256=440767d237c87d0300e4e4037c2c31dd2015f9aef78b7a1a9ad45a3839917da1
+provisioned handle=operator fingerprint_sha256=32f553fc9f6bce66f14111b151df199842be2d7a97938510b9bfe08a943e44f3
+provisioned handle=platform fingerprint_sha256=fe1378636661ecbd50defcd8695ba2f5fd3a20973ef8b2c51e37ad40f4142bbc
+provisioned handle=gateway-central-bank fingerprint_sha256=89536c1defa76347da9de849c248864dccbaa56ca889349b17167baf3635096a
+provisioned handle=gateway-court fingerprint_sha256=d64be84c0726ad9916a16857c8833bb1b8c4427b30383344f2864fef4610af46
+provisioned handle=gateway-identity fingerprint_sha256=1ad4b7262ab150424f1231ad9295e993c3b9982f8d8920530301f90f9a45b6e1
+provisioned handle=gateway-reputation fingerprint_sha256=ec2bf53ae27b14acc14a0e84c5e2210f30d938ae1e8c414e60aedb4c767f7065
+provisioned handle=gateway-task-board fingerprint_sha256=edfe113ccb50341bfdc74754f10c5159eaf46ee62979af41a712eb422301164b
+2026-10-18T09:24:41 [INFO] httpx: HTTP Request: POST http://127.0.0.1:55233/agents/register "HTTP/1.1 409 Conflict"
+2026-10-18T09:24:41 [INFO] httpx: HTTP Request: GET http://127.0.0.1:55233/agents "HTTP/1.1 200 OK"
+2026-10-18T09:24:41 [INFO] httpx: HTTP Request: GET http://127.0.0.1:55233/agents/a-c32dd67c-3ddf-4904-b13f-83b5ae965e87 "HTTP/1.1 200 OK"
+2026-10-18T09:24:41 [INFO] httpx: HTTP Request: GET http://127.0.0.1:55233/agents/a-c32dd67c-3ddf-4904-b13f-83b5ae965e87 "HTTP/1.1 200 OK"
+2026-10-18T09:24:41 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-c32dd67c-3ddf-4904-b13f-83b5ae965e87
+2026-10-18T09:24:41 [INFO] httpx: HTTP Request: POST http://127.0.0.1:55233/agents/register "HTTP/1.1 201 Created"
+2026-10-18T09:24:41 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-fca18726-f8ab-4413-9818-ccb9973c5214
+2026-10-18T09:24:41 [INFO] httpx: HTTP Request: POST http://127.0.0.1:55234/accounts "HTTP/1.1 201 Created"
+2026-10-18T09:24:41 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-18T09:24:41 [INFO] httpx: HTTP Request: POST http://127.0.0.1:55234/accounts/a-fca18726-f8ab-4413-9818-ccb9973c5214/credit "HTTP/1.1 200 OK"
+2026-10-18T09:24:41 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-ad1ae95b-2fd5-529e-bc85-3f84778c8a8e, tx_id=tx-b76deb4d-d855-49c1-a2f9-67cd5252a6bf, balance_after=1000000)
+2026-10-18T09:24:41 [INFO] httpx: HTTP Request: GET http://127.0.0.1:55234/accounts/a-fca18726-f8ab-4413-9818-ccb9973c5214 "HTTP/1.1 200 OK"
+agent_id=a-fca18726-f8ab-4413-9818-ccb9973c5214
+genesis_amount=1000000
+balance=1000000
+operation_id=op-ad1ae95b-2fd5-529e-bc85-3f84778c8a8e
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/agents/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 104 items
+
+agents/tests/e2e/test_agent_startup.py::test_registered_agent_can_create_own_account PASSED [  0%]
+agents/tests/e2e/test_agent_startup.py::test_registered_agent_can_post_task_after_account_creation PASSED [  1%]
+agents/tests/e2e/test_agent_startup.py::test_create_account_is_idempotent PASSED [  2%]
+agents/tests/e2e/test_agent_startup.py::test_unregistered_agent_cannot_create_account PASSED [  3%]
+agents/tests/e2e/test_asset_store.py::test_download_uploaded_asset PASSED [  4%]
+agents/tests/e2e/test_asset_store.py::test_multiple_asset_uploads PASSED [  5%]
+agents/tests/e2e/test_asset_store.py::test_submit_without_assets_rejected PASSED [  6%]
+agents/tests/e2e/test_autonomous_acceptance.py::test_feeder_autonomously_accepts_lowest_bid PASSED [  7%]
+agents/tests/e2e/test_bank.py::test_create_account_and_check_balance PASSED [  8%]
+agents/tests/e2e/test_bank.py::test_credit_account_and_view_transactions PASSED [  9%]
+agents/tests/e2e/test_bank.py::test_escrow_lock_insufficient_funds PASSED [ 10%]
+agents/tests/e2e/test_cancellation_escrow_refund.py::test_cancel_task_with_pending_bid_refunds_escrow_and_orphans_bid PASSED [ 11%]
+agents/tests/e2e/test_court_rulings.py::test_escrow_split_proportional_payout PASSED [ 12%]
+agents/tests/e2e/test_court_rulings.py::test_ruling_recorded_on_task_board PASSED [ 13%]
+agents/tests/e2e/test_court_rulings.py::test_court_posts_reputation_feedback PASSED [ 14%]
+agents/tests/e2e/test_court_rulings.py::test_dispute_proceeds_without_rebuttal PASSED [ 15%]
+agents/tests/e2e/test_court_rulings.py::test_duplicate_dispute_rejected PASSED [ 16%]
+agents/tests/e2e/test_dispute_court_handoff.py::test_task_board_dispute_auto_files_court_claim PASSED [ 17%]
+agents/tests/e2e/test_disputes.py::test_full_dispute_with_court_ruling PASSED [ 18%]
+agents/tests/e2e/test_economic_cycle.py::test_economic_cycle_earn_then_spend PASSED [ 19%]
+agents/tests/e2e/test_economic_invariants.py::test_economic_cycle_with_dispute_partial_payout PASSED [ 20%]
+agents/tests/e2e/test_economic_invariants.py::test_insufficient_funds_cannot_post_task PASSED [ 21%]
+agents/tests/e2e/test_fund_feeder.py::test_feeder_registration_is_idempotent PASSED [ 22%]
+agents/tests/e2e/test_fund_feeder.py::test_feeder_account_creation PASSED [ 23%]
+agents/tests/e2e/test_fund_feeder.py::test_platform_can_credit_feeder PASSED [ 24%]
+agents/tests/e2e/test_fund_feeder.py::test_credit_idempotency PASSED     [ 25%]
+agents/tests/e2e/test_fund_feeder.py::test_credit_requires_positive_amount PASSED [ 25%]
+agents/tests/e2e/test_fund_feeder.py::test_feeder_balance_reflects_credits PASSED [ 26%]
+agents/tests/e2e/test_fund_feeder.py::test_funding_summary_fields PASSED [ 27%]
+agents/tests/e2e/test_fund_feeder.py::test_credit_without_account_fails PASSED [ 28%]
+agents/tests/e2e/test_fund_feeder.py::test_feeder_agent_uses_ed25519_signing PASSED [ 29%]
+agents/tests/e2e/test_fund_feeder.py::test_fund_feeder_full_workflow PASSED [ 30%]
+agents/tests/e2e/test_identity.py::TestIdentityE2E::test_register_and_verify PASSED [ 31%]
+agents/tests/e2e/test_mp03_token_admission.py::test_bank_remote_identity_admission_matrix[wrong_audience-400-invalid_payload] PASSED [ 32%]
+agents/tests/e2e/test_mp03_token_admission.py::test_bank_remote_identity_admission_matrix[expired-401-token_expired] PASSED [ 33%]
+agents/tests/e2e/test_mp03_token_admission.py::test_bank_remote_identity_admission_matrix[missing_exp-400-invalid_jws] PASSED [ 34%]
+agents/tests/e2e/test_mp03_token_admission.py::test_bank_remote_identity_admission_matrix[bad_signature-403-forbidden] PASSED [ 35%]
+agents/tests/e2e/test_mp03_token_admission.py::test_bank_remote_identity_admission_matrix[bad_signature_missing_action-403-forbidden] PASSED [ 36%]
+agents/tests/e2e/test_mp03_token_admission.py::test_task_board_remote_identity_admission_matrix_has_no_bid_effect[wrong_resource-400-invalid_payload] PASSED [ 37%]
+agents/tests/e2e/test_mp03_token_admission.py::test_task_board_remote_identity_admission_matrix_has_no_bid_effect[wrong_action-400-invalid_payload] PASSED [ 38%]
+agents/tests/e2e/test_mp03_token_admission.py::test_task_board_remote_identity_admission_matrix_has_no_bid_effect[future-401-token_not_yet_valid] PASSED [ 39%]
+agents/tests/e2e/test_mp03_token_admission.py::test_task_board_remote_identity_admission_matrix_has_no_bid_effect[non_object_header-400-invalid_jws] PASSED [ 40%]
+agents/tests/e2e/test_mp03_token_admission.py::test_task_board_remote_identity_admission_matrix_has_no_bid_effect[boolean_time-400-invalid_jws] PASSED [ 41%]
+agents/tests/e2e/test_mp03_token_admission.py::test_reputation_remote_context_rejection_has_no_feedback_effect PASSED [ 42%]
+agents/tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[wrong_audience-400-invalid_payload] PASSED [ 43%]
+agents/tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[wrong_resource-400-invalid_payload] PASSED [ 44%]
+agents/tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[wrong_action-400-invalid_payload] PASSED [ 45%]
+agents/tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[expired-401-token_expired] PASSED [ 46%]
+agents/tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[future-401-token_not_yet_valid] PASSED [ 47%]
+agents/tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[missing_exp-400-invalid_jws] PASSED [ 48%]
+agents/tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[bad_signature-403-forbidden] PASSED [ 49%]
+agents/tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[wrong_platform_kid-403-forbidden] PASSED [ 50%]
+agents/tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[bad_signature_missing_action-403-forbidden] PASSED [ 50%]
+agents/tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[wrong_platform_kid_missing_action-403-forbidden] PASSED [ 51%]
+agents/tests/e2e/test_mp07_runtime_crash_replay.py::test_runtime_replays_exact_durable_command_after_process_sigkill[before_send-submit_bid] PASSED [ 52%]
+agents/tests/e2e/test_mp07_runtime_crash_replay.py::test_runtime_replays_exact_durable_command_after_process_sigkill[before_send-accept_bid] PASSED [ 53%]
+agents/tests/e2e/test_mp07_runtime_crash_replay.py::test_runtime_replays_exact_durable_command_after_process_sigkill[before_send-submit_deliverable] PASSED [ 54%]
+agents/tests/e2e/test_mp07_runtime_crash_replay.py::test_runtime_replays_exact_durable_command_after_process_sigkill[before_send-approve_task] PASSED [ 55%]
+agents/tests/e2e/test_mp07_runtime_crash_replay.py::test_runtime_replays_exact_durable_command_after_process_sigkill[before_send-dispute_task] PASSED [ 56%]
+agents/tests/e2e/test_mp07_runtime_crash_replay.py::test_runtime_replays_exact_durable_command_after_process_sigkill[after_response-submit_bid] PASSED [ 57%]
+agents/tests/e2e/test_mp07_runtime_crash_replay.py::test_runtime_replays_exact_durable_command_after_process_sigkill[after_response-accept_bid] PASSED [ 58%]
+agents/tests/e2e/test_mp07_runtime_crash_replay.py::test_runtime_replays_exact_durable_command_after_process_sigkill[after_response-submit_deliverable] PASSED [ 59%]
+agents/tests/e2e/test_mp07_runtime_crash_replay.py::test_runtime_replays_exact_durable_command_after_process_sigkill[after_response-approve_task] PASSED [ 60%]
+agents/tests/e2e/test_mp07_runtime_crash_replay.py::test_runtime_replays_exact_durable_command_after_process_sigkill[after_response-dispute_task] PASSED [ 61%]
+agents/tests/e2e/test_mp12_proxy_bids.py::test_real_operator_bids_stay_sealed_then_reveal_losing_bidder_history PASSED [ 62%]
+agents/tests/e2e/test_mp12_proxy_bids.py::test_real_operator_cannot_list_another_posters_open_bids PASSED [ 63%]
+agents/tests/e2e/test_platform_auth.py::test_non_platform_cannot_release_escrow PASSED [ 64%]
+agents/tests/e2e/test_platform_auth.py::test_non_platform_cannot_split_escrow PASSED [ 65%]
+agents/tests/e2e/test_platform_auth.py::test_non_platform_cannot_credit_account PASSED [ 66%]
+agents/tests/e2e/test_proxy_routes.py::test_proxy_identity_is_operator_not_platform PASSED [ 67%]
+agents/tests/e2e/test_proxy_routes.py::test_proxy_create_task_posts_as_operator_not_platform PASSED [ 68%]
+agents/tests/e2e/test_proxy_routes.py::test_proxy_accept_bid_authorized_as_operator_poster PASSED [ 69%]
+agents/tests/e2e/test_proxy_routes.py::test_proxy_approve_task_authorized_as_operator_poster PASSED [ 70%]
+agents/tests/e2e/test_proxy_routes.py::test_proxy_dispute_authorized_as_operator_poster PASSED [ 71%]
+agents/tests/e2e/test_reputation.py::test_mutual_feedback_exchange PASSED [ 72%]
+agents/tests/e2e/test_reputation_sealed.py::test_sealed_feedback_invisible_until_mutual PASSED [ 73%]
+agents/tests/e2e/test_reputation_sealed.py::test_self_feedback_rejected PASSED [ 74%]
+agents/tests/e2e/test_reputation_sealed.py::test_duplicate_feedback_rejected PASSED [ 75%]
+agents/tests/e2e/test_task_board.py::test_post_task_with_escrow PASSED   [ 75%]
+agents/tests/e2e/test_task_board.py::test_submit_bid_on_task PASSED      [ 76%]
+agents/tests/e2e/test_task_board.py::test_accept_bid_and_assign_worker PASSED [ 77%]
+agents/tests/e2e/test_task_board.py::test_post_and_cancel_task PASSED    [ 78%]
+agents/tests/e2e/test_task_board.py::test_happy_path_submit_and_approve PASSED [ 79%]
+agents/tests/e2e/test_task_board.py::test_competing_bidders PASSED       [ 80%]
+agents/tests/e2e/test_task_board.py::test_sealed_bid_visibility PASSED   [ 81%]
+agents/tests/e2e/test_task_board.py::test_file_dispute PASSED            [ 82%]
+agents/tests/e2e/test_task_board.py::test_execution_deadline_expiry PASSED [ 83%]
+agents/tests/e2e/test_task_board.py::test_auto_approve_on_review_timeout PASSED [ 84%]
+agents/tests/e2e/test_task_board_auth.py::test_self_bid_rejected PASSED  [ 85%]
+agents/tests/e2e/test_task_board_auth.py::test_duplicate_bid_rejected PASSED [ 86%]
+agents/tests/e2e/test_task_board_auth.py::test_non_poster_cannot_cancel_task PASSED [ 87%]
+agents/tests/e2e/test_task_board_auth.py::test_non_poster_cannot_accept_bid PASSED [ 88%]
+agents/tests/e2e/test_task_board_auth.py::test_non_poster_cannot_approve_task PASSED [ 89%]
+agents/tests/e2e/test_task_board_auth.py::test_non_poster_cannot_dispute_task PASSED [ 90%]
+agents/tests/e2e/test_task_board_auth.py::test_non_worker_cannot_upload_asset PASSED [ 91%]
+agents/tests/e2e/test_task_board_auth.py::test_non_worker_cannot_submit_deliverable PASSED [ 92%]
+agents/tests/e2e/test_task_board_auth.py::test_approve_non_submitted_task_rejected PASSED [ 93%]
+agents/tests/e2e/test_task_board_auth.py::test_bidding_deadline_expiry_rejects_bid PASSED [ 94%]
+agents/tests/e2e/test_treasury_provision.py::test_operator_registration_is_idempotent PASSED [ 95%]
+agents/tests/e2e/test_treasury_provision.py::test_operator_account_creation_is_idempotent PASSED [ 96%]
+agents/tests/e2e/test_treasury_provision.py::test_treasury_genesis_credit_is_idempotent PASSED [ 97%]
+agents/tests/e2e/test_treasury_provision.py::test_treasury_provision_full_workflow PASSED [ 98%]
+agents/tests/e2e/test_unattended_economy.py::test_unattended_economy_two_tasks_diverge_correctly PASSED [ 99%]
+agents/tests/e2e/test_wp06_autonomous_ruling.py::test_disputed_task_reaches_ruled_via_polling PASSED [100%]
+
+============================= 104 passed in 41.64s =============================

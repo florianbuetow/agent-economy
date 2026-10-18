@@ -1,0 +1,93 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 11 items
+
+tests/unit/test_mp07_proxy_transport_status.py FFFFFFFFFFF               [100%]
+
+=================================== FAILURES ===================================
+_ test_service_validates_body_and_retains_actual_transport_status[accept_bid-200-completed] _
+tests/unit/test_mp07_proxy_transport_status.py:106: in test_service_validates_body_and_retains_actual_transport_status
+    get_app_state().user_agent = _TransportAgent(
+    ^^^^^^^^^^^^^^^
+src/ui_service/core/state.py:42: in get_app_state
+    raise RuntimeError(msg)
+E   RuntimeError: Application state not initialized
+_ test_service_validates_body_and_retains_actual_transport_status[approve_task-202-claimed] _
+tests/unit/test_mp07_proxy_transport_status.py:106: in test_service_validates_body_and_retains_actual_transport_status
+    get_app_state().user_agent = _TransportAgent(
+    ^^^^^^^^^^^^^^^
+src/ui_service/core/state.py:42: in get_app_state
+    raise RuntimeError(msg)
+E   RuntimeError: Application state not initialized
+_ test_service_validates_body_and_retains_actual_transport_status[dispute_task-200-completed] _
+tests/unit/test_mp07_proxy_transport_status.py:106: in test_service_validates_body_and_retains_actual_transport_status
+    get_app_state().user_agent = _TransportAgent(
+    ^^^^^^^^^^^^^^^
+src/ui_service/core/state.py:42: in get_app_state
+    raise RuntimeError(msg)
+E   RuntimeError: Application state not initialized
+___ test_status_and_operation_state_contradictions_fail_closed[200-claimed] ____
+tests/unit/test_mp07_proxy_transport_status.py:143: in test_status_and_operation_state_contradictions_fail_closed
+    get_app_state().user_agent = _TransportAgent(
+    ^^^^^^^^^^^^^^^
+src/ui_service/core/state.py:42: in get_app_state
+    raise RuntimeError(msg)
+E   RuntimeError: Application state not initialized
+__ test_status_and_operation_state_contradictions_fail_closed[202-completed] ___
+tests/unit/test_mp07_proxy_transport_status.py:143: in test_status_and_operation_state_contradictions_fail_closed
+    get_app_state().user_agent = _TransportAgent(
+    ^^^^^^^^^^^^^^^
+src/ui_service/core/state.py:42: in get_app_state
+    raise RuntimeError(msg)
+E   RuntimeError: Application state not initialized
+__ test_status_and_operation_state_contradictions_fail_closed[201-completed] ___
+tests/unit/test_mp07_proxy_transport_status.py:143: in test_status_and_operation_state_contradictions_fail_closed
+    get_app_state().user_agent = _TransportAgent(
+    ^^^^^^^^^^^^^^^
+src/ui_service/core/state.py:42: in get_app_state
+    raise RuntimeError(msg)
+E   RuntimeError: Application state not initialized
+________________ test_sdk_contract_error_is_sanitized_as_ui_502 ________________
+tests/unit/test_mp07_proxy_transport_status.py:164: in test_sdk_contract_error_is_sanitized_as_ui_502
+    get_app_state().user_agent = _TransportAgent(
+    ^^^^^^^^^^^^^^^
+src/ui_service/core/state.py:42: in get_app_state
+    raise RuntimeError(msg)
+E   RuntimeError: Application state not initialized
+________ test_typed_transport_does_not_bypass_existing_body_validation _________
+tests/unit/test_mp07_proxy_transport_status.py:188: in test_typed_transport_does_not_bypass_existing_body_validation
+    get_app_state().user_agent = _TransportAgent(
+    ^^^^^^^^^^^^^^^
+src/ui_service/core/state.py:42: in get_app_state
+    raise RuntimeError(msg)
+E   RuntimeError: Application state not initialized
+_ test_router_forwards_validated_body_with_exact_transport_status[accept_bid-200-completed] _
+tests/unit/test_mp07_proxy_transport_status.py:232: in test_router_forwards_validated_body_with_exact_transport_status
+    response = await proxy_router.accept_bid(
+E   TypeError: accept_bid() missing 1 required positional argument: 'response'
+_ test_router_forwards_validated_body_with_exact_transport_status[approve_task-202-claimed] _
+tests/unit/test_mp07_proxy_transport_status.py:239: in test_router_forwards_validated_body_with_exact_transport_status
+    response = await proxy_router.approve_task(task_id="t-ui-status", body=request)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: approve_task() missing 1 required positional argument: 'response'
+_ test_router_forwards_validated_body_with_exact_transport_status[dispute_task-200-completed] _
+tests/unit/test_mp07_proxy_transport_status.py:242: in test_router_forwards_validated_body_with_exact_transport_status
+    response = await proxy_router.file_dispute(
+E   TypeError: file_dispute() missing 1 required positional argument: 'response'
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_service_validates_body_and_retains_actual_transport_status[accept_bid-200-completed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_service_validates_body_and_retains_actual_transport_status[approve_task-202-claimed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_service_validates_body_and_retains_actual_transport_status[dispute_task-200-completed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_status_and_operation_state_contradictions_fail_closed[200-claimed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_status_and_operation_state_contradictions_fail_closed[202-completed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_status_and_operation_state_contradictions_fail_closed[201-completed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_sdk_contract_error_is_sanitized_as_ui_502
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_typed_transport_does_not_bypass_existing_body_validation
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_router_forwards_validated_body_with_exact_transport_status[accept_bid-200-completed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_router_forwards_validated_body_with_exact_transport_status[approve_task-202-claimed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_router_forwards_validated_body_with_exact_transport_status[dispute_task-200-completed]
+============================== 11 failed in 0.20s ==============================

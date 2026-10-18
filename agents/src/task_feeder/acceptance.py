@@ -26,17 +26,19 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-import httpx
+from service_auth.financial_identity import operation_id_for
+
+from base_agent.runtime_task_intent_factory import acceptance_intent
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from base_agent.agent import BaseAgent
+    from base_agent.runtime_intents import NewTaskIntent
+    from base_agent.runtime_task_commands import RuntimeTaskCommands
     from task_feeder.config import AcceptanceConfig
 
 logger = logging.getLogger(__name__)
-
-_HTTP_CONFLICT = 409
 
 # Delivery-quality ratings are ordinal (dissatisfied < satisfied <
 # extremely_satisfied); mapped to a numeric scale and averaged to score an agent.
@@ -95,6 +97,19 @@ def _parse_created_at(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def _validated_bid(bid: object) -> dict[str, Any]:
+    if not isinstance(bid, dict):
+        raise ValueError("bid must be an object")
+    for key in ("bid_id", "bidder_id"):
+        value = bid.get(key)
+        if not isinstance(value, str) or value == "":
+            raise ValueError(f"{key} must be a nonempty string")
+    amount = bid.get("amount")
+    if type(amount) is not int or amount <= 0:
+        raise ValueError("bid amount must be a positive integer")
+    return bid
+
+
 class AcceptanceLoop:
     """Poll the feeder's own open tasks and accept the winning bid when eligible."""
 
@@ -103,10 +118,12 @@ class AcceptanceLoop:
         agent: BaseAgent,
         config: AcceptanceConfig,
         now: Callable[[], datetime],
+        commands: RuntimeTaskCommands,
     ) -> None:
         self._agent = agent
         self._config = config
         self._now = now
+        self._commands = commands
         self._running = True
         self._finalized: set[str] = set()
 
@@ -134,55 +151,80 @@ class AcceptanceLoop:
 
     async def accept_one(self, task: dict[str, Any]) -> str:
         """Evaluate one open task and, if eligible, accept its winning bid."""
-        task_id = str(task["task_id"])
-        # The bid list is the authoritative bid count; the task summary's
-        # bid_count is unreliable against the gateway-backed board.
-        bids = await self._agent.list_bids(task_id)
-        if not self.is_eligible(str(task["created_at"]), len(bids)):
-            # Not enough bids yet, or the acceptance window has not opened, or the
-            # task has zero bids and is left to expire.
-            return "not_eligible"
+        task_id_value = task.get("task_id")
+        if not isinstance(task_id_value, str) or task_id_value == "":
+            raise ValueError("task_id must be a nonempty string")
+        task_id = task_id_value
 
-        # Reputation only matters as a tie-break among the lowest-amount bids, so
-        # only fetch it when there is an amount tie to break.
-        lowest_amount = min(int(bid["amount"]) for bid in bids)
-        contenders = {str(bid["bidder_id"]) for bid in bids if int(bid["amount"]) == lowest_amount}
-        delivery_scores = await self._delivery_scores_for(contenders) if len(contenders) > 1 else {}
-        winner = select_winning_bid(bids, delivery_scores)
-        winner_bid_id = str(winner["bid_id"])
+        async def prepare() -> NewTaskIntent:
+            # The bid list is the authoritative bid count; the task summary's
+            # bid_count is unreliable against the gateway-backed board.
+            bids = [_validated_bid(bid) for bid in await self._agent.list_bids(task_id)]
+            created_at = task.get("created_at")
+            if not isinstance(created_at, str):
+                raise ValueError("created_at must be a string")
+            if not self.is_eligible(created_at, len(bids)):
+                raise _NotEligible
+
+            lowest_amount = min(bid["amount"] for bid in bids)
+            contenders = {bid["bidder_id"] for bid in bids if bid["amount"] == lowest_amount}
+            delivery_scores = (
+                await self._delivery_scores_for(contenders) if len(contenders) > 1 else {}
+            )
+            winner = select_winning_bid(bids, delivery_scores)
+            snapshot = await self._agent.get_task(task_id)
+            if snapshot.get("task_id") != task_id:
+                raise ValueError("task detail identity does not match the selected task")
+            source_version = snapshot.get("lifecycle_version")
+            if type(source_version) is not int:
+                raise ValueError("lifecycle_version must be an integer")
+            operation_id = operation_id_for("task-accept", (task_id, str(source_version)))
+            actor_id = self._agent.agent_id
+            if not isinstance(actor_id, str) or actor_id == "":
+                raise ValueError("agent must be registered before accepting a bid")
+            return acceptance_intent(
+                task=snapshot,
+                actor_id=actor_id,
+                bid=winner,
+                operation_id=operation_id,
+            )
 
         try:
-            await self._agent.accept_bid(task_id, winner_bid_id)
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == _HTTP_CONFLICT:
-                logger.warning(
-                    "Task %s no longer open (409) — likely expired first; marking done-with",
-                    task_id,
-                )
-                self._finalized.add(task_id)
-                return "conflict"
-            raise
-
+            intent = await self._commands.execute(
+                task_id=task_id,
+                slot="acceptance",
+                prepare=prepare,
+            )
+        except _NotEligible:
+            return "not_eligible"
+        if intent.state != "completed":
+            return intent.state
         self._finalized.add(task_id)
-        logger.info(
-            "Accepted bid %s on task %s (amount=%s)",
-            winner_bid_id,
-            task_id,
-            winner["amount"],
-        )
+        logger.info("Accepted bid on task %s", task_id)
         return "accepted"
 
     async def process_open_tasks(self) -> None:
         """Run one polling pass over the feeder's own open tasks."""
+        replayed = await self._commands.replay_unfinished()
+        replayed_task_ids = {intent.task_id for intent in replayed if intent.slot == "acceptance"}
+        self._finalized.update(
+            intent.task_id
+            for intent in replayed
+            if intent.slot == "acceptance" and intent.state == "completed"
+        )
         tasks = await self._agent.list_tasks(
             status="open",
             poster_id=self._agent.agent_id,
         )
         for task in tasks:
-            task_id = str(task.get("task_id", ""))
-            if task_id in self._finalized:
+            task_id_value = task.get("task_id")
+            if not isinstance(task_id_value, str) or task_id_value == "":
+                logger.error("Ignoring open-task projection with invalid task_id")
                 continue
-            if str(task.get("status", "")).lower() != "open":
+            task_id = task_id_value
+            if task_id in self._finalized or task_id in replayed_task_ids:
+                continue
+            if task.get("status") != "open":
                 continue
             try:
                 await self.accept_one(task)
@@ -204,3 +246,7 @@ class AcceptanceLoop:
     def stop(self) -> None:
         """Signal the acceptance loop to stop after the current cycle."""
         self._running = False
+
+
+class _NotEligible(Exception):
+    """Abort fresh preparation without publishing an acceptance intent."""

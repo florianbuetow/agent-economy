@@ -1,22 +1,30 @@
-"""Regression coverage for fractional task deadline precision (T-169)."""
+"""Regression coverage for fractional native task deadline precision (T-169)."""
 
 from __future__ import annotations
 
 import json
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import pytest
-from freezegun import freeze_time
 
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.task_db_client import TaskDbClient
+from tests.fakes.native_task_fixture import NativeTaskFixture, TaskTerms, native_task_context
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+_TASK_ID = "t-fractional-deadline"
+_FRACTIONAL_US = 250_000
+_TERMS = TaskTerms(100, 1, 20, 60, 60)
 
 
 def _open_task() -> dict[str, Any]:
     return {
-        "task_id": "t-fractional-deadline",
+        "task_id": _TASK_ID,
         "poster_id": "a-poster",
         "title": "Fractional deadline",
         "spec": "Preserve the complete cutoff timestamp.",
@@ -25,34 +33,37 @@ def _open_task() -> dict[str, Any]:
         "escrow_id": "esc-fractional-deadline",
         "created_at": "2025-01-01T00:00:00.250000Z",
         "bidding_deadline_seconds": 1,
+        "acceptance_window_seconds": 20,
         "deadline_seconds": 60,
         "review_deadline_seconds": 60,
         "bid_count": 0,
+        "escrow_pending": 0,
     }
 
 
-def _evaluator() -> tuple[DeadlineEvaluator, MagicMock, AsyncMock]:
-    store = MagicMock()
-    store.update_task.return_value = 1
-    store.get_task.return_value = None
-    escrow_coordinator = AsyncMock()
-    escrow_coordinator.retry_pending_escrow = AsyncMock(side_effect=lambda task: task)
-    escrow_coordinator.try_release_escrow = AsyncMock()
-    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=escrow_coordinator)
-    return evaluator, store, escrow_coordinator
+@contextmanager
+def _fractional_scenario(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[NativeTaskFixture]:
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+        scenario.clock.value_us += _FRACTIONAL_US
+        scenario.open_task(_TASK_ID, _TERMS)
+        task = scenario.task(_TASK_ID)
+        assert task["created_at"].endswith("00.250000Z")
+        assert task["bidding_cutoff_us"] == scenario.clock.value_us + 1_000_000
+        yield scenario
 
 
 @pytest.mark.unit
 def test_compute_deadline_preserves_fractional_base_precision() -> None:
     deadline = DeadlineEvaluator.compute_deadline("2025-01-01T00:00:00.250000Z", 1)
-
     assert deadline == "2025-01-01T00:00:01.250000Z"
 
 
 @pytest.mark.unit
 def test_compute_deadline_keeps_whole_second_format() -> None:
     deadline = DeadlineEvaluator.compute_deadline("2025-01-01T00:00:00Z", 1)
-
     assert deadline == "2025-01-01T00:00:01Z"
 
 
@@ -62,7 +73,7 @@ def test_gateway_create_payload_preserves_fractional_deadline() -> None:
 
     def _capture_request(request: httpx.Request) -> httpx.Response:
         requests.append(request)
-        return httpx.Response(201, json={"task_id": "t-fractional-deadline"}, request=request)
+        return httpx.Response(201, json={"task_id": _TASK_ID}, request=request)
 
     class _TestSigner:
         def sign_request(self, request: httpx.Request, *, action: str) -> httpx.Request:
@@ -89,36 +100,58 @@ def test_gateway_create_payload_preserves_fractional_deadline() -> None:
     payload = json.loads(requests[0].content)
     expected_deadline = "2025-01-01T00:00:01.250000Z"
     assert payload["bidding_deadline"] == expected_deadline
+    assert payload["acceptance_window_seconds"] == 20
     event_payload = json.loads(payload["event"]["payload"])
     assert event_payload["bidding_deadline"] == expected_deadline
 
 
 @pytest.mark.unit
-async def test_fractional_deadline_remains_open_just_before_cutoff() -> None:
-    evaluator, store, escrow_coordinator = _evaluator()
-    task = _open_task()
+async def test_fractional_deadline_remains_open_just_before_cutoff(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with _fractional_scenario(tmp_path, monkeypatch) as scenario:
+        cutoff_us = int(scenario.task(_TASK_ID)["bidding_cutoff_us"])
+        scenario.clock.value_us = cutoff_us - 1
+        evaluator = scenario.evaluator(platform_agent=None)
 
-    with freeze_time("2025-01-01 00:00:01.249999"):
-        result = await evaluator.evaluate_deadline(task)
+        result = await evaluator.evaluate_deadline(scenario.task(_TASK_ID))
 
-    assert result["status"] == "open"
-    store.update_task.assert_not_called()
-    escrow_coordinator.try_release_escrow.assert_not_awaited()
+        assert result["status"] == "open"
+        assert scenario.task(_TASK_ID)["status"] == "open"
+        assert (
+            scenario.store.writer.connection.execute(
+                "SELECT COUNT(*) FROM board_task_operations WHERE task_id=? "
+                "AND command='expire_bidding'",
+                (_TASK_ID,),
+            ).fetchone()[0]
+            == 0
+        )
+        assert scenario.store.reader.get_escrow(f"esc-{_TASK_ID}")["status"] == "locked"
+        scenario.bank.escrow_release.assert_not_awaited()
 
 
 @pytest.mark.unit
-async def test_fractional_deadline_expires_at_exact_cutoff() -> None:
-    evaluator, store, escrow_coordinator = _evaluator()
-    task = _open_task()
+async def test_fractional_deadline_expires_at_exact_cutoff(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with _fractional_scenario(tmp_path, monkeypatch) as scenario:
+        cutoff_us = int(scenario.task(_TASK_ID)["bidding_cutoff_us"])
+        scenario.clock.value_us = cutoff_us
+        evaluator = scenario.evaluator(platform_agent=None)
 
-    with freeze_time("2025-01-01 00:00:01.250000"):
-        result = await evaluator.evaluate_deadline(task)
+        result = await evaluator.evaluate_deadline(scenario.task(_TASK_ID))
 
-    assert result["status"] == "expired"
-    store.update_task.assert_called_once()
-    escrow_coordinator.try_release_escrow.assert_awaited_once_with(
-        "t-fractional-deadline",
-        "expired",
-        "esc-fractional-deadline",
-        "a-poster",
-    )
+        assert result["status"] == "expired"
+        assert result["expired_at"].endswith("01.250000Z")
+        operation_id = scenario.assert_settlement(
+            _TASK_ID,
+            command="expire_bidding",
+            status="expired",
+            recipient=scenario.poster_id,
+            event_type="task.expired",
+        )
+        assert operation_id
+        assert scenario.store.reader.get_account(scenario.poster_id)["balance"] == 1000
+        scenario.bank.escrow_release.assert_awaited_once()

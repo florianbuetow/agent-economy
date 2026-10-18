@@ -1,0 +1,12 @@
+....                                                                     [100%]
+=============================== warnings summary ===============================
+../../tests/runtime/test_isolated_test_runtime.py:18
+  /Users/flo/Developer/github/agent-economy/tests/runtime/test_isolated_test_runtime.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.integration
+
+../../tests/integration/test_startup_order_regression.py:11
+  /Users/flo/Developer/github/agent-economy/tests/integration/test_startup_order_regression.py:11: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+4 passed, 2 warnings in 9.66s

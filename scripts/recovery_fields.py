@@ -116,6 +116,7 @@ def _specific_fields(config_id: str, config: Mapping[str, object]) -> list[Field
             definitions.append(_network(f"platform.{name}"))
         definitions.extend(
             (
+                _file("runtime_state.directory", parent),
                 _file("data.keys_dir", parent),
                 _file("data.roster_path", parent),
                 _file("task_feeder.tasks_file", PathResolutionBase.AGENTS_PACKAGE_ROOT),
@@ -125,7 +126,11 @@ def _specific_fields(config_id: str, config: Mapping[str, object]) -> list[Field
             definitions.append((("workers", profile, "llm", "base_url"), BindingKind.NETWORK, None))
     elif config_id == "db-gateway":
         definitions.extend(
-            (_file("database.schema_path", cwd), _file("recovery.backup_root", parent))
+            (
+                _file("database.schema_path", cwd),
+                _file("recovery.backup_root", parent),
+                _file("board_authority.platform_public_key_path", parent),
+            )
         )
         for kid in _members(config, ("auth", "trusted_callers")):
             definitions.append(

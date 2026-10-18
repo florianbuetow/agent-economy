@@ -83,6 +83,7 @@ async def test_registered_agent_can_post_task_after_account_creation(
             spec="Verify startup flow creates bank account",
             reward=100,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )

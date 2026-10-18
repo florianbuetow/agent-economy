@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .native_task_contract import lifecycle_version, new_operation_id
+
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
 
@@ -40,15 +42,35 @@ async def test_cancel_task_with_pending_bid_refunds_escrow_and_orphans_bid(
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
         balance_after_post = await poster.get_balance()
         assert balance_after_post["balance"] == 4500
 
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
 
-        await poster.cancel_task(task_id=task["task_id"])
+        assert bid_response.status_code == 201
+
+        bid = bid_response.body
+
+        cancel_response = await poster.cancel_task(
+            task_id=task["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+
+        assert cancel_response.status_code == 200
+
+        cancelled_command_task = cancel_response.body
+
+        assert cancelled_command_task["status"] == "cancelled"
 
         cancelled_task = await poster.get_task(task["task_id"])
         assert cancelled_task["status"] == "cancelled"
@@ -63,6 +85,8 @@ async def test_cancel_task_with_pending_bid_refunds_escrow_and_orphans_bid(
                 "token": poster._sign_jws(
                     {
                         "action": "accept_bid",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(cancelled_task),
                         "task_id": task["task_id"],
                         "bid_id": bid["bid_id"],
                         "poster_id": poster.agent_id,

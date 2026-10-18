@@ -1,0 +1,19 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 33 items
+
+tests/unit/test_runtime_intents.py Fssssssssssssssssssssssssssssssss     [100%]
+
+=================================== FAILURES ===================================
+__________________ test_runtime_intent_interface_is_available __________________
+tests/unit/test_runtime_intents.py:170: in test_runtime_intent_interface_is_available
+    assert _runtime is not None, (
+E   AssertionError: T-181 capability missing: base_agent.runtime_intents has not been implemented
+E   assert None is not None
+=========================== short test summary info ============================
+FAILED tests/unit/test_runtime_intents.py::test_runtime_intent_interface_is_available
+======================== 1 failed, 32 skipped in 0.16s =========================

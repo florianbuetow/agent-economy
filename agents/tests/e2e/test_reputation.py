@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .native_task_contract import lifecycle_version, new_operation_id
+
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
 
@@ -27,14 +29,44 @@ async def test_mutual_feedback_exchange(make_funded_agent) -> None:
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
         await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
-        await worker.submit_deliverable(task["task_id"])
-        await poster.approve_task(task["task_id"])
+        submit_response = await worker.submit_deliverable(
+            task["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(accepted_task),
+        )
+        assert submit_response.status_code == 200
+        submitted_task = submit_response.body
+        assert submitted_task["status"] == "submitted"
+        approve_response = await poster.approve_task(
+            task["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(submitted_task),
+        )
+        assert approve_response.status_code == 200
+        approved_command_task = approve_response.body
+        assert approved_command_task["status"] == "approved"
 
         await poster.submit_feedback(
             task_id=task["task_id"],

@@ -1,0 +1,37 @@
+{
+  "claims": {
+    "baseline": {
+      "handle": 67495,
+      "failed": 1,
+      "errors": 8
+    },
+    "first_reconciliation": "9setup errors because missing workerasset; not aproductfailure",
+    "final": {
+      "handle": 12593,
+      "exit_code": 0,
+      "passed": 9
+    }
+  },
+  "review": "APPROVE by /root/mp07_board_rollout_review: both original testclasses/all9methods AST-identical; realnative approval andsettlement, names/times/racepreserved; notHTTP/filebyteproof",
+  "sources": {
+    "services/db-gateway/tests/unit/test_feedback_reveal_atomicity.py": "266e4b997aefc5351f25f0f4f8cf28efe2468091de6b98bcabab2717279ebb5a",
+    "docs/plans/2026-10-18-mp07-feedback-native-fixture.md": "9d1737c0d0733c0959d65114a6e561107f93593f306bbb63fc30c06084f4426f"
+  },
+  "artifacts": {
+    "agent-economy-mp07-feedback-native-fixture-baseline.log": "5ad031d695bfd8428a689bec40bf00ad770294bf1a8472a298e80f8069986f86",
+    "agent-economy-mp07-feedback-native-fixture-format.log": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50",
+    "agent-economy-mp07-feedback-native-fixture-green.log": "36082a73dd81cb4a305ced8df1c36fd5ceb755ef92384cc6fcc2d7925098e5bc",
+    "agent-economy-mp07-feedback-native-fixture-green2.log": "73afaedeaaf440ecbc6e1d9758001cfd6966768c23114c4ac52e97abd77a40cd",
+    "agent-economy-mp07-feedback-native-fixture-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-feedback-native-fixture-ruff2.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "baseline/test_feedback_reveal_atomicity.py": "608bbc307bf6c1440a0a51880ac4e57c244863f20e4a8f0463bc65121b8f7a77",
+    "agent-economy-mp07-gateway-final-fixtures-parent.log": "3df3e1a1c683ed96d0358c566f44c724a2ff3c0834410111b06a8a113fa67a1f"
+  },
+  "combined_parent_gate": {
+    "handle": 49591,
+    "exit_code": 0,
+    "passed": 65,
+    "warnings": 1,
+    "scope": "Combined constraints/projection/feedback/crosscutting; overlapping scopes must not be summed"
+  }
+}

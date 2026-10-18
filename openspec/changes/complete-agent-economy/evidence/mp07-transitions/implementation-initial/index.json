@@ -1,0 +1,101 @@
+{
+  "baseline_commit": "a6af0bed5e0475f63b271329bb7f8ea683da9bc3",
+  "root_gate": "not run; MP07 remains open",
+  "limits": [
+    "Authority configuration initial import/collection attempt was corrected before final baseline and excluded.",
+    "Publication initial missing-sidecar-schema setup error was bootstrap wiring, excluded from product reds.",
+    "New migration and command review regressions remain failing; focused greens do not prove complete MP07."
+  ],
+  "logs": [
+    {
+      "file": "verified-caller-red-final.log",
+      "source": "/private/tmp/agent-economy-mp07-verified-caller-red-final.log",
+      "sha256": "1ff186eaf4e858f8dc1e06fc5a679c4a25ca143743063aa8b21489f86672cb38",
+      "pytest_summary": "==================== 4 failed, 2 passed, 1 warning in 0.17s ===================="
+    },
+    {
+      "file": "verified-caller-green.log",
+      "source": "/private/tmp/agent-economy-mp07-verified-caller-green.log",
+      "sha256": "b25049d45f4184686e26ed8576e83f0cb115319d734fef8e8a6a8afc8cd4e3a3",
+      "pytest_summary": "========================= 6 passed, 1 warning in 0.29s ========================="
+    },
+    {
+      "file": "authority-config-red.log",
+      "source": "/private/tmp/agent-economy-mp07-authority-config-red.log",
+      "sha256": "18d2542f03995283d06314945796479f71d65857a54d5238995e867569426895",
+      "pytest_summary": "======================== 13 failed, 1 warning in 0.57s ========================="
+    },
+    {
+      "file": "authority-config.log",
+      "source": "/private/tmp/agent-economy-mp07-authority-config.log",
+      "sha256": "0681ce2a92527a114ca69ce09187c37e4f99fa0e282b79a2fba1228555f6574a",
+      "pytest_summary": "======================== 13 passed, 1 warning in 0.79s ========================="
+    },
+    {
+      "file": "deadline-actor-red.log",
+      "source": "/private/tmp/agent-economy-mp07-deadline-actor-red.log",
+      "sha256": "2a4c323b929cdbea4bb9c8675b799db2d133f4e4e2ae9c17d59e123442795af0",
+      "pytest_summary": "============================== 7 failed in 0.19s ==============================="
+    },
+    {
+      "file": "deadline-actor-green.log",
+      "source": "/private/tmp/agent-economy-mp07-deadline-actor-green.log",
+      "sha256": "c5039bae32b31771e88cce13c86b1f910c0e75bfe34006eed911ff211ce48cd8",
+      "pytest_summary": "============================== 7 passed in 0.03s ==============================="
+    },
+    {
+      "file": "runtime-schema-red.log",
+      "source": "/private/tmp/agent-economy-mp07-runtime-schema-red.log",
+      "sha256": "170944b0c68815145c7d985d26da58f65b3e08e6c228641f604fa58bb328d07d",
+      "pytest_summary": "========================= 3 failed, 1 warning in 2.69s ========================="
+    },
+    {
+      "file": "runtime-schema-green.log",
+      "source": "/private/tmp/agent-economy-mp07-runtime-schema-green.log",
+      "sha256": "0dc3688b2b15499cf266c8f3d49cfe2ee47e58403f36ef11f00d75f3fc16fbdc",
+      "pytest_summary": "========================= 3 passed, 1 warning in 2.20s ========================="
+    },
+    {
+      "file": "publication-red-final.log",
+      "source": "/private/tmp/agent-economy-mp07-publication-red-final.log",
+      "sha256": "0cc6e6f1f98c28305b24b053c3f6d56430303373bbe6c3ae541bd30071e5e354",
+      "pytest_summary": "========================= 1 failed, 1 warning in 0.32s ========================="
+    },
+    {
+      "file": "publication-runtime-green.log",
+      "source": "/private/tmp/agent-economy-mp07-publication-runtime-green.log",
+      "sha256": "ac7e2495b467d7fae4f40ecab4644ab97a021ea4d6bf45555da6abe83eff3ef9",
+      "pytest_summary": "========================= 4 passed, 1 warning in 1.54s ========================="
+    },
+    {
+      "file": "authority-schema-parent-green.log",
+      "source": "/private/tmp/agent-economy-mp07-authority-schema-parent-green.log",
+      "sha256": "67060744c30c411f9e73f0333e73db29664420eb091e6f3a82c392283a5fd688",
+      "pytest_summary": "======================== 28 passed, 1 warning in 0.82s ========================="
+    },
+    {
+      "file": "operation-boundary-first-wired.log",
+      "source": "/private/tmp/agent-economy-mp07-operation-boundary-first-wired.log",
+      "sha256": "23e6ce4dceec979a701db3040c5ad9c1fba5374b5965c6ab85d1258a287ab1f8",
+      "pytest_summary": "========================= 2 passed, 1 warning in 0.51s ========================="
+    },
+    {
+      "file": "wired-foundation-green.log",
+      "source": "/private/tmp/agent-economy-mp07-wired-foundation-green.log",
+      "sha256": "3906fd50791dc11e7695afc6680dab2536fdad7572f61842877cf440caf1987d",
+      "pytest_summary": "======================== 12 passed, 1 warning in 2.48s ========================="
+    },
+    {
+      "file": "migration-parent-green-initial.log",
+      "source": "/private/tmp/agent-economy-mp07-migration-parent-green-initial.log",
+      "sha256": "a67e1eb3a575a8246463d88b89c5f86627e459374a15bf37240ba0290158ba56",
+      "pytest_summary": "======================== 10 passed, 1 warning in 20.74s ========================"
+    },
+    {
+      "file": "schema-regressions-parent-red.log",
+      "source": "/private/tmp/agent-economy-mp07-schema-regressions-parent-red.log",
+      "sha256": "17fa8dfad4dcd5990ea8020927fe68ca0e2603cb7e7df6fc321437fc89f029b1",
+      "pytest_summary": "=================== 9 failed, 3 passed, 1 warning in 15.26s ===================="
+    }
+  ]
+}

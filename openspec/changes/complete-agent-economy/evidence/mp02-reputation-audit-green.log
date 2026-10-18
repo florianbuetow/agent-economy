@@ -1,0 +1,12 @@
+
+[0;34m=== Scanning Dependencies for Vulnerabilities ===[0m
+No known vulnerabilities found
+Name               Skip Reason
+------------------ ---------------------------------------------------------------------------------
+reputation-service Dependency not found on PyPI and could not be audited: reputation-service (0.1.0)
+service-auth       Dependency not found on PyPI and could not be audited: service-auth (0.1.0)
+service-clients    Dependency not found on PyPI and could not be audited: service-clients (0.1.0)
+service-commons    Dependency not found on PyPI and could not be audited: service-commons (0.1.0)
+
+[0;32m✓ No known vulnerabilities found[0m
+

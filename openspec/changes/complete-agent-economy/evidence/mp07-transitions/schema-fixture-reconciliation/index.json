@@ -1,0 +1,33 @@
+{
+  "baseline": "Full discovery1158:925pass214fail19errors, see ../gateway-full-discovery/index.json",
+  "focused": {
+    "handle": 92540,
+    "exit_code": 0,
+    "passed": 34,
+    "warnings": 1
+  },
+  "final_after_format": {
+    "handle": 23136,
+    "exit_code": 0,
+    "passed": 34,
+    "warnings": 1
+  },
+  "scope": "Three runtime fixture sources only; frozen v2 catalog/migration intact; original nonmutation/integrity/journal/ownership/rollback assertions retained; older schema rejection extended to v1 and v2. Other Gateway failures remain open.",
+  "review": "APPROVE after independent reread confirmed exact-v3 future-version control; parent77351 34passed/1existing warning.",
+  "artifacts": {
+    "agent-economy-mp07-gateway-schema-fixture-final.log": "1f1212ec033ab8dd12e46281a794abc82ba73cc86a983444e9c9a21356c60554",
+    "agent-economy-mp07-gateway-schema-fixture-focused.log": "db95ba3d17df5588025fee4a508048ec07ae60ee259824a93a70921fb87e1016",
+    "agent-economy-mp07-gateway-schema-fixture-reviewed.log": "d94c1f70f0f74cec034f9206c74a85253c536f56e6b373f0536a32249c19ddbd",
+    "agent-economy-mp07-gateway-schema-fixture-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "baseline/test_mp04_startup.py": "f0c6442c9494631d20834b2b6e88c67674dc54a02a47a8d20579a585a5f2e9f1",
+    "baseline/test_schema_review_regressions.py": "6d06dc00e83a7395794add5787f800ba180b320a225fbc98e64665af0dce52f6",
+    "baseline/test_schema_startup_health.py": "d501b252f13a59ef07010a8aad1ad32ba91a05ab876e97465198d47602a27584",
+    "review-verdict.md": "48a397994c2674f3b48ec6d26fad96886b6ca6846e093340b94dae83c0682c8b"
+  },
+  "sources": {
+    "services/db-gateway/tests/unit/test_schema_startup_health.py": "1bc61334f5ce3faca7fc8c86087c661111542c5f5a0f4f88d76cb23d0934e871",
+    "services/db-gateway/tests/unit/test_schema_review_regressions.py": "04598e7335af943cc990874d60bdb59371cbf6f16c22594cba0479e507f1e4a6",
+    "services/db-gateway/tests/unit/test_mp04_startup.py": "06943f6983c7798c78445bd409809b99151eb5c0cb91eff98838bb5805667f0e",
+    "docs/plans/2026-10-18-mp07-gateway-runtime-fixture-reconciliation.md": "6f373dbe9c116b18306263ec80b4d2a6d20408e1ce90d24166cc7df0ad38a1a3"
+  }
+}

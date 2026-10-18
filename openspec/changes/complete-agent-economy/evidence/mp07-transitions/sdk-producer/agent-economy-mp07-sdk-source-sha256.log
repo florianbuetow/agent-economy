@@ -1,0 +1,4 @@
+c216a6206ee1a7c49695b9572d5e18b92f38d369d93c187355c33358b10066a4  libs/service-auth/src/service_auth/mixins/task_board.py
+99cdbe138593c95fb56e695283e087579843a8fe35c0bfe25e25d4bd7df3cd98  libs/service-auth/tests/unit/test_mp07_task_board_producer.py
+2cf87ca928336764f7d8cb8c4ef63b07260682ab29dada1a3aab56c89f319db4  libs/service-auth/tests/unit/test_mp03_producers.py
+31ee59fdf8b6f7d53454a52e152ccf4ed30b48e04d3b5a297f53e188096de130  docs/plans/2026-10-18-mp07-sdk-contract-rollout.md

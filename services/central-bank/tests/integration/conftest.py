@@ -214,6 +214,10 @@ recovery:
   maintenance_lock_path: "{Path(db_path).parent / "maintenance.lock"}"
   backup_root: "{Path(db_path).parent / "backups"}"
 
+board_authority:
+  platform_public_key_path: "{Path(db_path).parent / "platform.pub"}"
+  deadline_actor_id: "system-task-board-deadline"
+
 request:
   max_body_size: 1048576
 auth:
@@ -242,6 +246,7 @@ async def _build_gateway_app(db_path: str) -> tuple[FastAPI, DbWriter]:
     key_dir = Path(db_path).parent
     generate_keypair("gateway-identity", key_dir)
     generate_keypair("gateway-central-bank", key_dir)
+    generate_keypair("platform", key_dir)
     config_path = _write_gateway_config(db_path)
     reset_gateway_state()
     state = init_gateway_state()
@@ -365,7 +370,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "central-bank"}"
 identity:
   base_url: "http://localhost:8001"
   get_agent_path: "/agents"

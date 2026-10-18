@@ -22,22 +22,26 @@ from __future__ import annotations
 import asyncio
 import os
 import socket
+import sqlite3
 import tempfile
 import threading
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import httpx
 import pytest
 import uvicorn
+from db_gateway_service import task_time
 from db_gateway_service.app import create_app as create_gateway_app
 from db_gateway_service.config import clear_settings_cache as clear_gateway_settings_cache
 from db_gateway_service.core.state import init_app_state as init_gateway_state
 from db_gateway_service.core.state import reset_app_state as reset_gateway_state
 from db_gateway_service.services.db_reader import DbReader
 from db_gateway_service.services.db_writer import DbWriter
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from httpx import ASGITransport, AsyncClient
 from service_auth.gateway import GatewayRequestSigner, GatewaySignerConfig
 from service_auth.platform import PlatformAgent
@@ -47,7 +51,7 @@ from court_service.app import create_app
 from court_service.config import clear_settings_cache
 from court_service.core.state import get_app_state, reset_app_state
 from court_service.judges import MockJudge
-from tests.helpers import make_mock_platform_agent
+from tests.helpers import make_mock_platform_agent, make_ruling_acknowledgment
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -57,6 +61,18 @@ if TYPE_CHECKING:
 PLATFORM_AGENT_ID = "a-platform-test-id"
 
 _SCHEMA_PATH = Path(__file__).resolve().parents[4] / "docs" / "specifications" / "schema.sql"
+_FIXED_GATEWAY_NOW = "2026-03-01T09:30:00Z"
+_FIXED_GATEWAY_NOW_US = parse_utc_text_to_epoch_us(_FIXED_GATEWAY_NOW)
+
+
+@dataclass(frozen=True)
+class SeededTask:
+    """Persisted native task history awaiting its matching Court claim."""
+
+    task_id: str
+    escrow_id: str
+    dispute_operation_id: str
+    reason: str
 
 
 class _GatewayAuth(httpx.Auth):
@@ -93,7 +109,7 @@ server:
 
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{Path(db_path).parent / "logs" / "db-gateway"}"
   format: "json"
 
 database:
@@ -105,6 +121,10 @@ database:
 recovery:
   maintenance_lock_path: "{Path(db_path).parent / "maintenance.lock"}"
   backup_root: "{Path(db_path).parent / "backups"}"
+
+board_authority:
+  platform_public_key_path: "{Path(db_path).parent / "platform.pub"}"
+  deadline_actor_id: "system-task-board-deadline"
 
 request:
   max_body_size: 1048576
@@ -144,8 +164,15 @@ class _LiveGateway:
     """A real DB Gateway ASGI app served by uvicorn on a random local port,
     started/stopped around a single test."""
 
-    def __init__(self, base_url: str, server: uvicorn.Server, thread: threading.Thread) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        db_path: str,
+        server: uvicorn.Server,
+        thread: threading.Thread,
+    ) -> None:
         self.base_url = base_url
+        self.db_path = db_path
         self._server = server
         self._thread = thread
 
@@ -163,6 +190,7 @@ async def _start_live_gateway(db_path: str) -> tuple[_LiveGateway, DbWriter]:
         "gateway-central-bank",
         "gateway-task-board",
         "gateway-court",
+        "platform",
     ):
         generate_keypair(kid, key_dir)
     config_path = _write_gateway_config(db_path)
@@ -205,7 +233,7 @@ async def _start_live_gateway(db_path: str) -> tuple[_LiveGateway, DbWriter]:
             msg = "In-process DB Gateway did not become ready in time"
             raise RuntimeError(msg)
 
-    return _LiveGateway(base_url, server, thread), writer
+    return _LiveGateway(base_url, db_path, server, thread), writer
 
 
 @pytest.fixture
@@ -215,7 +243,11 @@ def gateway_db_path(tmp_path: Path) -> str:
 
 
 @pytest.fixture
-async def _gateway(gateway_db_path: str) -> AsyncIterator[_LiveGateway]:
+async def _gateway(
+    gateway_db_path: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> AsyncIterator[_LiveGateway]:
+    monkeypatch.setattr(task_time, "utc_now_us", lambda: _FIXED_GATEWAY_NOW_US)
     live_gateway, writer = await _start_live_gateway(gateway_db_path)
     yield live_gateway
     live_gateway.stop()
@@ -281,10 +313,9 @@ async def seed_task(
     task_id: str,
     poster_id: str,
     worker_id: str,
-) -> str:
-    """Seed the full real-gateway FK chain a court claim requires:
-    identity_agents (poster, worker) -> bank_accounts -> bank_escrow ->
-    board_tasks. Returns the escrow_id used."""
+    reason: str,
+) -> SeededTask:
+    """Seed a real native task history through a pending dispute claim."""
     await register_identity_agent(gateway_client, poster_id)
     await register_identity_agent(gateway_client, worker_id)
 
@@ -344,8 +375,9 @@ async def seed_task(
             "title": "Court integration test task",
             "spec": "Prove the real gateway-backed dispute path end to end",
             "reward": 100,
-            "status": "submitted",
+            "status": "open",
             "bidding_deadline_seconds": 3600,
+            "acceptance_window_seconds": 1800,
             "deadline_seconds": 86400,
             "review_deadline_seconds": 86400,
             "bidding_deadline": "2026-03-01T10:00:00Z",
@@ -363,7 +395,153 @@ async def seed_task(
         },
     )
     assert resp.status_code == 201, resp.text
-    return escrow_id
+
+    bid_id = f"bid-{uuid.uuid4()}"
+    await _complete_task_operation(
+        gateway_client,
+        {
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid.uuid4()}",
+            "task_id": task_id,
+            "command": "submit_bid",
+            "expected_status": "open",
+            "expected_lifecycle_version": 0,
+            "actor_kind": "agent",
+            "actor_id": worker_id,
+            "arguments": {"bid_id": bid_id, "bidder_id": worker_id, "amount": 90},
+        },
+        expected_status="open",
+        expected_version=0,
+    )
+    await _complete_task_operation(
+        gateway_client,
+        {
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid.uuid4()}",
+            "task_id": task_id,
+            "command": "accept_bid",
+            "expected_status": "open",
+            "expected_lifecycle_version": 0,
+            "actor_kind": "agent",
+            "actor_id": poster_id,
+            "arguments": {
+                "bid_id": bid_id,
+                "worker_id": worker_id,
+                "escrow_id": escrow_id,
+                "reward": 100,
+                "bid_amount": 90,
+            },
+        },
+        expected_status="accepted",
+        expected_version=1,
+    )
+
+    asset_id = f"asset-{uuid.uuid4()}"
+    resp = await gateway_client.post(
+        "/board/assets",
+        json={
+            "asset_id": asset_id,
+            "task_id": task_id,
+            "uploader_id": worker_id,
+            "filename": "court-integration-result.txt",
+            "content_type": "text/plain",
+            "size_bytes": 6,
+            "storage_path": f"assets/{task_id}/{asset_id}",
+            "content_hash": "a" * 64,
+            "uploaded_at": _FIXED_GATEWAY_NOW,
+            "event": {
+                "event_source": "board",
+                "event_type": "asset.uploaded",
+                "timestamp": _FIXED_GATEWAY_NOW,
+                "task_id": task_id,
+                "agent_id": worker_id,
+                "summary": f"Worker asset for {task_id}",
+                "payload": "{}",
+            },
+        },
+    )
+    assert resp.status_code == 201, resp.text
+
+    await _complete_task_operation(
+        gateway_client,
+        {
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid.uuid4()}",
+            "task_id": task_id,
+            "command": "submit_deliverable",
+            "expected_status": "accepted",
+            "expected_lifecycle_version": 1,
+            "actor_kind": "agent",
+            "actor_id": worker_id,
+            "arguments": {"worker_id": worker_id},
+        },
+        expected_status="submitted",
+        expected_version=2,
+    )
+
+    dispute_operation_id = f"op-{uuid.uuid4()}"
+    resp = await gateway_client.post(
+        "/board/task-operations",
+        json={
+            "protocol_version": 1,
+            "operation_id": dispute_operation_id,
+            "task_id": task_id,
+            "command": "dispute_task",
+            "expected_status": "submitted",
+            "expected_lifecycle_version": 2,
+            "actor_kind": "agent",
+            "actor_id": poster_id,
+            "arguments": {
+                "poster_id": poster_id,
+                "worker_id": worker_id,
+                "escrow_id": escrow_id,
+                "reward": 100,
+                "reason": reason,
+            },
+        },
+    )
+    assert resp.status_code == 202, resp.text
+    pending = resp.json()
+    assert pending["operation_state"] == "claimed"
+    assert pending["effect_kind"] == "court_claim"
+    assert pending["effect_state"] == "pending"
+    return SeededTask(task_id, escrow_id, dispute_operation_id, reason)
+
+
+async def _complete_task_operation(
+    gateway_client: httpx.AsyncClient,
+    command: dict[str, Any],
+    *,
+    expected_status: str,
+    expected_version: int,
+) -> dict[str, Any]:
+    response = await gateway_client.post("/board/task-operations", json=command)
+    assert response.status_code == 200, response.text
+    operation = response.json()
+    assert operation["operation_state"] == "completed"
+    assert operation["effect_kind"] == "none"
+    assert operation["effect_state"] == "none"
+    assert operation["result"]["status"] == expected_status
+    assert operation["result"]["lifecycle_version"] == expected_version
+    return operation
+
+
+async def finalize_task_dispute(
+    gateway_client: httpx.AsyncClient,
+    seeded: SeededTask,
+) -> dict[str, Any]:
+    """Finalize the pending native dispute from the persisted Court claim."""
+    response = await gateway_client.post(
+        f"/board/task-operations/{seeded.dispute_operation_id}/finalize",
+        json={},
+    )
+    assert response.status_code == 200, response.text
+    completed = response.json()
+    assert completed["operation_state"] == "completed"
+    assert completed["effect_state"] == "succeeded"
+    assert completed["result"]["status"] == "disputed"
+    assert completed["result"]["lifecycle_version"] == 3
+    return completed
 
 
 class _NoDeliverableFetcher:
@@ -381,9 +559,44 @@ async def _register_platform_agent(agent: PlatformAgent) -> None:
     agent.agent_id = PLATFORM_AGENT_ID
 
 
+def _persisted_task_projection(db_path: str, task_id: str) -> dict[str, Any]:
+    connection = sqlite3.connect(db_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        row = connection.execute(
+            "SELECT t.task_id, t.poster_id, t.worker_id, t.escrow_id, t.title, t.spec, "
+            "t.reward, t.status, c.lifecycle_version FROM board_tasks AS t "
+            "JOIN board_task_contracts AS c ON c.task_id=t.task_id WHERE t.task_id=?",
+            (task_id,),
+        ).fetchone()
+    finally:
+        connection.close()
+    if row is None:
+        raise AssertionError("Platform fixture requires a persisted task")
+    projected = dict(row)
+    projected["deliverables"] = []
+    return projected
+
+
+def _persisted_claim_parties(db_path: str, claim_id: str) -> dict[str, object]:
+    connection = sqlite3.connect(db_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        row = connection.execute(
+            "SELECT c.claimant_id, c.respondent_id, t.escrow_id, t.reward "
+            "FROM court_claims AS c JOIN board_tasks AS t ON t.task_id=c.task_id "
+            "WHERE c.claim_id=?",
+            (claim_id,),
+        ).fetchone()
+    finally:
+        connection.close()
+    if row is None:
+        raise AssertionError("Ruling fixture requires a persisted Court claim")
+    return dict(row)
+
+
 def _write_agent_config(tmp_path: Path) -> Path:
-    keys_dir = tmp_path / "keys"
-    generate_keypair("platform", keys_dir)
+    keys_dir = tmp_path
     roster_path = tmp_path / "roster.yaml"
     roster_path.write_text('agents:\n  platform:\n    name: "Platform"\n')
     config_path = tmp_path / "agents.yaml"
@@ -427,7 +640,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "court"}"
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
   agent_config_path: "{agent_config_path}"
@@ -472,6 +685,26 @@ db_gateway:
         await state.platform_agent.close()
 
         state.platform_agent = make_mock_platform_agent(agent_id=PLATFORM_AGENT_ID)
+
+        async def _get_task(task_id: str) -> dict[str, Any]:
+            return _persisted_task_projection(_gateway.db_path, task_id)
+
+        async def _record_ruling(
+            _task_id: str,
+            payload: dict[str, object],
+        ) -> dict[str, Any]:
+            parties = _persisted_claim_parties(_gateway.db_path, str(payload["ruling_id"]))
+            return make_ruling_acknowledgment(
+                payload,
+                poster_id=str(parties["claimant_id"]),
+                worker_id=str(parties["respondent_id"]),
+                escrow_id=str(parties["escrow_id"]),
+                reward=int(parties["reward"]),
+                event_id=1,
+            )
+
+        state.platform_agent.get_task.side_effect = _get_task
+        state.platform_agent.record_ruling.side_effect = _record_ruling
         state.judges = [MockJudge(judge_id="judge-0", fixed_worker_pct=70, reasoning="Test")]
         state.deliverable_fetcher = _NoDeliverableFetcher()
 

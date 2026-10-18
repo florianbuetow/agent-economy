@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .native_task_contract import lifecycle_version, new_operation_id
+
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
 
@@ -27,6 +29,7 @@ async def test_self_bid_rejected(make_funded_agent) -> None:
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
@@ -38,6 +41,8 @@ async def test_self_bid_rejected(make_funded_agent) -> None:
                 "token": poster._sign_jws(
                     {
                         "action": "submit_bid",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(task),
                         "task_id": task["task_id"],
                         "bidder_id": poster.agent_id,
                         "amount": 400,
@@ -68,10 +73,17 @@ async def test_duplicate_bid_rejected(make_funded_agent) -> None:
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        await worker.submit_bid(task_id=task["task_id"], amount=400)
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
 
         response = await worker._request_raw(
             "POST",
@@ -80,6 +92,8 @@ async def test_duplicate_bid_rejected(make_funded_agent) -> None:
                 "token": worker._sign_jws(
                     {
                         "action": "submit_bid",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(task),
                         "task_id": task["task_id"],
                         "bidder_id": worker.agent_id,
                         "amount": 350,
@@ -110,6 +124,7 @@ async def test_non_poster_cannot_cancel_task(make_funded_agent) -> None:
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
@@ -121,6 +136,8 @@ async def test_non_poster_cannot_cancel_task(make_funded_agent) -> None:
                 "token": worker._sign_jws(
                     {
                         "action": "cancel_task",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(task),
                         "task_id": task["task_id"],
                         "poster_id": worker.agent_id,
                     },
@@ -151,10 +168,18 @@ async def test_non_poster_cannot_accept_bid(make_funded_agent) -> None:
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker1.submit_bid(task_id=task["task_id"], amount=400)
+        bid_response = await worker1.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
 
         response = await worker2._request_raw(
             "POST",
@@ -163,6 +188,8 @@ async def test_non_poster_cannot_accept_bid(make_funded_agent) -> None:
                 "token": worker2._sign_jws(
                     {
                         "action": "accept_bid",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(task),
                         "task_id": task["task_id"],
                         "bid_id": bid["bid_id"],
                         "poster_id": worker2.agent_id,
@@ -193,13 +220,36 @@ async def test_non_poster_cannot_approve_task(make_funded_agent) -> None:
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
         await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
-        await worker.submit_deliverable(task["task_id"])
+        submit_response = await worker.submit_deliverable(
+            task["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(accepted_task),
+        )
+        assert submit_response.status_code == 200
+        submitted_task = submit_response.body
+        assert submitted_task["status"] == "submitted"
 
         response = await worker._request_raw(
             "POST",
@@ -208,6 +258,8 @@ async def test_non_poster_cannot_approve_task(make_funded_agent) -> None:
                 "token": worker._sign_jws(
                     {
                         "action": "approve_task",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(submitted_task),
                         "task_id": task["task_id"],
                         "poster_id": worker.agent_id,
                     },
@@ -237,13 +289,36 @@ async def test_non_poster_cannot_dispute_task(make_funded_agent) -> None:
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
         await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
-        await worker.submit_deliverable(task["task_id"])
+        submit_response = await worker.submit_deliverable(
+            task["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(accepted_task),
+        )
+        assert submit_response.status_code == 200
+        submitted_task = submit_response.body
+        assert submitted_task["status"] == "submitted"
 
         response = await worker._request_raw(
             "POST",
@@ -252,6 +327,8 @@ async def test_non_poster_cannot_dispute_task(make_funded_agent) -> None:
                 "token": worker._sign_jws(
                     {
                         "action": "dispute_task",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(submitted_task),
                         "task_id": task["task_id"],
                         "poster_id": worker.agent_id,
                         "reason": "Bad work",
@@ -282,11 +359,27 @@ async def test_non_worker_cannot_upload_asset(make_funded_agent) -> None:
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
 
         response = await poster._request_raw(
             "POST",
@@ -322,11 +415,27 @@ async def test_non_worker_cannot_submit_deliverable(make_funded_agent) -> None:
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
         await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
 
         response = await poster._request_raw(
@@ -336,6 +445,8 @@ async def test_non_worker_cannot_submit_deliverable(make_funded_agent) -> None:
                 "token": poster._sign_jws(
                     {
                         "action": "submit_deliverable",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(accepted_task),
                         "task_id": task["task_id"],
                         "worker_id": poster.agent_id,
                     },
@@ -365,11 +476,27 @@ async def test_approve_non_submitted_task_rejected(make_funded_agent) -> None:
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
 
         response = await poster._request_raw(
             "POST",
@@ -378,6 +505,8 @@ async def test_approve_non_submitted_task_rejected(make_funded_agent) -> None:
                 "token": poster._sign_jws(
                     {
                         "action": "approve_task",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(accepted_task),
                         "task_id": task["task_id"],
                         "poster_id": poster.agent_id,
                     },
@@ -407,6 +536,7 @@ async def test_bidding_deadline_expiry_rejects_bid(make_funded_agent) -> None:
             spec="Do something quickly",
             reward=500,
             bidding_deadline_seconds=2,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
@@ -423,6 +553,8 @@ async def test_bidding_deadline_expiry_rejects_bid(make_funded_agent) -> None:
                 "token": worker._sign_jws(
                     {
                         "action": "submit_bid",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(expired_task),
                         "task_id": task["task_id"],
                         "bidder_id": worker.agent_id,
                         "amount": 400,

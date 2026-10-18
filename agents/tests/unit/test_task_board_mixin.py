@@ -5,12 +5,40 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
 
 from base_agent.agent import BaseAgent
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from base_agent.config import AgentConfig
+
+_OPERATION_ID = "op-00000000-0000-0000-0000-000000000001"
+_EXPECTED_LIFECYCLE_VERSION = 7
+
+
+def _http_response(status_code: int, body: dict[str, object]) -> httpx.Response:
+    return httpx.Response(
+        status_code,
+        json=body,
+        request=httpx.Request("POST", "https://board/task-command"),
+    )
+
+
+def _completed_response(
+    business: Mapping[str, object], effect_kind: str
+) -> tuple[dict[str, object], httpx.Response]:
+    body = {
+        **business,
+        "operation": {
+            "operation_state": "completed",
+            "effect_kind": effect_kind,
+            "effect_state": "none" if effect_kind == "none" else "succeeded",
+        },
+    }
+    return body, _http_response(200, body)
 
 
 @pytest.mark.unit
@@ -27,33 +55,37 @@ class TestPostTask:
         agent._sign_jws = Mock(side_effect=["task-jws", "escrow-jws"])
         agent._request = AsyncMock(return_value=task_response)
 
-        result = await agent.post_task(
-            title="Build login",
-            spec="Create a login page",
-            reward=5000,
-            bidding_deadline_seconds=86400,
-            execution_deadline_seconds=259200,
-            review_deadline_seconds=172800,
-        )
+        try:
+            result = await agent.post_task(
+                title="Build login",
+                spec="Create a login page",
+                reward=5000,
+                bidding_deadline_seconds=86400,
+                execution_deadline_seconds=259200,
+                review_deadline_seconds=172800,
+                acceptance_window_seconds=43200,
+            )
 
-        assert result == task_response
-        assert agent._sign_jws.call_count == 2
-        task_call = agent._sign_jws.call_args_list[0]
-        assert task_call[0][0]["action"] == "create_task"
-        assert task_call[0][0]["task_id"] == "t-fake-uuid"
-        assert task_call[0][0]["poster_id"] == "a-poster"
-        assert task_call[0][0]["title"] == "Build login"
-        assert task_call[0][0]["reward"] == 5000
-        escrow_call = agent._sign_jws.call_args_list[1]
-        assert escrow_call[0][0]["action"] == "escrow_lock"
-        assert escrow_call[0][0]["task_id"] == "t-fake-uuid"
-        assert escrow_call[0][0]["amount"] == 5000
-        agent._request.assert_awaited_once_with(
-            "POST",
-            f"{sample_config.task_board_url}/tasks",
-            json={"task_token": "task-jws", "escrow_token": "escrow-jws"},
-        )
-        await agent.close()
+            assert result == task_response
+            assert agent._sign_jws.call_count == 2
+            task_call = agent._sign_jws.call_args_list[0]
+            assert task_call[0][0]["action"] == "create_task"
+            assert task_call[0][0]["task_id"] == "t-fake-uuid"
+            assert task_call[0][0]["poster_id"] == "a-poster"
+            assert task_call[0][0]["title"] == "Build login"
+            assert task_call[0][0]["reward"] == 5000
+            assert task_call[0][0]["acceptance_window_seconds"] == 43200
+            escrow_call = agent._sign_jws.call_args_list[1]
+            assert escrow_call[0][0]["action"] == "escrow_lock"
+            assert escrow_call[0][0]["task_id"] == "t-fake-uuid"
+            assert escrow_call[0][0]["amount"] == 5000
+            agent._request.assert_awaited_once_with(
+                "POST",
+                f"{sample_config.task_board_url}/tasks",
+                json={"task_token": "task-jws", "escrow_token": "escrow-jws"},
+            )
+        finally:
+            await agent.close()
 
 
 @pytest.mark.unit
@@ -116,23 +148,38 @@ class TestCancelTask:
         agent = BaseAgent(config=sample_config)
         agent.agent_id = "a-poster"
         cancel_response = {"task_id": "t-1", "status": "cancelled"}
+        response_body, response = _completed_response(cancel_response, "bank_release")
         agent._sign_jws = Mock(return_value="cancel-jws")
-        agent._request = AsyncMock(return_value=cancel_response)
+        agent._request_raw = AsyncMock(return_value=response)
 
-        result = await agent.cancel_task("t-1")
+        try:
+            result = await agent.cancel_task(
+                "t-1",
+                operation_id=_OPERATION_ID,
+                expected_lifecycle_version=_EXPECTED_LIFECYCLE_VERSION,
+            )
 
-        assert result == cancel_response
-        agent._sign_jws.assert_called_once_with(
-            {"action": "cancel_task", "task_id": "t-1", "poster_id": "a-poster"},
-            audience="task-board",
-            resource="POST /tasks/t-1/cancel",
-        )
-        agent._request.assert_awaited_once_with(
-            "POST",
-            f"{sample_config.task_board_url}/tasks/t-1/cancel",
-            json={"token": "cancel-jws"},
-        )
-        await agent.close()
+            assert result.status_code == 200
+            assert result.body == response_body
+            assert {key: result.body[key] for key in cancel_response} == cancel_response
+            agent._sign_jws.assert_called_once_with(
+                {
+                    "action": "cancel_task",
+                    "operation_id": _OPERATION_ID,
+                    "expected_lifecycle_version": _EXPECTED_LIFECYCLE_VERSION,
+                    "task_id": "t-1",
+                    "poster_id": "a-poster",
+                },
+                audience="task-board",
+                resource="POST /tasks/t-1/cancel",
+            )
+            agent._request_raw.assert_awaited_once_with(
+                "POST",
+                f"{sample_config.task_board_url}/tasks/t-1/cancel",
+                json={"token": "cancel-jws"},
+            )
+        finally:
+            await agent.close()
 
 
 @pytest.mark.unit
@@ -144,27 +191,37 @@ class TestSubmitBid:
         agent.agent_id = "a-bidder"
         bid_response = {"bid_id": "bid-1", "task_id": "t-1", "amount": 4500}
         agent._sign_jws = Mock(return_value="bid-jws")
-        agent._request = AsyncMock(return_value=bid_response)
+        agent._request_raw = AsyncMock(return_value=_http_response(201, bid_response))
 
-        result = await agent.submit_bid("t-1", amount=4500)
+        try:
+            result = await agent.submit_bid(
+                "t-1",
+                amount=4500,
+                operation_id=_OPERATION_ID,
+                expected_lifecycle_version=_EXPECTED_LIFECYCLE_VERSION,
+            )
 
-        assert result == bid_response
-        agent._sign_jws.assert_called_once_with(
-            {
-                "action": "submit_bid",
-                "task_id": "t-1",
-                "bidder_id": "a-bidder",
-                "amount": 4500,
-            },
-            audience="task-board",
-            resource="POST /tasks/t-1/bids",
-        )
-        agent._request.assert_awaited_once_with(
-            "POST",
-            f"{sample_config.task_board_url}/tasks/t-1/bids",
-            json={"token": "bid-jws"},
-        )
-        await agent.close()
+            assert result.status_code == 201
+            assert result.body == bid_response
+            agent._sign_jws.assert_called_once_with(
+                {
+                    "action": "submit_bid",
+                    "operation_id": _OPERATION_ID,
+                    "expected_lifecycle_version": _EXPECTED_LIFECYCLE_VERSION,
+                    "task_id": "t-1",
+                    "bidder_id": "a-bidder",
+                    "amount": 4500,
+                },
+                audience="task-board",
+                resource="POST /tasks/t-1/bids",
+            )
+            agent._request_raw.assert_awaited_once_with(
+                "POST",
+                f"{sample_config.task_board_url}/tasks/t-1/bids",
+                json={"token": "bid-jws"},
+            )
+        finally:
+            await agent.close()
 
 
 @pytest.mark.unit
@@ -206,28 +263,40 @@ class TestAcceptBid:
         agent = BaseAgent(config=sample_config)
         agent.agent_id = "a-poster"
         accept_response = {"task_id": "t-1", "status": "accepted", "worker_id": "a-w"}
+        response_body, response = _completed_response(accept_response, "none")
         agent._sign_jws = Mock(return_value="accept-jws")
-        agent._request = AsyncMock(return_value=accept_response)
+        agent._request_raw = AsyncMock(return_value=response)
 
-        result = await agent.accept_bid("t-1", "bid-1")
+        try:
+            result = await agent.accept_bid(
+                "t-1",
+                "bid-1",
+                operation_id=_OPERATION_ID,
+                expected_lifecycle_version=_EXPECTED_LIFECYCLE_VERSION,
+            )
 
-        assert result == accept_response
-        agent._sign_jws.assert_called_once_with(
-            {
-                "action": "accept_bid",
-                "task_id": "t-1",
-                "bid_id": "bid-1",
-                "poster_id": "a-poster",
-            },
-            audience="task-board",
-            resource="POST /tasks/t-1/bids/bid-1/accept",
-        )
-        agent._request.assert_awaited_once_with(
-            "POST",
-            f"{sample_config.task_board_url}/tasks/t-1/bids/bid-1/accept",
-            json={"token": "accept-jws"},
-        )
-        await agent.close()
+            assert result.status_code == 200
+            assert result.body == response_body
+            assert {key: result.body[key] for key in accept_response} == accept_response
+            agent._sign_jws.assert_called_once_with(
+                {
+                    "action": "accept_bid",
+                    "operation_id": _OPERATION_ID,
+                    "expected_lifecycle_version": _EXPECTED_LIFECYCLE_VERSION,
+                    "task_id": "t-1",
+                    "bid_id": "bid-1",
+                    "poster_id": "a-poster",
+                },
+                audience="task-board",
+                resource="POST /tasks/t-1/bids/bid-1/accept",
+            )
+            agent._request_raw.assert_awaited_once_with(
+                "POST",
+                f"{sample_config.task_board_url}/tasks/t-1/bids/bid-1/accept",
+                json={"token": "accept-jws"},
+            )
+        finally:
+            await agent.close()
 
 
 @pytest.mark.unit
@@ -267,27 +336,38 @@ class TestSubmitDeliverable:
         agent = BaseAgent(config=sample_config)
         agent.agent_id = "a-worker"
         submit_response = {"task_id": "t-1", "status": "submitted"}
+        response_body, response = _completed_response(submit_response, "none")
         agent._sign_jws = Mock(return_value="submit-jws")
-        agent._request = AsyncMock(return_value=submit_response)
+        agent._request_raw = AsyncMock(return_value=response)
 
-        result = await agent.submit_deliverable("t-1")
+        try:
+            result = await agent.submit_deliverable(
+                "t-1",
+                operation_id=_OPERATION_ID,
+                expected_lifecycle_version=_EXPECTED_LIFECYCLE_VERSION,
+            )
 
-        assert result == submit_response
-        agent._sign_jws.assert_called_once_with(
-            {
-                "action": "submit_deliverable",
-                "task_id": "t-1",
-                "worker_id": "a-worker",
-            },
-            audience="task-board",
-            resource="POST /tasks/t-1/submit",
-        )
-        agent._request.assert_awaited_once_with(
-            "POST",
-            f"{sample_config.task_board_url}/tasks/t-1/submit",
-            json={"token": "submit-jws"},
-        )
-        await agent.close()
+            assert result.status_code == 200
+            assert result.body == response_body
+            assert {key: result.body[key] for key in submit_response} == submit_response
+            agent._sign_jws.assert_called_once_with(
+                {
+                    "action": "submit_deliverable",
+                    "operation_id": _OPERATION_ID,
+                    "expected_lifecycle_version": _EXPECTED_LIFECYCLE_VERSION,
+                    "task_id": "t-1",
+                    "worker_id": "a-worker",
+                },
+                audience="task-board",
+                resource="POST /tasks/t-1/submit",
+            )
+            agent._request_raw.assert_awaited_once_with(
+                "POST",
+                f"{sample_config.task_board_url}/tasks/t-1/submit",
+                json={"token": "submit-jws"},
+            )
+        finally:
+            await agent.close()
 
 
 @pytest.mark.unit
@@ -298,23 +378,38 @@ class TestApproveTask:
         agent = BaseAgent(config=sample_config)
         agent.agent_id = "a-poster"
         approve_response = {"task_id": "t-1", "status": "approved"}
+        response_body, response = _completed_response(approve_response, "bank_release")
         agent._sign_jws = Mock(return_value="approve-jws")
-        agent._request = AsyncMock(return_value=approve_response)
+        agent._request_raw = AsyncMock(return_value=response)
 
-        result = await agent.approve_task("t-1")
+        try:
+            result = await agent.approve_task(
+                "t-1",
+                operation_id=_OPERATION_ID,
+                expected_lifecycle_version=_EXPECTED_LIFECYCLE_VERSION,
+            )
 
-        assert result == approve_response
-        agent._sign_jws.assert_called_once_with(
-            {"action": "approve_task", "task_id": "t-1", "poster_id": "a-poster"},
-            audience="task-board",
-            resource="POST /tasks/t-1/approve",
-        )
-        agent._request.assert_awaited_once_with(
-            "POST",
-            f"{sample_config.task_board_url}/tasks/t-1/approve",
-            json={"token": "approve-jws"},
-        )
-        await agent.close()
+            assert result.status_code == 200
+            assert result.body == response_body
+            assert {key: result.body[key] for key in approve_response} == approve_response
+            agent._sign_jws.assert_called_once_with(
+                {
+                    "action": "approve_task",
+                    "operation_id": _OPERATION_ID,
+                    "expected_lifecycle_version": _EXPECTED_LIFECYCLE_VERSION,
+                    "task_id": "t-1",
+                    "poster_id": "a-poster",
+                },
+                audience="task-board",
+                resource="POST /tasks/t-1/approve",
+            )
+            agent._request_raw.assert_awaited_once_with(
+                "POST",
+                f"{sample_config.task_board_url}/tasks/t-1/approve",
+                json={"token": "approve-jws"},
+            )
+        finally:
+            await agent.close()
 
 
 @pytest.mark.unit
@@ -325,25 +420,37 @@ class TestDisputeTask:
         agent = BaseAgent(config=sample_config)
         agent.agent_id = "a-poster"
         dispute_response = {"task_id": "t-1", "status": "disputed"}
+        response_body, response = _completed_response(dispute_response, "court_claim")
         agent._sign_jws = Mock(return_value="dispute-jws")
-        agent._request = AsyncMock(return_value=dispute_response)
+        agent._request_raw = AsyncMock(return_value=response)
 
-        result = await agent.dispute_task("t-1", reason="Incomplete work")
+        try:
+            result = await agent.dispute_task(
+                "t-1",
+                reason="Incomplete work",
+                operation_id=_OPERATION_ID,
+                expected_lifecycle_version=_EXPECTED_LIFECYCLE_VERSION,
+            )
 
-        assert result == dispute_response
-        agent._sign_jws.assert_called_once_with(
-            {
-                "action": "dispute_task",
-                "task_id": "t-1",
-                "poster_id": "a-poster",
-                "reason": "Incomplete work",
-            },
-            audience="task-board",
-            resource="POST /tasks/t-1/dispute",
-        )
-        agent._request.assert_awaited_once_with(
-            "POST",
-            f"{sample_config.task_board_url}/tasks/t-1/dispute",
-            json={"token": "dispute-jws"},
-        )
-        await agent.close()
+            assert result.status_code == 200
+            assert result.body == response_body
+            assert {key: result.body[key] for key in dispute_response} == dispute_response
+            agent._sign_jws.assert_called_once_with(
+                {
+                    "action": "dispute_task",
+                    "operation_id": _OPERATION_ID,
+                    "expected_lifecycle_version": _EXPECTED_LIFECYCLE_VERSION,
+                    "task_id": "t-1",
+                    "poster_id": "a-poster",
+                    "reason": "Incomplete work",
+                },
+                audience="task-board",
+                resource="POST /tasks/t-1/dispute",
+            )
+            agent._request_raw.assert_awaited_once_with(
+                "POST",
+                f"{sample_config.task_board_url}/tasks/t-1/dispute",
+                json={"token": "dispute-jws"},
+            )
+        finally:
+            await agent.close()

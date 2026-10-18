@@ -28,6 +28,10 @@ recovery:
   maintenance_lock_path: "../../data/maintenance.lock"
   backup_root: "../../data/backups"
 
+board_authority:
+  platform_public_key_path: "../../data/keys/platform.pub"
+  deadline_actor_id: "system-task-board-deadline"
+
 auth:
   audience: "db-gateway"
   max_lifetime_seconds: 300

@@ -111,7 +111,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "central-bank"}"
 identity:
   base_url: "{DEAD_IDENTITY_URL}"
   get_agent_path: "/agents"

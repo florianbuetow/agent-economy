@@ -32,6 +32,10 @@ class TestConfig:
                 "maintenance_lock_path": "maintenance.lock",
                 "backup_root": "backups",
             },
+            board_authority={
+                "platform_public_key_path": "platform.pub",
+                "deadline_actor_id": "system-task-board-config-test",
+            },
             auth={
                 "audience": "db-gateway",
                 "max_lifetime_seconds": 30,

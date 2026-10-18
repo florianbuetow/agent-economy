@@ -1,0 +1,646 @@
+
+[0;34m=== Running Full CI (Quiet Mode) ===[0m
+[0;34m--- Phase 0: Project structure ---[0m
+
+[0;34m=== Checking Project Structure ===[0m
+
+[0;32m✓ services/central-bank/justfile[0m
+[0;32m✓ services/court/justfile[0m
+[0;32m✓ services/db-gateway/justfile[0m
+[0;32m✓ services/reputation/justfile[0m
+[0;32m✓ services/task-board/justfile[0m
+[0;32m✓ services/ui/justfile[0m
+
+[0;32m✓ All service justfiles are identical[0m
+
+[0;34m--- Phase 1: Libs CI ---[0m
+Checking service-commons...
+Checking service-commons...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-commons/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-commons
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 4 items
+
+tests/unit/test_smoke.py::test_package_importable PASSED                 [ 25%]
+tests/unit/test_smoke.py::test_exceptions_module_exports PASSED          [ 50%]
+tests/unit/test_smoke.py::test_logging_module_exports PASSED             [ 75%]
+tests/unit/test_smoke.py::test_config_module_exports PASSED              [100%]
+
+============================== 4 passed in 0.12s ===============================
+[0;32m✓ service-commons CI passed[0m
+Checking service-clients...
+Checking service-clients...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-clients/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-clients
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 59 items
+
+tests/unit/test_bank_client.py::TestConnectionFailureMapping::test_connect_error_maps_to_502_central_bank_unavailable PASSED [  1%]
+tests/unit/test_bank_client.py::TestConnectionFailureMapping::test_timeout_maps_to_502_central_bank_unavailable PASSED [  3%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_success PASSED      [  5%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_alias_matches_lock_escrow PASSED [  6%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_402_raises_insufficient_funds PASSED [  8%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_404_raises_account_not_found PASSED [ 10%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_403_raises_forbidden PASSED [ 11%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_409_raises_conflict_from_body PASSED [ 13%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_500_raises_502_central_bank_unavailable PASSED [ 15%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_success PASSED   [ 16%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_alias_matches_release_escrow PASSED [ 18%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_404_raises_not_found PASSED [ 20%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_403_raises_forbidden PASSED [ 22%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_409_raises_conflict PASSED [ 23%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_400_raises_bad_request PASSED [ 25%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_success PASSED     [ 27%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_alias_matches_split_escrow PASSED [ 28%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_404_raises_not_found PASSED [ 30%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_403_raises_forbidden PASSED [ 32%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_no_split_path_configured_raises_502 PASSED [ 33%]
+tests/unit/test_gateway_client.py::TestConnectionFailureMapping::test_connect_error_maps_to_502_db_gateway_unavailable PASSED [ 35%]
+tests/unit/test_gateway_client.py::TestConnectionFailureMapping::test_timeout_maps_to_502_db_gateway_unavailable PASSED [ 37%]
+tests/unit/test_gateway_client.py::TestIdentity::test_register_agent_success PASSED [ 38%]
+tests/unit/test_gateway_client.py::TestIdentity::test_register_agent_conflict PASSED [ 40%]
+tests/unit/test_gateway_client.py::TestIdentity::test_get_agent_not_found_returns_none PASSED [ 42%]
+tests/unit/test_gateway_client.py::TestIdentity::test_list_agents PASSED [ 44%]
+tests/unit/test_gateway_client.py::TestIdentity::test_count_agents PASSED [ 45%]
+tests/unit/test_gateway_client.py::TestBank::test_create_account_success PASSED [ 47%]
+tests/unit/test_gateway_client.py::TestBank::test_create_account_conflict PASSED [ 49%]
+tests/unit/test_gateway_client.py::TestBank::test_get_account_found PASSED [ 50%]
+tests/unit/test_gateway_client.py::TestBank::test_get_account_not_found_returns_none PASSED [ 52%]
+tests/unit/test_gateway_client.py::TestBank::test_get_transactions PASSED [ 54%]
+tests/unit/test_gateway_client.py::TestBank::test_count_accounts PASSED  [ 55%]
+tests/unit/test_gateway_client.py::TestBank::test_total_escrowed PASSED  [ 57%]
+tests/unit/test_gateway_client.py::TestBank::test_get_escrow_not_found_returns_none PASSED [ 59%]
+tests/unit/test_gateway_client.py::TestBank::test_credit_account PASSED  [ 61%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_lock_insufficient_funds PASSED [ 62%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_release_success PASSED [ 64%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_split_success PASSED [ 66%]
+tests/unit/test_gateway_client.py::TestReputation::test_submit_feedback_success PASSED [ 67%]
+tests/unit/test_gateway_client.py::TestReputation::test_submit_feedback_conflict PASSED [ 69%]
+tests/unit/test_gateway_client.py::TestReputation::test_get_feedback_not_found_returns_none PASSED [ 71%]
+tests/unit/test_gateway_client.py::TestReputation::test_list_feedback_by_task PASSED [ 72%]
+tests/unit/test_gateway_client.py::TestReputation::test_count_feedback PASSED [ 74%]
+tests/unit/test_gateway_client.py::TestCourt::test_file_claim_success PASSED [ 76%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_claim_not_found_returns_none PASSED [ 77%]
+tests/unit/test_gateway_client.py::TestCourt::test_list_claims_with_status_filter PASSED [ 79%]
+tests/unit/test_gateway_client.py::TestCourt::test_update_claim_status_not_found_returns_none PASSED [ 81%]
+tests/unit/test_gateway_client.py::TestCourt::test_update_claim_status_success PASSED [ 83%]
+tests/unit/test_gateway_client.py::TestCourt::test_submit_rebuttal_success PASSED [ 84%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_rebuttal_not_found_returns_none PASSED [ 86%]
+tests/unit/test_gateway_client.py::TestCourt::test_record_ruling_success PASSED [ 88%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_ruling_not_found_returns_none PASSED [ 89%]
+tests/unit/test_gateway_client.py::TestCourt::test_delete_ruling_success PASSED [ 91%]
+tests/unit/test_gateway_client.py::TestCourt::test_delete_ruling_not_found_returns_none PASSED [ 93%]
+tests/unit/test_gateway_client.py::TestCourt::test_count_claims PASSED   [ 94%]
+tests/unit/test_gateway_client.py::TestCourt::test_count_active_claims PASSED [ 96%]
+tests/unit/test_gateway_client.py::TestBoardRead::test_get_task_found PASSED [ 98%]
+tests/unit/test_gateway_client.py::TestBoardRead::test_get_task_not_found_returns_none PASSED [100%]
+
+============================== 59 passed in 0.72s ==============================
+[0;32m✓ service-clients CI passed[0m
+Checking service-auth...
+Checking service-auth...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-auth/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 15 items
+
+tests/unit/test_signing.py::TestKeygenRoundtrip::test_creates_and_loads_keys PASSED [  6%]
+tests/unit/test_signing.py::TestSignVerify::test_sign_and_verify_roundtrip PASSED [ 13%]
+tests/unit/test_signing.py::TestSignVerify::test_verify_rejects_wrong_key PASSED [ 20%]
+tests/unit/test_signing.py::TestSignVerify::test_malformed_token_raises_value_error PASSED [ 26%]
+tests/unit/test_signing.py::TestSignVerify::test_canonicalization_is_key_order_independent PASSED [ 33%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_payload PASSED [ 40%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_header PASSED [ 46%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_ttl_stamps_iat_exp_into_header_not_payload PASSED [ 53%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_legacy_token_without_exp_is_accepted PASSED [ 60%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_expired_token_is_rejected PASSED [ 66%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_unexpired_token_is_accepted PASSED [ 73%]
+tests/unit/test_signing.py::TestCrossCanonicalizationCompatibility::test_accepts_base_agent_old_canonicalization PASSED [ 80%]
+tests/unit/test_signing.py::TestCrossCanonicalizationCompatibility::test_accepts_platform_signer_canonicalization PASSED [ 86%]
+tests/unit/test_signing.py::TestPlatformSigner::test_signs_and_verifies PASSED [ 93%]
+tests/unit/test_signing.py::TestPlatformSigner::test_legacy_signer_omits_exp PASSED [100%]
+
+============================== 15 passed in 0.03s ==============================
+[0;32m✓ service-auth CI passed[0m
+[0;34m--- Phase 2: Service CI ---[0m
+Checking identity...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking central-bank...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking task-board...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking reputation...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking court...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking db-gateway...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking ui...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+[0;34m--- Phase 3: Per-service integration tests ---[0m
+
+[0;34m=== Running Per-Service Integration Tests ===[0m
+
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-88266f497aad4b3d95e38dc3f6f6eca7-53yih_5m
+[0;34m--- identity ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/identity/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/identity
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 7 items
+
+tests/integration/test_concurrent_registration_live.py::TestConcurrentDuplicateKeyRaceThroughLiveIdentity::test_exactly_one_201_through_live_identity_process PASSED [ 14%]
+tests/integration/test_endpoints.py::TestRegisterAgentGatewayBacked::test_register_agent_persists_row_via_real_gateway PASSED [ 28%]
+tests/integration/test_endpoints.py::TestRegisterAgentGatewayBacked::test_register_agent_writes_event_row_via_real_gateway PASSED [ 42%]
+tests/integration/test_endpoints.py::TestRegisterAgentGatewayBacked::test_duplicate_public_key_rejected_by_real_gateway PASSED [ 57%]
+tests/integration/test_endpoints.py::TestReadPathGatewayBacked::test_get_agent_reads_through_real_gateway PASSED [ 71%]
+tests/integration/test_endpoints.py::TestReadPathGatewayBacked::test_list_agents_reads_through_real_gateway PASSED [ 85%]
+tests/integration/test_endpoints.py::TestVerifyJwsGatewayBacked::test_verify_jws_round_trips_through_real_gateway PASSED [100%]
+
+=============================== warnings summary ===============================
+tests/integration/test_endpoints.py::TestVerifyJwsGatewayBacked::test_verify_jws_round_trips_through_real_gateway
+  /Users/flo/Developer/github/agent-economy/services/identity/.venv/lib/python3.13/site-packages/joserfc/_rfc7515/registry.py:93: SecurityWarning: EdDSA is deprecated via RFC 9864
+    warnings.warn(alg.security_warning, SecurityWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================= 7 passed, 1 warning in 1.13s =========================
+[0;34m--- central-bank ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/central-bank/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/central-bank
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+tests/integration/test_endpoints.py::TestAccountLifecycleGatewayBacked::test_create_account_persists_row_via_real_gateway PASSED [ 33%]
+tests/integration/test_endpoints.py::TestAccountLifecycleGatewayBacked::test_credit_account_updates_balance_via_real_gateway PASSED [ 66%]
+tests/integration/test_endpoints.py::TestEscrowLifecycleGatewayBacked::test_escrow_lock_and_release_moves_real_gateway_balances PASSED [100%]
+
+=============================== warnings summary ===============================
+tests/integration/test_endpoints.py::TestAccountLifecycleGatewayBacked::test_create_account_persists_row_via_real_gateway
+tests/integration/test_endpoints.py::TestAccountLifecycleGatewayBacked::test_credit_account_updates_balance_via_real_gateway
+tests/integration/test_endpoints.py::TestEscrowLifecycleGatewayBacked::test_escrow_lock_and_release_moves_real_gateway_balances
+  /Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/joserfc/_rfc7515/registry.py:93: SecurityWarning: EdDSA is deprecated via RFC 9864
+    warnings.warn(alg.security_warning, SecurityWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 3 passed, 3 warnings in 0.13s =========================
+[0;34m--- task-board ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/task-board/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/integration/test_endpoints.py::TestTaskLifecycleGatewayBacked::test_full_lifecycle_persists_through_real_gateway PASSED [100%]
+
+=============================== warnings summary ===============================
+tests/integration/test_endpoints.py::TestTaskLifecycleGatewayBacked::test_full_lifecycle_persists_through_real_gateway
+  /Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/joserfc/_rfc7515/registry.py:93: SecurityWarning: EdDSA is deprecated via RFC 9864
+    warnings.warn(alg.security_warning, SecurityWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================= 1 passed, 1 warning in 0.23s =========================
+[0;34m--- reputation ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/reputation/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/reputation
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 12 items
+
+tests/integration/test_endpoints.py::TestSubmitAndRetrieveFeedbackWorkflow::test_sealed_feedback_becomes_visible_after_mutual_submission PASSED [  8%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_missing_field_returns_400 PASSED [ 16%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_invalid_category_returns_400 PASSED [ 25%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_self_feedback_returns_400 PASSED [ 33%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_duplicate_feedback_returns_409 PASSED [ 41%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_wrong_content_type_returns_415 PASSED [ 50%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_invalid_json_returns_400 PASSED [ 58%]
+tests/integration/test_endpoints.py::TestHealthCheckWorkflow::test_health_tracks_total_feedback_including_sealed PASSED [ 66%]
+tests/integration/test_endpoints.py::TestMethodNotAllowed::test_put_feedback_returns_405 PASSED [ 75%]
+tests/integration/test_endpoints.py::TestMethodNotAllowed::test_delete_health_returns_405 PASSED [ 83%]
+tests/integration/test_endpoints.py::TestCommentHandling::test_feedback_with_comment PASSED [ 91%]
+tests/integration/test_endpoints.py::TestCommentHandling::test_feedback_without_comment PASSED [100%]
+
+============================== 12 passed in 0.20s ==============================
+[0;34m--- court ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/court/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/integration/test_endpoints.py::TestDisputeLifecycleGatewayBacked::test_file_rebut_and_rule_persists_through_real_gateway PASSED [100%]
+
+============================== 1 passed in 0.22s ===============================
+[0;34m--- db-gateway ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 6 items
+
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_register_then_read_round_trips_over_live_http PASSED [ 16%]
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_duplicate_public_key_returns_409_over_live_http PASSED [ 33%]
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_health_total_events_increments_after_live_write PASSED [ 50%]
+tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_exactly_one_201_among_five_racing_distinct_agents PASSED [ 66%]
+tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_winner_is_readable_and_no_duplicate_rows_exist PASSED [ 83%]
+tests/integration/test_endpoints.py::TestHealthIntegration::test_health_check PASSED [100%]
+
+============================== 6 passed in 0.38s ===============================
+[0;34m--- ui ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/ui/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 224 items
+
+tests/integration/test_agents.py::test_list_returns_all_agents PASSED    [  0%]
+tests/integration/test_agents.py::test_list_default_sort_total_earned_desc PASSED [  0%]
+tests/integration/test_agents.py::test_list_sort_by_total_spent PASSED   [  1%]
+tests/integration/test_agents.py::test_list_sort_by_tasks_posted PASSED  [  1%]
+tests/integration/test_agents.py::test_list_sort_by_tasks_completed PASSED [  2%]
+tests/integration/test_agents.py::test_list_sort_by_spec_quality PASSED  [  2%]
+tests/integration/test_agents.py::test_list_sort_by_delivery_quality PASSED [  3%]
+tests/integration/test_agents.py::test_list_sort_asc_reverses PASSED     [  3%]
+tests/integration/test_agents.py::test_list_pagination_limit_offset PASSED [  4%]
+tests/integration/test_agents.py::test_list_invalid_sort_returns_400 PASSED [  4%]
+tests/integration/test_agents.py::test_list_agent_stats_structure PASSED [  4%]
+tests/integration/test_agents.py::test_profile_returns_correct_agent PASSED [  5%]
+tests/integration/test_agents.py::test_profile_not_found_returns_404 PASSED [  5%]
+tests/integration/test_agents.py::test_profile_balance_matches_seed PASSED [  6%]
+tests/integration/test_agents.py::test_profile_recent_tasks_included PASSED [  6%]
+tests/integration/test_agents.py::test_profile_recent_tasks_role_field PASSED [  7%]
+tests/integration/test_agents.py::test_profile_feedback_excludes_invisible PASSED [  7%]
+tests/integration/test_agents.py::test_profile_balance_staleness PASSED  [  8%]
+tests/integration/test_agents.py::test_feed_returns_agent_events PASSED  [  8%]
+tests/integration/test_agents.py::test_feed_pagination_before PASSED     [  8%]
+tests/integration/test_agents.py::test_feed_has_more_flag PASSED         [  9%]
+tests/integration/test_agents.py::test_earnings_total_and_avg PASSED     [  9%]
+tests/integration/test_agents.py::test_earnings_cumulative_data_points PASSED [ 10%]
+tests/integration/test_agents.py::test_earnings_no_earnings_agent PASSED [ 10%]
+tests/integration/test_agents.py::test_earnings_staleness PASSED         [ 11%]
+tests/integration/test_economy_phase_stalled.py::test_economy_phase_stalled_on_empty_db PASSED [ 11%]
+tests/integration/test_economy_phase_stalled.py::test_economy_phase_stable_below_dispute_ceiling PASSED [ 12%]
+tests/integration/test_economy_phase_stalled.py::test_economy_phase_contracting_above_dispute_threshold PASSED [ 12%]
+tests/integration/test_events.py::test_events_returns_reverse_chronological PASSED [ 12%]
+tests/integration/test_events.py::test_events_default_returns_all_25 PASSED [ 13%]
+tests/integration/test_events.py::test_events_limit_param PASSED         [ 13%]
+tests/integration/test_events.py::test_events_limit_clamped_to_200 PASSED [ 14%]
+tests/integration/test_events.py::test_events_before_cursor PASSED       [ 14%]
+tests/integration/test_events.py::test_events_after_cursor PASSED        [ 15%]
+tests/integration/test_events.py::test_events_before_and_after_range PASSED [ 15%]
+tests/integration/test_events.py::test_events_filter_by_source PASSED    [ 16%]
+tests/integration/test_events.py::test_events_filter_by_type PASSED      [ 16%]
+tests/integration/test_events.py::test_events_filter_by_agent_id PASSED  [ 16%]
+tests/integration/test_events.py::test_events_filter_by_task_id PASSED   [ 17%]
+tests/integration/test_events.py::test_events_has_more_true PASSED       [ 17%]
+tests/integration/test_events.py::test_events_has_more_false PASSED      [ 18%]
+tests/integration/test_events.py::test_events_oldest_newest_ids PASSED   [ 18%]
+tests/integration/test_events.py::test_events_invalid_limit_returns_400 PASSED [ 19%]
+tests/integration/test_events.py::test_events_invalid_before_returns_400 PASSED [ 19%]
+tests/integration/test_events.py::test_events_limit_zero_returns_400 PASSED [ 20%]
+tests/integration/test_events.py::test_events_payload_is_dict PASSED     [ 20%]
+tests/integration/test_events.py::test_events_staleness_new_event PASSED [ 20%]
+tests/integration/test_events.py::test_sse_content_type PASSED           [ 21%]
+tests/integration/test_events.py::test_sse_sends_existing_events PASSED  [ 21%]
+tests/integration/test_events.py::test_sse_retry_directive PASSED        [ 22%]
+tests/integration/test_gdp_history_bucketed.py::test_all_points_match_total_when_no_recent_activity PASSED [ 22%]
+tests/integration/test_gdp_history_bucketed.py::test_mid_window_transaction_shifts_only_points_at_or_after_it PASSED [ 23%]
+tests/integration/test_gdp_history_bucketed.py::test_gdp_history_query_count_is_constant_not_per_point PASSED [ 23%]
+tests/integration/test_health.py::test_health_returns_200_with_status_ok PASSED [ 24%]
+tests/integration/test_health.py::test_health_has_uptime_seconds PASSED  [ 24%]
+tests/integration/test_health.py::test_health_has_started_at_iso PASSED  [ 25%]
+tests/integration/test_health.py::test_health_latest_event_id_matches_seed PASSED [ 25%]
+tests/integration/test_health.py::test_health_database_readable_true PASSED [ 25%]
+tests/integration/test_health.py::test_health_post_not_allowed PASSED    [ 26%]
+tests/integration/test_health.py::test_health_response_has_exact_keys PASSED [ 26%]
+tests/integration/test_health.py::test_health_uptime_increases_between_calls PASSED [ 27%]
+tests/integration/test_health.py::test_health_types_correct PASSED       [ 27%]
+tests/integration/test_health.py::test_health_no_db_returns_readable_false PASSED [ 28%]
+tests/integration/test_health.py::test_health_latest_event_id_updates_on_insert PASSED [ 28%]
+tests/integration/test_health.py::test_health_latest_event_id_zero_when_no_events PASSED [ 29%]
+tests/integration/test_list_agents_query_count.py::test_list_agents_query_count_is_constant_not_per_agent PASSED [ 29%]
+tests/integration/test_metrics.py::test_gdp_total PASSED                 [ 29%]
+tests/integration/test_metrics.py::test_gdp_per_agent PASSED             [ 30%]
+tests/integration/test_metrics.py::test_gdp_rate_per_hour PASSED         [ 30%]
+tests/integration/test_metrics.py::test_gdp_staleness PASSED             [ 31%]
+tests/integration/test_metrics.py::test_agents_total_registered PASSED   [ 31%]
+tests/integration/test_metrics.py::test_agents_with_completed_tasks PASSED [ 32%]
+tests/integration/test_metrics.py::test_agents_active PASSED             [ 32%]
+tests/integration/test_metrics.py::test_tasks_total_created PASSED       [ 33%]
+tests/integration/test_metrics.py::test_tasks_completed_all_time PASSED  [ 33%]
+tests/integration/test_metrics.py::test_tasks_open PASSED                [ 33%]
+tests/integration/test_metrics.py::test_tasks_in_execution PASSED        [ 34%]
+tests/integration/test_metrics.py::test_tasks_disputed PASSED            [ 34%]
+tests/integration/test_metrics.py::test_tasks_completion_rate PASSED     [ 35%]
+tests/integration/test_metrics.py::test_tasks_staleness PASSED           [ 35%]
+tests/integration/test_metrics.py::test_escrow_total_locked PASSED       [ 36%]
+tests/integration/test_metrics.py::test_escrow_staleness PASSED          [ 36%]
+tests/integration/test_metrics.py::test_spec_quality_avg_and_breakdown PASSED [ 37%]
+tests/integration/test_metrics.py::test_spec_quality_trend PASSED        [ 37%]
+tests/integration/test_metrics.py::test_labor_avg_bids_and_reward PASSED [ 37%]
+tests/integration/test_metrics.py::test_labor_reward_distribution_buckets PASSED [ 38%]
+tests/integration/test_metrics.py::test_gdp_history_valid_params PASSED  [ 38%]
+tests/integration/test_metrics.py::test_gdp_history_invalid_window_returns_400 PASSED [ 39%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_gdp_includes_delta_1h PASSED [ 39%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_gdp_includes_delta_24h PASSED [ 40%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_task_metrics_include_deltas PASSED [ 40%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_labor_market_includes_deltas PASSED [ 41%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_escrow_includes_delta PASSED [ 41%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_agent_metrics_include_delta PASSED [ 41%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_delta_values_are_numeric_or_null PASSED [ 42%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_accepts_valid_window_and_resolution PASSED [ 42%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_returns_data_points_array PASSED [ 43%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_rejects_invalid_window PASSED [ 43%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_rejects_invalid_resolution PASSED [ 44%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_data_points_have_timestamp_and_value PASSED [ 44%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_data_points_ordered_ascending PASSED [ 45%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_includes_window_and_resolution_in_response PASSED [ 45%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_returns_200_for_valid_window PASSED [ 45%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_returns_200_with_default_window PASSED [ 46%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_rejects_invalid_window PASSED [ 46%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_response_has_required_fields PASSED [ 47%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_buckets_are_24_hourly_strings PASSED [ 47%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_metrics_has_all_expected_keys PASSED [ 48%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_each_metric_has_24_values PASSED [ 48%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_all_values_are_non_negative PASSED [ 49%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_registered_agents_non_decreasing PASSED [ 49%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_completion_rate_between_0_and_1 PASSED [ 50%]
+tests/integration/test_quarterly.py::test_quarterly_explicit_2026_q1 PASSED [ 50%]
+tests/integration/test_quarterly.py::test_quarterly_default_current_quarter PASSED [ 50%]
+tests/integration/test_quarterly.py::test_quarterly_invalid_format_returns_400 PASSED [ 51%]
+tests/integration/test_quarterly.py::test_quarterly_invalid_year_returns_400 PASSED [ 51%]
+tests/integration/test_quarterly.py::test_quarterly_no_data_returns_404 PASSED [ 52%]
+tests/integration/test_quarterly.py::test_quarterly_gdp_total PASSED     [ 52%]
+tests/integration/test_quarterly.py::test_quarterly_gdp_previous_quarter_zero PASSED [ 53%]
+tests/integration/test_quarterly.py::test_quarterly_period_boundaries PASSED [ 53%]
+tests/integration/test_quarterly.py::test_quarterly_tasks_posted PASSED  [ 54%]
+tests/integration/test_quarterly.py::test_quarterly_tasks_completed PASSED [ 54%]
+tests/integration/test_quarterly.py::test_quarterly_tasks_disputed PASSED [ 54%]
+tests/integration/test_quarterly.py::test_quarterly_labor_avg_bids PASSED [ 55%]
+tests/integration/test_quarterly.py::test_quarterly_agents_registrations PASSED [ 55%]
+tests/integration/test_quarterly.py::test_quarterly_agents_total_at_end PASSED [ 56%]
+tests/integration/test_quarterly.py::test_quarterly_notable_highest_value_task PASSED [ 56%]
+tests/integration/test_quarterly.py::test_quarterly_notable_top_workers PASSED [ 57%]
+tests/integration/test_quarterly.py::test_quarterly_staleness_new_approved_task PASSED [ 57%]
+tests/integration/test_request_body_size_limit.py::test_oversized_proxy_task_body_rejected_with_413 PASSED [ 58%]
+tests/integration/test_request_body_size_limit.py::test_oversized_proxy_dispute_body_rejected_with_413 PASSED [ 58%]
+tests/integration/test_request_body_size_limit.py::test_body_within_limit_is_not_rejected_for_size PASSED [ 58%]
+tests/integration/test_reward_bucket_boundary.py::test_reward_of_exactly_100_falls_in_51_to_100_bucket PASSED [ 59%]
+tests/integration/test_reward_bucket_boundary.py::test_reward_of_101_falls_in_over_100_bucket PASSED [ 59%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_returns_data_points PASSED [ 60%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_has_sufficient_points PASSED [ 60%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_points_have_numeric_values PASSED [ 61%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_points_have_timestamps PASSED [ 61%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_7d_window_provides_more_points PASSED [ 62%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_1h_window_with_1m_resolution PASSED [ 62%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_key_present PASSED [ 62%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_has_24_values PASSED [ 63%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_values_between_0_and_1 PASSED [ 63%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_all_non_negative PASSED [ 64%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_increasing_trend_low_dispute_rate_is_growing PASSED [ 64%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_decreasing_trend_is_contracting_regardless_of_dispute_rate PASSED [ 65%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_increasing_trend_with_12pct_dispute_rate_is_stable PASSED [ 65%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_stable_trend_with_18pct_dispute_rate_is_stable PASSED [ 66%]
+tests/integration/test_t072_events_default_and_sse_gaps.py::test_events_default_limit_is_50 PASSED [ 66%]
+tests/integration/test_t072_events_default_and_sse_gaps.py::test_sse_sends_keepalive_when_idle PASSED [ 66%]
+tests/integration/test_t072_events_default_and_sse_gaps.py::test_sse_batches_are_capped_at_batch_size PASSED [ 67%]
+tests/integration/test_t072_gdp_history_default_gap.py::test_gdp_history_default_window_and_resolution PASSED [ 67%]
+tests/integration/test_t072_gdp_history_default_gap.py::test_gdp_history_default_data_points_are_cumulative_non_decreasing PASSED [ 68%]
+tests/integration/test_t072_metrics_shape_and_delta_gaps.py::test_metrics_top_level_keys_are_exact PASSED [ 68%]
+tests/integration/test_t072_metrics_shape_and_delta_gaps.py::test_all_delta_fields_are_strictly_null_with_no_prior_period_data PASSED [ 69%]
+tests/integration/test_t072_pagination_and_error_code_gaps.py::test_invalid_task_status_filter_uses_invalid_status_error_code PASSED [ 69%]
+tests/integration/test_t072_pagination_and_error_code_gaps.py::test_uncontested_min_age_minutes_excludes_younger_tasks PASSED [ 70%]
+tests/integration/test_t072_pagination_and_error_code_gaps.py::test_feed_limit_clamped_above_200_not_rejected PASSED [ 70%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_identity_returns_operator_agent_id PASSED [ 70%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_identity_unavailable_when_user_agent_missing PASSED [ 71%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_passthrough_no_auth_header_required PASSED [ 71%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_field_bounds_rejected_with_422[overrides0] PASSED [ 72%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_field_bounds_rejected_with_422[overrides1] PASSED [ 72%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_field_bounds_rejected_with_422[overrides2] PASSED [ 73%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_downstream_failure_surfaces_as_502 PASSED [ 73%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_accept_bid_passthrough PASSED [ 74%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_approve_task_passthrough PASSED [ 74%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_file_dispute_passthrough PASSED [ 75%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_dispute_reason_validation_rejected_with_422[] PASSED [ 75%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_dispute_reason_validation_rejected_with_422[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx] PASSED [ 75%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_extra_field_rejected_with_422 PASSED [ 76%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_non_json_content_type_rejected_with_415 PASSED [ 76%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_bodyless_approve_route_not_subject_to_json_validation PASSED [ 77%]
+tests/integration/test_t072_quarterly_default_value_gap.py::test_default_quarter_is_current_quarter_2026_q1 PASSED [ 77%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_core_task_fields PASSED [ 78%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_deadline_fields PASSED [ 78%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_bids_array PASSED [ 79%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_assets_for_submitted_task PASSED [ 79%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_feedback_for_completed_task PASSED [ 79%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_dispute_for_disputed_task PASSED [ 80%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_ruling_for_ruled_task PASSED [ 80%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_404_for_nonexistent_task PASSED [ 81%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_timestamps_present PASSED [ 81%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_returns_200_with_task_list PASSED [ 82%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_task_list_item_schema PASSED [ 82%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_filter_by_status_open PASSED [ 83%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_filter_by_status_disputed PASSED [ 83%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_pagination_limit PASSED [ 83%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_pagination_offset PASSED [ 84%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_default_sort_by_created_at_desc PASSED [ 84%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_invalid_status_returns_400 PASSED [ 85%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_empty_list_for_no_matches PASSED [ 85%]
+tests/integration/test_tasks.py::test_competitive_only_tasks_with_bids PASSED [ 86%]
+tests/integration/test_tasks.py::test_competitive_sorted_by_bid_count_desc PASSED [ 86%]
+tests/integration/test_tasks.py::test_competitive_default_status_open PASSED [ 87%]
+tests/integration/test_tasks.py::test_competitive_limit PASSED           [ 87%]
+tests/integration/test_tasks.py::test_competitive_includes_poster_info PASSED [ 87%]
+tests/integration/test_tasks.py::test_competitive_staleness_new_bid PASSED [ 88%]
+tests/integration/test_tasks.py::test_uncontested_open_tasks_without_bids PASSED [ 88%]
+tests/integration/test_tasks.py::test_uncontested_min_age_filter PASSED  [ 89%]
+tests/integration/test_tasks.py::test_uncontested_limit PASSED           [ 89%]
+tests/integration/test_tasks.py::test_uncontested_has_minutes_field PASSED [ 90%]
+tests/integration/test_tasks.py::test_uncontested_staleness_bid_removes_task PASSED [ 90%]
+tests/integration/test_tasks.py::test_drilldown_approved_task_full PASSED [ 91%]
+tests/integration/test_tasks.py::test_drilldown_not_found_returns_404 PASSED [ 91%]
+tests/integration/test_tasks.py::test_drilldown_bids_with_delivery_quality PASSED [ 91%]
+tests/integration/test_tasks.py::test_drilldown_accepted_bid_flag PASSED [ 92%]
+tests/integration/test_tasks.py::test_drilldown_disputed_task_has_dispute PASSED [ 92%]
+tests/integration/test_tasks.py::test_drilldown_non_disputed_has_null_dispute PASSED [ 93%]
+tests/integration/test_tasks.py::test_drilldown_feedback_visible_only PASSED [ 93%]
+tests/integration/test_tasks.py::test_drilldown_staleness_new_bid PASSED [ 94%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_gdp_delta_for_ticker PASSED [ 94%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_task_delta_for_board PASSED [ 95%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_escrow_delta_for_board PASSED [ 95%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_labor_delta_for_board PASSED [ 95%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_delta_values_include_direction PASSED [ 96%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_no_workers_full_unemployment PASSED [ 96%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_all_agents_working_zero_unemployment PASSED [ 97%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_mixed_state_known_values PASSED [ 97%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_delta_within_window_agent_starts_working PASSED [ 98%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_delta_agent_stops_working_approved PASSED [ 98%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_delta_agent_stops_working_disputed PASSED [ 99%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_multiple_transitions_within_window PASSED [ 99%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_zero_registered_agents_returns_zero PASSED [100%]
+
+============================= 224 passed in 3.92s ==============================
+
+[0;32m✓ Per-service integration tests passed[0m
+
+Runtime cleanup failed: db-gateway: [Errno 1] Operation not permitted; exact PGID 74968 snapshot: pid=74968 ppid=74967 pgid=74968 sid=0 stat=Z
+error: recipe `test-integration-all` failed with exit code 1
+error: recipe `ci-quiet` failed with exit code 1

@@ -10,6 +10,13 @@ import pytest_asyncio
 
 from tests.integration.conftest import read_one
 from tests.integration.gateway_helpers import create_gateway_client
+from tests.integration.native_task_fixtures import (
+    advance_task_to_submitted,
+    claim_dispute,
+    finalize_task_operation,
+    freeze_task_clock,
+    publish_open_task,
+)
 
 if TYPE_CHECKING:
     import httpx
@@ -36,7 +43,7 @@ def _identity_payload(agent_id: str, name: str) -> dict[str, object]:
     }
 
 
-async def _setup_prerequisite_data(client: httpx.AsyncClient) -> str:
+async def _setup_prerequisite_data(client: httpx.AsyncClient, *, reason: str) -> tuple[str, str]:
     accounts = [
         ("a-claimant", "Claimant", "op-00000000-0000-4000-8000-000000000201"),
         ("a-respondent", "Respondent", "op-00000000-0000-4000-8000-000000000202"),
@@ -107,41 +114,59 @@ async def _setup_prerequisite_data(client: httpx.AsyncClient) -> str:
     assert lock_envelope["receipt"]["source_reference"] == task_id
     assert lock_envelope["current_escrow"]["status"] == "locked"
 
-    task_response = await client.post(
-        "/board/tasks",
-        json={
+    task_response = await publish_open_task(
+        client,
+        task_id=task_id,
+        poster_id="a-claimant",
+        title="Disputed Task",
+        spec="Build something",
+        reward=200,
+        escrow_id=f"esc-{task_id}",
+        created_at="2026-03-02T00:00:16Z",
+        bidding_deadline="2026-03-02T01:00:16Z",
+        bidding_deadline_seconds=3600,
+        acceptance_window_seconds=1800,
+        execution_deadline_seconds=7200,
+        review_deadline_seconds=3600,
+        event={
+            "event_source": "board",
+            "event_type": "task.created",
+            "timestamp": "2026-03-02T00:00:16Z",
+            "agent_id": "a-claimant",
             "task_id": task_id,
-            "poster_id": "a-claimant",
-            "title": "Disputed Task",
-            "spec": "Build something",
-            "reward": 200,
-            "status": "disputed",
-            "bidding_deadline_seconds": 3600,
-            "deadline_seconds": 7200,
-            "review_deadline_seconds": 3600,
-            "bidding_deadline": "2026-03-02T00:16:15Z",
-            "bid_count": 1,
-            "escrow_pending": 0,
-            "escrow_id": f"esc-{task_id}",
-            "worker_id": "a-respondent",
-            "created_at": "2026-03-02T00:00:16Z",
-            "event": {
-                "event_source": "board",
-                "event_type": "task.created",
-                "timestamp": "2026-03-02T00:00:16Z",
-                "agent_id": "a-claimant",
-                "task_id": task_id,
-                "summary": "Task created",
-                "payload": "{}",
-            },
+            "summary": "Task created",
+            "payload": "{}",
         },
     )
     assert task_response.status_code == 201
-    return task_id
+    await advance_task_to_submitted(
+        client,
+        task_id=task_id,
+        poster_id="a-claimant",
+        worker_id="a-respondent",
+        escrow_id=f"esc-{task_id}",
+        reward=200,
+        operation_suffix="0000000203",
+        timestamp="2026-03-02T00:08:00Z",
+    )
+    operation_id = "op-00000000-0000-4000-8000-000000020304"
+    dispute_claim = await claim_dispute(
+        client,
+        task_id=task_id,
+        poster_id="a-claimant",
+        worker_id="a-respondent",
+        escrow_id=f"esc-{task_id}",
+        reward=200,
+        reason=reason,
+        operation_id=operation_id,
+    )
+    assert dispute_claim.status_code == 202, dispute_claim.text
+    return task_id, operation_id
 
 
 @pytest_asyncio.fixture
-async def gw_client(initialized_db: str):
+async def gw_client(initialized_db: str, monkeypatch: pytest.MonkeyPatch):
+    freeze_task_clock(monkeypatch, "2026-03-02T00:08:00Z")
     client = create_gateway_client(initialized_db)
     async with client:
         yield client
@@ -153,7 +178,9 @@ class TestCourtGatewayWrites:
         gw_client: httpx.AsyncClient,
         initialized_db: str,
     ) -> None:
-        task_id = await _setup_prerequisite_data(gw_client)
+        task_id, operation_id = await _setup_prerequisite_data(
+            gw_client, reason="Work does not meet specification"
+        )
 
         response = await gw_client.post(
             "/court/claims",
@@ -178,6 +205,9 @@ class TestCourtGatewayWrites:
             },
         )
         assert response.status_code == 201
+        finalized = await finalize_task_operation(gw_client, operation_id)
+        assert finalized.status_code == 200, finalized.text
+        assert finalized.json()["result"]["status"] == "disputed"
 
         row = read_one(
             initialized_db,
@@ -196,7 +226,7 @@ class TestCourtGatewayWrites:
         gw_client: httpx.AsyncClient,
         initialized_db: str,
     ) -> None:
-        task_id = await _setup_prerequisite_data(gw_client)
+        task_id, operation_id = await _setup_prerequisite_data(gw_client, reason="Incomplete work")
 
         claim_response = await gw_client.post(
             "/court/claims",
@@ -221,6 +251,9 @@ class TestCourtGatewayWrites:
             },
         )
         assert claim_response.status_code == 201
+        finalized = await finalize_task_operation(gw_client, operation_id)
+        assert finalized.status_code == 200, finalized.text
+        assert finalized.json()["result"]["status"] == "disputed"
 
         rebuttal_response = await gw_client.post(
             "/court/rebuttals",
@@ -258,7 +291,7 @@ class TestCourtGatewayWrites:
         gw_client: httpx.AsyncClient,
         initialized_db: str,
     ) -> None:
-        task_id = await _setup_prerequisite_data(gw_client)
+        task_id, operation_id = await _setup_prerequisite_data(gw_client, reason="Missing features")
 
         claim_response = await gw_client.post(
             "/court/claims",
@@ -283,6 +316,9 @@ class TestCourtGatewayWrites:
             },
         )
         assert claim_response.status_code == 201
+        finalized = await finalize_task_operation(gw_client, operation_id)
+        assert finalized.status_code == 200, finalized.text
+        assert finalized.json()["result"]["status"] == "disputed"
 
         ruling_response = await gw_client.post(
             "/court/rulings",

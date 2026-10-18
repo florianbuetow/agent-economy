@@ -8,7 +8,6 @@ labels. These are new tests only -- no existing test file is modified.
 
 from __future__ import annotations
 
-import datetime
 from typing import TYPE_CHECKING
 
 import pytest
@@ -18,6 +17,7 @@ from tests.helpers import make_jws_token
 from tests.unit.routers.conftest import (
     create_task,
     make_task_id,
+    new_operation_fields,
     submit_bid,
 )
 
@@ -44,6 +44,7 @@ class TestBiddingGaps:
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id_2)
 
         bid_payload = {
+            **new_operation_fields(task_id_2),
             "action": "submit_bid",
             "task_id": task_id_2,
             "bidder_id": bob_agent_id,
@@ -73,6 +74,7 @@ class TestBidListingGaps:
         await submit_bid(client, bob_keypair, bob_agent_id, task_id)
 
         cancel_payload = {
+            **new_operation_fields(task_id),
             "action": "cancel_task",
             "task_id": task_id,
             "poster_id": alice_agent_id,
@@ -99,7 +101,7 @@ class TestBidListingGaps:
         task_id = make_task_id()
 
         with freeze_time("2025-01-01 00:00:00") as frozen:
-            await create_task(
+            created = await create_task(
                 client,
                 alice_keypair,
                 alice_agent_id,
@@ -108,8 +110,9 @@ class TestBidListingGaps:
             )
             await submit_bid(client, bob_keypair, bob_agent_id, task_id)
 
-            # Advance past the bidding deadline so lazy evaluation expires the task.
-            frozen.tick(delta=datetime.timedelta(seconds=2))
+            # Bid-bearing native tasks expire at the selected acceptance cutoff.
+            assert created.status_code == 201, created.text
+            frozen.move_to(created.json()["acceptance_deadline"])
 
             # No Authorization header — task should now be lazily EXPIRED, bids public.
             resp = await client.get(f"/tasks/{task_id}/bids")
@@ -139,6 +142,7 @@ class TestBidAcceptanceGaps:
         real_bid_id = bid_resp.json()["bid_id"]
 
         accept_payload = {
+            **new_operation_fields(task_id),
             "action": "accept_bid",
             "task_id": task_id,
             "bid_id": "bid-00000000-0000-0000-0000-000000000000",
@@ -170,6 +174,7 @@ class TestBidAcceptanceGaps:
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id_2)
 
         accept_payload = {
+            **new_operation_fields(task_id_2),
             "action": "accept_bid",
             "task_id": task_id_2,
             "bid_id": bid_id,

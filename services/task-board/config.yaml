@@ -58,4 +58,5 @@ db_gateway:
 # Q-5 (GAP-A3): periodic background sweep that pushes open/accepted/submitted/disputed
 # tasks through deadline evaluation without waiting for an API read to trigger it.
 deadline_evaluation:
+  actor_id: "system-task-board-deadline"
   evaluation_interval_seconds: 10

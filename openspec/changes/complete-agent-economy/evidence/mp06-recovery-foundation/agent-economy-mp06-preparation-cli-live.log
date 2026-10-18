@@ -1,0 +1,34 @@
+Isolated runtime: /private/tmp/agent-economy-recovery-cli-proof.pCuZqr/runtime-b5793130cda24f8ba44d5be33947059a-7zsqf4ft
+provisioned handle=alice fingerprint_sha256=643e3f2576c2f7fb03f3879ef2b8371555da0f84febcfa7cc630f149a169c3e9
+provisioned handle=bob fingerprint_sha256=464eb14061a14be54aa8b0bc24ba860c7991d114dae5e4033018f280766e34a4
+provisioned handle=feeder fingerprint_sha256=413906a0180f559679cee1cc8034a5ad5bebc7e03038b6b91063cef5b909cb73
+provisioned handle=mathbot fingerprint_sha256=bd9c0639db11cf06f8e42042beb1423cb9f356daf21fe3cbe961265d57751525
+provisioned handle=mathbot_mistral fingerprint_sha256=a44d68b7369e8f3597ca12779f4c62bc7df6c861a896841e7ea69549f9105fd7
+provisioned handle=mathbot_openai fingerprint_sha256=92c87dec66224b6f372e4044c992076e72d172807d270b652e0e24b25c236ef2
+provisioned handle=operator fingerprint_sha256=18906a33c6ae928f7dc9f3b4058ea9cfc44bbd418cf913a3ff53dd61d89bab63
+provisioned handle=platform fingerprint_sha256=1e192fb31bccffe069c512d556fa359626eca9e1c4c1a76bc7a4f35dcefba87c
+provisioned handle=gateway-central-bank fingerprint_sha256=80d5326cfa4b32564d8ec7330730eab42aaf3e38face4c5d45bc3f146ef59093
+provisioned handle=gateway-court fingerprint_sha256=e8d43490719d45336ce40481ff61842c7306eeccf3df42d5a5615f812312ea09
+provisioned handle=gateway-identity fingerprint_sha256=039426bb6597ae8667adc9b08453ed6b6a8e30090c4ce5304e37ef579f6dd777
+provisioned handle=gateway-reputation fingerprint_sha256=9cd3327d2f640fd5b8261d36889d68a4896e09d048925b57571c1ea3cb9c7354
+provisioned handle=gateway-task-board fingerprint_sha256=9a38c87d5c215de0813cb4bd22cfeff21c33bdc401f781dad9564344b9425776
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: POST http://127.0.0.1:61282/agents/register "HTTP/1.1 409 Conflict"
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61282/agents "HTTP/1.1 200 OK"
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61282/agents/a-0098a7f2-59a3-42ed-9678-abbd3b54e3b2 "HTTP/1.1 200 OK"
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61282/agents/a-0098a7f2-59a3-42ed-9678-abbd3b54e3b2 "HTTP/1.1 200 OK"
+2026-10-16T02:18:16 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-0098a7f2-59a3-42ed-9678-abbd3b54e3b2
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: POST http://127.0.0.1:61282/agents/register "HTTP/1.1 409 Conflict"
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61282/agents "HTTP/1.1 200 OK"
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61282/agents/a-0098a7f2-59a3-42ed-9678-abbd3b54e3b2 "HTTP/1.1 200 OK"
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61282/agents/a-59b12546-a736-4417-babd-9f9100d666cf "HTTP/1.1 200 OK"
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61282/agents/a-59b12546-a736-4417-babd-9f9100d666cf "HTTP/1.1 200 OK"
+2026-10-16T02:18:16 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-59b12546-a736-4417-babd-9f9100d666cf
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: POST http://127.0.0.1:61283/accounts "HTTP/1.1 201 Created"
+2026-10-16T02:18:16 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: POST http://127.0.0.1:61283/accounts/a-59b12546-a736-4417-babd-9f9100d666cf/credit "HTTP/1.1 200 OK"
+2026-10-16T02:18:16 [INFO] treasury_provision_cli: Treasury provisioned (tx_id=tx-30fe2201-36e1-4c3b-bc01-33b46e463994, balance_after=1000000)
+2026-10-16T02:18:16 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61283/accounts/a-59b12546-a736-4417-babd-9f9100d666cf "HTTP/1.1 200 OK"
+agent_id=a-59b12546-a736-4417-babd-9f9100d666cf
+genesis_amount=1000000
+balance=1000000
+{"recovery_inventory": "/private/tmp/agent-economy-recovery-cli-proof.pCuZqr/runtime-b5793130cda24f8ba44d5be33947059a-7zsqf4ft/recovery-inventory.json", "inventory_sha256": "f59f06429b37384c03fb275e2bba92d9eed9dd5c8a2cd181e10ff0407f74c084", "runtime_manifest": "/private/tmp/agent-economy-recovery-cli-proof.pCuZqr/runtime-b5793130cda24f8ba44d5be33947059a-7zsqf4ft/runtime.json"}

@@ -128,6 +128,14 @@ Rationale: approve/dispute, accept/cancel, submit/expire, and competing ruling t
 
 Alternative rejected: process locks, unconditional status updates, GET-triggered recovery as the only mechanism, or exception cleanup as the recovery record.
 
+The concrete MP-07 contract is in `docs/plans/2026-10-17-mp07-transition-contract.md`.
+It uses an additive v3 task-contract sidecar, native task operations and separate honest legacy
+observations. Gateway command claims own state/version and frozen effect intent before external
+delivery. Finalization loads persisted Bank/Court facts inside its transaction, never trusts a
+forwarded success body, and preserves claim-time eligibility across slow effects. The narrow
+claim/finalize HTTP boundaries and replay/error ordering are defined there. Court-specific
+decision provenance and independent background retry remain MP-10 and MP-08 respectively.
+
 ### 6. Version schema changes and establish backup proof before migration
 
 The Gateway uses a schema-version table and ordered transactional migrations. Startup validates the exact required schema, indexes, foreign keys, integrity checks, and supported version. MP-06 first supplies a tested database/WAL backup, asset manifest, and key-backup foundation; MP-21 later proves complete restore and pending-work recovery. Monetary columns enforce integer type, non-negativity, explicit configured bounds, payer/recipient correctness, and ledger-to-balance provenance.

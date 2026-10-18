@@ -11,13 +11,16 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 from typing import TYPE_CHECKING
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from db_gateway_service import recovery
-from db_gateway_service.migration import migrate_v1_to_v2
-from db_gateway_service.schema import SchemaState, load_schema_sql
+from db_gateway_service.migration import migrate_v1_to_v2, migrate_v2_to_v3
+from db_gateway_service.receipt_audit import audit_receipt_ownership
+from db_gateway_service.schema import SchemaState, classify_schema, load_schema_sql
+from db_gateway_service.task_contract_audit import audit_task_contracts
 from service_auth import generate_keypair, public_key_to_b64
 from service_auth.signing import keypair_fingerprint
 from service_commons.maintenance_lock import MaintenanceLockMode, hold_maintenance_lock
@@ -49,6 +52,8 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 _PAYER = "a-historical-payer"
 _WORKER = "a-historical-worker"
 _CREDIT_REFERENCE = "historical-genesis"
+_V1_BACKUP_ID = "before-mp04-public-history"
+_V2_BACKUP_ID = "before-mp07-bank-history"
 
 
 def _hash(value: object) -> str:
@@ -60,6 +65,17 @@ def _hash(value: object) -> str:
         allow_nan=False,
     ).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+def _file_hashes(root: Path) -> dict[str, tuple[int, str]]:
+    return {
+        path.relative_to(root).as_posix(): (
+            path.stat().st_mode & 0o777,
+            hashlib.sha256(path.read_bytes()).hexdigest(),
+        )
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
 
 
 def _seed_v1(database: Path) -> None:
@@ -263,21 +279,67 @@ def gateway_db_path(tmp_path: Path) -> str:
     work_root = tmp_path / "work"
     backup_root.mkdir(mode=0o700)
     work_root.mkdir(mode=0o700)
-    recovery.create_backup(
+    v1_backup = recovery.create_backup(
         inventory,
         backup_root=backup_root,
-        backup_id="before-mp04-public-history",
+        backup_id=_V1_BACKUP_ID,
         work_root=work_root,
     )
+    assert v1_backup.state is recovery.PublicationState.COMPLETE
     result = migrate_v1_to_v2(
         inventory,
         backup_root=backup_root,
-        backup_id="before-mp04-public-history",
+        backup_id=_V1_BACKUP_ID,
         work_root=work_root,
         busy_timeout_ms=5000,
     )
     assert result.applied is True
     assert result.schema_version == 2
+    with closing(sqlite3.connect(database)) as connection:
+        assert classify_schema(connection).state is SchemaState.CURRENT_V2
+        financial_v2 = _snapshot(str(database))
+        assert audit_receipt_ownership(connection).ownership_clean
+
+    v2_backup = recovery.create_backup(
+        inventory,
+        backup_root=backup_root,
+        backup_id=_V2_BACKUP_ID,
+        work_root=work_root,
+    )
+    assert v2_backup.state is recovery.PublicationState.COMPLETE
+    v2_backup_hashes = _file_hashes(v2_backup.location)
+    verified = recovery.verify_backup(
+        backup_root=backup_root,
+        backup_id=_V2_BACKUP_ID,
+        work_root=work_root,
+    )
+    assert verified.artifact_verified and verified.identity_complete
+    task_migration = migrate_v2_to_v3(
+        inventory,
+        backup_root=backup_root,
+        backup_id=_V2_BACKUP_ID,
+        work_root=work_root,
+        busy_timeout_ms=5000,
+    )
+    assert task_migration.applied is True
+    assert task_migration.schema_version == 3
+    assert task_migration.observation == "committed_v3_verified"
+    with closing(sqlite3.connect(database)) as connection:
+        assert classify_schema(connection).state is SchemaState.CURRENT_V3
+        assert _snapshot(str(database)) == financial_v2
+        assert audit_receipt_ownership(connection).ownership_clean
+        assert audit_task_contracts(connection).contracts_clean
+        assert connection.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert connection.execute("SELECT * FROM schema_metadata").fetchone() == (
+            1,
+            3,
+            2,
+            _V2_BACKUP_ID,
+            v2_backup.manifest_sha256,
+        )
+        assert connection.execute("SELECT COUNT(*) FROM board_task_operations").fetchone() == (0,)
+    assert _file_hashes(v2_backup.location) == v2_backup_hashes
     return str(database)
 
 

@@ -1,0 +1,61 @@
+{
+  "scope": "runtime-config",
+  "status": "independent review APPROVE; combined parent config/window93 pass and scoped type checks pass; no ticket closure",
+  "boundary": "Not root CI, live stack, end-to-end recovery or complete runtime integration evidence.",
+  "artifacts": [
+    {
+      "path": "agent-economy-mp07-runtime-config-green-final.log",
+      "sha256": "a85936e69ca22a7525ec4231551a96bb0de8474adf22010c08d4ee78fa740303"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-config-green.log",
+      "sha256": "a37b2fb8323e9edd473bfdfe2e2ec57738e6f49f36c5d8051373d67c52201f59"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-config-mypy.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-config-pyright.log",
+      "sha256": "08e490cfa8d9d1958474a1a7d41acd4f215435dda760020480dd8d4a3afc172c"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-config-red-final.log",
+      "sha256": "058838e2ace7ffbe715db1d354b7b0258624d964b9069db73d752c059bad2db1"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-config-red-source.py",
+      "sha256": "088da6b156e873a36829945322bdbae584ba61beb92beaf704ffaa9d64625c6a"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-config-red.log",
+      "sha256": "78f435a332583692915551079aa1e1ab3d0a38fafa933c264cba12fb458fc134"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-config-sha256-final.log",
+      "sha256": "d467e674a3ab55bebc592cbc19708a35cfe30fdb7aed65f23ffe037ac547b4e6"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-config-window-final.log",
+      "sha256": "817979b42af1d63fc7d21822c004b474dc3ef6f45736b5955d75f74ddfe55bc8"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-config-window-pyright-final.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    }
+  ],
+  "sources": [
+    {
+      "path": "agents/src/base_agent/runtime_config.py",
+      "sha256": "e7e6b8711743774484c5fbd3e79a224a6ab338369277129c9a16f34905deab40"
+    },
+    {
+      "path": "agents/tests/unit/test_runtime_config.py",
+      "sha256": "d2419a4d2efe848cf7a53511c61cc44407e39a5f94265d0264e553a06042c67e"
+    },
+    {
+      "path": "docs/plans/2026-10-18-mp07-runtime-config-tests.md",
+      "sha256": "183de8b3ce62ea149b2581dd317c8a1aa53dc086bbca2560be39c0853248a275"
+    }
+  ]
+}

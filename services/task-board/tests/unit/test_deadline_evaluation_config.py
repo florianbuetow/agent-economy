@@ -37,7 +37,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{logs_path}"
 database:
   path: "{db_path}"
 identity:
@@ -120,7 +120,12 @@ def test_deadline_evaluation_section_loads(tmp_path) -> None:
         db_path=str(tmp_path / "task-board.db"),
         assets_path=str(tmp_path / "assets"),
         agent_config_path="agents.yaml",
-        deadline_evaluation_section=("deadline_evaluation:\n  evaluation_interval_seconds: 30\n"),
+        logs_path=str(tmp_path / "logs" / "task-board"),
+        deadline_evaluation_section=(
+            "deadline_evaluation:\n"
+            "  evaluation_interval_seconds: 30\n"
+            "  actor_id: system-task-board-test-deadline\n"
+        ),
     )
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -144,7 +149,10 @@ def test_deadline_evaluation_missing_interval_field_rejected(tmp_path) -> None:
         db_path=str(tmp_path / "task-board.db"),
         assets_path=str(tmp_path / "assets"),
         agent_config_path="agents.yaml",
-        deadline_evaluation_section="deadline_evaluation: {}\n",
+        logs_path=str(tmp_path / "logs" / "task-board"),
+        deadline_evaluation_section=(
+            "deadline_evaluation:\n  actor_id: system-task-board-test-deadline\n"
+        ),
     )
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -174,6 +182,7 @@ async def test_lifespan_fails_fast_without_deadline_evaluation_section(
         db_path=str(tmp_path / "task-board.db"),
         assets_path=str(tmp_path / "assets"),
         agent_config_path=str(agent_config_path),
+        logs_path=str(tmp_path / "logs" / "task-board"),
         deadline_evaluation_section="",
     )
     config_path = tmp_path / "config.yaml"

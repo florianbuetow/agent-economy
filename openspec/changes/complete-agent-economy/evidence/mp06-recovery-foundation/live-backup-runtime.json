@@ -1,0 +1,140 @@
+{
+  "run_id": "a2a9ef241ee04fd98e20de1f521df703",
+  "run_dir": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t",
+  "ports": {
+    "db-gateway": 65086,
+    "identity": 65087,
+    "central-bank": 65088,
+    "task-board": 65089,
+    "reputation": 65090,
+    "court": 65091,
+    "ui": 65092
+  },
+  "config_paths": {
+    "db-gateway": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/db-gateway.yaml",
+    "identity": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/identity.yaml",
+    "central-bank": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/central-bank.yaml",
+    "task-board": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/task-board.yaml",
+    "reputation": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/reputation.yaml",
+    "court": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/court.yaml",
+    "ui": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/ui.yaml"
+  },
+  "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/agents.yaml",
+  "gateway_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/db-gateway.yaml",
+  "log_paths": {
+    "db-gateway": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/logs/db-gateway.log",
+    "identity": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/logs/identity.log",
+    "central-bank": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/logs/central-bank.log",
+    "task-board": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/logs/task-board.log",
+    "reputation": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/logs/reputation.log",
+    "court": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/logs/court.log",
+    "ui": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/logs/ui.log"
+  },
+  "processes": {
+    "db-gateway": {
+      "pid": 88359,
+      "pgid": 88359,
+      "sid": 88359,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "identity": {
+      "pid": 88361,
+      "pgid": 88361,
+      "sid": 88361,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "central-bank": {
+      "pid": 88363,
+      "pgid": 88363,
+      "sid": 88363,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "task-board": {
+      "pid": 88365,
+      "pgid": 88365,
+      "sid": 88365,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "reputation": {
+      "pid": 88367,
+      "pgid": 88367,
+      "sid": 88367,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "court": {
+      "pid": 88369,
+      "pgid": 88369,
+      "sid": 88369,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "ui": {
+      "pid": 88371,
+      "pgid": 88371,
+      "sid": 88371,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "treasury_provision_cli"
+      ],
+      "pid": 88373,
+      "pgid": 88373,
+      "sid": 88373,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "bootstrap_commands": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "python",
+        "-m",
+        "key_provision_cli",
+        "provision",
+        "--config",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/agents.yaml",
+        "--gateway-config",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-955/test_live_full_runtime_invento0/runtime-a2a9ef241ee04fd98e20de1f521df703-1lzzs66t/configs/db-gateway.yaml"
+      ],
+      "pid": 88357,
+      "pgid": 88357,
+      "sid": 88357,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ]
+}

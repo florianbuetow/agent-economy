@@ -1,0 +1,41 @@
+{
+  "exit": 1,
+  "source_count": 1059,
+  "ordinary_log_count": 202,
+  "owned_groups_absent": 9,
+  "limits": "All component CIs passed; integration stopped at one legacy Board fixture. No package closure.",
+  "artifacts": [
+    {
+      "file": "root-ci-21.log",
+      "sha256": "3f31d4f0489c109818c131f8f471177c1629f486bd673e00ab00cda76b932f5a"
+    },
+    {
+      "file": "root-ci-21.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "file": "root-ci-21-before.json",
+      "sha256": "3fb323e83d9154f2b28fbf48c774655a18227f16d7a9cf2f835fe5dee1ae2916"
+    },
+    {
+      "file": "root-ci-21-after.json",
+      "sha256": "3fb323e83d9154f2b28fbf48c774655a18227f16d7a9cf2f835fe5dee1ae2916"
+    },
+    {
+      "file": "root-ci-21-log-before.json",
+      "sha256": "717269f4a5f937a93ef3611e7b6364db7b870bb08d8270d5d68bedeb84de8951"
+    },
+    {
+      "file": "root-ci-21-log-after.json",
+      "sha256": "717269f4a5f937a93ef3611e7b6364db7b870bb08d8270d5d68bedeb84de8951"
+    },
+    {
+      "file": "root-ci-21-comparison.json",
+      "sha256": "148bfc22f8e5f6c92121650b6a354576ff59f48b9e98d3187fad4b1cfb5b03f9"
+    },
+    {
+      "file": "root-ci-21-cleanup.json",
+      "sha256": "fae3d2e10c7ef3a9f9086d3fb384374df89442baa481dfe6ab35598061b4d523"
+    }
+  ]
+}

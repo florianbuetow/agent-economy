@@ -119,6 +119,9 @@ def test_task_identifier_is_literal_text(e2e_page, e2e_server, e2e_db_path):
         connection.execute(
             "UPDATE board_bids SET task_id = ? WHERE task_id = 't-task6'", (task_id,)
         )
+        connection.execute(
+            "UPDATE board_task_contracts SET task_id = ? WHERE task_id = 't-task6'", (task_id,)
+        )
     e2e_page.goto(f"{e2e_server}/task.html?task_id={quote(task_id, safe='')}")
     label = e2e_page.locator("#phase-content .card-label").first
     label.wait_for()
@@ -176,6 +179,9 @@ def test_task_identifier_is_one_encoded_request_segment(e2e_page, e2e_server, e2
         )
         connection.execute(
             "UPDATE board_bids SET task_id = ? WHERE task_id = 't-task6'", (task_id,)
+        )
+        connection.execute(
+            "UPDATE board_task_contracts SET task_id = ? WHERE task_id = 't-task6'", (task_id,)
         )
     with e2e_page.expect_response(
         lambda response: response.url.startswith(f"{e2e_server}/api/tasks/")

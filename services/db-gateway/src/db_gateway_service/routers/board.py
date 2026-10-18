@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service.board_authority import BoardAuthority
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.routers.helpers import (
     parse_json_body,
@@ -15,8 +18,45 @@ from db_gateway_service.routers.helpers import (
     validate_positive_integer,
     validate_required_fields,
 )
+from db_gateway_service.task_operation_requests import parse_task_operation_request
+
+if TYPE_CHECKING:
+    from db_gateway_service.services.db_writer import DbWriter
 
 router = APIRouter(prefix="/board", tags=["Board"])
+
+
+def _operation_context(request: Request) -> tuple[DbWriter, str, BoardAuthority]:
+    """Obtain identities from verified request and receiver configuration only."""
+    caller_kid: object = getattr(request.state, "gateway_caller_kid", None)
+    if not isinstance(caller_kid, str) or not caller_kid:
+        raise ServiceError("forbidden", "Authenticated Gateway caller is required", 403, {})
+    authority: object = getattr(request.app.state, "board_authority", None)
+    writer = get_app_state().db_writer
+    if writer is None or not isinstance(authority, BoardAuthority):
+        raise ServiceError("service_not_ready", "Task operation authority is not ready", 503, {})
+    return writer, caller_kid, authority
+
+
+@router.post("/task-operations")
+async def claim_task_operation(request: Request) -> JSONResponse:
+    """Atomically execute or claim a versioned task command."""
+    command = parse_task_operation_request(parse_json_body(await request.body()))
+    writer, caller_kid, authority = _operation_context(request)
+    result = writer.claim_task_operation(command, caller_kid, authority)
+    status = 200 if result["operation_state"] == "completed" else 202
+    return JSONResponse(status_code=status, content=result)
+
+
+@router.post("/task-operations/{operation_id}/finalize")
+async def finalize_task_operation(operation_id: str, request: Request) -> JSONResponse:
+    """Finalize using Gateway evidence; no forwarded result or actor is accepted."""
+    if parse_json_body(await request.body()) != {}:
+        raise ServiceError("invalid_payload", "Finalization body must be an empty object", 400, {})
+    writer, caller_kid, authority = _operation_context(request)
+    result = writer.finalize_task_operation(operation_id, caller_kid, authority)
+    status = 200 if result["operation_state"] == "completed" else 202
+    return JSONResponse(status_code=status, content=result)
 
 
 @router.post("/tasks", status_code=201)

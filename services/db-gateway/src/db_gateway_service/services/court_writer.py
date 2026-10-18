@@ -18,6 +18,8 @@ from db_gateway_service.services.db_writer_helpers import (
     is_foreign_key_violation,
     verify_cross_table_constraint,
 )
+from db_gateway_service.services.task_operation_guards import assert_no_competing_task_work
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 
 if TYPE_CHECKING:
     from db_gateway_service.services.db_writer import DbWriter
@@ -192,6 +194,7 @@ class CourtWriter:
         cursor = db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
+            task_id = self._admit_rebuttal(cursor, data)
             cursor.execute(
                 "INSERT INTO court_rebuttals "
                 "(rebuttal_id, claim_id, agent_id, content, submitted_at) "
@@ -204,6 +207,17 @@ class CourtWriter:
                     data["submitted_at"],
                 ),
             )
+            cursor.execute(
+                "UPDATE board_tasks SET rebuttal_submitted_at=? "
+                "WHERE task_id=? AND status='disputed' AND dispute_id=? "
+                "AND worker_id=? AND rebuttal_submitted_at IS NULL",
+                (data["submitted_at"], task_id, data["claim_id"], data["agent_id"]),
+            )
+            projected_rows = cursor.rowcount
+            if projected_rows != 1:
+                raise ServiceError(
+                    "rebuttal_projection_conflict", "Task rebuttal projection changed", 409, {}
+                )
             # Optional claim status update
             claim_status = data.get("claim_status_update")
             if claim_status is not None:
@@ -248,7 +262,17 @@ class CourtWriter:
                     "court_claims",
                     {"claim_id": data["claim_id"], **constraints},
                 )
-            event_id = insert_event(cursor, data["event"])
+            event = dict(data["event"])
+            event.update(
+                {
+                    "event_source": "court",
+                    "event_type": "rebuttal.submitted",
+                    "task_id": task_id,
+                    "agent_id": data["agent_id"],
+                    "timestamp": data["submitted_at"],
+                }
+            )
+            event_id = insert_event(cursor, event)
             db.commit()
             return {"rebuttal_id": data["rebuttal_id"], "event_id": event_id}
         except sqlite3.IntegrityError as exc:
@@ -269,6 +293,55 @@ class CourtWriter:
         except Exception:
             db.rollback()
             raise
+
+    @staticmethod
+    def _admit_rebuttal(cursor: sqlite3.Cursor, data: dict[str, Any]) -> str:
+        claim = cursor.execute(
+            "SELECT task_id,claimant_id,respondent_id,reason,rebuttal_deadline "
+            "FROM court_claims WHERE claim_id=?",
+            (data["claim_id"],),
+        ).fetchone()
+        if claim is None:
+            raise ServiceError("claim_not_found", "No claim with this claim_id", 404, {})
+        task_id = str(claim[0])
+        assert_no_competing_task_work(cursor, task_id)
+        task = cursor.execute(
+            "SELECT status,dispute_id,poster_id,worker_id,rebuttal_submitted_at,"
+            "dispute_reason,rebuttal_deadline "
+            "FROM board_tasks WHERE task_id=?",
+            (task_id,),
+        ).fetchone()
+        if task is None:
+            raise ServiceError("payload_mismatch", "Claim task is missing", 409, {})
+        if task[0] != "disputed":
+            raise ServiceError("invalid_status", "Task is not disputed", 409, {})
+        if (task[1], task[2], task[3]) != (data["claim_id"], claim[1], claim[2]):
+            raise ServiceError("payload_mismatch", "Claim and task parties do not match", 409, {})
+        if (task[5], task[6]) != (claim[3], claim[4]):
+            raise ServiceError("payload_mismatch", "Claim and task dispute facts differ", 409, {})
+        if data["agent_id"] != task[3]:
+            raise ServiceError("forbidden", "Only the task worker can submit a rebuttal", 403, {})
+        existing = cursor.execute(
+            "SELECT 1 FROM court_rebuttals WHERE claim_id=? LIMIT 1", (data["claim_id"],)
+        ).fetchone()
+        if existing is not None:
+            raise ServiceError(
+                "rebuttal_exists", "A rebuttal already exists for this claim", 409, {}
+            )
+        if task[4] is not None:
+            raise ServiceError(
+                "rebuttal_projection_conflict", "Task already has a rebuttal observation", 409, {}
+            )
+        try:
+            parse_utc_text_to_epoch_us(data["submitted_at"])
+        except ValueError as exc:
+            raise ServiceError(
+                "invalid_payload",
+                "submitted_at must be a representable UTC timestamp",
+                400,
+                {"field": "submitted_at"},
+            ) from exc
+        return task_id
 
     def record_ruling(self, data: dict[str, Any]) -> dict[str, Any]:
         """

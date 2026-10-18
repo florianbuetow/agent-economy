@@ -1,0 +1,24 @@
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;31m✗ Code-audit failed[0m
+
+[0;34m=== Scanning Dependencies for Vulnerabilities ===[0m
+Found 1 known vulnerability in 1 package
+Name Version ID                  Fix Versions
+---- ------- ------------------- ------------
+mcp  1.29.0  GHSA-84m7-p3x7-pcfv 1.30.0,2.2.0
+Name            Skip Reason
+--------------- ------------------------------------------------------------------------------
+service-auth    Dependency not found on PyPI and could not be audited: service-auth (0.1.0)
+service-commons Dependency not found on PyPI and could not be audited: service-commons (0.1.0)
+ui-service      Dependency not found on PyPI and could not be audited: ui-service (0.1.0)
+error: recipe `code-audit` failed on line 269 with exit code 1
+error: recipe `ci-quiet` failed with exit code 1

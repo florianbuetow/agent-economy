@@ -171,6 +171,10 @@ async def test_body_guard_preserves_exact_allowed_bytes():
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://localhost"
     ) as client:
-        response = await client.post("/api/proxy/tasks/example/approve", content=b"x" * 64)
+        response = await client.post(
+            "/api/proxy/tasks/example/approve",
+            content=b"x" * 64,
+            headers={"Content-Type": "application/json"},
+        )
     assert response.status_code == 200
     assert received == [b"x" * 64]

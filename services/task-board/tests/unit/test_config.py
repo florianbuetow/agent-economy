@@ -55,6 +55,7 @@ db_gateway:
     audience: "db-gateway"
     token_ttl_seconds: 300
 deadline_evaluation:
+  actor_id: "system-config-test-deadline"
   evaluation_interval_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
@@ -121,6 +122,7 @@ db_gateway:
     audience: "db-gateway"
     token_ttl_seconds: 300
 deadline_evaluation:
+  actor_id: "system-config-test-deadline"
   evaluation_interval_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
@@ -199,6 +201,7 @@ db_gateway:
     audience: "db-gateway"
     token_ttl_seconds: 300
 deadline_evaluation:
+  actor_id: "system-config-test-deadline"
   evaluation_interval_seconds: 10
 """
     config_path = tmp_path / "config.yaml"

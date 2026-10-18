@@ -1,0 +1,187 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 39 items
+
+tests/unit/test_mp07_task_board_producer.py FFFFFFFFFFFFFFFFFFFFFFFFFFFF [ 71%]
+FFFF                                                                     [ 82%]
+tests/unit/test_mp03_producers.py ..F....                                [100%]
+
+=================================== FAILURES ===================================
+_ test_mutation_preserves_explicit_identity_across_caller_retry[cancel_task-args0-business0-POST /tasks/t-1/cancel] _
+tests/unit/test_mp07_task_board_producer.py:117: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+_ test_mutation_preserves_explicit_identity_across_caller_retry[submit_bid-args1-business1-POST /tasks/t-1/bids] _
+tests/unit/test_mp07_task_board_producer.py:117: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+E   TypeError: TaskBoardMixin.submit_bid() got an unexpected keyword argument 'operation_id'
+_ test_mutation_preserves_explicit_identity_across_caller_retry[accept_bid-args2-business2-POST /tasks/t-1/bids/bid-1/accept] _
+tests/unit/test_mp07_task_board_producer.py:117: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+E   TypeError: TaskBoardMixin.accept_bid() got an unexpected keyword argument 'operation_id'
+_ test_mutation_preserves_explicit_identity_across_caller_retry[submit_deliverable-args3-business3-POST /tasks/t-1/submit] _
+tests/unit/test_mp07_task_board_producer.py:117: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+E   TypeError: TaskBoardMixin.submit_deliverable() got an unexpected keyword argument 'operation_id'
+_ test_mutation_preserves_explicit_identity_across_caller_retry[approve_task-args4-business4-POST /tasks/t-1/approve] _
+tests/unit/test_mp07_task_board_producer.py:117: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+E   TypeError: TaskBoardMixin.approve_task() got an unexpected keyword argument 'operation_id'
+_ test_mutation_preserves_explicit_identity_across_caller_retry[dispute_task-args5-business5-POST /tasks/t-1/dispute] _
+tests/unit/test_mp07_task_board_producer.py:117: in test_mutation_preserves_explicit_identity_across_caller_retry
+    await producer(
+E   TypeError: TaskBoardMixin.dispute_task() got an unexpected keyword argument 'operation_id'
+________ test_post_task_binds_explicit_window_and_distinct_escrow_token ________
+tests/unit/test_mp07_task_board_producer.py:141: in test_post_task_binds_explicit_window_and_distinct_escrow_token
+    await agent.post_task(
+E   TypeError: TaskBoardMixin.post_task() got an unexpected keyword argument 'acceptance_window_seconds'
+________ test_native_fields_are_required_keyword_only[post_task-args0] _________
+tests/unit/test_mp07_task_board_producer.py:189: in test_native_fields_are_required_keyword_only
+    with pytest.raises(TypeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE TypeError
+_______ test_native_fields_are_required_keyword_only[cancel_task-args1] ________
+tests/unit/test_mp07_task_board_producer.py:189: in test_native_fields_are_required_keyword_only
+    with pytest.raises(TypeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE TypeError
+________ test_native_fields_are_required_keyword_only[submit_bid-args2] ________
+tests/unit/test_mp07_task_board_producer.py:189: in test_native_fields_are_required_keyword_only
+    with pytest.raises(TypeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE TypeError
+________ test_native_fields_are_required_keyword_only[accept_bid-args3] ________
+tests/unit/test_mp07_task_board_producer.py:189: in test_native_fields_are_required_keyword_only
+    with pytest.raises(TypeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE TypeError
+____ test_native_fields_are_required_keyword_only[submit_deliverable-args4] ____
+tests/unit/test_mp07_task_board_producer.py:189: in test_native_fields_are_required_keyword_only
+    with pytest.raises(TypeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE TypeError
+_______ test_native_fields_are_required_keyword_only[approve_task-args5] _______
+tests/unit/test_mp07_task_board_producer.py:189: in test_native_fields_are_required_keyword_only
+    with pytest.raises(TypeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE TypeError
+_______ test_native_fields_are_required_keyword_only[dispute_task-args6] _______
+tests/unit/test_mp07_task_board_producer.py:189: in test_native_fields_are_required_keyword_only
+    with pytest.raises(TypeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE TypeError
+_______ test_invalid_acceptance_window_is_rejected_before_signing[None] ________
+tests/unit/test_mp07_task_board_producer.py:203: in test_invalid_acceptance_window_is_rejected_before_signing
+    await agent.post_task(
+E   TypeError: TaskBoardMixin.post_task() got an unexpected keyword argument 'acceptance_window_seconds'
+_______ test_invalid_acceptance_window_is_rejected_before_signing[True] ________
+tests/unit/test_mp07_task_board_producer.py:203: in test_invalid_acceptance_window_is_rejected_before_signing
+    await agent.post_task(
+E   TypeError: TaskBoardMixin.post_task() got an unexpected keyword argument 'acceptance_window_seconds'
+_________ test_invalid_acceptance_window_is_rejected_before_signing[0] _________
+tests/unit/test_mp07_task_board_producer.py:203: in test_invalid_acceptance_window_is_rejected_before_signing
+    await agent.post_task(
+E   TypeError: TaskBoardMixin.post_task() got an unexpected keyword argument 'acceptance_window_seconds'
+________ test_invalid_acceptance_window_is_rejected_before_signing[-1] _________
+tests/unit/test_mp07_task_board_producer.py:203: in test_invalid_acceptance_window_is_rejected_before_signing
+    await agent.post_task(
+E   TypeError: TaskBoardMixin.post_task() got an unexpected keyword argument 'acceptance_window_seconds'
+________ test_invalid_acceptance_window_is_rejected_before_signing[1.5] ________
+tests/unit/test_mp07_task_board_producer.py:203: in test_invalid_acceptance_window_is_rejected_before_signing
+    await agent.post_task(
+E   TypeError: TaskBoardMixin.post_task() got an unexpected keyword argument 'acceptance_window_seconds'
+________ test_invalid_acceptance_window_is_rejected_before_signing[20] _________
+tests/unit/test_mp07_task_board_producer.py:203: in test_invalid_acceptance_window_is_rejected_before_signing
+    await agent.post_task(
+E   TypeError: TaskBoardMixin.post_task() got an unexpected keyword argument 'acceptance_window_seconds'
+___ test_invalid_acceptance_window_is_rejected_before_signing[9223372036855] ___
+tests/unit/test_mp07_task_board_producer.py:203: in test_invalid_acceptance_window_is_rejected_before_signing
+    await agent.post_task(
+E   TypeError: TaskBoardMixin.post_task() got an unexpected keyword argument 'acceptance_window_seconds'
+__________ test_invalid_operation_id_is_rejected_before_signing[None] __________
+tests/unit/test_mp07_task_board_producer.py:225: in test_invalid_operation_id_is_rejected_before_signing
+    await agent.cancel_task(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+__________ test_invalid_operation_id_is_rejected_before_signing[True] __________
+tests/unit/test_mp07_task_board_producer.py:225: in test_invalid_operation_id_is_rejected_before_signing
+    await agent.cancel_task(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+_________ test_invalid_operation_id_is_rejected_before_signing[op-bad] _________
+tests/unit/test_mp07_task_board_producer.py:225: in test_invalid_operation_id_is_rejected_before_signing
+    await agent.cancel_task(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+_ test_invalid_operation_id_is_rejected_before_signing[op-AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA] _
+tests/unit/test_mp07_task_board_producer.py:225: in test_invalid_operation_id_is_rejected_before_signing
+    await agent.cancel_task(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+_______ test_invalid_lifecycle_version_is_rejected_before_signing[None] ________
+tests/unit/test_mp07_task_board_producer.py:246: in test_invalid_lifecycle_version_is_rejected_before_signing
+    await agent.cancel_task(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+_______ test_invalid_lifecycle_version_is_rejected_before_signing[True] ________
+tests/unit/test_mp07_task_board_producer.py:246: in test_invalid_lifecycle_version_is_rejected_before_signing
+    await agent.cancel_task(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+________ test_invalid_lifecycle_version_is_rejected_before_signing[-1] _________
+tests/unit/test_mp07_task_board_producer.py:246: in test_invalid_lifecycle_version_is_rejected_before_signing
+    await agent.cancel_task(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+________ test_invalid_lifecycle_version_is_rejected_before_signing[1.5] ________
+tests/unit/test_mp07_task_board_producer.py:246: in test_invalid_lifecycle_version_is_rejected_before_signing
+    await agent.cancel_task(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+_________ test_invalid_lifecycle_version_is_rejected_before_signing[0] _________
+tests/unit/test_mp07_task_board_producer.py:246: in test_invalid_lifecycle_version_is_rejected_before_signing
+    await agent.cancel_task(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+_ test_invalid_lifecycle_version_is_rejected_before_signing[9223372036854775808] _
+tests/unit/test_mp07_task_board_producer.py:246: in test_invalid_lifecycle_version_is_rejected_before_signing
+    await agent.cancel_task(
+E   TypeError: TaskBoardMixin.cancel_task() got an unexpected keyword argument 'operation_id'
+________________ test_sqlite_boundary_values_are_signed_exactly ________________
+tests/unit/test_mp07_task_board_producer.py:261: in test_sqlite_boundary_values_are_signed_exactly
+    await agent.post_task(
+E   TypeError: TaskBoardMixin.post_task() got an unexpected keyword argument 'acceptance_window_seconds'
+______________ test_post_task_emits_separate_context_bound_tokens ______________
+tests/unit/test_mp03_producers.py:103: in test_post_task_emits_separate_context_bound_tokens
+    await agent.post_task(
+E   TypeError: TaskBoardMixin.post_task() got an unexpected keyword argument 'acceptance_window_seconds'
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[cancel_task-args0-business0-POST /tasks/t-1/cancel]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[submit_bid-args1-business1-POST /tasks/t-1/bids]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[accept_bid-args2-business2-POST /tasks/t-1/bids/bid-1/accept]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[submit_deliverable-args3-business3-POST /tasks/t-1/submit]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[approve_task-args4-business4-POST /tasks/t-1/approve]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[dispute_task-args5-business5-POST /tasks/t-1/dispute]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_post_task_binds_explicit_window_and_distinct_escrow_token
+FAILED tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[post_task-args0]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[cancel_task-args1]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[submit_bid-args2]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[accept_bid-args3]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[submit_deliverable-args4]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[approve_task-args5]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[dispute_task-args6]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[None]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[True]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[0]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[-1]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[1.5]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[20]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[9223372036855]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[None]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[True]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[op-bad]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[op-AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[None]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[True]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[-1]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[1.5]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[0]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[9223372036854775808]
+FAILED tests/unit/test_mp07_task_board_producer.py::test_sqlite_boundary_values_are_signed_exactly
+FAILED tests/unit/test_mp03_producers.py::test_post_task_emits_separate_context_bound_tokens
+========================= 33 failed, 6 passed in 4.74s =========================

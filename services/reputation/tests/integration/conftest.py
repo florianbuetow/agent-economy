@@ -73,7 +73,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "reputation"}"
 platform:
   agent_config_path: "{agent_config_path}"
 identity:

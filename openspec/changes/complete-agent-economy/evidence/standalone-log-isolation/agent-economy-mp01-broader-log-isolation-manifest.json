@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-18T01:59:20+0200",
+  "scope": "Identity, Central Bank, and Reputation active or latent startup fixture log paths",
+  "results": {
+    "red": {"identity": "2 failed", "central_bank": "3 failed", "reputation": "4 failed"},
+    "green": {"identity": "2 passed", "central_bank": "3 passed", "reputation": "4 passed"},
+    "ordinary_service_startup_during_probes": false
+  },
+  "source_sha256": {
+    "services/identity/tests/unit/routers/conftest.py": "6451e6782d0b6917dfd49988c085573890c092b9f36a91feca0ac5dfd0dc3246",
+    "services/identity/tests/integration/conftest.py": "9deda97cdbf8c7888bb7a506ddd506b39b314c5d4e11a5727a1de7f005b77df6",
+    "services/identity/tests/unit/test_mp01_fixture_log_isolation.py": "6cccc524fa119be02007b09e591cc7fbfe3c0f26fe035fbca03c9a6fb088a2ce",
+    "services/central-bank/tests/unit/routers/conftest.py": "c2a5f2254471eee5e90888c396b91807d32bcc4508d41bcb4c9600404923f28d",
+    "services/central-bank/tests/unit/routers/test_two_tier_auth.py": "e8d6e9e3200a13bbd1e2d0446f30d2cc9b724aeb523da2ef0ba65a0435da5b20",
+    "services/central-bank/tests/integration/conftest.py": "d9b088623a98373922e701e91e8507b78091e06fef546d327370d21ddb39c450",
+    "services/central-bank/tests/unit/test_mp01_fixture_log_isolation.py": "ddb62f756a254207798225e30f5452b0c7220725bbe1f2f62ea40d2200c80f5c",
+    "services/reputation/tests/unit/routers/conftest.py": "c4ae242fa40c7bd46da3280c2d7f7115207243df27c3222091022d2c1a035a5b",
+    "services/reputation/tests/integration/conftest.py": "44bcd0f5c562d1ef5cf5ecbd9edc44d7d14d4115d873b99c6b622447731a4946",
+    "services/reputation/tests/unit/test_persistence.py": "9011ec4547b39318c70e23c0d667c4b0d54ec2abebb94e84f646b76edcb8bcc5",
+    "services/reputation/tests/unit/test_mp01_fixture_log_isolation.py": "08bf366914b1084b00282aead929e2df5725644bcafb1fcf678f6cca111d2116"
+  },
+  "log_sha256": {
+    "agent-economy-mp01-identity-log-isolation-red.log": "750f159d981a681c5054740a87fd3b29eb654573a7fc753a99f841746122bb84",
+    "agent-economy-mp01-identity-log-isolation-green.log": "2f1ceaf2c3fd537dc739895b0d77b858d9537a625e6491b51ed5fecfe7dbe252",
+    "agent-economy-mp01-identity-log-isolation-statics.log": "a44899af4b53bf76a221c8049c54539cfa3575254f48e1eb7c228c66fcc81aca",
+    "agent-economy-mp01-central-bank-log-isolation-red.log": "9482db75c5182fe42722c0fbc38fccc32a81ebc1fd11abdc4575b52ac7693afd",
+    "agent-economy-mp01-central-bank-log-isolation-green.log": "972e5b8db67b12f96035534a2e91039916acbe6abcfe3d7b4030d058d5a674e6",
+    "agent-economy-mp01-central-bank-log-isolation-statics.log": "a334281ce07cf36f64f1ca34687508934e040425869b22a70d76b3c04630ceaf",
+    "agent-economy-mp01-reputation-log-isolation-red.log": "061e374dfb124b300d4d5d67036fedabf48d176317b82ce8737b994a2bd61eab",
+    "agent-economy-mp01-reputation-log-isolation-green.log": "b658b09b1e63a3198e961557d995d15f4e2a04b8170c5f2be29e02747950128f",
+    "agent-economy-mp01-reputation-log-isolation-statics.log": "a334281ce07cf36f64f1ca34687508934e040425869b22a70d76b3c04630ceaf"
+  },
+  "limitations": [
+    "Focused proofs intercept configuration before service startup; they prove YAML path ownership, not full component behavior.",
+    "Companion Gateway ASGI configs were intentionally unchanged because they do not initialize logging in these fixtures.",
+    "Reputation negative config-only CFG-02 through CFG-04 inputs were intentionally unchanged.",
+    "No broad component or root suite was run because unrelated MP-07 fixture migration remains in progress."
+  ]
+}

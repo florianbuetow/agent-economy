@@ -1,64 +1,50 @@
-"""Unit tests for AssetManager."""
+"""AssetManager behavior against explicit native Gateway task history."""
 
 from __future__ import annotations
 
 import hashlib
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Literal
 from unittest.mock import AsyncMock
 
 import pytest
 from service_commons.exceptions import ServiceError
 
 from task_board_service.services.asset_manager import AssetManager
-from tests.fakes.in_memory_task_store import InMemoryTaskStore as TaskStore
+from tests.fakes.native_task_fixture import TaskTerms, native_task_context
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
 
+    from tests.fakes.gateway_task_store import GatewayTaskStore
+    from tests.fakes.native_task_fixture import NativeTaskFixture
 
-def _timestamp() -> str:
-    return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+_TERMS = TaskTerms(100, 3600, 3600, 3600, 3600)
 
 
-def _task_data(
-    task_id: str,
-    status: str,
-    worker_id: str | None,
-) -> dict[str, object]:
-    created_at = _timestamp()
-    return {
-        "task_id": task_id,
-        "poster_id": "a-poster",
-        "title": "Task",
-        "spec": "Spec",
-        "reward": 100,
-        "bidding_deadline_seconds": 3600,
-        "deadline_seconds": 3600,
-        "review_deadline_seconds": 3600,
-        "status": status,
-        "escrow_id": "esc-1",
-        "bid_count": 1,
-        "worker_id": worker_id,
-        "accepted_bid_id": "bid-1",
-        "created_at": created_at,
-        "accepted_at": created_at,
-        "submitted_at": None,
-        "approved_at": None,
-        "cancelled_at": None,
-        "disputed_at": None,
-        "dispute_reason": None,
-        "ruling_id": None,
-        "ruled_at": None,
-        "worker_pct": None,
-        "ruling_summary": None,
-        "expired_at": None,
-        "escrow_pending": 0,
-    }
+@contextmanager
+def _scenario(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    state: Literal["missing", "open", "accepted"],
+) -> Iterator[NativeTaskFixture]:
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+        if state != "missing":
+            scenario.open_task("t-1", _TERMS)
+        if state == "accepted":
+            scenario.bid("t-1", 90)
+            scenario.accept("t-1", 90)
+            task = scenario.task("t-1")
+            assert task["status"] == "accepted"
+            assert task["worker_id"] == scenario.worker_id
+            assert task["accepted_reward"] == 100
+            assert task["accepted_bid_amount"] == 90
+        yield scenario
 
 
 def _make_manager(
-    store: TaskStore,
+    store: GatewayTaskStore,
     storage_path: Path,
     token_payload: dict[str, object],
 ) -> tuple[AssetManager, AsyncMock, AsyncMock]:
@@ -77,295 +63,199 @@ def _make_manager(
     return manager, token_validator, deadline_evaluator
 
 
+def _manager(scenario: NativeTaskFixture, tmp_path: Path, signer_id: str) -> AssetManager:
+    manager, _validator, _deadline = _make_manager(
+        scenario.store,
+        tmp_path / "assets",
+        {"action": "upload_asset", "task_id": "t-1", "_signer_id": signer_id},
+    )
+    return manager
+
+
+def _asset(scenario: NativeTaskFixture, filename: str = "result.txt") -> dict[str, object]:
+    return {
+        "asset_id": "asset-1",
+        "task_id": "t-1",
+        "uploader_id": scenario.worker_id,
+        "filename": filename,
+        "content_type": "text/plain",
+        "size_bytes": 5,
+        "content_hash": "abc",
+        "uploaded_at": scenario.clock.iso(),
+    }
+
+
 @pytest.mark.unit
-async def test_upload_asset_success(tmp_path) -> None:
+async def test_upload_asset_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """upload_asset writes file, persists metadata, and returns SHA256 hash."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    store.insert_task(_task_data("t-1", "accepted", "a-worker"))
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    content = b"hello"
-    result = await manager.upload_asset("t-1", "token", content, "file.txt", "text/plain")
-
-    expected_hash = hashlib.sha256(content).hexdigest()
-    assert result["task_id"] == "t-1"
-    assert result["uploader_id"] == "a-worker"
-    assert result["filename"] == "file.txt"
-    assert result["content_hash"] == expected_hash
-
-    file_path = tmp_path / "assets" / "t-1" / result["asset_id"] / "file.txt"
-    assert file_path.exists()
-    assert file_path.read_bytes() == content
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        content = b"hello"
+        result = await manager.upload_asset("t-1", "token", content, "file.txt", "text/plain")
+        expected_hash = hashlib.sha256(content).hexdigest()
+        assert result["task_id"] == "t-1"
+        assert result["uploader_id"] == scenario.worker_id
+        assert result["filename"] == "file.txt"
+        assert result["content_hash"] == expected_hash
+        persisted = scenario.store.get_asset(str(result["asset_id"]), "t-1")
+        assert persisted is not None
+        assert persisted["content_hash"] == expected_hash
+        assert persisted["size_bytes"] == len(content)
+        file_path = tmp_path / "assets" / "t-1" / str(result["asset_id"]) / "file.txt"
+        assert file_path.exists()
+        assert file_path.read_bytes() == content
 
 
 @pytest.mark.unit
-async def test_upload_asset_file_too_large(tmp_path) -> None:
+async def test_upload_asset_file_too_large(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """upload_asset rejects content over max_file_size."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    store.insert_task(_task_data("t-1", "accepted", "a-worker"))
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    with pytest.raises(ServiceError) as exc_info:
-        await manager.upload_asset(
-            "t-1",
-            "token",
-            b"01234567890",
-            "big.bin",
-            "application/octet-stream",
-        )
-
-    assert exc_info.value.error == "file_too_large"
-    assert exc_info.value.status_code == 413
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        with pytest.raises(ServiceError) as raised:
+            await manager.upload_asset(
+                "t-1", "token", b"01234567890", "big.bin", "application/octet-stream"
+            )
+        assert raised.value.error == "file_too_large"
+        assert raised.value.status_code == 413
+        assert scenario.store.count_assets("t-1") == 0
 
 
 @pytest.mark.unit
-async def test_upload_asset_too_many_files(tmp_path) -> None:
+async def test_upload_asset_too_many_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """upload_asset rejects when max files per task is reached."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    store.insert_task(_task_data("t-1", "accepted", "a-worker"))
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
-    await manager.upload_asset("t-1", "token", b"b", "two.txt", "text/plain")
-
-    with pytest.raises(ServiceError) as exc_info:
-        await manager.upload_asset("t-1", "token", b"c", "three.txt", "text/plain")
-
-    assert exc_info.value.error == "too_many_assets"
-    assert exc_info.value.status_code == 409
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
+        await manager.upload_asset("t-1", "token", b"b", "two.txt", "text/plain")
+        with pytest.raises(ServiceError) as raised:
+            await manager.upload_asset("t-1", "token", b"c", "three.txt", "text/plain")
+        assert raised.value.error == "too_many_assets"
+        assert raised.value.status_code == 409
+        assert scenario.store.count_assets("t-1") == 2
 
 
 @pytest.mark.unit
-async def test_upload_asset_task_not_found(tmp_path) -> None:
+async def test_upload_asset_task_not_found(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """upload_asset returns task_not_found for unknown task."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    with pytest.raises(ServiceError) as exc_info:
-        await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
-
-    assert exc_info.value.error == "task_not_found"
-    assert exc_info.value.status_code == 404
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "missing") as scenario:
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        with pytest.raises(ServiceError) as raised:
+            await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
+        assert raised.value.error == "task_not_found"
+        assert raised.value.status_code == 404
 
 
 @pytest.mark.unit
-async def test_upload_asset_wrong_status(tmp_path) -> None:
+async def test_upload_asset_wrong_status(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """upload_asset returns invalid_status when task is not accepted."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    store.insert_task(_task_data("t-1", "open", "a-worker"))
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    with pytest.raises(ServiceError) as exc_info:
-        await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
-
-    assert exc_info.value.error == "invalid_status"
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "open") as scenario:
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        with pytest.raises(ServiceError) as raised:
+            await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
+        assert raised.value.error == "invalid_status"
+        assert scenario.store.count_assets("t-1") == 0
 
 
 @pytest.mark.unit
-async def test_upload_asset_wrong_worker(tmp_path) -> None:
+async def test_upload_asset_wrong_worker(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """upload_asset returns forbidden when signer is not assigned worker."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    store.insert_task(_task_data("t-1", "accepted", "a-worker"))
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-other"},
-    )
-
-    with pytest.raises(ServiceError) as exc_info:
-        await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
-
-    assert exc_info.value.error == "forbidden"
-    assert exc_info.value.status_code == 403
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
+        manager = _manager(scenario, tmp_path, "a-other")
+        with pytest.raises(ServiceError) as raised:
+            await manager.upload_asset("t-1", "token", b"a", "one.txt", "text/plain")
+        assert raised.value.error == "forbidden"
+        assert raised.value.status_code == 403
+        assert scenario.store.count_assets("t-1") == 0
 
 
 @pytest.mark.unit
-async def test_list_assets_success(tmp_path) -> None:
-    """list_assets returns task_id and assets list."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    store.insert_task(_task_data("t-1", "accepted", "a-worker"))
-    store.insert_asset(
-        {
-            "asset_id": "asset-1",
-            "task_id": "t-1",
-            "uploader_id": "a-worker",
-            "filename": "result.txt",
-            "content_type": "text/plain",
-            "size_bytes": 5,
-            "content_hash": "abc",
-            "uploaded_at": _timestamp(),
-        }
-    )
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    result = await manager.list_assets("t-1")
-
-    assert result["task_id"] == "t-1"
-    assert len(result["assets"]) == 1
-    assert result["assets"][0]["asset_id"] == "asset-1"
-    store.close()
+async def test_list_assets_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """list_assets returns task_id and persisted metadata."""
+    with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
+        scenario.store.insert_asset(_asset(scenario))
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        result = await manager.list_assets("t-1")
+        assert result["task_id"] == "t-1"
+        assert result["assets"] == [
+            {
+                "asset_id": "asset-1",
+                "uploader_id": scenario.worker_id,
+                "filename": "result.txt",
+                "content_type": "text/plain",
+                "size_bytes": 5,
+                "content_hash": "abc",
+                "uploaded_at": scenario.clock.iso(),
+            }
+        ]
 
 
 @pytest.mark.unit
-async def test_list_assets_task_not_found(tmp_path) -> None:
+async def test_list_assets_task_not_found(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """list_assets returns task_not_found for unknown task."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    with pytest.raises(ServiceError) as exc_info:
-        await manager.list_assets("t-1")
-
-    assert exc_info.value.error == "task_not_found"
-    assert exc_info.value.status_code == 404
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "missing") as scenario:
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        with pytest.raises(ServiceError) as raised:
+            await manager.list_assets("t-1")
+        assert raised.value.error == "task_not_found"
+        assert raised.value.status_code == 404
 
 
 @pytest.mark.unit
-async def test_download_asset_success(tmp_path) -> None:
+async def test_download_asset_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """download_asset returns content, content_type, and filename."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    store.insert_task(_task_data("t-1", "accepted", "a-worker"))
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-    upload_result = await manager.upload_asset("t-1", "token", b"hello", "file.txt", "text/plain")
-
-    content, content_type, filename = await manager.download_asset("t-1", upload_result["asset_id"])
-
-    assert content == b"hello"
-    assert content_type == "text/plain"
-    assert filename == "file.txt"
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        uploaded = await manager.upload_asset("t-1", "token", b"hello", "file.txt", "text/plain")
+        content, content_type, filename = await manager.download_asset(
+            "t-1", str(uploaded["asset_id"])
+        )
+        assert content == b"hello"
+        assert content_type == "text/plain"
+        assert filename == "file.txt"
 
 
 @pytest.mark.unit
-async def test_download_asset_task_not_found(tmp_path) -> None:
+async def test_download_asset_task_not_found(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """download_asset returns task_not_found for unknown task."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    with pytest.raises(ServiceError) as exc_info:
-        await manager.download_asset("t-1", "asset-1")
-
-    assert exc_info.value.error == "task_not_found"
-    assert exc_info.value.status_code == 404
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "missing") as scenario:
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        with pytest.raises(ServiceError) as raised:
+            await manager.download_asset("t-1", "asset-1")
+        assert raised.value.error == "task_not_found"
+        assert raised.value.status_code == 404
 
 
 @pytest.mark.unit
-async def test_download_asset_not_found(tmp_path) -> None:
+async def test_download_asset_not_found(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """download_asset returns asset_not_found for unknown asset."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    store.insert_task(_task_data("t-1", "accepted", "a-worker"))
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    with pytest.raises(ServiceError) as exc_info:
-        await manager.download_asset("t-1", "asset-1")
-
-    assert exc_info.value.error == "asset_not_found"
-    assert exc_info.value.status_code == 404
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        with pytest.raises(ServiceError) as raised:
+            await manager.download_asset("t-1", "asset-1")
+        assert raised.value.error == "asset_not_found"
+        assert raised.value.status_code == 404
 
 
 @pytest.mark.unit
-async def test_download_asset_path_traversal(tmp_path) -> None:
+async def test_download_asset_path_traversal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """download_asset blocks path traversal via stored filename."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    store.insert_task(_task_data("t-1", "accepted", "a-worker"))
-    store.insert_asset(
-        {
-            "asset_id": "asset-1",
-            "task_id": "t-1",
-            "uploader_id": "a-worker",
-            "filename": "../../../../outside.txt",
-            "content_type": "text/plain",
-            "size_bytes": 5,
-            "content_hash": "abc",
-            "uploaded_at": _timestamp(),
-        }
-    )
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    with pytest.raises(ServiceError) as exc_info:
-        await manager.download_asset("t-1", "asset-1")
-
-    assert exc_info.value.error == "asset_not_found"
-    assert exc_info.value.status_code == 404
-    store.close()
+    with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
+        scenario.store.insert_asset(_asset(scenario, "../../../../outside.txt"))
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        with pytest.raises(ServiceError) as raised:
+            await manager.download_asset("t-1", "asset-1")
+        assert raised.value.error == "asset_not_found"
+        assert raised.value.status_code == 404
 
 
 @pytest.mark.unit
-def test_count_assets_delegates(tmp_path) -> None:
-    """count_assets returns TaskStore count."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    store.insert_task(_task_data("t-1", "accepted", "a-worker"))
-    store.insert_asset(
-        {
-            "asset_id": "asset-1",
-            "task_id": "t-1",
-            "uploader_id": "a-worker",
-            "filename": "result.txt",
-            "content_type": "text/plain",
-            "size_bytes": 5,
-            "content_hash": "abc",
-            "uploaded_at": _timestamp(),
-        }
-    )
-    manager, _token_validator, _deadline_evaluator = _make_manager(
-        store,
-        tmp_path / "assets",
-        {"action": "upload_asset", "task_id": "t-1", "_signer_id": "a-worker"},
-    )
-
-    result = manager.count_assets("t-1")
-
-    assert result == 1
-    store.close()
+def test_count_assets_delegates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """count_assets returns the persisted Gateway count."""
+    with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
+        scenario.store.insert_asset(_asset(scenario))
+        manager = _manager(scenario, tmp_path, scenario.worker_id)
+        assert manager.count_assets("t-1") == 1

@@ -7,23 +7,24 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from task_board_service.core.state import get_app_state
 from tests.helpers import make_jws_token
 from tests.unit.routers.conftest import setup_task_in_dispute
+from tests.unit.routers.test_disputes import fixture_platform, stored_task
 
 if TYPE_CHECKING:
-    from httpx import AsyncClient
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from httpx import AsyncClient, Response
 
 
 async def _submit_rebuttal(
     client: AsyncClient,
-    worker_keypair,
+    worker_keypair: tuple[Ed25519PrivateKey, str],
     worker_id: str,
     task_id: str,
     *,
-    dispute_id: str = "disp-1",
+    dispute_id: str,
     rebuttal: str = "The deliverable meets the task specification.",
-):
+) -> Response:
     private_key = worker_keypair[0]
     payload = {
         "action": "submit_rebuttal",
@@ -41,46 +42,48 @@ class TestWorkerRebuttal:
     async def test_worker_rebuttal_is_forwarded_by_platform(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
     ) -> None:
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
-        state = get_app_state()
-        state.platform_agent.submit_rebuttal = AsyncMock(
-            return_value={"dispute_id": "disp-1", "status": "rebuttal_pending"}
-        )
+        dispute_id = stored_task(task_id)["dispute_id"]
 
-        response = await _submit_rebuttal(client, bob_keypair, bob_agent_id, task_id)
+        response = await _submit_rebuttal(
+            client, bob_keypair, bob_agent_id, task_id, dispute_id=dispute_id
+        )
 
         assert response.status_code == 200
         assert response.json()["status"] == "rebuttal_pending"
-        state.platform_agent.submit_rebuttal.assert_awaited_once_with(
-            "disp-1",
+        assert stored_task(task_id)["rebuttal_submitted_at"] is not None
+        fixture_platform().submit_rebuttal.assert_awaited_once_with(
+            dispute_id,
             "The deliverable meets the task specification.",
         )
 
     async def test_non_worker_rebuttal_is_rejected(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        carol_keypair,
-        carol_agent_id,
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        carol_keypair: tuple[Ed25519PrivateKey, str],
+        carol_agent_id: str,
     ) -> None:
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
-        state = get_app_state()
-        state.platform_agent.submit_rebuttal = AsyncMock()
+        dispute_id = stored_task(task_id)["dispute_id"]
+        fixture_platform().submit_rebuttal = AsyncMock()
 
-        response = await _submit_rebuttal(client, carol_keypair, carol_agent_id, task_id)
+        response = await _submit_rebuttal(
+            client, carol_keypair, carol_agent_id, task_id, dispute_id=dispute_id
+        )
 
         assert response.status_code == 403
         assert response.json()["error"] == "forbidden"
-        state.platform_agent.submit_rebuttal.assert_not_awaited()
+        fixture_platform().submit_rebuttal.assert_not_awaited()

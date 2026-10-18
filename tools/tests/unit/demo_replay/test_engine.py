@@ -119,7 +119,16 @@ class TestDispatchUsesConfigResolvedUrls:
         mock_post_task = AsyncMock(return_value={"task_id": "t-1"})
         monkeypatch.setattr(clients, "post_task", mock_post_task)
 
-        step = {"poster": "alice", "title": "Do a thing", "reward": 50}
+        step = {
+            "poster": "alice",
+            "title": "Do a thing",
+            "spec": "Do a thing",
+            "reward": 50,
+            "bidding_deadline_seconds": 3600,
+            "acceptance_window_seconds": 300,
+            "execution_deadline_seconds": 7200,
+            "review_deadline_seconds": 3600,
+        }
         await engine._do_post_task(MagicMock(), step)
 
         mock_post_task.assert_awaited_once()

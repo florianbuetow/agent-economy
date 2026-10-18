@@ -92,6 +92,9 @@ database:
 recovery:
   maintenance_lock_path: "{log_dir / "maintenance.lock"}"
   backup_root: "{log_dir / "backups"}"
+board_authority:
+  platform_public_key_path: "{log_dir / "platform.pub"}"
+  deadline_actor_id: "system-task-board-deadline"
 request:
   max_body_size: 1048576
 auth:
@@ -156,6 +159,7 @@ def live_identity(tmp_path: Path) -> Iterator[str]:
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
     generate_keypair("gateway-identity", log_dir)
+    generate_keypair("platform", log_dir)
     db_path = tmp_path / "economy.db"
 
     gateway_config = _write_gateway_config(db_path, log_dir)

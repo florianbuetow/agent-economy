@@ -1,0 +1,320 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 128 items
+
+tests/unit/test_key_bootstrap.py ....FF                                  [  4%]
+tests/unit/test_key_loading.py FFFFFFFFFFF                               [ 13%]
+tests/unit/test_key_provisioning.py .......................              [ 31%]
+tests/unit/test_mp03_jws_core.py ....................................... [ 61%]
+..........................                                               [ 82%]
+tests/unit/test_mp03_outbound_matrix.py ..                               [ 83%]
+tests/unit/test_mp03_producers.py ....                                   [ 86%]
+tests/unit/test_platform_signer_keys.py FF                               [ 88%]
+tests/unit/test_signing.py .FFFFFFFFEEFFFF                               [100%]
+
+==================================== ERRORS ====================================
+___ ERROR at setup of TestExpiryHeaderClaims.test_expired_token_is_rejected ____
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:926: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+tests/conftest.py:28: in reset_clock
+    original = signing._clock
+               ^^^^^^^^^^^^^^
+E   AttributeError: module 'service_auth.signing' has no attribute '_clock'
+__ ERROR at setup of TestExpiryHeaderClaims.test_unexpired_token_is_accepted ___
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:926: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+tests/conftest.py:28: in reset_clock
+    original = signing._clock
+               ^^^^^^^^^^^^^^
+E   AttributeError: module 'service_auth.signing' has no attribute '_clock'
+=================================== FAILURES ===================================
+_____ test_factory_explicit_bootstrap_is_idempotent_and_check_is_load_only _____
+tests/unit/test_key_bootstrap.py:128: in test_factory_explicit_bootstrap_is_idempotent_and_check_is_load_only
+    factory = AgentFactory(config_path=config_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+____ test_factory_check_reports_absent_pair_without_creating_key_directory _____
+tests/unit/test_key_bootstrap.py:155: in test_factory_check_reports_absent_pair_without_creating_key_directory
+    factory = AgentFactory(config_path=config_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+_______ test_missing_keys_fail_without_implicit_generation[create_agent] _______
+tests/unit/test_key_loading.py:69: in test_missing_keys_fail_without_implicit_generation
+    factory = AgentFactory(config_path=config_path, keys_dir=keys_dir)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+______ test_missing_keys_fail_without_implicit_generation[platform_agent] ______
+tests/unit/test_key_loading.py:69: in test_missing_keys_fail_without_implicit_generation
+    factory = AgentFactory(config_path=config_path, keys_dir=keys_dir)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+________ test_missing_keys_fail_without_implicit_generation[user_agent] ________
+tests/unit/test_key_loading.py:69: in test_missing_keys_fail_without_implicit_generation
+    factory = AgentFactory(config_path=config_path, keys_dir=keys_dir)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+____ test_missing_keys_fail_without_implicit_generation[load_agent_config] _____
+tests/unit/test_key_loading.py:69: in test_missing_keys_fail_without_implicit_generation
+    factory = AgentFactory(config_path=config_path, keys_dir=keys_dir)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+__________ test_preprovisioned_keys_load_for_every_supported_consumer __________
+tests/unit/test_key_loading.py:93: in test_preprovisioned_keys_load_for_every_supported_consumer
+    factory = AgentFactory(config_path=config_path, keys_dir=keys_dir)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+__ test_damaged_keys_fail_before_agent_http_initialization[mismatch-factory] ___
+tests/unit/test_key_loading.py:144: in test_damaged_keys_fail_before_agent_http_initialization
+    AgentFactory(config_path=config_path, keys_dir=keys_dir).create_agent("alice")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+___ test_damaged_keys_fail_before_agent_http_initialization[mismatch-config] ___
+tests/unit/test_key_loading.py:146: in test_damaged_keys_fail_before_agent_http_initialization
+    load_agent_config("alice", config_path)
+src/service_auth/config.py:107: in load_agent_config
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+__ test_damaged_keys_fail_before_agent_http_initialization[insecure-factory] ___
+tests/unit/test_key_loading.py:144: in test_damaged_keys_fail_before_agent_http_initialization
+    AgentFactory(config_path=config_path, keys_dir=keys_dir).create_agent("alice")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+___ test_damaged_keys_fail_before_agent_http_initialization[insecure-config] ___
+tests/unit/test_key_loading.py:146: in test_damaged_keys_fail_before_agent_http_initialization
+    load_agent_config("alice", config_path)
+src/service_auth/config.py:107: in load_agent_config
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+___ test_damaged_keys_fail_before_agent_http_initialization[symlink-factory] ___
+tests/unit/test_key_loading.py:144: in test_damaged_keys_fail_before_agent_http_initialization
+    AgentFactory(config_path=config_path, keys_dir=keys_dir).create_agent("alice")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+___ test_damaged_keys_fail_before_agent_http_initialization[symlink-config] ____
+tests/unit/test_key_loading.py:146: in test_damaged_keys_fail_before_agent_http_initialization
+    load_agent_config("alice", config_path)
+src/service_auth/config.py:107: in load_agent_config
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 300}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.13/v/missing
+___________ test_platform_agent_refuses_to_sign_before_registration ____________
+tests/unit/test_platform_signer_keys.py:41: in test_platform_agent_refuses_to_sign_before_registration
+    agent = _platform_agent()
+            ^^^^^^^^^^^^^^^^^
+tests/unit/test_platform_signer_keys.py:19: in _platform_agent
+    AgentConfig(
+E   TypeError: AgentConfig.__init__() missing 1 required positional argument: 'token_policy'
+______ test_platform_agent_signs_with_registered_identity_and_config_key _______
+tests/unit/test_platform_signer_keys.py:51: in test_platform_agent_signs_with_registered_identity_and_config_key
+    agent = _platform_agent()
+            ^^^^^^^^^^^^^^^^^
+tests/unit/test_platform_signer_keys.py:19: in _platform_agent
+    AgentConfig(
+E   TypeError: AgentConfig.__init__() missing 1 required positional argument: 'token_policy'
+________________ TestSignVerify.test_sign_and_verify_roundtrip _________________
+tests/unit/test_signing.py:58: in test_sign_and_verify_roundtrip
+    token = create_jws(payload, private_key, kid="a-1")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: create_jws() missing 3 required keyword-only arguments: 'audience', 'resource', and 'token_ttl_seconds'
+_________________ TestSignVerify.test_verify_rejects_wrong_key _________________
+tests/unit/test_signing.py:66: in test_verify_rejects_wrong_key
+    token = create_jws({"action": "test"}, private_key, kid="a-1")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: create_jws() missing 3 required keyword-only arguments: 'audience', 'resource', and 'token_ttl_seconds'
+____________ TestSignVerify.test_malformed_token_raises_value_error ____________
+tests/unit/test_signing.py:74: in test_malformed_token_raises_value_error
+    verify_jws("only.two", public_key)
+E   TypeError: verify_jws() missing 1 required keyword-only argument: 'policy'
+________ TestSignVerify.test_canonicalization_is_key_order_independent _________
+tests/unit/test_signing.py:78: in test_canonicalization_is_key_order_independent
+    token_a = create_jws({"b": 2, "a": 1}, private_key, kid="a-1")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: create_jws() missing 3 required keyword-only arguments: 'audience', 'resource', and 'token_ttl_seconds'
+______________ TestTamperRejection.test_rejects_tampered_payload _______________
+tests/unit/test_signing.py:88: in test_rejects_tampered_payload
+    token = create_jws({"action": "test", "amount": 1}, private_key, kid="a-1")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: create_jws() missing 3 required keyword-only arguments: 'audience', 'resource', and 'token_ttl_seconds'
+_______________ TestTamperRejection.test_rejects_tampered_header _______________
+tests/unit/test_signing.py:97: in test_rejects_tampered_header
+    token = create_jws({"action": "test"}, private_key, kid="a-1")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: create_jws() missing 3 required keyword-only arguments: 'audience', 'resource', and 'token_ttl_seconds'
+____ TestExpiryHeaderClaims.test_ttl_stamps_iat_exp_into_header_not_payload ____
+tests/unit/test_signing.py:118: in test_ttl_stamps_iat_exp_into_header_not_payload
+    token = create_jws(payload, private_key, kid="a-1", token_ttl_seconds=300)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: create_jws() missing 2 required keyword-only arguments: 'audience' and 'resource'
+_______ TestExpiryHeaderClaims.test_legacy_token_without_exp_is_accepted _______
+tests/unit/test_signing.py:131: in test_legacy_token_without_exp_is_accepted
+    token = create_jws({"action": "test"}, private_key, kid="a-1")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: create_jws() missing 3 required keyword-only arguments: 'audience', 'resource', and 'token_ttl_seconds'
+_ TestCrossCanonicalizationCompatibility.test_accepts_base_agent_old_canonicalization _
+tests/unit/test_signing.py:173: in test_accepts_base_agent_old_canonicalization
+    result = verify_jws(token, public_key)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: verify_jws() missing 1 required keyword-only argument: 'policy'
+_ TestCrossCanonicalizationCompatibility.test_accepts_platform_signer_canonicalization _
+tests/unit/test_signing.py:181: in test_accepts_platform_signer_canonicalization
+    result = verify_jws(token, public_key)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: verify_jws() missing 1 required keyword-only argument: 'policy'
+__________________ TestPlatformSigner.test_signs_and_verifies __________________
+tests/unit/test_signing.py:194: in test_signs_and_verifies
+    token = signer.sign({"action": "escrow_release", "escrow_id": "esc-1"})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: PlatformSigner.sign() missing 2 required keyword-only arguments: 'audience' and 'resource'
+_______________ TestPlatformSigner.test_legacy_signer_omits_exp ________________
+tests/unit/test_signing.py:205: in test_legacy_signer_omits_exp
+    signer = PlatformSigner(
+src/service_auth/signing.py:463: in __init__
+    raise ValueError(msg)
+E   ValueError: token_ttl_seconds must be a positive integer
+=========================== short test summary info ============================
+FAILED tests/unit/test_key_bootstrap.py::test_factory_explicit_bootstrap_is_idempotent_and_check_is_load_only
+FAILED tests/unit/test_key_bootstrap.py::test_factory_check_reports_absent_pair_without_creating_key_directory
+FAILED tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[create_agent]
+FAILED tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[platform_agent]
+FAILED tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[user_agent]
+FAILED tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[load_agent_config]
+FAILED tests/unit/test_key_loading.py::test_preprovisioned_keys_load_for_every_supported_consumer
+FAILED tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[mismatch-factory]
+FAILED tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[mismatch-config]
+FAILED tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[insecure-factory]
+FAILED tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[insecure-config]
+FAILED tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[symlink-factory]
+FAILED tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[symlink-config]
+FAILED tests/unit/test_platform_signer_keys.py::test_platform_agent_refuses_to_sign_before_registration
+FAILED tests/unit/test_platform_signer_keys.py::test_platform_agent_signs_with_registered_identity_and_config_key
+FAILED tests/unit/test_signing.py::TestSignVerify::test_sign_and_verify_roundtrip
+FAILED tests/unit/test_signing.py::TestSignVerify::test_verify_rejects_wrong_key
+FAILED tests/unit/test_signing.py::TestSignVerify::test_malformed_token_raises_value_error
+FAILED tests/unit/test_signing.py::TestSignVerify::test_canonicalization_is_key_order_independent
+FAILED tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_payload
+FAILED tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_header
+FAILED tests/unit/test_signing.py::TestExpiryHeaderClaims::test_ttl_stamps_iat_exp_into_header_not_payload
+FAILED tests/unit/test_signing.py::TestExpiryHeaderClaims::test_legacy_token_without_exp_is_accepted
+FAILED tests/unit/test_signing.py::TestCrossCanonicalizationCompatibility::test_accepts_base_agent_old_canonicalization
+FAILED tests/unit/test_signing.py::TestCrossCanonicalizationCompatibility::test_accepts_platform_signer_canonicalization
+FAILED tests/unit/test_signing.py::TestPlatformSigner::test_signs_and_verifies
+FAILED tests/unit/test_signing.py::TestPlatformSigner::test_legacy_signer_omits_exp
+ERROR tests/unit/test_signing.py::TestExpiryHeaderClaims::test_expired_token_is_rejected
+ERROR tests/unit/test_signing.py::TestExpiryHeaderClaims::test_unexpired_token_is_accepted
+=================== 27 failed, 99 passed, 2 errors in 0.66s ====================

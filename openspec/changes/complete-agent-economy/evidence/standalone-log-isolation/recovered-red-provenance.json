@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "provenance": {
+    "kind": "codex_thread_history_recovery",
+    "database": "/Users/flo/.codex/thread_history_1.sqlite",
+    "thread_id": "01a14c4b-3f3c-7fb2-ba2d-d482dff05bf1",
+    "turn_id": "01a14c4b-4084-7c70-8ce6-def46c6c0e46",
+    "recovery_note": "Each log is the exact aggregatedOutput text retained by its original failed commandExecution item. No test was rerun and no historical output was reconstructed."
+  },
+  "artifacts": {
+    "recovered-db-gateway-unit-red.log": {
+      "item_id": "exec-ac4302b8-5f10-4327-9969-e8e781c48ef0",
+      "cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+      "recorded_command": "/bin/zsh -lc 'UV_CACHE_DIR=/tmp/agent-economy-review-uv UV_FROZEN=1 uv run --no-sync pytest tests/unit/test_mp01_fixture_log_isolation.py -q --tb=short --color=no'",
+      "exit_code": 1,
+      "output_bytes": 1889,
+      "output_sha256": "1a72f1651a779b4857971f57c181bd63f60238cb6d5e2820365b0d1c89f8165b",
+      "source_item_json_sha256": "1d1c2e086bf55c1acfea2e5a191790041ea3e1e7f4efa7b916ff360bf47c692a"
+    },
+    "recovered-court-unit-red.log": {
+      "item_id": "exec-877ab6de-e842-4628-8035-f407aab6c947",
+      "cwd": "/Users/flo/Developer/github/agent-economy/services/court",
+      "recorded_command": "/bin/zsh -lc 'UV_CACHE_DIR=/tmp/agent-economy-review-uv UV_FROZEN=1 uv run --no-sync pytest tests/unit/test_mp01_fixture_log_isolation.py -q --tb=short --color=no'",
+      "exit_code": 1,
+      "output_bytes": 2925,
+      "output_sha256": "40bf908f5050bed069b3bc24403c9542245703b154675a0040fca770ddd66ea1",
+      "source_item_json_sha256": "26897c37bcd29496cb9980a5bb21ab3f7d2e5277f51118a6b4ade98a5da30279"
+    },
+    "recovered-task-board-unit-red.log": {
+      "item_id": "exec-473e69a5-37c0-4f24-826f-5ec8d15f3965",
+      "cwd": "/Users/flo/Developer/github/agent-economy/services/task-board",
+      "recorded_command": "/bin/zsh -lc 'UV_CACHE_DIR=/tmp/agent-economy-review-uv UV_FROZEN=1 uv run --no-sync pytest tests/unit/test_mp01_unit_log_isolation.py -q --tb=short --color=no'",
+      "exit_code": 1,
+      "output_bytes": 1971,
+      "output_sha256": "820ba961d24cd919b9faa04cf348a14655e46d1aff0f16444e71ea3ce472d332",
+      "source_item_json_sha256": "a5ed0d3b6183ac07fbe0c77bdf5c164453ea62f02c3b3f529b863183b6c21bee"
+    }
+  },
+  "pre_edit_sources": {
+    "committed_baseline": {
+      "commit": "a6af0bed5e0475f63b271329bb7f8ea683da9bc3",
+      "services/court/tests/integration/conftest.py": "97f1f9867d05da802c07298e2354ffa9fd9e8da8",
+      "services/court/tests/unit/routers/conftest.py": "b8180c7be08d4a8734aea3c18d4c24d2ead120f3",
+      "services/task-board/tests/unit/routers/conftest.py": "7bfc957ea2b7447fe5256bfaeffc72adb7188048",
+      "services/task-board/tests/unit/test_deadline_evaluation_config.py": "b7b51e5b952c701fade1702a2b1965bd725c93d7"
+    },
+    "dirty_gateway_snapshot": {
+      "source_read_item_id": "exec-0c878713-bb74-4319-8118-e01af42a2d61",
+      "source_read_item_json_sha256": "c2f7d1d359ce17592f387051e9d729eb725da5fe0315e084ea1bfcbaffad7c25",
+      "note": "The full pre-edit services/db-gateway/tests/unit/conftest.py text is retained at the start of this source-read command's aggregatedOutput. It already contained the separate MP-07 authority edits and still contained logging.directory data/logs. No standalone reverse-patched snapshot was created."
+    },
+    "proof_addition_record": {
+      "file_change_item_id": "exec-69a5f2b7-c747-467f-a9ec-e35ddbd72cae",
+      "file_change_item_json_sha256": "397c4fc2423bea96cf9e587e2ff8a99f4c1bb5e370aee58e6bacdc86d88af32d",
+      "note": "This retained fileChange record contains the exact initial additions of the three proof files before the red commands ran."
+    }
+  }
+}

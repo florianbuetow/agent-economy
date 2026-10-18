@@ -1,0 +1,199 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 46 items
+
+tests/unit/routers/test_court_resilience.py FFFFFF                       [ 13%]
+tests/unit/routers/test_dispute_court_handoff.py F                       [ 15%]
+tests/unit/routers/test_rebuttals.py F.                                  [ 19%]
+tests/unit/routers/test_rebuttal_dispute_binding.py FFFFF                [ 30%]
+tests/unit/routers/test_disputes.py ..........FF....FFFFF......          [ 89%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py FF              [ 93%]
+tests/unit/routers/test_t072_disputes_gaps.py ...                        [100%]
+
+=================================== FAILURES ===================================
+_ TestDisputeFilingCourtResilience.test_dead_court_returns_502_and_leaves_task_submitted[connect_error] _
+tests/unit/routers/test_court_resilience.py:101: in test_dead_court_returns_502_and_leaves_task_submitted
+    assert response.status_code == 502
+E   assert 400 == 502
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:41", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-fbabcc28-8faa-4cee-82a6-1ac577b68553/dispute"}}
+_ TestDisputeFilingCourtResilience.test_dead_court_returns_502_and_leaves_task_submitted[timeout] _
+tests/unit/routers/test_court_resilience.py:101: in test_dead_court_returns_502_and_leaves_task_submitted
+    assert response.status_code == 502
+E   assert 400 == 502
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:41", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-f3b7767d-58f7-4ce5-a54b-eb07bcf222dc/dispute"}}
+_ TestDisputeFilingCourtResilience.test_dead_court_returns_502_and_leaves_task_submitted[http_status_error] _
+tests/unit/routers/test_court_resilience.py:101: in test_dead_court_returns_502_and_leaves_task_submitted
+    assert response.status_code == 502
+E   assert 400 == 502
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:42", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-57923353-6a24-414f-9733-69783bc9965a/dispute"}}
+_ TestRebuttalCourtResilience.test_dead_court_returns_502_and_leaves_dispute_unchanged[connect_error] _
+tests/unit/routers/test_court_resilience.py:149: in test_dead_court_returns_502_and_leaves_dispute_unchanged
+    assert response.status_code == 502
+E   assert 409 == 502
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:43", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-64a1f0b0-38b0-4c00-b4b3-ef72d0aba08f/rebuttal"}}
+_ TestRebuttalCourtResilience.test_dead_court_returns_502_and_leaves_dispute_unchanged[timeout] _
+tests/unit/routers/test_court_resilience.py:149: in test_dead_court_returns_502_and_leaves_dispute_unchanged
+    assert response.status_code == 502
+E   assert 409 == 502
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:43", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-50194bf5-a956-4e4e-9e71-51ea58c468f5/rebuttal"}}
+_ TestRebuttalCourtResilience.test_dead_court_returns_502_and_leaves_dispute_unchanged[http_status_error] _
+tests/unit/routers/test_court_resilience.py:149: in test_dead_court_returns_502_and_leaves_dispute_unchanged
+    assert response.status_code == 502
+E   assert 409 == 502
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:44", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-46c12d6b-a34c-4675-a939-71b936755242/rebuttal"}}
+_____________________ test_dispute_auto_files_court_claim ______________________
+tests/unit/routers/test_dispute_court_handoff.py:38: in test_dispute_auto_files_court_claim
+    assert response.status_code == 200
+E   assert 202 == 200
+E    +  where 202 = <Response [202 Accepted]>.status_code
+_______ TestWorkerRebuttal.test_worker_rebuttal_is_forwarded_by_platform _______
+tests/unit/routers/test_rebuttals.py:59: in test_worker_rebuttal_is_forwarded_by_platform
+    assert response.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:45", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-a04b64bd-7f6b-4f24-8a0e-8fc74da00407/rebuttal"}}
+_ TestRebuttalDisputeBinding.test_worker_cannot_inject_rebuttal_into_another_tasks_dispute _
+tests/unit/routers/test_rebuttal_dispute_binding.py:86: in test_worker_cannot_inject_rebuttal_into_another_tasks_dispute
+    assert response.status_code == 400
+E   assert 409 == 400
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:46", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-28b5dd8a-2799-4b59-a0b8-4b9defe6bf26/rebuttal"}}
+__ TestRebuttalDisputeBinding.test_task_with_no_recorded_dispute_is_rejected ___
+tests/unit/routers/test_rebuttal_dispute_binding.py:110: in test_task_with_no_recorded_dispute_is_rejected
+    assert response.status_code == 409
+E   assert 400 == 409
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:47", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-90efdd3c-4cb6-49ed-ad30-a9b0b76873f7/rebuttal"}}
+____ TestRebuttalDisputeBinding.test_matching_dispute_id_is_forwarded_once _____
+tests/unit/routers/test_rebuttal_dispute_binding.py:135: in test_matching_dispute_id_is_forwarded_once
+    assert response.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:48", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-3538a94d-0da5-4863-ac6c-10ca6782f657/rebuttal"}}
+____ TestRebuttalDisputeBinding.test_dispute_task_persists_court_dispute_id ____
+tests/unit/routers/test_rebuttal_dispute_binding.py:158: in test_dispute_task_persists_court_dispute_id
+    assert response.status_code == 200
+E   assert 202 == 200
+E    +  where 202 = <Response [202 Accepted]>.status_code
+_ TestRebuttalDisputeBinding.test_court_without_dispute_id_leaves_task_undisputed _
+tests/unit/routers/test_rebuttal_dispute_binding.py:181: in test_court_without_dispute_id_leaves_task_undisputed
+    assert response.status_code == 502
+E   assert 202 == 502
+E    +  where 202 = <Response [202 Accepted]>.status_code
+___________________ TestRuling.test_platform_records_ruling ____________________
+tests/unit/routers/test_disputes.py:277: in test_platform_records_ruling
+    assert resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:57", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-e51c2bb0-616f-424b-91a1-26f403268757/ruling"}}
+___________ TestRuling.test_non_platform_agent_cannot_record_ruling ____________
+tests/unit/routers/test_disputes.py:311: in test_non_platform_agent_cannot_record_ruling
+    assert resp.status_code == 403
+E   assert 400 == 403
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:21:58", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-18b40ef3-bb07-4b9e-9ce8-16d2b1d51b09/ruling"}}
+_____________ TestRuling.test_invalid_worker_pct_values[negative] ______________
+tests/unit/routers/test_disputes.py:473: in test_invalid_worker_pct_values
+    assert resp.json()["error"] == "invalid_worker_pct"
+E   AssertionError: assert 'invalid_payload' == 'invalid_worker_pct'
+E     
+E     - invalid_worker_pct
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:02", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-1aa33071-4bb8-4bbe-aaad-2b981630939b/ruling"}}
+_____________ TestRuling.test_invalid_worker_pct_values[over_100] ______________
+tests/unit/routers/test_disputes.py:473: in test_invalid_worker_pct_values
+    assert resp.json()["error"] == "invalid_worker_pct"
+E   AssertionError: assert 'invalid_payload' == 'invalid_worker_pct'
+E     
+E     - invalid_worker_pct
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:03", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-7603ef78-7df9-41ce-9c7a-6f313d844144/ruling"}}
+_______________ TestRuling.test_invalid_worker_pct_values[float] _______________
+tests/unit/routers/test_disputes.py:473: in test_invalid_worker_pct_values
+    assert resp.json()["error"] == "invalid_worker_pct"
+E   AssertionError: assert 'invalid_payload' == 'invalid_worker_pct'
+E     
+E     - invalid_worker_pct
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:04", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-891ccbca-eca9-4d2f-ba9b-4a283d64edbd/ruling"}}
+______________ TestRuling.test_invalid_worker_pct_values[string] _______________
+tests/unit/routers/test_disputes.py:473: in test_invalid_worker_pct_values
+    assert resp.json()["error"] == "invalid_worker_pct"
+E   AssertionError: assert 'invalid_payload' == 'invalid_worker_pct'
+E     
+E     - invalid_worker_pct
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:04", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-cc900f6a-b805-4ca6-a183-c38467c6ddc5/ruling"}}
+_______________ TestRuling.test_invalid_worker_pct_values[null] ________________
+tests/unit/routers/test_disputes.py:473: in test_invalid_worker_pct_values
+    assert resp.json()["error"] == "invalid_worker_pct"
+E   AssertionError: assert 'invalid_payload' == 'invalid_worker_pct'
+E     
+E     - invalid_worker_pct
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:05", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-8c70069b-5c6b-4d86-abaa-03c5f6ce0806/ruling"}}
+_______________ test_identical_ruling_id_rerecord_is_idempotent ________________
+tests/unit/routers/test_wp06_record_ruling_idempotent.py:63: in test_identical_ruling_id_rerecord_is_idempotent
+    assert first.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:10", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-1317a434-d789-4548-9aad-5ddd747f7b50/ruling"}}
+_______________ test_different_ruling_id_on_ruled_task_conflicts _______________
+tests/unit/routers/test_wp06_record_ruling_idempotent.py:94: in test_different_ruling_id_on_ruled_task_conflicts
+    assert first.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:22:11", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-55bc4c7e-2ec0-4d9b-ae6f-ed1dbabe196b/ruling"}}
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[connect_error]
+FAILED tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[timeout]
+FAILED tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[http_status_error]
+FAILED tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[connect_error]
+FAILED tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[timeout]
+FAILED tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[http_status_error]
+FAILED tests/unit/routers/test_dispute_court_handoff.py::test_dispute_auto_files_court_claim
+FAILED tests/unit/routers/test_rebuttals.py::TestWorkerRebuttal::test_worker_rebuttal_is_forwarded_by_platform
+FAILED tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_worker_cannot_inject_rebuttal_into_another_tasks_dispute
+FAILED tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_task_with_no_recorded_dispute_is_rejected
+FAILED tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_matching_dispute_id_is_forwarded_once
+FAILED tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_dispute_task_persists_court_dispute_id
+FAILED tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_court_without_dispute_id_leaves_task_undisputed
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_platform_records_ruling
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_non_platform_agent_cannot_record_ruling
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[negative]
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[over_100]
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[float]
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[string]
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[null]
+FAILED tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_identical_ruling_id_rerecord_is_idempotent
+FAILED tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_different_ruling_id_on_ruled_task_conflicts
+======================== 22 failed, 24 passed in 31.70s ========================

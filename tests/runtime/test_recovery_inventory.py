@@ -226,7 +226,7 @@ def test_generated_full_runtime_builds_exhaustive_deduplicated_inventory(
     keypairs = {keypair.handle: keypair for keypair in inventory.keypairs}
 
     assert len(inventory.configs) == 8
-    assert len(inventory.field_bindings) == 60
+    assert len(inventory.field_bindings) == 62
     assert len(bindings) == len(inventory.field_bindings)
     assert inventory.maintenance_lock_path == configured_runtime.run_dir / "maintenance.lock"
     assert resources["database.primary"].capture_kind is CaptureKind.COPY
@@ -241,6 +241,13 @@ def test_generated_full_runtime_builds_exhaustive_deduplicated_inventory(
     assert resources["keys.root"].capture_kind is CaptureKind.DIRECTORY_ONLY
     assert resources["database.legacy.task-board"].capture_kind is CaptureKind.ABSENT_FILE
     assert resources["agents.tasks"].capture_kind is CaptureKind.ABSENT_FILE
+    assert resources["agents.runtime_state"].capture_kind is CaptureKind.ABSENT_DIRECTORY
+    assert resources["agents.runtime_state"].captured_path == (
+        configured_runtime.run_dir / "data" / "agent-runtime"
+    )
+    assert (
+        bindings[("agents", ("runtime_state", "directory"))].resource_id == "agents.runtime_state"
+    )
     assert (
         bindings[("db-gateway", ("database", "path"))].resource_id
         == bindings[("ui", ("database", "path"))].resource_id

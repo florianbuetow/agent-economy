@@ -14,6 +14,7 @@ import httpx
 import pytest
 
 from court_service.core.state import get_app_state
+from tests.helpers import make_ruling_acknowledgment
 from tests.unit.routers.conftest import (
     PLATFORM_AGENT_ID,
     file_and_rebut,
@@ -88,7 +89,17 @@ async def test_kill_between_tb_record_and_dispute_persist_converges_on_retry(
         if ruling_id not in seen_rulings:
             seen_rulings.add(ruling_id)
             settlements.append(ruling_id)
-        return {"status": "ok"}
+        stored = state.store.get_dispute(ruling_id)
+        if stored is None:
+            raise AssertionError("Ruling fixture requires a stored dispute")
+        return make_ruling_acknowledgment(
+            payload,
+            poster_id=str(stored["claimant_id"]),
+            worker_id=str(stored["respondent_id"]),
+            escrow_id=str(stored["escrow_id"]),
+            reward=1000,
+            event_id=1,
+        )
 
     state.platform_agent.record_ruling = AsyncMock(side_effect=fake_record_ruling)
 
@@ -165,8 +176,9 @@ async def test_reentrant_rule_call_during_task_fetch_fails_fast(client: AsyncCli
             "task_id": _task_id,
             "spec": "Build feature X",
             "title": "Task",
-            "reward": 100,
+            "reward": 1000,
             "deliverables": [],
+            "lifecycle_version": 3,
         }
 
     state.platform_agent.get_task = AsyncMock(side_effect=fetch_task_and_reenter)

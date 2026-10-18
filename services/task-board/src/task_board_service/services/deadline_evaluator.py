@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
+from service_auth.financial_identity import operation_id_for
 from service_commons.exceptions import ServiceError
 
 from task_board_service.logging import get_logger
 from task_board_service.services.task_db_client import PlatformHttpError
+from task_board_service.services.task_operations import complete_bank_operation
+from task_board_service.task_operation_contract import MAX_INTEGER, invalid_gateway_response
 
 if TYPE_CHECKING:
     from service_auth.platform import PlatformAgent
@@ -26,9 +29,27 @@ _TERMINAL_STATUSES = frozenset({"approved", "cancelled", "ruled", "expired"})
 _SWEEPABLE_STATUSES: tuple[str, ...] = ("open", "accepted", "submitted", "disputed")
 
 
-def _now_iso() -> str:
-    """Return current UTC time as ISO 8601 string with Z suffix."""
-    return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+def _now_us() -> int:
+    """Return exact epoch microseconds through the module's injectable datetime seam."""
+    now = datetime.now(UTC)
+    epoch = datetime.fromisoformat("1970-01-01T00:00:00+00:00")
+    delta = now - epoch
+    return delta.days * 86_400_000_000 + delta.seconds * 1_000_000 + delta.microseconds
+
+
+def _required_text(task: dict[str, Any], field: str) -> str:
+    value = task.get(field)
+    if not isinstance(value, str) or not value:
+        raise invalid_gateway_response()
+    return value
+
+
+def _required_integer(task: dict[str, Any], field: str, *, positive: bool) -> int:
+    value = task.get(field)
+    minimum = 1 if positive else 0
+    if type(value) is not int or not minimum <= value <= MAX_INTEGER:
+        raise invalid_gateway_response()
+    return value
 
 
 class DeadlineEvaluator:
@@ -38,32 +59,17 @@ class DeadlineEvaluator:
         self,
         store: TaskStorageInterface,
         escrow_coordinator: EscrowCoordinator,
-        *args: object,
-        **kwargs: object,
+        *,
+        platform_agent: PlatformAgent | None,
+        deadline_actor_id: str,
     ) -> None:
-        # Optional injected ``platform_agent`` (positional-after-two or keyword) so the
-        # evaluator stays constructible without Court wiring; when set, disputed tasks fire
-        # a platform-signed ruling trigger once the rebuttal window closes (GAP-A1). The
-        # variadic form avoids a default parameter value per project convention.
-        platform_agent: object | None = None
-        if len(args) > 1:
-            msg = "DeadlineEvaluator takes at most one positional arg after escrow_coordinator"
-            raise TypeError(msg)
-        if len(args) == 1:
-            platform_agent = args[0]
-        if "platform_agent" in kwargs:
-            if len(args) == 1:
-                msg = "platform_agent provided both positionally and by keyword"
-                raise TypeError(msg)
-            platform_agent = kwargs.pop("platform_agent")
-        if len(kwargs) > 0:
-            unknown = ", ".join(sorted(kwargs))
-            msg = f"Unexpected keyword argument(s): {unknown}"
-            raise TypeError(msg)
+        if not deadline_actor_id or deadline_actor_id.strip() != deadline_actor_id:
+            raise ValueError("deadline_actor_id must be a nonblank canonical string")
 
         self._store = store
         self._escrow_coordinator = escrow_coordinator
-        self._platform_agent = cast("PlatformAgent | None", platform_agent)
+        self._platform_agent = platform_agent
+        self._deadline_actor_id = deadline_actor_id
 
     @staticmethod
     def compute_deadline(base_timestamp: str | None, seconds: int) -> str | None:
@@ -75,116 +81,129 @@ class DeadlineEvaluator:
         return deadline_dt.isoformat(timespec="auto").replace("+00:00", "Z")
 
     async def evaluate_deadline(self, task: dict[str, Any]) -> dict[str, Any]:
-        """
-        Lazy deadline evaluation.
-
-        Checks if any active deadline has passed and transitions the task
-        to the appropriate status. Uses a database transaction with a
-        WHERE status = current_status clause to ensure atomicity.
-
-        After transition, attempts escrow release. If escrow fails,
-        escrow_pending is set to True for later retry.
-        """
-        # Skip terminal statuses — no further transitions possible
+        """Claim one eligible automatic transition, then return a fresh projection."""
         if task["status"] in _TERMINAL_STATUSES:
             return task
 
-        # Retry any pending escrow releases first
-        task = await self._escrow_coordinator.retry_pending_escrow(task)
+        if task["status"] == "disputed":
+            if task.get("pending_transition") is not None or task.get("legacy_reconciliations"):
+                return task
+            return await self._maybe_trigger_ruling(task)
 
-        now = datetime.now(UTC)
-
-        if task["status"] == "open":
-            bidding_deadline = self.compute_deadline(
-                task["created_at"], task["bidding_deadline_seconds"]
+        task_id = _required_text(task, "task_id")
+        name: str | None = None
+        try:
+            command = self._automatic_command(task, _now_us())
+            if command is None:
+                return task
+            name, cutoff_us, arguments = command
+            lifecycle_version = _required_integer(task, "lifecycle_version", positive=False)
+            operation_id = operation_id_for(
+                "task-deadline",
+                (task_id, name, str(lifecycle_version), str(cutoff_us)),
             )
-            if bidding_deadline is not None:
-                deadline_dt = datetime.fromisoformat(bidding_deadline.replace("Z", "+00:00"))
-                # Expire regardless of bid_count. A task that attracted bids but was
-                # never accepted has no other transition out of 'open', so guarding on
-                # bid_count == 0 left its escrow locked forever (T-035).
-                if now >= deadline_dt:
-                    expired_at = _now_iso()
-                    changed_rows = self._store.update_task(
-                        str(task["task_id"]),
-                        {"status": "expired", "expired_at": expired_at, "escrow_pending": 1},
-                        expected_status="open",
-                    )
-                    if changed_rows > 0:
-                        task["status"] = "expired"
-                        task["expired_at"] = expired_at
-                        task["escrow_pending"] = 1
-                        await self._escrow_coordinator.try_release_escrow(
-                            task["task_id"],
-                            "expired",
-                            task["escrow_id"],
-                            task["poster_id"],
-                        )
-                        # Re-read to get final escrow_pending state
-                        refreshed = self._store.get_task(task["task_id"])
-                        if refreshed is not None:
-                            task = refreshed
-
-        elif task["status"] == "accepted":
-            execution_deadline = self.compute_deadline(
-                task["accepted_at"],
-                task["deadline_seconds"],
+            envelope = self._store.claim_task_operation(
+                {
+                    "protocol_version": 1,
+                    "operation_id": operation_id,
+                    "task_id": task_id,
+                    "command": name,
+                    "expected_status": str(task["status"]),
+                    "expected_lifecycle_version": lifecycle_version,
+                    "actor_kind": "system",
+                    "actor_id": self._deadline_actor_id,
+                    "arguments": arguments,
+                }
             )
-            if execution_deadline is not None:
-                deadline_dt = datetime.fromisoformat(execution_deadline.replace("Z", "+00:00"))
-                if now >= deadline_dt:
-                    expired_at = _now_iso()
-                    changed_rows = self._store.update_task(
-                        str(task["task_id"]),
-                        {"status": "expired", "expired_at": expired_at, "escrow_pending": 1},
-                        expected_status="accepted",
-                    )
-                    if changed_rows > 0:
-                        task["status"] = "expired"
-                        task["expired_at"] = expired_at
-                        task["escrow_pending"] = 1
-                        await self._escrow_coordinator.try_release_escrow(
-                            task["task_id"],
-                            "expired",
-                            task["escrow_id"],
-                            task["poster_id"],
-                        )
-                        refreshed = self._store.get_task(task["task_id"])
-                        if refreshed is not None:
-                            task = refreshed
-
-        elif task["status"] == "submitted":
-            review_deadline = self.compute_deadline(
-                task["submitted_at"],
-                task["review_deadline_seconds"],
+            await complete_bank_operation(
+                self._store,
+                self._escrow_coordinator,
+                envelope,
             )
-            if review_deadline is not None:
-                deadline_dt = datetime.fromisoformat(review_deadline.replace("Z", "+00:00"))
-                if now >= deadline_dt:
-                    approved_at = _now_iso()
-                    changed_rows = self._store.update_task(
-                        str(task["task_id"]),
-                        {"status": "approved", "approved_at": approved_at, "escrow_pending": 1},
-                        expected_status="submitted",
-                    )
-                    if changed_rows > 0:
-                        task["status"] = "approved"
-                        task["approved_at"] = approved_at
-                        task["escrow_pending"] = 1
-                        await self._escrow_coordinator.try_release_escrow(
-                            task["task_id"],
-                            "approved",
-                            task["escrow_id"],
-                            task["worker_id"],
-                        )
-                        refreshed = self._store.get_task(task["task_id"])
-                        if refreshed is not None:
-                            task = refreshed
+        except (PlatformHttpError, ServiceError) as exc:
+            if isinstance(exc, ServiceError) and exc.error == "invalid_gateway_response":
+                raise
+            get_logger(__name__).warning(
+                "Automatic task transition did not complete; current state will be re-read",
+                extra={"task_id": task_id, "command": name, "error": str(exc)},
+            )
+        refreshed = self._store.get_task(task_id)
+        if refreshed is None:
+            raise ServiceError("task_not_found", "Task not found", 404, {})
+        return refreshed
 
-        elif task["status"] == "disputed":
-            task = await self._maybe_trigger_ruling(task)
-
-        return task
+    def _automatic_command(
+        self,
+        task: dict[str, Any],
+        now_us: int,
+    ) -> tuple[str, int, dict[str, str | int]] | None:
+        status = task["status"]
+        task_id = _required_text(task, "task_id")
+        poster_id = _required_text(task, "poster_id")
+        escrow_id = _required_text(task, "escrow_id")
+        if status == "open":
+            bidding_cutoff = _required_integer(task, "bidding_cutoff_us", positive=False)
+            if now_us < bidding_cutoff:
+                return None
+            has_bid = bool(self._store.get_bids_for_task(task_id))
+            if has_bid:
+                acceptance_cutoff = _required_integer(task, "acceptance_cutoff_us", positive=False)
+                if now_us < acceptance_cutoff:
+                    return None
+                command = "expire_acceptance"
+                cutoff_us = acceptance_cutoff
+            else:
+                command = "expire_bidding"
+                cutoff_us = bidding_cutoff
+            reward = _required_integer(task, "reward", positive=True)
+            return (
+                command,
+                cutoff_us,
+                {
+                    "poster_id": poster_id,
+                    "escrow_id": escrow_id,
+                    "reward": reward,
+                    "source_reference": f"task:{task_id}:expired",
+                    "cutoff_us": cutoff_us,
+                },
+            )
+        if status == "accepted":
+            cutoff_us = _required_integer(task, "execution_cutoff_us", positive=False)
+            if now_us < cutoff_us:
+                return None
+            worker_id = _required_text(task, "worker_id")
+            reward = _required_integer(task, "accepted_reward", positive=True)
+            return (
+                "expire_execution",
+                cutoff_us,
+                {
+                    "poster_id": poster_id,
+                    "worker_id": worker_id,
+                    "escrow_id": escrow_id,
+                    "reward": reward,
+                    "source_reference": f"task:{task_id}:expired",
+                    "cutoff_us": cutoff_us,
+                },
+            )
+        if status == "submitted":
+            cutoff_us = _required_integer(task, "review_cutoff_us", positive=False)
+            if now_us < cutoff_us:
+                return None
+            worker_id = _required_text(task, "worker_id")
+            reward = _required_integer(task, "accepted_reward", positive=True)
+            return (
+                "auto_approve",
+                cutoff_us,
+                {
+                    "poster_id": poster_id,
+                    "worker_id": worker_id,
+                    "escrow_id": escrow_id,
+                    "reward": reward,
+                    "source_reference": f"task:{task_id}:approved",
+                    "cutoff_us": cutoff_us,
+                },
+            )
+        return None
 
     def _rebuttal_window_closed(self, task: dict[str, Any]) -> bool:
         """Report whether ruling may proceed: a rebuttal exists or its deadline passed."""
@@ -248,24 +267,9 @@ class DeadlineEvaluator:
         requests. A single task's failure is logged and does not abort the sweep
         or the loop; the next interval retries it.
 
-        Safe against a concurrent lazy evaluation of the same task (e.g. a request
-        handler reading it mid-sweep): ``evaluate_deadline`` transitions via
-        ``store.update_task(..., expected_status=...)``, a compare-and-swap that
-        only applies when the task is still in the expected status (see
-        ``InMemoryTaskStore.update_task`` and ``TaskDbClient.update_task``'s
-        ``constraints={"status": expected_status}`` forwarded to the gateway).
-        Whichever evaluation — sweep or lazy read — wins the race applies the
-        transition and releases escrow exactly once; the loser's update is a no-op.
-
-        Escrow failures are already handled inside ``EscrowCoordinator`` (caught,
-        logged, ``escrow_pending`` set for retry — never propagated). What can
-        still escape a single task's evaluation is the DB gateway itself being
-        transiently unreachable or erroring: ``TaskDbClient.update_task``/
-        ``get_task`` raise ``PlatformHttpError`` (connect/timeout) or
-        ``RuntimeError`` (non-2xx gateway response) with no internal handling.
-        Those two are caught here so one task's transient gateway failure
-        doesn't stop the rest of the sweep; any other exception is a genuine
-        bug and is left to propagate and fail loudly.
+        Concurrent sweep/read evaluators submit the same deterministic operation identity.
+        Gateway owns status/version/cutoff predicates and exact replay. Typed claim or
+        delivery failures are contained per task; unexpected programming errors propagate.
         """
         logger = get_logger(__name__)
         while True:
@@ -281,7 +285,7 @@ class DeadlineEvaluator:
                 for task in tasks:
                     try:
                         await self.evaluate_deadline(task)
-                    except (PlatformHttpError, RuntimeError):
+                    except (PlatformHttpError, ServiceError, RuntimeError):
                         logger.exception(
                             "Deadline sweep failed for task; will retry next interval",
                             extra={"task_id": str(task.get("task_id")), "status": status},

@@ -62,7 +62,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "reputation"}"
 platform:
   agent_config_path: ""
 request:
@@ -169,7 +169,7 @@ async def _post_feedback_jws(
 @pytest.mark.unit
 async def test_cfg_01_service_starts_with_valid_db_gateway(tmp_path: Path) -> None:
     """CFG-01: Service starts with a valid db_gateway config."""
-    config_content = """\
+    config_content = f"""\
 service:
   name: "reputation"
   version: "0.1.0"
@@ -179,7 +179,7 @@ server:
   log_level: "info"
 logging:
   level: "INFO"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "reputation"}"
 platform:
   agent_config_path: ""
 request:

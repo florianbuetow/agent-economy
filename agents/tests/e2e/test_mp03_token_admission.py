@@ -14,6 +14,8 @@ import httpx
 import pytest
 import yaml
 
+from .native_task_contract import lifecycle_version, new_operation_id
+
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -281,6 +283,7 @@ async def test_task_board_remote_identity_admission_matrix_has_no_bid_effect(
         spec="A rejected token must not create a bid",
         reward=10,
         bidding_deadline_seconds=300,
+        acceptance_window_seconds=3600,
         execution_deadline_seconds=300,
         review_deadline_seconds=300,
     )
@@ -288,6 +291,8 @@ async def test_task_board_remote_identity_admission_matrix_has_no_bid_effect(
     resource = f"POST /tasks/{task_id}/bids"
     payload: dict[str, object] = {
         "action": "submit_bid",
+        "operation_id": new_operation_id(),
+        "expected_lifecycle_version": lifecycle_version(task),
         "task_id": task_id,
         "bidder_id": worker.agent_id,
         "amount": 1,
@@ -320,7 +325,16 @@ async def test_task_board_remote_identity_admission_matrix_has_no_bid_effect(
         _assert_error(response, expected_status, expected_error)
         assert await poster.list_bids(task_id) == []
 
-        created = await worker.submit_bid(task_id, 1)
+        created_response = await worker.submit_bid(
+            task_id,
+            1,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+
+        assert created_response.status_code == 201
+
+        created = created_response.body
         assert created["bidder_id"] == worker.agent_id
         bids = await poster.list_bids(task_id)
         assert len(bids) == 1

@@ -6,12 +6,14 @@ import asyncio
 from datetime import datetime
 
 import pytest
+from freezegun import freeze_time
 
 from tests.helpers import make_jws_token
 from tests.unit.routers.conftest import (
     accept_bid,
     create_task,
     make_task_id,
+    new_operation_fields,
     submit_bid,
 )
 
@@ -75,6 +77,7 @@ class TestBidding:
         private_key = alice_keypair[0]
         cancel_payload = {
             "action": "cancel_task",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "poster_id": alice_agent_id,
         }
@@ -177,6 +180,7 @@ class TestBidding:
         private_key = bob_keypair[0]
         payload = {
             "action": "submit_bid",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "bidder_id": carol_agent_id,
             "amount": 90,
@@ -230,6 +234,7 @@ class TestBidding:
         private_key = bob_keypair[0]
         payload = {
             "action": "submit_bid",
+            **new_operation_fields(task_id),
             "task_id": task_id,
         }
         token = make_jws_token(private_key, bob_agent_id, payload)
@@ -260,6 +265,7 @@ class TestBidding:
         private_key = bob_keypair[0]
         payload = {
             "action": "submit_bid",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "bidder_id": bob_agent_id,
             "amount": invalid_amount,
@@ -294,7 +300,7 @@ class TestBidding:
         bob_keypair,
         bob_agent_id,
     ):
-        """BID-12: Bid after bidding deadline expired returns 409 invalid_status."""
+        """BID-12: Bid at the persisted bidding cutoff returns 409 cutoff_reached."""
         task_resp = await create_task(
             client,
             alice_keypair,
@@ -304,12 +310,10 @@ class TestBidding:
         assert task_resp.status_code == 201
         task_id = task_resp.json()["task_id"]
 
-        # Wait for the bidding deadline to pass
-        await asyncio.sleep(1.5)
-
-        response = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
+        with freeze_time(task_resp.json()["bidding_deadline"]):
+            response = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert response.status_code == 409
-        assert response.json()["error"] == "invalid_status"
+        assert response.json()["error"] == "cutoff_reached"
 
     @pytest.mark.unit
     async def test_bid_13_concurrent_duplicate_bid_race(
@@ -739,6 +743,7 @@ class TestBidAcceptance:
         private_key = alice_keypair[0]
         payload = {
             "action": "cancel_task",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "bid_id": bid_id,
             "poster_id": alice_agent_id,
@@ -774,6 +779,7 @@ class TestBidAcceptance:
         private_key = carol_keypair[0]
         payload = {
             "action": "accept_bid",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "bid_id": bid_id,
             "poster_id": alice_agent_id,
@@ -836,7 +842,7 @@ class TestBidAcceptance:
         datetime.fromisoformat(data["accepted_at"])
 
     @pytest.mark.unit
-    async def test_accept_after_bidding_deadline_is_rejected(
+    async def test_accept_at_acceptance_deadline_is_rejected(
         self,
         client,
         alice_keypair,
@@ -844,14 +850,10 @@ class TestBidAcceptance:
         bob_keypair,
         bob_agent_id,
     ):
-        """Accepting a bid after the bidding deadline is rejected: the task has expired.
+        """A bid-bearing native task rejects acceptance at its selected window cutoff.
 
-        T-035 / GAP-A2. This previously asserted a late accept still returned 200 while
-        the task was "open", and was labelled BA-10 -- but spec BA-10 is "Accepting a bid
-        updates bid_count correctly" and says nothing about deadlines. The asserted
-        behaviour contradicted LIFE-07 ("task is expired, not open" once the bidding
-        deadline passes) and LIFE-09 (terminal EXPIRED blocks all mutations), and was only
-        reachable because bid-carrying tasks never expired.
+        MP-07 moves this expiry boundary from bidding close to the poster's explicit
+        acceptance cutoff. The rejected command cannot extend that frozen cutoff.
         """
         task_resp = await create_task(
             client,
@@ -867,14 +869,10 @@ class TestBidAcceptance:
         assert bid_resp.status_code == 201
         bid_id = bid_resp.json()["bid_id"]
 
-        # Wait for deadline to pass. T-104: the original 0.5s margin (deadline=1s,
-        # sleep=1.5s) was flaky under CI jitter/GC pauses; widened to a 1.5s margin.
-        await asyncio.sleep(2.5)
+        with freeze_time(task_resp.json()["acceptance_deadline"]):
+            response = await accept_bid(client, alice_keypair, alice_agent_id, task_id, bid_id)
+            assert response.status_code == 409
+            assert response.json()["error"] == "cutoff_reached"
 
-        # Lazy evaluation expires the task, so acceptance is no longer possible
-        response = await accept_bid(client, alice_keypair, alice_agent_id, task_id, bid_id)
-        assert response.status_code == 409
-        assert response.json()["error"] == "invalid_status"
-
-        task = await client.get(f"/tasks/{task_id}")
-        assert task.json()["status"] == "expired"
+            task = await client.get(f"/tasks/{task_id}")
+            assert task.json()["status"] == "expired"

@@ -7,12 +7,20 @@ constructor-time snapshot.
 
 from __future__ import annotations
 
+from json import JSONDecodeError
 from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
 from task_board_service.services.task_db_client import PlatformHttpError
-from task_board_service.services.task_helpers import is_valid_worker_pct, now_iso, task_to_response
+from task_board_service.services.task_helpers import is_valid_worker_pct
+from task_board_service.services.task_operations import (
+    accepted_task_arguments,
+    complete_bank_operation,
+    complete_court_operation,
+    operation_response,
+    public_operation_identity,
+)
 
 if TYPE_CHECKING:
     from service_auth.platform import PlatformAgent
@@ -32,144 +40,47 @@ class TaskRulingCoordinator:
         token: str,
         platform_agent: PlatformAgent,
     ) -> dict[str, Any]:
-        """
-        Dispute deliverables — sends task to the Court for resolution.
-
-        Error precedence:
-        1-6. JWS verification
-        7.   invalid_payload — wrong action, task_id mismatch
-        9a.  forbidden — signer != poster_id in payload
-        10.  task_not_found
-        11.  invalid_status — not SUBMITTED
-        9b.  forbidden — signer != task's poster
-        12.  invalid_reason — empty or too long
-        13.  court_unavailable — Court returned no dispute id
-        """
+        """Claim a poster dispute before creating or recovering its Court effect."""
         manager = self._manager
-        # Steps 4-7a: Verify JWS, validate action. T-036 (exception #8): the
-        # undocumented 'file_dispute' alias is removed — dispute_task is the
-        # only accepted action.
         payload = await manager.token_validator.validate_jws_token(
             token,
             "dispute_task",
             expected_resource=f"POST /tasks/{task_id}/dispute",
         )
         signer_id: str = payload["_signer_id"]
-
-        # Step 7b: Validate required fields
-        if "task_id" not in payload:
-            raise ServiceError("invalid_payload", "Missing required field: task_id", 400, {})
-
-        if "poster_id" not in payload:
-            raise ServiceError("invalid_payload", "Missing required field: poster_id", 400, {})
-
-        # Step 7c: task_id in payload must match URL path
+        for field in ("task_id", "poster_id"):
+            if field not in payload:
+                raise ServiceError("invalid_payload", f"Missing required field: {field}", 400, {})
+        operation_id, expected_version = public_operation_identity(payload)
         if payload["task_id"] != task_id:
-            raise ServiceError(
-                "invalid_payload",
-                "task_id in payload does not match URL path",
-                400,
-                {},
-            )
-
-        # Step 9a: Signer must match poster_id in payload
+            raise ServiceError("invalid_payload", "task_id does not match URL path", 400, {})
         if signer_id != payload["poster_id"]:
             raise ServiceError("forbidden", "Signer does not match poster_id", 403, {})
-
-        # Step 10: Load task
+        reason = payload.get("reason")
+        if not isinstance(reason, str) or not 1 <= len(reason) <= 10000:
+            raise ServiceError(
+                "invalid_reason", "Dispute reason must be 1 to 10,000 characters", 400, {}
+            )
         task = manager.store.get_task(task_id)
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
-
-        # Evaluate deadline
-        task = await manager.deadline_evaluator.evaluate_deadline(task)
-
-        # Step 11: Check status
-        if task["status"] != "submitted":
-            raise ServiceError(
-                "invalid_status",
-                f"Cannot dispute task in '{task['status']}' status, must be 'submitted'",
-                409,
-                {},
-            )
-
-        # Step 9b: Signer must be the task's poster
-        if signer_id != task["poster_id"]:
-            raise ServiceError("forbidden", "Only the poster can dispute", 403, {})
-
-        # Step 12: Validate reason
-        reason = payload.get("reason")
-        if not isinstance(reason, str) or len(reason) < 1:
-            raise ServiceError(
-                "invalid_reason",
-                "Dispute reason must be a non-empty string",
-                400,
-                {},
-            )
-
-        if len(reason) > 10000:
-            raise ServiceError(
-                "invalid_reason",
-                "Dispute reason must not exceed 10,000 characters",
-                400,
-                {},
-            )
-
-        # Step 13: connect/timeout/HTTP errors from Court map to a typed 502 —
-        # the task must stay 'submitted' rather than surface a raw 500 (GAP-E7).
-        try:
-            court_dispute = await platform_agent.file_claim(
-                task_id=task_id,
-                claimant_id=str(task["poster_id"]),
-                respondent_id=str(task["worker_id"]),
-                claim=reason,
-                escrow_id=str(task["escrow_id"]),
-            )
-        except PlatformHttpError as exc:
-            raise ServiceError(
-                "court_unavailable",
-                "Cannot connect to Court",
-                502,
-                {},
-            ) from exc
-
-        # Step 13: A task must never enter 'disputed' without a Court dispute to
-        # bind rebuttals to, otherwise any worker could name an arbitrary dispute.
-        dispute_id = court_dispute.get("dispute_id")
-        if not isinstance(dispute_id, str) or len(dispute_id) < 1:
-            raise ServiceError(
-                "court_unavailable",
-                "Court did not return a dispute id",
-                502,
-                {},
-            )
-
-        # Update task. Persist the Court-authoritative rebuttal deadline alongside the
-        # dispute id so the deadline evaluator can fire the ruling once the window closes
-        # (GAP-A1); it may be absent if Court did not return one.
-        disputed_at = now_iso()
-        dispute_updates: dict[str, Any] = {
-            "status": "disputed",
-            "disputed_at": disputed_at,
-            "dispute_reason": reason,
-            "dispute_id": dispute_id,
-        }
-        rebuttal_deadline = court_dispute.get("rebuttal_deadline")
-        if isinstance(rebuttal_deadline, str) and rebuttal_deadline != "":
-            dispute_updates["rebuttal_deadline"] = rebuttal_deadline
-        manager.store.update_task(
-            task_id,
-            dispute_updates,
-            expected_status=None,
+        arguments = accepted_task_arguments(task, expected_version, "submitted")
+        arguments["reason"] = reason
+        envelope = manager.store.claim_task_operation(
+            {
+                "protocol_version": 1,
+                "operation_id": operation_id,
+                "task_id": task_id,
+                "command": "dispute_task",
+                "expected_status": "submitted",
+                "expected_lifecycle_version": expected_version,
+                "actor_kind": "agent",
+                "actor_id": signer_id,
+                "arguments": arguments,
+            }
         )
-
-        updated = manager.store.get_task(task_id)
-        if updated is None:
-            msg = f"Task {task_id} not found after update"
-            raise RuntimeError(msg)
-        response = task_to_response(updated)
-        response["dispute_id"] = dispute_id
-        return response
+        finalized = await complete_court_operation(manager.store, platform_agent, envelope)
+        return operation_response(manager.store, finalized)
 
     async def submit_rebuttal(
         self,
@@ -269,197 +180,77 @@ class TaskRulingCoordinator:
                 {},
             )
 
-        # Connect/timeout/HTTP errors from Court map to a typed 502 — the dispute
-        # must stay exactly as it was rather than surface a raw 500 (GAP-E7).
+        # Transport or malformed acknowledgment errors map to a typed 502.
+        # Court owns the atomic rebuttal and its Board timestamp projection.
         try:
             response: dict[str, Any] = await platform_agent.submit_rebuttal(
                 str(stored_dispute_id), rebuttal
             )
-        except PlatformHttpError as exc:
+        except (PlatformHttpError, JSONDecodeError) as exc:
             raise ServiceError(
                 "court_unavailable",
                 "Cannot connect to Court",
                 502,
                 {},
             ) from exc
-        # Record that a rebuttal now exists so the deadline evaluator can fire the ruling
-        # immediately, without waiting for the rebuttal window to close (GAP-A1).
-        manager.store.update_task(
-            task_id,
-            {"rebuttal_submitted_at": now_iso()},
-            expected_status=None,
-        )
         return response
 
     async def record_ruling(self, task_id: str, token: str) -> dict[str, Any]:
-        """
-        Record a Court ruling. Platform-signed operation.
-
-        Error precedence:
-        1-6. JWS verification
-        7.   invalid_payload — wrong action, task_id mismatch, missing fields
-        9a.  forbidden — signer is not the platform agent
-        10.  task_not_found
-        11.  invalid_status — not DISPUTED
-        12.  invalid_worker_pct
-        """
+        """Claim the exact platform ruling before delivering its frozen Bank intent."""
         manager = self._manager
-        # Steps 4-7a: Verify JWS locally (platform op), validate action.
-        # T-036: the undocumented 'submit_ruling' alias is removed — record_ruling
-        # is the only accepted action.
         payload = await manager.token_validator.validate_platform_jws_token(
             token,
             "record_ruling",
             expected_resource=f"POST /tasks/{task_id}/ruling",
         )
         signer_id: str = payload["_signer_id"]
-
-        # Step 7b: Validate required fields
-        if "task_id" not in payload:
-            raise ServiceError("invalid_payload", "Missing required field: task_id", 400, {})
-
-        # Step 7c: task_id in payload must match URL path
+        for field in ("task_id", "ruling_id", "ruling_summary", "worker_pct"):
+            if field not in payload:
+                raise ServiceError("invalid_payload", f"Missing required field: {field}", 400, {})
+        operation_id, expected_version = public_operation_identity(payload)
         if payload["task_id"] != task_id:
-            raise ServiceError(
-                "invalid_payload",
-                "task_id in payload does not match URL path",
-                400,
-                {},
-            )
-
-        # Step 7d: Validate ruling_id present and non-empty
-        if "ruling_id" not in payload:
-            raise ServiceError("invalid_payload", "Missing required field: ruling_id", 400, {})
-
+            raise ServiceError("invalid_payload", "task_id does not match URL path", 400, {})
         ruling_id = payload["ruling_id"]
-        if not isinstance(ruling_id, str) or len(ruling_id) < 1:
+        summary = payload["ruling_summary"]
+        if not isinstance(ruling_id, str) or not ruling_id:
+            raise ServiceError("invalid_payload", "ruling_id must be a nonempty string", 400, {})
+        if not isinstance(summary, str) or not summary:
             raise ServiceError(
-                "invalid_payload",
-                "ruling_id must be a non-empty string",
-                400,
-                {},
+                "invalid_payload", "ruling_summary must be a nonempty string", 400, {}
             )
-
-        # Step 7e: Validate ruling_summary present and non-empty
-        if "ruling_summary" not in payload:
-            raise ServiceError(
-                "invalid_payload",
-                "Missing required field: ruling_summary",
-                400,
-                {},
-            )
-
-        ruling_summary = payload["ruling_summary"]
-        if not isinstance(ruling_summary, str) or len(ruling_summary) < 1:
-            raise ServiceError(
-                "invalid_payload",
-                "ruling_summary must be a non-empty string",
-                400,
-                {},
-            )
-
-        # Step 7f: Validate worker_pct present
-        if "worker_pct" not in payload:
-            raise ServiceError(
-                "invalid_payload",
-                "Missing required field: worker_pct",
-                400,
-                {},
-            )
-
-        worker_pct = payload["worker_pct"]
-
-        # Step 9a: Signer must be the platform agent
         if signer_id != manager.platform_agent_id:
+            raise ServiceError("forbidden", "Only the platform agent can record rulings", 403, {})
+        worker_pct = payload["worker_pct"]
+        if not is_valid_worker_pct(worker_pct):
             raise ServiceError(
-                "forbidden",
-                "Only the platform agent can record rulings",
-                403,
-                {},
+                "invalid_worker_pct", "worker_pct must be an integer between 0 and 100", 400, {}
             )
-
-        # Step 10: Load task
         task = manager.store.get_task(task_id)
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
-
-        # A stored ruling may be retried only with its original financial and textual terms.
-        is_retry = task["status"] == "ruled" and task.get("ruling_id") == ruling_id
-
-        # Step 11: Preserve status precedence for requests unrelated to the stored ruling.
-        if task["status"] != "disputed" and not is_retry:
-            raise ServiceError(
-                "invalid_status",
-                f"Cannot record ruling for task in '{task['status']}' status, must be 'disputed'",
-                409,
-                {},
-            )
-
-        # Step 12: Validate worker_pct value (after status check)
-        if not is_valid_worker_pct(worker_pct):
-            raise ServiceError(
-                "invalid_worker_pct",
-                "worker_pct must be an integer between 0 and 100",
-                400,
-                {},
-            )
-
-        worker_pct_int = int(worker_pct)
-
-        if is_retry:
-            if worker_pct_int != task["worker_pct"] or ruling_summary != task["ruling_summary"]:
-                raise ServiceError(
-                    "ruling_conflict",
-                    "Ruling identity is already bound to different terms",
-                    409,
-                    {"ruling_id": ruling_id},
-                )
-            return task_to_response(task)
-
-        # Escrow distribution based on ruling:
-        # - 0% => full refund to poster
-        # - 100% => full payout to worker
-        # - otherwise => split between both
-        if worker_pct_int == 0:
-            await manager.escrow_coordinator.release_ruling_escrow(
-                task_id,
-                ruling_id,
-                task["escrow_id"],
-                task["poster_id"],
-            )
-        elif worker_pct_int == 100:
-            await manager.escrow_coordinator.release_ruling_escrow(
-                task_id,
-                ruling_id,
-                task["escrow_id"],
-                task["worker_id"],
-            )
-        else:
-            await manager.escrow_coordinator.split_ruling_escrow(
-                task_id,
-                ruling_id,
-                task["escrow_id"],
-                task["worker_id"],
-                task["poster_id"],
-                worker_pct_int,
-            )
-
-        # Update task
-        ruled_at = now_iso()
-        manager.store.update_task(
-            task_id,
+        arguments = accepted_task_arguments(task, expected_version, "disputed")
+        arguments.update(
             {
-                "status": "ruled",
-                "ruled_at": ruled_at,
                 "ruling_id": ruling_id,
-                "worker_pct": worker_pct_int,
-                "ruling_summary": ruling_summary,
-            },
-            expected_status=None,
+                "worker_pct": worker_pct,
+                "summary": summary,
+                "source_reference": f"task:{task_id}:ruling:{ruling_id}",
+            }
         )
-
-        updated = manager.store.get_task(task_id)
-        if updated is None:
-            msg = f"Task {task_id} not found after update"
-            raise RuntimeError(msg)
-        return task_to_response(updated)
+        envelope = manager.store.claim_task_operation(
+            {
+                "protocol_version": 1,
+                "operation_id": operation_id,
+                "task_id": task_id,
+                "command": "record_ruling",
+                "expected_status": "disputed",
+                "expected_lifecycle_version": expected_version,
+                "actor_kind": "platform",
+                "actor_id": signer_id,
+                "arguments": arguments,
+            }
+        )
+        finalized = await complete_bank_operation(
+            manager.store, manager.escrow_coordinator, envelope
+        )
+        return operation_response(manager.store, finalized)

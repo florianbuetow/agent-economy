@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-18T01:06:13+0200",
+  "capture_kind": "current_working_tree_bytes",
+  "commit_at_capture": "a6af0bed5e0475f63b271329bb7f8ea683da9bc3",
+  "scope": "Selected current Gateway and Task Board sources/tests touched by the MP-07 read, client, creation, bidding and acceptance rollout.",
+  "limitations": [
+    "These hashes identify current working-tree bytes at capture time.",
+    "They are not asserted to reconstruct the exact pre-fix bytes that produced historical red logs.",
+    "They do not prove the remaining Task Board command rollout, a full component gate, or repository-wide CI."
+  ],
+  "sha256": {
+    "services/db-gateway/src/db_gateway_service/routers/board.py": "6d6a10beb5a6225229fb4d1ff3b5a54cd3ce67f4fd42b7fb8c31f3c0d4211951",
+    "services/db-gateway/src/db_gateway_service/services/db_reader.py": "078412036c0d04991a05da9baa74e441e55e0f1a04f7cbabc664abc8d5748d3c",
+    "services/db-gateway/src/db_gateway_service/services/db_writer.py": "9855c79338c63c7595eb9fc33e30ff7b4f87a0d0f548348bb9c442eb463b3f0e",
+    "services/db-gateway/src/db_gateway_service/services/task_operation_writer.py": "e879323a2f6c6bd17f859c871c4d8fc86f7c22c9e29f748e87409251db2865c7",
+    "services/db-gateway/src/db_gateway_service/task_operation_requests.py": "8dafc026802f8a5284440d3dda0ca0daced843ec6737e6ce86a56953c00a6f33",
+    "services/db-gateway/tests/unit/routers/test_mp07_task_operation_boundary.py": "5c000d1502d8b78080d27fc43f7553a32e4cb1851b86d33a2980fdf1fbb03cc2",
+    "services/db-gateway/tests/unit/test_mp07_pure_finalization.py": "704d8ace1a1f1970c4123b31d8c6bcf46776cc0a0033f3434f7a8eead7b5a796",
+    "services/db-gateway/tests/unit/test_mp07_task_read_projection.py": "c74eb2b42c14881d477dc8cdf2aa09f8c0816f266d3da86416d765f06a2e7670",
+    "services/task-board/config.yaml": "bbf1a88a803c24a2fff20fe608357263eebff08a106b43416f5a0106453fe4ef",
+    "services/task-board/src/task_board_service/schemas.py": "decd506001a00aae14b0e072cdb72227036cd22ea6dd6810213a76e2ddfa5f8b",
+    "services/task-board/src/task_board_service/task_contract_projection.py": "6eb189832554bd05d378aacba486cd62172b3a9450819a104d0f072b433fb2d2",
+    "services/task-board/src/task_board_service/task_operation_contract.py": "b9274235fe2607c9431b3a9bffa99f3cfedfeb67338d6233c510c47d932ed368",
+    "services/task-board/src/task_board_service/services/protocol.py": "eb6c53f9ad94157f0bec65d4e07c5b99711358f16362db9a8d35972e21d462f1",
+    "services/task-board/src/task_board_service/services/task_bidding.py": "dd230857ce1fb9d8205eafd8744513faaadbaf08965e1198620042a4628d83c6",
+    "services/task-board/src/task_board_service/services/task_creation.py": "ba958f66f4cf136978b5a53029d1b45f0f848e67bfe162b03460afeebc315cba",
+    "services/task-board/src/task_board_service/services/task_db_client.py": "8cec584bd06c9deeaacfb460e9c6b8b1434117d53c2b48b3fcb12b813836d289",
+    "services/task-board/src/task_board_service/services/task_helpers.py": "a460af038a69e464c57df4ab076757283b64e905ee4068ed1c981922f6473e60",
+    "services/task-board/tests/integration/conftest.py": "74c32bedcd9444b98fa88bc50a0a968a37345b989f3498315ce4c13f9e3f85c4",
+    "services/task-board/tests/integration/test_mp07_acceptance_result_projection.py": "704795be7897b744208ff976fca6ecf49bf81670b92e6759b685ab47d3c102a2",
+    "services/task-board/tests/integration/test_mp07_public_command_replay.py": "980497dff682ab0e3d11612bf1ea3fee5916757f104ac765e34f421177a46f5c",
+    "services/task-board/tests/unit/test_mp07_bid_projection_validation.py": "8ba9de9708277dc882a45b32335b8fa7db70846a532739db62d08556ab99456d",
+    "services/task-board/tests/unit/test_mp07_creation_cutoff_bounds.py": "cc94352f5e96d4f13ca040652310edd2790b13f6828a3be2347f76f03acdcc1e",
+    "services/task-board/tests/unit/test_mp07_creation_window.py": "d858e32fb7ff675a30e8da0664ccd2deacf1e286ccf2c587bb8deb9f93585fa3",
+    "services/task-board/tests/unit/test_mp07_deadline_actor_config.py": "aad9642b7c1f2680cf6be6c2c11df83ca39f7367b51dd582c0134ef4dd50eea8",
+    "services/task-board/tests/unit/test_mp07_public_task_projection.py": "ea6d6566e381d16027965b0b97d9090bd762c6781dbb3a75a7f2126dd612a205",
+    "services/task-board/tests/unit/test_mp07_public_whole_second_cutoffs.py": "fde618985a799693ac8a10116c61775642c26fcfd12ce1b8807bda14da60ffe4",
+    "services/task-board/tests/unit/test_mp07_task_operation_client.py": "91cc291bcb646f921c93e385310a1c3ecda9d62f6ea74a7fdfc536b42846188c",
+    "services/task-board/tests/unit/test_mp07_task_operation_client_regressions.py": "76d71067e1d76bc1341ac8c19eff2240037ca90a45acc9d7f7a353fa21d8f27d",
+    "services/task-board/tests/unit/test_task_db_client_normalization.py": "2d557dc5874d215953a2d437dee6ed160ddf50b2d4384e987242310799e8bf79"
+  }
+}

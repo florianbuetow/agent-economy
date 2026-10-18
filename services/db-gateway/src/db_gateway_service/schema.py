@@ -19,6 +19,7 @@ class SchemaState(StrEnum):
     EMPTY = "empty"
     CURRENT_V1 = "current_v1"
     CURRENT_V2 = "current_v2"
+    CURRENT_V3 = "current_v3"
     SUPPORTED_V0 = "supported_v0"
     PARTIAL = "partial"
     UNKNOWN = "unknown"
@@ -49,10 +50,14 @@ def load_schema_sql(state: SchemaState) -> str:
         SchemaState.SUPPORTED_V0: "legacy_v0.sql",
         SchemaState.CURRENT_V1: "current_v1.sql",
         SchemaState.CURRENT_V2: "current_v2.sql",
+        SchemaState.CURRENT_V3: "current_v3.sql",
     }.get(state)
     if resource_name is None:
         raise ValueError(f"Schema state has no SQL resource: {state.value}")
-    return _load_resource(resource_name)
+    sql = _load_resource(resource_name)
+    if state is SchemaState.CURRENT_V3:
+        return f"{sql}\n{_load_resource('task_operations_v3.sql')}"
+    return sql
 
 
 def classify_schema(connection: sqlite3.Connection) -> SchemaClassification:
@@ -64,10 +69,11 @@ def classify_schema(connection: sqlite3.Connection) -> SchemaClassification:
     if not object_names:
         return SchemaClassification(SchemaState.EMPTY, None, signature, ())
 
-    current = _known_current_v2_catalog()
+    current = _known_current_v3_catalog()
+    v2 = _known_current_v2_catalog()
     v1 = _known_current_catalog()
     legacy_variants = _known_legacy_catalogs()
-    if metadata.version is not None and metadata.version > 2:
+    if metadata.version is not None and metadata.version > 3:
         findings = metadata.findings or ("future_schema_version",)
         return SchemaClassification(
             SchemaState.FUTURE,
@@ -75,14 +81,17 @@ def classify_schema(connection: sqlite3.Connection) -> SchemaClassification:
             signature,
             findings,
         )
-    if catalog == current and metadata.version == 2 and metadata.valid_current:
-        return SchemaClassification(SchemaState.CURRENT_V2, 2, signature, ())
-    if catalog == v1 and metadata.version == 1 and metadata.valid_current:
-        return SchemaClassification(SchemaState.CURRENT_V1, 1, signature, ())
+    for expected_catalog, version, state in (
+        (current, 3, SchemaState.CURRENT_V3),
+        (v2, 2, SchemaState.CURRENT_V2),
+        (v1, 1, SchemaState.CURRENT_V1),
+    ):
+        if catalog == expected_catalog and metadata.version == version and metadata.valid_current:
+            return SchemaClassification(state, version, signature, ())
     if any(catalog == legacy for legacy in legacy_variants) and metadata.signature is None:
         return SchemaClassification(SchemaState.SUPPORTED_V0, 0, signature, ())
 
-    known_older_catalogs = (*legacy_variants, v1)
+    known_older_catalogs = (*legacy_variants, v1, v2)
     findings = (*_catalog_findings(catalog, current, known_older_catalogs), *metadata.findings)
     known_names = set(current)
     for legacy in known_older_catalogs:
@@ -117,6 +126,16 @@ def _known_current_v2_catalog() -> dict[str, object]:
     connection = sqlite3.connect(":memory:")
     try:
         connection.executescript(load_schema_sql(SchemaState.CURRENT_V2))
+        return _semantic_catalog(connection)
+    finally:
+        connection.close()
+
+
+@lru_cache(maxsize=1)
+def _known_current_v3_catalog() -> dict[str, object]:
+    connection = sqlite3.connect(":memory:")
+    try:
+        connection.executescript(load_schema_sql(SchemaState.CURRENT_V3))
         return _semantic_catalog(connection)
     finally:
         connection.close()
@@ -292,7 +311,7 @@ def _inspect_metadata(
         len(version_rows) == 1
         and version_rows[0][0] == "integer"
         and isinstance(version_rows[0][1], int)
-        and version_rows[0][1] > 2
+        and version_rows[0][1] > 3
     ):
         future_version = int(version_rows[0][1])
         return _MetadataInspection(
@@ -329,7 +348,7 @@ def _inspect_metadata(
     metadata_version = row[3] if row[2] == "integer" and isinstance(row[3], int) else None
     fresh = row[4:] == ("null", None, "null", None, "null", None)
     migrated = (
-        metadata_version in {1, 2}
+        metadata_version in {1, 2, 3}
         and row[4] == "integer"
         and row[5] == metadata_version - 1
         and row[6] == "text"
@@ -340,7 +359,9 @@ def _inspect_metadata(
         and _valid_sha256(row[9])
     )
     valid = (
-        row[:3] == ("integer", 1, "integer") and metadata_version in {1, 2} and (fresh or migrated)
+        row[:3] == ("integer", 1, "integer")
+        and metadata_version in {1, 2, 3}
+        and (fresh or migrated)
     )
     return _MetadataInspection(
         metadata_version,

@@ -1,4 +1,4 @@
-"""MP-04 startup admission for exact schema v2 and receipt ownership."""
+"""MP-04 startup admission for current schema and unchanged v2 receipt ownership."""
 
 from __future__ import annotations
 
@@ -25,21 +25,23 @@ def _write_schema(path: Path, state: SchemaState) -> None:
         connection.close()
 
 
-def test_existing_exact_v2_is_the_only_admitted_runtime_schema(tmp_path: Path) -> None:
-    path = tmp_path / "v2.db"
-    _write_schema(path, SchemaState.CURRENT_V2)
+def test_existing_exact_v3_is_the_only_admitted_runtime_schema(tmp_path: Path) -> None:
+    path = tmp_path / "v3.db"
+    _write_schema(path, SchemaState.CURRENT_V3)
     writer = DbWriter(str(path), 5000, "wal", None)
     try:
-        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V2
+        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V3
     finally:
         writer.close()
 
 
-def test_existing_v1_requires_explicit_migration_before_persistent_configuration(
+@pytest.mark.parametrize("state", [SchemaState.CURRENT_V1, SchemaState.CURRENT_V2])
+def test_older_schema_requires_explicit_migration_before_persistent_configuration(
     tmp_path: Path,
+    state: SchemaState,
 ) -> None:
-    path = tmp_path / "v1.db"
-    _write_schema(path, SchemaState.CURRENT_V1)
+    path = tmp_path / f"{state.value}.db"
+    _write_schema(path, state)
     before = path.read_bytes()
     with pytest.raises(ServiceError) as captured:
         DbWriter(str(path), 5000, "wal", None)
@@ -48,16 +50,16 @@ def test_existing_v1_requires_explicit_migration_before_persistent_configuration
     assert path.read_bytes() == before
 
 
-def test_empty_database_bootstraps_exact_v2_transactionally(tmp_path: Path) -> None:
+def test_empty_database_bootstraps_exact_v3_transactionally(tmp_path: Path) -> None:
     path = tmp_path / "fresh.db"
     writer = DbWriter(
         str(path),
         5000,
         "wal",
-        load_schema_sql(SchemaState.CURRENT_V2),
+        load_schema_sql(SchemaState.CURRENT_V3),
     )
     try:
-        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V2
+        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V3
         assert (
             writer.connection.execute("SELECT cutover_kind FROM bank_receipt_cutover").fetchone()[0]
             == "fresh_v2"
@@ -66,9 +68,9 @@ def test_empty_database_bootstraps_exact_v2_transactionally(tmp_path: Path) -> N
         writer.close()
 
 
-def test_tampered_v2_bootstrap_rolls_back_every_schema_object(tmp_path: Path) -> None:
+def test_tampered_current_bootstrap_rolls_back_every_schema_object(tmp_path: Path) -> None:
     path = tmp_path / "tampered-bootstrap.db"
-    schema = load_schema_sql(SchemaState.CURRENT_V2).replace(
+    schema = load_schema_sql(SchemaState.CURRENT_V3).replace(
         "a81b1a47e8cd319a73362c83a992f181986e799b1e82753bf139e60b35d0a4f6",
         "f" * 64,
         1,
@@ -87,12 +89,12 @@ def test_tampered_v2_bootstrap_rolls_back_every_schema_object(tmp_path: Path) ->
 
 
 @pytest.mark.parametrize("tamper", ["missing-cutover", "unowned-transaction"])
-def test_v2_receipt_ownership_failure_is_rejected_before_configuration(
+def test_receipt_ownership_failure_is_rejected_before_configuration(
     tmp_path: Path,
     tamper: str,
 ) -> None:
     path = tmp_path / f"{tamper}.db"
-    _write_schema(path, SchemaState.CURRENT_V2)
+    _write_schema(path, SchemaState.CURRENT_V3)
     connection = sqlite3.connect(path)
     if tamper == "missing-cutover":
         connection.execute("DELETE FROM bank_receipt_cutover")

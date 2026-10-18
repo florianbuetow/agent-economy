@@ -20,7 +20,7 @@ async def app(tmp_path):
     """Create a test app with a temporary database."""
     db_path = tmp_path / "test.db"
     generate_keypair("gateway-identity", tmp_path)
-    config_content = """
+    config_content = f"""
 service:
   name: "identity"
   version: "0.1.0"
@@ -30,7 +30,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "identity"}"
 crypto:
   public_key_prefix: "ed25519:"
   public_key_bytes: 32

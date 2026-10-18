@@ -1,0 +1,54 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 5 items
+
+tests/unit/test_mp07_native_proxy_browser.py FFFFF                       [100%]
+
+=================================== FAILURES ===================================
+____ test_create_form_requires_poster_selected_acceptance_window[chromium] _____
+tests/unit/test_mp07_native_proxy_browser.py:256: in test_create_form_requires_poster_selected_acceptance_window
+    expect(page.locator("#f-accept-window")).to_be_visible()
+E   AssertionError: Locator expected to be visible
+E   Actual value: None
+E   Error: element(s) not found 
+E   Call log:
+E     - Expect "to_be_visible" with timeout 5000ms
+E     - waiting for locator("#f-accept-window")
+______ test_pending_approval_reuses_frozen_intent_after_reload[chromium] _______
+tests/unit/test_mp07_native_proxy_browser.py:303: in test_pending_approval_reuses_frozen_intent_after_reload
+    page.wait_for_function("sessionStorage.length > 0", timeout=1000)
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:11599: in wait_for_function
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_page.py:1110: in wait_for_function
+    return await self._main_frame.wait_for_function(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/_impl/_frame.py:878: in wait_for_function
+    await self._channel.send("waitForFunction", self._timeout, params)
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TimeoutError: Page.wait_for_function: Timeout 1000ms exceeded.
+_ test_invalid_completion_ack_retains_intent_without_success[chromium-foreign] _
+tests/unit/test_mp07_native_proxy_browser.py:379: in test_invalid_completion_ack_retains_intent_without_success
+    assert mutation_bodies[0] is not None
+E   assert None is not None
+_ test_only_matching_verified_completion_clears_intent_and_refreshes[chromium] _
+tests/unit/test_mp07_native_proxy_browser.py:432: in test_only_matching_verified_completion_clears_intent_and_refreshes
+    assert mutation_bodies[0] is not None
+E   assert None is not None
+_ test_invalid_completion_ack_retains_intent_without_success[chromium-malformed] _
+tests/unit/test_mp07_native_proxy_browser.py:379: in test_invalid_completion_ack_retains_intent_without_success
+    assert mutation_bodies[0] is not None
+E   assert None is not None
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_native_proxy_browser.py::test_create_form_requires_poster_selected_acceptance_window[chromium]
+FAILED tests/unit/test_mp07_native_proxy_browser.py::test_pending_approval_reuses_frozen_intent_after_reload[chromium]
+FAILED tests/unit/test_mp07_native_proxy_browser.py::test_invalid_completion_ack_retains_intent_without_success[chromium-foreign]
+FAILED tests/unit/test_mp07_native_proxy_browser.py::test_only_matching_verified_completion_clears_intent_and_refreshes[chromium]
+FAILED tests/unit/test_mp07_native_proxy_browser.py::test_invalid_completion_ack_retains_intent_without_success[chromium-malformed]
+============================== 5 failed in 8.07s ===============================

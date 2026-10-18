@@ -1,0 +1,167 @@
+/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/_pytest/threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread litellm-model-cost-map-retry
+
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_model_cost_map.py", line 580, in _retry_remote_fetch_in_background
+    first_wait: Final = _next_retry_wait(outcome=first_outcome, attempt=1, max_attempts=max_attempts, rng=rng)
+                        ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_model_cost_map.py", line 315, in _next_retry_wait
+    verbose_logger.warning(
+    ~~~~~~~~~~~~~~~~~~~~~~^
+        "LiteLLM: model cost map fetch attempt %d/%d failed (%s); retrying in %.1fs",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        wait_seconds,
+        ^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py", line 1534, in warning
+    self._log(WARNING, msg, args, **kwargs)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py", line 1667, in _log
+    self.handle(record)
+    ~~~~~~~~~~~^^^^^^^^
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py", line 1681, in handle
+    maybe_record = self.filter(record)
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py", line 867, in filter
+    result = f.filter(record)
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/_logging.py", line 551, in filter
+    return _process_record(
+        record,
+    ...<2 lines>...
+        redact=_ENABLE_SECRET_REDACTION,
+    )
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/_logging.py", line 455, in _process_record
+    candidate: Final = diagnostics.run(
+                       ~~~~~~~~~~~~~~~^
+        lambda native: native.process_diagnostic(message, exception, stack, leaves, (redact, base64_limit, text_limit)),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        lambda: _python_process_diagnostic(message, exception, stack, leaves, redact, base64_limit, text_limit),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/rust_bridge/diagnostics.py", line 47, in run
+    from litellm.rust_bridge.catalog import LoggerContext, decision
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/rust_bridge/catalog.py", line 15, in <module>
+    from litellm.types.secret_managers.main import KeyManagementSystem
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1322, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1262, in _find_spec
+  File "<frozen importlib._bootstrap_external>", line 1559, in find_spec
+  File "<frozen importlib._bootstrap_external>", line 1528, in _get_spec
+  File "<frozen importlib._bootstrap_external>", line 1399, in __iter__
+  File "<frozen importlib._bootstrap_external>", line 1386, in _recalculate
+  File "<frozen importlib._bootstrap_external>", line 1399, in __iter__
+  File "<frozen importlib._bootstrap_external>", line 1386, in _recalculate
+  File "<frozen importlib._bootstrap_external>", line 1382, in _get_parent_path
+KeyError: 'litellm'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/threading.py", line 1043, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/threading.py", line 994, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_model_cost_map.py", line 615, in _retry_remote_fetch_in_background
+    verbose_logger.warning("LiteLLM: Background model cost map retry failed: %s", e)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py", line 1534, in warning
+    self._log(WARNING, msg, args, **kwargs)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py", line 1667, in _log
+    self.handle(record)
+    ~~~~~~~~~~~^^^^^^^^
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py", line 1681, in handle
+    maybe_record = self.filter(record)
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py", line 867, in filter
+    result = f.filter(record)
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/_logging.py", line 551, in filter
+    return _process_record(
+        record,
+    ...<2 lines>...
+        redact=_ENABLE_SECRET_REDACTION,
+    )
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/_logging.py", line 455, in _process_record
+    candidate: Final = diagnostics.run(
+                       ~~~~~~~~~~~~~~~^
+        lambda native: native.process_diagnostic(message, exception, stack, leaves, (redact, base64_limit, text_limit)),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        lambda: _python_process_diagnostic(message, exception, stack, leaves, redact, base64_limit, text_limit),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/rust_bridge/diagnostics.py", line 47, in run
+    from litellm.rust_bridge.catalog import LoggerContext, decision
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/rust_bridge/catalog.py", line 15, in <module>
+    from litellm.types.secret_managers.main import KeyManagementSystem
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1322, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1262, in _find_spec
+  File "<frozen importlib._bootstrap_external>", line 1559, in find_spec
+  File "<frozen importlib._bootstrap_external>", line 1528, in _get_spec
+  File "<frozen importlib._bootstrap_external>", line 1399, in __iter__
+  File "<frozen importlib._bootstrap_external>", line 1386, in _recalculate
+  File "<frozen importlib._bootstrap_external>", line 1399, in __iter__
+  File "<frozen importlib._bootstrap_external>", line 1386, in _recalculate
+  File "<frozen importlib._bootstrap_external>", line 1382, in _get_parent_path
+KeyError: 'litellm'
+
+Enable tracemalloc to get traceback where the object was allocated.
+See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+  warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+___________ ERROR collecting tests/unit/test_mp07_ruling_producer.py ___________
+ImportError while importing test module '/Users/flo/Developer/github/agent-economy/services/court/tests/unit/test_mp07_ruling_producer.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_ruling_producer.py:19: in <module>
+    from court_service.services.ruling_orchestrator import RulingOrchestrator
+src/court_service/services/__init__.py:4: in <module>
+    from court_service.services.dispute_service import DisputeService
+src/court_service/services/dispute_service.py:11: in <module>
+    from court_service.services.ruling_orchestrator import RulingOrchestrator
+src/court_service/services/ruling_orchestrator.py:11: in <module>
+    from court_service.judges import DisputeContext, JudgeVote
+src/court_service/judges/__init__.py:4: in <module>
+    from court_service.judges.llm_judge import LLMJudge
+src/court_service/judges/llm_judge.py:9: in <module>
+    import litellm
+.venv/lib/python3.13/site-packages/litellm/__init__.py:563: in <module>
+    model_cost = get_model_cost_map(url=model_cost_map_url)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_model_cost_map.py:672: in get_model_cost_map
+    verbose_logger.warning(
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py:1534: in warning
+    self._log(WARNING, msg, args, **kwargs)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py:1667: in _log
+    self.handle(record)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py:1681: in handle
+    maybe_record = self.filter(record)
+                   ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/logging/__init__.py:867: in filter
+    result = f.filter(record)
+             ^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/litellm/_logging.py:551: in filter
+    return _process_record(
+.venv/lib/python3.13/site-packages/litellm/_logging.py:455: in _process_record
+    candidate: Final = diagnostics.run(
+.venv/lib/python3.13/site-packages/litellm/rust_bridge/diagnostics.py:47: in run
+    from litellm.rust_bridge.catalog import LoggerContext, decision
+E   ImportError: cannot import name 'LoggerContext' from partially initialized module 'litellm.rust_bridge.catalog' (most likely due to a circular import) (/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/litellm/rust_bridge/catalog.py)
+=========================== short test summary info ============================
+ERROR tests/unit/test_mp07_ruling_producer.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 2.51s ===============================

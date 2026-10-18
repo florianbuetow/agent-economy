@@ -10,6 +10,12 @@ import pytest_asyncio
 
 from tests.integration.conftest import read_one
 from tests.integration.gateway_helpers import create_gateway_client
+from tests.integration.native_task_fixtures import (
+    accept_native_bid,
+    freeze_task_clock,
+    publish_open_task,
+    submit_native_bid,
+)
 
 if TYPE_CHECKING:
     import httpx
@@ -112,39 +118,36 @@ async def _create_task_with_escrow(
     assert lock_envelope["receipt"]["source_reference"] == task_id
     assert lock_envelope["current_escrow"]["status"] == "locked"
 
-    task_response = await client.post(
-        "/board/tasks",
-        json={
+    task_response = await publish_open_task(
+        client,
+        task_id=task_id,
+        poster_id=poster_id,
+        title="Test Task",
+        spec="Implement something useful",
+        reward=reward,
+        escrow_id=f"esc-{task_id}",
+        created_at="2026-03-02T04:21:00Z",
+        bidding_deadline="2026-03-02T05:21:00Z",
+        bidding_deadline_seconds=3600,
+        acceptance_window_seconds=1800,
+        execution_deadline_seconds=7200,
+        review_deadline_seconds=3600,
+        event={
+            "event_source": "board",
+            "event_type": "task.created",
+            "timestamp": "2026-03-02T04:21:00Z",
+            "agent_id": poster_id,
             "task_id": task_id,
-            "poster_id": poster_id,
-            "title": "Test Task",
-            "spec": "Implement something useful",
-            "reward": reward,
-            "status": "open",
-            "bidding_deadline_seconds": 3600,
-            "deadline_seconds": 7200,
-            "review_deadline_seconds": 3600,
-            "bidding_deadline": "2026-03-02T05:21:00Z",
-            "bid_count": 0,
-            "escrow_pending": 0,
-            "escrow_id": f"esc-{task_id}",
-            "created_at": "2026-03-02T04:21:00Z",
-            "event": {
-                "event_source": "board",
-                "event_type": "task.created",
-                "timestamp": "2026-03-02T04:21:00Z",
-                "agent_id": poster_id,
-                "task_id": task_id,
-                "summary": "Task created: Test Task",
-                "payload": json.dumps({"title": "Test Task", "reward": reward}),
-            },
+            "summary": "Task created: Test Task",
+            "payload": json.dumps({"title": "Test Task", "reward": reward}),
         },
     )
     assert task_response.status_code == 201
 
 
 @pytest_asyncio.fixture
-async def gw_client(initialized_db: str):
+async def gw_client(initialized_db: str, monkeypatch: pytest.MonkeyPatch):
+    freeze_task_clock(monkeypatch, "2026-03-02T04:30:00Z")
     client = create_gateway_client(initialized_db)
     async with client:
         await _setup_agents_and_accounts(client)
@@ -180,28 +183,15 @@ class TestTaskBoardGatewayWrites:
     ) -> None:
         await _create_task_with_escrow(gw_client, "t-bid-001", "a-poster", 200)
 
-        response = await gw_client.post(
-            "/board/bids",
-            json={
-                "bid_id": "bid-001",
-                "task_id": "t-bid-001",
-                "bidder_id": "a-worker",
-                "proposal": "I can do this well",
-                "amount": 180,
-                "submitted_at": "2026-03-02T04:25:00Z",
-                "constraints": {"status": "open"},
-                "event": {
-                    "event_source": "board",
-                    "event_type": "bid.submitted",
-                    "timestamp": "2026-03-02T04:25:00Z",
-                    "agent_id": "a-worker",
-                    "task_id": "t-bid-001",
-                    "summary": "Bid submitted",
-                    "payload": json.dumps({"bid_id": "bid-001", "amount": 180}),
-                },
-            },
+        response = await submit_native_bid(
+            gw_client,
+            operation_id="op-00000000-0000-4000-8000-000000000104",
+            task_id="t-bid-001",
+            bid_id="bid-001",
+            bidder_id="a-worker",
+            amount=180,
         )
-        assert response.status_code == 201
+        assert response.status_code == 200
 
         bid = read_one(
             initialized_db,
@@ -211,7 +201,7 @@ class TestTaskBoardGatewayWrites:
         assert bid is not None
         assert bid["task_id"] == "t-bid-001"
         assert bid["bidder_id"] == "a-worker"
-        assert bid["proposal"] == "I can do this well"
+        assert bid["proposal"] == "180"
         assert bid["amount"] == 180
 
     async def test_update_task_status_writes_updated_fields(
@@ -221,27 +211,25 @@ class TestTaskBoardGatewayWrites:
     ) -> None:
         await _create_task_with_escrow(gw_client, "t-status-001", "a-poster", 300)
 
-        response = await gw_client.post(
-            "/board/tasks/t-status-001/status",
-            json={
-                "updates": {
-                    "status": "accepted",
-                    "worker_id": "a-worker",
-                    "accepted_bid_id": "bid-accepted-001",
-                    "accepted_at": "2026-03-02T04:30:00Z",
-                    "execution_deadline": "2026-03-02T06:30:00Z",
-                },
-                "constraints": {"status": "open"},
-                "event": {
-                    "event_source": "board",
-                    "event_type": "task.accepted",
-                    "timestamp": "2026-03-02T04:30:00Z",
-                    "agent_id": "a-poster",
-                    "task_id": "t-status-001",
-                    "summary": "Task accepted",
-                    "payload": json.dumps({"worker_id": "a-worker"}),
-                },
-            },
+        bid_response = await submit_native_bid(
+            gw_client,
+            operation_id="op-00000000-0000-4000-8000-000000000105",
+            task_id="t-status-001",
+            bid_id="bid-accepted-001",
+            bidder_id="a-worker",
+            amount=275,
+        )
+        assert bid_response.status_code == 200
+        response = await accept_native_bid(
+            gw_client,
+            operation_id="op-00000000-0000-4000-8000-000000000106",
+            task_id="t-status-001",
+            bid_id="bid-accepted-001",
+            poster_id="a-poster",
+            worker_id="a-worker",
+            escrow_id="esc-t-status-001",
+            reward=300,
+            bid_amount=275,
         )
         assert response.status_code == 200
 

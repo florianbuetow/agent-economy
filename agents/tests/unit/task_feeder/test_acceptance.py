@@ -11,11 +11,11 @@ window has opened (``acceptance_after_seconds``) or a bid quorum
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
-import httpx
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 from task_feeder.acceptance import (
     AcceptanceLoop,
@@ -23,6 +23,19 @@ from task_feeder.acceptance import (
     select_winning_bid,
 )
 from task_feeder.config import AcceptanceConfig
+
+from ._runtime_fixtures import (
+    POSTER_ID,
+    TASK_ID,
+    make_agent,
+    open_task,
+    runtime_commands,
+)
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from base_agent.runtime_task_commands import RuntimeTaskCommands
 
 BASE = datetime(2026, 7, 10, 12, 0, 0, tzinfo=UTC)
 
@@ -65,24 +78,23 @@ def _feedback(category: str, rating: str, to_agent_id: str = "w-a") -> dict[str,
     }
 
 
-def _task(bid_count: int, created_at: datetime = BASE, task_id: str = "t-1") -> dict[str, Any]:
-    return {
-        "task_id": task_id,
-        "status": "open",
-        "bid_count": bid_count,
-        "created_at": _iso(created_at),
-    }
+def _task(
+    bid_count: int,
+    created_at: datetime = BASE,
+    task_id: str = TASK_ID,
+) -> dict[str, Any]:
+    task = open_task(task_id=task_id)
+    task.update(bid_count=bid_count, created_at=_iso(created_at))
+    return task
 
 
 def _make_agent(
     bids: list[dict[str, Any]] | None = None,
     feedback_by_agent: dict[str, list[dict[str, Any]]] | None = None,
 ) -> MagicMock:
-    agent = MagicMock()
-    agent.agent_id = "feeder-1"
-    agent.list_tasks = AsyncMock(return_value=[])
+    agent = make_agent()
+    agent.get_task = AsyncMock(return_value=open_task())
     agent.list_bids = AsyncMock(return_value=bids if bids is not None else [])
-    agent.accept_bid = AsyncMock(return_value={"status": "accepted"})
     feedback = feedback_by_agent if feedback_by_agent is not None else {}
 
     async def _get_feedback(agent_id: str) -> list[dict[str, Any]]:
@@ -92,10 +104,13 @@ def _make_agent(
     return agent
 
 
-def _http_error(status_code: int) -> httpx.HTTPStatusError:
-    request = httpx.Request("POST", "http://localhost:8003/accept")
-    response = httpx.Response(status_code, request=request)
-    return httpx.HTTPStatusError("boom", request=request, response=response)
+def _eligibility_loop(now: datetime) -> AcceptanceLoop:
+    return AcceptanceLoop(
+        agent=cast("Any", _make_agent()),
+        config=_make_config(),
+        now=lambda: now,
+        commands=cast("RuntimeTaskCommands", object()),
+    )
 
 
 @pytest.mark.unit
@@ -146,100 +161,144 @@ class TestSelectWinningBid:
 @pytest.mark.unit
 class TestEligibility:
     def test_not_eligible_before_threshold_and_quorum(self) -> None:
-        loop = AcceptanceLoop(agent=_make_agent(), config=_make_config(), now=lambda: BASE)
+        loop = _eligibility_loop(BASE)
         assert not loop.is_eligible(_iso(BASE), bid_count=1)
 
     def test_eligible_when_quorum_met(self) -> None:
-        loop = AcceptanceLoop(agent=_make_agent(), config=_make_config(), now=lambda: BASE)
+        loop = _eligibility_loop(BASE)
         assert loop.is_eligible(_iso(BASE), bid_count=2)
 
     def test_eligible_when_time_threshold_passed(self) -> None:
         now = BASE + timedelta(seconds=40)
-        loop = AcceptanceLoop(agent=_make_agent(), config=_make_config(), now=lambda: now)
+        loop = _eligibility_loop(now)
         assert loop.is_eligible(_iso(BASE), bid_count=1)
 
     def test_zero_bids_never_eligible(self) -> None:
         now = BASE + timedelta(seconds=1000)
-        loop = AcceptanceLoop(agent=_make_agent(), config=_make_config(), now=lambda: now)
+        loop = _eligibility_loop(now)
         assert not loop.is_eligible(_iso(BASE), bid_count=0)
 
 
 @pytest.mark.unit
 class TestAcceptOne:
     @pytest.mark.asyncio
-    async def test_accepts_lowest_bid_when_eligible(self) -> None:
+    async def test_accepts_lowest_bid_when_eligible(self, tmp_path: Path) -> None:
         agent = _make_agent(bids=[_bid("b-1", "w-a", 8), _bid("b-2", "w-b", 6)])
-        loop = AcceptanceLoop(agent=agent, config=_make_config(), now=lambda: BASE)
-        result = await loop.accept_one(_task(bid_count=2))
+        with runtime_commands(tmp_path, agent) as (commands, _store):
+            loop = AcceptanceLoop(
+                agent=agent, config=_make_config(), now=lambda: BASE, commands=commands
+            )
+            result = await loop.accept_one(_task(bid_count=2))
         assert result == "accepted"
-        agent.accept_bid.assert_awaited_once_with("t-1", "b-2")
+        agent.accept_bid.assert_awaited_once_with(
+            TASK_ID,
+            "b-2",
+            operation_id=operation_id_for("task-accept", (TASK_ID, "7")),
+            expected_lifecycle_version=7,
+        )
 
     @pytest.mark.asyncio
-    async def test_does_not_accept_before_eligibility(self) -> None:
+    async def test_does_not_accept_before_eligibility(self, tmp_path: Path) -> None:
         agent = _make_agent(bids=[_bid("b-1", "w-a", 6)])
-        loop = AcceptanceLoop(agent=agent, config=_make_config(), now=lambda: BASE)
-        result = await loop.accept_one(_task(bid_count=1))
+        with runtime_commands(tmp_path, agent) as (commands, store):
+            loop = AcceptanceLoop(
+                agent=agent, config=_make_config(), now=lambda: BASE, commands=commands
+            )
+            result = await loop.accept_one(_task(bid_count=1))
+            assert store.load(TASK_ID, "acceptance") is None
         assert result == "not_eligible"
         agent.accept_bid.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_zero_bids_left_to_expire(self) -> None:
+    async def test_zero_bids_left_to_expire(self, tmp_path: Path) -> None:
         now = BASE + timedelta(seconds=1000)
         agent = _make_agent()
-        loop = AcceptanceLoop(agent=agent, config=_make_config(), now=lambda: now)
-        result = await loop.accept_one(_task(bid_count=0))
+        with runtime_commands(tmp_path, agent) as (commands, store):
+            loop = AcceptanceLoop(
+                agent=agent, config=_make_config(), now=lambda: now, commands=commands
+            )
+            result = await loop.accept_one(_task(bid_count=0))
+            assert store.load(TASK_ID, "acceptance") is None
         assert result == "not_eligible"
         agent.accept_bid.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_acceptance_happens_strictly_before_bidding_deadline(self) -> None:
+    async def test_acceptance_happens_strictly_before_bidding_deadline(
+        self, tmp_path: Path
+    ) -> None:
         config = _make_config()
         # T-035 ordering invariant: the acceptance window opens before expiry.
         assert config.acceptance_after_seconds < config.bidding_deadline_seconds
         now = BASE + timedelta(seconds=config.acceptance_after_seconds)
         agent = _make_agent(bids=[_bid("b-1", "w-a", 6)])
-        loop = AcceptanceLoop(agent=agent, config=config, now=lambda: now)
-        # bid_count 1 < quorum 2, so only the time threshold can make it eligible.
-        result = await loop.accept_one(_task(bid_count=1))
+        with runtime_commands(tmp_path, agent) as (commands, _store):
+            loop = AcceptanceLoop(agent=agent, config=config, now=lambda: now, commands=commands)
+            # bid_count 1 < quorum 2, so only the time threshold can make it eligible.
+            result = await loop.accept_one(_task(bid_count=1))
         assert result == "accepted"
         agent.accept_bid.assert_awaited_once()
         elapsed = (now - BASE).total_seconds()
         assert elapsed < config.bidding_deadline_seconds
 
     @pytest.mark.asyncio
-    async def test_409_marks_done_with_and_does_not_crash(self) -> None:
+    async def test_generic_409_remains_pending_and_does_not_finalize(self, tmp_path: Path) -> None:
         agent = _make_agent(bids=[_bid("b-1", "w-a", 6)])
-        agent.accept_bid = AsyncMock(side_effect=_http_error(409))
-        loop = AcceptanceLoop(
-            agent=agent, config=_make_config(min_bids_to_accept=1), now=lambda: BASE
-        )
-        result = await loop.accept_one(_task(bid_count=1))
-        assert result == "conflict"
+        with runtime_commands(tmp_path, agent, acknowledgment="generic_conflict") as (
+            commands,
+            store,
+        ):
+            loop = AcceptanceLoop(
+                agent=agent,
+                config=_make_config(min_bids_to_accept=1),
+                now=lambda: BASE,
+                commands=commands,
+            )
+            result = await loop.accept_one(_task(bid_count=1))
+            saved = store.load(TASK_ID, "acceptance")
+        assert result == "pending"
+        assert saved is not None and saved.state == "pending"
+        assert TASK_ID not in loop._finalized
 
     @pytest.mark.asyncio
-    async def test_non_conflict_http_error_propagates(self) -> None:
+    async def test_native_dependency_failure_is_journaled_pending_and_retried(
+        self, tmp_path: Path
+    ) -> None:
         agent = _make_agent(bids=[_bid("b-1", "w-a", 6)])
-        agent.accept_bid = AsyncMock(side_effect=_http_error(500))
-        loop = AcceptanceLoop(
-            agent=agent, config=_make_config(min_bids_to_accept=1), now=lambda: BASE
-        )
-        with pytest.raises(httpx.HTTPStatusError):
-            await loop.accept_one(_task(bid_count=1))
+        with runtime_commands(tmp_path, agent, acknowledgment="dependency_failure") as (
+            commands,
+            store,
+        ):
+            loop = AcceptanceLoop(
+                agent=agent,
+                config=_make_config(min_bids_to_accept=1),
+                now=lambda: BASE,
+                commands=commands,
+            )
+            first = await loop.accept_one(_task(bid_count=1))
+            second = await loop.accept_one(_task(bid_count=1))
+            saved = store.load(TASK_ID, "acceptance")
+        assert first == second == "pending"
+        assert saved is not None and saved.state == "pending"
+        assert agent.accept_bid.await_count == 2
+        assert TASK_ID not in loop._finalized
 
 
 @pytest.mark.unit
 class TestProcessOpenTasks:
     @pytest.mark.asyncio
-    async def test_polls_own_open_tasks_and_accepts_lowest(self) -> None:
+    async def test_polls_own_open_tasks_and_accepts_lowest(self, tmp_path: Path) -> None:
         agent = _make_agent(bids=[_bid("b-1", "w-a", 8), _bid("b-2", "w-b", 6)])
         agent.list_tasks = AsyncMock(return_value=[_task(bid_count=2)])
-        loop = AcceptanceLoop(agent=agent, config=_make_config(), now=lambda: BASE)
-        await loop.process_open_tasks()
-        agent.list_tasks.assert_awaited_once_with(status="open", poster_id="feeder-1")
-        agent.accept_bid.assert_awaited_once_with("t-1", "b-2")
+        with runtime_commands(tmp_path, agent) as (commands, _store):
+            loop = AcceptanceLoop(
+                agent=agent, config=_make_config(), now=lambda: BASE, commands=commands
+            )
+            await loop.process_open_tasks()
+        agent.list_tasks.assert_awaited_once_with(status="open", poster_id=POSTER_ID)
+        assert agent.accept_bid.await_args.args == (TASK_ID, "b-2")
 
     @pytest.mark.asyncio
-    async def test_amount_tie_broken_by_reputation_via_loop(self) -> None:
+    async def test_amount_tie_broken_by_reputation_via_loop(self, tmp_path: Path) -> None:
         agent = _make_agent(
             bids=[_bid("b-1", "w-a", 6), _bid("b-2", "w-b", 6)],
             feedback_by_agent={
@@ -248,18 +307,29 @@ class TestProcessOpenTasks:
             },
         )
         agent.list_tasks = AsyncMock(return_value=[_task(bid_count=2)])
-        loop = AcceptanceLoop(agent=agent, config=_make_config(), now=lambda: BASE)
-        await loop.process_open_tasks()
-        agent.accept_bid.assert_awaited_once_with("t-1", "b-2")
+        with runtime_commands(tmp_path, agent) as (commands, _store):
+            loop = AcceptanceLoop(
+                agent=agent, config=_make_config(), now=lambda: BASE, commands=commands
+            )
+            await loop.process_open_tasks()
+        assert agent.accept_bid.await_args.args == (TASK_ID, "b-2")
 
     @pytest.mark.asyncio
-    async def test_finalized_task_not_retried_after_conflict(self) -> None:
+    async def test_definitively_rejected_task_is_not_sent_again(self, tmp_path: Path) -> None:
         agent = _make_agent(bids=[_bid("b-1", "w-a", 6)])
-        agent.accept_bid = AsyncMock(side_effect=_http_error(409))
         agent.list_tasks = AsyncMock(return_value=[_task(bid_count=1)])
-        loop = AcceptanceLoop(
-            agent=agent, config=_make_config(min_bids_to_accept=1), now=lambda: BASE
-        )
-        await loop.process_open_tasks()
-        await loop.process_open_tasks()
+        with runtime_commands(tmp_path, agent, acknowledgment="definitive_rejection") as (
+            commands,
+            store,
+        ):
+            loop = AcceptanceLoop(
+                agent=agent,
+                config=_make_config(min_bids_to_accept=1),
+                now=lambda: BASE,
+                commands=commands,
+            )
+            await loop.process_open_tasks()
+            await loop.process_open_tasks()
+            saved = store.load(TASK_ID, "acceptance")
         assert agent.accept_bid.await_count == 1
+        assert saved is not None and saved.state == "definitive_rejection"

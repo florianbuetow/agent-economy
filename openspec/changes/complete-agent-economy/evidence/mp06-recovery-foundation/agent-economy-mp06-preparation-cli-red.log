@@ -1,0 +1,108 @@
+F.......FFF.                                                             [100%]
+=================================== FAILURES ===================================
+________ test_prepare_cli_requires_and_retains_explicit_registry_limits ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b66efd0>
+
+    def test_prepare_cli_requires_and_retains_explicit_registry_limits(monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("sys.argv", [
+            "isolated_test_runtime.py", "--prepare-recovery", "--registry-timeout-seconds", "2.5",
+            "--registry-max-attempts", "3", "--", "/usr/bin/true",
+        ])
+>       args = runtime_module._parse_args()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../../tests/runtime/test_recovery_preparation_cli.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../scripts/isolated_test_runtime.py:1078: in _parse_args
+    return parser.parse_args()
+           ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:1902: in parse_args
+    self.error(msg)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2658: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = ArgumentParser(prog='isolated_test_runtime.py', usage=None, description='Run live test phases against a disposable, process-owned service stack.', formatter_class=<class 'argparse.HelpFormatter'>, conflict_handler='error', add_help=True)
+status = 2
+message = 'isolated_test_runtime.py: error: unrecognized arguments: --prepare-recovery --registry-timeout-seconds\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+>       _sys.exit(status)
+E       SystemExit: 2
+
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/argparse.py:2645: SystemExit
+----------------------------- Captured stderr call -----------------------------
+usage: isolated_test_runtime.py [-h] [--artifacts-root ARTIFACTS_ROOT]
+                                [--provision] [--services SERVICES]
+                                ...
+isolated_test_runtime.py: error: unrecognized arguments: --prepare-recovery --registry-timeout-seconds
+______ test_cli_prepares_after_a_drained_successful_or_failed_command[0] _______
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1056/test_cli_prepares_after_a_drai0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b7ada90>
+capsys = <_pytest.capture.CaptureFixture object at 0x10b73cc20>, phase_exit = 0
+
+    @pytest.mark.parametrize("phase_exit", [0, 7])
+    def test_cli_prepares_after_a_drained_successful_or_failed_command(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], phase_exit: int,
+    ) -> None:
+        runtime = _Runtime(tmp_path, phase_exit, False)
+        assert _route(monkeypatch, runtime, True) == phase_exit
+>       assert runtime.calls == ["start", "command", "prepare", "stop"]
+E       AssertionError: assert ['start', 'command', 'stop'] == ['start', 'co...pare', 'stop']
+E         
+E         At index 2 diff: 'stop' != 'prepare'
+E         Right contains one more item: 'stop'
+E         Use -v to get more diff
+
+../../tests/runtime/test_recovery_preparation_cli.py:96: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1056/test_cli_prepares_after_a_drai0
+______ test_cli_prepares_after_a_drained_successful_or_failed_command[7] _______
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1056/test_cli_prepares_after_a_drai1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b786b30>
+capsys = <_pytest.capture.CaptureFixture object at 0x10b69fc50>, phase_exit = 7
+
+    @pytest.mark.parametrize("phase_exit", [0, 7])
+    def test_cli_prepares_after_a_drained_successful_or_failed_command(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], phase_exit: int,
+    ) -> None:
+        runtime = _Runtime(tmp_path, phase_exit, False)
+        assert _route(monkeypatch, runtime, True) == phase_exit
+>       assert runtime.calls == ["start", "command", "prepare", "stop"]
+E       AssertionError: assert ['start', 'command', 'stop'] == ['start', 'co...pare', 'stop']
+E         
+E         At index 2 diff: 'stop' != 'prepare'
+E         Right contains one more item: 'stop'
+E         Use -v to get more diff
+
+../../tests/runtime/test_recovery_preparation_cli.py:96: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1056/test_cli_prepares_after_a_drai1
+_______ test_cli_preparation_failure_is_nonzero_redacted_and_still_stops _______
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1056/test_cli_preparation_failure_i0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b786350>
+capsys = <_pytest.capture.CaptureFixture object at 0x10b69f110>
+
+    def test_cli_preparation_failure_is_nonzero_redacted_and_still_stops(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        runtime = _Runtime(tmp_path, 0, True)
+>       assert _route(monkeypatch, runtime, True) == 1
+E       assert 0 == 1
+E        +  where 0 = _route(<_pytest.monkeypatch.MonkeyPatch object at 0x10b786350>, <test_recovery_preparation_cli._Runtime object at 0x10b69e990>, True)
+
+../../tests/runtime/test_recovery_preparation_cli.py:107: AssertionError
+----------------------------- Captured stdout call -----------------------------
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1056/test_cli_preparation_failure_i0
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_recovery_preparation_cli.py::test_prepare_cli_requires_and_retains_explicit_registry_limits
+FAILED ../../tests/runtime/test_recovery_preparation_cli.py::test_cli_prepares_after_a_drained_successful_or_failed_command[0]
+FAILED ../../tests/runtime/test_recovery_preparation_cli.py::test_cli_prepares_after_a_drained_successful_or_failed_command[7]
+FAILED ../../tests/runtime/test_recovery_preparation_cli.py::test_cli_preparation_failure_is_nonzero_redacted_and_still_stops
+4 failed, 8 passed in 0.41s

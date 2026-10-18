@@ -102,7 +102,7 @@ def _create_task(
     """Create a full task. Returns (task_id, poster_id, escrow_id)."""
     pid = poster_id or _setup_funded_account(client)
     eid, tid = _lock_escrow(client, pid)
-    client.post(
+    response = client.post(
         "/board/tasks",
         json={
             "task_id": tid,
@@ -112,14 +112,16 @@ def _create_task(
             "reward": 100,
             "status": "open",
             "bidding_deadline_seconds": 86400,
+            "acceptance_window_seconds": 3600,
             "deadline_seconds": 172800,
             "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:00:00Z",
+            "bidding_deadline": "2026-03-01T10:15:00Z",
             "escrow_id": eid,
             "created_at": "2026-02-28T10:15:00Z",
             "event": make_event(source="board", event_type="task.created", task_id=tid),
         },
     )
+    assert response.status_code == 201
     return tid, pid, eid
 
 

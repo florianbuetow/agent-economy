@@ -1,0 +1,312 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 40 items
+
+tests/unit/test_mp07_rebuttal_projection.py FFFFFFFFFFFF.F               [ 35%]
+tests/unit/test_mp07_native_write_boundary.py FFFFFFFFFFFFFFFFFFFFFFFFF. [100%]
+
+=================================== FAILURES ===================================
+_ test_rebuttal_projects_exact_timestamp_with_one_event_and_unchanged_version __
+tests/unit/test_mp07_rebuttal_projection.py:162: in test_rebuttal_projects_exact_timestamp_with_one_event_and_unchanged_version
+    assert (
+E   AssertionError: assert None == '2099-01-01T00:00:07Z'
+_ test_active_or_blocked_task_operation_rejects_rebuttal_before_any_write[claimed] _
+tests/unit/test_mp07_rebuttal_projection.py:209: in test_active_or_blocked_task_operation_rejects_rebuttal_before_any_write
+    raised = _assert_rejected_without_effects(
+tests/unit/test_mp07_rebuttal_projection.py:103: in _assert_rejected_without_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_active_or_blocked_task_operation_rejects_rebuttal_before_any_write[blocked] _
+tests/unit/test_mp07_rebuttal_projection.py:209: in test_active_or_blocked_task_operation_rejects_rebuttal_before_any_write
+    raised = _assert_rejected_without_effects(
+tests/unit/test_mp07_rebuttal_projection.py:103: in _assert_rejected_without_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_____ test_unresolved_legacy_observation_rejects_rebuttal_before_any_write _____
+tests/unit/test_mp07_rebuttal_projection.py:255: in test_unresolved_legacy_observation_rejects_rebuttal_before_any_write
+    raised = _assert_rejected_without_effects(
+tests/unit/test_mp07_rebuttal_projection.py:103: in _assert_rejected_without_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_________________ test_rebuttal_requires_disputed_task_status __________________
+tests/unit/test_mp07_rebuttal_projection.py:268: in test_rebuttal_requires_disputed_task_status
+    _assert_rejected_without_effects(db_writer, _rebuttal(dispute), 409, "invalid_status")
+tests/unit/test_mp07_rebuttal_projection.py:103: in _assert_rejected_without_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+__________________ test_rebuttal_requires_task_claim_linkage ___________________
+tests/unit/test_mp07_rebuttal_projection.py:279: in test_rebuttal_requires_task_claim_linkage
+    _assert_rejected_without_effects(db_writer, _rebuttal(dispute), 409, "payload_mismatch")
+tests/unit/test_mp07_rebuttal_projection.py:103: in _assert_rejected_without_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_________ test_rebuttal_requires_claim_parties_to_match_task[claimant] _________
+tests/unit/test_mp07_rebuttal_projection.py:300: in test_rebuttal_requires_claim_parties_to_match_task
+    _assert_rejected_without_effects(db_writer, _rebuttal(dispute), 409, "payload_mismatch")
+tests/unit/test_mp07_rebuttal_projection.py:103: in _assert_rejected_without_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+________ test_rebuttal_requires_claim_parties_to_match_task[respondent] ________
+tests/unit/test_mp07_rebuttal_projection.py:300: in test_rebuttal_requires_claim_parties_to_match_task
+    _assert_rejected_without_effects(db_writer, _rebuttal(dispute), 409, "payload_mismatch")
+tests/unit/test_mp07_rebuttal_projection.py:103: in _assert_rejected_without_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+____________ test_rebuttal_requires_request_agent_to_be_task_worker ____________
+tests/unit/test_mp07_rebuttal_projection.py:308: in test_rebuttal_requires_request_agent_to_be_task_worker
+    _assert_rejected_without_effects(db_writer, data, 403, "forbidden")
+tests/unit/test_mp07_rebuttal_projection.py:103: in _assert_rejected_without_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+____________________ test_rebuttal_requires_persisted_claim ____________________
+tests/unit/test_mp07_rebuttal_projection.py:316: in test_rebuttal_requires_persisted_claim
+    _assert_rejected_without_effects(db_writer, data, 404, "claim_not_found")
+tests/unit/test_mp07_rebuttal_projection.py:105: in _assert_rejected_without_effects
+    assert raised.value.status_code == status_code
+E   AssertionError: assert 409 == 404
+E    +  where 409 = ServiceError('Foreign key constraint failed').status_code
+E    +    where ServiceError('Foreign key constraint failed') = <ExceptionInfo ServiceError('Foreign key constraint failed') tblen=4>.value
+_______ test_second_rebuttal_for_same_claim_is_rejected_even_with_new_id _______
+tests/unit/test_mp07_rebuttal_projection.py:330: in test_second_rebuttal_for_same_claim_is_rejected_even_with_new_id
+    _assert_rejected_without_effects(db_writer, _rebuttal(dispute), 409, "rebuttal_exists")
+tests/unit/test_mp07_rebuttal_projection.py:103: in _assert_rejected_without_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_____________ test_conflicting_board_rebuttal_marker_fails_closed ______________
+tests/unit/test_mp07_rebuttal_projection.py:341: in test_conflicting_board_rebuttal_marker_fails_closed
+    _assert_rejected_without_effects(
+tests/unit/test_mp07_rebuttal_projection.py:103: in _assert_rejected_without_effects
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_rebuttal_fault_rolls_back_court_projection_and_event[board_projection] __
+tests/unit/test_mp07_rebuttal_projection.py:366: in test_rebuttal_fault_rolls_back_court_projection_and_event
+    with pytest.raises((ServiceError, sqlite3.IntegrityError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'service_commons.exceptions.ServiceError'>, <class 'sqlite3.IntegrityError'>)
+________ test_unversioned_bid_writer_is_retired_on_an_idle_native_task _________
+tests/unit/test_mp07_native_write_boundary.py:153: in test_unversioned_bid_writer_is_retired_on_an_idle_native_task
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+___ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[status] ___
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[worker_id] __
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[accepted_bid_id] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[accepted_at] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[execution_deadline] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[submitted_at] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[review_deadline] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[approved_at] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[cancelled_at] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[dispute_reason] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[dispute_id] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[rebuttal_deadline] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[rebuttal_submitted_at] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[disputed_at] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[ruling_id] __
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[worker_pct] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[ruling_summary] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+__ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[ruled_at] __
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[expired_at] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_generic_status_writer_cannot_mutate_native_lifecycle_fields[escrow_pending] _
+tests/unit/test_mp07_native_write_boundary.py:227: in test_generic_status_writer_cannot_mutate_native_lifecycle_fields
+    _assert_native_operation_required(
+tests/unit/test_mp07_native_write_boundary.py:143: in _assert_native_operation_required
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+__ test_publication_cannot_bootstrap_native_lifecycle_state[status-accepted] ___
+tests/unit/test_mp07_native_write_boundary.py:262: in test_publication_cannot_bootstrap_native_lifecycle_state
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+____ test_publication_cannot_bootstrap_native_lifecycle_state[bid_count-1] _____
+tests/unit/test_mp07_native_write_boundary.py:262: in test_publication_cannot_bootstrap_native_lifecycle_state
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+__ test_publication_cannot_bootstrap_native_lifecycle_state[escrow_pending-1] __
+tests/unit/test_mp07_native_write_boundary.py:262: in test_publication_cannot_bootstrap_native_lifecycle_state
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_publication_cannot_bootstrap_native_lifecycle_state[dispute_id-clm-injected] _
+tests/unit/test_mp07_native_write_boundary.py:262: in test_publication_cannot_bootstrap_native_lifecycle_state
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_rebuttal_projects_exact_timestamp_with_one_event_and_unchanged_version
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_active_or_blocked_task_operation_rejects_rebuttal_before_any_write[claimed]
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_active_or_blocked_task_operation_rejects_rebuttal_before_any_write[blocked]
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_unresolved_legacy_observation_rejects_rebuttal_before_any_write
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_rebuttal_requires_disputed_task_status
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_rebuttal_requires_task_claim_linkage
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_rebuttal_requires_claim_parties_to_match_task[claimant]
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_rebuttal_requires_claim_parties_to_match_task[respondent]
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_rebuttal_requires_request_agent_to_be_task_worker
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_rebuttal_requires_persisted_claim
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_second_rebuttal_for_same_claim_is_rejected_even_with_new_id
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_conflicting_board_rebuttal_marker_fails_closed
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_rebuttal_fault_rolls_back_court_projection_and_event[board_projection]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_unversioned_bid_writer_is_retired_on_an_idle_native_task
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[status]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[worker_id]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[accepted_bid_id]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[accepted_at]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[execution_deadline]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[submitted_at]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[review_deadline]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[approved_at]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[cancelled_at]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[dispute_reason]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[dispute_id]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[rebuttal_deadline]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[rebuttal_submitted_at]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[disputed_at]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[ruling_id]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[worker_pct]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[ruling_summary]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[ruled_at]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[expired_at]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_generic_status_writer_cannot_mutate_native_lifecycle_fields[escrow_pending]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_publication_cannot_bootstrap_native_lifecycle_state[status-accepted]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_publication_cannot_bootstrap_native_lifecycle_state[bid_count-1]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_publication_cannot_bootstrap_native_lifecycle_state[escrow_pending-1]
+FAILED tests/unit/test_mp07_native_write_boundary.py::test_publication_cannot_bootstrap_native_lifecycle_state[dispute_id-clm-injected]
+=================== 38 failed, 2 passed, 1 warning in 6.38s ====================

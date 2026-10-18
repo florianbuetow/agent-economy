@@ -97,7 +97,9 @@ def _settings(lock_path: Path) -> SimpleNamespace:
             timeout_seconds=1,
             signing=object(),
         ),
-        deadline_evaluation=SimpleNamespace(evaluation_interval_seconds=60),
+        deadline_evaluation=SimpleNamespace(
+            evaluation_interval_seconds=60, actor_id="system-maintenance-test-deadline"
+        ),
         recovery=SimpleNamespace(maintenance_lock_path=lock_path),
     )
 

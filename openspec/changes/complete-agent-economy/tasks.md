@@ -41,6 +41,9 @@ Prerequisites: None; MP-00 focused proofs can precede this group.
 - [x] 2.13 [T-177] Prove that a transient health ReadTimeout aborts controlled UI fixture setup before its existing readiness budget; retain persistent-timeout and child-exit failure controls with diagnostics. Parent reproduced two intended reds/two controls; independent review approved. See evidence/ui-readiness-checkpoint.md; root19 passed the full gate; see evidence/root19-checkpoint.md.
 - [x] 2.14 [T-178] Keep transient timeouts inside the existing readiness polling loop without increasing timeout values; verify focused and unchanged browser cases, full UI, review and fresh root CI.
 
+- [x] 2.15 [T-179] Prove that audited standalone integration/unit startup log directories escape their temporary roots without starting services or writing ordinary logs; distinguish config-only inputs and manual ASGI helpers.
+- [x] 2.16 [T-180] Configure distinct owned temporary log directories for all audited service startup fixtures; verify boundary proofs and live regression runs with unchanged ordinary log hashes, preserving existing contents; require fresh root CI before closure.
+
 ## 3. MP-03: Durable keys and one token contract
 
 Prerequisites: MP-01.
@@ -89,10 +92,28 @@ and limitations. The full Core/Vision goal and later lifecycle/recovery packages
 
 Prerequisites: MP-06.
 
-- [ ] 7.1 [T-122] Write barrier-based multi-instance accept/cancel, submit/expire, approve/dispute and competing-acceptance tests; verify the current check-then-act failures.
-- [ ] 7.2 [T-123] Require authoritative state/version/actor/cutoff predicates and claim transitions before external effects; verify losers have conflicts without contradictory claim, asset, assignment or money effects.
-- [ ] 7.3 [T-123] Implement the owner-selected per-poster acceptance window with exact deadline equality and Q-16 feeder interaction; verify early poster choice, closed bidding, immediate zero-bid expiry, selected-window cutoff and immutable published/accepted terms without a silent duration.
-- [ ] 7.4 [T-123] Document the revised state/operation API and run real-gateway state histories; verify every history matches a valid serial outcome and semantic event.
+MP-07 is verified complete at Root22. Native schema/commands, all eleven lifecycle
+histories, poster-selected windows, producer rollout and durable caller replay are
+independently approved. Root22 passed every phase with 1,059 unchanged source/config
+files and 202 unchanged ordinary logs, including 65 Board integration, 211 cross/runtime,
+298 browser and 104 live-agent cases. All ten final SIGKILL histories passed in that gate.
+The three existing provider-credential skips do not prove the later real Court profile.
+See `evidence/root22-checkpoint.md` and `evidence/mp07-transitions/completion-audit.md`.
+The final independent verifier approved tasks 7.1–7.6 plus log-isolation tasks 2.15–2.16.
+The full Core/Vision goal and later recovery/evidence/economic packages remain open.
+
+- [x] 7.1 [T-122] Write barrier-based multi-instance accept/cancel, submit/expire, approve/dispute and competing-acceptance tests; verify the current check-then-act failures.
+- [x] 7.2 [T-123] Require authoritative state/version/actor/cutoff predicates and claim transitions before external effects; verify losers have conflicts without contradictory claim, asset, assignment or money effects.
+- [x] 7.3 [T-123] Implement the owner-selected per-poster acceptance window with exact deadline equality and Q-16 feeder interaction; verify early poster choice, closed bidding, immediate zero-bid expiry, selected-window cutoff and immutable published/accepted terms without a silent duration.
+- [x] 7.4 [T-123] Document the revised state/operation API and run real-gateway state histories; verify every history matches a valid serial outcome and semantic event.
+
+The runtime producer needs a durable caller intent before delivery; an in-memory UUID cache cannot
+satisfy the accepted restart requirement. T-181/T-182 isolate this prerequisite under MP-07 using the
+already reviewed producer contract and MP-01/03 foundations. They do not substitute for the complete
+MP-05/16/17/18 packages or their prerequisite gates.
+
+- [x] 7.5 [T-181] Capture runtime intent-loss and process/filesystem fault proofs for known bid/accept/submit/review slots; verify frozen replay before fresh eligibility, strict owner binding, and no false completion from current state.
+- [x] 7.6 [T-182] Implement caller-owned atomic JSON intent persistence and exact native replay plus explicit feeder acceptance-window input; verify restart/response-loss/local-write-failure cases without private Gateway access, SQL-rule exceptions or broader recovery closure claims.
 
 ## 8. MP-05: Recoverable posting
 

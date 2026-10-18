@@ -31,10 +31,60 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from service_auth.task_board_responses import TaskBoardCommandResponse
 
 from ui_service.core.state import get_app_state
 
 pytestmark = pytest.mark.integration
+
+OPERATION_ID = "op-00000000-0000-4000-8000-000000000072"
+NATIVE_IDENTITY = {
+    "operation_id": OPERATION_ID,
+    "expected_lifecycle_version": 7,
+}
+
+
+def _mutation_result(command: str, task_id: str) -> dict[str, Any]:
+    source_status, target_status, effect_kind = {
+        "accept_bid": ("open", "accepted", "none"),
+        "approve_task": ("submitted", "approved", "bank_release"),
+        "dispute_task": ("submitted", "disputed", "court_claim"),
+    }[command]
+    effect_reference = (
+        OPERATION_ID
+        if command == "approve_task"
+        else ("clm-native" if command == "dispute_task" else None)
+    )
+    return {
+        "task_id": task_id,
+        "status": target_status,
+        "lifecycle_version": 8,
+        "operation": {
+            "protocol_version": 1,
+            "operation_id": OPERATION_ID,
+            "task_id": task_id,
+            "command": command,
+            "request_sha256": "a" * 64,
+            "operation_state": "completed",
+            "source_status": source_status,
+            "source_lifecycle_version": 7,
+            "target_status": target_status,
+            "target_lifecycle_version": 8,
+            "effect_kind": effect_kind,
+            "effect_state": "none" if effect_kind == "none" else "succeeded",
+            "effect_operation_id": OPERATION_ID if command == "approve_task" else None,
+            "effect_result_reference": effect_reference,
+            "effect_intent": None if effect_kind == "none" else {"fixture": command},
+            "event_id": 72,
+            "result": {
+                "task_id": task_id,
+                "command": command,
+                "status": target_status,
+                "lifecycle_version": 8,
+                "event_id": 72,
+            },
+        },
+    }
 
 
 class _FakeUserAgent:
@@ -59,17 +109,26 @@ class _FakeUserAgent:
             raise self.post_task_raises
         return self.post_task_result
 
-    async def accept_bid(self, **kwargs: Any) -> dict[str, Any]:
+    async def accept_bid(self, **kwargs: Any) -> TaskBoardCommandResponse:
         self.accept_bid_calls.append(kwargs)
-        return {"task_id": kwargs["task_id"], "status": "accepted"}
+        return TaskBoardCommandResponse(
+            status_code=200,
+            body=_mutation_result("accept_bid", kwargs["task_id"]),
+        )
 
-    async def approve_task(self, **kwargs: Any) -> dict[str, Any]:
+    async def approve_task(self, **kwargs: Any) -> TaskBoardCommandResponse:
         self.approve_task_calls.append(kwargs)
-        return {"task_id": kwargs["task_id"], "status": "approved"}
+        return TaskBoardCommandResponse(
+            status_code=200,
+            body=_mutation_result("approve_task", kwargs["task_id"]),
+        )
 
-    async def dispute_task(self, **kwargs: Any) -> dict[str, Any]:
+    async def dispute_task(self, **kwargs: Any) -> TaskBoardCommandResponse:
         self.dispute_task_calls.append(kwargs)
-        return {"task_id": kwargs["task_id"], "status": "disputed"}
+        return TaskBoardCommandResponse(
+            status_code=200,
+            body=_mutation_result("dispute_task", kwargs["task_id"]),
+        )
 
     async def close(self) -> None:
         """Required so lifespan shutdown (``await state.user_agent.close()``) is a no-op."""
@@ -81,6 +140,7 @@ VALID_CREATE_BODY: dict[str, Any] = {
     "spec": "Do the thing",
     "reward": 50,
     "bidding_deadline_seconds": 3600,
+    "acceptance_window_seconds": 1800,
     "execution_deadline_seconds": 7200,
     "review_deadline_seconds": 3600,
 }
@@ -156,10 +216,13 @@ async def test_accept_bid_passthrough(client) -> None:
     fake = _FakeUserAgent()
     get_app_state().user_agent = fake
 
-    response = await client.post("/api/proxy/tasks/t-task2/bids/bid-3/accept")
+    response = await client.post(
+        "/api/proxy/tasks/t-task2/bids/bid-3/accept",
+        json=NATIVE_IDENTITY,
+    )
     assert response.status_code == 200
-    assert response.json() == {"task_id": "t-task2", "status": "accepted"}
-    assert fake.accept_bid_calls == [{"task_id": "t-task2", "bid_id": "bid-3"}]
+    assert response.json() == _mutation_result("accept_bid", "t-task2")
+    assert fake.accept_bid_calls == [{"task_id": "t-task2", "bid_id": "bid-3", **NATIVE_IDENTITY}]
 
 
 async def test_approve_task_passthrough(client) -> None:
@@ -167,10 +230,10 @@ async def test_approve_task_passthrough(client) -> None:
     fake = _FakeUserAgent()
     get_app_state().user_agent = fake
 
-    response = await client.post("/api/proxy/tasks/t-task8/approve")
+    response = await client.post("/api/proxy/tasks/t-task8/approve", json=NATIVE_IDENTITY)
     assert response.status_code == 200
-    assert response.json() == {"task_id": "t-task8", "status": "approved"}
-    assert fake.approve_task_calls == [{"task_id": "t-task8"}]
+    assert response.json() == _mutation_result("approve_task", "t-task8")
+    assert fake.approve_task_calls == [{"task_id": "t-task8", **NATIVE_IDENTITY}]
 
 
 async def test_file_dispute_passthrough(client) -> None:
@@ -179,11 +242,14 @@ async def test_file_dispute_passthrough(client) -> None:
     get_app_state().user_agent = fake
 
     response = await client.post(
-        "/api/proxy/tasks/t-task8/dispute", json={"reason": "Not delivered"}
+        "/api/proxy/tasks/t-task8/dispute",
+        json={"reason": "Not delivered", **NATIVE_IDENTITY},
     )
     assert response.status_code == 200
-    assert response.json() == {"task_id": "t-task8", "status": "disputed"}
-    assert fake.dispute_task_calls == [{"task_id": "t-task8", "reason": "Not delivered"}]
+    assert response.json() == _mutation_result("dispute_task", "t-task8")
+    assert fake.dispute_task_calls == [
+        {"task_id": "t-task8", "reason": "Not delivered", **NATIVE_IDENTITY}
+    ]
 
 
 @pytest.mark.parametrize("reason", ["", "x" * 5001])
@@ -192,7 +258,10 @@ async def test_dispute_reason_validation_rejected_with_422(client, reason: str) 
     fake = _FakeUserAgent()
     get_app_state().user_agent = fake
 
-    response = await client.post("/api/proxy/tasks/t-task8/dispute", json={"reason": reason})
+    response = await client.post(
+        "/api/proxy/tasks/t-task8/dispute",
+        json={"reason": reason, **NATIVE_IDENTITY},
+    )
     assert response.status_code == 422
     assert fake.dispute_task_calls == []
 
@@ -225,11 +294,50 @@ async def test_non_json_content_type_rejected_with_415(client) -> None:
     assert fake.post_task_calls == []
 
 
-async def test_bodyless_approve_route_not_subject_to_json_validation(client) -> None:
-    """VAL-04: POST .../approve with no body and no Content-Type header is
-    never 415/413 — it is not one of the JSON-validated routes at all. A
-    503 downstream (no UserAgent) is an acceptable outcome; 415/413 is not."""
-    get_app_state().user_agent = None
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/proxy/tasks/t-task8/approve",
+        "/api/proxy/tasks/t-task2/bids/bid-3/accept",
+    ],
+)
+@pytest.mark.parametrize("content_type", [None, "text/plain"])
+async def test_native_mutation_requires_json_content_type(
+    client,
+    path: str,
+    content_type: str | None,
+) -> None:
+    """Accept/approve JSON bodies are rejected at middleware before the operator."""
+    fake = _FakeUserAgent()
+    get_app_state().user_agent = fake
+    headers = {} if content_type is None else {"Content-Type": content_type}
 
-    response = await client.post("/api/proxy/tasks/t-task8/approve")
-    assert response.status_code not in (415, 413)
+    response = await client.post(path, content=b"{}", headers=headers)
+
+    assert response.status_code == 415
+    assert response.json()["error"] == "unsupported_media_type"
+    assert fake.accept_bid_calls == []
+    assert fake.approve_task_calls == []
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/proxy/tasks/t-task8/approve",
+        "/api/proxy/tasks/t-task2/bids/bid-3/accept",
+    ],
+)
+async def test_native_mutation_empty_json_body_is_422_before_operator(client, path: str) -> None:
+    """A valid JSON media type does not make an absent required body valid."""
+    fake = _FakeUserAgent()
+    get_app_state().user_agent = fake
+
+    response = await client.post(
+        path,
+        content=b"",
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422
+    assert fake.accept_bid_calls == []
+    assert fake.approve_task_calls == []

@@ -1,0 +1,104 @@
+{
+  "status": "Parent fullUI CI exit0 and251 integration pass; independent review APPROVE;142sources202ordinarylogs unchanged.",
+  "boundary": "Component proof only; full runtime integration and fresh root CI pending.",
+  "artifacts": [
+    {
+      "path": "agent-economy-mp07-ui-status-all-unit-escalated.log",
+      "sha256": "e23df70701074cba95c2434ba96397fed9721ad12994b5189a00e72a13f77aea"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-all-unit.log",
+      "sha256": "edf1fb716530f79388aa35eb3fda0ef4daa5e985c35c41e379c0441d4440f94f"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-existing-integration.log",
+      "sha256": "20fae6ac67ccdd93a5684f4c6c1361b17c18baf0180eb99b5bfa6f69812e3698"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-existing-unit.log",
+      "sha256": "e4deaa7a26032abdba7c947f3047eff42224ad5e81232bb10b1bbd3a052a8f35"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-green-target.log",
+      "sha256": "c3bfacbe2f36951daefb81807c2c94d07db76e9fbfa1fa9ffc452f7ac480a411"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-integration-green.log",
+      "sha256": "1faf18f7f273c2723a781203b323ccf9ffa660c8ce19fce280ce397ec67ae010"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-parent-after.json",
+      "sha256": "f00053910f17d990c3fbe9bd67857d8e6d0392187fcabade12bd42dbd21d586a"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-parent-before.json",
+      "sha256": "f00053910f17d990c3fbe9bd67857d8e6d0392187fcabade12bd42dbd21d586a"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-parent-ci.log",
+      "sha256": "7292462d160c9b628366654574915ea4ce336d941670b11acc54977d7c43e5a2"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-parent-integration.log",
+      "sha256": "4e7b8c03f104bb1b49274fdf39df3bc7512c2c79ef8e6652fc0429924dcb2c82"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-red-final.log",
+      "sha256": "cee948c29800589ef34f3206a5542230d20c293796fb64fd71ae2ad18bee23fd"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-red.log",
+      "sha256": "45ea1474b5f1147e3d838c6d0c0c5fd45d82c57c1da1adde22a606de3db95a63"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-semgrep-settings.yml",
+      "sha256": "1ac3719bc893f4b4e8539561ef380b8840767e0442889c08437fd00308d0b1f0"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-semgrep-version",
+      "sha256": "0d30aa3b4505ead883884d75fc3c5ad8976974f8fb0b75d37689bee06b8655bf"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-semgrep.log",
+      "sha256": "8edadfaf2db40b35836b49d2b4ac0f678294cd09459ac71bfed2f465d54e53ee"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-sha256.log",
+      "sha256": "1249e214b54d5b3ba6c37121f09e85047e4a528d99fba724d0825035ba7fb05d"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-snapshot.py",
+      "sha256": "dba0b0ed77834b9a12d4454eef0ba38de799727ed887fae1f388b7e89b117099"
+    },
+    {
+      "path": "agent-economy-mp07-ui-status-unit-green.log",
+      "sha256": "cbaffbc89acb0fd52f9a24aba2b9ae7f01bf2b4f3b9297ea0ced61b0b743b1eb"
+    }
+  ],
+  "sources": [
+    {
+      "path": "services/ui/src/ui_service/services/proxy.py",
+      "sha256": "8715005b2bfbbcb9a83b47cc0e9144f4d181788a2a46d9c05b87f69b27011582"
+    },
+    {
+      "path": "services/ui/src/ui_service/routers/proxy.py",
+      "sha256": "30fcd44d77d46c427f40c14d769e5445ed6c2fb2d66c364b4a56c9e4b2a14a3f"
+    },
+    {
+      "path": "services/ui/tests/unit/test_mp07_proxy_transport_status.py",
+      "sha256": "ba381615002cfb04b49c1c45beadc7362af6684878e5c6e94d28eb70eded30e1"
+    },
+    {
+      "path": "services/ui/tests/unit/test_mp07_native_proxy.py",
+      "sha256": "1623bafd4207806d83c549cd6ed76c1d4eed813cb9d4c339bf3f85fd72a00c31"
+    },
+    {
+      "path": "services/ui/tests/integration/test_t072_proxy_operator_writepath_gaps.py",
+      "sha256": "4ef0595bee2a02991d49d280a4b4a3359f0b3bd55c1292cc5c66f22b3a2fb9ff"
+    },
+    {
+      "path": "docs/plans/2026-10-18-mp07-ui-status-reconciliation.md",
+      "sha256": "552eecb5c6ede3c942e4399caaa95af3395698aad8eba232fc8a1d8d9459ebd6"
+    }
+  ]
+}

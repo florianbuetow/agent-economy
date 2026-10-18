@@ -14,9 +14,14 @@ import uuid
 from typing import TYPE_CHECKING
 
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 from tests.helpers import make_jws_token
-from tests.integration.conftest import PLATFORM_AGENT_ID, seed_task
+from tests.integration.conftest import (
+    PLATFORM_AGENT_ID,
+    finalize_task_dispute,
+    seed_task,
+)
 
 if TYPE_CHECKING:
     import httpx
@@ -49,8 +54,13 @@ class TestDisputeLifecycleGatewayBacked:
         claimant_id = "a-claimant-integration"
         respondent_id = "a-respondent-integration"
         task_id = f"t-{uuid.uuid4()}"
-        escrow_id = await seed_task(
-            gateway_client, task_id=task_id, poster_id=claimant_id, worker_id=respondent_id
+        reason = "The worker did not deliver as specified."
+        seeded = await seed_task(
+            gateway_client,
+            task_id=task_id,
+            poster_id=claimant_id,
+            worker_id=respondent_id,
+            reason=reason,
         )
 
         file_payload = {
@@ -58,8 +68,8 @@ class TestDisputeLifecycleGatewayBacked:
             "task_id": task_id,
             "claimant_id": claimant_id,
             "respondent_id": respondent_id,
-            "claim": "The worker did not deliver as specified.",
-            "escrow_id": escrow_id,
+            "claim": reason,
+            "escrow_id": seeded.escrow_id,
         }
         file_token = make_jws_token(file_payload, kid=PLATFORM_AGENT_ID)
         file_resp = await client.post("/disputes/file", json={"token": file_token})
@@ -77,6 +87,9 @@ class TestDisputeLifecycleGatewayBacked:
         assert claim_row["claimant_id"] == claimant_id
         assert claim_row["respondent_id"] == respondent_id
         assert claim_row["status"] == "rebuttal_pending"
+
+        completed_dispute = await finalize_task_dispute(gateway_client, seeded)
+        assert completed_dispute["effect_result_reference"] == dispute_id
 
         rebuttal_payload = {
             "action": "submit_rebuttal",
@@ -121,3 +134,34 @@ class TestDisputeLifecycleGatewayBacked:
         )
         assert final_claim_row is not None
         assert final_claim_row["status"] == "ruled"
+
+        board_row = _read_one(
+            gateway_db_path,
+            "SELECT t.status, c.lifecycle_version FROM board_tasks AS t "
+            "JOIN board_task_contracts AS c ON c.task_id=t.task_id WHERE t.task_id=?",
+            (task_id,),
+        )
+        assert board_row == {"status": "disputed", "lifecycle_version": 3}
+        escrow_row = _read_one(
+            gateway_db_path,
+            "SELECT status, resolved_at FROM bank_escrow WHERE escrow_id=?",
+            (seeded.escrow_id,),
+        )
+        assert escrow_row == {"status": "locked", "resolved_at": None}
+        ruling_operation_id = operation_id_for("court-ruling", (dispute_id,))
+        assert (
+            _read_one(
+                gateway_db_path,
+                "SELECT operation_id FROM board_task_operations WHERE operation_id=?",
+                (ruling_operation_id,),
+            )
+            is None
+        )
+        assert (
+            _read_one(
+                gateway_db_path,
+                "SELECT operation_id FROM bank_operation_receipts WHERE operation_id=?",
+                (ruling_operation_id,),
+            )
+            is None
+        )

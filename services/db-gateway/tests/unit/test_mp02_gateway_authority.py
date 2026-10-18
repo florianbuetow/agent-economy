@@ -15,6 +15,7 @@ from service_auth import jws
 from service_auth.gateway import GatewayRequestSigner, GatewaySignerConfig
 from service_auth.signing import generate_keypair
 
+from db_gateway_service import task_time
 from db_gateway_service.core.middleware import GATEWAY_ROUTE_POLICIES
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.services.db_reader import DbReader
@@ -39,7 +40,9 @@ def _agent_body(agent_id: str) -> dict[str, object]:
     }
 
 
-def _seed_domain_graph(client: TestClient) -> dict[str, str]:
+def _seed_domain_graph(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
+    now_us = task_time.parse_utc_text_to_epoch_us("2026-02-28T10:04:00Z")
+    monkeypatch.setattr(task_time, "utc_now_us", lambda: now_us)
     poster = f"a-{uuid4()}"
     worker = f"a-{uuid4()}"
     task_id = f"t-{uuid4()}"
@@ -92,9 +95,10 @@ def _seed_domain_graph(client: TestClient) -> dict[str, str]:
                 "reward": 100,
                 "status": "open",
                 "bidding_deadline_seconds": 86400,
+                "acceptance_window_seconds": 3600,
                 "deadline_seconds": 172800,
                 "review_deadline_seconds": 43200,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
+                "bidding_deadline": "2026-03-01T10:03:00Z",
                 "escrow_id": escrow_id,
                 "created_at": "2026-02-28T10:03:00Z",
                 "event": make_event(source="board", event_type="task.created", task_id=task_id),
@@ -124,16 +128,21 @@ def _write_case(domain: str, graph: dict[str, str]) -> tuple[str, dict[str, Any]
         )
     if domain == "board":
         return (
-            "/board/bids",
+            "/board/task-operations",
             {
-                "bid_id": f"bid-{uuid4()}",
+                "protocol_version": 1,
+                "operation_id": f"op-{uuid4()}",
                 "task_id": graph["task_id"],
-                "bidder_id": graph["worker"],
-                "proposal": "Valid authority proof bid",
-                "submitted_at": "2026-02-28T10:05:00Z",
-                "event": make_event(
-                    source="board", event_type="bid.submitted", task_id=graph["task_id"]
-                ),
+                "command": "submit_bid",
+                "expected_status": "open",
+                "expected_lifecycle_version": 0,
+                "actor_kind": "agent",
+                "actor_id": graph["worker"],
+                "arguments": {
+                    "bid_id": f"bid-{uuid4()}",
+                    "bidder_id": graph["worker"],
+                    "amount": 75,
+                },
             },
             "board_bids",
         )
@@ -180,8 +189,9 @@ def test_unsigned_domain_write_is_rejected_without_state_or_event_changes(
     domain: str,
     app_with_writer: TestClient,
     db_writer: DbWriter,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    graph = _seed_domain_graph(app_with_writer)
+    graph = _seed_domain_graph(app_with_writer, monkeypatch)
     path, body, table = _write_case(domain, graph)
     row_count = db_writer.connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
     event_count = db_writer.connection.execute("SELECT COUNT(*) FROM events").fetchone()[0]
@@ -438,8 +448,9 @@ def test_court_has_only_the_singular_board_task_read_grant(
     app_with_writer: TestClient,
     gateway_test_signers: dict[str, GatewayRequestSigner],
     db_writer: DbWriter,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    graph = _seed_domain_graph(app_with_writer)
+    graph = _seed_domain_graph(app_with_writer, monkeypatch)
     get_app_state().db_reader = DbReader(db=db_writer.connection)
     task_path = f"/board/tasks/{graph['task_id']}"
     narrow_auth = _signed_authorization(

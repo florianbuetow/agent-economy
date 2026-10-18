@@ -6,9 +6,14 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
 import httpx
+from service_auth.financial_identity import operation_id_for
 from service_commons.exceptions import ServiceError
 
 from court_service.judges import DisputeContext, JudgeVote
+from court_service.services.ruling_acknowledgment import (
+    task_version_conflict_from_response,
+    validate_ruling_acknowledgment,
+)
 
 if TYPE_CHECKING:
     from service_auth.platform import PlatformAgent
@@ -111,6 +116,18 @@ class RulingOrchestrator:
         if isinstance(value, str):
             return [value]
         return []
+
+    @staticmethod
+    def _task_snapshot_version(task_data: dict[str, Any]) -> int:
+        version = task_data.get("lifecycle_version")
+        if type(version) is not int or version < 0 or version > (1 << 63) - 1:
+            raise ServiceError(
+                "invalid_task_snapshot",
+                "Task Board returned an invalid lifecycle version",
+                502,
+                {},
+            )
+        return version
 
     @staticmethod
     def _normalize_vote(raw_vote: object, index: int) -> JudgeVote:
@@ -339,19 +356,48 @@ class RulingOrchestrator:
         dispute_id: str,
         median_worker_pct: int,
         ruling_summary: str,
+        expected_lifecycle_version: int,
+        reward: int,
     ) -> None:
+        operation_id = operation_id_for("court-ruling", (dispute_id,))
+        task_id = str(dispute["task_id"])
         try:
-            await platform_agent.record_ruling(
-                str(dispute["task_id"]),
+            acknowledgment = await platform_agent.record_ruling(
+                task_id,
                 {
                     "action": "record_ruling",
-                    "task_id": str(dispute["task_id"]),
+                    "operation_id": operation_id,
+                    "expected_lifecycle_version": expected_lifecycle_version,
+                    "task_id": task_id,
                     "ruling_id": dispute_id,
                     "worker_pct": median_worker_pct,
                     "ruling_summary": ruling_summary,
                 },
             )
+            validate_ruling_acknowledgment(
+                acknowledgment,
+                operation_id=operation_id,
+                task_id=task_id,
+                source_version=expected_lifecycle_version,
+                ruling_id=dispute_id,
+                poster_id=str(dispute["claimant_id"]),
+                worker_id=str(dispute["respondent_id"]),
+                worker_pct=median_worker_pct,
+                ruling_summary=ruling_summary,
+                reward=reward,
+            )
         except httpx.HTTPStatusError as exc:
+            try:
+                error_body: object = exc.response.json()
+            except ValueError:
+                error_body = None
+            version_conflict = task_version_conflict_from_response(
+                exc.response.status_code,
+                error_body,
+                expected_version=expected_lifecycle_version,
+            )
+            if version_conflict is not None:
+                raise version_conflict from exc
             raise ServiceError(
                 "task_board_unavailable",
                 "Cannot reach Task Board service",
@@ -396,6 +442,7 @@ class RulingOrchestrator:
         ``dispute`` must already be in the ``judging`` status via ``begin_ruling``.
         """
         try:
+            expected_lifecycle_version = self._task_snapshot_version(task_data)
             context = self._build_context(dispute, task_data)
             normalized_votes = await self._evaluate_judges(judges, context)
             median_worker_pct, ruling_summary = self._compute_ruling(normalized_votes)
@@ -406,6 +453,8 @@ class RulingOrchestrator:
                 dispute_id,
                 median_worker_pct,
                 ruling_summary,
+                expected_lifecycle_version,
+                context.reward,
             )
             await self._record_feedback(
                 platform_agent,

@@ -1,0 +1,21 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 85 items / 81 deselected / 4 selected
+
+tests/unit/test_mp03_jws_core.py F...                                    [100%]
+
+=================================== FAILURES ===================================
+___ test_context_boundary_rejects_incomplete_authenticated_payload[payload0] ___
+tests/unit/test_mp03_jws_core.py:667: in test_context_boundary_rejects_incomplete_authenticated_payload
+    require_context(verified, audience="central-bank", resource="POST /escrow/esc-1/release",
+src/service_auth/jws.py:430: in require_context
+    or verified.payload["action"] not in actions
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'action'
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload0]
+================== 1 failed, 3 passed, 81 deselected in 0.04s ==================

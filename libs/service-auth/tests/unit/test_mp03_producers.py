@@ -100,7 +100,7 @@ async def test_post_task_emits_separate_context_bound_tokens() -> None:
     await agent._http.aclose()
     agent._http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     try:
-        await agent.post_task("Title", "Spec", 25, 10, 20, 30)
+        await agent.post_task("Title", "Spec", 25, 10, 20, 30, acceptance_window_seconds=40)
     finally:
         await agent.close()
 

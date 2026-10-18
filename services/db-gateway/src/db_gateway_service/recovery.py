@@ -13,11 +13,12 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import stat
 import sys
 import uuid
-from contextlib import contextmanager, suppress
+from contextlib import ExitStack, contextmanager, suppress
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from enum import StrEnum
@@ -59,6 +60,38 @@ from service_commons.recovery_contract import (
 BUNDLE_FORMAT_VERSION = 1
 _DATABASE_RESOURCE_ID = "database.primary"
 _ASSET_RESOURCE_ID = "assets.root"
+_AGENT_RUNTIME_RESOURCE_ID = "agents.runtime_state"
+_AGENT_IDENTITY_NAME = re.compile(r"^[0-9a-f]{64}$")
+_AGENT_OWNER_FIELDS = frozenset(
+    {
+        "schema_version",
+        "environment_id",
+        "role",
+        "profile",
+        "handle",
+        "registered_agent_id",
+        "key_fingerprint",
+        "service_urls",
+    }
+)
+_AGENT_OWNER_STRING_FIELDS = frozenset(
+    {
+        "environment_id",
+        "role",
+        "profile",
+        "handle",
+        "registered_agent_id",
+    }
+)
+_AGENT_SERVICE_URL_FIELDS = frozenset(
+    {
+        "identity_url",
+        "bank_url",
+        "task_board_url",
+        "reputation_url",
+        "court_url",
+    }
+)
 _MONEY_STORAGE_QUERIES = (
     (
         "bank_accounts",
@@ -301,6 +334,16 @@ class _CaptureState:
     database_source: Path | None = None
     database_wal_present: bool | None = None
     database_wal_payload: Path | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _AgentRuntimeIdentity:
+    name: str
+    directory_device: int
+    directory_inode: int
+    lock_path: Path
+    lock_device: int
+    lock_inode: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -679,6 +722,144 @@ def _verify_capture_roots(identities: dict[Path, tuple[int, int]]) -> None:
         current = root.lstat()
         if (current.st_dev, current.st_ino) != expected:
             raise RecoveryError("source_changed", f"Capture root changed: {root}")
+
+
+def _agent_runtime_resource(inventory: RecoveryInventoryV1) -> SourceResourceV1 | None:
+    matches = tuple(
+        resource
+        for resource in inventory.resources
+        if resource.logical_id == _AGENT_RUNTIME_RESOURCE_ID
+    )
+    if len(matches) > 1:
+        raise RecoveryError("incomplete_inventory", "Agent runtime resource is duplicated")
+    return matches[0] if matches else None
+
+
+def _inspect_agent_identity(
+    identities: _PinnedDirectory,
+    name: str,
+) -> _AgentRuntimeIdentity:
+    if _AGENT_IDENTITY_NAME.fullmatch(name) is None:
+        raise RecoveryError("unsafe_resource", f"Invalid agent runtime identity directory: {name}")
+    identity = _open_pinned_child(identities, name)
+    primary_error: BaseException | None = None
+    try:
+        identity.verify()
+        metadata = os.fstat(identity.descriptor)
+        try:
+            lock_metadata = os.stat(
+                "runtime.lock",
+                dir_fd=identity.descriptor,
+                follow_symlinks=False,
+            )
+        except OSError as exc:
+            raise RecoveryError(
+                "unsafe_resource", f"Agent runtime identity lacks a safe lock: {name}"
+            ) from exc
+        if not stat.S_ISREG(lock_metadata.st_mode) or stat.S_IMODE(lock_metadata.st_mode) != 0o600:
+            raise RecoveryError(
+                "unsafe_resource", f"Agent runtime identity lock is invalid: {name}"
+            )
+        identity.verify()
+        return _AgentRuntimeIdentity(
+            name=name,
+            directory_device=metadata.st_dev,
+            directory_inode=metadata.st_ino,
+            lock_path=identity.path / "runtime.lock",
+            lock_device=lock_metadata.st_dev,
+            lock_inode=lock_metadata.st_ino,
+        )
+    except BaseException as error:
+        primary_error = error
+        raise
+    finally:
+        identity.close(primary_error=primary_error)
+
+
+def _snapshot_agent_runtime_identities(
+    inventory: RecoveryInventoryV1,
+) -> tuple[_AgentRuntimeIdentity, ...]:
+    resource = _agent_runtime_resource(inventory)
+    if resource is None or resource.capture_kind is not CaptureKind.COPY:
+        return ()
+    journal = _open_pinned_directory(
+        resource.captured_path,
+        label="agent runtime journal",
+    )
+    identities: _PinnedDirectory | None = None
+    primary_error: BaseException | None = None
+    try:
+        journal.verify()
+        try:
+            identities_metadata = os.stat(
+                "identities",
+                dir_fd=journal.descriptor,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            journal.verify()
+            return ()
+        except OSError as exc:
+            raise RecoveryError(
+                "unsafe_resource", "Agent runtime identities cannot be inspected"
+            ) from exc
+        if not stat.S_ISDIR(identities_metadata.st_mode):
+            raise RecoveryError("unsafe_resource", "Agent runtime identities is not a directory")
+        identities = _open_pinned_child(journal, "identities")
+        with os.scandir(identities.descriptor) as entries:
+            names = sorted(entry.name for entry in entries)
+        snapshot = tuple(_inspect_agent_identity(identities, name) for name in names)
+        identities.verify()
+        journal.verify()
+        return snapshot
+    except BaseException as error:
+        primary_error = error
+        raise
+    finally:
+        if identities is not None:
+            identities.close(primary_error=primary_error)
+        journal.close(primary_error=primary_error)
+
+
+def _hold_agent_runtime_identity_locks(
+    inventory: RecoveryInventoryV1,
+    stack: ExitStack,
+) -> tuple[tuple[_AgentRuntimeIdentity, ...], tuple[HeldMaintenanceLock, ...]]:
+    snapshot = _snapshot_agent_runtime_identities(inventory)
+    held: list[HeldMaintenanceLock] = []
+    for identity in snapshot:
+        try:
+            lock = stack.enter_context(
+                hold_existing_maintenance_lock(
+                    identity.lock_path,
+                    mode=MaintenanceLockMode.EXCLUSIVE,
+                    blocking=False,
+                    expected_device=identity.lock_device,
+                    expected_inode=identity.lock_inode,
+                )
+            )
+        except MaintenanceLockError as exc:
+            reason = "runtime_active" if exc.reason == "busy" else "source_changed"
+            raise RecoveryError(
+                reason,
+                f"Cannot fence agent runtime identity {identity.name}: {exc}",
+            ) from exc
+        held.append(lock)
+    return snapshot, tuple(held)
+
+
+def _verify_agent_runtime_identity_locks(
+    inventory: RecoveryInventoryV1,
+    expected: tuple[_AgentRuntimeIdentity, ...],
+    held: tuple[HeldMaintenanceLock, ...],
+) -> None:
+    try:
+        for lock in held:
+            lock.verify_identity()
+    except MaintenanceLockError as exc:
+        raise RecoveryError("source_changed", f"Agent runtime lock changed: {exc}") from exc
+    if _snapshot_agent_runtime_identities(inventory) != expected:
+        raise RecoveryError("source_changed", "Agent runtime identity set changed during snapshot")
 
 
 def _assert_no_symlink_components(path: Path, *, label: str) -> None:
@@ -2078,7 +2259,10 @@ def _capture_metadata_resource(
 ) -> bool:
     if resource.capture_kind is CaptureKind.KEYPAIR:
         return True
-    if resource.capture_kind is CaptureKind.ABSENT_FILE:
+    if resource.capture_kind in {
+        CaptureKind.ABSENT_FILE,
+        CaptureKind.ABSENT_DIRECTORY,
+    }:
         _assert_expected_absence(resource.captured_path, label=resource.logical_id)
         state.absent_resources.append((resource.logical_id, resource.captured_path))
         state.resources[resource.logical_id] = {
@@ -2839,13 +3023,23 @@ def _capture_under_maintenance_lock(
             expected_inode=expected_lock.inode,
         ) as held_lock:
             _verify_capture_roots(capture_root_identities)
-            captured = _capture_payload(
-                inventory,
-                payload=payload,
-                work_root=work_root,
-                held_lock=held_lock,
-                payload_output=payload_output,
-            )
+            with ExitStack() as identity_locks:
+                identity_snapshot, held_identity_locks = _hold_agent_runtime_identity_locks(
+                    inventory,
+                    identity_locks,
+                )
+                captured = _capture_payload(
+                    inventory,
+                    payload=payload,
+                    work_root=work_root,
+                    held_lock=held_lock,
+                    payload_output=payload_output,
+                )
+                _verify_agent_runtime_identity_locks(
+                    inventory,
+                    identity_snapshot,
+                    held_identity_locks,
+                )
             held_lock.verify_identity()
             _verify_capture_roots(capture_root_identities)
             return captured
@@ -3138,9 +3332,12 @@ def _validate_metadata_manifest_resource(
         or record.get("capture_root") != str(resource.capture_root)
     ):
         raise RecoveryError("invalid_manifest", f"Resource contract differs: {resource.logical_id}")
-    if resource.capture_kind is CaptureKind.ABSENT_FILE:
+    if resource.capture_kind in {
+        CaptureKind.ABSENT_FILE,
+        CaptureKind.ABSENT_DIRECTORY,
+    }:
         if record.get("present") is not False or "payload_path" in record:
-            raise RecoveryError("invalid_manifest", "Absent-file evidence is invalid")
+            raise RecoveryError("invalid_manifest", "Absent-resource evidence is invalid")
         return set()
     if resource.capture_kind is CaptureKind.RUNTIME_LOCK:
         if "payload_path" in record:
@@ -4640,6 +4837,134 @@ def _verify_target_configs(
             raise RecoveryError("target_mismatch", f"Active config differs: {config.logical_id}")
 
 
+def _target_agent_service_urls(
+    inventory: RecoveryInventoryV1,
+    target_bindings: TargetBindingsV1,
+) -> dict[str, str]:
+    urls: dict[str, str] = {}
+    for binding in inventory.field_bindings:
+        path = tuple(binding.field_path)
+        if (
+            binding.config_id != "agents"
+            or binding.binding_kind is not BindingKind.NETWORK
+            or len(path) != 2
+            or path[0] != "platform"
+            or not isinstance(path[1], str)
+        ):
+            continue
+        target_value = target_bindings.endpoint_values[binding.binding_id]
+        if not isinstance(target_value, str):
+            raise RecoveryError(
+                "binding_mismatch", f"Agent endpoint is not a string: {binding.binding_id}"
+            )
+        urls[path[1]] = target_value
+    if frozenset(urls) != _AGENT_SERVICE_URL_FIELDS or any(
+        not value.strip() for value in urls.values()
+    ):
+        raise RecoveryError("incomplete_bindings", "Agent service URL targets are incomplete")
+    return urls
+
+
+def _agent_owner_record_code(
+    owner: object,
+    *,
+    identity: str,
+    expected_urls: dict[str, str],
+) -> str | None:
+    if not isinstance(owner, dict):
+        return "agent_runtime_owner_invalid"
+    record = cast("dict[str, object]", owner)
+    key_fingerprint = record.get("key_fingerprint")
+    service_urls_value = record.get("service_urls")
+    invalid_record = (
+        frozenset(record) != _AGENT_OWNER_FIELDS
+        or type(record.get("schema_version")) is not int
+        or record.get("schema_version") != 1
+        or any(
+            not isinstance(record.get(field), str) or not cast("str", record[field]).strip()
+            for field in _AGENT_OWNER_STRING_FIELDS
+        )
+        or not isinstance(key_fingerprint, str)
+        or _AGENT_IDENTITY_NAME.fullmatch(key_fingerprint) is None
+        or key_fingerprint != identity
+        or not isinstance(service_urls_value, dict)
+    )
+    if invalid_record:
+        return "agent_runtime_owner_invalid"
+    service_urls = cast("dict[object, object]", service_urls_value)
+    if frozenset(service_urls) != _AGENT_SERVICE_URL_FIELDS or any(
+        not isinstance(value, str) or not value.strip() for value in service_urls.values()
+    ):
+        return "agent_runtime_owner_invalid"
+    if service_urls != expected_urls:
+        return "agent_runtime_owner_binding_mismatch"
+    return None
+
+
+def _restored_agent_identity_names(
+    evidence: _RestoreEvidence,
+    *,
+    prefix: Path,
+) -> tuple[str, ...]:
+    identities_prefix = prefix / "identities"
+    names: list[str] = []
+    for relative_text in evidence.directories:
+        relative = Path(relative_text)
+        try:
+            identity_relative = relative.relative_to(identities_prefix)
+        except ValueError:
+            continue
+        if len(identity_relative.parts) != 1:
+            continue
+        identity = identity_relative.parts[0]
+        if _AGENT_IDENTITY_NAME.fullmatch(identity) is None:
+            raise RecoveryError(
+                "target_mismatch", f"Restored agent identity name is invalid: {identity}"
+            )
+        names.append(identity)
+    return tuple(sorted(names))
+
+
+def _agent_runtime_owner_findings(
+    inventory: RecoveryInventoryV1,
+    target_bindings: TargetBindingsV1,
+    evidence: _RestoreEvidence,
+    *,
+    target_root: Path,
+) -> list[dict[str, object]]:
+    resource = _agent_runtime_resource(inventory)
+    if resource is None or resource.capture_kind is CaptureKind.ABSENT_DIRECTORY:
+        return []
+    target = target_bindings.resource_paths[resource.logical_id]
+    prefix = target.relative_to(target_root)
+    expected_urls = _target_agent_service_urls(inventory, target_bindings)
+    findings: list[dict[str, object]] = []
+    for identity in _restored_agent_identity_names(evidence, prefix=prefix):
+        relative = prefix / "identities" / identity / "owner.json"
+        file_evidence = evidence.files.get(relative.as_posix())
+        if file_evidence is None or (
+            file_evidence.get("role") != resource.logical_id or file_evidence.get("mode") != 0o600
+        ):
+            findings.append({"code": "agent_runtime_owner_invalid", "identity": identity})
+            continue
+        try:
+            owner_bytes, owner_mode = _read_pinned_regular(
+                target_root / relative,
+                label=f"agent runtime owner {identity}",
+            )
+            owner = json.loads(owner_bytes)
+        except (RecoveryError, json.JSONDecodeError, UnicodeDecodeError):
+            findings.append({"code": "agent_runtime_owner_invalid", "identity": identity})
+            continue
+        if owner_mode != 0o600:
+            findings.append({"code": "agent_runtime_owner_invalid", "identity": identity})
+            continue
+        code = _agent_owner_record_code(owner, identity=identity, expected_urls=expected_urls)
+        if code is not None:
+            findings.append({"code": code, "identity": identity})
+    return findings
+
+
 def _render_configs(
     *,
     inventory: RecoveryInventoryV1,
@@ -4751,7 +5076,10 @@ def _restore_resources(
         restore_evidence.record_directory(target_root, directory, mode=0o700)
     for resource in inventory.resources:
         target = target_bindings.resource_paths[resource.logical_id]
-        if resource.capture_kind is CaptureKind.ABSENT_FILE:
+        if resource.capture_kind in {
+            CaptureKind.ABSENT_FILE,
+            CaptureKind.ABSENT_DIRECTORY,
+        }:
             restore_evidence.record_absent(target_root, target)
             continue
         if resource.capture_kind in {CaptureKind.CONFIG, CaptureKind.DIRECTORY_ONLY}:
@@ -5186,6 +5514,12 @@ def _verify_restored_contents(
     )
     if target_keypairs != verified.target_keypairs:
         raise RecoveryError("target_mismatch", "Target keypair evidence differs")
+    agent_owner_findings = _agent_runtime_owner_findings(
+        verified.inventory,
+        verified.target_bindings,
+        verified.evidence,
+        target_root=target_root,
+    )
     database = verified.target_bindings.resource_paths[_DATABASE_RESOURCE_ID]
     wal = Path(f"{database}-wal")
     target_audit = _audit_database(
@@ -5202,7 +5536,7 @@ def _verify_restored_contents(
     _validate_target_tree(target_root, verified.evidence, special_files=special_files)
     audit_findings = cast("list[dict[str, object]]", target_audit["findings"])
     identity_findings = cast("list[dict[str, object]]", target_audit["identity_findings"])
-    return audit_findings, [*key_findings, *identity_findings]
+    return audit_findings, [*key_findings, *identity_findings, *agent_owner_findings]
 
 
 def _verify_restore_with_workspace(

@@ -6,11 +6,36 @@ import uuid
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from service_auth.financial_identity import operation_id_for
+from service_auth.financial_responses import SQLITE_MAX_INTEGER, validate_operation_id
+from service_auth.task_board_responses import (
+    TaskBoardCommandResponse,
+    parse_task_board_command_response,
+)
 
 if TYPE_CHECKING:
     import httpx
 
     from service_auth.config import AgentConfig
+
+_MAX_DURATION_SECONDS = SQLITE_MAX_INTEGER // 1_000_000
+
+
+def _acceptance_window(value: int) -> int:
+    if type(value) is not int or not 1 <= value <= _MAX_DURATION_SECONDS:
+        raise ValueError(
+            "acceptance_window_seconds must be a positive SQLite-safe integer duration"
+        )
+    return value
+
+
+def _operation_identity(operation_id: str, expected_lifecycle_version: int) -> tuple[str, int]:
+    validated_id = validate_operation_id(operation_id)
+    if (
+        type(expected_lifecycle_version) is not int
+        or not 0 <= expected_lifecycle_version <= SQLITE_MAX_INTEGER
+    ):
+        raise ValueError("expected_lifecycle_version must be a nonnegative SQLite-safe integer")
+    return validated_id, expected_lifecycle_version
 
 
 class _TaskBoardClient(Protocol):
@@ -28,6 +53,20 @@ class _TaskBoardClient(Protocol):
     async def _request_raw(self, method: str, url: str, **kwargs: Any) -> httpx.Response: ...
 
 
+async def _send_task_board_command(
+    client: _TaskBoardClient,
+    *,
+    url: str,
+    token: str,
+    allowed_status_codes: frozenset[int],
+    effect_kind: str | None,
+) -> TaskBoardCommandResponse:
+    response = await client._request_raw("POST", url, json={"token": token})
+    return parse_task_board_command_response(
+        response, allowed_status_codes=allowed_status_codes, effect_kind=effect_kind
+    )
+
+
 class TaskBoardMixin:
     """Methods for interacting with the Task Board service (port 8003)."""
 
@@ -39,8 +78,11 @@ class TaskBoardMixin:
         bidding_deadline_seconds: int,
         execution_deadline_seconds: int,
         review_deadline_seconds: int,
+        *,
+        acceptance_window_seconds: int,
     ) -> dict[str, Any]:
         """Post a new task to the Task Board."""
+        window_seconds = _acceptance_window(acceptance_window_seconds)
         poster_id = self.agent_id
         if poster_id is None:
             raise RuntimeError("Agent must be registered before signing")
@@ -55,6 +97,7 @@ class TaskBoardMixin:
                 "spec": spec,
                 "reward": reward,
                 "bidding_deadline_seconds": bidding_deadline_seconds,
+                "acceptance_window_seconds": window_seconds,
                 "execution_deadline_seconds": execution_deadline_seconds,
                 "review_deadline_seconds": review_deadline_seconds,
             },
@@ -101,26 +144,55 @@ class TaskBoardMixin:
         url = f"{self.config.task_board_url}/tasks/{task_id}"
         return await self._request("GET", url)
 
-    async def cancel_task(self: _TaskBoardClient, task_id: str) -> dict[str, Any]:
+    async def cancel_task(
+        self: _TaskBoardClient,
+        task_id: str,
+        *,
+        operation_id: str,
+        expected_lifecycle_version: int,
+    ) -> TaskBoardCommandResponse:
         """Cancel a task."""
+        operation_id, expected_lifecycle_version = _operation_identity(
+            operation_id, expected_lifecycle_version
+        )
         url = f"{self.config.task_board_url}/tasks/{task_id}/cancel"
         token = self._sign_jws(
             {
                 "action": "cancel_task",
+                "operation_id": operation_id,
+                "expected_lifecycle_version": expected_lifecycle_version,
                 "task_id": task_id,
                 "poster_id": self.agent_id,
             },
             audience="task-board",
             resource=f"POST /tasks/{task_id}/cancel",
         )
-        return await self._request("POST", url, json={"token": token})
+        return await _send_task_board_command(
+            self,
+            url=url,
+            token=token,
+            allowed_status_codes=frozenset({200, 202}),
+            effect_kind="bank_release",
+        )
 
-    async def submit_bid(self: _TaskBoardClient, task_id: str, amount: int) -> dict[str, Any]:
+    async def submit_bid(
+        self: _TaskBoardClient,
+        task_id: str,
+        amount: int,
+        *,
+        operation_id: str,
+        expected_lifecycle_version: int,
+    ) -> TaskBoardCommandResponse:
         """Submit a bid on a task."""
+        operation_id, expected_lifecycle_version = _operation_identity(
+            operation_id, expected_lifecycle_version
+        )
         url = f"{self.config.task_board_url}/tasks/{task_id}/bids"
         token = self._sign_jws(
             {
                 "action": "submit_bid",
+                "operation_id": operation_id,
+                "expected_lifecycle_version": expected_lifecycle_version,
                 "task_id": task_id,
                 "bidder_id": self.agent_id,
                 "amount": amount,
@@ -128,7 +200,13 @@ class TaskBoardMixin:
             audience="task-board",
             resource=f"POST /tasks/{task_id}/bids",
         )
-        return await self._request("POST", url, json={"token": token})
+        return await _send_task_board_command(
+            self,
+            url=url,
+            token=token,
+            allowed_status_codes=frozenset({201}),
+            effect_kind=None,
+        )
 
     async def list_bids(self: _TaskBoardClient, task_id: str) -> list[dict[str, Any]]:
         """List bids for a task."""
@@ -145,12 +223,24 @@ class TaskBoardMixin:
         response = await self._request("GET", url, headers=headers)
         return cast("list[dict[str, Any]]", response["bids"])
 
-    async def accept_bid(self: _TaskBoardClient, task_id: str, bid_id: str) -> dict[str, Any]:
+    async def accept_bid(
+        self: _TaskBoardClient,
+        task_id: str,
+        bid_id: str,
+        *,
+        operation_id: str,
+        expected_lifecycle_version: int,
+    ) -> TaskBoardCommandResponse:
         """Accept a bid on a task."""
+        operation_id, expected_lifecycle_version = _operation_identity(
+            operation_id, expected_lifecycle_version
+        )
         url = f"{self.config.task_board_url}/tasks/{task_id}/bids/{bid_id}/accept"
         token = self._sign_jws(
             {
                 "action": "accept_bid",
+                "operation_id": operation_id,
+                "expected_lifecycle_version": expected_lifecycle_version,
                 "task_id": task_id,
                 "bid_id": bid_id,
                 "poster_id": self.agent_id,
@@ -158,7 +248,13 @@ class TaskBoardMixin:
             audience="task-board",
             resource=f"POST /tasks/{task_id}/bids/{bid_id}/accept",
         )
-        return await self._request("POST", url, json={"token": token})
+        return await _send_task_board_command(
+            self,
+            url=url,
+            token=token,
+            allowed_status_codes=frozenset({200}),
+            effect_kind="none",
+        )
 
     async def upload_asset(
         self: _TaskBoardClient,
@@ -180,40 +276,86 @@ class TaskBoardMixin:
             "POST", url, headers=headers, files={"file": (filename, content)}
         )
 
-    async def submit_deliverable(self: _TaskBoardClient, task_id: str) -> dict[str, Any]:
+    async def submit_deliverable(
+        self: _TaskBoardClient,
+        task_id: str,
+        *,
+        operation_id: str,
+        expected_lifecycle_version: int,
+    ) -> TaskBoardCommandResponse:
         """Submit deliverables for review."""
+        operation_id, expected_lifecycle_version = _operation_identity(
+            operation_id, expected_lifecycle_version
+        )
         url = f"{self.config.task_board_url}/tasks/{task_id}/submit"
         token = self._sign_jws(
             {
                 "action": "submit_deliverable",
+                "operation_id": operation_id,
+                "expected_lifecycle_version": expected_lifecycle_version,
                 "task_id": task_id,
                 "worker_id": self.agent_id,
             },
             audience="task-board",
             resource=f"POST /tasks/{task_id}/submit",
         )
-        return await self._request("POST", url, json={"token": token})
+        return await _send_task_board_command(
+            self,
+            url=url,
+            token=token,
+            allowed_status_codes=frozenset({200}),
+            effect_kind="none",
+        )
 
-    async def approve_task(self: _TaskBoardClient, task_id: str) -> dict[str, Any]:
+    async def approve_task(
+        self: _TaskBoardClient,
+        task_id: str,
+        *,
+        operation_id: str,
+        expected_lifecycle_version: int,
+    ) -> TaskBoardCommandResponse:
         """Approve a submitted task."""
+        operation_id, expected_lifecycle_version = _operation_identity(
+            operation_id, expected_lifecycle_version
+        )
         url = f"{self.config.task_board_url}/tasks/{task_id}/approve"
         token = self._sign_jws(
             {
                 "action": "approve_task",
+                "operation_id": operation_id,
+                "expected_lifecycle_version": expected_lifecycle_version,
                 "task_id": task_id,
                 "poster_id": self.agent_id,
             },
             audience="task-board",
             resource=f"POST /tasks/{task_id}/approve",
         )
-        return await self._request("POST", url, json={"token": token})
+        return await _send_task_board_command(
+            self,
+            url=url,
+            token=token,
+            allowed_status_codes=frozenset({200, 202}),
+            effect_kind="bank_release",
+        )
 
-    async def dispute_task(self: _TaskBoardClient, task_id: str, reason: str) -> dict[str, Any]:
+    async def dispute_task(
+        self: _TaskBoardClient,
+        task_id: str,
+        reason: str,
+        *,
+        operation_id: str,
+        expected_lifecycle_version: int,
+    ) -> TaskBoardCommandResponse:
         """Dispute a submitted task."""
+        operation_id, expected_lifecycle_version = _operation_identity(
+            operation_id, expected_lifecycle_version
+        )
         url = f"{self.config.task_board_url}/tasks/{task_id}/dispute"
         token = self._sign_jws(
             {
                 "action": "dispute_task",
+                "operation_id": operation_id,
+                "expected_lifecycle_version": expected_lifecycle_version,
                 "task_id": task_id,
                 "poster_id": self.agent_id,
                 "reason": reason,
@@ -221,7 +363,13 @@ class TaskBoardMixin:
             audience="task-board",
             resource=f"POST /tasks/{task_id}/dispute",
         )
-        return await self._request("POST", url, json={"token": token})
+        return await _send_task_board_command(
+            self,
+            url=url,
+            token=token,
+            allowed_status_codes=frozenset({200, 202}),
+            effect_kind="court_claim",
+        )
 
     async def list_assets(self: _TaskBoardClient, task_id: str) -> list[dict[str, Any]]:
         """List all assets uploaded for a task (public, no auth required)."""

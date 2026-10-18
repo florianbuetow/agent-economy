@@ -206,6 +206,13 @@ def _insert_open_task(conn: sqlite3.Connection, task_id: str, reward: int) -> No
             None,
         ),
     )
+    conn.execute(
+        "INSERT INTO board_task_contracts "
+        "(task_id, lifecycle_version, timing_contract_version, acceptance_window_seconds, "
+        "bidding_cutoff_us, acceptance_cutoff_us, execution_cutoff_us, review_cutoff_us, "
+        "accepted_reward, accepted_bid_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (task_id, 0, 1, None, 1, 1, None, None, None, None),
+    )
     conn.commit()
 
 

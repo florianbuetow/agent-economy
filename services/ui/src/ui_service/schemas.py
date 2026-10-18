@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -546,23 +546,46 @@ class QuarterlyReportResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Proxy (UserAgent task lifecycle)
 # ---------------------------------------------------------------------------
+SQLITE_MAX_INTEGER = (1 << 63) - 1
+MAX_ACCEPTANCE_WINDOW_SECONDS = SQLITE_MAX_INTEGER // 1_000_000
+OperationId = Annotated[
+    str,
+    Field(
+        strict=True,
+        pattern=r"^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    ),
+]
+LifecycleVersion = Annotated[int, Field(strict=True, ge=0, le=SQLITE_MAX_INTEGER)]
+
+
 class CreateTaskRequest(BaseModel):
     """Request to create a new task via UserAgent."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", strict=True)
     title: str = Field(min_length=1, max_length=200)
     spec: str = Field(min_length=1, max_length=10000)
-    reward: int = Field(gt=0)
-    bidding_deadline_seconds: int = Field(gt=0)
-    execution_deadline_seconds: int = Field(gt=0)
-    review_deadline_seconds: int = Field(gt=0)
+    reward: int = Field(gt=0, le=SQLITE_MAX_INTEGER)
+    bidding_deadline_seconds: int = Field(gt=0, le=SQLITE_MAX_INTEGER)
+    acceptance_window_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    execution_deadline_seconds: int = Field(gt=0, le=SQLITE_MAX_INTEGER)
+    review_deadline_seconds: int = Field(gt=0, le=SQLITE_MAX_INTEGER)
+
+
+class NativeMutationRequest(BaseModel):
+    """Caller-owned identity for one native Task Board command."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    operation_id: OperationId
+    expected_lifecycle_version: LifecycleVersion
 
 
 class FileDisputeRequest(BaseModel):
     """Request to file a dispute on a task."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", strict=True)
     reason: str = Field(min_length=1, max_length=5000)
+    operation_id: OperationId
+    expected_lifecycle_version: LifecycleVersion
 
 
 class ProxyIdentityResponse(BaseModel):

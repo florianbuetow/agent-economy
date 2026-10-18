@@ -1,0 +1,101 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 9 items
+
+tests/unit/test_feedback_reveal_atomicity.py EEEEEEEEF                   [100%]
+
+==================================== ERRORS ====================================
+__ ERROR at setup of TestGatewayOwnedReveal.test_first_feedback_stays_sealed ___
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestGatewayOwnedReveal.test_counter_feedback_reveals_both_rows _
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestGatewayOwnedReveal.test_stale_caller_reveal_flag_is_ignored _
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+__ ERROR at setup of TestGatewayOwnedReveal.test_unrelated_pair_is_unaffected __
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestGatewayOwnedReveal.test_platform_feedback_is_visible_without_a_reverse _
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestGatewayOwnedReveal.test_platform_feedback_still_reveals_an_existing_reverse _
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+______ ERROR at setup of TestGatewayOwnedReveal.test_reveal_is_idempotent ______
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestGatewayOwnedReveal.test_reveal_emits_one_feedback_revealed_event _
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+=================================== FAILURES ===================================
+_ TestConcurrentReveal.test_concurrent_counter_feedback_never_leaves_both_sealed _
+tests/unit/test_feedback_reveal_atomicity.py:397: in test_concurrent_counter_feedback_never_leaves_both_sealed
+    DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_feedback_reveal_atomicity.py::TestConcurrentReveal::test_concurrent_counter_feedback_never_leaves_both_sealed
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_first_feedback_stays_sealed
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_counter_feedback_reveals_both_rows
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_stale_caller_reveal_flag_is_ignored
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_unrelated_pair_is_unaffected
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_platform_feedback_is_visible_without_a_reverse
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_platform_feedback_still_reveals_an_existing_reverse
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_reveal_is_idempotent
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_reveal_emits_one_feedback_revealed_event
+==================== 1 failed, 1 warning, 8 errors in 2.59s ====================

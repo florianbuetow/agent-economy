@@ -1,0 +1,1762 @@
+{
+  "run_id": "98da9aba8ad64c1e9e572582d0210eae",
+  "run_dir": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+  "ports": {
+    "db-gateway": 53000,
+    "identity": 53001,
+    "central-bank": 53002,
+    "task-board": 53003,
+    "reputation": 53004,
+    "court": 53005,
+    "ui": 53006
+  },
+  "config_paths": {
+    "db-gateway": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/db-gateway.yaml",
+    "identity": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/identity.yaml",
+    "central-bank": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/central-bank.yaml",
+    "task-board": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/task-board.yaml",
+    "reputation": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/reputation.yaml",
+    "court": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/court.yaml",
+    "ui": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/ui.yaml"
+  },
+  "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+  "gateway_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/db-gateway.yaml",
+  "log_paths": {
+    "db-gateway": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs/db-gateway.log",
+    "identity": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs/identity.log",
+    "central-bank": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs/central-bank.log",
+    "task-board": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs/task-board.log",
+    "reputation": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs/reputation.log",
+    "court": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs/court.log",
+    "ui": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs/ui.log"
+  },
+  "processes": {
+    "db-gateway": {
+      "pid": 98327,
+      "pgid": 98327,
+      "sid": 98327,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "identity": {
+      "pid": 98331,
+      "pgid": 98331,
+      "sid": 98331,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "central-bank": {
+      "pid": 98334,
+      "pgid": 98334,
+      "sid": 98334,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "task-board": {
+      "pid": 98336,
+      "pgid": 98336,
+      "sid": 98336,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "reputation": {
+      "pid": 98340,
+      "pgid": 98340,
+      "sid": 98340,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "court": {
+      "pid": 98398,
+      "pgid": 98398,
+      "sid": 98398,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "ui": {
+      "pid": 98496,
+      "pgid": 98496,
+      "sid": 98496,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "treasury_provision_cli"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/agents",
+      "pid": 98307,
+      "pgid": 98307,
+      "sid": 98307,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "db_gateway_service.recovery_cli",
+        "migrate",
+        "--inventory",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/recovery-inventory.json",
+        "--backup-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/backups",
+        "--backup-id",
+        "legacy-live-work",
+        "--work-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/migration-work",
+        "--busy-timeout-ms",
+        "5000"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+      "pid": 98315,
+      "pgid": 98315,
+      "sid": 98315,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "db_gateway_service.recovery_cli",
+        "migrate-v1-to-v2",
+        "--inventory",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/recovery-inventory.json",
+        "--backup-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/backups",
+        "--backup-id",
+        "before-receipt-migration",
+        "--work-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/migration-work",
+        "--busy-timeout-ms",
+        "5000"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+      "pid": 98320,
+      "pgid": 98320,
+      "sid": 98320,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "db_gateway_service.recovery_cli",
+        "migrate-v2-to-v3",
+        "--inventory",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/recovery-inventory.json",
+        "--backup-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/backups",
+        "--backup-id",
+        "before-task-migration",
+        "--work-root",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/migration-work",
+        "--busy-timeout-ms",
+        "5000"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+      "pid": 98324,
+      "pgid": 98324,
+      "sid": 98324,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "bootstrap_commands": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "python",
+        "-m",
+        "key_provision_cli",
+        "provision",
+        "--config",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+        "--gateway-config",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/db-gateway.yaml"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/agents",
+      "pid": 98274,
+      "pgid": 98274,
+      "sid": 98274,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "startup_inputs": {
+    "db-gateway": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/db-gateway.yaml",
+      "config_sha256": "cd4443a5d5edc3eefd232e751ebcfb1c7ee1b8d4c885166f5bfc802670a70869",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+      "agent_config_sha256": "591e8d3ee6b66be9e61d6811ad6fe5bcce289b217c2616ef286f6bc919c5188c",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway"
+    },
+    "identity": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/identity.yaml",
+      "config_sha256": "a51efd11f8b0091177b7260b87290edf0819a1e1a80daf02ce81b9a30f713067",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+      "agent_config_sha256": "591e8d3ee6b66be9e61d6811ad6fe5bcce289b217c2616ef286f6bc919c5188c",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/identity"
+    },
+    "central-bank": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/central-bank.yaml",
+      "config_sha256": "4414ff5838739c9896f58c382244bf4cc697052df22ac412ac79f72c0b90174d",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+      "agent_config_sha256": "591e8d3ee6b66be9e61d6811ad6fe5bcce289b217c2616ef286f6bc919c5188c",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/central-bank"
+    },
+    "task-board": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/task-board.yaml",
+      "config_sha256": "9e2c1bfea6e198f0402fe77903c8a5bab09e7f7c5bad33eec537bf4d821a31df",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+      "agent_config_sha256": "591e8d3ee6b66be9e61d6811ad6fe5bcce289b217c2616ef286f6bc919c5188c",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/task-board"
+    },
+    "reputation": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/reputation.yaml",
+      "config_sha256": "34c4587a9890058e4495d646e9286d413ed4805bae2277ff3fad305dc5d2e430",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+      "agent_config_sha256": "591e8d3ee6b66be9e61d6811ad6fe5bcce289b217c2616ef286f6bc919c5188c",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/reputation"
+    },
+    "court": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/court.yaml",
+      "config_sha256": "ddc7d29ca3f1621d85c248745d773e8d4326195ef545f8a35e5c5ad6d72a1302",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+      "agent_config_sha256": "591e8d3ee6b66be9e61d6811ad6fe5bcce289b217c2616ef286f6bc919c5188c",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/court"
+    },
+    "ui": {
+      "config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/ui.yaml",
+      "config_sha256": "def1c596e07ea52d770c10cf0952c37a537006ba869a0f3c8882c540ee170caa",
+      "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+      "agent_config_sha256": "591e8d3ee6b66be9e61d6811ad6fe5bcce289b217c2616ef286f6bc919c5188c",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/ui"
+    }
+  },
+  "maintenance_identity": {
+    "device": 16777234,
+    "inode": 334927218
+  },
+  "recovery": {
+    "state": "ready",
+    "inventory_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/recovery-inventory.json",
+    "inventory_sha256": "66513137c1019baa5c1a5575692f30e7640915825c44718a5ce41e0dff383d08",
+    "inventory": {
+      "contract_version": 1,
+      "runtime_id": "98da9aba8ad64c1e9e572582d0210eae",
+      "source_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+      "agents_package_root": "/Users/flo/Developer/github/agent-economy/agents",
+      "maintenance_lock_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/maintenance.lock",
+      "maintenance_lock_identity": {
+        "device": 16777234,
+        "inode": 334927218
+      },
+      "resources": [
+        {
+          "logical_id": "agents.roster",
+          "kind": "file",
+          "capture_kind": "copy",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/roster.yaml"
+        },
+        {
+          "logical_id": "agents.runtime_state",
+          "kind": "directory",
+          "capture_kind": "absent_directory",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/agent-runtime"
+        },
+        {
+          "logical_id": "agents.tasks",
+          "kind": "file",
+          "capture_kind": "absent_file",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/math_tasks.jsonl"
+        },
+        {
+          "logical_id": "assets.root",
+          "kind": "directory",
+          "capture_kind": "copy",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/assets"
+        },
+        {
+          "logical_id": "config.agents",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml"
+        },
+        {
+          "logical_id": "config.central-bank",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/central-bank.yaml"
+        },
+        {
+          "logical_id": "config.court",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/court.yaml"
+        },
+        {
+          "logical_id": "config.db-gateway",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/db-gateway.yaml"
+        },
+        {
+          "logical_id": "config.identity",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/identity.yaml"
+        },
+        {
+          "logical_id": "config.reputation",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/reputation.yaml"
+        },
+        {
+          "logical_id": "config.task-board",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/task-board.yaml"
+        },
+        {
+          "logical_id": "config.ui",
+          "kind": "file",
+          "capture_kind": "config",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/ui.yaml"
+        },
+        {
+          "logical_id": "database.legacy.task-board",
+          "kind": "file",
+          "capture_kind": "absent_file",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/task-board.db"
+        },
+        {
+          "logical_id": "database.primary",
+          "kind": "file",
+          "capture_kind": "copy",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/economy.db"
+        },
+        {
+          "logical_id": "database.schema",
+          "kind": "file",
+          "capture_kind": "copy",
+          "capture_root": "/Users/flo/Developer/github/agent-economy",
+          "captured_path": "/Users/flo/Developer/github/agent-economy/docs/specifications/schema.sql"
+        },
+        {
+          "logical_id": "frontend.web",
+          "kind": "directory",
+          "capture_kind": "copy",
+          "capture_root": "/Users/flo/Developer/github/agent-economy",
+          "captured_path": "/Users/flo/Developer/github/agent-economy/services/ui/data/web"
+        },
+        {
+          "logical_id": "key.alice.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/alice.key"
+        },
+        {
+          "logical_id": "key.alice.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/alice.pub"
+        },
+        {
+          "logical_id": "key.bob.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/bob.key"
+        },
+        {
+          "logical_id": "key.bob.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/bob.pub"
+        },
+        {
+          "logical_id": "key.feeder.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/feeder.key"
+        },
+        {
+          "logical_id": "key.feeder.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/feeder.pub"
+        },
+        {
+          "logical_id": "key.gateway-central-bank.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-central-bank.key"
+        },
+        {
+          "logical_id": "key.gateway-central-bank.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-central-bank.pub"
+        },
+        {
+          "logical_id": "key.gateway-court.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-court.key"
+        },
+        {
+          "logical_id": "key.gateway-court.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-court.pub"
+        },
+        {
+          "logical_id": "key.gateway-identity.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-identity.key"
+        },
+        {
+          "logical_id": "key.gateway-identity.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-identity.pub"
+        },
+        {
+          "logical_id": "key.gateway-reputation.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-reputation.key"
+        },
+        {
+          "logical_id": "key.gateway-reputation.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-reputation.pub"
+        },
+        {
+          "logical_id": "key.gateway-task-board.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-task-board.key"
+        },
+        {
+          "logical_id": "key.gateway-task-board.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-task-board.pub"
+        },
+        {
+          "logical_id": "key.mathbot.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/mathbot.key"
+        },
+        {
+          "logical_id": "key.mathbot.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/mathbot.pub"
+        },
+        {
+          "logical_id": "key.mathbot_mistral.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/mathbot_mistral.key"
+        },
+        {
+          "logical_id": "key.mathbot_mistral.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/mathbot_mistral.pub"
+        },
+        {
+          "logical_id": "key.mathbot_openai.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/mathbot_openai.key"
+        },
+        {
+          "logical_id": "key.mathbot_openai.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/mathbot_openai.pub"
+        },
+        {
+          "logical_id": "key.operator.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/operator.key"
+        },
+        {
+          "logical_id": "key.operator.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/operator.pub"
+        },
+        {
+          "logical_id": "key.platform.private",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/platform.key"
+        },
+        {
+          "logical_id": "key.platform.public",
+          "kind": "file",
+          "capture_kind": "keypair",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/platform.pub"
+        },
+        {
+          "logical_id": "keys.root",
+          "kind": "directory",
+          "capture_kind": "directory_only",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys"
+        },
+        {
+          "logical_id": "logs.root",
+          "kind": "directory",
+          "capture_kind": "directory_only",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs"
+        },
+        {
+          "logical_id": "recovery.backups",
+          "kind": "directory",
+          "capture_kind": "directory_only",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/backups"
+        },
+        {
+          "logical_id": "runtime.maintenance_lock",
+          "kind": "file",
+          "capture_kind": "runtime_lock",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/maintenance.lock"
+        }
+      ],
+      "configs": [
+        {
+          "logical_id": "agents",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/agents",
+          "sha256": "591e8d3ee6b66be9e61d6811ad6fe5bcce289b217c2616ef286f6bc919c5188c"
+        },
+        {
+          "logical_id": "central-bank",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/central-bank.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/central-bank",
+          "sha256": "4414ff5838739c9896f58c382244bf4cc697052df22ac412ac79f72c0b90174d"
+        },
+        {
+          "logical_id": "court",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/court.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/court",
+          "sha256": "ddc7d29ca3f1621d85c248745d773e8d4326195ef545f8a35e5c5ad6d72a1302"
+        },
+        {
+          "logical_id": "db-gateway",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/db-gateway.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+          "sha256": "cd4443a5d5edc3eefd232e751ebcfb1c7ee1b8d4c885166f5bfc802670a70869"
+        },
+        {
+          "logical_id": "identity",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/identity.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/identity",
+          "sha256": "a51efd11f8b0091177b7260b87290edf0819a1e1a80daf02ce81b9a30f713067"
+        },
+        {
+          "logical_id": "reputation",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/reputation.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/reputation",
+          "sha256": "34c4587a9890058e4495d646e9286d413ed4805bae2277ff3fad305dc5d2e430"
+        },
+        {
+          "logical_id": "task-board",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/task-board.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/task-board",
+          "sha256": "9e2c1bfea6e198f0402fe77903c8a5bab09e7f7c5bad33eec537bf4d821a31df"
+        },
+        {
+          "logical_id": "ui",
+          "capture_root": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr",
+          "captured_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/ui.yaml",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/ui",
+          "sha256": "def1c596e07ea52d770c10cf0952c37a537006ba869a0f3c8882c540ee170caa"
+        }
+      ],
+      "field_bindings": [
+        {
+          "binding_id": "agents:platform.identity_url",
+          "config_id": "agents",
+          "field_path": [
+            "platform",
+            "identity_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53001",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:platform.bank_url",
+          "config_id": "agents",
+          "field_path": [
+            "platform",
+            "bank_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53002",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:platform.task_board_url",
+          "config_id": "agents",
+          "field_path": [
+            "platform",
+            "task_board_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53003",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:platform.reputation_url",
+          "config_id": "agents",
+          "field_path": [
+            "platform",
+            "reputation_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53004",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:platform.court_url",
+          "config_id": "agents",
+          "field_path": [
+            "platform",
+            "court_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53005",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:runtime_state.directory",
+          "config_id": "agents",
+          "field_path": [
+            "runtime_state",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/agent-runtime",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/agent-runtime",
+          "resource_id": "agents.runtime_state"
+        },
+        {
+          "binding_id": "agents:data.keys_dir",
+          "config_id": "agents",
+          "field_path": [
+            "data",
+            "keys_dir"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys",
+          "resource_id": "keys.root"
+        },
+        {
+          "binding_id": "agents:data.roster_path",
+          "config_id": "agents",
+          "field_path": [
+            "data",
+            "roster_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/roster.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/roster.yaml",
+          "resource_id": "agents.roster"
+        },
+        {
+          "binding_id": "agents:task_feeder.tasks_file",
+          "config_id": "agents",
+          "field_path": [
+            "task_feeder",
+            "tasks_file"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/math_tasks.jsonl",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/math_tasks.jsonl",
+          "resource_id": "agents.tasks"
+        },
+        {
+          "binding_id": "agents:workers.mathbot.llm.base_url",
+          "config_id": "agents",
+          "field_path": [
+            "workers",
+            "mathbot",
+            "llm",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:1234/v1",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:workers.mathbot_openai.llm.base_url",
+          "config_id": "agents",
+          "field_path": [
+            "workers",
+            "mathbot_openai",
+            "llm",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "https://api.openai.com/v1",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "agents:workers.mathbot_mistral.llm.base_url",
+          "config_id": "agents",
+          "field_path": [
+            "workers",
+            "mathbot_mistral",
+            "llm",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "https://api.mistral.ai/v1",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "central-bank:server.port",
+          "config_id": "central-bank",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53002,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "central-bank:logging.directory",
+          "config_id": "central-bank",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "central-bank:db_gateway.url",
+          "config_id": "central-bank",
+          "field_path": [
+            "db_gateway",
+            "url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53000",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "central-bank:db_gateway.signing.private_key_path",
+          "config_id": "central-bank",
+          "field_path": [
+            "db_gateway",
+            "signing",
+            "private_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-central-bank.key",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-central-bank.key",
+          "resource_id": "key.gateway-central-bank.private"
+        },
+        {
+          "binding_id": "central-bank:platform.agent_config_path",
+          "config_id": "central-bank",
+          "field_path": [
+            "platform",
+            "agent_config_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "resource_id": "config.agents"
+        },
+        {
+          "binding_id": "central-bank:identity.base_url",
+          "config_id": "central-bank",
+          "field_path": [
+            "identity",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53001",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "court:server.port",
+          "config_id": "court",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53005,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "court:logging.directory",
+          "config_id": "court",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "court:db_gateway.url",
+          "config_id": "court",
+          "field_path": [
+            "db_gateway",
+            "url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53000",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "court:db_gateway.signing.private_key_path",
+          "config_id": "court",
+          "field_path": [
+            "db_gateway",
+            "signing",
+            "private_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-court.key",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-court.key",
+          "resource_id": "key.gateway-court.private"
+        },
+        {
+          "binding_id": "court:platform.agent_config_path",
+          "config_id": "court",
+          "field_path": [
+            "platform",
+            "agent_config_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "resource_id": "config.agents"
+        },
+        {
+          "binding_id": "db-gateway:server.port",
+          "config_id": "db-gateway",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53000,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "db-gateway:logging.directory",
+          "config_id": "db-gateway",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "db-gateway:recovery.maintenance_lock_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "recovery",
+            "maintenance_lock_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/maintenance.lock",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/maintenance.lock",
+          "resource_id": "runtime.maintenance_lock"
+        },
+        {
+          "binding_id": "db-gateway:database.path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "database",
+            "path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/economy.db",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/economy.db",
+          "resource_id": "database.primary"
+        },
+        {
+          "binding_id": "db-gateway:database.schema_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "database",
+            "schema_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/Users/flo/Developer/github/agent-economy/docs/specifications/schema.sql",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/Users/flo/Developer/github/agent-economy/docs/specifications/schema.sql",
+          "resource_id": "database.schema"
+        },
+        {
+          "binding_id": "db-gateway:recovery.backup_root",
+          "config_id": "db-gateway",
+          "field_path": [
+            "recovery",
+            "backup_root"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/backups",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/backups",
+          "resource_id": "recovery.backups"
+        },
+        {
+          "binding_id": "db-gateway:board_authority.platform_public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "board_authority",
+            "platform_public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/platform.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/platform.pub",
+          "resource_id": "key.platform.public"
+        },
+        {
+          "binding_id": "db-gateway:auth.trusted_callers.gateway-identity.public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "auth",
+            "trusted_callers",
+            "gateway-identity",
+            "public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-identity.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-identity.pub",
+          "resource_id": "key.gateway-identity.public"
+        },
+        {
+          "binding_id": "db-gateway:auth.trusted_callers.gateway-central-bank.public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "auth",
+            "trusted_callers",
+            "gateway-central-bank",
+            "public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-central-bank.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-central-bank.pub",
+          "resource_id": "key.gateway-central-bank.public"
+        },
+        {
+          "binding_id": "db-gateway:auth.trusted_callers.gateway-task-board.public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "auth",
+            "trusted_callers",
+            "gateway-task-board",
+            "public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-task-board.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-task-board.pub",
+          "resource_id": "key.gateway-task-board.public"
+        },
+        {
+          "binding_id": "db-gateway:auth.trusted_callers.gateway-reputation.public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "auth",
+            "trusted_callers",
+            "gateway-reputation",
+            "public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-reputation.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-reputation.pub",
+          "resource_id": "key.gateway-reputation.public"
+        },
+        {
+          "binding_id": "db-gateway:auth.trusted_callers.gateway-court.public_key_path",
+          "config_id": "db-gateway",
+          "field_path": [
+            "auth",
+            "trusted_callers",
+            "gateway-court",
+            "public_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-court.pub",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-court.pub",
+          "resource_id": "key.gateway-court.public"
+        },
+        {
+          "binding_id": "identity:server.port",
+          "config_id": "identity",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53001,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "identity:logging.directory",
+          "config_id": "identity",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "identity:db_gateway.url",
+          "config_id": "identity",
+          "field_path": [
+            "db_gateway",
+            "url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53000",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "identity:db_gateway.signing.private_key_path",
+          "config_id": "identity",
+          "field_path": [
+            "db_gateway",
+            "signing",
+            "private_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-identity.key",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-identity.key",
+          "resource_id": "key.gateway-identity.private"
+        },
+        {
+          "binding_id": "reputation:server.port",
+          "config_id": "reputation",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53004,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "reputation:logging.directory",
+          "config_id": "reputation",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "reputation:db_gateway.url",
+          "config_id": "reputation",
+          "field_path": [
+            "db_gateway",
+            "url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53000",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "reputation:db_gateway.signing.private_key_path",
+          "config_id": "reputation",
+          "field_path": [
+            "db_gateway",
+            "signing",
+            "private_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-reputation.key",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-reputation.key",
+          "resource_id": "key.gateway-reputation.private"
+        },
+        {
+          "binding_id": "reputation:platform.agent_config_path",
+          "config_id": "reputation",
+          "field_path": [
+            "platform",
+            "agent_config_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "resource_id": "config.agents"
+        },
+        {
+          "binding_id": "reputation:identity.base_url",
+          "config_id": "reputation",
+          "field_path": [
+            "identity",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53001",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "task-board:server.port",
+          "config_id": "task-board",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53003,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "task-board:logging.directory",
+          "config_id": "task-board",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "task-board:db_gateway.url",
+          "config_id": "task-board",
+          "field_path": [
+            "db_gateway",
+            "url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53000",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "task-board:db_gateway.signing.private_key_path",
+          "config_id": "task-board",
+          "field_path": [
+            "db_gateway",
+            "signing",
+            "private_key_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-task-board.key",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/keys/gateway-task-board.key",
+          "resource_id": "key.gateway-task-board.private"
+        },
+        {
+          "binding_id": "task-board:platform.agent_config_path",
+          "config_id": "task-board",
+          "field_path": [
+            "platform",
+            "agent_config_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "resource_id": "config.agents"
+        },
+        {
+          "binding_id": "task-board:identity.base_url",
+          "config_id": "task-board",
+          "field_path": [
+            "identity",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53001",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "task-board:recovery.maintenance_lock_path",
+          "config_id": "task-board",
+          "field_path": [
+            "recovery",
+            "maintenance_lock_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/maintenance.lock",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/maintenance.lock",
+          "resource_id": "runtime.maintenance_lock"
+        },
+        {
+          "binding_id": "task-board:database.path",
+          "config_id": "task-board",
+          "field_path": [
+            "database",
+            "path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/task-board.db",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/task-board.db",
+          "resource_id": "database.legacy.task-board"
+        },
+        {
+          "binding_id": "task-board:central_bank.base_url",
+          "config_id": "task-board",
+          "field_path": [
+            "central_bank",
+            "base_url"
+          ],
+          "binding_kind": "network",
+          "captured_value": "http://127.0.0.1:53002",
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "task-board:assets.storage_path",
+          "config_id": "task-board",
+          "field_path": [
+            "assets",
+            "storage_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/assets",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/assets",
+          "resource_id": "assets.root"
+        },
+        {
+          "binding_id": "ui:server.port",
+          "config_id": "ui",
+          "field_path": [
+            "server",
+            "port"
+          ],
+          "binding_kind": "port",
+          "captured_value": 53006,
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        },
+        {
+          "binding_id": "ui:logging.directory",
+          "config_id": "ui",
+          "field_path": [
+            "logging",
+            "directory"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/logs",
+          "resource_id": "logs.root"
+        },
+        {
+          "binding_id": "ui:recovery.maintenance_lock_path",
+          "config_id": "ui",
+          "field_path": [
+            "recovery",
+            "maintenance_lock_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/maintenance.lock",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/maintenance.lock",
+          "resource_id": "runtime.maintenance_lock"
+        },
+        {
+          "binding_id": "ui:database.path",
+          "config_id": "ui",
+          "field_path": [
+            "database",
+            "path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/economy.db",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/data/economy.db",
+          "resource_id": "database.primary"
+        },
+        {
+          "binding_id": "ui:frontend.web_root",
+          "config_id": "ui",
+          "field_path": [
+            "frontend",
+            "web_root"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/Users/flo/Developer/github/agent-economy/services/ui/data/web",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/Users/flo/Developer/github/agent-economy/services/ui/data/web",
+          "resource_id": "frontend.web"
+        },
+        {
+          "binding_id": "ui:user_agent.agent_config_path",
+          "config_id": "ui",
+          "field_path": [
+            "user_agent",
+            "agent_config_path"
+          ],
+          "binding_kind": "filesystem",
+          "captured_value": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "resolution_base": "absolute",
+          "resolved_source_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/configs/agents.yaml",
+          "resource_id": "config.agents"
+        },
+        {
+          "binding_id": "ui:browser_security.allowed_origins",
+          "config_id": "ui",
+          "field_path": [
+            "browser_security",
+            "allowed_origins"
+          ],
+          "binding_kind": "origins",
+          "captured_value": [
+            "http://127.0.0.1:53006",
+            "http://localhost:53006"
+          ],
+          "resolution_base": null,
+          "resolved_source_path": null,
+          "resource_id": null
+        }
+      ],
+      "keypairs": [
+        {
+          "handle": "alice",
+          "role": "economic",
+          "private_resource_id": "key.alice.private",
+          "public_resource_id": "key.alice.public",
+          "expected_public_fingerprint_sha256": "d33691feeed041d75b8e75647d10d3747073794e3c645d04051c234e89f0f4e5",
+          "registration_requirement": "optional",
+          "captured_registration_state": "registered",
+          "expected_registered_agent_id": "a-396d025c-2abc-4c04-a305-9b67ae73cce6"
+        },
+        {
+          "handle": "bob",
+          "role": "economic",
+          "private_resource_id": "key.bob.private",
+          "public_resource_id": "key.bob.public",
+          "expected_public_fingerprint_sha256": "7930733daf769df4b8a59c57f0827e993270dbe4037ffd6f84a0e215a2cb3b0f",
+          "registration_requirement": "optional",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "feeder",
+          "role": "economic",
+          "private_resource_id": "key.feeder.private",
+          "public_resource_id": "key.feeder.public",
+          "expected_public_fingerprint_sha256": "19320ac5cba8ac61aae33cebca5000e5e9c3d774af80204804dbf3bb4985ad9c",
+          "registration_requirement": "optional",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "gateway-central-bank",
+          "role": "gateway",
+          "private_resource_id": "key.gateway-central-bank.private",
+          "public_resource_id": "key.gateway-central-bank.public",
+          "expected_public_fingerprint_sha256": "1ea227cd824e8a587fddeb1e18a1a19e168947bfc15cb66d7a38427760999743",
+          "registration_requirement": "forbidden",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "gateway-court",
+          "role": "gateway",
+          "private_resource_id": "key.gateway-court.private",
+          "public_resource_id": "key.gateway-court.public",
+          "expected_public_fingerprint_sha256": "752a1c2c5f899eca741a87b50bfb6db8105e27770da953452316785b56b46fbe",
+          "registration_requirement": "forbidden",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "gateway-identity",
+          "role": "gateway",
+          "private_resource_id": "key.gateway-identity.private",
+          "public_resource_id": "key.gateway-identity.public",
+          "expected_public_fingerprint_sha256": "3fa69f9794b59111a9e04fdaf17ca02ac113b767baa3ff4127039b81402a2bb4",
+          "registration_requirement": "forbidden",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "gateway-reputation",
+          "role": "gateway",
+          "private_resource_id": "key.gateway-reputation.private",
+          "public_resource_id": "key.gateway-reputation.public",
+          "expected_public_fingerprint_sha256": "10178463a0ba8d4800efa73111a0ac78bf66e4c56a6b50a92e20c7447d4920e1",
+          "registration_requirement": "forbidden",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "gateway-task-board",
+          "role": "gateway",
+          "private_resource_id": "key.gateway-task-board.private",
+          "public_resource_id": "key.gateway-task-board.public",
+          "expected_public_fingerprint_sha256": "8542344c9c35ede047d2c08d9ba5d6472b996a1abf4d4a756a27d732e9f7b0c4",
+          "registration_requirement": "forbidden",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "mathbot",
+          "role": "economic",
+          "private_resource_id": "key.mathbot.private",
+          "public_resource_id": "key.mathbot.public",
+          "expected_public_fingerprint_sha256": "f55abe26a7a6fc1e8f5dd3ec94f4b2525567ccfe39628512fb9a13b08a2ee83c",
+          "registration_requirement": "optional",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "mathbot_mistral",
+          "role": "economic",
+          "private_resource_id": "key.mathbot_mistral.private",
+          "public_resource_id": "key.mathbot_mistral.public",
+          "expected_public_fingerprint_sha256": "16ef9c94b0360277b297e5d3212495bdf04ece596262f942d34a72136c27b2c7",
+          "registration_requirement": "optional",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "mathbot_openai",
+          "role": "economic",
+          "private_resource_id": "key.mathbot_openai.private",
+          "public_resource_id": "key.mathbot_openai.public",
+          "expected_public_fingerprint_sha256": "60090d89d9ba36192897c73ca1ed3181614e2157f9a670071936e32dd18bb5a5",
+          "registration_requirement": "optional",
+          "captured_registration_state": "unregistered",
+          "expected_registered_agent_id": null
+        },
+        {
+          "handle": "operator",
+          "role": "economic",
+          "private_resource_id": "key.operator.private",
+          "public_resource_id": "key.operator.public",
+          "expected_public_fingerprint_sha256": "3f31917b31875d8caa65c238ff7162208243dea03434d97a80bf7a8744f88df1",
+          "registration_requirement": "required",
+          "captured_registration_state": "registered",
+          "expected_registered_agent_id": "a-a061c2fa-a894-4620-8193-d66131df33a8"
+        },
+        {
+          "handle": "platform",
+          "role": "economic",
+          "private_resource_id": "key.platform.private",
+          "public_resource_id": "key.platform.public",
+          "expected_public_fingerprint_sha256": "ac6752e0d1a5e9a93430ebc60180af40b586c28925393543c386796f86590eed",
+          "registration_requirement": "required",
+          "captured_registration_state": "registered",
+          "expected_registered_agent_id": "a-604d3a41-f455-4cb8-82f6-6bbd92b4a9c9"
+        }
+      ],
+      "process_ownership": [
+        {
+          "logical_id": "db-gateway",
+          "config_id": "db-gateway",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway",
+          "agents_package_root": null,
+          "pid": 98277,
+          "pgid": 98277,
+          "sid": 98277,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "identity",
+          "config_id": "identity",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/identity",
+          "agents_package_root": null,
+          "pid": 98281,
+          "pgid": 98281,
+          "sid": 98281,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "central-bank",
+          "config_id": "central-bank",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/central-bank",
+          "agents_package_root": null,
+          "pid": 98283,
+          "pgid": 98283,
+          "sid": 98283,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "task-board",
+          "config_id": "task-board",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/task-board",
+          "agents_package_root": null,
+          "pid": 98286,
+          "pgid": 98286,
+          "sid": 98286,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "reputation",
+          "config_id": "reputation",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/reputation",
+          "agents_package_root": null,
+          "pid": 98290,
+          "pgid": 98290,
+          "sid": 98290,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "court",
+          "config_id": "court",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/court",
+          "agents_package_root": null,
+          "pid": 98296,
+          "pgid": 98296,
+          "sid": 98296,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "ui",
+          "config_id": "ui",
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/services/ui",
+          "agents_package_root": null,
+          "pid": 98304,
+          "pgid": 98304,
+          "sid": 98304,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 143,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "key-bootstrap-0",
+          "config_id": null,
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/agents",
+          "agents_package_root": "/Users/flo/Developer/github/agent-economy/agents",
+          "pid": 98274,
+          "pgid": 98274,
+          "sid": 98274,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 0,
+          "cleanup_error": null
+        },
+        {
+          "logical_id": "phase-command-0",
+          "config_id": null,
+          "process_cwd": "/Users/flo/Developer/github/agent-economy/agents",
+          "agents_package_root": "/Users/flo/Developer/github/agent-economy/agents",
+          "pid": 98307,
+          "pgid": 98307,
+          "sid": 98307,
+          "running": false,
+          "group_drained": true,
+          "leader_returncode": 0,
+          "cleanup_error": null
+        }
+      ]
+    }
+  }
+}

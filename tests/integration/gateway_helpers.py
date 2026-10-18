@@ -121,8 +121,12 @@ database:
   journal_mode: "wal"
 
 recovery:
-  maintenance_lock_path: "{config_dir / 'maintenance.lock'}"
-  backup_root: "{config_dir / 'backups'}"
+  maintenance_lock_path: "{config_dir / "maintenance.lock"}"
+  backup_root: "{config_dir / "backups"}"
+
+board_authority:
+  platform_public_key_path: "{config_dir / "platform.pub"}"
+  deadline_actor_id: "system-task-board-deadline"
 
 request:
   max_body_size: 1048576
@@ -205,6 +209,7 @@ def create_gateway_client(db_path: str) -> httpx.AsyncClient:
     config_dir = Path(temporary_directory.name)
     state = None
     try:
+        generate_keypair("platform", config_dir)
         signers: dict[str, GatewayRequestSigner] = {}
         for domain, handle in _DOMAIN_HANDLES.items():
             generate_keypair(handle, config_dir)

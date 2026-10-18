@@ -2,32 +2,43 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
+import asyncio
 import os
 import uuid
+from contextlib import closing, suppress
+from json import JSONDecodeError
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import yaml
 from cryptography.exceptions import InvalidSignature as _InvalidSignature
+from db_gateway_service.board_authority import BoardAuthority
+from db_gateway_service.schema import SchemaState, load_schema_sql
+from db_gateway_service.task_time import utc_now_us
 from httpx import ASGITransport, AsyncClient
 from service_auth.financial_identity import operation_id_for
-from service_auth.jws import JwsAdmissionError, VerifiedJws
+from service_auth.jws import JwsAdmissionError, VerifiedJws, parse_jws, verify_jws_for_signer
 from service_auth.platform import PlatformAgent
 from service_auth.signing import generate_keypair as provision_keypair
+from service_auth.signing import public_key_to_b64
 from service_commons.exceptions import ServiceError
 
 from task_board_service.app import create_app
-from task_board_service.config import clear_settings_cache
+from task_board_service.config import clear_settings_cache, get_settings
 from task_board_service.core.lifespan import lifespan
 from task_board_service.core.state import get_app_state, reset_app_state
-from tests.fakes.in_memory_task_store import InMemoryTaskStore
-from tests.helpers import generate_keypair, make_jws_token, verify_compact_jws
+from task_board_service.services.asset_manager import AssetManager
+from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+from task_board_service.services.escrow_coordinator import EscrowCoordinator
+from task_board_service.services.task_manager import TaskManager
+from task_board_service.services.token_validator import TokenValidator
+from tests.fakes.gateway_task_store import GatewayTaskStore
+from tests.fakes.router_gateway_effects import RouterGatewayEffects
+from tests.helpers import generate_keypair, make_jws_token
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Awaitable, Callable
     from pathlib import Path
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -97,76 +108,14 @@ def make_bid_id() -> str:
     return f"bid-{uuid.uuid4()}"
 
 
-def _native_lock_response(escrow_token: str) -> dict[str, object]:
-    """Return the native receipt for the exact signed task-lock intent."""
-    verified = verify_compact_jws(escrow_token)
-    payload = verified.payload
-    operation_id = payload["operation_id"]
-    task_id = payload["task_id"]
-    poster_id = payload["agent_id"]
-    amount = payload["amount"]
-    assert isinstance(operation_id, str)
-    assert isinstance(task_id, str)
-    assert isinstance(poster_id, str)
-    assert type(amount) is int
-    canonical_request = {
-        "request_version": 1,
-        "operation_kind": "escrow_lock",
-        "payer_account_id": poster_id,
-        "task_id": task_id,
-        "amount": amount,
-    }
-    escrow_id = f"esc-{uuid.uuid4()}"
-    committed_at = "2026-10-16T00:00:00Z"
-    return {
-        "outcome": "native_receipt",
-        "receipt": {
-            "receipt_version": 1,
-            "operation_id": operation_id,
-            "operation_kind": "escrow_lock",
-            "request_sha256": hashlib.sha256(
-                json.dumps(
-                    canonical_request,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                    ensure_ascii=False,
-                ).encode()
-            ).hexdigest(),
-            "source_reference": task_id,
-            "committed_at": committed_at,
-            "event_id": 1,
-            "escrow_id": escrow_id,
-            "result": {"escrow_status_at_commit": "locked"},
-            "legs": [
-                {
-                    "role": "payer",
-                    "account_id": poster_id,
-                    "direction": "debit",
-                    "amount": amount,
-                    "transaction_id": f"tx-{uuid.uuid4()}",
-                    "balance_after": 0,
-                }
-            ],
-        },
-        "current_escrow": {
-            "escrow_id": escrow_id,
-            "payer_account_id": poster_id,
-            "task_id": task_id,
-            "amount": amount,
-            "status": "locked",
-            "created_at": committed_at,
-            "resolved_at": None,
-        },
-    }
-
-
 # ---------------------------------------------------------------------------
 # Keypair fixtures
 # ---------------------------------------------------------------------------
 @pytest.fixture
-def platform_keypair() -> tuple[Ed25519PrivateKey, str]:
-    """Generate a platform keypair."""
-    return generate_keypair()
+def platform_keypair(tmp_path: Path) -> tuple[Ed25519PrivateKey, str]:
+    """Use the same owned platform key in configuration, signatures and Gateway authority."""
+    private_key, public_key = provision_keypair("platform", tmp_path / "agent-keys")
+    return private_key, f"ed25519:{public_key_to_b64(public_key)}"
 
 
 @pytest.fixture
@@ -215,8 +164,15 @@ def carol_agent_id() -> str:
 # App + client fixtures
 # ---------------------------------------------------------------------------
 @pytest.fixture
-async def app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[Any]:
-    """Create a test app with temp database and mocked external services."""
+async def app(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    platform_keypair: tuple[Ed25519PrivateKey, str],
+    alice_keypair: tuple[Ed25519PrivateKey, str],
+    bob_keypair: tuple[Ed25519PrivateKey, str],
+    carol_keypair: tuple[Ed25519PrivateKey, str],
+) -> AsyncIterator[Any]:
+    """Use real isolated persistence behind controllable external transport boundaries."""
     db_path = tmp_path / "test.db"
     provision_keypair("gateway-task-board", tmp_path)
     agent_config_path = _write_platform_agent_config(tmp_path)
@@ -230,7 +186,7 @@ server:
   log_level: "info"
 logging:
   level: "WARNING"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "task-board"}"
 database:
   path: "{db_path}"
 identity:
@@ -250,7 +206,7 @@ platform:
 request:
   max_body_size: 1048576
 recovery:
-  maintenance_lock_path: "maintenance.lock"
+  maintenance_lock_path: "{tmp_path / "maintenance.lock"}"
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
@@ -264,6 +220,7 @@ db_gateway:
     token_ttl_seconds: 300
 deadline_evaluation:
   evaluation_interval_seconds: 3600
+  actor_id: system-task-board-deadline
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -275,66 +232,145 @@ deadline_evaluation:
     reset_app_state()
     monkeypatch.setattr(PlatformAgent, "register", _register_test_platform)
 
-    test_app = create_app()
-    async with lifespan(test_app):
-        # Replace external service clients with mocks
-        state = get_app_state()
-        fake_store = InMemoryTaskStore(db_path=str(db_path))
-        state.store = fake_store
+    try:
+        test_app = create_app()
+        async with lifespan(test_app):
+            state = get_app_state()
+            real_platform = state.platform_agent
+            assert real_platform is not None
+            known_keys = {
+                ALICE_AGENT_ID: alice_keypair[0].public_key(),
+                BOB_AGENT_ID: bob_keypair[0].public_key(),
+                CAROL_AGENT_ID: carol_keypair[0].public_key(),
+            }
 
-        # Mock PlatformAgent for local certificate validation
-        mock_platform = MagicMock()
-        mock_platform.agent_id = PLATFORM_AGENT_ID
-        mock_platform.validate_certificate = MagicMock(side_effect=verify_compact_jws)
-        mock_platform.file_claim = AsyncMock(
-            return_value={"dispute_id": "disp-1", "status": "rebuttal_pending"}
-        )
-        mock_platform.submit_rebuttal = AsyncMock(
-            return_value={"dispute_id": f"disp-{uuid.uuid4()}", "status": "rebuttal_pending"}
-        )
-        mock_platform.close = AsyncMock()
-        state.platform_agent = mock_platform
+            def verify_fixture_identity(token: str) -> VerifiedJws:
+                parsed = parse_jws(token)
+                if parsed.header.kid == PLATFORM_AGENT_ID:
+                    return real_platform.validate_certificate(token)
+                public_key = known_keys.get(parsed.header.kid)
+                if public_key is None:
+                    raise _InvalidSignature("Unknown fixture identity")
+                return verify_jws_for_signer(
+                    token,
+                    public_key,
+                    policy=real_platform.config.token_policy,
+                    expected_kid=parsed.header.kid,
+                )
 
-        # Mock Central Bank client — default: escrow operations succeed
-        mock_bank = AsyncMock()
-        mock_bank.close = AsyncMock()
-        mock_bank.escrow_lock = AsyncMock(side_effect=_native_lock_response)
-        mock_bank.escrow_release = AsyncMock(return_value={"status": "released"})
-        mock_bank.escrow_split = AsyncMock(return_value={"status": "split"})
-        state.central_bank_client = mock_bank
+            with closing(
+                GatewayTaskStore(
+                    db_path=db_path,
+                    busy_timeout_ms=5000,
+                    journal_mode="wal",
+                    schema_sql=load_schema_sql(SchemaState.CURRENT_V3),
+                    caller_kid="gateway-task-board",
+                    authority=BoardAuthority(
+                        platform_public_key=platform_keypair[1],
+                        deadline_actor_id="system-task-board-deadline",
+                    ),
+                    clock_us=utc_now_us,
+                )
+            ) as gateway_store:
+                effects = RouterGatewayEffects(
+                    gateway_store, utc_now_us, 3600, verify_fixture_identity
+                )
+                for agent_id, keypair, balance in (
+                    (PLATFORM_AGENT_ID, platform_keypair, 0),
+                    (ALICE_AGENT_ID, alice_keypair, 1_000_000),
+                    (BOB_AGENT_ID, bob_keypair, 1_000_000),
+                    (CAROL_AGENT_ID, carol_keypair, 1_000_000),
+                ):
+                    effects.register_actor(agent_id, keypair[1], balance)
+                assert state.store is not None
+                assert state.deadline_sweep_task is not None
+                state.deadline_sweep_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await state.deadline_sweep_task
+                state.store.close()
+                state.store = gateway_store
+                test_app.state.gateway_store = gateway_store
+                test_app.state.gateway_effects = effects
+                test_app.state.verify_fixture_identity = verify_fixture_identity
 
-        # Mock IdentityClient for JWS verification
-        mock_identity = AsyncMock()
-        mock_identity.close = AsyncMock()
-        mock_identity.verify_jws = AsyncMock(side_effect=_make_delegating_verify_jws(state))
-        state.identity_client = mock_identity
+                mock_platform = MagicMock()
+                mock_platform.agent_id = PLATFORM_AGENT_ID
+                mock_platform.validate_certificate = MagicMock(side_effect=verify_fixture_identity)
+                mock_platform.file_claim = AsyncMock(side_effect=effects.file_claim)
+                mock_platform.submit_rebuttal = AsyncMock(side_effect=effects.submit_rebuttal)
+                mock_platform.trigger_ruling = AsyncMock(
+                    return_value={"status": "rebuttal_pending"}
+                )
+                mock_platform.close = AsyncMock()
+                state.platform_agent = mock_platform
+                state.platform_signer = mock_platform
 
-        # Propagate mocks to extracted services
-        if state.task_manager is not None:
-            state.task_manager._store = fake_store
-            state.task_manager._central_bank_client = mock_bank
-            state.task_manager._deadline_evaluator._store = fake_store
-            state.task_manager._asset_manager._store = fake_store
-            state.task_manager._asset_manager._deadline_evaluator._store = fake_store
-            state.task_manager._escrow_coordinator._store = fake_store
-        if state.token_validator is not None:
-            state.token_validator._platform_agent = mock_platform
-            state.token_validator._identity_client = mock_identity
-        if state.escrow_coordinator is not None:
-            state.escrow_coordinator._store = fake_store
-            state.escrow_coordinator._central_bank_client = mock_bank
-        if state.asset_manager is not None:
-            state.asset_manager._store = fake_store
-            state.asset_manager._deadline_evaluator._store = fake_store
+                mock_bank = AsyncMock()
+                mock_bank.close = AsyncMock()
+                mock_bank.escrow_lock = AsyncMock(side_effect=effects.lock)
+                mock_bank.escrow_release = AsyncMock(side_effect=effects.release)
+                mock_bank.escrow_split = AsyncMock(side_effect=effects.split)
+                state.central_bank_client = mock_bank
 
-        yield test_app
+                mock_identity = AsyncMock()
+                mock_identity.close = AsyncMock()
+                mock_identity.verify_jws = AsyncMock(side_effect=make_fixture_verify_jws(state))
+                state.identity_client = mock_identity
 
-    reset_app_state()
-    clear_settings_cache()
-    if old_config is None:
-        os.environ.pop("CONFIG_PATH", None)
-    else:
-        os.environ["CONFIG_PATH"] = old_config
+                settings = get_settings()
+                assert settings.limits is not None
+                assert settings.deadline_evaluation is not None
+                coordinator = EscrowCoordinator(mock_bank)
+                validator = TokenValidator(mock_platform, mock_identity)
+                evaluator = DeadlineEvaluator(
+                    gateway_store,
+                    coordinator,
+                    platform_agent=mock_platform,
+                    deadline_actor_id=settings.deadline_evaluation.actor_id,
+                )
+                assets = AssetManager(
+                    store=gateway_store,
+                    token_validator=validator,
+                    deadline_evaluator=evaluator,
+                    asset_storage_path=str(tmp_path / "assets"),
+                    max_file_size=settings.limits.max_file_size,
+                    max_files_per_task=settings.limits.max_assets_per_task,
+                )
+                manager = TaskManager(
+                    store=gateway_store,
+                    central_bank_client=mock_bank,
+                    escrow_coordinator=coordinator,
+                    token_validator=validator,
+                    deadline_evaluator=evaluator,
+                    asset_manager=assets,
+                    platform_signer=mock_platform,
+                    platform_agent_id=PLATFORM_AGENT_ID,
+                )
+                state.task_manager = manager
+                state.token_validator = validator
+                state.escrow_coordinator = coordinator
+                state.asset_manager = assets
+                sweep = asyncio.create_task(
+                    evaluator.run_periodic_sweep(
+                        settings.deadline_evaluation.evaluation_interval_seconds
+                    )
+                )
+                state.deadline_sweep_task = sweep
+                try:
+                    yield test_app
+                finally:
+                    sweep.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await sweep
+                    manager.close()
+
+    finally:
+        reset_app_state()
+        clear_settings_cache()
+        if old_config is None:
+            os.environ.pop("CONFIG_PATH", None)
+        else:
+            os.environ["CONFIG_PATH"] = old_config
 
 
 @pytest.fixture
@@ -349,91 +385,129 @@ async def client(app: Any) -> AsyncIterator[AsyncClient]:
 # Mock override fixtures (use these to replace default mock behavior)
 # ---------------------------------------------------------------------------
 @pytest.fixture
-def mock_identity_verify_success(_app: Any) -> None:
+def mock_identity_verify_success(_app: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Configure the identity client mock to verify JWS successfully."""
     state = get_app_state()
-    state.platform_agent.validate_certificate = MagicMock(side_effect=verify_compact_jws)
-    state.identity_client.verify_jws = AsyncMock(side_effect=_make_delegating_verify_jws(state))
-    if state.token_validator is not None:
-        state.token_validator._identity_client = state.identity_client
+    assert state.platform_agent is not None
+    assert state.identity_client is not None
+    monkeypatch.setattr(
+        state.platform_agent,
+        "validate_certificate",
+        MagicMock(side_effect=_app.state.verify_fixture_identity),
+    )
+    monkeypatch.setattr(
+        state.identity_client, "verify_jws", AsyncMock(side_effect=make_fixture_verify_jws(state))
+    )
 
 
 @pytest.fixture
-def mock_identity_unavailable(_app: Any) -> None:
+def mock_identity_unavailable(_app: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Configure the identity client mock to simulate service unavailability."""
     state = get_app_state()
-    state.platform_agent.validate_certificate = MagicMock(
-        side_effect=ConnectionError("Identity service unreachable")
+    assert state.platform_agent is not None
+    assert state.identity_client is not None
+    monkeypatch.setattr(
+        state.platform_agent,
+        "validate_certificate",
+        MagicMock(side_effect=ConnectionError("Identity service unreachable")),
     )
-    state.identity_client.verify_jws = AsyncMock(
-        side_effect=ServiceError(
-            "identity_service_unavailable",
-            "Cannot reach Identity service",
-            502,
-            {},
-        )
+    monkeypatch.setattr(
+        state.identity_client,
+        "verify_jws",
+        AsyncMock(
+            side_effect=ServiceError(
+                "identity_service_unavailable",
+                "Cannot reach Identity service",
+                502,
+                {},
+            )
+        ),
     )
-    if state.token_validator is not None:
-        state.token_validator._identity_client = state.identity_client
 
 
 @pytest.fixture
-def mock_identity_timeout(_app: Any) -> None:
+def mock_identity_timeout(_app: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Configure the identity client mock to simulate a timeout."""
     state = get_app_state()
-    state.platform_agent.validate_certificate = MagicMock(
-        side_effect=TimeoutError("Identity service timed out")
+    assert state.platform_agent is not None
+    assert state.identity_client is not None
+    monkeypatch.setattr(
+        state.platform_agent,
+        "validate_certificate",
+        MagicMock(side_effect=TimeoutError("Identity service timed out")),
     )
-    state.identity_client.verify_jws = AsyncMock(
-        side_effect=ServiceError(
-            "identity_service_unavailable",
-            "Cannot reach Identity service",
-            502,
-            {},
-        )
+    monkeypatch.setattr(
+        state.identity_client,
+        "verify_jws",
+        AsyncMock(
+            side_effect=ServiceError(
+                "identity_service_unavailable",
+                "Cannot reach Identity service",
+                502,
+                {},
+            )
+        ),
     )
-    if state.token_validator is not None:
-        state.token_validator._identity_client = state.identity_client
 
 
 @pytest.fixture
-def mock_identity_unexpected_response(_app: Any) -> None:
+def mock_identity_unexpected_response(_app: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Configure the identity client mock to return an unexpected response."""
     state = get_app_state()
-    state.platform_agent.validate_certificate = MagicMock(
-        side_effect=ValueError("Unexpected response from Identity service")
+    assert state.platform_agent is not None
+    assert state.identity_client is not None
+    monkeypatch.setattr(
+        state.platform_agent,
+        "validate_certificate",
+        MagicMock(
+            side_effect=JSONDecodeError("Unexpected response from Identity service", "not-json", 0)
+        ),
     )
-    state.identity_client.verify_jws = AsyncMock(
-        side_effect=ServiceError(
-            "identity_service_unavailable",
-            "Cannot reach Identity service",
-            502,
-            {},
-        )
+    monkeypatch.setattr(
+        state.identity_client,
+        "verify_jws",
+        AsyncMock(
+            side_effect=ServiceError(
+                "identity_service_unavailable",
+                "Cannot reach Identity service",
+                502,
+                {},
+            )
+        ),
     )
-    if state.token_validator is not None:
-        state.token_validator._identity_client = state.identity_client
 
 
 @pytest.fixture
-def mock_central_bank_insufficient_funds(_app: Any) -> None:
+def mock_central_bank_insufficient_funds(_app: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Configure the Central Bank mock to reject escrow with insufficient funds."""
     state = get_app_state()
-    state.central_bank_client.escrow_lock = AsyncMock(side_effect=Exception("INSUFFICIENT_FUNDS"))
+    assert state.central_bank_client is not None
+    monkeypatch.setattr(
+        state.central_bank_client,
+        "escrow_lock",
+        AsyncMock(side_effect=Exception("INSUFFICIENT_FUNDS")),
+    )
 
 
 @pytest.fixture
-def mock_central_bank_unavailable(_app: Any) -> None:
+def mock_central_bank_unavailable(_app: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Configure the Central Bank mock to simulate unavailability."""
     state = get_app_state()
-    state.central_bank_client.escrow_lock = AsyncMock(
-        side_effect=ConnectionError("Central Bank unreachable")
+    assert state.central_bank_client is not None
+    monkeypatch.setattr(
+        state.central_bank_client,
+        "escrow_lock",
+        AsyncMock(side_effect=ConnectionError("Central Bank unreachable")),
     )
-    state.central_bank_client.escrow_release = AsyncMock(
-        side_effect=ConnectionError("Central Bank unreachable")
+    monkeypatch.setattr(
+        state.central_bank_client,
+        "escrow_release",
+        AsyncMock(side_effect=ConnectionError("Central Bank unreachable")),
     )
-    state.central_bank_client.escrow_split = AsyncMock(
-        side_effect=ConnectionError("Central Bank unreachable")
+    monkeypatch.setattr(
+        state.central_bank_client,
+        "escrow_split",
+        AsyncMock(side_effect=ConnectionError("Central Bank unreachable")),
     )
 
 
@@ -442,20 +516,22 @@ def mock_central_bank_unavailable(_app: Any) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _make_delegating_verify_jws(state_ref: Any) -> Any:
+def make_fixture_verify_jws(state_ref: Any) -> Callable[[str], Awaitable[VerifiedJws]]:
     """Create a verify_jws mock that delegates to platform_agent.validate_certificate.
 
     This ensures tests that override validate_certificate (e.g. with InvalidSignature)
     will see the same behavior when verification goes through identity_client.verify_jws.
 
-    Signature-related errors (InvalidSignature, ValueError) are mapped to valid=False.
-    Connectivity errors (ConnectionError, TimeoutError, etc.) are raised as ServiceError(502)
-    to simulate what the real IdentityClient would do.
+    Signature/admission errors retain their typed rejection. Only explicitly simulated
+    connection, timeout and JSON-decode failures map to dependency unavailability.
+    Unexpected exceptions and malformed verifier results must fail the test visibly.
     """
 
     async def _delegating_verify_jws(token: str) -> VerifiedJws:
         try:
             verified = state_ref.platform_agent.validate_certificate(token)
+            if not isinstance(verified, VerifiedJws):
+                raise TypeError("Fixture verifier must return VerifiedJws")
             action = verified.payload.get("action")
             if not isinstance(action, str) or not action:
                 raise ServiceError(
@@ -471,7 +547,7 @@ def _make_delegating_verify_jws(state_ref: Any) -> Any:
             raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
         except ServiceError:
             raise
-        except Exception as exc:
+        except (ConnectionError, TimeoutError, JSONDecodeError) as exc:
             raise ServiceError(
                 "identity_service_unavailable",
                 "Cannot reach Identity service",
@@ -485,6 +561,21 @@ def _make_delegating_verify_jws(state_ref: Any) -> Any:
 # ---------------------------------------------------------------------------
 # Task lifecycle helper functions
 # ---------------------------------------------------------------------------
+def new_operation_fields(task_id: str) -> dict[str, object]:
+    """Build one new test intent from the currently observed version before signing.
+
+    A missing-task negative case explicitly sends version zero. Replay tests retain
+    their own original payload instead of calling this new-intent helper again.
+    """
+    store = get_app_state().store
+    assert store is not None
+    task = store.get_task(task_id)
+    return {
+        "operation_id": f"op-{uuid.uuid4()}",
+        "expected_lifecycle_version": 0 if task is None else task["lifecycle_version"],
+    }
+
+
 async def create_task(
     client: AsyncClient,
     poster_keypair: tuple[Ed25519PrivateKey, str],
@@ -512,6 +603,7 @@ async def create_task(
         "spec": spec,
         "reward": reward,
         "bidding_deadline_seconds": bidding_deadline_seconds,
+        "acceptance_window_seconds": 3600,
         "execution_deadline_seconds": execution_deadline_seconds,
         "review_deadline_seconds": review_deadline_seconds,
     }
@@ -549,6 +641,7 @@ async def submit_bid(
     private_key = bidder_keypair[0]
     payload = {
         "action": "submit_bid",
+        **new_operation_fields(task_id),
         "task_id": task_id,
         "bidder_id": bidder_id,
         "amount": amount,
@@ -568,6 +661,7 @@ async def accept_bid(
     private_key = poster_keypair[0]
     payload = {
         "action": "accept_bid",
+        **new_operation_fields(task_id),
         "task_id": task_id,
         "bid_id": bid_id,
         "poster_id": poster_id,
@@ -609,6 +703,7 @@ async def submit_deliverable(
     private_key = worker_keypair[0]
     payload = {
         "action": "submit_deliverable",
+        **new_operation_fields(task_id),
         "task_id": task_id,
         "worker_id": worker_id,
     }
@@ -626,6 +721,7 @@ async def approve_task(
     private_key = poster_keypair[0]
     payload = {
         "action": "approve_task",
+        **new_operation_fields(task_id),
         "task_id": task_id,
         "poster_id": poster_id,
     }
@@ -649,6 +745,7 @@ async def file_dispute(
     private_key = poster_keypair[0]
     payload = {
         "action": "dispute_task",
+        **new_operation_fields(task_id),
         "task_id": task_id,
         "poster_id": poster_id,
         "reason": reason,
@@ -670,14 +767,23 @@ async def submit_ruling(
 
     Uses the canonical 'record_ruling' action — the undocumented 'submit_ruling'
     alias was removed (T-036). record_ruling always requires an explicit
-    ruling_id (the real Court caller generates and persists one for idempotent
-    retry, per T-040); this helper generates one the same way the alias used to.
+    ruling_id matching the stored dispute. A missing-dispute negative case uses
+    an explicit unrelated claim identifier so source-state rejection is exercised.
     """
     private_key = platform_keypair[0]
+    store = get_app_state().store
+    assert store is not None
+    task = store.get_task(task_id)
+    ruling_id = (
+        str(task["dispute_id"])
+        if task is not None and task["dispute_id"] is not None
+        else f"clm-{uuid.uuid4()}"
+    )
     payload = {
         "action": "record_ruling",
+        **new_operation_fields(task_id),
         "task_id": task_id,
-        "ruling_id": f"rul-{uuid.uuid4()}",
+        "ruling_id": ruling_id,
         "worker_pct": worker_pct,
         "ruling_summary": ruling_summary,
     }

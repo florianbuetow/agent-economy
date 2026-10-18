@@ -31,6 +31,8 @@ _ALL_GATEWAY_ACTIONS = (
 )
 
 GATEWAY_ROUTE_POLICIES: dict[tuple[str, str], tuple[str, ...]] = {
+    ("POST", "/board/task-operations"): ("gateway.board.write",),
+    ("POST", "/board/task-operations/{operation_id}/finalize"): ("gateway.board.write",),
     ("POST", "/identity/agents"): ("gateway.identity.write",),
     ("GET", "/identity/agents/count"): ("gateway.identity.read",),
     ("GET", "/identity/agents"): ("gateway.identity.read",),
@@ -145,7 +147,7 @@ class RequestValidationMiddleware:
             self._validate_content_type(method, raw_headers)
             full_body = await self._read_body(receive)
             token = self._bearer_token(raw_headers)
-            self._authenticate(
+            verified_caller_kid = self._authenticate(
                 token,
                 method=method,
                 path=path,
@@ -153,6 +155,7 @@ class RequestValidationMiddleware:
                 body=full_body,
                 query=query,
             )
+            scope.setdefault("state", {})["gateway_caller_kid"] = verified_caller_kid
         except _MiddlewareFailure as exc:
             await self._error(scope, receive, send, exc.error, exc.message, exc.status_code)
             return
@@ -255,7 +258,7 @@ class RequestValidationMiddleware:
         route_path: str,
         body: bytes,
         query: bytes,
-    ) -> None:
+    ) -> str:
         try:
             parsed = parse_jws(token)
             caller = self.trusted_callers.get(parsed.header.kid)
@@ -279,6 +282,7 @@ class RequestValidationMiddleware:
                 raise ForbiddenError("Gateway caller lacks the required capability")
             if route_template is None:
                 raise ForbiddenError("Gateway route has no explicit capability policy")
+            return verified.header.kid
         except JwsAdmissionError as exc:
             raise _MiddlewareFailure(exc.error_code, str(exc), exc.status_code) from exc
 

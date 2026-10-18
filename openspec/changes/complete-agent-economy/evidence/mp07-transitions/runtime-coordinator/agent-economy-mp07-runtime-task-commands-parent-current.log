@@ -1,0 +1,28 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 32 items
+
+tests/unit/test_runtime_task_commands.py .....F......................... [ 96%]
+.                                                                        [100%]
+
+=================================== FAILURES ===================================
+___ test_execute_dispatches_exact_frozen_public_sdk_arguments[dispute_task] ____
+tests/unit/test_runtime_task_commands.py:437: in test_execute_dispatches_exact_frozen_public_sdk_arguments
+    observed = await coordinator.execute(
+src/base_agent/runtime_task_commands.py:130: in execute
+    intent = self._store.create(candidate)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_intents.py:308: in create
+    validate_owner_intent(self.owner, intent)
+src/base_agent/runtime_intent_ack.py:139: in validate_owner_intent
+    _validate_mutation_facts(intent, actor_id, public, frozen, result)
+src/base_agent/runtime_intent_ack.py:220: in _validate_mutation_facts
+    raise RuntimeIntentError("invalid_input", "dispute result facts are invalid")
+E   base_agent.runtime_intent_models.RuntimeIntentError: dispute result facts are invalid
+=========================== short test summary info ============================
+FAILED tests/unit/test_runtime_task_commands.py::test_execute_dispatches_exact_frozen_public_sdk_arguments[dispute_task]
+========================= 1 failed, 31 passed in 0.32s =========================

@@ -1,0 +1,3 @@
+src/demo_replay/engine.py:388: error: Argument 4 to "accept_bid" has incompatible type "object"; expected "str"  [arg-type]
+src/demo_replay/engine.py:394: error: Incompatible types in assignment (expression has type "object", variable has type "str")  [assignment]
+Found 2 errors in 1 file (checked 4 source files)

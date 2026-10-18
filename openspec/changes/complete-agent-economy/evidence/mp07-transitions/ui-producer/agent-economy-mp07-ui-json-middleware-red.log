@@ -1,0 +1,46 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 42 items / 35 deselected / 7 selected
+
+tests/unit/test_mp07_native_proxy_browser.py F                           [ 14%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py FFFF..      [100%]
+
+=================================== FAILURES ===================================
+_________ test_create_form_requires_poster_selected_acceptance_window __________
+tests/unit/test_mp07_native_proxy_browser.py:511: in test_create_form_requires_poster_selected_acceptance_window
+    assert page.locator("#f-accept-window").get_attribute("placeholder") == "Required"
+E   AssertionError: assert '60' == 'Required'
+E     
+E     - Required
+E     + 60
+_ test_native_mutation_requires_json_content_type[None-/api/proxy/tasks/t-task8/approve] _
+tests/integration/test_t072_proxy_operator_writepath_gaps.py:307: in test_native_mutation_requires_json_content_type
+    assert response.status_code == 415
+E   assert 422 == 415
+E    +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+_ test_native_mutation_requires_json_content_type[None-/api/proxy/tasks/t-task2/bids/bid-3/accept] _
+tests/integration/test_t072_proxy_operator_writepath_gaps.py:307: in test_native_mutation_requires_json_content_type
+    assert response.status_code == 415
+E   assert 422 == 415
+E    +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+_ test_native_mutation_requires_json_content_type[text/plain-/api/proxy/tasks/t-task8/approve] _
+tests/integration/test_t072_proxy_operator_writepath_gaps.py:307: in test_native_mutation_requires_json_content_type
+    assert response.status_code == 415
+E   assert 422 == 415
+E    +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+_ test_native_mutation_requires_json_content_type[text/plain-/api/proxy/tasks/t-task2/bids/bid-3/accept] _
+tests/integration/test_t072_proxy_operator_writepath_gaps.py:307: in test_native_mutation_requires_json_content_type
+    assert response.status_code == 415
+E   assert 422 == 415
+E    +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_native_proxy_browser.py::test_create_form_requires_poster_selected_acceptance_window
+FAILED tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_native_mutation_requires_json_content_type[None-/api/proxy/tasks/t-task8/approve]
+FAILED tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_native_mutation_requires_json_content_type[None-/api/proxy/tasks/t-task2/bids/bid-3/accept]
+FAILED tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_native_mutation_requires_json_content_type[text/plain-/api/proxy/tasks/t-task8/approve]
+FAILED tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_native_mutation_requires_json_content_type[text/plain-/api/proxy/tasks/t-task2/bids/bid-3/accept]
+================== 5 failed, 2 passed, 35 deselected in 2.63s ==================

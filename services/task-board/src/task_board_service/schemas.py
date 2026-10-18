@@ -1,10 +1,11 @@
 """Pydantic request/response models for the API."""
 
-from __future__ import annotations
-
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
+
+from task_board_service.task_contract_projection import TaskContractProjection
+from task_board_service.task_operation_contract import OperationEnvelope
 
 
 class HealthResponse(BaseModel):
@@ -27,7 +28,7 @@ class ErrorResponse(BaseModel):
     details: dict[str, object]
 
 
-class TaskResponse(BaseModel):
+class TaskResponse(TaskContractProjection):
     """Full task detail response model."""
 
     model_config = ConfigDict(extra="forbid")
@@ -52,6 +53,8 @@ class TaskResponse(BaseModel):
     disputed_at: str | None
     dispute_reason: str | None
     dispute_id: str | None
+    rebuttal_deadline: str | None
+    rebuttal_submitted_at: str | None
     ruling_id: str | None
     ruled_at: str | None
     worker_pct: int | None
@@ -59,11 +62,18 @@ class TaskResponse(BaseModel):
     expired_at: str | None
     escrow_pending: bool
     bidding_deadline: str
+    acceptance_deadline: str
     execution_deadline: str | None
     review_deadline: str | None
 
 
-class TaskSummary(BaseModel):
+class TaskMutationResponse(TaskResponse):
+    """Current task view plus the separately preserved immutable command outcome."""
+
+    operation: OperationEnvelope
+
+
+class TaskSummary(TaskContractProjection):
     """Summary task model for list views."""
 
     model_config = ConfigDict(extra="forbid")
@@ -76,6 +86,7 @@ class TaskSummary(BaseModel):
     worker_id: str | None
     created_at: str
     bidding_deadline: str
+    acceptance_deadline: str
     execution_deadline: str | None
     review_deadline: str | None
 

@@ -1,0 +1,65 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 5 items
+
+tests/integration/test_mp07_public_command_replay.py FFFFF               [100%]
+
+=================================== FAILURES ===================================
+___ test_exact_submit_bid_replay_after_response_loss_returns_original_result ___
+tests/integration/test_mp07_public_command_replay.py:365: in test_exact_submit_bid_replay_after_response_loss_returns_original_result
+    assert replay.status_code == 201, diagnostics
+E   AssertionError: {'bids': [{'amount': 90, 'bid_id': 'bid-44ebe530-89fa-41a5-b645-35a374dfba74', 'bidder_id': 'a-mp07-replay-worker-68b0... ...}, 'replay': {'details': {}, 'error': 'bid_already_exists', 'message': 'This agent already bid on this task'}, ...}
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:23:52", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-ea1a8321-dbee-4f5c-80d7-7a901e3469d4"}}
+{"timestamp": "2026-10-17 20:23:52", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_exists", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-17 20:23:52", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_already_exists", "status_code": 409, "path": "/tasks/t-ea1a8321-dbee-4f5c-80d7-7a901e3469d4/bids"}}
+___ test_exact_accept_bid_replay_after_response_loss_returns_original_terms ____
+tests/integration/test_mp07_public_command_replay.py:430: in test_exact_accept_bid_replay_after_response_loss_returns_original_terms
+    assert replay.status_code == 200, diagnostics
+E   AssertionError: {'bids': [{'amount': 90, 'bid_id': 'bid-b58b0427-bbf3-4774-94b7-5172faf31a7b', 'bidder_id': 'a-mp07-replay-worker-0eda...ils': {}, 'error': 'invalid_status', 'message': "Cannot accept bid on task in 'accepted' status, must be 'open'"}, ...}
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:23:53", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-154657a3-4e48-4ddf-af04-0ac8d4172fd0"}}
+{"timestamp": "2026-10-17 20:23:53", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-154657a3-4e48-4ddf-af04-0ac8d4172fd0/bids/bid-b58b0427-bbf3-4774-94b7-5172faf31a7b/accept"}}
+__ test_changed_bid_amount_under_same_operation_id_conflicts_without_changes ___
+tests/integration/test_mp07_public_command_replay.py:489: in test_changed_bid_amount_under_same_operation_id_conflicts_without_changes
+    assert changed.json()["error"] == "operation_id_conflict", diagnostics
+E   AssertionError: {'after': ([{'accepted_at': None, 'accepted_bid_id': None, 'bid_count': 1, 'reward': 100, ...}], [{'amount': 90, 'bid_...'}], 'response': {'details': {}, 'error': 'bid_already_exists', 'message': 'This agent already bid on this task'}, ...}
+E   assert 'bid_already_exists' == 'operation_id_conflict'
+E     
+E     - operation_id_conflict
+E     + bid_already_exists
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:23:53", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-b43c73a7-0040-4eaa-9008-60fd7d32ccf9"}}
+{"timestamp": "2026-10-17 20:23:53", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_exists", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-17 20:23:53", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_already_exists", "status_code": 409, "path": "/tasks/t-b43c73a7-0040-4eaa-9008-60fd7d32ccf9/bids"}}
+______ test_cross_command_operation_id_reuse_conflicts_without_accepting _______
+tests/integration/test_mp07_public_command_replay.py:534: in test_cross_command_operation_id_reuse_conflicts_without_accepting
+    assert reused.status_code == 409, diagnostics
+E   AssertionError: {'after': [{'accepted_at': '2026-10-17T20:23:53.779946Z', 'accepted_bid_id': 'bid-38a5ce4d-4501-4c68-933d-666cc2a37b04...79946Z', 'accepted_bid_id': 'bid-38a5ce4d-4501-4c68-933d-666cc2a37b04', 'approved_at': None, 'bid_count': 1, ...}, ...}
+E   assert 200 == 409
+E    +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:23:53", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-70e52690-823d-4de5-98ba-bffa68d84cfa"}}
+______ test_wrong_expected_lifecycle_version_rejects_bid_without_changes _______
+tests/integration/test_mp07_public_command_replay.py:576: in test_wrong_expected_lifecycle_version_rejects_bid_without_changes
+    assert response.status_code == 409, diagnostics
+E   AssertionError: {'after': [{'accepted_at': None, 'accepted_bid_id': None, 'bid_count': 1, 'reward': 100, ...}], 'before': [{'accepted_...966', 'submitted_at': '2026-10-17T20:23:54.073193Z'}], 'events': [{'event_id': 6, 'event_type': 'bid.submitted'}], ...}
+E   assert 201 == 409
+E    +  where 201 = <Response [201 Created]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:23:54", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-64aa114e-1287-4ee2-87fe-e12eea8278a8"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_public_command_replay.py::test_exact_submit_bid_replay_after_response_loss_returns_original_result
+FAILED tests/integration/test_mp07_public_command_replay.py::test_exact_accept_bid_replay_after_response_loss_returns_original_terms
+FAILED tests/integration/test_mp07_public_command_replay.py::test_changed_bid_amount_under_same_operation_id_conflicts_without_changes
+FAILED tests/integration/test_mp07_public_command_replay.py::test_cross_command_operation_id_reuse_conflicts_without_accepting
+FAILED tests/integration/test_mp07_public_command_replay.py::test_wrong_expected_lifecycle_version_rejects_bid_without_changes
+============================== 5 failed in 1.63s ===============================

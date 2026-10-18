@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from service_auth.gateway import GatewayTrustConfig
 from service_commons.config import (
     REDACTION_MARKER,
@@ -73,6 +73,43 @@ class RecoveryConfig(BaseModel):
     backup_root: Path
 
 
+class BoardAuthorityConfig(BaseModel):
+    """Receiver-owned Task Board actor authority configuration."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+    platform_public_key_path: Path
+    deadline_actor_id: str
+
+    @field_validator("platform_public_key_path", mode="before")
+    @classmethod
+    def parse_platform_public_key_path(cls, value: object) -> Path:
+        """Accept an explicit YAML path string without scalar coercion."""
+        if isinstance(value, Path):
+            return value
+        if isinstance(value, str):
+            return Path(value)
+        msg = "platform_public_key_path must be a path string"
+        raise ValueError(msg)
+
+    @field_validator("platform_public_key_path")
+    @classmethod
+    def validate_platform_public_key_path(cls, value: Path) -> Path:
+        """Require a non-blank canonical public-key filename."""
+        if not str(value).strip() or value.suffix != ".pub":
+            msg = "platform_public_key_path must be a non-blank canonical .pub path"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("deadline_actor_id")
+    @classmethod
+    def validate_deadline_actor_id(cls, value: str) -> str:
+        """Require one explicit stable system actor identifier."""
+        if not value.strip() or value != value.strip():
+            msg = "deadline_actor_id must be a non-blank canonical string"
+            raise ValueError(msg)
+        return value
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -89,6 +126,7 @@ class Settings(BaseModel):
     request: RequestConfig
     auth: GatewayTrustConfig
     recovery: RecoveryConfig
+    board_authority: BoardAuthorityConfig
 
 
 Settings.model_rebuild(_types_namespace={"GatewayTrustConfig": GatewayTrustConfig})

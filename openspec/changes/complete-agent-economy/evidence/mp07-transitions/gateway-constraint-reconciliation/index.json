@@ -1,0 +1,39 @@
+{
+  "claims": {
+    "baseline": "13fail",
+    "author_final": 13,
+    "native_controls": 69,
+    "limits": "Retired ad-hocBoard constraints mapped to nativepreconditions; supported asset/rebuttal/Bank constraints unchanged"
+  },
+  "review": "APPROVE by /root/mp07_gateway_atomic_review: contractmapping preserves/strengthens originalobservables, supportedconstraints unchanged; ATOM05actualSQLiteFKafterin-flightwrites/fullrollback is honestfaultprobe; architectureclear.",
+  "shared_helper_sha256": "290f136b3e186c1609309d933cec2aa6fcb646ac29b8339d43d57eaad291d133",
+  "sources": {
+    "services/db-gateway/tests/unit/test_constraints.py": "64541357685a749d4783ef59925afb8064f3423b9e727ac3389ef01c16366b01",
+    "services/db-gateway/tests/unit/test_t072_constraints_gaps.py": "195e8830837bdf6c2da8a2bf139a1385201ccc3dcbe253634df533e232c9c60f",
+    "docs/plans/2026-10-18-mp07-gateway-constraint-reconciliation.md": "c53ddbf754ffa0e861c714140c88a0388e7d3d1b3e232db802870e9bce7170d1"
+  },
+  "artifacts": {
+    "agent-economy-mp07-gateway-constraints-after-fixture.log": "2c441b9333b172ebcafd95214bf80c3ae53b4cd1069f3f9034a7099a7c1b17d7",
+    "agent-economy-mp07-gateway-constraints-baseline.log": "329fc2db54857fe1b8e359bce6811426a072a0f3219e4ad1ec5912eb2879c7ea",
+    "agent-economy-mp07-gateway-constraints-before-sha256.log": "ad5d734ed5524263ba8e88fce4261286c0929872366845ae0857603588cfb6f0",
+    "agent-economy-mp07-gateway-constraints-broader.log": "f84064d1efcdb78ca8affa7dfb0ac3d1c8cd404fde6fc1bd7989075d56afe46d",
+    "agent-economy-mp07-gateway-constraints-codespell.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agent-economy-mp07-gateway-constraints-file1.log": "4bd3b5495fc8de41dad6c1fd9598f6cfa2e76621d9d855aece628a1e4511ecc6",
+    "agent-economy-mp07-gateway-constraints-file2-after-fixture.log": "5030929bb46784475a495050f39311ffb0255de71c2ae3529c6fa76cddb5d41c",
+    "agent-economy-mp07-gateway-constraints-file2.log": "90f70d0867bfaeca4bd1ceb81d167456b6557923d97fa659cdd868fa08fadfe3",
+    "agent-economy-mp07-gateway-constraints-final-sha256.log": "5b02b1e887f7e297d84fd3b24de79ce69763c36a1d152d3a131c3e90b870b5bd",
+    "agent-economy-mp07-gateway-constraints-final.log": "08e934091139d6a6ffd8ccad1a045a97f42ab690095b31a8ef3f4d51c39fe071",
+    "agent-economy-mp07-gateway-constraints-format.log": "3bc53bf3e981a98a34a852e175bf9b77af841edea74fca595d9aedcbaf9a4938",
+    "agent-economy-mp07-gateway-constraints-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "baseline/test_constraints.py": "5ee9e2165ae5f2190744cd42576c5967846be789414ee334300e02e0ff73b1c5",
+    "baseline/test_t072_constraints_gaps.py": "0a47e177b803d59b772b0a41ade1d543aed09b3b09ee08d9cf16741d8066991e",
+    "agent-economy-mp07-gateway-final-fixtures-parent.log": "3df3e1a1c683ed96d0358c566f44c724a2ff3c0834410111b06a8a113fa67a1f"
+  },
+  "combined_parent_gate": {
+    "handle": 49591,
+    "exit_code": 0,
+    "passed": 65,
+    "warnings": 1,
+    "scope": "Combined constraints/projection/feedback/crosscutting; overlapping scopes must not be summed"
+  }
+}

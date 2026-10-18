@@ -1,5 +1,12 @@
 # Database Gateway Service — API Specification
 
+## MP-07 native Board operation amendment
+
+The [native operation contract](task-board-native-operations.md) defines v3 publication, Board
+claim/finalize endpoints, retired generic bid/status writes and atomic Court rebuttal projection.
+It supersedes conflicting legacy write/idempotency descriptions below. Caller rollout and full
+release verification remain open.
+
 ## MP-04 receipt contract amendment
 
 The [2026-10-16 financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md)
@@ -231,7 +238,7 @@ Every mutating endpoint accepts an `event` field in the request body. The gatewa
 
 ```json
 {
-  "event_source": "bank",
+  "event_source": "central-bank",
   "event_type": "escrow.locked",
   "timestamp": "2026-02-28T10:00:00Z",
   "task_id": "t-123",
@@ -243,13 +250,19 @@ Every mutating endpoint accepts an `event` field in the request body. The gatewa
 
 | Field          | Type   | Required | Description                                                |
 |----------------|--------|----------|------------------------------------------------------------|
-| `event_source` | string | yes      | Domain: `identity`, `bank`, `board`, `reputation`, `court` |
+| `event_source` | string | yes      | Producer: `identity`, `central-bank`, `board`, `reputation`, `court` |
 | `event_type`   | string | yes      | Dot-notation event type (e.g., `task.created`)             |
 | `timestamp`    | string | yes      | ISO 8601 UTC timestamp                                     |
-| `task_id`      | string | no       | Null for non-task events (e.g., `agent.registered`)        |
+| `task_id`      | string | no       | Optional presentation metadata; absent/null or exact task ID        |
 | `agent_id`     | string | no       | Primary actor who triggered the event                      |
 | `summary`      | string | yes      | Pre-rendered one-liner for feed display                    |
 | `payload`      | string | yes      | JSON string blob, shape depends on event type              |
+
+The production Central Bank client emits `central-bank` events. Its release/split events omit
+`task_id`; the database stores NULL. Task settlement binds the task through the receipt escrow ID
+and the authoritative `bank_escrow.task_id`, along with the frozen request, parties, amount, legs,
+transaction linkage and timestamps. A provided event task ID must match that task; a foreign
+non-null task ID is conflicting evidence. Event metadata does not replace financial ownership.
 
 The gateway validates that `event_source`, `event_type`, `timestamp`, `summary`, and `payload` are present and non-empty. It does not interpret or validate the contents of `payload` — that is the caller's responsibility.
 
@@ -464,7 +477,7 @@ Create a bank account with an optional initial credit. Inserts into `bank_accoun
     "timestamp": "2026-02-28T10:00:00Z"
   },
   "event": {
-    "event_source": "bank",
+    "event_source": "central-bank",
     "event_type": "account.created",
     "timestamp": "2026-02-28T10:00:00Z",
     "task_id": null,
@@ -542,7 +555,7 @@ Credit an account. Inserts a credit transaction, updates the account balance, an
   "reference": "salary_round_3",
   "timestamp": "2026-02-28T10:05:00Z",
   "event": {
-    "event_source": "bank",
+    "event_source": "central-bank",
     "event_type": "salary.paid",
     "timestamp": "2026-02-28T10:05:00Z",
     "task_id": null,
@@ -605,7 +618,7 @@ Lock funds in escrow. Debits the payer's account, creates an escrow record, logs
   "created_at": "2026-02-28T10:10:00Z",
   "tx_id": "tx-escrow-lock-uuid",
   "event": {
-    "event_source": "bank",
+    "event_source": "central-bank",
     "event_type": "escrow.locked",
     "timestamp": "2026-02-28T10:10:00Z",
     "task_id": "t-123",
@@ -678,10 +691,9 @@ locked-state predicate; caller-controlled `constraints` are rejected.
   "tx_id": "tx-release-uuid",
   "resolved_at": "2026-02-28T11:00:00Z",
   "event": {
-    "event_source": "bank",
+    "event_source": "central-bank",
     "event_type": "escrow.released",
     "timestamp": "2026-02-28T11:00:00Z",
-    "task_id": "t-123",
     "agent_id": "a-worker-uuid",
     "summary": "Bob received 100 coins from escrow release",
     "payload": "{\"escrow_id\": \"esc-550e8400\", \"amount\": 100, \"recipient_id\": \"a-worker-uuid\", \"recipient_name\": \"Bob\"}"
@@ -756,10 +768,9 @@ event, receipt, and ordered legs atomically. Caller amounts and financial `const
   "poster_tx_id": "tx-split-poster-uuid",
   "resolved_at": "2026-02-28T12:00:00Z",
   "event": {
-    "event_source": "bank",
+    "event_source": "central-bank",
     "event_type": "escrow.split",
     "timestamp": "2026-02-28T12:00:00Z",
-    "task_id": "t-123",
     "agent_id": "a-poster-uuid",
     "summary": "Escrow split: worker 40, poster 60",
     "payload": "{\"escrow_id\": \"esc-550e8400\", \"worker_pct\": 40}"

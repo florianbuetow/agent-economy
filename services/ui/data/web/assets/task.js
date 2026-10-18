@@ -10,6 +10,8 @@
     myAgentId: null,
     bidLoadStatus: 'idle', // 'idle' | 'loading' | 'ready' | 'error'
     bidLoadError: '',
+    pendingIntent: null,
+    intentMessage: '',
     currentPhase: 0,
     maxPhase: 0,
     sseSource: null
@@ -95,6 +97,10 @@
           '<label class="form-label">Review Deadline (s)</label>' +
           '<input class="form-input" id="f-rev-dl" type="number" min="1" placeholder="120">' +
         '</div>' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">Bid Acceptance Window (s)</label>' +
+        '<input class="form-input" id="f-accept-window" type="number" min="1" placeholder="Required">' +
       '</div>' +
       '<div style="margin-top:14px">' +
         '<button class="btn btn-cyan solid" id="btn-post-task">Post Task</button>' +
@@ -305,6 +311,231 @@
     return str ? ATE.escapeHTML(str) : '';
   }
 
+  var OPERATION_FIELDS = [
+    'protocol_version', 'operation_id', 'task_id', 'command', 'request_sha256',
+    'operation_state', 'source_status', 'source_lifecycle_version', 'target_status',
+    'target_lifecycle_version', 'effect_kind', 'effect_state', 'effect_operation_id',
+    'effect_result_reference', 'effect_intent', 'event_id', 'result'
+  ];
+
+  function intentStorageKey(taskId) {
+    return 'ate.task-operation:' + taskId;
+  }
+
+  function canonicalOperationId() {
+    if (!window.crypto) {
+      throw new Error('Secure operation identity generation is unavailable');
+    }
+    if (typeof window.crypto.randomUUID === 'function') {
+      return 'op-' + window.crypto.randomUUID();
+    }
+    if (typeof window.crypto.getRandomValues !== 'function') {
+      throw new Error('Secure operation identity generation is unavailable');
+    }
+    var bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    var hex = Array.from(bytes, function(value) { return value.toString(16).padStart(2, '0'); }).join('');
+    return 'op-' + hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' +
+      hex.slice(16, 20) + '-' + hex.slice(20);
+  }
+
+  function readIntent(taskId) {
+    var raw = sessionStorage.getItem(intentStorageKey(taskId));
+    if (!raw) return null;
+    try {
+      var intent = JSON.parse(raw);
+      if (!intent || intent.task_id !== taskId || typeof intent.operation_id !== 'string' ||
+          typeof intent.operator_agent_id !== 'string' || typeof intent.action !== 'string' ||
+          !Number.isSafeInteger(intent.expected_lifecycle_version) ||
+          typeof intent.path !== 'string' || !intent.body || typeof intent.body !== 'object') {
+        state.intentMessage = 'Saved operation intent is malformed and cannot be retried.';
+        return null;
+      }
+      if (intent.intent_state === 'claimed') {
+        state.intentMessage = 'Operation pending on the platform. Retry the saved operation explicitly.';
+      } else if (intent.intent_state === 'conflict') {
+        state.intentMessage = 'Saved operation has a platform conflict. Retry only for authoritative confirmation.';
+      } else if (intent.intent_state === 'error') {
+        state.intentMessage = 'Saved operation received an invalid response. Retry explicitly.';
+      } else {
+        state.intentMessage = 'Operation response is uncertain. Retry the saved operation explicitly.';
+      }
+      return intent;
+    } catch (_error) {
+      state.intentMessage = 'Saved operation intent is malformed and cannot be retried.';
+      return null;
+    }
+  }
+
+  function saveIntent(intent) {
+    sessionStorage.setItem(intentStorageKey(intent.task_id), JSON.stringify(intent));
+    state.pendingIntent = intent;
+  }
+
+  function clearIntent(intent) {
+    sessionStorage.removeItem(intentStorageKey(intent.task_id));
+    state.pendingIntent = null;
+    state.intentMessage = '';
+  }
+
+  function freezeIntent(action, terms) {
+    if (!state.task || !Number.isSafeInteger(state.task.lifecycle_version)) {
+      throw new Error('Authoritative task lifecycle version is unavailable');
+    }
+    if (!state.myAgentId) throw new Error('Operator identity is unavailable');
+    if (state.pendingIntent) return state.pendingIntent;
+    var operationId = canonicalOperationId();
+    var path;
+    var body = {
+      operation_id: operationId,
+      expected_lifecycle_version: state.task.lifecycle_version
+    };
+    var intent = {
+      intent_version: 1,
+      task_id: state.task.task_id,
+      operator_agent_id: state.myAgentId,
+      action: action,
+      operation_id: operationId,
+      expected_lifecycle_version: state.task.lifecycle_version,
+      intent_state: 'uncertain'
+    };
+    if (action === 'accept_bid') {
+      path = '/api/proxy/tasks/' + encodeURIComponent(state.task.task_id) + '/bids/' + encodeURIComponent(terms.bid_id) + '/accept';
+      intent.bid_id = terms.bid_id;
+    } else if (action === 'approve_task') {
+      path = '/api/proxy/tasks/' + encodeURIComponent(state.task.task_id) + '/approve';
+    } else if (action === 'dispute_task') {
+      path = '/api/proxy/tasks/' + encodeURIComponent(state.task.task_id) + '/dispute';
+      body.reason = terms.reason;
+      intent.reason = terms.reason;
+    } else {
+      throw new Error('Unknown task operation');
+    }
+    intent.path = path;
+    intent.body = body;
+    saveIntent(intent);
+    return intent;
+  }
+
+  function validErrorEnvelope(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) &&
+      Object.keys(value).sort().join(',') === 'details,error,message' &&
+      typeof value.error === 'string' && value.error.length > 0 &&
+      typeof value.message === 'string' && value.message.length > 0 &&
+      value.details && typeof value.details === 'object' && !Array.isArray(value.details);
+  }
+
+  function validOperationAcknowledgment(value, intent, requiredState) {
+    if (!value || typeof value !== 'object' || Array.isArray(value) || value.task_id !== intent.task_id ||
+        typeof value.status !== 'string' || !Number.isSafeInteger(value.lifecycle_version)) return false;
+    var operation = value.operation;
+    if (!operation || typeof operation !== 'object' || Array.isArray(operation) ||
+        Object.keys(operation).sort().join(',') !== OPERATION_FIELDS.slice().sort().join(',')) return false;
+    if (operation.protocol_version !== 1 || operation.operation_id !== intent.operation_id ||
+        operation.task_id !== intent.task_id || operation.command !== intent.action ||
+        !/^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(operation.operation_id) ||
+        !/^[0-9a-f]{64}$/.test(operation.request_sha256) ||
+        !Number.isSafeInteger(operation.source_lifecycle_version) ||
+        !Number.isSafeInteger(operation.target_lifecycle_version) ||
+        operation.source_lifecycle_version !== intent.expected_lifecycle_version ||
+        operation.target_lifecycle_version < operation.source_lifecycle_version ||
+        operation.operation_state !== requiredState || typeof operation.source_status !== 'string' ||
+        typeof operation.target_status !== 'string') return false;
+    if (requiredState === 'claimed') {
+      return operation.effect_kind !== 'none' && operation.effect_state === 'pending' &&
+        operation.event_id === null && operation.result === null &&
+        value.lifecycle_version === operation.source_lifecycle_version;
+    }
+    return operation.event_id !== null && Number.isSafeInteger(operation.event_id) &&
+      operation.result && typeof operation.result === 'object' &&
+      ((operation.effect_kind === 'none' && operation.effect_state === 'none') ||
+       (operation.effect_kind !== 'none' && operation.effect_state === 'succeeded')) &&
+      value.lifecycle_version >= operation.target_lifecycle_version;
+  }
+
+  function updateIntent(intent, intentState, message) {
+    intent.intent_state = intentState;
+    state.intentMessage = message;
+    saveIntent(intent);
+    updateView();
+  }
+
+  async function submitFrozenIntent(intent) {
+    if (intent.operator_agent_id !== state.myAgentId) {
+      state.intentMessage = 'Saved operation belongs to a different operator identity.';
+      updateView();
+      return;
+    }
+    var response;
+    try {
+      response = await ATE.proxyFetch(intent.path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(intent.body)
+      });
+    } catch (_error) {
+      updateIntent(intent, 'uncertain', 'Operation response is uncertain. Retry the saved operation explicitly.');
+      return;
+    }
+    var data;
+    try {
+      data = await response.json();
+    } catch (_error) {
+      updateIntent(intent, 'error', 'Invalid Task Board acknowledgment response.');
+      return;
+    }
+    if (!response.ok) {
+      var message = validErrorEnvelope(data) ? data.message : 'Task Board returned an invalid error response.';
+      if (response.status === 409 && validErrorEnvelope(data) && data.error === 'task_version_conflict' &&
+          Number.isSafeInteger(data.details.expected_lifecycle_version) &&
+          data.details.expected_lifecycle_version === intent.expected_lifecycle_version &&
+          Number.isSafeInteger(data.details.actual_lifecycle_version) &&
+          typeof data.details.current_status === 'string' && data.details.current_status.length > 0) {
+        intent.definitive_rejection = {
+          error: data.error,
+          actual_lifecycle_version: data.details.actual_lifecycle_version,
+          current_status: data.details.current_status
+        };
+      } else {
+        delete intent.definitive_rejection;
+      }
+      updateIntent(intent, response.status === 409 ? 'conflict' : 'error', message + ' Retry the saved operation explicitly.');
+      return;
+    }
+    if (response.status === 202 && validOperationAcknowledgment(data, intent, 'claimed')) {
+      updateIntent(intent, 'claimed', 'Operation pending on the platform. Retry the saved operation explicitly.');
+      return;
+    }
+    if (response.status === 200 && validOperationAcknowledgment(data, intent, 'completed')) {
+      clearIntent(intent);
+      await refreshTaskData(intent.task_id);
+      return;
+    }
+    updateIntent(intent, 'error', 'Invalid Task Board acknowledgment response. Retry the saved operation explicitly.');
+  }
+
+  function renderIntentRecovery() {
+    if (!state.pendingIntent || !state.task || state.pendingIntent.task_id !== state.task.task_id) return;
+    document.querySelectorAll('.btn-accept-bid, #btn-approve, #btn-dispute-show, #btn-submit-dispute').forEach(function(element) {
+      element.remove();
+    });
+    var matchesOperator = state.pendingIntent.operator_agent_id === state.myAgentId;
+    var message = matchesOperator ? (state.intentMessage || 'Saved operation awaiting explicit confirmation retry.') :
+      'Saved operation belongs to a different operator identity.';
+    var panel = document.createElement('div');
+    panel.className = 'card operation-recovery';
+    panel.innerHTML = '<div class="card-header"><span class="card-label">Saved Task Operation</span></div>' +
+      '<div class="card-body"><div class="operation-recovery-message">' + esc(message) + '</div>' +
+      '<button class="btn btn-cyan solid" data-operation-recovery' + (matchesOperator ? '' : ' disabled') +
+      '>Retry Saved Operation</button>' +
+      (state.pendingIntent.definitive_rejection ?
+        '<button class="btn" data-operation-rejection-reset' + (matchesOperator ? '' : ' disabled') +
+        '>Refresh and Dismiss Rejected Operation</button>' : '') + '</div>';
+    document.getElementById('phase-content').appendChild(panel);
+  }
+
   // ── Phase strip rendering ──────────────────────────────────
   function renderPhaseStrip() {
     var steps = document.querySelectorAll('.phase-step');
@@ -362,6 +593,7 @@
     }
 
     renderPhaseStrip();
+    renderIntentRecovery();
     bindActionButtons();
   }
 
@@ -389,12 +621,18 @@
       var spec = document.getElementById('f-spec').value.trim();
       var reward = parseInt(document.getElementById('f-reward').value, 10);
       var bidDl = parseInt(document.getElementById('f-bid-dl').value, 10);
+      var acceptWindowRaw = document.getElementById('f-accept-window').value.trim();
+      var acceptWindow = Number(acceptWindowRaw);
       var execDl = parseInt(document.getElementById('f-exec-dl').value, 10);
       var revDl = parseInt(document.getElementById('f-rev-dl').value, 10);
       var errEl = document.getElementById('post-error');
 
-      if (!title || !spec || !reward || !bidDl || !execDl || !revDl) {
+      if (!title || !spec || !reward || !bidDl || !acceptWindowRaw || !execDl || !revDl) {
         errEl.textContent = 'All fields are required.';
+        return;
+      }
+      if (!Number.isSafeInteger(acceptWindow) || acceptWindow <= 0 || acceptWindow > 9223372036854) {
+        errEl.textContent = 'Acceptance window must be a positive whole number.';
         return;
       }
 
@@ -410,6 +648,7 @@
             spec: spec,
             reward: reward,
             bidding_deadline_seconds: bidDl,
+            acceptance_window_seconds: acceptWindow,
             execution_deadline_seconds: execDl,
             review_deadline_seconds: revDl
           })
@@ -444,8 +683,8 @@
         var bidId = this.getAttribute('data-bid-id');
         this.disabled = true;
         try {
-          await ATE.proxyFetch('/api/proxy/tasks/' + encodeURIComponent(state.taskId) + '/bids/' + encodeURIComponent(bidId) + '/accept', { method: 'POST' });
-          await refreshTaskData(state.taskId);
+          var intent = freezeIntent('accept_bid', { bid_id: bidId });
+          await submitFrozenIntent(intent);
         } catch (e) {
           console.error('Accept bid failed:', e);
           this.disabled = false;
@@ -459,8 +698,8 @@
       approveBtn.addEventListener('click', async function() {
         this.disabled = true;
         try {
-          await ATE.proxyFetch('/api/proxy/tasks/' + encodeURIComponent(state.taskId) + '/approve', { method: 'POST' });
-          await refreshTaskData(state.taskId);
+          var intent = freezeIntent('approve_task', {});
+          await submitFrozenIntent(intent);
         } catch (e) {
           console.error('Approve failed:', e);
           this.disabled = false;
@@ -487,20 +726,40 @@
         this.disabled = true;
         errEl.textContent = '';
         try {
-          var resp = await ATE.proxyFetch('/api/proxy/tasks/' + encodeURIComponent(state.taskId) + '/dispute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reason: reason })
-          });
-          if (!resp.ok) {
-            var err = await resp.json().catch(function() { return {}; });
-            throw new Error(err.message || 'Failed to file dispute');
-          }
-          await refreshTaskData(state.taskId);
+          var intent = freezeIntent('dispute_task', { reason: reason });
+          await submitFrozenIntent(intent);
         } catch (e) {
           errEl.textContent = e.message;
           this.disabled = false;
         }
+      });
+    }
+
+    var recoveryBtn = document.querySelector('[data-operation-recovery]');
+    if (recoveryBtn) {
+      recoveryBtn.addEventListener('click', async function() {
+        if (!state.pendingIntent || this.disabled) return;
+        this.disabled = true;
+        await submitFrozenIntent(state.pendingIntent);
+      });
+    }
+
+    var rejectionResetBtn = document.querySelector('[data-operation-rejection-reset]');
+    if (rejectionResetBtn) {
+      rejectionResetBtn.addEventListener('click', async function() {
+        var intent = state.pendingIntent;
+        if (!intent || !intent.definitive_rejection || this.disabled ||
+            intent.operator_agent_id !== state.myAgentId) return;
+        this.disabled = true;
+        var refreshed = await refreshTaskData(intent.task_id);
+        if (!refreshed || !state.task ||
+            state.task.lifecycle_version !== intent.definitive_rejection.actual_lifecycle_version ||
+            state.task.status !== intent.definitive_rejection.current_status) {
+          updateIntent(intent, 'conflict', 'Authoritative task state did not confirm the rejection. Retry the refresh explicitly.');
+          return;
+        }
+        clearIntent(intent);
+        updateView();
       });
     }
   }
@@ -540,10 +799,12 @@
           await loadAuthorizedOpenBids(state.task);
         }
         updateView();
+        return true;
       }
     } catch (e) {
       console.warn('[task] refreshTaskData error:', e.message);
     }
+    return false;
   }
 
   // ── SSE ────────────────────────────────────────────────────
@@ -615,6 +876,7 @@
     if (taskId) {
       state.taskId = taskId;
       state.mode = 'view';
+      state.pendingIntent = readIntent(taskId);
       await refreshTaskData(taskId);
       await loadHistoricalEvents(taskId);
       connectTaskSSE(taskId);

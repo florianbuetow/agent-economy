@@ -1,0 +1,1340 @@
+
+[0;34m=== Running Full CI (Quiet Mode) ===[0m
+[0;34m--- Phase 0: Project structure ---[0m
+
+[0;34m=== Checking Project Structure ===[0m
+
+[0;32m✓ services/central-bank/justfile[0m
+[0;32m✓ services/court/justfile[0m
+[0;32m✓ services/db-gateway/justfile[0m
+[0;32m✓ services/reputation/justfile[0m
+[0;32m✓ services/task-board/justfile[0m
+[0;32m✓ services/ui/justfile[0m
+
+[0;32m✓ All service justfiles are identical[0m
+
+[0;34m--- Phase 1: Libs CI ---[0m
+Checking service-commons...
+Checking service-commons...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-commons/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-commons
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 177 items
+
+tests/unit/test_config_bytes.py::test_verified_bytes_parse_like_the_file_loader[service: {name: ui}\n] PASSED [  0%]
+tests/unit/test_config_bytes.py::test_verified_bytes_parse_like_the_file_loader[{"port": 8008}] PASSED [  1%]
+tests/unit/test_config_bytes.py::test_verified_bytes_parse_like_the_file_loader[flag: false\n] PASSED [  1%]
+tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[] PASSED [  2%]
+tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[[]] PASSED [  2%]
+tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[42] PASSED [  3%]
+tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[broken: [] PASSED [  3%]
+tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[\xff] PASSED [  4%]
+tests/unit/test_config_bytes.py::test_file_loader_keeps_its_missing_file_error PASSED [  5%]
+tests/unit/test_maintenance_existing_lock.py::test_holds_only_the_recorded_existing_lock_identity PASSED [  5%]
+tests/unit/test_maintenance_existing_lock.py::test_missing_recorded_lock_is_not_created PASSED [  6%]
+tests/unit/test_maintenance_existing_lock.py::test_missing_recorded_lock_parent_is_not_created PASSED [  6%]
+tests/unit/test_maintenance_existing_lock.py::test_unsafe_existing_mode_is_rejected_without_chmod PASSED [  7%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[True-1-TypeError] PASSED [  7%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[0.0-1-TypeError] PASSED [  8%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[0-True-TypeError] PASSED [  9%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[0-1.0-TypeError] PASSED [  9%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[-1-1-ValueError] PASSED [ 10%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[0-0-ValueError] PASSED [ 10%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[0--1-ValueError] PASSED [ 11%]
+tests/unit/test_maintenance_existing_lock.py::test_wrong_recorded_inode_is_rejected_before_any_flock PASSED [ 11%]
+tests/unit/test_maintenance_existing_lock.py::test_recorded_lock_swap_during_flock_is_rejected[True] PASSED [ 12%]
+tests/unit/test_maintenance_existing_lock.py::test_recorded_lock_swap_during_flock_is_rejected[False] PASSED [ 12%]
+tests/unit/test_maintenance_existing_lock.py::test_exception_path_unlocks_closes_and_deactivates_existing_handle PASSED [ 13%]
+tests/unit/test_maintenance_lock.py::test_creates_persistent_regular_lock_with_exact_permissions PASSED [ 14%]
+tests/unit/test_maintenance_lock.py::test_rejects_invalid_runtime_argument_types[shared-False] PASSED [ 14%]
+tests/unit/test_maintenance_lock.py::test_rejects_invalid_runtime_argument_types[shared-1] PASSED [ 15%]
+tests/unit/test_maintenance_lock.py::test_rejects_existing_lock_with_unsafe_permissions_without_changing_it PASSED [ 15%]
+tests/unit/test_maintenance_lock.py::test_rejects_nonregular_lock_paths[symlink] PASSED [ 16%]
+tests/unit/test_maintenance_lock.py::test_rejects_nonregular_lock_paths[directory] PASSED [ 16%]
+tests/unit/test_maintenance_lock.py::test_rejects_missing_parent_without_creating_directories PASSED [ 17%]
+tests/unit/test_maintenance_lock.py::test_rejects_relative_path PASSED   [ 18%]
+tests/unit/test_maintenance_lock.py::test_rejects_lexically_noncanonical_absolute_path PASSED [ 18%]
+tests/unit/test_maintenance_lock.py::test_rejects_symlinked_ancestor_without_touching_target PASSED [ 19%]
+tests/unit/test_maintenance_lock.py::test_releases_lock_when_context_body_raises PASSED [ 19%]
+tests/unit/test_maintenance_lock.py::test_shared_locks_coexist_across_processes PASSED [ 20%]
+tests/unit/test_maintenance_lock.py::test_incompatible_nonblocking_lock_fails_meaningfully_across_processes[shared-exclusive] PASSED [ 20%]
+tests/unit/test_maintenance_lock.py::test_incompatible_nonblocking_lock_fails_meaningfully_across_processes[exclusive-shared] PASSED [ 21%]
+tests/unit/test_maintenance_lock.py::test_incompatible_nonblocking_lock_fails_meaningfully_across_processes[exclusive-exclusive] PASSED [ 22%]
+tests/unit/test_maintenance_lock.py::test_concurrent_first_creators_share_one_persistent_lock PASSED [ 22%]
+tests/unit/test_maintenance_lock.py::test_lock_path_replacement_immediately_after_open_fails_closed PASSED [ 23%]
+tests/unit/test_maintenance_lock.py::test_ancestor_retarget_during_traversal_fails_closed PASSED [ 23%]
+tests/unit/test_maintenance_lock.py::test_lock_path_replacement_during_acquisition_fails_closed_and_closes_descriptor[True] PASSED [ 24%]
+tests/unit/test_maintenance_lock.py::test_lock_path_replacement_during_acquisition_fails_closed_and_closes_descriptor[False] PASSED [ 24%]
+tests/unit/test_maintenance_lock.py::test_release_failures_do_not_mask_context_exception PASSED [ 25%]
+tests/unit/test_maintenance_lock.py::test_release_failure_after_clean_body_is_reported PASSED [ 25%]
+tests/unit/test_maintenance_lock_identity.py::test_held_lock_exposes_immutable_verified_path_identity PASSED [ 26%]
+tests/unit/test_maintenance_lock_identity.py::test_replacing_held_lock_path_is_detected_before_unlock PASSED [ 27%]
+tests/unit/test_maintenance_lock_identity.py::test_retargeting_held_lock_ancestor_is_detected_before_unlock PASSED [ 27%]
+tests/unit/test_maintenance_lock_identity.py::test_changing_held_lock_mode_is_detected_before_unlock PASSED [ 28%]
+tests/unit/test_maintenance_lock_identity.py::test_released_handle_rejects_identity_verification PASSED [ 28%]
+tests/unit/test_maintenance_lock_identity.py::test_identity_failure_during_exception_preserves_primary_error PASSED [ 29%]
+tests/unit/test_recovery_contract.py::test_valid_inventory_round_trips_through_canonical_json PASSED [ 29%]
+tests/unit/test_recovery_contract.py::test_canonical_json_ignores_mapping_insertion_order PASSED [ 30%]
+tests/unit/test_recovery_contract.py::test_unknown_contract_version_is_rejected[RecoveryInventoryV1] PASSED [ 31%]
+tests/unit/test_recovery_contract.py::test_unknown_contract_version_is_rejected[TargetBindingsV1] PASSED [ 31%]
+tests/unit/test_recovery_contract.py::test_contract_version_rejects_values_that_only_compare_equal_to_one[True-RecoveryInventoryV1] PASSED [ 32%]
+tests/unit/test_recovery_contract.py::test_contract_version_rejects_values_that_only_compare_equal_to_one[True-TargetBindingsV1] PASSED [ 32%]
+tests/unit/test_recovery_contract.py::test_contract_version_rejects_values_that_only_compare_equal_to_one[1.0-RecoveryInventoryV1] PASSED [ 33%]
+tests/unit/test_recovery_contract.py::test_contract_version_rejects_values_that_only_compare_equal_to_one[1.0-TargetBindingsV1] PASSED [ 33%]
+tests/unit/test_recovery_contract.py::test_unknown_fields_and_binding_kinds_are_rejected PASSED [ 34%]
+tests/unit/test_recovery_contract.py::test_resource_capture_intent_must_match_filesystem_shape[file-directory_only] PASSED [ 35%]
+tests/unit/test_recovery_contract.py::test_resource_capture_intent_must_match_filesystem_shape[directory-keypair] PASSED [ 35%]
+tests/unit/test_recovery_contract.py::test_resource_capture_intent_must_match_filesystem_shape[directory-config] PASSED [ 36%]
+tests/unit/test_recovery_contract.py::test_resource_capture_intents_cover_copy_key_config_and_directory_only PASSED [ 36%]
+tests/unit/test_recovery_contract.py::test_valid_keypair_inventory_references_canonical_pair_resources PASSED [ 37%]
+tests/unit/test_recovery_contract.py::test_keypair_inventory_rejects_bad_names_capture_kinds_and_references[resources0-keypairs0] PASSED [ 37%]
+tests/unit/test_recovery_contract.py::test_keypair_inventory_rejects_bad_names_capture_kinds_and_references[resources1-keypairs1] PASSED [ 38%]
+tests/unit/test_recovery_contract.py::test_keypair_inventory_rejects_bad_names_capture_kinds_and_references[resources2-keypairs2] PASSED [ 38%]
+tests/unit/test_recovery_contract.py::test_keypair_inventory_rejects_duplicate_handles_or_reused_resources PASSED [ 39%]
+tests/unit/test_recovery_contract.py::test_port_bindings_reject_non_strict_integers[True] PASSED [ 40%]
+tests/unit/test_recovery_contract.py::test_port_bindings_reject_non_strict_integers[8123.0] PASSED [ 40%]
+tests/unit/test_recovery_contract.py::test_port_bindings_reject_non_strict_integers[8123] PASSED [ 41%]
+tests/unit/test_recovery_contract.py::test_binding_kinds_require_their_exact_value_and_path_shape PASSED [ 41%]
+tests/unit/test_recovery_contract.py::test_field_paths_must_be_concrete_segments[field_path0-http://provider.invalid] PASSED [ 42%]
+tests/unit/test_recovery_contract.py::test_field_paths_must_be_concrete_segments[field_path1-http://provider.invalid] PASSED [ 42%]
+tests/unit/test_recovery_contract.py::test_field_paths_must_be_concrete_segments[field_path2-http://provider.invalid] PASSED [ 43%]
+tests/unit/test_recovery_contract.py::test_field_paths_must_be_concrete_segments[field_path3-http://provider.invalid] PASSED [ 44%]
+tests/unit/test_recovery_contract.py::test_inventory_rejects_duplicate_ids_and_config_field_pairs PASSED [ 44%]
+tests/unit/test_recovery_contract.py::test_inventory_rejects_duplicate_or_inconsistent_process_ownership PASSED [ 45%]
+tests/unit/test_recovery_contract.py::test_process_identity_fields_are_strict_positive_and_all_or_none[1-None-1] PASSED [ 45%]
+tests/unit/test_recovery_contract.py::test_process_identity_fields_are_strict_positive_and_all_or_none[0-1-1] PASSED [ 46%]
+tests/unit/test_recovery_contract.py::test_process_identity_fields_are_strict_positive_and_all_or_none[-1-1-1] PASSED [ 46%]
+tests/unit/test_recovery_contract.py::test_process_identity_fields_are_strict_positive_and_all_or_none[True-1-1] PASSED [ 47%]
+tests/unit/test_recovery_contract.py::test_process_state_rejects_inconsistent_runtime_facts[True-True-None] PASSED [ 48%]
+tests/unit/test_recovery_contract.py::test_process_state_rejects_inconsistent_runtime_facts[True-False-0] PASSED [ 48%]
+tests/unit/test_recovery_contract.py::test_process_state_rejects_inconsistent_runtime_facts[False-True-None] PASSED [ 49%]
+tests/unit/test_recovery_contract.py::test_stopped_process_record_preserves_observed_cleanup_facts PASSED [ 49%]
+tests/unit/test_recovery_contract.py::test_inventory_enforces_config_and_resource_references PASSED [ 50%]
+tests/unit/test_recovery_contract.py::test_inventory_rejects_inconsistent_lexical_path_resolution[binding0-configs0] PASSED [ 50%]
+tests/unit/test_recovery_contract.py::test_inventory_rejects_inconsistent_lexical_path_resolution[binding1-configs1] PASSED [ 51%]
+tests/unit/test_recovery_contract.py::test_inventory_rejects_inconsistent_lexical_path_resolution[binding2-configs2] PASSED [ 51%]
+tests/unit/test_recovery_contract.py::test_inventory_uses_captured_config_parent_and_agents_anchor PASSED [ 52%]
+tests/unit/test_recovery_contract.py::test_partial_runtime_inventory_is_structurally_valid PASSED [ 53%]
+tests/unit/test_recovery_contract.py::test_target_resource_paths_must_remain_beneath_target_root PASSED [ 53%]
+tests/unit/test_recovery_contract.py::test_target_code_anchors_may_live_outside_target_root PASSED [ 54%]
+tests/unit/test_recovery_contract.py::test_target_mapping_fields_are_immutable_and_hash_stable[process_cwds-escape-value0] PASSED [ 54%]
+tests/unit/test_recovery_contract.py::test_target_mapping_fields_are_immutable_and_hash_stable[resource_paths-escape-value1] PASSED [ 55%]
+tests/unit/test_recovery_contract.py::test_target_mapping_fields_are_immutable_and_hash_stable[endpoint_values-escape-http://outside.invalid] PASSED [ 55%]
+tests/unit/test_recovery_contract.py::test_target_mapping_fields_are_detached_from_input_aliases PASSED [ 56%]
+tests/unit/test_recovery_contract.py::test_contract_models_have_no_configurable_defaults_and_are_frozen PASSED [ 57%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[.] PASSED [ 57%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[..] PASSED [ 58%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[/absolute] PASSED [ 58%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[nested/resource] PASSED [ 59%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[nested\\resource] PASSED [ 59%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[bad\x00id] PASSED [ 60%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[bad\nid] PASSED [ 61%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[.] PASSED [ 61%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[..] PASSED [ 62%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[/absolute] PASSED [ 62%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[nested/config] PASSED [ 63%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[nested\\config] PASSED [ 63%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[bad\x00id] PASSED [ 64%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[bad\tid] PASSED [ 64%]
+tests/unit/test_recovery_contract_review.py::test_key_handles_reject_control_characters[bad\x00handle] PASSED [ 65%]
+tests/unit/test_recovery_contract_review.py::test_key_handles_reject_control_characters[bad\rhandle] PASSED [ 66%]
+tests/unit/test_recovery_contract_review.py::test_key_handles_reject_control_characters[bad\x7fhandle] PASSED [ 66%]
+tests/unit/test_recovery_contract_review.py::test_filesystem_component_ids_preserve_dots_and_hyphens[gateway.schema-v1] PASSED [ 67%]
+tests/unit/test_recovery_contract_review.py::test_filesystem_component_ids_preserve_dots_and_hyphens[agent-config.v2] PASSED [ 67%]
+tests/unit/test_recovery_contract_review.py::test_resource_and_config_capture_roots_are_explicit_boundaries PASSED [ 68%]
+tests/unit/test_recovery_contract_review.py::test_resource_capture_path_cannot_escape_its_lexical_root[capture_root0-captured_path0] PASSED [ 68%]
+tests/unit/test_recovery_contract_review.py::test_resource_capture_path_cannot_escape_its_lexical_root[capture_root1-captured_path1] PASSED [ 69%]
+tests/unit/test_recovery_contract_review.py::test_resource_capture_path_cannot_escape_its_lexical_root[capture_root2-captured_path2] PASSED [ 70%]
+tests/unit/test_recovery_contract_review.py::test_config_capture_path_cannot_escape_its_lexical_root[capture_root0-captured_path0] PASSED [ 70%]
+tests/unit/test_recovery_contract_review.py::test_config_capture_path_cannot_escape_its_lexical_root[capture_root1-captured_path1] PASSED [ 71%]
+tests/unit/test_recovery_contract_review.py::test_config_capture_path_cannot_escape_its_lexical_root[capture_root2-captured_path2] PASSED [ 71%]
+tests/unit/test_recovery_contract_review.py::test_directory_capture_path_may_equal_its_capture_root PASSED [ 72%]
+tests/unit/test_recovery_contract_review.py::test_registered_agent_id_cannot_map_to_distinct_fingerprints PASSED [ 72%]
+tests/unit/test_recovery_contract_review.py::test_registered_agent_aliases_with_one_fingerprint_are_valid PASSED [ 73%]
+tests/unit/test_recovery_contract_review.py::test_gateway_fingerprints_are_unique PASSED [ 74%]
+tests/unit/test_recovery_contract_review.py::test_gateway_and_economic_fingerprint_sets_are_disjoint PASSED [ 74%]
+tests/unit/test_recovery_contract_review.py::test_partial_inventory_accepts_zero_or_one_exact_runtime_lock PASSED [ 75%]
+tests/unit/test_recovery_contract_review.py::test_runtime_lock_resource_must_match_inventory_lock_path PASSED [ 75%]
+tests/unit/test_recovery_contract_review.py::test_inventory_rejects_multiple_runtime_lock_resources PASSED [ 76%]
+tests/unit/test_recovery_contract_review.py::test_duplicate_paths_reject_contradictory_resource_shapes[file-absent_file] PASSED [ 76%]
+tests/unit/test_recovery_contract_review.py::test_duplicate_paths_reject_contradictory_resource_shapes[file-runtime_lock] PASSED [ 77%]
+tests/unit/test_recovery_contract_review.py::test_duplicate_paths_reject_contradictory_resource_shapes[directory-copy] PASSED [ 77%]
+tests/unit/test_recovery_contract_review.py::test_duplicate_paths_with_identical_resource_shape_remain_structurally_valid PASSED [ 78%]
+tests/unit/test_recovery_identity_contract.py::test_registered_economic_identity_facts_round_trip_canonically PASSED [ 79%]
+tests/unit/test_recovery_identity_contract.py::test_optional_unregistered_economic_key_is_structurally_valid PASSED [ 79%]
+tests/unit/test_recovery_identity_contract.py::test_gateway_key_must_be_forbidden_from_economic_registration PASSED [ 80%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] PASSED [ 80%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] PASSED [ 81%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA] PASSED [ 81%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg] PASSED [ 82%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[] PASSED [ 83%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[ a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a] PASSED [ 83%]
+tests/unit/test_recovery_identity_contract.py::test_registration_state_and_expected_agent_id_must_agree[required-unregistered-None] PASSED [ 84%]
+tests/unit/test_recovery_identity_contract.py::test_registration_state_and_expected_agent_id_must_agree[optional-registered-None] PASSED [ 84%]
+tests/unit/test_recovery_identity_contract.py::test_registration_state_and_expected_agent_id_must_agree[optional-unregistered-agent-operator] PASSED [ 85%]
+tests/unit/test_recovery_identity_contract.py::test_registration_state_and_expected_agent_id_must_agree[optional-registered-] PASSED [ 85%]
+tests/unit/test_recovery_identity_contract.py::test_registration_state_and_expected_agent_id_must_agree[optional-registered- agent-operator] PASSED [ 86%]
+tests/unit/test_recovery_identity_contract.py::test_registration_policy_is_constrained_by_key_role[economic-forbidden-unregistered-None] PASSED [ 87%]
+tests/unit/test_recovery_identity_contract.py::test_registration_policy_is_constrained_by_key_role[gateway-required-registered-gateway-agent] PASSED [ 87%]
+tests/unit/test_recovery_identity_contract.py::test_registration_policy_is_constrained_by_key_role[gateway-optional-unregistered-None] PASSED [ 88%]
+tests/unit/test_recovery_identity_contract.py::test_registration_policy_is_constrained_by_key_role[gateway-forbidden-registered-gateway-agent] PASSED [ 88%]
+tests/unit/test_recovery_identity_contract.py::test_economic_aliases_with_one_fingerprint_must_agree_on_identity PASSED [ 89%]
+tests/unit/test_recovery_identity_contract.py::test_consistent_economic_aliases_with_one_fingerprint_are_valid PASSED [ 89%]
+tests/unit/test_recovery_identity_contract.py::test_distinct_economic_fingerprints_may_have_distinct_identities PASSED [ 90%]
+tests/unit/test_recovery_identity_contract.py::test_all_identity_fields_are_required PASSED [ 90%]
+tests/unit/test_recovery_identity_contract.py::test_non_payload_file_capture_intents_are_explicit[absent_file] PASSED [ 91%]
+tests/unit/test_recovery_identity_contract.py::test_non_payload_file_capture_intents_are_explicit[runtime_lock] PASSED [ 92%]
+tests/unit/test_recovery_identity_contract.py::test_non_payload_file_capture_intents_reject_directories[absent_file] PASSED [ 92%]
+tests/unit/test_recovery_identity_contract.py::test_non_payload_file_capture_intents_reject_directories[runtime_lock] PASSED [ 93%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[-1-1] PASSED [ 93%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[0-0] PASSED [ 94%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[0--1] PASSED [ 94%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[True-1] PASSED [ 95%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[0-True] PASSED [ 96%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[0.0-1] PASSED [ 96%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[0-1.0] PASSED [ 97%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_is_required_immutable_source_evidence PASSED [ 97%]
+tests/unit/test_smoke.py::test_package_importable PASSED                 [ 98%]
+tests/unit/test_smoke.py::test_exceptions_module_exports PASSED          [ 98%]
+tests/unit/test_smoke.py::test_logging_module_exports PASSED             [ 99%]
+tests/unit/test_smoke.py::test_config_module_exports PASSED              [100%]
+
+============================= 177 passed in 0.86s ==============================
+[0;32m✓ service-commons CI passed[0m
+Checking service-clients...
+Checking service-clients...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-clients/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-clients
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 104 items
+
+tests/unit/test_bank_client.py::TestConnectionFailureMapping::test_connect_error_maps_to_502_central_bank_unavailable PASSED [  0%]
+tests/unit/test_bank_client.py::TestConnectionFailureMapping::test_timeout_maps_to_502_central_bank_unavailable PASSED [  1%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_success PASSED      [  2%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_alias_matches_lock_escrow PASSED [  3%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_402_raises_insufficient_funds PASSED [  4%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_404_raises_account_not_found PASSED [  5%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_403_raises_forbidden PASSED [  6%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_409_raises_conflict_from_body PASSED [  7%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_500_raises_502_central_bank_unavailable PASSED [  8%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_success PASSED   [  9%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_alias_matches_release_escrow PASSED [ 10%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_404_raises_not_found PASSED [ 11%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_403_raises_forbidden PASSED [ 12%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_409_raises_conflict PASSED [ 13%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_400_raises_bad_request PASSED [ 14%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_success PASSED     [ 15%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_alias_matches_split_escrow PASSED [ 16%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_404_raises_not_found PASSED [ 17%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_403_raises_forbidden PASSED [ 18%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_no_split_path_configured_raises_502 PASSED [ 19%]
+tests/unit/test_gateway_client.py::TestConnectionFailureMapping::test_connect_error_maps_to_502_db_gateway_unavailable PASSED [ 20%]
+tests/unit/test_gateway_client.py::TestConnectionFailureMapping::test_timeout_maps_to_502_db_gateway_unavailable PASSED [ 21%]
+tests/unit/test_gateway_client.py::TestIdentity::test_register_agent_success PASSED [ 22%]
+tests/unit/test_gateway_client.py::TestIdentity::test_register_agent_conflict PASSED [ 23%]
+tests/unit/test_gateway_client.py::TestIdentity::test_get_agent_not_found_returns_none PASSED [ 24%]
+tests/unit/test_gateway_client.py::TestIdentity::test_list_agents PASSED [ 25%]
+tests/unit/test_gateway_client.py::TestIdentity::test_count_agents PASSED [ 25%]
+tests/unit/test_gateway_client.py::TestBank::test_create_account_success PASSED [ 26%]
+tests/unit/test_gateway_client.py::TestBank::test_create_account_conflict PASSED [ 27%]
+tests/unit/test_gateway_client.py::TestBank::test_get_account_found PASSED [ 28%]
+tests/unit/test_gateway_client.py::TestBank::test_get_account_not_found_returns_none PASSED [ 29%]
+tests/unit/test_gateway_client.py::TestBank::test_get_transactions PASSED [ 30%]
+tests/unit/test_gateway_client.py::TestBank::test_count_accounts PASSED  [ 31%]
+tests/unit/test_gateway_client.py::TestBank::test_total_escrowed PASSED  [ 32%]
+tests/unit/test_gateway_client.py::TestBank::test_get_escrow_not_found_returns_none PASSED [ 33%]
+tests/unit/test_gateway_client.py::TestBank::test_credit_account PASSED  [ 34%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_lock_insufficient_funds PASSED [ 35%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_release_success PASSED [ 36%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_split_success PASSED [ 37%]
+tests/unit/test_gateway_client.py::TestReputation::test_submit_feedback_success PASSED [ 38%]
+tests/unit/test_gateway_client.py::TestReputation::test_submit_feedback_conflict PASSED [ 39%]
+tests/unit/test_gateway_client.py::TestReputation::test_get_feedback_not_found_returns_none PASSED [ 40%]
+tests/unit/test_gateway_client.py::TestReputation::test_list_feedback_by_task PASSED [ 41%]
+tests/unit/test_gateway_client.py::TestReputation::test_count_feedback PASSED [ 42%]
+tests/unit/test_gateway_client.py::TestCourt::test_file_claim_success PASSED [ 43%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_claim_not_found_returns_none PASSED [ 44%]
+tests/unit/test_gateway_client.py::TestCourt::test_list_claims_with_status_filter PASSED [ 45%]
+tests/unit/test_gateway_client.py::TestCourt::test_update_claim_status_not_found_returns_none PASSED [ 46%]
+tests/unit/test_gateway_client.py::TestCourt::test_update_claim_status_success PASSED [ 47%]
+tests/unit/test_gateway_client.py::TestCourt::test_submit_rebuttal_success PASSED [ 48%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_rebuttal_not_found_returns_none PASSED [ 49%]
+tests/unit/test_gateway_client.py::TestCourt::test_record_ruling_success PASSED [ 50%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_ruling_not_found_returns_none PASSED [ 50%]
+tests/unit/test_gateway_client.py::TestCourt::test_delete_ruling_success PASSED [ 51%]
+tests/unit/test_gateway_client.py::TestCourt::test_delete_ruling_not_found_returns_none PASSED [ 52%]
+tests/unit/test_gateway_client.py::TestCourt::test_count_claims PASSED   [ 53%]
+tests/unit/test_gateway_client.py::TestCourt::test_count_active_claims PASSED [ 54%]
+tests/unit/test_gateway_client.py::TestBoardRead::test_get_task_found PASSED [ 55%]
+tests/unit/test_gateway_client.py::TestBoardRead::test_get_task_not_found_returns_none PASSED [ 56%]
+tests/unit/test_identity_client.py::test_verify_jws_returns_complete_typed_result PASSED [ 57%]
+tests/unit/test_identity_client.py::test_verify_jws_invalid_result_raises_raw_invalid_signature PASSED [ 58%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_missing_header] PASSED [ 59%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_kid_mismatch] PASSED [ 60%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_bool_to_int] PASSED [ 61%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_bool_to_float] PASSED [ 62%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_wrong_valid_type] PASSED [ 63%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_wrong_payload_type] PASSED [ 64%]
+tests/unit/test_identity_client.py::test_claimed_success_for_invalid_requested_token_maps_to_identity_unavailable PASSED [ 65%]
+tests/unit/test_identity_client.py::test_identity_http_errors_are_preserved[400-invalid_jws] PASSED [ 66%]
+tests/unit/test_identity_client.py::test_identity_http_errors_are_preserved[401-token_expired] PASSED [ 67%]
+tests/unit/test_identity_client.py::test_identity_http_errors_are_preserved[404-agent_not_found] PASSED [ 68%]
+tests/unit/test_identity_client.py::test_get_agent_contract_is_unchanged PASSED [ 69%]
+tests/unit/test_identity_client.py::test_unparseable_deep_identity_success_is_unavailable PASSED [ 70%]
+tests/unit/test_identity_client.py::test_internal_transport_recursion_is_not_an_upstream_contract_error PASSED [ 71%]
+tests/unit/test_mp02_gateway_signing.py::test_write_signs_final_serialized_request_before_transport PASSED [ 72%]
+tests/unit/test_mp02_gateway_signing.py::test_read_signs_final_encoded_query_before_transport PASSED [ 73%]
+tests/unit/test_mp02_gateway_signing.py::test_constructor_requires_a_gateway_signer PASSED [ 74%]
+tests/unit/test_mp02_gateway_signing.py::test_real_signature_binds_gateway_client_final_body_and_query PASSED [ 75%]
+tests/unit/test_mp03_bank_context.py::test_release_and_split_use_concrete_bank_resources PASSED [ 75%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_retry_signs_the_same_caller_identity_and_returns_original_receipt[release_escrow] PASSED [ 76%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_retry_signs_the_same_caller_identity_and_returns_original_receipt[escrow_release] PASSED [ 77%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_retry_signs_the_same_caller_identity_and_returns_original_receipt[split_escrow] PASSED [ 78%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_retry_signs_the_same_caller_identity_and_returns_original_receipt[escrow_split] PASSED [ 79%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_conflict_preserves_the_winning_operation_identity[release_escrow] PASSED [ 80%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_conflict_preserves_the_winning_operation_identity[split_escrow] PASSED [ 81%]
+tests/unit/test_mp04_bank_operation_identity.py::test_lock_preserves_the_bank_operation_identity_validation_error PASSED [ 82%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_accepts_truthful_receipts[lock_escrow-body0-201] PASSED [ 83%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_accepts_truthful_receipts[release_escrow-body1-200] PASSED [ 84%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_accepts_truthful_receipts[split_escrow-body2-200] PASSED [ 85%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[lock_escrow-body0-201] PASSED [ 86%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[escrow_lock-body1-201] PASSED [ 87%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[release_escrow-body2-200] PASSED [ 88%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[escrow_release-body3-200] PASSED [ 89%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[split_escrow-body4-200] PASSED [ 90%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[escrow_split-body5-200] PASSED [ 91%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_success_status_with_unparseable_lock_token_is_dependency_error PASSED [ 92%]
+tests/unit/test_mp04_legacy_bank_client.py::test_claimed_valid_legacy_lock_returns_exact_observation PASSED [ 93%]
+tests/unit/test_mp04_legacy_bank_client.py::test_mismatched_legacy_lock_is_a_typed_dependency_failure[attempt_id] PASSED [ 94%]
+tests/unit/test_mp04_legacy_bank_client.py::test_mismatched_legacy_lock_is_a_typed_dependency_failure[hash] PASSED [ 95%]
+tests/unit/test_mp04_legacy_bank_client.py::test_mismatched_legacy_lock_is_a_typed_dependency_failure[payer] PASSED [ 96%]
+tests/unit/test_mp04_legacy_bank_client.py::test_mismatched_legacy_lock_is_a_typed_dependency_failure[task] PASSED [ 97%]
+tests/unit/test_mp04_legacy_bank_client.py::test_mismatched_legacy_lock_is_a_typed_dependency_failure[amount] PASSED [ 98%]
+tests/unit/test_mp04_legacy_bank_client.py::test_malformed_success_is_a_typed_dependency_failure PASSED [ 99%]
+tests/unit/test_mp04_legacy_bank_client.py::test_non_success_mapping_precedes_financial_response_parsing PASSED [100%]
+
+============================= 104 passed in 1.50s ==============================
+[0;32m✓ service-clients CI passed[0m
+Checking service-auth...
+Checking service-auth...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-auth/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 379 items
+
+tests/unit/test_financial_identity.py::test_operation_id_uses_the_versioned_url_uuid5_protocol PASSED [  0%]
+tests/unit/test_financial_identity.py::test_operation_id_is_stable_and_sensitive_to_ordered_identity PASSED [  0%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_empty_or_non_utf8_protocol_parts[-identity_parts0] PASSED [  0%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_empty_or_non_utf8_protocol_parts[task-settlement-identity_parts1] PASSED [  1%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_empty_or_non_utf8_protocol_parts[task-settlement-identity_parts2] PASSED [  1%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_empty_or_non_utf8_protocol_parts[\ud800-identity_parts3] PASSED [  1%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_empty_or_non_utf8_protocol_parts[task-settlement-identity_parts4] PASSED [  1%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_non_string_identity_parts PASSED [  2%]
+tests/unit/test_gateway.py::test_signs_final_httpx_body_query_and_encoded_path PASSED [  2%]
+tests/unit/test_gateway.py::test_rejects_tampered_body_or_query PASSED   [  2%]
+tests/unit/test_gateway.py::test_rejects_existing_authorization_and_unread_stream PASSED [  2%]
+tests/unit/test_gateway.py::test_config_rejects_invalid_required_values[kid- ] PASSED [  3%]
+tests/unit/test_gateway.py::test_config_rejects_invalid_required_values[audience-] PASSED [  3%]
+tests/unit/test_gateway.py::test_config_rejects_invalid_required_values[token_ttl_seconds-0] PASSED [  3%]
+tests/unit/test_gateway.py::test_signer_config_rejects_coercible_ttl_types[True] PASSED [  3%]
+tests/unit/test_gateway.py::test_signer_config_rejects_coercible_ttl_types[30] PASSED [  4%]
+tests/unit/test_gateway.py::test_signer_config_rejects_coercible_ttl_types[30.0] PASSED [  4%]
+tests/unit/test_gateway.py::test_signer_config_rejects_extra_fields PASSED [  4%]
+tests/unit/test_gateway.py::test_trust_config_accepts_yaml_paths_without_scalar_coercion PASSED [  5%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[max_lifetime_seconds-True] PASSED [  5%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[max_lifetime_seconds-30] PASSED [  5%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[max_lifetime_seconds-30.0] PASSED [  5%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[clock_skew_seconds-False] PASSED [  6%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[clock_skew_seconds-0] PASSED [  6%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[clock_skew_seconds-0.0] PASSED [  6%]
+tests/unit/test_gateway.py::test_trust_config_rejects_non_path_and_extra_fields PASSED [  6%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_hardens_valid_legacy_pair_without_rewriting_bytes PASSED [  7%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_refuses_invalid_material_without_modification[private-only] PASSED [  7%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_refuses_invalid_material_without_modification[corrupt] PASSED [  7%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_refuses_invalid_material_without_modification[mismatch] PASSED [  7%]
+tests/unit/test_key_bootstrap.py::test_factory_explicit_bootstrap_is_idempotent_and_check_is_load_only PASSED [  8%]
+tests/unit/test_key_bootstrap.py::test_factory_check_reports_absent_pair_without_creating_key_directory PASSED [  8%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[create_agent] PASSED [  8%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[platform_agent] PASSED [  8%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[user_agent] PASSED [  9%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[load_agent_config] PASSED [  9%]
+tests/unit/test_key_loading.py::test_preprovisioned_keys_load_for_every_supported_consumer PASSED [  9%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[mismatch-factory] PASSED [ 10%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[mismatch-config] PASSED [ 10%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[insecure-factory] PASSED [ 10%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[insecure-config] PASSED [ 10%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[symlink-factory] PASSED [ 11%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[symlink-config] PASSED [ 11%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_is_idempotent_and_never_replaces_existing_pair PASSED [ 11%]
+tests/unit/test_key_provisioning.py::test_cold_concurrent_generate_keypair_converges_across_processes PASSED [ 11%]
+tests/unit/test_key_provisioning.py::test_partial_pair_is_refused_without_changing_surviving_bytes[private] PASSED [ 12%]
+tests/unit/test_key_provisioning.py::test_partial_pair_is_refused_without_changing_surviving_bytes[public] PASSED [ 12%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[private] PASSED [ 12%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[public] PASSED [ 12%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[both] PASSED [ 13%]
+tests/unit/test_key_provisioning.py::test_mismatched_pair_is_refused_without_replacement PASSED [ 13%]
+tests/unit/test_key_provisioning.py::test_load_keypair_rejects_mismatched_pair_without_rewrite PASSED [ 13%]
+tests/unit/test_key_provisioning.py::test_fresh_private_key_mode_is_exactly_0600_under_permissive_umask PASSED [ 13%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[] PASSED [ 14%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[.] PASSED [ 14%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[..] PASSED [ 14%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[nested/agent] PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[nested\\agent] PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[private] PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[public] PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[lock] PASSED [ 16%]
+tests/unit/test_key_provisioning.py::test_interrupted_public_first_publication_remains_partial_and_is_not_replaced PASSED [ 16%]
+tests/unit/test_key_provisioning.py::test_publication_fsyncs_public_before_private_commit_marker PASSED [ 16%]
+tests/unit/test_key_provisioning.py::test_missing_lock_reader_never_observes_publication_in_progress PASSED [ 16%]
+tests/unit/test_key_provisioning.py::test_lock_acquisition_failure_closes_descriptor_and_preserves_diagnostic PASSED [ 17%]
+tests/unit/test_key_provisioning.py::test_unlock_failure_does_not_mask_body_failure_and_descriptor_is_closed PASSED [ 17%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_validates_strict_pair_without_key_mutation PASSED [ 17%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_explicitly_accepts_legacy_mode_without_chmod PASSED [ 17%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_strict_mode_rejects_legacy_permissions PASSED [ 18%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_absent_pair_does_not_create_directory PASSED [ 18%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_partial_pair_is_not_repaired PASSED [ 18%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_may_establish_only_lock_metadata PASSED [ 18%]
+tests/unit/test_keypair_fingerprint.py::test_factory_exposes_sorted_public_targets_without_provisioning PASSED [ 19%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_preserves_raw_bytes_modes_and_fingerprints PASSED [ 19%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_requires_an_explicit_boolean_blocking_mode[None] PASSED [ 19%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_requires_an_explicit_boolean_blocking_mode[0] PASSED [ 20%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_requires_an_explicit_boolean_blocking_mode[1] PASSED [ 20%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_requires_an_explicit_boolean_blocking_mode[false] PASSED [ 20%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_noncanonical_targets_before_lock_creation[-.pub] PASSED [ 20%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_noncanonical_targets_before_lock_creation[../alpha-alpha.pub] PASSED [ 21%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_noncanonical_targets_before_lock_creation[alpha-renamed.pub] PASSED [ 21%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_noncanonical_targets_before_lock_creation[alpha-alpha.key] PASSED [ 21%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_duplicate_paths_before_lock_creation PASSED [ 21%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_establishes_only_missing_legacy_lock_metadata PASSED [ 22%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_absent_pair_may_create_only_coordination_lock PASSED [ 22%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_invalid_pairs_without_mutating_bytes[missing] PASSED [ 22%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_invalid_pairs_without_mutating_bytes[partial] PASSED [ 22%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_invalid_pairs_without_mutating_bytes[private-mode] PASSED [ 23%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_invalid_pairs_without_mutating_bytes[mismatch] PASSED [ 23%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_symlinked_parent_before_lock_creation PASSED [ 23%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_nonblocking_fails_under_process_contention PASSED [ 24%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_blocking_waits_for_exclusive_transition_before_validation PASSED [ 24%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_nonblocking_reports_contention_before_mutable_pair_state PASSED [ 24%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_rechecks_inode_collisions_under_the_complete_lock_set PASSED [ 24%]
+tests/unit/test_keypair_snapshot.py::test_later_lock_contention_releases_every_earlier_snapshot_lock PASSED [ 25%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_holds_every_lock_until_all_pairs_are_read PASSED [ 25%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_exception_releases_all_acquired_locks PASSED [ 25%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_lock_path_replacement_after_flock PASSED [ 25%]
+tests/unit/test_keypair_snapshot.py::test_public_load_rejects_lock_path_replacement_after_open PASSED [ 26%]
+tests/unit/test_mp03_jws_core.py::test_create_and_verify_roundtrip_is_typed_and_keeps_context_in_header PASSED [ 26%]
+tests/unit/test_mp03_jws_core.py::test_signature_covers_received_compact_bytes_without_reserializing PASSED [ 26%]
+tests/unit/test_mp03_jws_core.py::test_wrong_signature_remains_cryptography_invalid_signature PASSED [ 26%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[None] PASSED [ 27%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[value1] PASSED [ 27%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[x] PASSED [ 27%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[1] PASSED [ 27%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[True] PASSED [ 28%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[alg-HS256] PASSED [ 28%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[alg-True] PASSED [ 28%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[typ-JWS] PASSED [ 29%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[typ-1] PASSED [ 29%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[kid- ] PASSED [ 29%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[kid-True] PASSED [ 29%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[iat-True] PASSED [ 30%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[iat-1] PASSED [ 30%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[exp-True] PASSED [ 30%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[exp-1.5] PASSED [ 30%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[aud-] PASSED [ 31%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[aud-7] PASSED [ 31%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-get /tasks/1] PASSED [ 31%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET https://example.test/tasks/1] PASSED [ 31%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET /tasks/1?q=x] PASSED [ 32%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET /tasks/1#x] PASSED [ 32%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET  /tasks/1] PASSED [ 32%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET /tasks/{id}] PASSED [ 32%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[alg] PASSED [ 33%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[typ] PASSED [ 33%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[kid] PASSED [ 33%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[iat] PASSED [ 34%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[exp] PASSED [ 34%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[aud] PASSED [ 34%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[resource] PASSED [ 34%]
+tests/unit/test_mp03_jws_core.py::test_rejects_extra_header_field PASSED [ 35%]
+tests/unit/test_mp03_jws_core.py::test_payload_requires_nonblank_string_action[payload0] PASSED [ 35%]
+tests/unit/test_mp03_jws_core.py::test_payload_requires_nonblank_string_action[payload1] PASSED [ 35%]
+tests/unit/test_mp03_jws_core.py::test_payload_requires_nonblank_string_action[payload2] PASSED [ 35%]
+tests/unit/test_mp03_jws_core.py::test_action_only_payload_and_same_named_domain_fields_are_valid PASSED [ 36%]
+tests/unit/test_mp03_jws_core.py::test_rejects_duplicate_and_nonfinite_json PASSED [ 36%]
+tests/unit/test_mp03_jws_core.py::test_decoder_failures_are_normalized_to_invalid_jws[decoder_error0] PASSED [ 36%]
+tests/unit/test_mp03_jws_core.py::test_decoder_failures_are_normalized_to_invalid_jws[decoder_error1] PASSED [ 36%]
+tests/unit/test_mp03_jws_core.py::test_create_jws_normalizes_recursive_payloads[deep] PASSED [ 37%]
+tests/unit/test_mp03_jws_core.py::test_create_jws_normalizes_recursive_payloads[cycle] PASSED [ 37%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[two.parts] PASSED [ 37%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[...] PASSED [ 37%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[a.b.c.d] PASSED [ 38%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[@@@.e30.AA] PASSED [ 38%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[e30.e30.@@@] PASSED [ 38%]
+tests/unit/test_mp03_jws_core.py::test_signature_must_decode_to_exact_ed25519_length[1] PASSED [ 39%]
+tests/unit/test_mp03_jws_core.py::test_signature_must_decode_to_exact_ed25519_length[63] PASSED [ 39%]
+tests/unit/test_mp03_jws_core.py::test_signature_must_decode_to_exact_ed25519_length[65] PASSED [ 39%]
+tests/unit/test_mp03_jws_core.py::test_valid_length_wrong_signature_remains_invalid_signature PASSED [ 39%]
+tests/unit/test_mp03_jws_core.py::test_token_policy_rejects_bool_and_invalid_ranges PASSED [ 40%]
+tests/unit/test_mp03_jws_core.py::test_temporal_edges_and_maximum_lifetime PASSED [ 40%]
+tests/unit/test_mp03_jws_core.py::test_authentic_signature_is_checked_before_temporal_state PASSED [ 40%]
+tests/unit/test_mp03_jws_core.py::test_context_and_signer_guards PASSED  [ 40%]
+tests/unit/test_mp03_jws_core.py::test_platform_signer_requires_positive_ttl_and_explicit_context PASSED [ 41%]
+tests/unit/test_mp03_jws_core.py::test_platform_signer_requires_canonical_validated_keypair PASSED [ 41%]
+tests/unit/test_mp03_jws_core.py::test_identity_success_parser_binds_complete_wire_to_requested_token PASSED [ 41%]
+tests/unit/test_mp03_jws_core.py::test_identity_binding_compares_json_types_recursively[requested0-claimed0] PASSED [ 41%]
+tests/unit/test_mp03_jws_core.py::test_identity_binding_compares_json_types_recursively[requested1-claimed1] PASSED [ 42%]
+tests/unit/test_mp03_jws_core.py::test_identity_binding_compares_json_types_recursively[requested2-claimed2] PASSED [ 42%]
+tests/unit/test_mp03_jws_core.py::test_claimed_valid_identity_wraps_unparseable_requested_token PASSED [ 42%]
+tests/unit/test_mp03_jws_core.py::test_claimed_valid_identity_wraps_recursive_wire_shape PASSED [ 43%]
+tests/unit/test_mp03_jws_core.py::test_identity_invalid_signature_wire_is_never_success PASSED [ 43%]
+tests/unit/test_mp03_jws_core.py::test_verification_preserves_original_json_serialization[None] PASSED [ 43%]
+tests/unit/test_mp03_jws_core.py::test_verification_preserves_original_json_serialization[2] PASSED [ 43%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload0] PASSED [ 44%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload1] PASSED [ 44%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload2] PASSED [ 44%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload3] PASSED [ 44%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload0] PASSED [ 45%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload1] PASSED [ 45%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload2] PASSED [ 45%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload3] PASSED [ 45%]
+tests/unit/test_mp03_jws_core.py::test_temporal_rejection_precedes_authenticated_action_validation[1893456031-1893456091-TokenNotYetValidError] PASSED [ 46%]
+tests/unit/test_mp03_jws_core.py::test_temporal_rejection_precedes_authenticated_action_validation[1893455900-1893455970-TokenExpiredError] PASSED [ 46%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload0] PASSED [ 46%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload1] PASSED [ 46%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload2] PASSED [ 47%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload3] PASSED [ 47%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload0] PASSED [ 47%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload1] PASSED [ 48%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload2] PASSED [ 48%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload3] PASSED [ 48%]
+tests/unit/test_mp03_outbound_matrix.py::test_platform_bank_court_reputation_and_task_board_tokens PASSED [ 48%]
+tests/unit/test_mp03_outbound_matrix.py::test_platform_sign_requires_explicit_context_and_registration PASSED [ 49%]
+tests/unit/test_mp03_producers.py::test_agent_config_rejects_invalid_ttl_and_policy_mismatch PASSED [ 49%]
+tests/unit/test_mp03_producers.py::test_load_agent_config_requires_complete_strict_signing PASSED [ 49%]
+tests/unit/test_mp03_producers.py::test_post_task_emits_separate_context_bound_tokens PASSED [ 49%]
+tests/unit/test_mp03_producers.py::test_unregistered_agent_cannot_sign PASSED [ 50%]
+tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[None] PASSED [ 50%]
+tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[policy1] PASSED [ 50%]
+tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[policy2] PASSED [ 50%]
+tests/unit/test_mp04_legacy_observations.py::test_control_fixtures_are_admissible_before_mutation PASSED [ 51%]
+tests/unit/test_mp04_legacy_observations.py::test_other_financial_boundaries_reject_valid_legacy_outcomes_control[issuance] PASSED [ 51%]
+tests/unit/test_mp04_legacy_observations.py::test_other_financial_boundaries_reject_valid_legacy_outcomes_control[release] PASSED [ 51%]
+tests/unit/test_mp04_legacy_observations.py::test_other_financial_boundaries_reject_valid_legacy_outcomes_control[split] PASSED [ 51%]
+tests/unit/test_mp04_legacy_observations.py::test_credit_attempts_share_one_unchanged_historical_observation PASSED [ 52%]
+tests/unit/test_mp04_legacy_observations.py::test_lock_attempts_preserve_cutover_fact_and_project_native_settlement PASSED [ 52%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[attempt_id] PASSED [ 52%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[attempt_kind] PASSED [ 53%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[attempt_hash] PASSED [ 53%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[account] PASSED [ 53%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[amount] PASSED [ 53%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[reference] PASSED [ 54%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[observed_kind_wrong] PASSED [ 54%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[observed_kind_missing] PASSED [ 54%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[transaction_type] PASSED [ 54%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[extra_transaction] PASSED [ 55%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[extra_observation] PASSED [ 55%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[extra_top] PASSED [ 55%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[missing_transaction_key] PASSED [ 55%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[missing_observation_key] PASSED [ 56%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[missing_attempt_key] PASSED [ 56%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[missing_top_key] PASSED [ 56%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[coerced_amount] PASSED [ 56%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[boolean_amount] PASSED [ 57%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[amount_out_of_range] PASSED [ 57%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[balance_negative] PASSED [ 57%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[balance_boolean] PASSED [ 58%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[historical_operation_id] PASSED [ 58%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[forged_fact_hash] PASSED [ 58%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[raw_timestamp] PASSED [ 58%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[raw_event_id] PASSED [ 59%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[event_out_of_range] PASSED [ 59%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[attempt_id] PASSED [ 59%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[attempt_kind] PASSED [ 59%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[attempt_hash] PASSED [ 60%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[payer] PASSED [ 60%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[task] PASSED [ 60%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[amount] PASSED [ 60%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[observed_kind_wrong] PASSED [ 61%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[observed_kind_missing] PASSED [ 61%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_type] PASSED [ 61%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[current_payer] PASSED [ 62%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[current_escrow] PASSED [ 62%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[current_task] PASSED [ 62%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[current_amount] PASSED [ 62%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[lock_escrow] PASSED [ 63%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_payer_mismatch] PASSED [ 63%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_task_mismatch] PASSED [ 63%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_amount_mismatch] PASSED [ 63%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[historical_operation_id] PASSED [ 64%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[forged_transaction_hash] PASSED [ 64%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[forged_lock_hash] PASSED [ 64%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_with_locked_status] PASSED [ 64%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_hash_without_fact] PASSED [ 65%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[unsorted_resolution_ids] PASSED [ 65%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_escrow_mismatch] PASSED [ 65%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_status_mismatch] PASSED [ 65%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[released_cardinality] PASSED [ 66%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[split_cardinality_zero] PASSED [ 66%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[split_cardinality_three] PASSED [ 66%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[duplicate_resolution_ids] PASSED [ 67%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_empty_id] PASSED [ 67%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_time_mismatch] PASSED [ 67%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[forged_resolution_hash] PASSED [ 67%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[extra_top] PASSED [ 68%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[extra_observation] PASSED [ 68%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[extra_transaction] PASSED [ 68%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[extra_lock] PASSED [ 68%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[extra_current] PASSED [ 69%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_attempt_key] PASSED [ 69%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_top_key] PASSED [ 69%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_observation_key] PASSED [ 69%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_transaction_key] PASSED [ 70%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_lock_key] PASSED [ 70%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_current_key] PASSED [ 70%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[coerced_event] PASSED [ 70%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[raw_timestamp] PASSED [ 71%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_event_out_of_range] PASSED [ 71%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[lock_event_out_of_range] PASSED [ 71%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_balance_negative] PASSED [ 72%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[money_boolean] PASSED [ 72%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[money_zero] PASSED [ 72%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[money_out_of_range] PASSED [ 72%]
+tests/unit/test_mp04_legacy_observations.py::test_self_consistent_terminal_resolution_fact_is_preserved PASSED [ 73%]
+tests/unit/test_mp04_legacy_observations.py::test_self_consistent_split_resolution_fact_is_preserved PASSED [ 73%]
+tests/unit/test_mp04_legacy_observations.py::test_self_consistent_one_leg_split_resolution_is_preserved PASSED [ 73%]
+tests/unit/test_mp04_legacy_observations.py::test_terminal_historical_null_resolution_time_is_preserved[released] PASSED [ 73%]
+tests/unit/test_mp04_legacy_observations.py::test_terminal_historical_null_resolution_time_is_preserved[split] PASSED [ 74%]
+tests/unit/test_mp04_legacy_observations.py::test_locked_historical_nonnull_resolution_time_is_preserved[] PASSED [ 74%]
+tests/unit/test_mp04_legacy_observations.py::test_locked_historical_nonnull_resolution_time_is_preserved[legacy-nonnull-time] PASSED [ 74%]
+tests/unit/test_mp04_legacy_observations.py::test_native_settlement_preserves_empty_historical_creation_time[escrow_release] PASSED [ 74%]
+tests/unit/test_mp04_legacy_observations.py::test_native_settlement_preserves_empty_historical_creation_time[escrow_split] PASSED [ 75%]
+tests/unit/test_mp04_legacy_observations.py::test_native_lock_still_rejects_empty_creation_time PASSED [ 75%]
+tests/unit/test_mp04_legacy_observations.py::test_native_projection_rejects_non_string_or_non_utf8_creation_time[7] PASSED [ 75%]
+tests/unit/test_mp04_legacy_observations.py::test_native_projection_rejects_non_string_or_non_utf8_creation_time[\ud800] PASSED [ 75%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[cancel_task-args0-business0-POST /tasks/t-1/cancel] PASSED [ 76%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[submit_bid-args1-business1-POST /tasks/t-1/bids] PASSED [ 76%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[accept_bid-args2-business2-POST /tasks/t-1/bids/bid-1/accept] PASSED [ 76%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[submit_deliverable-args3-business3-POST /tasks/t-1/submit] PASSED [ 77%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[approve_task-args4-business4-POST /tasks/t-1/approve] PASSED [ 77%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[dispute_task-args5-business5-POST /tasks/t-1/dispute] PASSED [ 77%]
+tests/unit/test_mp07_task_board_producer.py::test_post_task_binds_explicit_window_and_distinct_escrow_token PASSED [ 77%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[post_task-args0] PASSED [ 78%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[cancel_task-args1] PASSED [ 78%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[submit_bid-args2] PASSED [ 78%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[accept_bid-args3] PASSED [ 78%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[submit_deliverable-args4] PASSED [ 79%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[approve_task-args5] PASSED [ 79%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[dispute_task-args6] PASSED [ 79%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[None] PASSED [ 79%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[True] PASSED [ 80%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[0] PASSED [ 80%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[-1] PASSED [ 80%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[1.5] PASSED [ 81%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[20] PASSED [ 81%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[9223372036855] PASSED [ 81%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[None] PASSED [ 81%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[True] PASSED [ 82%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[op-bad] PASSED [ 82%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[op-AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA] PASSED [ 82%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[None] PASSED [ 82%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[True] PASSED [ 83%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[-1] PASSED [ 83%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[1.5] PASSED [ 83%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[0] PASSED [ 83%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[9223372036854775808] PASSED [ 84%]
+tests/unit/test_mp07_task_board_producer.py::test_sqlite_boundary_values_are_signed_exactly PASSED [ 84%]
+tests/unit/test_mp07_task_board_status.py::test_public_status_types_are_constructible_and_response_is_frozen PASSED [ 84%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[submit_bid-args0-201-body0-expected_payload0-POST /tasks/t-1/bids] PASSED [ 84%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[accept_bid-args1-200-body1-expected_payload1-POST /tasks/t-1/bids/bid-1/accept] PASSED [ 85%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[submit_deliverable-args2-200-body2-expected_payload2-POST /tasks/t-1/submit] PASSED [ 85%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[cancel_task-args3-200-body3-expected_payload3-POST /tasks/t-1/cancel] PASSED [ 85%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[cancel_task-args4-202-body4-expected_payload4-POST /tasks/t-1/cancel] PASSED [ 86%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[approve_task-args5-200-body5-expected_payload5-POST /tasks/t-1/approve] PASSED [ 86%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[approve_task-args6-202-body6-expected_payload6-POST /tasks/t-1/approve] PASSED [ 86%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[dispute_task-args7-200-body7-expected_payload7-POST /tasks/t-1/dispute] PASSED [ 86%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[dispute_task-args8-202-body8-expected_payload8-POST /tasks/t-1/dispute] PASSED [ 87%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[submit_bid-args0-200-body0] PASSED [ 87%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[accept_bid-args1-201-body1] PASSED [ 87%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[submit_deliverable-args2-202-body2] PASSED [ 87%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[cancel_task-args3-201-body3] PASSED [ 88%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[approve_task-args4-201-body4] PASSED [ 88%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[dispute_task-args5-201-body5] PASSED [ 88%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[accept_bid-args0-200-{-None] PASSED [ 88%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[accept_bid-args1-200-None-json_body1] PASSED [ 89%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[submit_bid-args2-201-None-json_body2] PASSED [ 89%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[submit_deliverable-args3-200-None-json_body3] PASSED [ 89%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[approve_task-args4-202-None-json_body4] PASSED [ 89%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_status_body_contradiction[approve_task-args0-200-body0] PASSED [ 90%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_status_body_contradiction[approve_task-args1-202-body1] PASSED [ 90%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_status_body_contradiction[cancel_task-args2-202-body2] PASSED [ 90%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[submit_bid-args0] PASSED [ 91%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[accept_bid-args1] PASSED [ 91%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[submit_deliverable-args2] PASSED [ 91%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[cancel_task-args3] PASSED [ 91%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[approve_task-args4] PASSED [ 92%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[dispute_task-args5] PASSED [ 92%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[submit_bid-args0] PASSED [ 92%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[accept_bid-args1] PASSED [ 92%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[submit_deliverable-args2] PASSED [ 93%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[cancel_task-args3] PASSED [ 93%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[approve_task-args4] PASSED [ 93%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[dispute_task-args5] PASSED [ 93%]
+tests/unit/test_platform_signer_keys.py::test_platform_agent_refuses_to_sign_before_registration PASSED [ 94%]
+tests/unit/test_platform_signer_keys.py::test_platform_agent_signs_with_registered_identity_and_config_key PASSED [ 94%]
+tests/unit/test_platform_signer_keys.py::test_local_principal_rejection_precedes_action_content[payload0] PASSED [ 94%]
+tests/unit/test_platform_signer_keys.py::test_local_principal_rejection_precedes_action_content[payload1] PASSED [ 94%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[expired-TokenExpiredError] PASSED [ 95%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[future-TokenNotYetValidError] PASSED [ 95%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[overlong-InvalidJwsError] PASSED [ 95%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[bad_signature-InvalidSignature] PASSED [ 96%]
+tests/unit/test_signing.py::TestKeygenRoundtrip::test_creates_and_loads_keys PASSED [ 96%]
+tests/unit/test_signing.py::TestSignVerify::test_sign_and_verify_roundtrip PASSED [ 96%]
+tests/unit/test_signing.py::TestSignVerify::test_verify_rejects_wrong_key PASSED [ 96%]
+tests/unit/test_signing.py::TestSignVerify::test_malformed_token_raises_value_error PASSED [ 97%]
+tests/unit/test_signing.py::TestSignVerify::test_canonicalization_is_key_order_independent PASSED [ 97%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_payload PASSED [ 97%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_header PASSED [ 97%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_ttl_stamps_iat_exp_into_header_not_payload PASSED [ 98%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_legacy_token_without_exp_is_rejected PASSED [ 98%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_expired_token_is_rejected PASSED [ 98%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_unexpired_token_is_accepted PASSED [ 98%]
+tests/unit/test_signing.py::TestLegacyProfileRejection::test_rejects_base_agent_old_profile PASSED [ 99%]
+tests/unit/test_signing.py::TestLegacyProfileRejection::test_rejects_platform_signer_old_profile PASSED [ 99%]
+tests/unit/test_signing.py::TestPlatformSigner::test_signs_and_verifies PASSED [ 99%]
+tests/unit/test_signing.py::TestPlatformSigner::test_legacy_signer_without_lifetime_is_rejected PASSED [100%]
+
+============================= 379 passed in 3.35s ==============================
+[0;32m✓ service-auth CI passed[0m
+[0;34m--- Phase 2: Service CI ---[0m
+Checking identity...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking central-bank...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking task-board...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking reputation...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking court...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking db-gateway...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking ui...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+[0;34m--- Phase 3: Per-service integration tests ---[0m
+
+[0;34m=== Running Per-Service Integration Tests ===[0m
+
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-bb2dfcc773494f73806fcfdf22515469-rqnw2ggv
+provisioned handle=alice fingerprint_sha256=e8298cfb24074916fe4ce04d61cec08abf5b8d9b636395de107b918fbb6a1cb3
+provisioned handle=bob fingerprint_sha256=abd1151ebcba0b803244c116ad3c5c6332c2ea38a5882eeb6f81c633199144ff
+provisioned handle=feeder fingerprint_sha256=645b78605fb0e5d34cebacded5e506fb596e8dd2d943e11a14167689796cf7fa
+provisioned handle=mathbot fingerprint_sha256=7e407d819e74f35ce55f99d72b46370a871c9189026e8162a8a01c3d09203d50
+provisioned handle=mathbot_mistral fingerprint_sha256=09dc3ae762d12e9e4b693c6e92270076c5f3186141b48b1aa780b7916096dea6
+provisioned handle=mathbot_openai fingerprint_sha256=62fd4218266bf22122ab4cd029dac36c0f448a417643305500e383ad8c0f2cb1
+provisioned handle=operator fingerprint_sha256=018413cc6c01a95c80df78a8fd1cc93d8f66f84e715e69321f02cdac501e3572
+provisioned handle=platform fingerprint_sha256=636faf9828a35693bcd5c082ed069605a5f3c84aff97e6cef1dd4949713f512d
+provisioned handle=gateway-central-bank fingerprint_sha256=9a0ef929de7bef3853fdba811f5a3f01f63b57b3674b5790b9152db153cf4a4e
+provisioned handle=gateway-court fingerprint_sha256=cca81b62eedb412b64b886f72378977c8f6b49fbe669a4733e0ee293090be95e
+provisioned handle=gateway-identity fingerprint_sha256=0ca535e684e9c3a39e903841135f5204cebed1c19c7b60716b98c9e81d509136
+provisioned handle=gateway-reputation fingerprint_sha256=6a2086edadee25031f71eb11c72094d7666d5cb900cf733248c702d9f8cb4e1e
+provisioned handle=gateway-task-board fingerprint_sha256=5b76013a688f27b8045ea5621aa10f65bcf33a5f08e63184c820fccd9daef8c4
+[0;34m--- identity ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/identity/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/identity
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 7 items
+
+tests/integration/test_concurrent_registration_live.py::TestConcurrentDuplicateKeyRaceThroughLiveIdentity::test_exactly_one_201_through_live_identity_process PASSED [ 14%]
+tests/integration/test_endpoints.py::TestRegisterAgentGatewayBacked::test_register_agent_persists_row_via_real_gateway PASSED [ 28%]
+tests/integration/test_endpoints.py::TestRegisterAgentGatewayBacked::test_register_agent_writes_event_row_via_real_gateway PASSED [ 42%]
+tests/integration/test_endpoints.py::TestRegisterAgentGatewayBacked::test_duplicate_public_key_rejected_by_real_gateway PASSED [ 57%]
+tests/integration/test_endpoints.py::TestReadPathGatewayBacked::test_get_agent_reads_through_real_gateway PASSED [ 71%]
+tests/integration/test_endpoints.py::TestReadPathGatewayBacked::test_list_agents_reads_through_real_gateway PASSED [ 85%]
+tests/integration/test_endpoints.py::TestVerifyJwsGatewayBacked::test_verify_jws_round_trips_through_real_gateway PASSED [100%]
+
+============================== 7 passed in 2.33s ===============================
+[0;34m--- central-bank ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/central-bank/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/central-bank
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 25 items
+
+tests/integration/test_endpoints.py::TestAccountLifecycleGatewayBacked::test_create_account_persists_row_via_real_gateway PASSED [  4%]
+tests/integration/test_endpoints.py::TestAccountLifecycleGatewayBacked::test_credit_account_updates_balance_via_real_gateway PASSED [  8%]
+tests/integration/test_endpoints.py::TestEscrowLifecycleGatewayBacked::test_escrow_lock_and_release_moves_real_gateway_balances PASSED [ 12%]
+tests/integration/test_mp04_historical_observations.py::test_exact_credit_and_lock_return_bound_unchanged_observations_without_aliasing PASSED [ 16%]
+tests/integration/test_mp04_historical_observations.py::test_changed_historical_amount_returns_exact_conflict_without_effects[credit-expected_keys0] PASSED [ 20%]
+tests/integration/test_mp04_historical_observations.py::test_changed_historical_amount_returns_exact_conflict_without_effects[lock-expected_keys1] PASSED [ 24%]
+tests/integration/test_mp04_historical_observations.py::test_terminal_historical_settlement_is_unreplayable_without_effects[esc-released-False-released] PASSED [ 28%]
+tests/integration/test_mp04_historical_observations.py::test_terminal_historical_settlement_is_unreplayable_without_effects[esc-split-True-split] PASSED [ 32%]
+tests/integration/test_mp04_historical_observations.py::test_native_operation_identity_precedes_historical_classification PASSED [ 36%]
+tests/integration/test_mp04_historical_observations.py::test_corrupt_marker_returns_typed_failure_without_new_effects PASSED [ 40%]
+tests/integration/test_mp04_historical_observations.py::test_native_settlement_preserves_cutover_lock_observation_with_fresh_projection PASSED [ 44%]
+tests/integration/test_mp04_public_settlement_race.py::test_opposing_public_settlements_have_one_immutable_native_winner PASSED [ 48%]
+tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[release] PASSED [ 52%]
+tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-0-percent] PASSED [ 56%]
+tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-partial] PASSED [ 60%]
+tests/integration/test_mp04_replay_baseline.py::test_committed_settlement_replay_returns_original_receipt_without_new_legs[split-100-percent] PASSED [ 64%]
+tests/integration/test_mp04_replay_baseline.py::test_operation_id_reuse_with_changed_credit_reference_conflicts_without_write PASSED [ 68%]
+tests/integration/test_mp04_replay_baseline.py::test_operation_id_reuse_with_changed_lock_target_conflicts_without_write PASSED [ 72%]
+tests/integration/test_mp04_replay_baseline.py::test_exact_lock_replay_after_settlement_preserves_receipt_and_refreshes_projection PASSED [ 76%]
+tests/integration/test_mp04_replay_baseline.py::test_successful_release_exposes_reconcilable_public_receipt PASSED [ 80%]
+tests/integration/test_mp04_replay_baseline.py::test_zero_account_rejects_operation_identity_without_ledger_write PASSED [ 84%]
+tests/integration/test_mp04_replay_baseline.py::test_public_credit_rejects_malformed_operation_identity[not-an-operation] PASSED [ 88%]
+tests/integration/test_mp04_replay_baseline.py::test_public_credit_rejects_malformed_operation_identity[op-NOT-CANONICAL] PASSED [ 92%]
+tests/integration/test_mp04_replay_baseline.py::test_public_credit_preserves_invalid_utf8_financial_request PASSED [ 96%]
+tests/integration/test_mp04_replay_baseline.py::test_agent_lock_rejects_malformed_operation_identity PASSED [100%]
+
+============================== 25 passed in 6.35s ==============================
+[0;34m--- task-board ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/task-board/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 65 items
+
+tests/integration/test_endpoints.py::test_embedded_gateway_holds_only_its_disposable_maintenance_lock PASSED [  1%]
+tests/integration/test_endpoints.py::TestTaskLifecycleGatewayBacked::test_full_lifecycle_persists_through_real_gateway FAILED [  3%]
+tests/integration/test_mp07_accept_expiry_race.py::test_stale_validated_accept_cannot_overwrite_acceptance_expiry PASSED [  4%]
+tests/integration/test_mp07_acceptance_result_projection.py::test_acceptance_replay_retains_original_operation_after_submission PASSED [  6%]
+tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[missing] PASSED [  7%]
+tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[null] PASSED [  9%]
+tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[zero] PASSED [ 10%]
+tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[negative] PASSED [ 12%]
+tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[bool] PASSED [ 13%]
+tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[float] PASSED [ 15%]
+tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[string] PASSED [ 16%]
+tests/integration/test_mp07_acceptance_window.py::test_two_selected_windows_are_preserved_and_expose_distinct_deadlines PASSED [ 18%]
+tests/integration/test_mp07_acceptance_window.py::test_early_acceptance_remains_legal PASSED [ 20%]
+tests/integration/test_mp07_acceptance_window.py::test_zero_bid_task_expires_at_exact_bidding_cutoff PASSED [ 21%]
+tests/integration/test_mp07_acceptance_window.py::test_new_bid_after_bidding_cutoff_rejects_without_closing_task_with_bid PASSED [ 23%]
+tests/integration/test_mp07_acceptance_window.py::test_poster_can_accept_at_selected_cutoff_minus_one_microsecond PASSED [ 24%]
+tests/integration/test_mp07_acceptance_window.py::test_task_with_bid_expires_at_selected_acceptance_cutoff_equality PASSED [ 26%]
+tests/integration/test_mp07_atomic_task_transitions.py::test_concurrent_approve_and_dispute_have_one_serial_winner PASSED [ 27%]
+tests/integration/test_mp07_atomic_task_transitions.py::test_competing_acceptances_have_one_serial_winner PASSED [ 29%]
+tests/integration/test_mp07_atomic_task_transitions.py::test_concurrent_acceptance_and_poster_cancel_have_one_serial_winner PASSED [ 30%]
+tests/integration/test_mp07_bid_admission_races.py::test_bid_validated_before_acceptance_cannot_mutate_accepted_task PASSED [ 32%]
+tests/integration/test_mp07_bid_admission_races.py::test_bid_validated_before_cutoff_cannot_commit_at_equality PASSED [ 33%]
+tests/integration/test_mp07_bid_admission_races.py::test_two_independent_bids_both_succeed PASSED [ 35%]
+tests/integration/test_mp07_court_ack_decode.py::test_committed_claim_completes_when_court_ack_json_is_malformed PASSED [ 36%]
+tests/integration/test_mp07_court_ack_decode.py::test_malformed_ack_without_claim_returns_typed_failure_and_keeps_claim PASSED [ 38%]
+tests/integration/test_mp07_deadline_lookup_failure.py::test_retryable_bid_lookup_failure_returns_fresh_source_projection[transport-detail] PASSED [ 40%]
+tests/integration/test_mp07_deadline_lookup_failure.py::test_retryable_bid_lookup_failure_returns_fresh_source_projection[transport-list] PASSED [ 41%]
+tests/integration/test_mp07_deadline_lookup_failure.py::test_retryable_bid_lookup_failure_returns_fresh_source_projection[typed-503-detail] PASSED [ 43%]
+tests/integration/test_mp07_deadline_lookup_failure.py::test_retryable_bid_lookup_failure_returns_fresh_source_projection[typed-503-list] PASSED [ 44%]
+tests/integration/test_mp07_deadline_lookup_failure.py::test_malformed_bid_lookup_success_remains_visible_502 PASSED [ 46%]
+tests/integration/test_mp07_deadline_transition_races.py::test_stale_validated_submit_cannot_overwrite_execution_expiry PASSED [ 47%]
+tests/integration/test_mp07_deadline_transition_races.py::test_stale_review_action_cannot_beat_autoapproval_at_cutoff[approve] PASSED [ 49%]
+tests/integration/test_mp07_deadline_transition_races.py::test_stale_review_action_cannot_beat_autoapproval_at_cutoff[dispute] PASSED [ 50%]
+tests/integration/test_mp07_native_court_handoff.py::test_persisted_claim_finalizes_with_actual_claim_identity_and_deadline PASSED [ 52%]
+tests/integration/test_mp07_native_court_handoff.py::test_persisted_claim_survives_lost_court_ack_and_exact_replay PASSED [ 53%]
+tests/integration/test_mp07_native_court_handoff.py::test_success_body_without_persisted_claim_stays_pending PASSED [ 55%]
+tests/integration/test_mp07_native_court_handoff.py::test_mismatched_persisted_claim_blocks_without_fabricated_success PASSED [ 56%]
+tests/integration/test_mp07_native_deadlines.py::test_bid_at_bidding_cutoff_stays_open_until_acceptance_cutoff PASSED [ 58%]
+tests/integration/test_mp07_native_deadlines.py::test_open_deadline_uses_authoritative_bid_existence_and_native_refund[False-expire_bidding-10] PASSED [ 60%]
+tests/integration/test_mp07_native_deadlines.py::test_open_deadline_uses_authoritative_bid_existence_and_native_refund[True-expire_acceptance-30] PASSED [ 61%]
+tests/integration/test_mp07_native_deadlines.py::test_execution_expiry_refunds_fixed_reward_through_native_claim PASSED [ 63%]
+tests/integration/test_mp07_native_deadlines.py::test_review_cutoff_autoapproves_fixed_reward_through_native_claim PASSED [ 64%]
+tests/integration/test_mp07_native_deadlines.py::test_bank_failure_keeps_source_state_and_reduced_pending_projection PASSED [ 66%]
+tests/integration/test_mp07_native_effect_recovery.py::test_missing_receipt_stays_pending_and_exact_retry_completes PASSED [ 67%]
+tests/integration/test_mp07_native_effect_recovery.py::test_persisted_receipt_survives_lost_bank_acknowledgement PASSED [ 69%]
+tests/integration/test_mp07_native_effect_recovery.py::test_precommit_bank_failure_keeps_claim_for_same_operation_retry PASSED [ 70%]
+tests/integration/test_mp07_native_effect_recovery.py::test_open_task_approval_returns_domain_conflict_before_bank_or_claim PASSED [ 72%]
+tests/integration/test_mp07_native_public_lifecycle.py::test_public_submission_replays_original_native_result_after_response_loss PASSED [ 73%]
+tests/integration/test_mp07_native_public_lifecycle.py::test_public_approval_claims_before_bank_and_replays_one_fixed_reward_receipt PASSED [ 75%]
+tests/integration/test_mp07_native_public_lifecycle.py::test_public_approval_conflicts_before_bank_delivery[changed_replay-operation_id_conflict] PASSED [ 76%]
+tests/integration/test_mp07_native_public_lifecycle.py::test_public_approval_conflicts_before_bank_delivery[stale_version-task_version_conflict] PASSED [ 78%]
+tests/integration/test_mp07_native_public_lifecycle.py::test_public_cancellation_claims_before_refund_and_replays_one_receipt PASSED [ 80%]
+tests/integration/test_mp07_native_ruling_handoff.py::test_public_ruling_uses_native_claim_and_actual_receipt[0-escrow_release-released] PASSED [ 81%]
+tests/integration/test_mp07_native_ruling_handoff.py::test_public_ruling_uses_native_claim_and_actual_receipt[50-escrow_split-split] PASSED [ 83%]
+tests/integration/test_mp07_native_ruling_handoff.py::test_public_ruling_uses_native_claim_and_actual_receipt[100-escrow_release-released] PASSED [ 84%]
+tests/integration/test_mp07_native_ruling_handoff.py::test_changed_ruling_terms_reuse_conflicts_before_bank PASSED [ 86%]
+tests/integration/test_mp07_native_ruling_handoff.py::test_foreign_ruling_identity_rejects_before_bank_or_claim PASSED [ 87%]
+tests/integration/test_mp07_public_command_replay.py::test_exact_submit_bid_replay_after_response_loss_returns_original_result PASSED [ 89%]
+tests/integration/test_mp07_public_command_replay.py::test_exact_accept_bid_replay_after_response_loss_returns_original_terms PASSED [ 90%]
+tests/integration/test_mp07_public_command_replay.py::test_changed_bid_amount_under_same_operation_id_conflicts_without_changes PASSED [ 92%]
+tests/integration/test_mp07_public_command_replay.py::test_cross_command_operation_id_reuse_conflicts_without_accepting PASSED [ 93%]
+tests/integration/test_mp07_public_command_replay.py::test_wrong_expected_lifecycle_version_rejects_bid_without_changes PASSED [ 95%]
+tests/integration/test_mp07_rebuttal_ack_decode.py::test_malformed_rebuttal_ack_preserves_commit_and_returns_typed_502 PASSED [ 96%]
+tests/integration/test_mp07_rebuttal_bridge.py::test_public_rebuttal_uses_court_timestamp_without_generic_board_write PASSED [ 98%]
+tests/integration/test_mp07_rebuttal_bridge.py::test_lost_court_ack_keeps_atomic_rebuttal_projection_and_returns_typed_502 PASSED [100%]
+
+=================================== FAILURES ===================================
+_ TestTaskLifecycleGatewayBacked.test_full_lifecycle_persists_through_real_gateway _
+tests/integration/test_endpoints.py:173: in test_full_lifecycle_persists_through_real_gateway
+    assert create_resp.status_code == 201, create_resp.text
+E   AssertionError: {"error":"invalid_payload","message":"Missing required field: acceptance_window_seconds","details":{}}
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 08:07:36", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_endpoints.py::TestTaskLifecycleGatewayBacked::test_full_lifecycle_persists_through_real_gateway - AssertionError: {"error":"invalid_payload","message":"Missing required field: acceptance_window_seconds","details":{}}
+assert 400 == 201
+ +  where 400 = <Response [400 Bad Request]>.status_code
+======================== 1 failed, 64 passed in 26.10s =========================
+error: recipe `test-integration` failed with exit code 1
+[0;34m--- reputation ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/reputation/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/reputation
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 12 items
+
+tests/integration/test_endpoints.py::TestSubmitAndRetrieveFeedbackWorkflow::test_sealed_feedback_becomes_visible_after_mutual_submission PASSED [  8%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_missing_field_returns_400 PASSED [ 16%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_invalid_category_returns_400 PASSED [ 25%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_self_feedback_returns_400 PASSED [ 33%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_duplicate_feedback_returns_409 PASSED [ 41%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_wrong_content_type_returns_415 PASSED [ 50%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_invalid_json_returns_400 PASSED [ 58%]
+tests/integration/test_endpoints.py::TestHealthCheckWorkflow::test_health_tracks_total_feedback_including_sealed PASSED [ 66%]
+tests/integration/test_endpoints.py::TestMethodNotAllowed::test_put_feedback_returns_405 PASSED [ 75%]
+tests/integration/test_endpoints.py::TestMethodNotAllowed::test_delete_health_returns_405 PASSED [ 83%]
+tests/integration/test_endpoints.py::TestCommentHandling::test_feedback_with_comment PASSED [ 91%]
+tests/integration/test_endpoints.py::TestCommentHandling::test_feedback_without_comment PASSED [100%]
+
+============================== 12 passed in 0.51s ==============================
+[0;34m--- court ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/court/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/integration/test_endpoints.py::TestDisputeLifecycleGatewayBacked::test_file_rebut_and_rule_persists_through_real_gateway PASSED [100%]
+
+============================== 1 passed in 0.49s ===============================
+[0;34m--- db-gateway ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 6 items
+
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_register_then_read_round_trips_over_live_http PASSED [ 16%]
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_duplicate_public_key_returns_409_over_live_http PASSED [ 33%]
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_health_total_events_increments_after_live_write PASSED [ 50%]
+tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_exactly_one_201_among_five_racing_distinct_agents PASSED [ 66%]
+tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_winner_is_readable_and_no_duplicate_rows_exist PASSED [ 83%]
+tests/integration/test_endpoints.py::TestHealthIntegration::test_health_check PASSED [100%]
+
+============================== 6 passed in 0.47s ===============================
+[0;34m--- ui ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/ui/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 251 items
+
+tests/integration/test_agents.py::test_list_returns_all_agents PASSED    [  0%]
+tests/integration/test_agents.py::test_list_default_sort_total_earned_desc PASSED [  0%]
+tests/integration/test_agents.py::test_list_sort_by_total_spent PASSED   [  1%]
+tests/integration/test_agents.py::test_list_sort_by_tasks_posted PASSED  [  1%]
+tests/integration/test_agents.py::test_list_sort_by_tasks_completed PASSED [  1%]
+tests/integration/test_agents.py::test_list_sort_by_spec_quality PASSED  [  2%]
+tests/integration/test_agents.py::test_list_sort_by_delivery_quality PASSED [  2%]
+tests/integration/test_agents.py::test_list_sort_asc_reverses PASSED     [  3%]
+tests/integration/test_agents.py::test_list_pagination_limit_offset PASSED [  3%]
+tests/integration/test_agents.py::test_list_invalid_sort_returns_400 PASSED [  3%]
+tests/integration/test_agents.py::test_list_agent_stats_structure PASSED [  4%]
+tests/integration/test_agents.py::test_profile_returns_correct_agent PASSED [  4%]
+tests/integration/test_agents.py::test_profile_not_found_returns_404 PASSED [  5%]
+tests/integration/test_agents.py::test_profile_balance_matches_seed PASSED [  5%]
+tests/integration/test_agents.py::test_profile_recent_tasks_included PASSED [  5%]
+tests/integration/test_agents.py::test_profile_recent_tasks_role_field PASSED [  6%]
+tests/integration/test_agents.py::test_profile_feedback_excludes_invisible PASSED [  6%]
+tests/integration/test_agents.py::test_profile_balance_staleness PASSED  [  7%]
+tests/integration/test_agents.py::test_feed_returns_agent_events PASSED  [  7%]
+tests/integration/test_agents.py::test_feed_pagination_before PASSED     [  7%]
+tests/integration/test_agents.py::test_feed_has_more_flag PASSED         [  8%]
+tests/integration/test_agents.py::test_earnings_total_and_avg PASSED     [  8%]
+tests/integration/test_agents.py::test_earnings_cumulative_data_points PASSED [  9%]
+tests/integration/test_agents.py::test_earnings_no_earnings_agent PASSED [  9%]
+tests/integration/test_agents.py::test_earnings_staleness PASSED         [  9%]
+tests/integration/test_economy_phase_stalled.py::test_economy_phase_stalled_on_empty_db PASSED [ 10%]
+tests/integration/test_economy_phase_stalled.py::test_economy_phase_stable_below_dispute_ceiling PASSED [ 10%]
+tests/integration/test_economy_phase_stalled.py::test_economy_phase_contracting_above_dispute_threshold PASSED [ 11%]
+tests/integration/test_events.py::test_events_returns_reverse_chronological PASSED [ 11%]
+tests/integration/test_events.py::test_events_default_returns_all_25 PASSED [ 11%]
+tests/integration/test_events.py::test_events_limit_param PASSED         [ 12%]
+tests/integration/test_events.py::test_events_limit_clamped_to_200 PASSED [ 12%]
+tests/integration/test_events.py::test_events_before_cursor PASSED       [ 13%]
+tests/integration/test_events.py::test_events_after_cursor PASSED        [ 13%]
+tests/integration/test_events.py::test_events_before_and_after_range PASSED [ 13%]
+tests/integration/test_events.py::test_events_filter_by_source PASSED    [ 14%]
+tests/integration/test_events.py::test_events_filter_by_type PASSED      [ 14%]
+tests/integration/test_events.py::test_events_filter_by_agent_id PASSED  [ 15%]
+tests/integration/test_events.py::test_events_filter_by_task_id PASSED   [ 15%]
+tests/integration/test_events.py::test_events_has_more_true PASSED       [ 15%]
+tests/integration/test_events.py::test_events_has_more_false PASSED      [ 16%]
+tests/integration/test_events.py::test_events_oldest_newest_ids PASSED   [ 16%]
+tests/integration/test_events.py::test_events_invalid_limit_returns_400 PASSED [ 17%]
+tests/integration/test_events.py::test_events_invalid_before_returns_400 PASSED [ 17%]
+tests/integration/test_events.py::test_events_limit_zero_returns_400 PASSED [ 17%]
+tests/integration/test_events.py::test_events_payload_is_dict PASSED     [ 18%]
+tests/integration/test_events.py::test_events_staleness_new_event PASSED [ 18%]
+tests/integration/test_events.py::test_sse_content_type PASSED           [ 19%]
+tests/integration/test_events.py::test_sse_sends_existing_events PASSED  [ 19%]
+tests/integration/test_events.py::test_sse_retry_directive PASSED        [ 19%]
+tests/integration/test_gdp_history_bucketed.py::test_all_points_match_total_when_no_recent_activity PASSED [ 20%]
+tests/integration/test_gdp_history_bucketed.py::test_mid_window_transaction_shifts_only_points_at_or_after_it PASSED [ 20%]
+tests/integration/test_gdp_history_bucketed.py::test_gdp_history_query_count_is_constant_not_per_point PASSED [ 21%]
+tests/integration/test_health.py::test_health_returns_200_with_status_ok PASSED [ 21%]
+tests/integration/test_health.py::test_health_has_uptime_seconds PASSED  [ 21%]
+tests/integration/test_health.py::test_health_has_started_at_iso PASSED  [ 22%]
+tests/integration/test_health.py::test_health_latest_event_id_matches_seed PASSED [ 22%]
+tests/integration/test_health.py::test_health_database_readable_true PASSED [ 23%]
+tests/integration/test_health.py::test_health_post_not_allowed PASSED    [ 23%]
+tests/integration/test_health.py::test_health_response_has_exact_keys PASSED [ 23%]
+tests/integration/test_health.py::test_health_uptime_increases_between_calls PASSED [ 24%]
+tests/integration/test_health.py::test_health_types_correct PASSED       [ 24%]
+tests/integration/test_health.py::test_health_no_db_returns_readable_false PASSED [ 25%]
+tests/integration/test_health.py::test_health_latest_event_id_updates_on_insert PASSED [ 25%]
+tests/integration/test_health.py::test_health_latest_event_id_zero_when_no_events PASSED [ 25%]
+tests/integration/test_list_agents_query_count.py::test_list_agents_query_count_is_constant_not_per_agent PASSED [ 26%]
+tests/integration/test_metrics.py::test_gdp_total PASSED                 [ 26%]
+tests/integration/test_metrics.py::test_gdp_per_agent PASSED             [ 27%]
+tests/integration/test_metrics.py::test_gdp_rate_per_hour PASSED         [ 27%]
+tests/integration/test_metrics.py::test_gdp_staleness PASSED             [ 27%]
+tests/integration/test_metrics.py::test_agents_total_registered PASSED   [ 28%]
+tests/integration/test_metrics.py::test_agents_with_completed_tasks PASSED [ 28%]
+tests/integration/test_metrics.py::test_agents_active PASSED             [ 29%]
+tests/integration/test_metrics.py::test_tasks_total_created PASSED       [ 29%]
+tests/integration/test_metrics.py::test_tasks_completed_all_time PASSED  [ 29%]
+tests/integration/test_metrics.py::test_tasks_open PASSED                [ 30%]
+tests/integration/test_metrics.py::test_tasks_in_execution PASSED        [ 30%]
+tests/integration/test_metrics.py::test_tasks_disputed PASSED            [ 31%]
+tests/integration/test_metrics.py::test_tasks_completion_rate PASSED     [ 31%]
+tests/integration/test_metrics.py::test_tasks_staleness PASSED           [ 31%]
+tests/integration/test_metrics.py::test_escrow_total_locked PASSED       [ 32%]
+tests/integration/test_metrics.py::test_escrow_staleness PASSED          [ 32%]
+tests/integration/test_metrics.py::test_spec_quality_avg_and_breakdown PASSED [ 33%]
+tests/integration/test_metrics.py::test_spec_quality_trend PASSED        [ 33%]
+tests/integration/test_metrics.py::test_labor_avg_bids_and_reward PASSED [ 33%]
+tests/integration/test_metrics.py::test_labor_reward_distribution_buckets PASSED [ 34%]
+tests/integration/test_metrics.py::test_gdp_history_valid_params PASSED  [ 34%]
+tests/integration/test_metrics.py::test_gdp_history_invalid_window_returns_400 PASSED [ 35%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_gdp_includes_delta_1h PASSED [ 35%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_gdp_includes_delta_24h PASSED [ 35%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_task_metrics_include_deltas PASSED [ 36%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_labor_market_includes_deltas PASSED [ 36%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_escrow_includes_delta PASSED [ 37%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_agent_metrics_include_delta PASSED [ 37%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_delta_values_are_numeric_or_null PASSED [ 37%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_accepts_valid_window_and_resolution PASSED [ 38%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_returns_data_points_array PASSED [ 38%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_rejects_invalid_window PASSED [ 39%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_rejects_invalid_resolution PASSED [ 39%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_data_points_have_timestamp_and_value PASSED [ 39%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_data_points_ordered_ascending PASSED [ 40%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_includes_window_and_resolution_in_response PASSED [ 40%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_returns_200_for_valid_window PASSED [ 41%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_returns_200_with_default_window PASSED [ 41%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_rejects_invalid_window PASSED [ 41%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_response_has_required_fields PASSED [ 42%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_buckets_are_24_hourly_strings PASSED [ 42%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_metrics_has_all_expected_keys PASSED [ 43%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_each_metric_has_24_values PASSED [ 43%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_all_values_are_non_negative PASSED [ 43%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_registered_agents_non_decreasing PASSED [ 44%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_completion_rate_between_0_and_1 PASSED [ 44%]
+tests/integration/test_mp02_browser_authority.py::test_off_origin_bodyless_write_is_rejected_before_operator[/api/proxy/tasks/t-task8/approve] PASSED [ 45%]
+tests/integration/test_mp02_browser_authority.py::test_off_origin_bodyless_write_is_rejected_before_operator[/api/proxy/tasks/t-task2/bids/bid-3/accept] PASSED [ 45%]
+tests/integration/test_mp02_browser_authority.py::test_malicious_host_is_rejected_before_operator PASSED [ 45%]
+tests/integration/test_mp02_browser_authority.py::test_same_origin_write_requires_csrf_header PASSED [ 46%]
+tests/integration/test_mp12_sealed_projections.py::test_public_open_task_hides_bid_details_but_keeps_count PASSED [ 46%]
+tests/integration/test_mp12_sealed_projections.py::test_public_post_open_bids_use_canonical_integer_amount PASSED [ 47%]
+tests/integration/test_mp12_sealed_projections.py::test_poster_proxy_lists_open_bids_without_cacheable_response PASSED [ 47%]
+tests/integration/test_mp12_sealed_projections.py::test_nonposter_proxy_cannot_list_open_bids PASSED [ 47%]
+tests/integration/test_mp12_sealed_projections.py::test_open_bid_secrets_are_redacted_from_public_event_history PASSED [ 48%]
+tests/integration/test_mp12_sealed_projections.py::test_open_bid_actor_filter_does_not_match_sealed_membership PASSED [ 48%]
+tests/integration/test_mp12_sealed_projections.py::test_open_bid_secrets_are_redacted_from_initial_and_resumed_sse[0] PASSED [ 49%]
+tests/integration/test_mp12_sealed_projections.py::test_open_bid_secrets_are_redacted_from_initial_and_resumed_sse[99] PASSED [ 49%]
+tests/integration/test_mp12_sealed_projections.py::test_legacy_sealed_feedback_is_redacted_from_event_history PASSED [ 49%]
+tests/integration/test_mp12_sealed_projections.py::test_feedback_actor_filter_does_not_match_sealed_membership PASSED [ 50%]
+tests/integration/test_mp12_sealed_projections.py::test_legacy_sealed_feedback_is_redacted_from_initial_and_resumed_sse[0] PASSED [ 50%]
+tests/integration/test_mp12_sealed_projections.py::test_legacy_sealed_feedback_is_redacted_from_initial_and_resumed_sse[100] PASSED [ 50%]
+tests/integration/test_mp12_sealed_projections.py::test_open_bid_membership_is_removed_from_agent_feed_before_pagination[a-alice] PASSED [ 51%]
+tests/integration/test_mp12_sealed_projections.py::test_open_bid_membership_is_removed_from_agent_feed_before_pagination[a-bob] PASSED [ 51%]
+tests/integration/test_mp12_sealed_projections.py::test_open_bid_event_is_not_added_to_unrelated_agent_feed PASSED [ 52%]
+tests/integration/test_mp12_sealed_projections.py::test_post_open_bid_event_remains_visible_in_agent_feed PASSED [ 52%]
+tests/integration/test_mp12_sealed_projections.py::test_stored_producer_bid_actor_reveals_only_after_open PASSED [ 52%]
+tests/integration/test_mp12_sealed_projections.py::test_sealed_feedback_has_no_projection_or_aggregate_influence PASSED [ 53%]
+tests/integration/test_quarterly.py::test_quarterly_explicit_2026_q1 PASSED [ 53%]
+tests/integration/test_quarterly.py::test_quarterly_default_current_quarter PASSED [ 54%]
+tests/integration/test_quarterly.py::test_quarterly_invalid_format_returns_400 PASSED [ 54%]
+tests/integration/test_quarterly.py::test_quarterly_invalid_year_returns_400 PASSED [ 54%]
+tests/integration/test_quarterly.py::test_quarterly_no_data_returns_404 PASSED [ 55%]
+tests/integration/test_quarterly.py::test_quarterly_gdp_total PASSED     [ 55%]
+tests/integration/test_quarterly.py::test_quarterly_gdp_previous_quarter_zero PASSED [ 56%]
+tests/integration/test_quarterly.py::test_quarterly_period_boundaries PASSED [ 56%]
+tests/integration/test_quarterly.py::test_quarterly_tasks_posted PASSED  [ 56%]
+tests/integration/test_quarterly.py::test_quarterly_tasks_completed PASSED [ 57%]
+tests/integration/test_quarterly.py::test_quarterly_tasks_disputed PASSED [ 57%]
+tests/integration/test_quarterly.py::test_quarterly_labor_avg_bids PASSED [ 58%]
+tests/integration/test_quarterly.py::test_quarterly_agents_registrations PASSED [ 58%]
+tests/integration/test_quarterly.py::test_quarterly_agents_total_at_end PASSED [ 58%]
+tests/integration/test_quarterly.py::test_quarterly_notable_highest_value_task PASSED [ 59%]
+tests/integration/test_quarterly.py::test_quarterly_notable_top_workers PASSED [ 59%]
+tests/integration/test_quarterly.py::test_quarterly_staleness_new_approved_task PASSED [ 60%]
+tests/integration/test_request_body_size_limit.py::test_oversized_proxy_task_body_rejected_with_413 PASSED [ 60%]
+tests/integration/test_request_body_size_limit.py::test_oversized_proxy_dispute_body_rejected_with_413 PASSED [ 60%]
+tests/integration/test_request_body_size_limit.py::test_body_within_limit_is_not_rejected_for_size PASSED [ 61%]
+tests/integration/test_reward_bucket_boundary.py::test_reward_of_exactly_100_falls_in_51_to_100_bucket PASSED [ 61%]
+tests/integration/test_reward_bucket_boundary.py::test_reward_of_101_falls_in_over_100_bucket PASSED [ 62%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_returns_data_points PASSED [ 62%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_has_sufficient_points PASSED [ 62%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_points_have_numeric_values PASSED [ 63%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_points_have_timestamps PASSED [ 63%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_7d_window_provides_more_points PASSED [ 64%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_1h_window_with_1m_resolution PASSED [ 64%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_key_present PASSED [ 64%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_has_24_values PASSED [ 65%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_values_between_0_and_1 PASSED [ 65%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_all_non_negative PASSED [ 66%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_increasing_trend_low_dispute_rate_is_growing PASSED [ 66%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_decreasing_trend_is_contracting_regardless_of_dispute_rate PASSED [ 66%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_increasing_trend_with_12pct_dispute_rate_is_stable PASSED [ 67%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_stable_trend_with_18pct_dispute_rate_is_stable PASSED [ 67%]
+tests/integration/test_t072_events_default_and_sse_gaps.py::test_events_default_limit_is_50 PASSED [ 68%]
+tests/integration/test_t072_events_default_and_sse_gaps.py::test_sse_sends_keepalive_when_idle PASSED [ 68%]
+tests/integration/test_t072_events_default_and_sse_gaps.py::test_sse_batches_are_capped_at_batch_size PASSED [ 68%]
+tests/integration/test_t072_gdp_history_default_gap.py::test_gdp_history_default_window_and_resolution PASSED [ 69%]
+tests/integration/test_t072_gdp_history_default_gap.py::test_gdp_history_default_data_points_are_cumulative_non_decreasing PASSED [ 69%]
+tests/integration/test_t072_metrics_shape_and_delta_gaps.py::test_metrics_top_level_keys_are_exact PASSED [ 70%]
+tests/integration/test_t072_metrics_shape_and_delta_gaps.py::test_all_delta_fields_are_strictly_null_with_no_prior_period_data PASSED [ 70%]
+tests/integration/test_t072_pagination_and_error_code_gaps.py::test_invalid_task_status_filter_uses_invalid_status_error_code PASSED [ 70%]
+tests/integration/test_t072_pagination_and_error_code_gaps.py::test_uncontested_min_age_minutes_excludes_younger_tasks PASSED [ 71%]
+tests/integration/test_t072_pagination_and_error_code_gaps.py::test_feed_limit_clamped_above_200_not_rejected PASSED [ 71%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_identity_returns_operator_agent_id PASSED [ 72%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_identity_unavailable_when_user_agent_missing PASSED [ 72%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_passthrough_no_auth_header_required PASSED [ 72%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_field_bounds_rejected_with_422[overrides0] PASSED [ 73%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_field_bounds_rejected_with_422[overrides1] PASSED [ 73%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_field_bounds_rejected_with_422[overrides2] PASSED [ 74%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_downstream_failure_surfaces_as_502 PASSED [ 74%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_accept_bid_passthrough PASSED [ 74%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_approve_task_passthrough PASSED [ 75%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_file_dispute_passthrough PASSED [ 75%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_dispute_reason_validation_rejected_with_422[] PASSED [ 76%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_dispute_reason_validation_rejected_with_422[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx] PASSED [ 76%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_extra_field_rejected_with_422 PASSED [ 76%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_non_json_content_type_rejected_with_415 PASSED [ 77%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_native_mutation_requires_json_content_type[None-/api/proxy/tasks/t-task8/approve] PASSED [ 77%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_native_mutation_requires_json_content_type[None-/api/proxy/tasks/t-task2/bids/bid-3/accept] PASSED [ 78%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_native_mutation_requires_json_content_type[text/plain-/api/proxy/tasks/t-task8/approve] PASSED [ 78%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_native_mutation_requires_json_content_type[text/plain-/api/proxy/tasks/t-task2/bids/bid-3/accept] PASSED [ 78%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_native_mutation_empty_json_body_is_422_before_operator[/api/proxy/tasks/t-task8/approve] PASSED [ 79%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_native_mutation_empty_json_body_is_422_before_operator[/api/proxy/tasks/t-task2/bids/bid-3/accept] PASSED [ 79%]
+tests/integration/test_t072_quarterly_default_value_gap.py::test_default_quarter_is_current_quarter_2026_q1 PASSED [ 80%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_core_task_fields PASSED [ 80%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_deadline_fields PASSED [ 80%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_bids_array PASSED [ 81%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_assets_for_submitted_task PASSED [ 81%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_feedback_for_completed_task PASSED [ 82%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_dispute_for_disputed_task PASSED [ 82%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_ruling_for_ruled_task PASSED [ 82%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_404_for_nonexistent_task PASSED [ 83%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_timestamps_present PASSED [ 83%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_returns_200_with_task_list PASSED [ 84%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_task_list_item_schema PASSED [ 84%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_filter_by_status_open PASSED [ 84%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_filter_by_status_disputed PASSED [ 85%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_pagination_limit PASSED [ 85%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_pagination_offset PASSED [ 86%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_default_sort_by_created_at_desc PASSED [ 86%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_invalid_status_returns_400 PASSED [ 86%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_empty_list_for_no_matches PASSED [ 87%]
+tests/integration/test_tasks.py::test_competitive_only_tasks_with_bids PASSED [ 87%]
+tests/integration/test_tasks.py::test_competitive_sorted_by_bid_count_desc PASSED [ 88%]
+tests/integration/test_tasks.py::test_competitive_default_status_open PASSED [ 88%]
+tests/integration/test_tasks.py::test_competitive_limit PASSED           [ 88%]
+tests/integration/test_tasks.py::test_competitive_includes_poster_info PASSED [ 89%]
+tests/integration/test_tasks.py::test_competitive_staleness_new_bid PASSED [ 89%]
+tests/integration/test_tasks.py::test_uncontested_open_tasks_without_bids PASSED [ 90%]
+tests/integration/test_tasks.py::test_uncontested_min_age_filter PASSED  [ 90%]
+tests/integration/test_tasks.py::test_uncontested_limit PASSED           [ 90%]
+tests/integration/test_tasks.py::test_uncontested_has_minutes_field PASSED [ 91%]
+tests/integration/test_tasks.py::test_uncontested_staleness_bid_removes_task PASSED [ 91%]
+tests/integration/test_tasks.py::test_drilldown_approved_task_full PASSED [ 92%]
+tests/integration/test_tasks.py::test_drilldown_not_found_returns_404 PASSED [ 92%]
+tests/integration/test_tasks.py::test_drilldown_bids_with_delivery_quality PASSED [ 92%]
+tests/integration/test_tasks.py::test_drilldown_accepted_bid_flag PASSED [ 93%]
+tests/integration/test_tasks.py::test_drilldown_disputed_task_has_dispute PASSED [ 93%]
+tests/integration/test_tasks.py::test_drilldown_non_disputed_has_null_dispute PASSED [ 94%]
+tests/integration/test_tasks.py::test_drilldown_feedback_visible_only PASSED [ 94%]
+tests/integration/test_tasks.py::test_drilldown_staleness_new_bid PASSED [ 94%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_gdp_delta_for_ticker PASSED [ 95%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_task_delta_for_board PASSED [ 95%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_escrow_delta_for_board PASSED [ 96%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_labor_delta_for_board PASSED [ 96%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_delta_values_include_direction PASSED [ 96%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_no_workers_full_unemployment PASSED [ 97%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_all_agents_working_zero_unemployment PASSED [ 97%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_mixed_state_known_values PASSED [ 98%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_delta_within_window_agent_starts_working PASSED [ 98%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_delta_agent_stops_working_approved PASSED [ 98%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_delta_agent_stops_working_disputed PASSED [ 99%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_multiple_transitions_within_window PASSED [ 99%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_zero_registered_agents_returns_zero PASSED [100%]
+
+============================= 251 passed in 8.09s ==============================
+
+[0;31m✗ Some per-service integration suites failed[0m
+error: recipe `_test-integration-suites` failed with exit code 1
+error: recipe `test-integration-all` failed with exit code 1
+error: recipe `ci-quiet` failed with exit code 1

@@ -13,7 +13,8 @@ from service_commons.exceptions import ServiceError
 
 from db_gateway_service import recovery
 from db_gateway_service.financial_requests import canonical_request
-from db_gateway_service.migration import migrate_v1_to_v2
+from db_gateway_service.migration import migrate_v1_to_v2, migrate_v2_to_v3
+from db_gateway_service.schema import SchemaState, classify_schema
 from db_gateway_service.services.db_writer import DbWriter
 from tests.conftest import make_event
 from tests.unit import test_mp04_migration as migration_tests
@@ -42,21 +43,23 @@ def _prepare_migrated_writer(
     modifier: Callable[[sqlite3.Connection], None] | None,
 ) -> DbWriter:
     inventory, backup_root, work_root, database = migration_tests._prepared_v1(tmp_path)
-    backup_id = "before-mp04"
-    if modifier is not None:
-        connection = sqlite3.connect(database)
-        try:
+    connection = sqlite3.connect(database)
+    try:
+        financial_before = _financial_snapshot(connection)
+        _prepare_task_history(connection)
+        assert _financial_snapshot(connection) == financial_before
+        if modifier is not None:
             modifier(connection)
-            connection.commit()
-        finally:
-            connection.close()
-        backup_id = f"history-{uuid4()}"
-        recovery.create_backup(
-            inventory,
-            backup_root=backup_root,
-            backup_id=backup_id,
-            work_root=work_root,
-        )
+        connection.commit()
+    finally:
+        connection.close()
+    backup_id = f"history-{uuid4()}"
+    recovery.create_backup(
+        inventory,
+        backup_root=backup_root,
+        backup_id=backup_id,
+        work_root=work_root,
+    )
     migrate_v1_to_v2(
         inventory,
         backup_root=backup_root,
@@ -64,7 +67,63 @@ def _prepare_migrated_writer(
         work_root=work_root,
         busy_timeout_ms=5000,
     )
-    return DbWriter(str(database), 5000, "wal", None)
+    connection = sqlite3.connect(database)
+    try:
+        financial_cutover = _financial_snapshot(connection)
+        assert classify_schema(connection).state is SchemaState.CURRENT_V2
+    finally:
+        connection.close()
+    task_backup_id = f"task-history-{uuid4()}"
+    recovery.create_backup(
+        inventory,
+        backup_root=backup_root,
+        backup_id=task_backup_id,
+        work_root=work_root,
+    )
+    migration = migrate_v2_to_v3(
+        inventory,
+        backup_root=backup_root,
+        backup_id=task_backup_id,
+        work_root=work_root,
+        busy_timeout_ms=5000,
+    )
+    assert migration.observation == "committed_v3_verified"
+    writer = DbWriter(str(database), 5000, "wal", None)
+    try:
+        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V3
+        assert _financial_snapshot(writer.connection) == financial_cutover
+        assert (
+            writer.connection.execute("SELECT COUNT(*) FROM board_task_operations").fetchone()[0]
+            == 0
+        )
+    except BaseException:
+        writer.close()
+        raise
+    return writer
+
+
+def _prepare_task_history(connection: sqlite3.Connection) -> None:
+    """Replace only unrelated historical fixture placeholders before receipt cutover."""
+    connection.execute(
+        "UPDATE board_tasks SET created_at='2026-10-17T12:00:00.125000Z', "
+        "bidding_deadline='2026-10-17T12:00:01.125000Z', "
+        "accepted_bid_id='bid-1', accepted_at='2026-10-17T12:00:00.500000Z', "
+        "execution_deadline='2026-10-17T12:00:01.500000Z', "
+        "submitted_at='2026-10-17T12:00:01Z', review_deadline='2026-10-17T12:00:02Z', "
+        "disputed_at='2026-10-17T12:00:01.500000Z', bid_count=1, "
+        "rebuttal_deadline='2026-10-17T12:00:11.500000Z', "
+        "rebuttal_submitted_at='2026-10-17T12:00:03Z' WHERE task_id='t-1'"
+    )
+    connection.execute("UPDATE board_bids SET submitted_at='2026-10-17T12:00:00.250000Z'")
+    connection.execute(
+        "UPDATE court_claims SET status='rebuttal_submitted', "
+        "filed_at='2026-10-17T12:00:01.500000Z', "
+        "rebuttal_deadline='2026-10-17T12:00:11.500000Z'"
+    )
+    connection.execute("UPDATE court_rebuttals SET submitted_at='2026-10-17T12:00:03Z'")
+    connection.execute(
+        "UPDATE board_assets SET uploader_id='a-worker', uploaded_at='2026-10-17T12:00:00.750000Z'"
+    )
 
 
 @pytest.fixture
@@ -75,9 +134,15 @@ def migrated_writer(tmp_path: Path) -> Iterator[DbWriter]:
 
 
 def _snapshot(writer: DbWriter) -> dict[str, tuple[tuple[object, ...], ...]]:
+    return _financial_snapshot(writer.connection)
+
+
+def _financial_snapshot(
+    connection: sqlite3.Connection,
+) -> dict[str, tuple[tuple[object, ...], ...]]:
     tables = [
         str(row[0])
-        for row in writer.connection.execute(
+        for row in connection.execute(
             "SELECT name FROM sqlite_master "
             "WHERE type='table' AND (name='events' OR name LIKE 'bank_%') ORDER BY name"
         ).fetchall()
@@ -85,7 +150,7 @@ def _snapshot(writer: DbWriter) -> dict[str, tuple[tuple[object, ...], ...]]:
     return {
         table: tuple(
             sorted(
-                (tuple(row) for row in writer.connection.execute(f'SELECT * FROM "{table}"')),
+                (tuple(row) for row in connection.execute(f'SELECT * FROM "{table}"')),
                 key=repr,
             )
         )

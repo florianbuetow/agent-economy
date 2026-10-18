@@ -1,0 +1,192 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 345 items
+
+tests/unit/routers/test_action_aliases.py ..                             [  0%]
+tests/unit/routers/test_assets.py .................                      [  5%]
+tests/unit/routers/test_auth.py ........................................ [ 17%]
+.                                                                        [ 17%]
+tests/unit/routers/test_bid_count_after_accept.py .                      [ 17%]
+tests/unit/routers/test_bids.py ..F.F.F..FFFF.FF................F..F     [ 28%]
+tests/unit/routers/test_court_resilience.py FFFFFF                       [ 29%]
+tests/unit/routers/test_dispute_court_handoff.py F                       [ 30%]
+tests/unit/routers/test_disputes.py ..........FF
+
+=================================== FAILURES ===================================
+________________ TestBidding.test_bid_03_bid_on_cancelled_task _________________
+tests/unit/routers/test_bids.py:83: in test_bid_03_bid_on_cancelled_task
+    assert cancel_resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:25", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-db9b5ff9-a0bb-4f3a-95bf-23e5fe4e70c9/cancel"}}
+________________ TestBidding.test_bid_05_duplicate_bid_rejected ________________
+tests/unit/routers/test_bids.py:135: in test_bid_05_duplicate_bid_rejected
+    assert second.json()["error"] == "bid_already_exists"
+E   AssertionError: assert 'bid_exists' == 'bid_already_exists'
+E     
+E     - bid_already_exists
+E     + bid_exists
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:26", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_exists", "status_code": 409, "path": "/tasks/t-80a6fdf7-216b-4809-a920-483a2f32c59d/bids"}}
+___________________ TestBidding.test_bid_07_signer_mismatch ____________________
+tests/unit/routers/test_bids.py:186: in test_bid_07_signer_mismatch
+    assert response.status_code == 403
+E   assert 400 == 403
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:28", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-96a8bf31-b0a4-4edf-a49b-a8ea9ce16e37/bids"}}
+_______________ TestBidding.test_bid_10_invalid_bid_amount[zero] _______________
+tests/unit/routers/test_bids.py:270: in test_bid_10_invalid_bid_amount
+    assert response.json()["error"] == "invalid_reward"
+E   AssertionError: assert 'invalid_payload' == 'invalid_reward'
+E     
+E     - invalid_reward
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:29", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-0c110218-9d2a-4d5e-8352-c27a7471a167/bids"}}
+_____________ TestBidding.test_bid_10_invalid_bid_amount[negative] _____________
+tests/unit/routers/test_bids.py:270: in test_bid_10_invalid_bid_amount
+    assert response.json()["error"] == "invalid_reward"
+E   AssertionError: assert 'invalid_payload' == 'invalid_reward'
+E     
+E     - invalid_reward
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:30", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-62c2a17c-f132-4afe-b64e-6111dc866fb8/bids"}}
+______________ TestBidding.test_bid_10_invalid_bid_amount[float] _______________
+tests/unit/routers/test_bids.py:270: in test_bid_10_invalid_bid_amount
+    assert response.json()["error"] == "invalid_reward"
+E   AssertionError: assert 'invalid_payload' == 'invalid_reward'
+E     
+E     - invalid_reward
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:30", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-0257f697-4885-45ba-bb76-d93d0d99c162/bids"}}
+______________ TestBidding.test_bid_10_invalid_bid_amount[string] ______________
+tests/unit/routers/test_bids.py:270: in test_bid_10_invalid_bid_amount
+    assert response.json()["error"] == "invalid_reward"
+E   AssertionError: assert 'invalid_payload' == 'invalid_reward'
+E     
+E     - invalid_reward
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:31", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-7d963719-9c64-4981-99b3-a7e775fad617/bids"}}
+______________ TestBidding.test_bid_12_bid_after_bidding_deadline ______________
+tests/unit/routers/test_bids.py:312: in test_bid_12_bid_after_bidding_deadline
+    assert response.json()["error"] == "invalid_status"
+E   AssertionError: assert 'cutoff_reached' == 'invalid_status'
+E     
+E     - invalid_status
+E     + cutoff_reached
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:33", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-ce8ee05f-224d-43ab-8842-2f6386849d4f/bids"}}
+____________ TestBidding.test_bid_13_concurrent_duplicate_bid_race _____________
+tests/unit/routers/test_bids.py:337: in test_bid_13_concurrent_duplicate_bid_race
+    assert error_responses[0].json()["error"] == "bid_already_exists"
+E   AssertionError: assert 'bid_exists' == 'bid_already_exists'
+E     
+E     - bid_already_exists
+E     + bid_exists
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:34", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_exists", "status_code": 409, "path": "/tasks/t-084fa755-d9f0-434d-b4a5-b7f1553c02f5/bids"}}
+_________________ TestBidAcceptance.test_ba_07_signer_mismatch _________________
+tests/unit/routers/test_bids.py:785: in test_ba_07_signer_mismatch
+    assert response.status_code == 403
+E   assert 400 == 403
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:44", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-86261f58-0ed3-4f7e-bd62-9cdfaff56cd6/bids/bid-8af68de0-3a6a-46e1-9da5-762feb379c23/accept"}}
+_______ TestBidAcceptance.test_accept_after_bidding_deadline_is_rejected _______
+tests/unit/routers/test_bids.py:876: in test_accept_after_bidding_deadline_is_rejected
+    assert response.status_code == 409
+E   assert 200 == 409
+E    +  where 200 = <Response [200 OK]>.status_code
+_ TestDisputeFilingCourtResilience.test_dead_court_returns_502_and_leaves_task_submitted[connect_error] _
+tests/unit/routers/test_court_resilience.py:101: in test_dead_court_returns_502_and_leaves_task_submitted
+    assert response.status_code == 502
+E   assert 400 == 502
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:49", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-c412bd81-9d2e-4fe3-85e8-79d6aaa28764/dispute"}}
+_ TestDisputeFilingCourtResilience.test_dead_court_returns_502_and_leaves_task_submitted[timeout] _
+tests/unit/routers/test_court_resilience.py:101: in test_dead_court_returns_502_and_leaves_task_submitted
+    assert response.status_code == 502
+E   assert 400 == 502
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:49", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-c3ec0f61-a3e2-4a33-97db-1b970ca50c7e/dispute"}}
+_ TestDisputeFilingCourtResilience.test_dead_court_returns_502_and_leaves_task_submitted[http_status_error] _
+tests/unit/routers/test_court_resilience.py:101: in test_dead_court_returns_502_and_leaves_task_submitted
+    assert response.status_code == 502
+E   assert 400 == 502
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:50", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-5325a189-7fbc-44ae-9e30-ffd3ec2ce5d7/dispute"}}
+_ TestRebuttalCourtResilience.test_dead_court_returns_502_and_leaves_dispute_unchanged[connect_error] _
+tests/unit/routers/test_court_resilience.py:149: in test_dead_court_returns_502_and_leaves_dispute_unchanged
+    assert response.status_code == 502
+E   assert 409 == 502
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:51", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-1465827b-66c9-4228-b311-0169bb81e4ee/rebuttal"}}
+_ TestRebuttalCourtResilience.test_dead_court_returns_502_and_leaves_dispute_unchanged[timeout] _
+tests/unit/routers/test_court_resilience.py:149: in test_dead_court_returns_502_and_leaves_dispute_unchanged
+    assert response.status_code == 502
+E   assert 409 == 502
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:51", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-c047f54c-503f-4b9d-916f-62a8dd90b4c1/rebuttal"}}
+_ TestRebuttalCourtResilience.test_dead_court_returns_502_and_leaves_dispute_unchanged[http_status_error] _
+tests/unit/routers/test_court_resilience.py:149: in test_dead_court_returns_502_and_leaves_dispute_unchanged
+    assert response.status_code == 502
+E   assert 409 == 502
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:18:52", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-29604712-46cd-4eb7-947c-7c301947d128/rebuttal"}}
+_____________________ test_dispute_auto_files_court_claim ______________________
+tests/unit/routers/test_dispute_court_handoff.py:38: in test_dispute_auto_files_court_claim
+    assert response.status_code == 200
+E   assert 202 == 200
+E    +  where 202 = <Response [202 Accepted]>.status_code
+___________________ TestRuling.test_platform_records_ruling ____________________
+tests/unit/routers/test_disputes.py:277: in test_platform_records_ruling
+    assert resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:19:00", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-645ae076-0117-4fd1-b906-051e22f45cf3/ruling"}}
+___________ TestRuling.test_non_platform_agent_cannot_record_ruling ____________
+tests/unit/routers/test_disputes.py:311: in test_non_platform_agent_cannot_record_ruling
+    assert resp.status_code == 403
+E   assert 400 == 403
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:19:01", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-3cb8fc8b-9e5c-4428-92da-bdf9dde769a1/ruling"}}
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_bids.py::TestBidding::test_bid_03_bid_on_cancelled_task
+FAILED tests/unit/routers/test_bids.py::TestBidding::test_bid_05_duplicate_bid_rejected
+FAILED tests/unit/routers/test_bids.py::TestBidding::test_bid_07_signer_mismatch
+FAILED tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[zero]
+FAILED tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[negative]
+FAILED tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[float]
+FAILED tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[string]
+FAILED tests/unit/routers/test_bids.py::TestBidding::test_bid_12_bid_after_bidding_deadline
+FAILED tests/unit/routers/test_bids.py::TestBidding::test_bid_13_concurrent_duplicate_bid_race
+FAILED tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_07_signer_mismatch
+FAILED tests/unit/routers/test_bids.py::TestBidAcceptance::test_accept_after_bidding_deadline_is_rejected
+FAILED tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[connect_error]
+FAILED tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[timeout]
+FAILED tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[http_status_error]
+FAILED tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[connect_error]
+FAILED tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[timeout]
+FAILED tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[http_status_error]
+FAILED tests/unit/routers/test_dispute_court_handoff.py::test_dispute_auto_files_court_claim
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_platform_records_ruling
+FAILED tests/unit/routers/test_disputes.py::TestRuling::test_non_platform_agent_cannot_record_ruling
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 20 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+=================== 20 failed, 96 passed in 73.11s (0:01:13) ===================

@@ -5,12 +5,18 @@ Concurrency, HTTP Misuse, Security).
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from service_auth.signing import public_key_to_b64
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service.services import court_writer
+from db_gateway_service.services.task_operation_writer import TaskOperationWriter
+from db_gateway_service.task_operation_requests import parse_task_operation_request
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
 
 if TYPE_CHECKING:
@@ -106,7 +112,11 @@ def _create_task_for_agent(
     escrow_id: str,
 ) -> str:
     """Create a task and return task_id."""
-    tid = f"t-{uuid4()}"
+    escrow = db_writer.connection.execute(
+        "SELECT task_id FROM bank_escrow WHERE escrow_id=?", (escrow_id,)
+    ).fetchone()
+    assert escrow is not None
+    tid = str(escrow[0])
     db_writer.create_task(
         {
             "task_id": tid,
@@ -116,9 +126,10 @@ def _create_task_for_agent(
             "reward": 100,
             "status": "open",
             "bidding_deadline_seconds": 3600,
+            "acceptance_window_seconds": 3600,
             "deadline_seconds": 86400,
             "review_deadline_seconds": 3600,
-            "bidding_deadline": "2026-03-01T10:00:00Z",
+            "bidding_deadline": "2026-02-28T11:00:00Z",
             "escrow_id": escrow_id,
             "created_at": "2026-02-28T10:00:00Z",
             "event": make_event(
@@ -150,6 +161,7 @@ def _file_claim(
             "reason": "Test dispute reason",
             "status": status,
             "filed_at": "2026-02-28T12:00:00Z",
+            "rebuttal_deadline": "2026-02-28T14:00:00Z",
             "event": make_event(
                 source="court",
                 event_type="claim.filed",
@@ -159,6 +171,97 @@ def _file_claim(
         }
     )
     return cid
+
+
+def _prepare_disputed_claim(
+    writer: DbWriter, task_id: str, poster_id: str, worker_id: str, escrow_id: str
+) -> str:
+    """Persist an admitted dispute before injecting the original rollback failure."""
+    clock = {"now": parse_utc_text_to_epoch_us("2026-02-28T10:30:00Z")}
+    key = Ed25519PrivateKey.generate().public_key()
+    operations = TaskOperationWriter(
+        writer.connection,
+        lambda: clock["now"],
+        "system-atomicity-test",
+        f"ed25519:{public_key_to_b64(key)}",
+    )
+
+    def claim(
+        command: str, status: str, version: int, actor_id: str, arguments: dict[str, object]
+    ) -> dict[str, Any]:
+        return operations.claim_operation(
+            parse_task_operation_request(
+                {
+                    "protocol_version": 1,
+                    "operation_id": f"op-{uuid4()}",
+                    "task_id": task_id,
+                    "command": command,
+                    "expected_status": status,
+                    "expected_lifecycle_version": version,
+                    "actor_kind": "agent",
+                    "actor_id": actor_id,
+                    "arguments": arguments,
+                }
+            ),
+            "gateway-task-board",
+        )
+
+    bid_id = f"bid-{uuid4()}"
+    bid = claim(
+        "submit_bid", "open", 0, worker_id, {"bid_id": bid_id, "bidder_id": worker_id, "amount": 50}
+    )
+    assert bid["operation_state"] == "completed"
+    accepted = claim(
+        "accept_bid",
+        "open",
+        0,
+        poster_id,
+        {
+            "bid_id": bid_id,
+            "worker_id": worker_id,
+            "escrow_id": escrow_id,
+            "reward": 100,
+            "bid_amount": 50,
+        },
+    )
+    assert accepted["operation_state"] == "completed"
+    writer.record_asset(
+        {
+            "asset_id": f"asset-{uuid4()}",
+            "task_id": task_id,
+            "uploader_id": worker_id,
+            "filename": "answer.txt",
+            "content_type": "text/plain",
+            "size_bytes": 1,
+            "storage_path": f"{task_id}/answer.txt",
+            "uploaded_at": "2026-02-28T11:00:00Z",
+            "event": make_event(source="board", event_type="asset.uploaded", task_id=task_id),
+        },
+        None,
+    )
+    clock["now"] = parse_utc_text_to_epoch_us("2026-02-28T11:30:00Z")
+    submitted = claim("submit_deliverable", "accepted", 1, worker_id, {"worker_id": worker_id})
+    assert submitted["operation_state"] == "completed"
+    clock["now"] = parse_utc_text_to_epoch_us("2026-02-28T12:00:00Z")
+    disputed = claim(
+        "dispute_task",
+        "submitted",
+        2,
+        poster_id,
+        {
+            "poster_id": poster_id,
+            "worker_id": worker_id,
+            "escrow_id": escrow_id,
+            "reward": 100,
+            "reason": "Test dispute reason",
+        },
+    )
+    assert disputed["operation_state"] == "claimed"
+    claim_id = _file_claim(writer, task_id, poster_id, worker_id, status="filed")
+    finalized = operations.finalize_operation(disputed["operation_id"], "gateway-task-board")
+    assert finalized["operation_state"] == "completed"
+    assert finalized["result"]["dispute_id"] == claim_id
+    return claim_id
 
 
 def _count_rows(db: sqlite3.Connection, table: str) -> int:
@@ -315,9 +418,10 @@ class TestEventIntegrity:
                 "reward": 100,
                 "status": "open",
                 "bidding_deadline_seconds": 3600,
+                "acceptance_window_seconds": 3600,
                 "deadline_seconds": 86400,
                 "review_deadline_seconds": 3600,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
+                "bidding_deadline": "2026-02-28T11:00:00Z",
                 "escrow_id": esc_id,
                 "created_at": "2026-02-28T10:00:00Z",
                 "event": make_event(
@@ -533,25 +637,49 @@ class TestAtomicity:
         assert _count_rows(db_writer._db, "bank_transactions") == tx_before
         assert _count_rows(db_writer._db, "events") == events_before
 
-    def test_rebuttal_with_fk_violation_is_atomic(self, db_writer: DbWriter) -> None:
-        """ATOM-05: Rebuttal with claim_status_update is atomic on FK failure."""
+    def test_rebuttal_with_fk_violation_is_atomic(
+        self, db_writer: DbWriter, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """ATOM-05: A real event FK failure rolls back all preceding rebuttal writes."""
         alice = _register_agent(db_writer, name="Alice")
         bob = _register_agent(db_writer, name="Bob")
         _create_funded_account(db_writer, alice, balance=500)
         esc_id = _lock_escrow(db_writer, alice, amount=100)
         task_id = _create_task_for_agent(db_writer, alice, esc_id)
-        claim_id = _file_claim(db_writer, task_id, alice, bob, status="filed")
+        claim_id = _prepare_disputed_claim(db_writer, task_id, alice, bob, esc_id)
 
         rebuttals_before = _count_rows(db_writer._db, "court_rebuttals")
         events_before = _count_rows(db_writer._db, "events")
 
-        # Attempt rebuttal with non-existent agent_id (FK violation)
+        before = tuple(db_writer.connection.iterdump())
+        real_insert_event = court_writer.insert_event
+        reached_event: list[bool] = []
+
+        def fail_event(cursor: sqlite3.Cursor, event: dict[str, Any]) -> int:
+            assert cursor.execute("SELECT COUNT(*) FROM court_rebuttals").fetchone()[0] == 1
+            assert (
+                cursor.execute(
+                    "SELECT status FROM court_claims WHERE claim_id=?", (claim_id,)
+                ).fetchone()[0]
+                == "rebuttal"
+            )
+            assert (
+                cursor.execute(
+                    "SELECT rebuttal_submitted_at FROM board_tasks WHERE task_id=?", (task_id,)
+                ).fetchone()[0]
+                == "2026-02-28T13:00:00Z"
+            )
+            reached_event.append(True)
+            return real_insert_event(cursor, {**event, "agent_id": f"a-missing-{uuid4()}"})
+
+        monkeypatch.setattr(court_writer, "insert_event", fail_event)
+        # A valid worker reaches the write path; the real event INSERT raises the FK failure.
         with pytest.raises(ServiceError) as exc_info:
             db_writer.submit_rebuttal(
                 {
                     "rebuttal_id": f"reb-{uuid4()}",
                     "claim_id": claim_id,
-                    "agent_id": f"a-{uuid4()}",
+                    "agent_id": bob,
                     "content": "My rebuttal",
                     "submitted_at": "2026-02-28T13:00:00Z",
                     "claim_status_update": "rebuttal",
@@ -560,6 +688,8 @@ class TestAtomicity:
                 None,
             )
         assert exc_info.value.error == "foreign_key_violation"
+        assert reached_event == [True]
+        assert tuple(db_writer.connection.iterdump()) == before
 
         # Claim status unchanged
         row = db_writer._db.execute(

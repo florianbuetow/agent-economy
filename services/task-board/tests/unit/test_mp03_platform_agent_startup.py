@@ -108,7 +108,10 @@ def _write_service_config(
                     "max_file_size": 1048576,
                     "max_files_per_task": 2,
                 },
-                "deadline_evaluation": {"evaluation_interval_seconds": 3600},
+                "deadline_evaluation": {
+                    "evaluation_interval_seconds": 3600,
+                    "actor_id": "system-platform-startup-test-deadline",
+                },
             }
         )
     )
