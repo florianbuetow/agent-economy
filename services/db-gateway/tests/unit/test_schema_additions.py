@@ -14,6 +14,7 @@ from tests.fakes.native_board_history import (
     BusinessClock,
     TaskGraph,
     operation_body,
+    publish_task,
     submit_bid,
 )
 
@@ -79,41 +80,20 @@ def _create_funded_account(
 def _create_task(client: TestClient, *, poster_id: str) -> tuple[str, str]:
     task_id = f"t-{uuid4()}"
     escrow_id = f"esc-{uuid4()}"
-    lock_response = client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": f"op-{uuid4()}",
-            "escrow_id": escrow_id,
-            "payer_account_id": poster_id,
-            "amount": 100,
-            "task_id": task_id,
-            "created_at": "2026-03-01T10:10:00Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=task_id),
-        },
+    publish_task(
+        client,
+        task_id=task_id,
+        poster_id=poster_id,
+        escrow_id=escrow_id,
+        title="Schema test task",
+        spec="Validate schema additions",
+        reward=100,
+        bidding_deadline_seconds=3600,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=7200,
+        review_deadline_seconds=1800,
+        lock_timestamp="2026-03-01T10:10:00Z",
     )
-    assert lock_response.status_code == 201
-
-    task_response = client.post(
-        "/board/tasks",
-        json={
-            "task_id": task_id,
-            "poster_id": poster_id,
-            "title": "Schema test task",
-            "spec": "Validate schema additions",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 3600,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 7200,
-            "review_deadline_seconds": 1800,
-            "bidding_deadline": "2026-03-01T11:12:00Z",
-            "escrow_id": escrow_id,
-            "created_at": "2026-03-01T10:12:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=task_id),
-        },
-    )
-    assert task_response.status_code == 201
     return task_id, escrow_id
 
 

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    from service_auth.task_postings import TaskPostingIntent, TaskPostingResponse
 
 
 class AssetStorageInterface(Protocol):
@@ -20,7 +23,23 @@ class AssetStorageInterface(Protocol):
 class TaskStorageInterface(AssetStorageInterface, Protocol):
     """Protocol defining the Task Board task storage interface."""
 
-    def insert_task(self, task_data: dict[str, Any]) -> None: ...
+    def admit_task_publication(self, intent: TaskPostingIntent) -> TaskPostingResponse: ...
+
+    def reconcile_task_publication(
+        self,
+        operation_id: str,
+        intent: TaskPostingIntent | None,
+    ) -> TaskPostingResponse: ...
+
+    def get_task_publication(
+        self,
+        operation_id: str,
+        poster_id: str,
+    ) -> TaskPostingResponse: ...
+
+    def list_posting_recovery(self, after: str, limit: int) -> dict[str, Any]: ...
+
+    def reconcile_legacy_posting_observation(self, observation_id: str) -> dict[str, Any]: ...
 
     def claim_task_operation(self, payload: dict[str, Any]) -> dict[str, Any]: ...
 

@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from playwright.sync_api import expect, sync_playwright
+from service_auth.financial_identity import operation_id_for
+from service_auth.task_postings import TaskPostingIntent
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -19,8 +21,13 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.unit
 
 TASK_JS_PATH = Path(__file__).resolve().parents[2] / "data" / "web" / "assets" / "task.js"
+TASK_POSTING_JS_PATH = (
+    Path(__file__).resolve().parents[2] / "data" / "web" / "assets" / "task-posting.js"
+)
 TASK_URL = "http://ui.test/task.html"
 TASK_ID = "t-native-ui"
+POSTING_TASK_ID = "t-00000000-0000-4000-8000-000000000703"
+POSTING_OPERATION_ID = "op-00000000-0000-4000-8000-000000000704"
 FALLBACK_OPERATION_ID = "op-00000000-0000-4000-8000-000000000799"
 FOREIGN_OPERATION_ID = "op-00000000-0000-4000-8000-000000000798"
 
@@ -33,6 +40,7 @@ PAGE_HTML = """<!doctype html>
     <main id="phase-content"></main>
     <div id="feed-scroll"></div>
     <div id="ticker-track"></div>
+    <script src="/assets/task-posting.js"></script>
     <script src="/assets/task.js"></script>
   </body>
 </html>
@@ -154,6 +162,66 @@ AUTHORIZED_BIDS = {
         }
     ],
 }
+
+POSTING_TERMS = {
+    "title": "Native UI task",
+    "spec": "Keep the caller intent explicit.",
+    "reward": 75,
+    "bidding_deadline_seconds": 120,
+    "acceptance_window_seconds": 45,
+    "execution_deadline_seconds": 300,
+    "review_deadline_seconds": 90,
+}
+_POSTING_INTENT = TaskPostingIntent.from_json(
+    {
+        "protocol_version": 1,
+        "operation_id": POSTING_OPERATION_ID,
+        "task_id": POSTING_TASK_ID,
+        "actor_kind": "agent",
+        "actor_id": "a-ui-native",
+        "lock_operation_id": operation_id_for(
+            "task-lock", (POSTING_TASK_ID, "a-ui-native")
+        ),
+        **POSTING_TERMS,
+    }
+)
+POSTING_RECORD = {
+    "record_version": 1,
+    "scope": {
+        "schema_version": 1,
+        "operator_agent_id": "a-ui-native",
+        "operator_public_fingerprint_sha256": "5" * 64,
+        "service_urls": {
+            "identity_url": "http://identity.test",
+            "bank_url": "http://bank.test",
+            "task_board_url": "http://board.test",
+            "reputation_url": "http://reputation.test",
+            "court_url": "http://court.test",
+        },
+    },
+    "intent": _POSTING_INTENT.as_json(),
+    "request_sha256": _POSTING_INTENT.request_sha256,
+}
+
+
+def _pending_posting_observation() -> dict[str, Any]:
+    return {
+        "observation": "submit",
+        "status_code": 202,
+        "publication": {
+            "protocol_version": 1,
+            "operation_id": POSTING_OPERATION_ID,
+            "task_id": POSTING_TASK_ID,
+            "request_sha256": _POSTING_INTENT.request_sha256,
+            "publication_state": "awaiting_lock",
+            "lock_operation_id": _POSTING_INTENT.lock_operation_id,
+            "escrow_id": None,
+            "admitted_at": "2026-10-19T09:00:00.000000Z",
+            "published_at": None,
+            "result": None,
+            "error": None,
+        },
+    }
 
 
 def _approval_response(operation_id: str, state: str) -> dict[str, Any]:
@@ -384,6 +452,19 @@ def _install_ate_stub(page: Page) -> None:
 
 def _page_route(route: Route) -> None:
     url = route.request.url
+    if url.endswith("/api/proxy/browser-config"):
+        route.fulfill(
+            status=200,
+            json={"csrf_header_name": "X-ATE-CSRF", "csrf_header_value": "local-operator"},
+        )
+        return
+    if url.endswith("/assets/task-posting.js"):
+        route.fulfill(
+            status=200,
+            content_type="application/javascript",
+            body=TASK_POSTING_JS_PATH.read_text(),
+        )
+        return
     if url.endswith("/assets/task.js"):
         route.fulfill(
             status=200, content_type="application/javascript", body=TASK_JS_PATH.read_text()
@@ -498,9 +579,12 @@ def test_create_form_requires_poster_selected_acceptance_window(page: Page) -> N
         if url.endswith("/api/proxy/identity"):
             route.fulfill(status=200, json={"agent_id": "a-ui-native"})
             return
-        if url.endswith("/api/proxy/tasks"):
+        if url.endswith("/api/proxy/task-postings/prepare"):
             create_requests.append(route.request.post_data_json)
-            route.fulfill(status=200, json={"task_id": TASK_ID, "status": "open"})
+            route.fulfill(status=200, json=POSTING_RECORD)
+            return
+        if url.endswith(f"/api/proxy/task-postings/{POSTING_OPERATION_ID}/submit"):
+            route.fulfill(status=202, json=_pending_posting_observation())
             return
         _page_route(route)
 
@@ -516,7 +600,9 @@ def test_create_form_requires_poster_selected_acceptance_window(page: Page) -> N
     page.locator("#f-accept-window").fill("45")
     page.locator("#f-exec-dl").fill("300")
     page.locator("#f-rev-dl").fill("90")
-    with page.expect_request(lambda request: request.url.endswith("/api/proxy/tasks")):
+    with page.expect_request(
+        lambda request: request.url.endswith("/api/proxy/task-postings/prepare")
+    ):
         page.locator("#btn-post-task").click()
 
     assert len(create_requests) == 1
@@ -536,9 +622,9 @@ def test_create_rejects_non_integral_or_nonpositive_acceptance_window(
         if url.endswith("/api/proxy/identity"):
             route.fulfill(status=200, json={"agent_id": "a-ui-native"})
             return
-        if url.endswith("/api/proxy/tasks"):
+        if url.endswith("/api/proxy/task-postings/prepare"):
             create_requests.append(route.request.post_data)
-            route.fulfill(status=200, json={"task_id": TASK_ID, "status": "open"})
+            route.fulfill(status=200, json=POSTING_RECORD)
             return
         _page_route(route)
 

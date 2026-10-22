@@ -13,7 +13,9 @@ from db_gateway_service.routers.helpers import validate_constraints
 from db_gateway_service.services.db_reader import DbReader
 from db_gateway_service.services.db_writer import DbWriter
 from db_gateway_service.services.task_operation_writer import TaskOperationWriter
+from db_gateway_service.services.task_publication_writer import TaskPublicationWriter
 from db_gateway_service.task_operation_requests import parse_task_operation_request
+from db_gateway_service.task_publication_requests import parse_task_publication_request
 from db_gateway_service.task_time import epoch_us_to_utc_text
 from service_commons.exceptions import ServiceError
 
@@ -57,6 +59,10 @@ class GatewayTaskStore(TaskDbClient):
                 clock_us,
                 authority.deadline_actor_id,
                 authority.platform_public_key,
+            )
+            self._publications = TaskPublicationWriter(
+                self._writer.connection,
+                clock_us=clock_us,
             )
         except BaseException:
             self._writer.close()
@@ -112,6 +118,10 @@ class GatewayTaskStore(TaskDbClient):
         )
 
     def _read(self, path: str, params: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        if path == "/board/posting-recovery":
+            return 200, self._publications.recovery(
+                params["after"], params["limit"], self._caller_kid
+            )
         if path == "/board/tasks":
             return 200, {
                 "tasks": self._reader.list_tasks(
@@ -127,6 +137,12 @@ class GatewayTaskStore(TaskDbClient):
         if path == "/board/tasks/count-by-status":
             return 200, self._reader.count_tasks_by_status()
         parts = path.strip("/").split("/")
+        if len(parts) == 3 and parts[:2] == ["board", "task-publications"]:
+            return 200, self._publications.get(
+                parts[2],
+                self._caller_kid,
+                expected_actor_id=params.get("poster_id"),
+            )
         if len(parts) == 3 and parts[:2] == ["board", "tasks"]:
             return 200, self._required_row(self._reader.get_task(parts[2]), "task")
         if len(parts) == 3 and parts[:2] == ["board", "bids"]:
@@ -145,18 +161,32 @@ class GatewayTaskStore(TaskDbClient):
         raise AssertionError(f"Unsupported test store read: {path}")
 
     def _write(self, path: str, data: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        if path == "/board/task-publications":
+            result = self._publications.admit(
+                parse_task_publication_request(data), self._caller_kid
+            )
+            return self._publication_status(result), result
         if path == "/board/task-operations":
             result = self._operations.claim_operation(
                 parse_task_operation_request(data), self._caller_kid
             )
             return self._operation_status(result), result
-        if path == "/board/tasks":
-            return 201, self._writer.create_task(data)
         if path == "/board/bids":
             return 201, self._writer.submit_bid(data, validate_constraints(data))
         if path == "/board/assets":
             return 201, self._writer.record_asset(data, validate_constraints(data))
         parts = path.strip("/").split("/")
+        if (
+            len(parts) == 4
+            and parts[:2] == ["board", "task-publications"]
+            and parts[3] == "reconcile"
+        ):
+            if data != {}:
+                raise ServiceError(
+                    "invalid_payload", "Reconciliation body must be an empty object", 400, {}
+                )
+            result = self._publications.reconcile(parts[2], self._caller_kid)
+            return self._publication_status(result), result
         if len(parts) == 4 and parts[:2] == ["board", "task-operations"] and parts[3] == "finalize":
             if data != {}:
                 raise ServiceError(
@@ -177,6 +207,15 @@ class GatewayTaskStore(TaskDbClient):
     @staticmethod
     def _operation_status(result: dict[str, Any]) -> int:
         return 200 if result["operation_state"] == "completed" else 202
+
+    @staticmethod
+    def _publication_status(result: dict[str, Any]) -> int:
+        state = result["publication_state"]
+        if state == "published":
+            return 201
+        if state == "awaiting_lock":
+            return 202
+        raise AssertionError(f"Unexpected native publication state: {state}")
 
     def close(self) -> None:
         """Release this connection while retaining caller-owned persistent evidence."""

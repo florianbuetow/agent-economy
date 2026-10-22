@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from task_board_service.task_contract_projection import TaskContractProjection
 from task_board_service.task_operation_contract import OperationEnvelope
@@ -26,6 +26,74 @@ class ErrorResponse(BaseModel):
     error: str
     message: str
     details: dict[str, object]
+
+
+class TaskPublicationBlockedDetails(BaseModel):
+    """Safe persisted reason for an integrity-blocked publication."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    reason: Literal[
+        "receipt_invalid",
+        "escrow_invalid",
+        "settlement_conflict",
+        "publication_conflict",
+        "clock_out_of_range",
+    ]
+
+
+class TaskPublicationBlockedError(BaseModel):
+    """Non-recursive error frozen inside a blocked publication envelope."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    error: Literal["publication_integrity_blocked"]
+    message: Literal["Publication evidence requires reconciliation"]
+    details: TaskPublicationBlockedDetails
+
+
+class TaskPublicationResult(BaseModel):
+    """Immutable task-creation result frozen at atomic publication."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    task_id: str
+    poster_id: str
+    title: str
+    spec: str
+    reward: int
+    bidding_deadline_seconds: int
+    acceptance_window_seconds: int
+    execution_deadline_seconds: int
+    review_deadline_seconds: int
+    status: Literal["open"]
+    escrow_id: str
+    created_at: str
+    bidding_deadline: str
+    acceptance_deadline: str
+    bidding_cutoff_us: int
+    acceptance_cutoff_us: int
+    lifecycle_version: Literal[0]
+    timing_contract_version: Literal[2]
+    event_id: int
+
+
+class TaskPublicationEnvelope(BaseModel):
+    """Exact public acknowledgment for one native task publication."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    protocol_version: Literal[1]
+    operation_id: str = Field(
+        pattern=r"^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    )
+    task_id: str
+    request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    publication_state: Literal["awaiting_lock", "published", "blocked_integrity"]
+    lock_operation_id: str = Field(
+        pattern=r"^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    )
+    escrow_id: str | None
+    admitted_at: str
+    published_at: str | None
+    result: TaskPublicationResult | None
+    error: TaskPublicationBlockedError | None
 
 
 class TaskResponse(TaskContractProjection):

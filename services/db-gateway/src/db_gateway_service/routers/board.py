@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Request
@@ -19,11 +20,22 @@ from db_gateway_service.routers.helpers import (
     validate_required_fields,
 )
 from db_gateway_service.task_operation_requests import parse_task_operation_request
+from db_gateway_service.task_publication_requests import parse_task_publication_request
 
 if TYPE_CHECKING:
     from db_gateway_service.services.db_writer import DbWriter
 
 router = APIRouter(prefix="/board", tags=["Board"])
+
+
+def _publication_response(result: dict[str, object]) -> JSONResponse:
+    status = 201 if result["publication_state"] == "published" else 202
+    return JSONResponse(status_code=status, content=result)
+
+
+def _legacy_posting_response(result: dict[str, object]) -> JSONResponse:
+    status = 200 if result["observation_state"] == "refunded" else 202
+    return JSONResponse(status_code=status, content=result)
 
 
 def _operation_context(request: Request) -> tuple[DbWriter, str, BoardAuthority]:
@@ -36,6 +48,74 @@ def _operation_context(request: Request) -> tuple[DbWriter, str, BoardAuthority]
     if writer is None or not isinstance(authority, BoardAuthority):
         raise ServiceError("service_not_ready", "Task operation authority is not ready", 503, {})
     return writer, caller_kid, authority
+
+
+@router.post("/task-publications")
+async def admit_task_publication(request: Request) -> JSONResponse:
+    """Reserve the complete posting identity before any external effect."""
+    command = parse_task_publication_request(parse_json_body(await request.body()))
+    writer, caller_kid, _authority = _operation_context(request)
+    return _publication_response(writer.admit_task_publication(command, caller_kid))
+
+
+@router.post("/task-publications/{operation_id}/reconcile")
+async def reconcile_task_publication(operation_id: str, request: Request) -> JSONResponse:
+    """Reconcile only from stored evidence, without accepting forwarded receipts."""
+    if parse_json_body(await request.body()) != {}:
+        raise ServiceError(
+            "invalid_payload", "Reconciliation body must be an empty object", 400, {}
+        )
+    writer, caller_kid, _authority = _operation_context(request)
+    return _publication_response(writer.reconcile_task_publication(operation_id, caller_kid))
+
+
+@router.get("/task-publications/{operation_id}")
+async def get_task_publication(operation_id: str, request: Request) -> JSONResponse:
+    """Read publication state using the authenticated writer capability."""
+    query = request.query_params
+    if set(query) - {"poster_id"} or len(query.getlist("poster_id")) > 1:
+        raise ServiceError("invalid_payload", "Only one optional poster_id is supported", 400, {})
+    expected_actor_id = query.get("poster_id")
+    if expected_actor_id == "":
+        raise ServiceError("invalid_payload", "poster_id must be a nonempty string", 400, {})
+    writer, caller_kid, _authority = _operation_context(request)
+    return JSONResponse(
+        status_code=200,
+        content=writer.get_task_publication(
+            operation_id, caller_kid, expected_actor_id=expected_actor_id
+        ),
+    )
+
+
+@router.get("/posting-recovery")
+async def list_posting_recovery(request: Request) -> JSONResponse:
+    """Read an explicit bounded cursor page without broad Board read authority."""
+    query = request.query_params
+    if set(query) != {"after", "limit"} or any(
+        len(query.getlist(name)) != 1 for name in ("after", "limit")
+    ):
+        raise ServiceError("invalid_payload", "Exactly one after and limit are required", 400, {})
+    limit_text = query["limit"]
+    if re.fullmatch(r"[1-9][0-9]{0,3}", limit_text) is None:
+        raise ServiceError("invalid_payload", "limit must be an integer in 1..1000", 400, {})
+    writer, caller_kid, _authority = _operation_context(request)
+    result = writer.list_posting_recovery(query["after"], int(limit_text), caller_kid)
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/legacy-posting-observations/{observation_id}/reconcile")
+async def reconcile_legacy_posting_observation(
+    observation_id: str, request: Request
+) -> JSONResponse:
+    """Finalize one migrated orphan refund from persisted evidence only."""
+    if parse_json_body(await request.body()) != {}:
+        raise ServiceError(
+            "invalid_payload", "Reconciliation body must be an empty object", 400, {}
+        )
+    writer, caller_kid, _authority = _operation_context(request)
+    return _legacy_posting_response(
+        writer.reconcile_legacy_posting_observation(observation_id, caller_kid)
+    )
 
 
 @router.post("/task-operations")

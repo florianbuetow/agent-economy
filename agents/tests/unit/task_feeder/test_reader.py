@@ -42,7 +42,7 @@ class TestLoadTasks:
         assert len(tasks) == 1
         assert tasks[0].title == "Add numbers"
         assert tasks[0].level == 1
-        assert tasks[0].solutions == ["5"]
+        assert tasks[0].solutions == ("5",)
         assert tasks[0].solution_note is None
 
     def test_loads_multiple_tasks(self, tmp_path: Path) -> None:

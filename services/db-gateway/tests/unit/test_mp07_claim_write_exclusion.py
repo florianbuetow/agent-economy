@@ -13,6 +13,11 @@ from db_gateway_service.services.db_writer import DbWriter
 from db_gateway_service.services.task_operation_writer import TaskOperationWriter
 from db_gateway_service.task_operation_requests import parse_task_operation_request
 from tests.conftest import make_event
+from tests.fakes.mp05_publication_migration_history import (
+    V3Source,
+    _with_task_board_authority,
+    publish_verified_backup,
+)
 from tests.unit import test_mp07_legacy_effect_migration as legacy
 from tests.unit import test_mp07_migration_contract as parent_contract
 from tests.unit.routers import test_mp07_task_operation_boundary as boundary
@@ -70,6 +75,11 @@ def test_cancel_claim_blocks_legacy_bid_atomically(
         == 201
     )
     operation_id = f"op-{uuid.uuid4()}"
+    contract = db_writer.connection.execute(
+        "SELECT acceptance_cutoff_us FROM board_task_contracts WHERE task_id=?",
+        (graph.task_id,),
+    ).fetchone()
+    assert contract is not None
     claim_id = _claim(
         db_writer,
         {
@@ -86,7 +96,7 @@ def test_cancel_claim_blocks_legacy_bid_atomically(
                 "escrow_id": graph.escrow_id,
                 "reward": 100,
                 "source_reference": f"task:{graph.task_id}:cancelled",
-                "cutoff_us": 4071081600000000,
+                "cutoff_us": contract[0],
             },
         },
         now_us=1,
@@ -232,13 +242,27 @@ def test_unresolved_legacy_observation_blocks_generic_task_writes(
     recovery.create_backup(
         inventory, backup_root=backup_root, backup_id=backup_id, work_root=work_root
     )
-    migration.migrate_v2_to_v3(
+    v3_result = migration.migrate_v2_to_v3(
         inventory,
         backup_root=backup_root,
         backup_id=backup_id,
         work_root=work_root,
         busy_timeout_ms=5000,
     )
+    assert v3_result.observation == "committed_v3_verified"
+    caller_kid = "gateway-legacy-write-exclusion"
+    inventory = _with_task_board_authority(inventory, handle=caller_kid)
+    source = V3Source(inventory, backup_root, work_root, database, caller_kid)
+    publication_backup_id = "legacy-write-exclusion-v4"
+    publish_verified_backup(source, backup_id=publication_backup_id)
+    v4_result = migration.migrate_v3_to_v4(
+        inventory,
+        backup_root=backup_root,
+        backup_id=publication_backup_id,
+        work_root=work_root,
+        busy_timeout_ms=5000,
+    )
+    assert v4_result.observation == "committed_v4_verified"
     writer = DbWriter(str(database), 5000, "wal", None)
     try:
         observation_id = str(

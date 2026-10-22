@@ -13,10 +13,15 @@ from service_commons.exceptions import ServiceError
 
 from db_gateway_service import recovery
 from db_gateway_service.financial_requests import canonical_request
-from db_gateway_service.migration import migrate_v1_to_v2, migrate_v2_to_v3
+from db_gateway_service.migration import migrate_v1_to_v2, migrate_v2_to_v3, migrate_v3_to_v4
 from db_gateway_service.schema import SchemaState, classify_schema
 from db_gateway_service.services.db_writer import DbWriter
 from tests.conftest import make_event
+from tests.fakes.mp05_publication_migration_history import (
+    V3Source,
+    _with_task_board_authority,
+    publish_verified_backup,
+)
 from tests.unit import test_mp04_migration as migration_tests
 
 if TYPE_CHECKING:
@@ -88,9 +93,31 @@ def _prepare_migrated_writer(
         busy_timeout_ms=5000,
     )
     assert migration.observation == "committed_v3_verified"
+    connection = sqlite3.connect(database)
+    try:
+        assert classify_schema(connection).state is SchemaState.CURRENT_V3
+    finally:
+        connection.close()
+    source = V3Source(
+        inventory=_with_task_board_authority(inventory, handle="gateway-task-board"),
+        backup_root=backup_root,
+        work_root=work_root,
+        database=database,
+        caller_kid="gateway-task-board",
+    )
+    publication_backup_id = f"publication-history-{uuid4()}"
+    publish_verified_backup(source, backup_id=publication_backup_id)
+    publication_migration = migrate_v3_to_v4(
+        source.inventory,
+        backup_root=backup_root,
+        backup_id=publication_backup_id,
+        work_root=work_root,
+        busy_timeout_ms=5000,
+    )
+    assert publication_migration.observation == "committed_v4_verified"
     writer = DbWriter(str(database), 5000, "wal", None)
     try:
-        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V3
+        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V4
         assert _financial_snapshot(writer.connection) == financial_cutover
         assert (
             writer.connection.execute("SELECT COUNT(*) FROM board_task_operations").fetchone()[0]

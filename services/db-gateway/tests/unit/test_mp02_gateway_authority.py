@@ -12,8 +12,10 @@ import pytest
 from fastapi import Response
 from fastapi.routing import APIRoute
 from service_auth import jws
+from service_auth.financial_identity import operation_id_for
 from service_auth.gateway import GatewayRequestSigner, GatewaySignerConfig
 from service_auth.signing import generate_keypair
+from service_auth.task_postings import TaskPostingIntent
 
 from db_gateway_service import task_time
 from db_gateway_service.core.middleware import GATEWAY_ROUTE_POLICIES
@@ -68,44 +70,56 @@ def _seed_domain_graph(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> d
         ).status_code
         == 201
     )
+    intent = TaskPostingIntent.from_json(
+        {
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid4()}",
+            "task_id": task_id,
+            "actor_kind": "agent",
+            "actor_id": poster,
+            "lock_operation_id": operation_id_for("task-lock", (task_id, poster)),
+            "title": "Authority fixture",
+            "spec": "Persist one valid task",
+            "reward": 100,
+            "bidding_deadline_seconds": 86400,
+            "acceptance_window_seconds": 3600,
+            "execution_deadline_seconds": 172800,
+            "review_deadline_seconds": 43200,
+        }
+    )
+    admitted = client.post("/board/task-publications", json=intent.as_json())
+    assert admitted.status_code == 202, admitted.text
+    assert admitted.json()["publication_state"] == "awaiting_lock"
+    locked_at = task_time.epoch_us_to_utc_text(now_us)
     assert (
         client.post(
             "/bank/escrow/lock",
             json={
-                "operation_id": f"op-{uuid4()}",
+                "operation_id": intent.lock_operation_id,
                 "escrow_id": escrow_id,
                 "payer_account_id": poster,
                 "amount": 100,
                 "task_id": task_id,
-                "created_at": "2026-02-28T10:02:00Z",
+                "created_at": locked_at,
                 "tx_id": f"tx-{uuid4()}",
-                "event": make_event(source="bank", event_type="escrow.locked", task_id=task_id),
+                "event": {
+                    **make_event(
+                        source="central-bank",
+                        event_type="escrow.locked",
+                        task_id=task_id,
+                        agent_id=poster,
+                    ),
+                    "timestamp": locked_at,
+                },
             },
         ).status_code
         == 201
     )
-    assert (
-        client.post(
-            "/board/tasks",
-            json={
-                "task_id": task_id,
-                "poster_id": poster,
-                "title": "Authority fixture",
-                "spec": "Persist one valid task",
-                "reward": 100,
-                "status": "open",
-                "bidding_deadline_seconds": 86400,
-                "acceptance_window_seconds": 3600,
-                "deadline_seconds": 172800,
-                "review_deadline_seconds": 43200,
-                "bidding_deadline": "2026-03-01T10:03:00Z",
-                "escrow_id": escrow_id,
-                "created_at": "2026-02-28T10:03:00Z",
-                "event": make_event(source="board", event_type="task.created", task_id=task_id),
-            },
-        ).status_code
-        == 201
-    )
+    published = client.post(f"/board/task-publications/{intent.operation_id}/reconcile", json={})
+    assert published.status_code == 201, published.text
+    assert published.json()["publication_state"] == "published"
+    assert published.json()["task_id"] == task_id
+    assert published.json()["escrow_id"] == escrow_id
     return {"poster": poster, "worker": worker, "task_id": task_id}
 
 

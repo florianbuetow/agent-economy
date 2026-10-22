@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -24,7 +24,8 @@ async def test_self_bid_rejected(make_funded_agent) -> None:
         poster = await make_funded_agent(name="Poster QFH", balance=5000)
         agents_to_close.append(poster)
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Self bid rejected task",
             spec="Do something",
             reward=500,
@@ -68,7 +69,8 @@ async def test_duplicate_bid_rejected(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker HZM", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Duplicate bid rejected task",
             spec="Do something",
             reward=500,
@@ -119,7 +121,8 @@ async def test_non_poster_cannot_cancel_task(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker PLK", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Non poster cannot cancel task",
             spec="Do something",
             reward=500,
@@ -163,7 +166,8 @@ async def test_non_poster_cannot_accept_bid(make_funded_agent) -> None:
         worker2 = await make_funded_agent(name="Worker VTR 2", balance=0)
         agents_to_close.extend([poster, worker1, worker2])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Non poster cannot accept bid task",
             spec="Do something",
             reward=500,
@@ -215,7 +219,8 @@ async def test_non_poster_cannot_approve_task(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker JNS", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Non poster cannot approve task",
             spec="Do something",
             reward=500,
@@ -284,7 +289,8 @@ async def test_non_poster_cannot_dispute_task(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker MCD", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Non poster cannot dispute task",
             spec="Do something",
             reward=500,
@@ -354,7 +360,8 @@ async def test_non_worker_cannot_upload_asset(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker YUP", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Non worker cannot upload asset",
             spec="Do something",
             reward=500,
@@ -410,7 +417,8 @@ async def test_non_worker_cannot_submit_deliverable(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker AWE", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Non worker cannot submit deliverable",
             spec="Do something",
             reward=500,
@@ -471,7 +479,8 @@ async def test_approve_non_submitted_task_rejected(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker KRT", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Approve non submitted task rejected",
             spec="Do something",
             reward=500,
@@ -531,7 +540,8 @@ async def test_bidding_deadline_expiry_rejects_bid(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker BDX", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Bidding deadline expiry rejects bid task",
             spec="Do something quickly",
             reward=500,

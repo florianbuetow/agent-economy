@@ -219,6 +219,26 @@ def migrate_v2_to_v3(
     )
 
 
+def migrate_v3_to_v4(
+    inventory: RecoveryInventoryV1,
+    *,
+    backup_root: Path,
+    backup_id: str,
+    work_root: Path,
+    busy_timeout_ms: int,
+) -> MigrationResult:
+    """Run the explicit verified publication migration from v3 to v4."""
+    from db_gateway_service.publication_migration import migrate_v3_to_v4 as implementation
+
+    return implementation(
+        inventory,
+        backup_root=backup_root,
+        backup_id=backup_id,
+        work_root=work_root,
+        busy_timeout_ms=busy_timeout_ms,
+    )
+
+
 def _migrate_bound_source(
     *,
     bound: BackupBoundSource,

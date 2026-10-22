@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 import pytest
 import yaml
@@ -11,7 +12,15 @@ from pydantic import ValidationError
 
 from task_feeder.config import TaskFeederConfig, load_task_feeder_settings
 from task_feeder.loop import TaskFeederLoop
-from task_feeder.reader import RawTask
+from task_feeder.posting import TaskFeederPostingCoordinator
+from task_feeder.reader import RawTask, load_task_snapshot
+
+from ._runtime_fixtures import make_agent
+from .test_mp05_durable_posting import (
+    _configure_prepare,
+    _posting_session,
+    _published_response,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -23,6 +32,7 @@ def _values() -> dict[str, object]:
     return {
         "handle": "feeder",
         "tasks_file": "tasks.jsonl",
+        "source_max_bytes": 8_388_608,
         "feed_interval_seconds": 5,
         "max_open_tasks": 3,
         "bidding_deadline_seconds": 120,
@@ -82,14 +92,11 @@ def test_window_and_selection_delay_are_distinct_yaml_fields(tmp_path: Path) -> 
     assert config.model_dump()["acceptance_window_seconds"] == 73
 
 
-async def test_posting_forwards_the_exact_poster_window(monkeypatch: pytest.MonkeyPatch) -> None:
-    config = TaskFeederConfig.model_validate(_values())
-    agent = Mock()
-    agent.agent_id = "a-feeder"
-    agent.list_tasks = AsyncMock(return_value=[])
-    agent.post_task = AsyncMock(return_value={"task_id": "t-posted"})
-    sleep = AsyncMock()
-    monkeypatch.setattr("task_feeder.loop.asyncio.sleep", sleep)
+async def test_posting_forwards_the_exact_poster_window(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source_path = tmp_path / "tasks.jsonl"
     task = RawTask(
         title="Addition",
         spec="Calculate 1 + 2",
@@ -98,16 +105,44 @@ async def test_posting_forwards_the_exact_poster_window(monkeypatch: pytest.Monk
         solutions=["3"],
         solution_note=None,
     )
-    loop = TaskFeederLoop(agent=agent, config=config)
-    await loop._feed_one(iter([task]))
-    agent.post_task.assert_awaited_once_with(
-        title=task.title,
-        spec=task.spec,
-        reward=20,
-        bidding_deadline_seconds=120,
-        acceptance_window_seconds=73,
-        execution_deadline_seconds=300,
-        review_deadline_seconds=120,
+    source_path.write_text(json.dumps(task.as_json()) + "\n", encoding="utf-8")
+    snapshot = load_task_snapshot(source_path.resolve(), max_bytes=8_388_608)
+    config = TaskFeederConfig.model_validate({**_values(), "tasks_file": str(source_path)})
+    agent = make_agent()
+    prepared = _configure_prepare(agent)
+    agent.submit_task_posting = AsyncMock(side_effect=_published_response)
+
+    with _posting_session(tmp_path, agent) as postings:
+        coordinator = TaskFeederPostingCoordinator(agent, postings)
+        coordinator.bind_current_source(snapshot, config)
+        loop = TaskFeederLoop(agent, config, coordinator)
+        await loop.feed_once()
+        saved = postings.records()
+        agent.list_tasks.return_value = [{"task_id": f"open-{index}"} for index in range(3)]
+        sleep = AsyncMock(side_effect=lambda _seconds: loop.stop())
+        monkeypatch.setattr("task_feeder.loop.asyncio.sleep", sleep)
+        await loop.run()
+        sleep.assert_awaited_once_with(5)
+
+    assert len(prepared) == len(saved) == 1
+    expected_terms = (
+        "Addition",
+        "Calculate 1 + 2",
+        20,
+        120,
+        73,
+        300,
+        120,
     )
-    assert loop.task_map == {"t-posted": task}
-    sleep.assert_awaited_once_with(5)
+    for intent in (prepared[0], saved[0].intent):
+        assert (
+            intent.title,
+            intent.spec,
+            intent.reward,
+            intent.bidding_deadline_seconds,
+            intent.acceptance_window_seconds,
+            intent.execution_deadline_seconds,
+            intent.review_deadline_seconds,
+        ) == expected_terms
+    assert saved[0].state == "published"
+    assert loop.task_map == {saved[0].intent.task_id: task}

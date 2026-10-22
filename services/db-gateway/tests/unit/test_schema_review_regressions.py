@@ -30,10 +30,10 @@ def test_current_schema_requires_its_version_row() -> None:
 def test_future_version_in_exact_current_table_shape_is_not_admitted() -> None:
     connection = sqlite3.connect(":memory:")
     try:
-        connection.executescript(load_schema_sql(SchemaState.CURRENT_V3))
-        assert classify_schema(connection).state is SchemaState.CURRENT_V3
+        connection.executescript(load_schema_sql(SchemaState.CURRENT_V4))
+        assert classify_schema(connection).state is SchemaState.CURRENT_V4
         connection.execute("PRAGMA ignore_check_constraints=ON")
-        connection.execute("UPDATE schema_metadata SET version=4")
+        connection.execute("UPDATE schema_metadata SET version=5")
         connection.execute("PRAGMA ignore_check_constraints=OFF")
         assert classify_schema(connection).state is SchemaState.FUTURE
     finally:

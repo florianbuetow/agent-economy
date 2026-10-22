@@ -133,7 +133,7 @@ class TestLifecycle:
         # 1. Alice creates a task
         resp = await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
         assert resp.status_code == 201
-        assert resp.json()["status"] == "open"
+        assert resp.json()["result"]["status"] == "open"
 
         # 2. Bob bids
         resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
@@ -192,7 +192,7 @@ class TestLifecycle:
         # 1. Alice creates a task
         resp = await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
         assert resp.status_code == 201
-        assert resp.json()["status"] == "open"
+        assert resp.json()["result"]["status"] == "open"
 
         # 2. Bob bids and is accepted
         resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
@@ -266,7 +266,7 @@ class TestLifecycle:
                 bidding_deadline_seconds=1,
             )
             assert resp.status_code == 201
-            assert resp.json()["status"] == "open"
+            assert resp.json()["result"]["status"] == "open"
 
             # Advance past deadline
             frozen.tick(delta=datetime.timedelta(seconds=2))

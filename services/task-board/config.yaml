@@ -60,3 +60,9 @@ db_gateway:
 deadline_evaluation:
   actor_id: "system-task-board-deadline"
   evaluation_interval_seconds: 10
+
+# Explicit bounds for durable task publication and legacy refund reconciliation.
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100

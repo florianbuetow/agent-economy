@@ -39,6 +39,7 @@ from service_auth.task_board_responses import (
     TaskBoardCommandContractError,
     TaskBoardCommandResponse,
 )
+from service_auth.task_postings import TaskPostingIntent, TaskPostingResponse
 from service_auth.user_agent import UserAgent
 
 __version__ = "0.1.0"
@@ -59,6 +60,8 @@ __all__ = [
     "PlatformSigner",
     "TaskBoardCommandContractError",
     "TaskBoardCommandResponse",
+    "TaskPostingIntent",
+    "TaskPostingResponse",
     "TokenExpiredError",
     "TokenNotYetValidError",
     "TokenPolicy",

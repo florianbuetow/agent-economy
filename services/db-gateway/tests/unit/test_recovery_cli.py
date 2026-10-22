@@ -122,6 +122,7 @@ def test_verification_preserves_incomplete_recovery_states(tmp_path, monkeypatch
         identity_complete=False,
         migration_eligible=False,
         operational_restore_verified=False,
+        posting_recovery=recovery.PostingRecoveryResult.not_applicable(),
         finding_codes=("missing_key_material",),
         manifest_sha256="c" * 64,
     )
@@ -183,7 +184,16 @@ def test_restore_passes_explicit_typed_bindings(tmp_path, monkeypatch, capsys):
 @pytest.mark.parametrize("command", ["verify-restore", "finalize-restore"])
 def test_restore_checks_do_not_require_source_paths(tmp_path, monkeypatch, capsys, command):
     calls = []
-    result = recovery.VerificationResult(True, True, True, False, False, (), "e" * 64)
+    result = recovery.VerificationResult(
+        True,
+        True,
+        True,
+        False,
+        False,
+        recovery.PostingRecoveryResult.not_applicable(),
+        (),
+        "e" * 64,
+    )
 
     def check(**kwargs):
         calls.append(kwargs)

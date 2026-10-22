@@ -17,7 +17,11 @@ from typing import TYPE_CHECKING
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from db_gateway_service import recovery
-from db_gateway_service.migration import migrate_v1_to_v2, migrate_v2_to_v3
+from db_gateway_service.migration import (
+    migrate_v1_to_v2,
+    migrate_v2_to_v3,
+    migrate_v3_to_v4,
+)
 from db_gateway_service.receipt_audit import audit_receipt_ownership
 from db_gateway_service.schema import SchemaState, classify_schema, load_schema_sql
 from db_gateway_service.task_contract_audit import audit_task_contracts
@@ -30,6 +34,7 @@ from service_commons.recovery_contract import (
     CaptureKind,
     KeypairRole,
     MaintenanceLockIdentityV1,
+    OwnedProcessV1,
     PathResolutionBase,
     RecoveryInventoryV1,
     RegistrationRequirement,
@@ -54,6 +59,9 @@ _WORKER = "a-historical-worker"
 _CREDIT_REFERENCE = "historical-genesis"
 _V1_BACKUP_ID = "before-mp04-public-history"
 _V2_BACKUP_ID = "before-mp07-bank-history"
+_V3_BACKUP_ID = "before-mp05-publication-history"
+_RELEASED_TASK_ID = "task-released"
+_SPLIT_TASK_ID = "task-split"
 
 
 def _hash(value: object) -> str:
@@ -125,9 +133,138 @@ def _seed_v1(database: Path) -> None:
                 ("esc-native", _PAYER, 100, "task-native", "locked", "", None, None),
             ],
         )
+        _seed_historical_task_context(connection)
         connection.commit()
     finally:
         connection.close()
+
+
+def _seed_historical_task_context(connection: sqlite3.Connection) -> None:
+    """Attach true Board history to settled worker payouts without changing Bank rows."""
+    created_at = "2026-03-01T08:00:00Z"
+    bidding_deadline = "2026-03-01T09:00:00Z"
+    accepted_at = bidding_deadline
+    execution_deadline = "2026-03-01T10:00:00Z"
+    submitted_at = execution_deadline
+    review_deadline = "2026-03-01T11:00:00Z"
+    connection.executemany(
+        "INSERT INTO board_tasks "
+        "(task_id, poster_id, title, spec, reward, status, bidding_deadline_seconds, "
+        "deadline_seconds, review_deadline_seconds, bidding_deadline, execution_deadline, "
+        "review_deadline, bid_count, escrow_pending, escrow_id, worker_id, accepted_bid_id, "
+        "dispute_reason, dispute_id, rebuttal_deadline, created_at, accepted_at, submitted_at, "
+        "approved_at, disputed_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, 3600, 3600, 3600, ?, ?, ?, 1, 0, ?, ?, ?, ?, ?, ?, "
+        "?, ?, ?, ?, ?)",
+        [
+            (
+                _RELEASED_TASK_ID,
+                _PAYER,
+                "Historical approved task",
+                "Preserve the existing released worker payout",
+                100,
+                "approved",
+                bidding_deadline,
+                execution_deadline,
+                review_deadline,
+                "esc-released",
+                _WORKER,
+                "bid-released",
+                None,
+                None,
+                None,
+                created_at,
+                accepted_at,
+                submitted_at,
+                review_deadline,
+                None,
+            ),
+            (
+                _SPLIT_TASK_ID,
+                _PAYER,
+                "Historical split task",
+                "Preserve the existing split while Board ruling is unrecorded",
+                100,
+                "disputed",
+                bidding_deadline,
+                execution_deadline,
+                review_deadline,
+                "esc-split",
+                _WORKER,
+                "bid-split",
+                "Historical split settlement before Board ruling was recorded",
+                "clm-split",
+                "2026-03-01T12:30:00Z",
+                created_at,
+                accepted_at,
+                submitted_at,
+                None,
+                "2026-03-01T12:00:00Z",
+            ),
+        ],
+    )
+    connection.executemany(
+        "INSERT INTO board_bids "
+        "(bid_id, task_id, bidder_id, proposal, amount, submitted_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [
+            (
+                "bid-released",
+                _RELEASED_TASK_ID,
+                _WORKER,
+                "Historical accepted bid",
+                100,
+                "2026-03-01T08:30:00Z",
+            ),
+            (
+                "bid-split",
+                _SPLIT_TASK_ID,
+                _WORKER,
+                "Historical accepted bid",
+                100,
+                "2026-03-01T08:30:00Z",
+            ),
+        ],
+    )
+    connection.execute(
+        "INSERT INTO court_claims "
+        "(claim_id, task_id, claimant_id, respondent_id, reason, status, rebuttal_deadline, "
+        "filed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            "clm-split",
+            _SPLIT_TASK_ID,
+            _PAYER,
+            _WORKER,
+            "Historical split settlement before Board ruling was recorded",
+            "judging",
+            "2026-03-01T12:30:00Z",
+            "2026-03-01T12:00:00Z",
+        ),
+    )
+
+    assert connection.execute(
+        "SELECT status, poster_id, worker_id, accepted_bid_id, escrow_id, reward "
+        "FROM board_tasks WHERE task_id=?",
+        (_RELEASED_TASK_ID,),
+    ).fetchone() == ("approved", _PAYER, _WORKER, "bid-released", "esc-released", 100)
+    assert connection.execute(
+        "SELECT status, poster_id, worker_id, accepted_bid_id, escrow_id, reward, dispute_id "
+        "FROM board_tasks WHERE task_id=?",
+        (_SPLIT_TASK_ID,),
+    ).fetchone() == ("disputed", _PAYER, _WORKER, "bid-split", "esc-split", 100, "clm-split")
+    assert connection.execute(
+        "SELECT task_id, claimant_id, respondent_id, reason "
+        "FROM court_claims WHERE claim_id='clm-split'"
+    ).fetchone() == (
+        _SPLIT_TASK_ID,
+        _PAYER,
+        _WORKER,
+        "Historical split settlement before Board ruling was recorded",
+    )
+    for task_id in ("task-open", "task-native"):
+        assert (
+            connection.execute("SELECT 1 FROM board_tasks WHERE task_id=?", (task_id,)).fetchone()
+            is None
+        )
 
 
 def _inventory(source: Path, database: Path) -> RecoveryInventoryV1:
@@ -268,6 +405,218 @@ def _inventory(source: Path, database: Path) -> RecoveryInventoryV1:
     )
 
 
+def _with_task_board_authority(inventory: RecoveryInventoryV1) -> RecoveryInventoryV1:
+    """Extend captured v3 source identity with the required Board migration authority."""
+    source = inventory.source_root
+    keys = source / "keys"
+    handle = "gateway-task-board"
+    generate_keypair(handle, keys)
+    public_key_path = keys / f"{handle}.pub"
+    private_key_path = keys / f"{handle}.key"
+
+    gateway_config = next(config for config in inventory.configs if config.logical_id == "gateway")
+    gateway_value = json.loads(gateway_config.captured_path.read_text(encoding="utf-8"))
+    gateway_value["auth"]["trusted_callers"][handle] = {
+        "public_key_path": str(public_key_path),
+        "capabilities": ["gateway.board.write"],
+    }
+    gateway_bytes = json.dumps(
+        gateway_value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    gateway_config.captured_path.write_bytes(gateway_bytes)
+
+    config_directory = source / "configs"
+    config_directory.mkdir()
+    board_directory = source / "task-board"
+    board_directory.mkdir()
+    board_config_path = config_directory / "task-board.yaml"
+    board_bytes = json.dumps(
+        {
+            "db_gateway": {
+                "signing": {
+                    "kid": handle,
+                    "private_key_path": str(private_key_path),
+                }
+            }
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    board_config_path.write_bytes(board_bytes)
+
+    configs = (
+        *(
+            SourceConfigV1(
+                logical_id=config.logical_id,
+                captured_path=config.captured_path,
+                capture_root=config.capture_root,
+                process_cwd=config.process_cwd,
+                sha256=(
+                    hashlib.sha256(gateway_bytes).hexdigest()
+                    if config.logical_id == "gateway"
+                    else config.sha256
+                ),
+            )
+            for config in inventory.configs
+        ),
+        SourceConfigV1(
+            logical_id="task-board",
+            captured_path=board_config_path,
+            capture_root=config_directory,
+            process_cwd=board_directory,
+            sha256=hashlib.sha256(board_bytes).hexdigest(),
+        ),
+    )
+    resources = (
+        *inventory.resources,
+        SourceResourceV1(
+            logical_id="config.task-board",
+            kind=ResourceKind.FILE,
+            capture_kind=CaptureKind.CONFIG,
+            capture_root=config_directory,
+            captured_path=board_config_path,
+        ),
+        SourceResourceV1(
+            logical_id=f"key.{handle}.private",
+            kind=ResourceKind.FILE,
+            capture_kind=CaptureKind.KEYPAIR,
+            capture_root=keys,
+            captured_path=private_key_path,
+        ),
+        SourceResourceV1(
+            logical_id=f"key.{handle}.public",
+            kind=ResourceKind.FILE,
+            capture_kind=CaptureKind.KEYPAIR,
+            capture_root=keys,
+            captured_path=public_key_path,
+        ),
+    )
+    bindings = (
+        *inventory.field_bindings,
+        SourceFieldBindingV1(
+            binding_id=f"gateway.auth.{handle}.public_key_path",
+            config_id="gateway",
+            field_path=("auth", "trusted_callers", handle, "public_key_path"),
+            binding_kind=BindingKind.FILESYSTEM,
+            captured_value=str(public_key_path),
+            resolution_base=PathResolutionBase.ABSOLUTE,
+            resolved_source_path=public_key_path,
+            resource_id=f"key.{handle}.public",
+        ),
+        SourceFieldBindingV1(
+            binding_id="task-board.db_gateway.signing.private_key_path",
+            config_id="task-board",
+            field_path=("db_gateway", "signing", "private_key_path"),
+            binding_kind=BindingKind.FILESYSTEM,
+            captured_value=str(private_key_path),
+            resolution_base=PathResolutionBase.ABSOLUTE,
+            resolved_source_path=private_key_path,
+            resource_id=f"key.{handle}.private",
+        ),
+    )
+    keypairs = (
+        *inventory.keypairs,
+        SourceKeypairV1(
+            handle=handle,
+            role=KeypairRole.GATEWAY,
+            private_resource_id=f"key.{handle}.private",
+            public_resource_id=f"key.{handle}.public",
+            expected_public_fingerprint_sha256=keypair_fingerprint(
+                handle,
+                keys,
+                allow_legacy_private_mode=False,
+            ),
+            registration_requirement=RegistrationRequirement.FORBIDDEN,
+            captured_registration_state=CapturedRegistrationState.UNREGISTERED,
+            expected_registered_agent_id=None,
+        ),
+    )
+    processes = (
+        *inventory.process_ownership,
+        OwnedProcessV1(
+            logical_id="task-board",
+            config_id="task-board",
+            process_cwd=board_directory,
+            agents_package_root=None,
+            pid=None,
+            pgid=None,
+            sid=None,
+            running=False,
+            group_drained=False,
+            leader_returncode=None,
+            cleanup_error=None,
+        ),
+    )
+    return RecoveryInventoryV1(
+        contract_version=inventory.contract_version,
+        runtime_id=inventory.runtime_id,
+        source_root=inventory.source_root,
+        agents_package_root=inventory.agents_package_root,
+        maintenance_lock_path=inventory.maintenance_lock_path,
+        maintenance_lock_identity=inventory.maintenance_lock_identity,
+        resources=resources,
+        configs=configs,
+        field_bindings=bindings,
+        keypairs=keypairs,
+        process_ownership=processes,
+    )
+
+
+def _migrate_current_v3_to_v4(
+    inventory: RecoveryInventoryV1,
+    database: Path,
+    backup_root: Path,
+    work_root: Path,
+    financial_history: dict[str, tuple[tuple[object, ...], ...]],
+) -> None:
+    v3_inventory = _with_task_board_authority(inventory)
+    v3_backup = recovery.create_backup(
+        v3_inventory,
+        backup_root=backup_root,
+        backup_id=_V3_BACKUP_ID,
+        work_root=work_root,
+    )
+    assert v3_backup.state is recovery.PublicationState.COMPLETE
+    v3_backup_hashes = _file_hashes(v3_backup.location)
+    v3_verification = recovery.verify_backup(
+        backup_root=backup_root,
+        backup_id=_V3_BACKUP_ID,
+        work_root=work_root,
+    )
+    assert v3_verification.artifact_verified and v3_verification.identity_complete
+    publication_migration = migrate_v3_to_v4(
+        v3_inventory,
+        backup_root=backup_root,
+        backup_id=_V3_BACKUP_ID,
+        work_root=work_root,
+        busy_timeout_ms=5000,
+    )
+    assert publication_migration.applied is True
+    assert publication_migration.schema_version == 4
+    assert publication_migration.observation == "committed_v4_verified"
+    with closing(sqlite3.connect(database)) as connection:
+        assert classify_schema(connection).state is SchemaState.CURRENT_V4
+        assert _snapshot(str(database)) == financial_history
+        assert audit_receipt_ownership(connection).ownership_clean
+        assert audit_task_contracts(connection).contracts_clean
+        assert connection.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert connection.execute("SELECT * FROM schema_metadata").fetchone() == (
+            1,
+            4,
+            3,
+            _V3_BACKUP_ID,
+            publication_migration.manifest_sha256,
+        )
+    assert _file_hashes(v3_backup.location) == v3_backup_hashes
+
+
 @pytest.fixture
 def gateway_db_path(tmp_path: Path) -> str:
     source = tmp_path / "source"
@@ -340,6 +689,8 @@ def gateway_db_path(tmp_path: Path) -> str:
         )
         assert connection.execute("SELECT COUNT(*) FROM board_task_operations").fetchone() == (0,)
     assert _file_hashes(v2_backup.location) == v2_backup_hashes
+
+    _migrate_current_v3_to_v4(inventory, database, backup_root, work_root, financial_v2)
     return str(database)
 
 

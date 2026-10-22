@@ -14,6 +14,7 @@ from service_auth.signing import public_key_to_b64
 from service_commons.exceptions import ServiceError
 
 from tests.fakes.gateway_task_store import GatewayTaskStore
+from tests.fakes.native_task_fixture import TaskTerms, publish_open_task
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -23,6 +24,8 @@ pytestmark = pytest.mark.unit
 
 _AT = "2026-10-18T12:00:00Z"
 _NOW_US = parse_utc_text_to_epoch_us(_AT)
+_TASK_1 = "t-00000000-0000-4000-8000-000000000101"
+_TASK_2 = "t-00000000-0000-4000-8000-000000000102"
 
 
 def _new_public_key() -> str:
@@ -42,13 +45,13 @@ def _event(source: str, event_type: str, task_id: str | None) -> dict[str, Any]:
 
 @pytest.fixture
 def store(tmp_path: Path) -> Iterator[GatewayTaskStore]:
-    """Own one v3 database and explicitly provision fixture identities and funds."""
+    """Own one v4 database and explicitly provision fixture identities and funds."""
     platform_public_key = _new_public_key()
     adapter = GatewayTaskStore(
         db_path=tmp_path / "task-board.db",
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V3),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
         caller_kid="gateway-task-board",
         authority=BoardAuthority(
             platform_public_key=platform_public_key,
@@ -100,35 +103,15 @@ def store(tmp_path: Path) -> Iterator[GatewayTaskStore]:
 
 
 def _create_task(store: GatewayTaskStore, task_id: str) -> None:
-    store.writer.escrow_lock(
-        {
-            "operation_id": operation_id_for("test-task-store", (task_id, "escrow-lock")),
-            "escrow_id": f"esc-{task_id}",
-            "payer_account_id": "a-poster",
-            "amount": 100,
-            "task_id": task_id,
-            "created_at": _AT,
-            "tx_id": f"tx-lock-{task_id}",
-            "event": _event("bank", "escrow.locked", task_id),
-        }
-    )
-    store.insert_task(
-        {
-            "task_id": task_id,
-            "poster_id": "a-poster",
-            "title": f"Task {task_id}",
-            "spec": "Specification",
-            "reward": 100,
-            "bidding_deadline_seconds": 3600,
-            "acceptance_window_seconds": 600,
-            "deadline_seconds": 7200,
-            "review_deadline_seconds": 1800,
-            "status": "open",
-            "escrow_id": f"esc-{task_id}",
-            "bid_count": 0,
-            "created_at": _AT,
-            "escrow_pending": 0,
-        }
+    publish_open_task(
+        store,
+        task_id=task_id,
+        poster_id="a-poster",
+        title=f"Task {task_id}",
+        spec="Specification",
+        terms=TaskTerms(100, 3600, 600, 7200, 1800),
+        timestamp=_AT,
+        event=_event("central-bank", "escrow.locked", task_id),
     )
 
 
@@ -210,21 +193,21 @@ def _asset_data(task_id: str) -> dict[str, Any]:
 
 def test_task_crud_and_counts(store: GatewayTaskStore) -> None:
     """Native transitions preserve task get/list/count and reject wrong source state."""
-    _create_task(store, "t-1")
-    _create_task(store, "t-2")
-    _accept_task(store, "t-2", "bid-t-2")
+    _create_task(store, _TASK_1)
+    _create_task(store, _TASK_2)
+    _accept_task(store, _TASK_2, "bid-task-2")
 
-    task = store.get_task("t-1")
+    task = store.get_task(_TASK_1)
     assert task is not None
-    assert task["task_id"] == "t-1"
+    assert task["task_id"] == _TASK_1
     assert task["status"] == "open"
 
-    _accept_task(store, "t-1", "bid-t-1")
-    store.insert_asset(_asset_data("t-1"))
+    _accept_task(store, _TASK_1, "bid-task-1")
+    store.insert_asset(_asset_data(_TASK_1))
     changed = store.claim_task_operation(
         _command(
-            task_id="t-1",
-            operation_id=operation_id_for("test-task-store", ("t-1", "submit")),
+            task_id=_TASK_1,
+            operation_id=operation_id_for("test-task-store", (_TASK_1, "submit")),
             command="submit_deliverable",
             status="accepted",
             version=1,
@@ -236,19 +219,19 @@ def test_task_crud_and_counts(store: GatewayTaskStore) -> None:
     assert changed["target_status"] == "submitted"
     assert changed["target_lifecycle_version"] == 2
 
-    before = store.get_task("t-2")
+    before = store.get_task(_TASK_2)
     before_events = store.writer.get_total_events()
     with pytest.raises(ServiceError) as mismatch:
-        store.claim_task_operation(_accept_command("t-2", "bid-t-2", 1))
+        store.claim_task_operation(_accept_command(_TASK_2, "bid-task-2", 1))
     assert (mismatch.value.status_code, mismatch.value.error) == (409, "invalid_status")
-    assert store.get_task("t-2") == before
+    assert store.get_task(_TASK_2) == before
     assert store.writer.get_total_events() == before_events
 
     listed = store.list_tasks(status=None, poster_id=None, worker_id=None, limit=None, offset=None)
     assert len(listed) == 2
     assert {row["task_id"]: row["status"] for row in listed} == {
-        "t-1": "submitted",
-        "t-2": "accepted",
+        _TASK_1: "submitted",
+        _TASK_2: "accepted",
     }
     assert store.count_tasks() == 2
     grouped = store.count_tasks_by_status()
@@ -258,43 +241,43 @@ def test_task_crud_and_counts(store: GatewayTaskStore) -> None:
 
 def test_bid_operations(store: GatewayTaskStore) -> None:
     """Native bid insert/get/list preserves one bid when the bidder submits a new intent."""
-    _create_task(store, "t-1")
-    store.claim_task_operation(_bid_command("t-1", "bid-1", 90))
+    _create_task(store, _TASK_1)
+    store.claim_task_operation(_bid_command(_TASK_1, "bid-1", 90))
 
-    task = store.get_task("t-1")
+    task = store.get_task(_TASK_1)
     assert task is not None
     assert task["bid_count"] == 1
-    bid = store.get_bid("bid-1", "t-1")
+    bid = store.get_bid("bid-1", _TASK_1)
     assert bid is not None
     assert bid["bidder_id"] == "a-worker-1"
-    bids = store.get_bids_for_task("t-1")
+    bids = store.get_bids_for_task(_TASK_1)
     assert len(bids) == 1
     assert bids[0]["bid_id"] == "bid-1"
 
     before_events = store.writer.get_total_events()
     with pytest.raises(ServiceError) as duplicate:
-        store.claim_task_operation(_bid_command("t-1", "bid-2", 85))
+        store.claim_task_operation(_bid_command(_TASK_1, "bid-2", 85))
     assert (duplicate.value.status_code, duplicate.value.error) == (409, "bid_exists")
-    assert store.get_task("t-1") == task
-    assert store.get_bid("bid-1", "t-1") == bid
-    assert store.get_bid("bid-2", "t-1") is None
-    assert store.get_bids_for_task("t-1") == bids
+    assert store.get_task(_TASK_1) == task
+    assert store.get_bid("bid-1", _TASK_1) == bid
+    assert store.get_bid("bid-2", _TASK_1) is None
+    assert store.get_bids_for_task(_TASK_1) == bids
     assert store.writer.get_total_events() == before_events
 
 
 def test_asset_operations(store: GatewayTaskStore) -> None:
     """Asset insert/get/list/count works for the accepted worker's task."""
-    _create_task(store, "t-1")
-    _accept_task(store, "t-1", "bid-1")
-    store.insert_asset(_asset_data("t-1"))
+    _create_task(store, _TASK_1)
+    _accept_task(store, _TASK_1, "bid-1")
+    store.insert_asset(_asset_data(_TASK_1))
 
-    asset = store.get_asset("asset-1", "t-1")
+    asset = store.get_asset("asset-1", _TASK_1)
     assert asset is not None
     assert asset["filename"] == "result.txt"
-    assets = store.get_assets_for_task("t-1")
+    assets = store.get_assets_for_task(_TASK_1)
     assert len(assets) == 1
     assert assets[0]["asset_id"] == "asset-1"
-    assert store.count_assets("t-1") == 1
+    assert store.count_assets(_TASK_1) == 1
 
 
 def test_close_succeeds(store: GatewayTaskStore, tmp_path: Path) -> None:

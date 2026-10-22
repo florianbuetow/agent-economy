@@ -31,6 +31,7 @@ from task_board_service.core.state import get_app_state, reset_app_state
 from task_board_service.services.asset_manager import AssetManager
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
+from task_board_service.services.posting_recovery import PostingRecovery
 from task_board_service.services.task_manager import TaskManager
 from task_board_service.services.token_validator import TokenValidator
 from tests.fakes.gateway_task_store import GatewayTaskStore
@@ -207,6 +208,10 @@ request:
   max_body_size: 1048576
 recovery:
   maintenance_lock_path: "{tmp_path / "maintenance.lock"}"
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
@@ -231,6 +236,7 @@ deadline_evaluation:
     clear_settings_cache()
     reset_app_state()
     monkeypatch.setattr(PlatformAgent, "register", _register_test_platform)
+    fixture_posting_recovery_task: asyncio.Task[None] | None = None
 
     try:
         test_app = create_app()
@@ -258,20 +264,36 @@ deadline_evaluation:
                     expected_kid=parsed.header.kid,
                 )
 
-            with closing(
-                GatewayTaskStore(
-                    db_path=db_path,
-                    busy_timeout_ms=5000,
-                    journal_mode="wal",
-                    schema_sql=load_schema_sql(SchemaState.CURRENT_V3),
-                    caller_kid="gateway-task-board",
-                    authority=BoardAuthority(
-                        platform_public_key=platform_keypair[1],
-                        deadline_actor_id="system-task-board-deadline",
-                    ),
-                    clock_us=utc_now_us,
-                )
-            ) as gateway_store:
+            with (
+                closing(
+                    GatewayTaskStore(
+                        db_path=db_path,
+                        busy_timeout_ms=5000,
+                        journal_mode="wal",
+                        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+                        caller_kid="gateway-task-board",
+                        authority=BoardAuthority(
+                            platform_public_key=platform_keypair[1],
+                            deadline_actor_id="system-task-board-deadline",
+                        ),
+                        clock_us=utc_now_us,
+                    )
+                ) as gateway_store,
+                closing(
+                    GatewayTaskStore(
+                        db_path=db_path,
+                        busy_timeout_ms=5000,
+                        journal_mode="wal",
+                        schema_sql=None,
+                        caller_kid="gateway-task-board",
+                        authority=BoardAuthority(
+                            platform_public_key=platform_keypair[1],
+                            deadline_actor_id="system-task-board-deadline",
+                        ),
+                        clock_us=utc_now_us,
+                    )
+                ) as recovery_store,
+            ):
                 effects = RouterGatewayEffects(
                     gateway_store, utc_now_us, 3600, verify_fixture_identity
                 )
@@ -284,11 +306,17 @@ deadline_evaluation:
                     effects.register_actor(agent_id, keypair[1], balance)
                 assert state.store is not None
                 assert state.deadline_sweep_task is not None
+                assert state.posting_recovery_task is not None
                 state.deadline_sweep_task.cancel()
                 with suppress(asyncio.CancelledError):
                     await state.deadline_sweep_task
+                state.posting_recovery_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await state.posting_recovery_task
                 state.store.close()
                 state.store = gateway_store
+                settings = get_settings()
+                assert settings.posting_recovery is not None
                 test_app.state.gateway_store = gateway_store
                 test_app.state.gateway_effects = effects
                 test_app.state.verify_fixture_identity = verify_fixture_identity
@@ -311,13 +339,25 @@ deadline_evaluation:
                 mock_bank.escrow_release = AsyncMock(side_effect=effects.release)
                 mock_bank.escrow_split = AsyncMock(side_effect=effects.split)
                 state.central_bank_client = mock_bank
+                posting_recovery = PostingRecovery(
+                    store=recovery_store,
+                    bank=mock_bank,
+                    batch_size=settings.posting_recovery.batch_size,
+                    diagnostic_limit=settings.posting_recovery.diagnostic_limit,
+                )
+                state.posting_recovery = posting_recovery
+                fixture_posting_recovery_task = asyncio.create_task(
+                    posting_recovery.run_periodic(
+                        interval_seconds=settings.posting_recovery.interval_seconds
+                    )
+                )
+                state.posting_recovery_task = fixture_posting_recovery_task
 
                 mock_identity = AsyncMock()
                 mock_identity.close = AsyncMock()
                 mock_identity.verify_jws = AsyncMock(side_effect=make_fixture_verify_jws(state))
                 state.identity_client = mock_identity
 
-                settings = get_settings()
                 assert settings.limits is not None
                 assert settings.deadline_evaluation is not None
                 coordinator = EscrowCoordinator(mock_bank)
@@ -362,6 +402,10 @@ deadline_evaluation:
                     sweep.cancel()
                     with suppress(asyncio.CancelledError):
                         await sweep
+                    assert fixture_posting_recovery_task is not None
+                    fixture_posting_recovery_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await fixture_posting_recovery_task
                     manager.close()
 
     finally:
@@ -594,11 +638,18 @@ async def create_task(
         task_id = make_task_id()
 
     private_key = poster_keypair[0]
-
+    lock_operation_id = (
+        f"op-{uuid.uuid4()}"
+        if task_id == ""
+        else operation_id_for("task-lock", (task_id, poster_id))
+    )
     task_payload = {
         "action": "create_task",
+        "protocol_version": 1,
+        "operation_id": f"op-{uuid.uuid4()}",
         "task_id": task_id,
         "poster_id": poster_id,
+        "lock_operation_id": lock_operation_id,
         "title": title,
         "spec": spec,
         "reward": reward,
@@ -609,11 +660,6 @@ async def create_task(
     }
     task_token = make_jws_token(private_key, poster_id, task_payload)
 
-    lock_operation_id = (
-        f"op-{uuid.uuid4()}"
-        if task_id == ""
-        else operation_id_for("task-lock", (task_id, poster_id))
-    )
     escrow_payload = {
         "action": "escrow_lock",
         "task_id": task_id,
@@ -621,12 +667,23 @@ async def create_task(
         "amount": reward,
         "operation_id": lock_operation_id,
     }
-    escrow_token = make_jws_token(private_key, poster_id, escrow_payload)
+    escrow_token = make_jws_token(
+        private_key,
+        poster_id,
+        escrow_payload,
+        audience="central-bank",
+    )
 
-    return await client.post(
+    response = await client.post(
         "/tasks",
         json={"task_token": task_token, "escrow_token": escrow_token},
     )
+    if response.status_code == 201:
+        envelope = response.json()
+        assert envelope["publication_state"] == "published"
+        assert isinstance(envelope["result"], dict)
+        assert envelope["result"]["task_id"] == task_id
+    return response
 
 
 async def submit_bid(

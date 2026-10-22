@@ -76,6 +76,9 @@ class RouterGatewayEffects:
         task_id = payload["task_id"]
         agent_id = payload["agent_id"]
         assert isinstance(task_id, str) and isinstance(agent_id, str)
+        created_at = epoch_us_to_utc_text(self.clock_us())
+        event = self.event("central-bank", "escrow.locked", task_id, agent_id)
+        event["timestamp"] = created_at
         return self.store.writer.escrow_lock(
             {
                 "operation_id": payload["operation_id"],
@@ -83,9 +86,9 @@ class RouterGatewayEffects:
                 "payer_account_id": payload["agent_id"],
                 "amount": payload["amount"],
                 "task_id": payload["task_id"],
-                "created_at": epoch_us_to_utc_text(self.clock_us()),
+                "created_at": created_at,
                 "tx_id": f"tx-{uuid.uuid4()}",
-                "event": self.event("bank", "escrow.locked", task_id, agent_id),
+                "event": event,
             }
         )
 

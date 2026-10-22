@@ -106,6 +106,17 @@ class TaskOperationWriter:
         cursor = self._db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
+            publication = cursor.execute(
+                "SELECT 1 FROM board_task_publications WHERE operation_id=?",
+                (request.operation_id,),
+            ).fetchone()
+            if publication is not None:
+                raise _service_error(
+                    "operation_id_conflict",
+                    "Operation identity already belongs to a task publication",
+                    409,
+                    {"winning_operation_id": request.operation_id},
+                )
             existing = self._operation_row(cursor, request.operation_id)
             if existing is not None:
                 envelope = self._replay(existing, request, caller_kid)

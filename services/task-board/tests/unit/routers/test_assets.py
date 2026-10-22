@@ -95,7 +95,7 @@ class TestAssetUpload:
         # Create a task but do NOT accept any bid — task stays in OPEN status
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         upload_resp = await upload_asset(
             client,

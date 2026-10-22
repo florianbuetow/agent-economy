@@ -31,7 +31,7 @@ async def test_ba_10_bid_count_reflects_total_bids_after_acceptance(
     """bid_count stays at the total number of bids once one of them is accepted."""
     task_resp = await create_task(client, alice_keypair, alice_agent_id)
     assert task_resp.status_code == 201
-    task_id = task_resp.json()["task_id"]
+    task_id = task_resp.json()["result"]["task_id"]
 
     bob_bid = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
     assert bob_bid.status_code == 201

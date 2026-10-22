@@ -21,9 +21,10 @@ if TYPE_CHECKING:
     from tests.fakes.native_task_fixture import NativeTaskFixture
 
 _APPROVAL_OPERATION_ID = "op-00000000-0000-4000-8000-000000000001"
-_APPROVAL_SOURCE_REFERENCE = "task:t-1:approved"
+_TASK_ID = "t-00000000-0000-4000-8000-000000000501"
+_APPROVAL_SOURCE_REFERENCE = f"task:{_TASK_ID}:approved"
 _SPLIT_OPERATION_ID = "op-00000000-0000-4000-8000-000000000002"
-_SPLIT_SOURCE_REFERENCE = "task:t-1:ruling:clm-t-1"
+_SPLIT_SOURCE_REFERENCE = f"task:{_TASK_ID}:ruling:clm-{_TASK_ID}"
 TERMS = TaskTerms(100, 3600, 600, 3600, 3600)
 
 
@@ -219,14 +220,14 @@ async def test_split_escrow_generic_error_wraps() -> None:
 async def test_claimed_expiry_completes_only_after_persisted_release(
     native_tasks: NativeTaskFixture,
 ) -> None:
-    native_tasks.open_task("t-1", TERMS)
+    native_tasks.open_task(_TASK_ID, TERMS)
     native_tasks.clock.at_seconds(3600)
-    claimed = claim_expiry(native_tasks, "t-1", _APPROVAL_OPERATION_ID)
-    assert_pending(native_tasks, "t-1", _APPROVAL_OPERATION_ID, "open")
+    claimed = claim_expiry(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID)
+    assert_pending(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID, "open")
     result = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
     assert result["operation_state"] == "completed"
     native_tasks.assert_settlement(
-        "t-1",
+        _TASK_ID,
         command="expire_bidding",
         status="expired",
         recipient=native_tasks.poster_id,
@@ -236,18 +237,19 @@ async def test_claimed_expiry_completes_only_after_persisted_release(
 
 @pytest.mark.unit
 async def test_failed_delivery_does_not_complete_expiry(native_tasks: NativeTaskFixture) -> None:
-    native_tasks.open_task("t-1", TERMS)
+    native_tasks.open_task(_TASK_ID, TERMS)
     native_tasks.clock.at_seconds(3600)
-    claimed = claim_expiry(native_tasks, "t-1", _APPROVAL_OPERATION_ID)
+    claimed = claim_expiry(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID)
     expected = ServiceError("central_bank_unavailable", "injected", 502, {})
     native_tasks.bank.escrow_release.side_effect = expected
     with pytest.raises(ServiceError) as caught:
         await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
     assert caught.value is expected
-    assert_pending(native_tasks, "t-1", _APPROVAL_OPERATION_ID, "open")
+    assert_pending(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID, "open")
     assert (
         native_tasks.store.writer.connection.execute(
-            "SELECT COUNT(*) FROM events WHERE task_id='t-1' AND event_type='task.expired'"
+            "SELECT COUNT(*) FROM events WHERE task_id=? AND event_type='task.expired'",
+            (_TASK_ID,),
         ).fetchone()[0]
         == 0
     )
@@ -255,14 +257,14 @@ async def test_failed_delivery_does_not_complete_expiry(native_tasks: NativeTask
 
 @pytest.mark.unit
 async def test_unowned_open_state_has_no_implicit_release(native_tasks: NativeTaskFixture) -> None:
-    native_tasks.open_task("t-1", TERMS)
-    task = native_tasks.task("t-1")
+    native_tasks.open_task(_TASK_ID, TERMS)
+    task = native_tasks.task(_TASK_ID)
     result = await native_tasks.evaluator(None).evaluate_deadline(task)
     assert result == task
     # An inconsistent supplied flag still cannot create native recovery ownership.
     flagged = {**task, "escrow_pending": 1}
     assert (await native_tasks.evaluator(None).evaluate_deadline(flagged))["status"] == "open"
-    assert native_tasks.task("t-1") == task
+    assert native_tasks.task(_TASK_ID) == task
     native_tasks.bank.escrow_release.assert_not_awaited()
 
 
@@ -272,9 +274,9 @@ async def test_pending_retry_completes_the_same_owner(
     native_tasks: NativeTaskFixture, kind: str
 ) -> None:
     if kind == "expiry":
-        native_tasks.open_task("t-1", TERMS)
+        native_tasks.open_task(_TASK_ID, TERMS)
         native_tasks.clock.at_seconds(3600)
-        claimed = claim_expiry(native_tasks, "t-1", _APPROVAL_OPERATION_ID)
+        claimed = claim_expiry(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID)
         source, target, recipient, command, event = (
             "open",
             "expired",
@@ -283,8 +285,8 @@ async def test_pending_retry_completes_the_same_owner(
             "task.expired",
         )
     else:
-        prepare_submitted(native_tasks, "t-1")
-        claimed = claim_approval(native_tasks, "t-1", _APPROVAL_OPERATION_ID)
+        prepare_submitted(native_tasks, _TASK_ID)
+        claimed = claim_approval(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID)
         source, target, recipient, command, event = (
             "submitted",
             "approved",
@@ -297,13 +299,13 @@ async def test_pending_retry_completes_the_same_owner(
     )
     with pytest.raises(ServiceError):
         await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
-    assert_pending(native_tasks, "t-1", _APPROVAL_OPERATION_ID, source)
+    assert_pending(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID, source)
     native_tasks.bank.escrow_release.side_effect = native_tasks.persist_release
     completed = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
     assert completed["operation_state"] == "completed"
     assert (
         native_tasks.assert_settlement(
-            "t-1", command=command, status=target, recipient=recipient, event_type=event
+            _TASK_ID, command=command, status=target, recipient=recipient, event_type=event
         )
         == _APPROVAL_OPERATION_ID
     )
@@ -323,19 +325,19 @@ async def test_pending_retry_completes_the_same_owner(
 async def test_repeated_delivery_failure_keeps_native_ownership(
     native_tasks: NativeTaskFixture,
 ) -> None:
-    prepare_submitted(native_tasks, "t-1")
-    claimed = claim_approval(native_tasks, "t-1", _APPROVAL_OPERATION_ID)
+    prepare_submitted(native_tasks, _TASK_ID)
+    claimed = claim_approval(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID)
     native_tasks.bank.escrow_release.side_effect = ServiceError(
         "central_bank_unavailable", "injected", 502, {}
     )
     for _ in range(2):
         with pytest.raises(ServiceError):
             await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
-        assert_pending(native_tasks, "t-1", _APPROVAL_OPERATION_ID, "submitted")
+        assert_pending(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID, "submitted")
     assert (
         native_tasks.store.writer.connection.execute(
-            "SELECT COUNT(*) FROM board_task_operations "
-            "WHERE task_id='t-1' AND command='approve_task'"
+            "SELECT COUNT(*) FROM board_task_operations WHERE task_id=? AND command='approve_task'",
+            (_TASK_ID,),
         ).fetchone()[0]
         == 1
     )
@@ -343,9 +345,9 @@ async def test_repeated_delivery_failure_keeps_native_ownership(
 
 @pytest.mark.unit
 async def test_disputed_state_has_no_implicit_bank_retry(native_tasks: NativeTaskFixture) -> None:
-    prepare_submitted(native_tasks, "t-1")
-    native_tasks.dispute("t-1", rebuttal_seconds=3600)
-    task = native_tasks.task("t-1")
+    prepare_submitted(native_tasks, _TASK_ID)
+    native_tasks.dispute(_TASK_ID, rebuttal_seconds=3600)
+    task = native_tasks.task(_TASK_ID)
     result = await native_tasks.evaluator(None).evaluate_deadline(task)
     assert result == task
     assert result["status"] == "disputed"

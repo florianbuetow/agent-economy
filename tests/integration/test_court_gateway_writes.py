@@ -43,7 +43,9 @@ def _identity_payload(agent_id: str, name: str) -> dict[str, object]:
     }
 
 
-async def _setup_prerequisite_data(client: httpx.AsyncClient, *, reason: str) -> tuple[str, str]:
+async def _setup_prerequisite_data(
+    client: httpx.AsyncClient, *, reason: str
+) -> tuple[str, str]:
     accounts = [
         ("a-claimant", "Claimant", "op-00000000-0000-4000-8000-000000000201"),
         ("a-respondent", "Respondent", "op-00000000-0000-4000-8000-000000000202"),
@@ -84,35 +86,7 @@ async def _setup_prerequisite_data(client: httpx.AsyncClient, *, reason: str) ->
         assert account_envelope["receipt"]["result"]["balance_after"] == 5000
         assert account_envelope["current_escrow"] is None
 
-    task_id = "t-court-001"
-
-    lock_response = await client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": "op-00000000-0000-4000-8000-000000000203",
-            "escrow_id": f"esc-{task_id}",
-            "payer_account_id": "a-claimant",
-            "amount": 200,
-            "task_id": task_id,
-            "created_at": "2026-03-02T00:00:16Z",
-            "tx_id": f"tx-esc-{task_id}",
-            "event": {
-                "event_source": "bank",
-                "event_type": "escrow.locked",
-                "timestamp": "2026-03-02T00:00:16Z",
-                "agent_id": "a-claimant",
-                "task_id": task_id,
-                "summary": "Escrow locked",
-                "payload": "{}",
-            },
-        },
-    )
-    assert lock_response.status_code == 201
-    lock_envelope = lock_response.json()
-    assert lock_envelope["outcome"] == "native_receipt"
-    assert lock_envelope["receipt"]["operation_kind"] == "escrow_lock"
-    assert lock_envelope["receipt"]["source_reference"] == task_id
-    assert lock_envelope["current_escrow"]["status"] == "locked"
+    task_id = "t-00000000-0000-4000-8000-000000000601"
 
     task_response = await publish_open_task(
         client,
@@ -122,21 +96,10 @@ async def _setup_prerequisite_data(client: httpx.AsyncClient, *, reason: str) ->
         spec="Build something",
         reward=200,
         escrow_id=f"esc-{task_id}",
-        created_at="2026-03-02T00:00:16Z",
-        bidding_deadline="2026-03-02T01:00:16Z",
         bidding_deadline_seconds=3600,
         acceptance_window_seconds=1800,
         execution_deadline_seconds=7200,
         review_deadline_seconds=3600,
-        event={
-            "event_source": "board",
-            "event_type": "task.created",
-            "timestamp": "2026-03-02T00:00:16Z",
-            "agent_id": "a-claimant",
-            "task_id": task_id,
-            "summary": "Task created",
-            "payload": "{}",
-        },
     )
     assert task_response.status_code == 201
     await advance_task_to_submitted(
@@ -226,7 +189,9 @@ class TestCourtGatewayWrites:
         gw_client: httpx.AsyncClient,
         initialized_db: str,
     ) -> None:
-        task_id, operation_id = await _setup_prerequisite_data(gw_client, reason="Incomplete work")
+        task_id, operation_id = await _setup_prerequisite_data(
+            gw_client, reason="Incomplete work"
+        )
 
         claim_response = await gw_client.post(
             "/court/claims",
@@ -291,7 +256,9 @@ class TestCourtGatewayWrites:
         gw_client: httpx.AsyncClient,
         initialized_db: str,
     ) -> None:
-        task_id, operation_id = await _setup_prerequisite_data(gw_client, reason="Missing features")
+        task_id, operation_id = await _setup_prerequisite_data(
+            gw_client, reason="Missing features"
+        )
 
         claim_response = await gw_client.post(
             "/court/claims",

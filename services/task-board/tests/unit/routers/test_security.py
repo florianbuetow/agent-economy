@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import uuid
 from typing import TYPE_CHECKING
 
 import pytest
@@ -301,8 +302,11 @@ class TestErrorPrecedence:
         task_payload = {
             "acceptance_window_seconds": 3600,
             "action": "create_task",
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid.uuid4()}",
             "task_id": task_id_1,
             "poster_id": alice_agent_id,
+            "lock_operation_id": operation_id_for("task-lock", (task_id_1, alice_agent_id)),
             "title": "Test task",
             "spec": "Test specification",
             "reward": 100,
@@ -319,7 +323,13 @@ class TestErrorPrecedence:
             "agent_id": alice_agent_id,
             "amount": 100,
         }
-        escrow_token = make_jws_token(alice_keypair[0], alice_agent_id, escrow_payload)
+        escrow_token = make_jws_token(
+            alice_keypair[0],
+            alice_agent_id,
+            escrow_payload,
+            audience="central-bank",
+            resource="POST /escrow/lock",
+        )
 
         resp = await client.post(
             "/tasks",

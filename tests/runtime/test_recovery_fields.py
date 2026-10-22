@@ -123,11 +123,10 @@ def test_relative_paths_use_consumer_anchors_and_urls_stay_literal(
     assert by_field[("data", "keys_dir")].resolution_base is PathResolutionBase.CONFIG_PARENT
     assert (
         by_field[("task_feeder", "tasks_file")].resolved_source_path
-        == REPO_ROOT / "data" / "math_tasks.jsonl"
+        == tmp_path / "data" / "math_tasks.jsonl"
     )
     assert (
-        by_field[("task_feeder", "tasks_file")].resolution_base
-        is PathResolutionBase.AGENTS_PACKAGE_ROOT
+        by_field[("task_feeder", "tasks_file")].resolution_base is PathResolutionBase.CONFIG_PARENT
     )
     provider = by_field[("workers", "mathbot_openai", "llm", "base_url")]
     assert provider.binding_kind is BindingKind.NETWORK

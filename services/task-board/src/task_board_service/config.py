@@ -190,6 +190,15 @@ class RecoveryConfig(BaseModel):
     maintenance_lock_path: Path
 
 
+class PostingRecoveryConfig(BaseModel):
+    """Explicit bounds for periodic publication and historical-refund recovery."""
+
+    model_config = ConfigDict(extra="forbid")
+    interval_seconds: float = Field(strict=True, gt=0, allow_inf_nan=False)
+    batch_size: int = Field(strict=True, ge=1, le=1000)
+    diagnostic_limit: int = Field(strict=True, ge=1, le=1000)
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -212,6 +221,7 @@ class Settings(BaseModel):
     limits: LimitsConfig | None = None
     deadline_evaluation: DeadlineEvaluationConfig | None = None
     recovery: RecoveryConfig
+    posting_recovery: PostingRecoveryConfig
 
 
 def get_config_path() -> Path:

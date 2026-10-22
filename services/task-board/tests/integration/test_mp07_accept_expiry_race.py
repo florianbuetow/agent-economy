@@ -31,8 +31,14 @@ from task_board_service.services.escrow_coordinator import EscrowCoordinator
 from task_board_service.services.task_db_client import TaskDbClient
 from task_board_service.services.task_manager import TaskManager
 from task_board_service.services.token_validator import TokenValidator
+from tests.helpers import make_jws_token as make_scoped_jws_token
 from tests.helpers import verify_compact_jws
 from tests.integration.conftest import make_jws_token, register_identity_agent
+from tests.integration.mp05_posting_setup import (
+    native_escrow_payload,
+    native_task_payload,
+    persist_lock_after_admission,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -273,13 +279,11 @@ def _install_clocked_release(
     runtime.boundaries.bank.escrow_release = AsyncMock(side_effect=_release)
 
 
-async def _seed_funded_escrow(
+async def _seed_funded_account(
     gateway_client: httpx.AsyncClient,
     *,
     payer_id: str,
-    task_id: str,
-    escrow_id: str,
-) -> dict[str, object]:
+) -> None:
     await register_identity_agent(gateway_client, payer_id)
     account_response = await gateway_client.post(
         "/bank/accounts",
@@ -306,32 +310,6 @@ async def _seed_funded_escrow(
     )
     assert account_response.status_code == 201, account_response.text
 
-    lock_response = await gateway_client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": operation_id_for("task-lock", (task_id, payer_id)),
-            "escrow_id": escrow_id,
-            "payer_account_id": payer_id,
-            "amount": 100,
-            "task_id": task_id,
-            "created_at": "2026-10-17T11:59:59Z",
-            "tx_id": f"tx-{uuid.uuid4()}",
-            "event": {
-                "event_source": "central-bank",
-                "event_type": "escrow.locked",
-                "timestamp": "2026-10-17T11:59:59Z",
-                "agent_id": payer_id,
-                "summary": f"Escrow locked for {task_id}",
-                "payload": "{}",
-            },
-        },
-    )
-    assert lock_response.status_code == 201, lock_response.text
-    envelope = lock_response.json()
-    assert isinstance(envelope, dict)
-    assert envelope["outcome"] == "native_receipt"
-    return envelope
-
 
 async def _create_open_task_with_bid(
     client: httpx.AsyncClient,
@@ -344,15 +322,33 @@ async def _create_open_task_with_bid(
     task_id = f"t-{uuid.uuid4()}"
     escrow_id = f"esc-{uuid.uuid4()}"
     await register_identity_agent(gateway_client, worker_id)
-    lock_envelope = await _seed_funded_escrow(
+    await _seed_funded_account(
         gateway_client,
         payer_id=poster_id,
-        task_id=task_id,
-        escrow_id=escrow_id,
     )
     state = get_app_state()
     assert state.central_bank_client is not None
-    state.central_bank_client.escrow_lock = AsyncMock(return_value=lock_envelope)
+    task_payload = native_task_payload(
+        task_id=task_id,
+        poster_id=poster_id,
+        title="MP-07 acceptance versus expiry",
+        spec="Expire at the selected acceptance cutoff without stale acceptance.",
+        reward=100,
+        bidding_deadline_seconds=_BIDDING_SECONDS,
+        acceptance_window_seconds=_ACCEPTANCE_WINDOW_SECONDS,
+        execution_deadline_seconds=60,
+        review_deadline_seconds=60,
+    )
+
+    async def _persist_lock(_escrow_token: str) -> dict[str, Any]:
+        return await persist_lock_after_admission(
+            gateway_client,
+            task_payload=task_payload,
+            escrow_id=escrow_id,
+            clock_us=_ClockDateTime.clock.epoch_us,
+        )
+
+    state.central_bank_client.escrow_lock = AsyncMock(side_effect=_persist_lock)
 
     create_response = await client.post(
         "/tasks",
@@ -360,29 +356,14 @@ async def _create_open_task_with_bid(
             "task_token": make_jws_token(
                 poster_key,
                 poster_id,
-                {
-                    "action": "create_task",
-                    "task_id": task_id,
-                    "poster_id": poster_id,
-                    "title": "MP-07 acceptance versus expiry",
-                    "spec": "Expire at the selected acceptance cutoff without stale acceptance.",
-                    "reward": 100,
-                    "bidding_deadline_seconds": _BIDDING_SECONDS,
-                    "acceptance_window_seconds": _ACCEPTANCE_WINDOW_SECONDS,
-                    "execution_deadline_seconds": 60,
-                    "review_deadline_seconds": 60,
-                },
+                task_payload,
             ),
-            "escrow_token": make_jws_token(
+            "escrow_token": make_scoped_jws_token(
                 poster_key,
                 poster_id,
-                {
-                    "action": "escrow_lock",
-                    "operation_id": operation_id_for("task-lock", (task_id, poster_id)),
-                    "task_id": task_id,
-                    "agent_id": poster_id,
-                    "amount": 100,
-                },
+                native_escrow_payload(task_payload),
+                audience="central-bank",
+                resource="POST /escrow/lock",
             ),
         },
     )

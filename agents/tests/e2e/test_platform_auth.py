@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 from service_auth.financial_identity import operation_id_for
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -26,7 +26,8 @@ async def test_non_platform_cannot_release_escrow(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker PA1", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Platform auth test",
             spec="Do something",
             reward=500,
@@ -78,7 +79,8 @@ async def test_non_platform_cannot_split_escrow(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker PA2", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Platform split auth test",
             spec="Do something",
             reward=500,

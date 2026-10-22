@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
+from service_auth.financial_identity import operation_id_for
+
 from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
 
@@ -162,16 +164,89 @@ def task_body(
     }
 
 
+def publish_task(
+    client: TestClient,
+    *,
+    task_id: str,
+    poster_id: str,
+    escrow_id: str,
+    title: str,
+    spec: str,
+    reward: int,
+    bidding_deadline_seconds: int,
+    acceptance_window_seconds: int,
+    execution_deadline_seconds: int,
+    review_deadline_seconds: int,
+    lock_timestamp: str,
+) -> httpx.Response:
+    """Admit, fund, and reconcile one ordinary task through signed native routes."""
+
+    operation_id = operation_id_for("gateway-native-http-fixture", (task_id, "publication"))
+    lock_operation_id = operation_id_for("task-lock", (task_id, poster_id))
+    intent = {
+        "protocol_version": 1,
+        "operation_id": operation_id,
+        "task_id": task_id,
+        "actor_kind": "agent",
+        "actor_id": poster_id,
+        "lock_operation_id": lock_operation_id,
+        "title": title,
+        "spec": spec,
+        "reward": reward,
+        "bidding_deadline_seconds": bidding_deadline_seconds,
+        "acceptance_window_seconds": acceptance_window_seconds,
+        "execution_deadline_seconds": execution_deadline_seconds,
+        "review_deadline_seconds": review_deadline_seconds,
+    }
+    admitted = client.post("/board/task-publications", json=intent)
+    assert admitted.status_code == 202, admitted.text
+    locked = client.post(
+        "/bank/escrow/lock",
+        json={
+            "operation_id": lock_operation_id,
+            "escrow_id": escrow_id,
+            "payer_account_id": poster_id,
+            "amount": reward,
+            "task_id": task_id,
+            "created_at": lock_timestamp,
+            "tx_id": f"tx-{uuid4()}",
+            "event": {
+                **make_event(
+                    source="central-bank",
+                    event_type="escrow.locked",
+                    task_id=task_id,
+                    agent_id=poster_id,
+                ),
+                "timestamp": lock_timestamp,
+            },
+        },
+    )
+    assert locked.status_code == 201, locked.text
+    reconciled = client.post(f"/board/task-publications/{operation_id}/reconcile", json={})
+    assert reconciled.status_code == 201, reconciled.text
+    return reconciled
+
+
 def create_task(client: TestClient) -> TaskGraph:
     """Create a full registered/funded/locked/published task graph."""
     poster_id = register_agent(client, name="Poster")
     create_account(client, poster_id, balance=500)
-    escrow_id, task_id = lock_escrow(client, poster_id)
-    response = client.post(
-        "/board/tasks",
-        json=task_body(task_id, poster_id, escrow_id),
+    task_id = f"t-{uuid4()}"
+    escrow_id = f"esc-{uuid4()}"
+    publish_task(
+        client,
+        task_id=task_id,
+        poster_id=poster_id,
+        escrow_id=escrow_id,
+        title="Test Task",
+        spec="Build a login page",
+        reward=100,
+        bidding_deadline_seconds=43200,
+        acceptance_window_seconds=ACCEPTANCE_WINDOW_SECONDS,
+        execution_deadline_seconds=172800,
+        review_deadline_seconds=43200,
+        lock_timestamp="2099-01-01T11:59:02Z",
     )
-    assert response.status_code == 201, response.text
     return TaskGraph(task_id, poster_id, escrow_id)
 
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import partial
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, Mock
@@ -10,6 +9,7 @@ from uuid import uuid4
 
 import pytest
 from service_auth.financial_identity import operation_id_for
+from service_auth.task_postings import TaskPostingIntent, TaskPostingResponse
 from service_commons.exceptions import ServiceError
 
 from task_board_service.services.task_creation import TaskCreationCoordinator
@@ -23,51 +23,52 @@ if TYPE_CHECKING:
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
 _MISSING = object()
-_NOW = "2099-01-01T00:00:00Z"
-
-
-def _parsed_token(_token: str, poster_id: str) -> SimpleNamespace:
-    return SimpleNamespace(header=SimpleNamespace(kid=poster_id))
 
 
 class _Store:
+    """Coordinator boundary double; real receipt proof lives in Gateway tests."""
+
     def __init__(self) -> None:
-        self.inserted: list[dict[str, Any]] = []
+        self.admitted: list[TaskPostingIntent] = []
+        self.reconciled: list[str] = []
 
-    def get_task(self, task_id: str) -> dict[str, Any] | None:
-        stored = next((dict(task) for task in self.inserted if task["task_id"] == task_id), None)
-        if stored is not None:
-            stored["dispute_id"] = None
-            stored.update(
-                {
-                    "lifecycle_version": 0,
-                    "timing_contract_version": 2,
-                    "bidding_cutoff_us": 1_000_000,
-                    "acceptance_cutoff_us": 1_000_000
-                    + int(stored["acceptance_window_seconds"]) * 1_000_000,
-                    "execution_cutoff_us": None,
-                    "review_cutoff_us": None,
-                    "accepted_reward": None,
-                    "accepted_bid_amount": None,
-                    "pending_transition": None,
-                    "legacy_reconciliations": [],
-                }
-            )
-        return stored
+    def admit_task_publication(self, intent: TaskPostingIntent) -> TaskPostingResponse:
+        self.admitted.append(intent)
+        return TaskPostingResponse(202, {"publication_state": "awaiting_lock"})
 
-    def insert_task(self, task: dict[str, Any]) -> None:
-        self.inserted.append(dict(task))
+    def reconcile_task_publication(
+        self, operation_id: str, intent: TaskPostingIntent | None
+    ) -> TaskPostingResponse:
+        assert intent is not None and self.admitted == [intent]
+        assert operation_id == intent.operation_id
+        self.reconciled.append(operation_id)
+        if len(self.reconciled) == 1:
+            return TaskPostingResponse(202, {"publication_state": "awaiting_lock"})
+        return TaskPostingResponse(
+            201,
+            {
+                "publication_state": "published",
+                "result": {
+                    "task_id": intent.task_id,
+                    "acceptance_window_seconds": intent.acceptance_window_seconds,
+                },
+            },
+        )
 
 
 @pytest.fixture
-def creation_boundary(
-    monkeypatch: pytest.MonkeyPatch,
-) -> Iterator[tuple[TaskCreationCoordinator, SimpleNamespace, _Store, dict[str, Any]]]:
+def creation_boundary() -> Iterator[
+    tuple[TaskCreationCoordinator, SimpleNamespace, _Store, dict[str, Any]]
+]:
     poster_id = f"a-poster-{uuid4()}"
     task_id = f"t-{uuid4()}"
     reward = 100
     operation_id = operation_id_for("task-lock", (task_id, poster_id))
     payload: dict[str, Any] = {
+        "action": "create_task",
+        "protocol_version": 1,
+        "operation_id": f"op-{uuid4()}",
+        "lock_operation_id": operation_id,
         "_signer_id": poster_id,
         "task_id": task_id,
         "poster_id": poster_id,
@@ -80,47 +81,18 @@ def creation_boundary(
     }
     token_validator = SimpleNamespace(
         validate_jws_token=AsyncMock(return_value=payload),
-        decode_escrow_token_payload=Mock(
+        validate_escrow_jws_token=AsyncMock(
             return_value={
+                "action": "escrow_lock",
                 "task_id": task_id,
                 "amount": reward,
                 "operation_id": operation_id,
                 "agent_id": poster_id,
+                "_signer_id": poster_id,
             }
         ),
     )
-    escrow_id = f"esc-{uuid4()}"
-    central_bank_client = SimpleNamespace(
-        escrow_lock=AsyncMock(
-            return_value={
-                "outcome": "native_receipt",
-                "receipt": {
-                    "receipt_version": 1,
-                    "operation_id": operation_id,
-                    "operation_kind": "escrow_lock",
-                    "source_reference": task_id,
-                    "escrow_id": escrow_id,
-                    "result": {"escrow_status_at_commit": "locked"},
-                    "legs": [
-                        {
-                            "role": "payer",
-                            "account_id": poster_id,
-                            "direction": "debit",
-                            "amount": reward,
-                        }
-                    ],
-                },
-                "current_escrow": {
-                    "escrow_id": escrow_id,
-                    "payer_account_id": poster_id,
-                    "task_id": task_id,
-                    "amount": reward,
-                    "status": "locked",
-                    "resolved_at": None,
-                },
-            }
-        )
-    )
+    central_bank_client = SimpleNamespace(escrow_lock=AsyncMock(return_value=None))
     store = _Store()
     manager = SimpleNamespace(
         token_validator=token_validator,
@@ -129,11 +101,6 @@ def creation_boundary(
         escrow_coordinator=SimpleNamespace(release_posting_compensation=AsyncMock()),
         logger=Mock(),
     )
-    monkeypatch.setattr(
-        "task_board_service.services.task_creation.parse_jws",
-        partial(_parsed_token, poster_id=poster_id),
-    )
-    monkeypatch.setattr("task_board_service.services.task_creation.now_iso", lambda: _NOW)
     yield TaskCreationCoordinator(cast("TaskManager", manager)), manager, store, payload
 
 
@@ -165,10 +132,13 @@ async def test_invalid_acceptance_window_fails_before_bank_or_store(
 
     assert raised.value.status_code == 400
     assert raised.value.error == expected_error
-    assert "acceptance_window_seconds" in raised.value.message
-    assert manager.token_validator.decode_escrow_token_payload.call_count == 0
+    assert (
+        "required fields" if window is _MISSING else "acceptance_window_seconds"
+    ) in raised.value.message
+    manager.token_validator.validate_escrow_jws_token.assert_not_awaited()
     assert manager.central_bank_client.escrow_lock.await_count == 0
-    assert store.inserted == []
+    assert store.admitted == []
+    assert store.reconciled == []
 
 
 async def test_explicit_acceptance_window_reaches_persisted_task_input(
@@ -180,7 +150,10 @@ async def test_explicit_acceptance_window_reaches_persisted_task_input(
     response = await coordinator.create_task("task-token", "escrow-token")
 
     assert manager.central_bank_client.escrow_lock.await_count == 1
-    assert len(store.inserted) == 1
-    assert store.inserted[0]["acceptance_window_seconds"] == 45
-    assert response["task_id"] == payload["task_id"]
-    assert response["acceptance_window_seconds"] == 45
+    assert len(store.admitted) == 1
+    assert store.admitted[0].acceptance_window_seconds == 45
+    assert store.reconciled == [payload["operation_id"], payload["operation_id"]]
+    assert response.status_code == 201
+    assert response.body["publication_state"] == "published"
+    assert response.body["result"]["task_id"] == payload["task_id"]
+    assert response.body["result"]["acceptance_window_seconds"] == 45

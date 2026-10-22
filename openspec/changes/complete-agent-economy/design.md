@@ -136,6 +136,25 @@ forwarded success body, and preserves claim-time eligibility across slow effects
 claim/finalize HTTP boundaries and replay/error ordering are defined there. Court-specific
 decision provenance and independent background retry remain MP-10 and MP-08 respectively.
 
+The concrete MP-05 publication contract is in
+`docs/plans/2026-10-18-mp05-publication-contract.md`. A separate schema-v4 record
+reserves the complete caller-owned posting intent before Bank transport; it does
+not pretend a task lifecycle row already exists. Native states are awaiting lock,
+published, or integrity-blocked. Publication verifies persisted Bank receipt,
+escrow, leg, transaction and event facts inside the task/contract/event/result
+transaction. Missing receipt remains pending, and only a fresh poster-signed
+retry may initiate an unproven debit. Background recovery can publish confirmed
+funding but cannot renew poster debit authority.
+
+For new v4 postings, sample creation time at atomic publication, separately from
+intent admission; this supersedes MP-07's earlier pre-effect timestamp statement
+without changing existing task timing. Exact replay returns the frozen creation
+result even after lifecycle advancement. Verified migration records historical
+orphans separately and refunds each escrow once; it never invents native posting
+terms. Historical observations permanently reserve their task IDs, including
+after refund. Native posting has no implicit abandonment/refund policy. SDK,
+feeder, UI and demo must preserve the original posting identity across restart.
+
 ### 6. Version schema changes and establish backup proof before migration
 
 The Gateway uses a schema-version table and ordered transactional migrations. Startup validates the exact required schema, indexes, foreign keys, integrity checks, and supported version. MP-06 first supplies a tested database/WAL backup, asset manifest, and key-backup foundation; MP-21 later proves complete restore and pending-work recovery. Monetary columns enforce integer type, non-negativity, explicit configured bounds, payer/recipient correctness, and ledger-to-balance provenance.

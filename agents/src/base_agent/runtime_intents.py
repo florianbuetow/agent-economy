@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self
 
 from service_commons.maintenance_lock import (
@@ -60,6 +61,44 @@ __all__ = [
     "RuntimeIntentError",
     "RuntimeOwner",
 ]
+
+
+@dataclass(slots=True)
+class PostingNamespace:
+    """Owned posting descriptors borrowing an open intent-store lease."""
+
+    parent: FileTaskIntentStore
+    identity: SafeDirectory
+    postings: SafeDirectory
+    records: SafeDirectory
+    _closed: bool = False
+
+    def verify(self) -> None:
+        if self._closed:
+            raise RuntimeIntentError("invalid_input", "posting namespace is closed")
+        identity, _intents = self.parent._require_open()
+        if (identity.device, identity.inode) != (
+            self.identity.device,
+            self.identity.inode,
+        ) or identity.path != self.identity.path:
+            raise RuntimeIntentError("unsafe_path", "posting parent identity changed")
+        self.identity.verify()
+        self.postings.verify()
+        self.records.verify()
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        error: BaseException | None = None
+        for directory in (self.records, self.postings):
+            try:
+                directory.close()
+            except BaseException as exc:
+                if error is None:
+                    error = exc
+        if error is not None:
+            raise error
 
 
 class FileTaskIntentStore:
@@ -211,7 +250,7 @@ class FileTaskIntentStore:
         except OSError as exc:
             raise RuntimeIntentError("unsafe_path", "identity directory cannot be scanned") from exc
         staging = re.compile(r"^\.owner\.json\.[0-9a-f]{24}\.tmp$")
-        allowed = {"owner.json", "runtime.lock", "intents"}
+        allowed = {"owner.json", "runtime.lock", "intents", "postings"}
         for name in names:
             if staging.fullmatch(name) is not None:
                 remove_private_staging_record(identity, name)
@@ -221,7 +260,29 @@ class FileTaskIntentStore:
                 )
             elif name in {"owner.json", "runtime.lock"}:
                 validate_record_admission(identity, name)
+            elif name == "postings":
+                postings = open_private_child(identity, "postings")
+                postings.close()
         intents.verify()
+
+    def open_posting_namespace(self) -> PostingNamespace:
+        """Open the posting namespace under this store's already-held lease."""
+
+        identity, _intents = self._require_open()
+        postings: SafeDirectory | None = None
+        records: SafeDirectory | None = None
+        try:
+            postings = open_private_child(identity, "postings")
+            records = open_private_child(postings, "records")
+            namespace = PostingNamespace(self, identity, postings, records)
+            namespace.verify()
+            return namespace
+        except BaseException:
+            if records is not None:
+                records.close()
+            if postings is not None:
+                postings.close()
+            raise
 
     def intent_path(self, task_id: str, slot: str) -> Path:
         task_id = require_task_id(task_id)

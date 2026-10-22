@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -37,7 +37,8 @@ async def test_cancel_task_with_pending_bid_refunds_escrow_and_orphans_bid(
         worker = await make_funded_agent(name="Worker CXR", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Cancel task with a pending bid",
             spec="Do something",
             reward=500,

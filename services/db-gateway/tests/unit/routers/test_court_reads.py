@@ -10,6 +10,7 @@ import pytest
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.services.db_reader import DbReader
 from tests.conftest import make_event
+from tests.fakes.native_board_history import publish_task
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
@@ -71,57 +72,28 @@ def _setup_funded_account(
     return aid
 
 
-def _lock_escrow(
-    client: TestClient,
-    payer_id: str,
-    amount: int = 100,
-    task_id: str | None = None,
-) -> tuple[str, str]:
-    tid = task_id or f"t-{uuid4()}"
-    eid = f"esc-{uuid4()}"
-    client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": f"op-{uuid4()}",
-            "escrow_id": eid,
-            "payer_account_id": payer_id,
-            "amount": amount,
-            "task_id": tid,
-            "created_at": "2026-02-28T10:10:00Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=tid),
-        },
-    )
-    return eid, tid
-
-
 def _create_task(
     client: TestClient,
     poster_id: str | None = None,
 ) -> tuple[str, str, str]:
     """Create a full task. Returns (task_id, poster_id, escrow_id)."""
     pid = poster_id or _setup_funded_account(client)
-    eid, tid = _lock_escrow(client, pid)
-    response = client.post(
-        "/board/tasks",
-        json={
-            "task_id": tid,
-            "poster_id": pid,
-            "title": "Test Task",
-            "spec": "Build a login page",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 172800,
-            "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:15:00Z",
-            "escrow_id": eid,
-            "created_at": "2026-02-28T10:15:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=tid),
-        },
+    tid = f"t-{uuid4()}"
+    eid = f"esc-{uuid4()}"
+    publish_task(
+        client,
+        task_id=tid,
+        poster_id=pid,
+        escrow_id=eid,
+        title="Test Task",
+        spec="Build a login page",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=172800,
+        review_deadline_seconds=43200,
+        lock_timestamp="2026-02-28T10:10:00Z",
     )
-    assert response.status_code == 201
     return tid, pid, eid
 
 

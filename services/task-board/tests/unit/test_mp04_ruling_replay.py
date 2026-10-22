@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from tests.fakes.native_task_fixture import NativeTaskFixture
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
+RULING_TASK_ID = "t-00000000-0000-4000-8000-000000000605"
 RULING_OPERATION_ID = "op-00000000-0000-4000-8000-000000000903"
 
 
@@ -56,7 +57,7 @@ async def persist_native_split(
 def ruling_snapshot(scenario: NativeTaskFixture) -> tuple[Any, ...]:
     connection = scenario.store.writer.connection
     return (
-        scenario.task("t-one"),
+        scenario.task(RULING_TASK_ID),
         tuple(
             tuple(row)
             for row in connection.execute("SELECT * FROM bank_accounts ORDER BY account_id")
@@ -95,8 +96,8 @@ async def stored_ruling(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> AsyncIterator[StoredRuling]:
     with native_task_context(tmp_path, monkeypatch) as scenario:
-        prepare_submitted(scenario, "t-one")
-        scenario.dispute("t-one", rebuttal_seconds=3600)
+        prepare_submitted(scenario, RULING_TASK_ID)
+        scenario.dispute(RULING_TASK_ID, rebuttal_seconds=3600)
         scenario.bank.escrow_split = AsyncMock(side_effect=partial(persist_native_split, scenario))
         validator = AsyncMock()
         manager = Mock(spec=TaskManager)
@@ -108,15 +109,15 @@ async def stored_ruling(
         payload = {
             "action": "record_ruling",
             "_signer_id": "a-platform",
-            "task_id": "t-one",
+            "task_id": RULING_TASK_ID,
             "operation_id": RULING_OPERATION_ID,
             "expected_lifecycle_version": 3,
-            "ruling_id": "clm-t-one",
+            "ruling_id": f"clm-{RULING_TASK_ID}",
             "worker_pct": 50,
             "ruling_summary": "Split ruling",
         }
         validator.validate_platform_jws_token.return_value = payload
-        result = await coordinator.record_ruling("t-one", "verified-platform-token")
+        result = await coordinator.record_ruling(RULING_TASK_ID, "verified-platform-token")
         assert result["status"] == "ruled"
         assert result["operation"]["operation_state"] == "completed"
         assert (
@@ -141,9 +142,11 @@ async def test_identical_stored_ruling_replay_returns_original_without_settlemen
     stored_ruling: StoredRuling,
 ) -> None:
     original = ruling_snapshot(stored_ruling.scenario)
-    result = await stored_ruling.coordinator.record_ruling("t-one", "verified-platform-token")
+    result = await stored_ruling.coordinator.record_ruling(
+        RULING_TASK_ID, "verified-platform-token"
+    )
     assert result["status"] == "ruled"
-    assert result["ruling_id"] == "clm-t-one"
+    assert result["ruling_id"] == f"clm-{RULING_TASK_ID}"
     assert result["worker_pct"] == 50
     assert result["ruling_summary"] == "Split ruling"
     assert result["ruled_at"] == stored_ruling.result["ruled_at"]
@@ -167,7 +170,7 @@ async def test_changed_stored_ruling_terms_conflict_without_effect(
         "ruling_summary": summary,
     }
     with pytest.raises(ServiceError) as error:
-        await stored_ruling.coordinator.record_ruling("t-one", "verified-platform-token")
+        await stored_ruling.coordinator.record_ruling(RULING_TASK_ID, "verified-platform-token")
     assert (error.value.status_code, error.value.error) == (409, "operation_id_conflict")
     _assert_no_effect(stored_ruling, original)
 
@@ -183,7 +186,7 @@ async def test_invalid_stored_ruling_percentage_is_not_an_exact_retry(
         "worker_pct": worker_pct,
     }
     with pytest.raises(ServiceError) as error:
-        await stored_ruling.coordinator.record_ruling("t-one", "verified-platform-token")
+        await stored_ruling.coordinator.record_ruling(RULING_TASK_ID, "verified-platform-token")
     assert (error.value.status_code, error.value.error) == (400, "invalid_worker_pct")
     _assert_no_effect(stored_ruling, original)
 
@@ -200,7 +203,7 @@ async def test_malformed_other_ruling_fails_shape_validation_without_effect(
         "worker_pct": "invalid",
     }
     with pytest.raises(ServiceError) as error:
-        await stored_ruling.coordinator.record_ruling("t-one", "verified-platform-token")
+        await stored_ruling.coordinator.record_ruling(RULING_TASK_ID, "verified-platform-token")
     assert (error.value.status_code, error.value.error) == (400, "invalid_worker_pct")
     _assert_no_effect(stored_ruling, original)
 
@@ -217,6 +220,6 @@ async def test_other_ruling_preserves_status_precedence_and_stored_terms(
         "worker_pct": 50,
     }
     with pytest.raises(ServiceError) as error:
-        await stored_ruling.coordinator.record_ruling("t-one", "verified-platform-token")
+        await stored_ruling.coordinator.record_ruling(RULING_TASK_ID, "verified-platform-token")
     assert (error.value.status_code, error.value.error) == (409, "invalid_status")
     _assert_no_effect(stored_ruling, original)

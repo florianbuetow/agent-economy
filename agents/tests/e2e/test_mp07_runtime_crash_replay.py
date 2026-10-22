@@ -31,6 +31,8 @@ from base_agent.runtime_task_intent_factory import (
     submission_intent,
 )
 
+from .native_task_contract import publish_task
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -189,13 +191,14 @@ async def _make_actors(tmp_path: Path, platform_agent: PlatformAgent) -> _Actors
 async def _prepare_task(
     actors: _Actors, action: str
 ) -> tuple[dict[str, Any], Mapping[str, object] | None]:
-    posted = await actors.poster.post_task(
-        "MP-07 process crash proof",
-        "Prove exact replay of one durable native mutation after process death.",
-        _REWARD,
-        86_400,
-        86_400,
-        86_400,
+    posted = await publish_task(
+        actors.poster,
+        title="MP-07 process crash proof",
+        spec="Prove exact replay of one durable native mutation after process death.",
+        reward=_REWARD,
+        bidding_deadline_seconds=86_400,
+        execution_deadline_seconds=86_400,
+        review_deadline_seconds=86_400,
         acceptance_window_seconds=86_400,
     )
     task_id = str(posted["task_id"])

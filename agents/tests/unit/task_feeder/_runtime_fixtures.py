@@ -64,6 +64,12 @@ def make_agent() -> MagicMock:
     agent.accept_bid = AsyncMock()
     agent.approve_task = AsyncMock()
     agent.dispute_task = AsyncMock()
+    agent.get_task_posting = AsyncMock(
+        side_effect=AssertionError("Unexpected posting status request")
+    )
+    agent.submit_task_posting = AsyncMock(
+        side_effect=AssertionError("Unexpected posting submission")
+    )
     return agent
 
 

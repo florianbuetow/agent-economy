@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 import pytest
 
 from db_gateway_service.task_contract_audit import audit_task_contracts
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
+from tests.fakes.native_board_history import BusinessClock
 from tests.unit.routers.test_mp07_task_operation_boundary import _seed_graph
 
 if TYPE_CHECKING:
@@ -15,6 +17,14 @@ if TYPE_CHECKING:
     from db_gateway_service.services.db_writer import DbWriter
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def _fixed_publication_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "db_gateway_service.task_time.utc_now_us",
+        BusinessClock(now_us=parse_utc_text_to_epoch_us("2099-01-01T00:00:00Z")),
+    )
 
 
 def test_new_publication_has_exact_native_timing_sidecar(

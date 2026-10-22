@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -26,7 +26,8 @@ async def test_sealed_feedback_invisible_until_mutual(make_funded_agent) -> None
         agents_to_close.extend([poster, worker])
 
         # Complete a task through the happy path
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Sealed feedback task",
             spec="Do something",
             reward=500,
@@ -132,7 +133,8 @@ async def test_self_feedback_rejected(make_funded_agent) -> None:
         agents_to_close.extend([poster, worker])
 
         # Complete a task
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Self feedback task",
             spec="Do something",
             reward=500,
@@ -212,7 +214,8 @@ async def test_duplicate_feedback_rejected(make_funded_agent) -> None:
         agents_to_close.extend([poster, worker])
 
         # Complete a task
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Dup feedback task",
             spec="Do something",
             reward=500,

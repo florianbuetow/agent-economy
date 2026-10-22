@@ -12,6 +12,7 @@ class TestTaskFeederConfig:
         config = TaskFeederConfig(
             handle="feeder",
             tasks_file="../data/math_tasks.jsonl",
+            source_max_bytes=8_388_608,
             feed_interval_seconds=15,
             max_open_tasks=5,
             bidding_deadline_seconds=120,
@@ -31,6 +32,7 @@ class TestTaskFeederConfig:
             TaskFeederConfig(
                 handle="feeder",
                 tasks_file="../data/math_tasks.jsonl",
+                source_max_bytes=8_388_608,
                 feed_interval_seconds=15,
                 max_open_tasks=5,
                 bidding_deadline_seconds=120,

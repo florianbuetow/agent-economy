@@ -160,6 +160,30 @@ The Task Board SHALL be the source of truth for task lifecycle state and SHALL e
 - **THEN** recovery produces exactly one correctly funded public task or exactly one documented refund
 - **AND** ambiguous publication is reconciled before any compensation refunds an existing task
 
+#### Scenario: Native posting identity precedes financial transport
+- **WHEN** a poster prepares and submits one native posting intent
+- **THEN** its task and operation IDs and complete immutable terms are retained before transport and reserved durably before Bank dispatch
+- **AND** exact replay returns the original publication result, changed terms conflict, and two deliberately distinct postings with identical content remain distinct
+- **AND** publication operation IDs cannot also own lifecycle operations
+
+#### Scenario: Bank acknowledgment is absent but a request may still commit
+- **WHEN** an admitted posting has no observed lock receipt after a timeout or restart
+- **THEN** it remains pending without publication or compensation based solely on that absence
+- **AND** background recovery can publish a subsequently proven lock, but only a fresh poster-signed retry of the same intent can initiate an unproven debit
+- **AND** a late original dispatch and concurrent same-intent retry produce one lock and one task
+
+#### Scenario: Funding and publication become authoritative together
+- **WHEN** the native publication reconciler observes the exact persisted lock receipt
+- **THEN** it verifies the request, payer, task, amount, escrow state, leg, transaction and event ownership before atomically creating the task, timing contract, creation event and immutable result
+- **AND** bidding and acceptance cutoffs derive from atomic publication time, separately from intent admission, without changing old published terms
+- **AND** pending postings remain absent from public task discovery
+
+#### Scenario: Legacy posting orphans are recovered without inventing terms
+- **WHEN** verified quiescent migration finds supported historical escrow evidence unreferenced by any published task's escrow
+- **THEN** it records a separate durable observation and per-escrow refund identity rather than inventing a native posting intent or specification
+- **AND** a different payer's orphan may be refunded while the same task ID's published winner keeps its funding
+- **AND** legacy observations permanently reserve their task IDs, existing proven refunds retain their original receipts, and ambiguous provenance never authorizes a refund or new posting
+
 #### Scenario: Terminal task has pending effects
 - **WHEN** a task is approved, expired, cancelled or ruled but an associated financial effect remains unfinished
 - **THEN** background recovery continues independently of task reads or its terminal business status

@@ -421,10 +421,19 @@ async def test_feeder_sibling_failure_drains_under_lease_before_close_and_releas
     sibling_started = {"acceptance": asyncio.Event(), "review": asyncio.Event()}
 
     class FeederLoop:
-        def __init__(self, *, agent: _FakeAgent, config: TaskFeederConfig) -> None:
+        def __init__(
+            self,
+            agent: _FakeAgent,
+            config: TaskFeederConfig,
+            posting: object,
+        ) -> None:
             assert agent is agent_under_test
             assert config == _feeder_config(tmp_path)
+            assert posting is not None
             self.task_map: dict[str, object] = {}
+
+        def rebuild_task_map(self) -> dict[str, object]:
+            return self.task_map
 
         async def run(self) -> None:
             await sibling_started["acceptance"].wait()

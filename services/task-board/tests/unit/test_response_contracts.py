@@ -27,6 +27,7 @@ from task_board_service.schemas import (
     BidResponse,
     TaskListResponse,
     TaskMutationResponse,
+    TaskPublicationEnvelope,
     TaskResponse,
 )
 
@@ -65,6 +66,10 @@ request:
   max_body_size: 1048576
 recovery:
   maintenance_lock_path: "maintenance.lock"
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
@@ -118,7 +123,7 @@ def test_asset_response_includes_content_hash() -> None:
 
 @pytest.mark.unit
 def test_task_endpoints_wire_response_model(app) -> None:
-    assert _route_response_model(app, "/tasks", "POST") is TaskResponse
+    assert _route_response_model(app, "/tasks", "POST") is TaskPublicationEnvelope
     assert _route_response_model(app, "/tasks", "GET") is TaskListResponse
     assert _route_response_model(app, "/tasks/{task_id}", "GET") is TaskResponse
     assert _route_response_model(app, "/tasks/{task_id}/cancel", "POST") is TaskMutationResponse

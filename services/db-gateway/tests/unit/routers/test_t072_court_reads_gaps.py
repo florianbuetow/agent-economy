@@ -28,6 +28,7 @@ from tests.fakes.native_board_history import (
     accept_bid,
     finalize,
     operation_body,
+    publish_task,
     submit_bid,
 )
 
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
 _BUSINESS_START_US = parse_utc_text_to_epoch_us("2026-02-28T12:00:00Z")
 _CLAIM_TIME_US = parse_utc_text_to_epoch_us("2026-02-28T16:00:00Z")
 _REBUTTAL_TIME_US = parse_utc_text_to_epoch_us("2026-02-28T17:00:00Z")
+_TASK_CREATED_US = parse_utc_text_to_epoch_us("2026-02-28T10:15:00Z")
 _DISPUTE_REASON = "The login page does not validate email format"
 _REBUTTAL_DEADLINE = "2026-03-01T17:00:00Z"
 
@@ -114,37 +116,40 @@ def _lock_escrow(
     return eid, tid
 
 
-def _create_task(client: TestClient, poster_id: str | None = None) -> tuple[str, str, str]:
+def _create_task(
+    client: TestClient,
+    clock: BusinessClock,
+    poster_id: str | None = None,
+) -> tuple[str, str, str]:
     pid = poster_id or _setup_funded_account(client)
-    eid, tid = _lock_escrow(client, pid)
-    response = client.post(
-        "/board/tasks",
-        json={
-            "task_id": tid,
-            "poster_id": pid,
-            "title": "Test Task",
-            "spec": "Build a login page",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 172800,
-            "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:15:00Z",
-            "escrow_id": eid,
-            "created_at": "2026-02-28T10:15:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=tid),
-        },
-    )
-    assert response.status_code == 201
+    eid, tid = f"esc-{uuid4()}", f"t-{uuid4()}"
+    previous = clock.now_us
+    clock.now_us = _TASK_CREATED_US
+    try:
+        publish_task(
+            client,
+            task_id=tid,
+            poster_id=pid,
+            escrow_id=eid,
+            title="Test Task",
+            spec="Build a login page",
+            reward=100,
+            bidding_deadline_seconds=86400,
+            acceptance_window_seconds=3600,
+            execution_deadline_seconds=172800,
+            review_deadline_seconds=43200,
+            lock_timestamp="2026-02-28T10:10:00Z",
+        )
+    finally:
+        clock.now_us = previous
     return tid, pid, eid
 
 
-def _setup_court_prerequisites(client: TestClient) -> tuple[str, str, str]:
+def _setup_court_prerequisites(client: TestClient, clock: BusinessClock) -> tuple[str, str, str]:
     """Create alice, bob, and a task. Returns (alice, bob, task_id)."""
     alice = _setup_funded_account(client, name="Alice")
     bob = _register_agent(client, name="Bob")
-    tid, _pid, _eid = _create_task(client, poster_id=alice)
+    tid, _pid, _eid = _create_task(client, clock, poster_id=alice)
     return alice, bob, tid
 
 
@@ -181,7 +186,7 @@ def _prepare_disputed_claim(
     """Persist a real Board history and matching Court claim for rebuttal reads."""
     alice = _setup_funded_account(client, name="Alice")
     bob = _register_agent(client, name="Bob")
-    task_id, _poster_id, escrow_id = _create_task(client, poster_id=alice)
+    task_id, _poster_id, escrow_id = _create_task(client, clock, poster_id=alice)
     graph = TaskGraph(task_id=task_id, poster_id=alice, escrow_id=escrow_id)
 
     bid_id, bid = submit_bid(client, graph, bob)
@@ -297,10 +302,18 @@ class TestReadClaimsFilterByClaimantId:
     """READ-27: GET /court/claims filters by claimant_id (status filter is
     already covered by test_court_reads.py)."""
 
-    def test_filter_by_claimant_id(self, app_with_writer: TestClient) -> None:
-        alice, bob, tid1 = _setup_court_prerequisites(app_with_writer)
+    def test_filter_by_claimant_id(
+        self,
+        app_with_writer: TestClient,
+        _fixed_gateway_business_clock: BusinessClock,
+    ) -> None:
+        alice, bob, tid1 = _setup_court_prerequisites(
+            app_with_writer, _fixed_gateway_business_clock
+        )
         carol = _register_agent(app_with_writer, name="Carol")
-        tid2, _pid2, _eid2 = _create_task(app_with_writer, poster_id=alice)
+        tid2, _pid2, _eid2 = _create_task(
+            app_with_writer, _fixed_gateway_business_clock, poster_id=alice
+        )
 
         claim_from_alice = _file_claim(app_with_writer, tid1, alice, bob)
         _file_claim(app_with_writer, tid2, carol, bob)
@@ -338,8 +351,12 @@ class TestReadRebuttalByClaimId:
         assert data["claim_id"] == claim_id
         assert data["agent_id"] == bob
 
-    def test_get_rebuttal_not_found(self, app_with_writer: TestClient) -> None:
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+    def test_get_rebuttal_not_found(
+        self,
+        app_with_writer: TestClient,
+        _fixed_gateway_business_clock: BusinessClock,
+    ) -> None:
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
         _wire_db_reader()
 
@@ -353,8 +370,12 @@ class TestReadRebuttalByClaimId:
 class TestReadRulingByClaimId:
     """READ-31/READ-32: GET /court/rulings/{claim_id}."""
 
-    def test_get_ruling_returns_the_record(self, app_with_writer: TestClient) -> None:
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+    def test_get_ruling_returns_the_record(
+        self,
+        app_with_writer: TestClient,
+        _fixed_gateway_business_clock: BusinessClock,
+    ) -> None:
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
         ruling_id = _record_ruling(app_with_writer, claim_id, tid)
         _wire_db_reader()
@@ -367,8 +388,12 @@ class TestReadRulingByClaimId:
         assert data["claim_id"] == claim_id
         assert data["worker_pct"] == 70
 
-    def test_get_ruling_not_found(self, app_with_writer: TestClient) -> None:
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+    def test_get_ruling_not_found(
+        self,
+        app_with_writer: TestClient,
+        _fixed_gateway_business_clock: BusinessClock,
+    ) -> None:
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
         _wire_db_reader()
 

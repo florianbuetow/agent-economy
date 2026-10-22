@@ -47,7 +47,7 @@ async def _task_with_bid(
             client, poster_keypair, poster_id, bidding_deadline_seconds=60
         )
         assert task_resp.status_code == 201, task_resp.text
-        task = task_resp.json()
+        task = task_resp.json()["result"]
         bid_resp = await submit_bid(client, bidder_keypair, bidder_id, task["task_id"])
         assert bid_resp.status_code == 201, bid_resp.text
     return dict(task)
@@ -153,7 +153,7 @@ async def test_zero_bid_expiry_still_works(
         client, alice_keypair, alice_agent_id, bidding_deadline_seconds=60
     )
     assert task_resp.status_code == 201, task_resp.text
-    task = task_resp.json()
+    task = task_resp.json()["result"]
     with freeze_time(task["bidding_deadline"]):
         response = await client.get(f"/tasks/{task['task_id']}")
     assert response.status_code == 200, response.text

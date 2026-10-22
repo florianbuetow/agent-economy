@@ -31,6 +31,13 @@ _ALL_GATEWAY_ACTIONS = (
 )
 
 GATEWAY_ROUTE_POLICIES: dict[tuple[str, str], tuple[str, ...]] = {
+    ("POST", "/board/task-publications"): ("gateway.board.write",),
+    ("POST", "/board/task-publications/{operation_id}/reconcile"): ("gateway.board.write",),
+    ("GET", "/board/task-publications/{operation_id}"): ("gateway.board.write",),
+    ("GET", "/board/posting-recovery"): ("gateway.board.write",),
+    ("POST", "/board/legacy-posting-observations/{observation_id}/reconcile"): (
+        "gateway.board.write",
+    ),
     ("POST", "/board/task-operations"): ("gateway.board.write",),
     ("POST", "/board/task-operations/{operation_id}/finalize"): ("gateway.board.write",),
     ("POST", "/identity/agents"): ("gateway.identity.write",),

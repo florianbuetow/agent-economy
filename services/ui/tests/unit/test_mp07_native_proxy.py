@@ -11,8 +11,10 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from httpx import ASGITransport, AsyncClient
 from service_auth.config import AgentConfig
+from service_auth.financial_identity import operation_id_for
 from service_auth.jws import TokenPolicy
 from service_auth.task_board_responses import TaskBoardCommandResponse
+from service_auth.task_postings import TaskPostingIntent
 from service_auth.user_agent import UserAgent
 from service_commons.exceptions import ServiceError
 
@@ -335,13 +337,25 @@ class _RecordingUserAgent:
     agent_id = "a-ui-native"
 
     def __init__(self, mutation_state: str = "completed") -> None:
+        self.config = _agent_config()
         self.mutation_state = mutation_state
         self.mutation_result_override: dict[str, Any] | None = None
         self.calls: list[tuple[str, dict[str, Any]]] = []
 
-    async def post_task(self, **kwargs: Any) -> dict[str, Any]:
-        self.calls.append(("create", kwargs))
-        return {"task_id": "t-created", "status": "open", "lifecycle_version": 0}
+    def prepare_task_posting(self, **kwargs: Any) -> TaskPostingIntent:
+        self.calls.append(("prepare", kwargs))
+        task_id = "t-00000000-0000-4000-8000-000000000702"
+        return TaskPostingIntent.from_json(
+            {
+                "protocol_version": 1,
+                "operation_id": OPERATION_ID,
+                "task_id": task_id,
+                "actor_kind": "agent",
+                "actor_id": self.agent_id,
+                "lock_operation_id": operation_id_for("task-lock", (task_id, self.agent_id)),
+                **kwargs,
+            }
+        )
 
     async def accept_bid(self, **kwargs: Any) -> TaskBoardCommandResponse:
         self.calls.append(("accept", kwargs))
@@ -377,10 +391,11 @@ async def test_create_requires_and_forwards_poster_acceptance_window(client) -> 
     agent = _RecordingUserAgent()
     get_app_state().user_agent = agent
 
-    response = await client.post("/api/proxy/tasks", json=VALID_CREATE_BODY)
+    response = await client.post("/api/proxy/task-postings/prepare", json=VALID_CREATE_BODY)
 
     assert response.status_code == 200
-    assert agent.calls == [("create", VALID_CREATE_BODY)]
+    assert response.json()["intent"]["acceptance_window_seconds"] == 45
+    assert agent.calls == [("prepare", VALID_CREATE_BODY)]
 
 
 async def test_create_rejects_missing_acceptance_window_before_sdk(client) -> None:
@@ -389,7 +404,7 @@ async def test_create_rejects_missing_acceptance_window_before_sdk(client) -> No
     body = dict(VALID_CREATE_BODY)
     del body["acceptance_window_seconds"]
 
-    response = await client.post("/api/proxy/tasks", json=body)
+    response = await client.post("/api/proxy/task-postings/prepare", json=body)
 
     assert response.status_code == 422
     assert agent.calls == []
@@ -404,7 +419,7 @@ async def test_create_rejects_non_strict_or_unrepresentable_acceptance_window(
     get_app_state().user_agent = agent
 
     response = await client.post(
-        "/api/proxy/tasks",
+        "/api/proxy/task-postings/prepare",
         json={**VALID_CREATE_BODY, "acceptance_window_seconds": value},
     )
 

@@ -18,7 +18,9 @@ from service_commons.exceptions import ServiceError
 
 from db_gateway_service.receipt_audit import audit_receipt_ownership
 from db_gateway_service.services.db_writer import DbWriter
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
+from tests.fakes.native_publication_fixture import publish_native_task
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -83,24 +85,21 @@ def _lock_escrow(writer: DbWriter, payer_id: str, task_id: str, amount: int) -> 
 
 def _create_task(writer: DbWriter, poster_id: str) -> str:
     task_id = f"t-{uuid4()}"
-    escrow_id = _lock_escrow(writer, poster_id, task_id, amount=100)
-    writer.create_task(
-        {
-            "task_id": task_id,
-            "poster_id": poster_id,
-            "title": "Test Task",
-            "spec": "Build a login page",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 172800,
-            "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:15:00Z",
-            "escrow_id": escrow_id,
-            "created_at": "2026-02-28T10:15:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=task_id),
-        }
+    publish_native_task(
+        writer,
+        caller_kid="gateway-task-board",
+        clock_us=parse_utc_text_to_epoch_us("2026-02-28T10:15:00Z"),
+        task_id=task_id,
+        poster_id=poster_id,
+        escrow_id=f"esc-{uuid4()}",
+        title="Test Task",
+        spec="Build a login page",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=172800,
+        review_deadline_seconds=43200,
+        lock_timestamp="2026-02-28T10:10:00Z",
     )
     return task_id
 

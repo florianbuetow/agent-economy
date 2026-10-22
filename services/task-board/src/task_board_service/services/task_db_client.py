@@ -3,14 +3,27 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import httpx
 from pydantic import ValidationError
+from service_auth.task_postings import (
+    TaskPostingIntent,
+    TaskPostingResponse,
+    parse_task_posting_status_response,
+    parse_task_posting_submit_response,
+)
 from service_commons.exceptions import ServiceError
 
-from task_board_service.services.errors import DuplicateBidError, DuplicateTaskError
+from task_board_service.posting_recovery_contract import (
+    validate_legacy_blocked_wrapper,
+    validate_legacy_observation_id,
+    validate_legacy_posting_envelope,
+    validate_recovery_page,
+    validate_recovery_request,
+)
+from task_board_service.services.errors import DuplicateBidError
 from task_board_service.task_contract_projection import (
     GatewayBid,
     TaskContractProjection,
@@ -101,10 +114,16 @@ class TaskDbClient:
         params: dict[str, Any] | None,
     ) -> httpx.Response:
         request = self._client.build_request(method, path, json=json, params=params)
-        signed_request = self._signer.sign_request(
-            request,
-            action=f"gateway.board.{'read' if method == 'GET' else 'write'}",
+        private_publication_read = method == "GET" and (
+            path.startswith("/board/task-publications/")
+            or path.startswith("/board/posting-recovery")
         )
+        action = (
+            "gateway.board.write"
+            if method != "GET" or private_publication_read
+            else "gateway.board.read"
+        )
+        signed_request = self._signer.sign_request(request, action=action)
         return self._client.send(signed_request)
 
     def _now(self) -> str:
@@ -140,11 +159,6 @@ class TaskDbClient:
             event["agent_id"] = agent_id
         return event
 
-    def _parse_iso(self, value: str) -> datetime:
-        if value.endswith("Z"):
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return datetime.fromisoformat(value).astimezone(UTC)
-
     def _normalize_task(self, data: dict[str, Any]) -> dict[str, Any]:
         return {column: data.get(column) for column in self._TASK_COLUMNS}
 
@@ -165,6 +179,157 @@ class TaskDbClient:
         except ValidationError as exc:
             raise invalid_gateway_response() from exc
         raise ServiceError(error.error, error.message, response.status_code, error.details)
+
+    def _parse_publication_submit(
+        self,
+        response: httpx.Response,
+        intent: TaskPostingIntent,
+    ) -> TaskPostingResponse:
+        try:
+            return parse_task_posting_submit_response(response, intent)
+        except httpx.HTTPStatusError:
+            self._raise_gateway_error(response)
+            raise AssertionError("unreachable") from None
+        except (RuntimeError, TypeError, ValueError) as exc:
+            raise invalid_gateway_response() from exc
+
+    def _parse_publication_status(
+        self,
+        response: httpx.Response,
+        operation_id: str,
+    ) -> TaskPostingResponse:
+        if response.status_code != 200:
+            self._raise_gateway_error(response)
+        try:
+            return parse_task_posting_status_response(response, operation_id)
+        except (RuntimeError, TypeError, ValueError) as exc:
+            raise invalid_gateway_response() from exc
+
+    def admit_task_publication(self, intent: TaskPostingIntent) -> TaskPostingResponse:
+        """Durably reserve one exact posting intent before any Bank transport."""
+        response = self._request(
+            "POST",
+            "/board/task-publications",
+            json=intent.as_json(),
+            params=None,
+        )
+        return self._parse_publication_submit(response, intent)
+
+    def reconcile_task_publication(
+        self,
+        operation_id: str,
+        intent: TaskPostingIntent | None,
+    ) -> TaskPostingResponse:
+        """Reconcile persisted financial evidence without accepting caller evidence."""
+        validated_id = validate_operation_id(operation_id)
+        response = self._request(
+            "POST",
+            f"/board/task-publications/{validated_id}/reconcile",
+            json={},
+            params=None,
+        )
+        if intent is not None:
+            return self._parse_publication_submit(response, intent)
+        if response.status_code in {201, 202}:
+            body = self._strict_json(response)
+            status_response = httpx.Response(200, json=body, request=response.request)
+            parsed = self._parse_publication_status(status_response, validated_id)
+            expected_state = "published" if response.status_code == 201 else "awaiting_lock"
+            if parsed.body["publication_state"] != expected_state:
+                raise invalid_gateway_response()
+            return TaskPostingResponse(response.status_code, parsed.body)
+        if response.status_code == 409:
+            body = self._strict_json(response)
+            details = body.get("details")
+            if (
+                set(body) != {"error", "message", "details"}
+                or body.get("error") != "publication_integrity_blocked"
+                or body.get("message") != "Publication evidence requires reconciliation"
+                or not isinstance(details, dict)
+                or set(details) != {"publication"}
+            ):
+                raise invalid_gateway_response()
+            status_response = httpx.Response(
+                200,
+                json=details["publication"],
+                request=response.request,
+            )
+            parsed = self._parse_publication_status(status_response, validated_id)
+            if parsed.body["publication_state"] != "blocked_integrity":
+                raise invalid_gateway_response()
+            return TaskPostingResponse(response.status_code, body)
+        if response.status_code not in {201, 202, 409}:
+            self._raise_gateway_error(response)
+        raise AssertionError("unreachable")
+
+    def _get_task_publication(
+        self,
+        operation_id: str,
+        *,
+        poster_id: str | None,
+    ) -> TaskPostingResponse:
+        validated_id = validate_operation_id(operation_id)
+        params = None if poster_id is None else {"poster_id": poster_id}
+        response = self._request(
+            "GET",
+            f"/board/task-publications/{validated_id}",
+            json=None,
+            params=params,
+        )
+        return self._parse_publication_status(response, validated_id)
+
+    def get_task_publication(
+        self,
+        operation_id: str,
+        poster_id: str,
+    ) -> TaskPostingResponse:
+        """Read one publication through the required economic-owner filter."""
+        return self._get_task_publication(operation_id, poster_id=poster_id)
+
+    def list_posting_recovery(self, after: str, limit: int) -> dict[str, Any]:
+        """Return one strict bounded page of this Board writer's pending recovery work."""
+        validated_after, validated_limit = validate_recovery_request(after, limit)
+        response = self._request(
+            "GET",
+            "/board/posting-recovery",
+            json=None,
+            params={"after": validated_after, "limit": validated_limit},
+        )
+        if response.status_code != 200:
+            self._raise_gateway_error(response)
+        return validate_recovery_page(
+            self._strict_json(response),
+            after=validated_after,
+            limit=validated_limit,
+        )
+
+    def reconcile_legacy_posting_observation(self, observation_id: str) -> dict[str, Any]:
+        """Reconcile one stored legacy refund intent without accepting fresh terms."""
+        validated_id = validate_legacy_observation_id(observation_id)
+        response = self._request(
+            "POST",
+            f"/board/legacy-posting-observations/{validated_id}/reconcile",
+            json={},
+            params=None,
+        )
+        if response.status_code == 409:
+            body = self._strict_json(response)
+            if body.get("error") != "posting_refund_integrity_blocked":
+                self._raise_gateway_error(response)
+            raise validate_legacy_blocked_wrapper(
+                body,
+                expected_observation_id=validated_id,
+            )
+        if response.status_code not in {200, 202}:
+            self._raise_gateway_error(response)
+        envelope = validate_legacy_posting_envelope(
+            self._strict_json(response),
+            expected_observation_id=validated_id,
+        )
+        expected_state = "refunded" if response.status_code == 200 else "refund_pending"
+        if envelope["observation_state"] != expected_state:
+            raise invalid_gateway_response()
+        return envelope
 
     def claim_task_operation(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Claim or replay one exact native command without replacing its identity."""
@@ -203,50 +368,6 @@ class TaskDbClient:
         if isinstance(status, str):
             return _LIFECYCLE_EVENTS_BY_STATUS.get(status, "task.updated")
         return "task.updated"
-
-    def insert_task(self, task_data: dict[str, Any]) -> None:
-        created_at = str(task_data["created_at"])
-        bidding_deadline_seconds = int(task_data["bidding_deadline_seconds"])
-        bidding_deadline_dt = self._parse_iso(created_at) + timedelta(
-            seconds=bidding_deadline_seconds
-        )
-        bidding_deadline = bidding_deadline_dt.isoformat(timespec="auto").replace("+00:00", "Z")
-
-        payload: dict[str, Any] = {
-            "task_id": task_data["task_id"],
-            "poster_id": task_data["poster_id"],
-            "title": task_data["title"],
-            "spec": task_data["spec"],
-            "reward": task_data["reward"],
-            "status": task_data["status"],
-            "bidding_deadline_seconds": task_data["bidding_deadline_seconds"],
-            "acceptance_window_seconds": task_data["acceptance_window_seconds"],
-            "deadline_seconds": task_data["deadline_seconds"],
-            "review_deadline_seconds": task_data["review_deadline_seconds"],
-            "bidding_deadline": bidding_deadline,
-            "bid_count": task_data["bid_count"],
-            "escrow_pending": task_data.get("escrow_pending", 0),
-            "escrow_id": task_data["escrow_id"],
-            "created_at": created_at,
-            "event": self._build_event(
-                event_type="task.created",
-                summary=f"Task created: {task_data['title']}",
-                payload={
-                    "title": task_data["title"],
-                    "reward": task_data["reward"],
-                    "bidding_deadline": bidding_deadline,
-                },
-                task_id=str(task_data["task_id"]),
-                agent_id=str(task_data["poster_id"]),
-            ),
-        }
-
-        response = self._request("POST", "/board/tasks", json=payload, params=None)
-        if response.status_code == 409:
-            raise DuplicateTaskError(f"A task with task_id={task_data['task_id']} already exists")
-        if response.status_code not in (200, 201):
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
 
     def get_task(self, task_id: str) -> dict[str, Any] | None:
         response = self._request("GET", f"/board/tasks/{task_id}", json=None, params=None)

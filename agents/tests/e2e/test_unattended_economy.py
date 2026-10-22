@@ -50,6 +50,7 @@ import pytest
 
 from base_agent.runtime_config import RuntimeStateConfig
 from base_agent.runtime_intents import FileTaskIntentStore
+from base_agent.runtime_postings import FileTaskPostingStore
 from base_agent.runtime_task_commands import RuntimeTaskCommands, runtime_owner_from_agent
 from math_worker.config import LLMConfig, MathWorkerConfig
 from math_worker.llm_client import LLMClient
@@ -57,6 +58,8 @@ from math_worker.loop import MathWorkerLoop
 from task_feeder.acceptance import AcceptanceLoop
 from task_feeder.config import AcceptanceConfig, TaskFeederConfig
 from task_feeder.loop import TaskFeederLoop
+from task_feeder.posting import TaskFeederPostingCoordinator
+from task_feeder.reader import load_task_snapshot
 from task_feeder.review import ReviewLoop
 from tests.e2e.deterministic_math_transport import DeterministicArithmeticTransport
 
@@ -146,10 +149,13 @@ def _build_feeder_loops(
     feeder: BaseAgent,
     tasks_path: Path,
     commands: RuntimeTaskCommands,
+    intent_store: FileTaskIntentStore,
+    journal_stack: ExitStack,
 ) -> tuple[TaskFeederLoop, list[Any]]:
     feeder_config = TaskFeederConfig(
         handle="wp09_feeder",
         tasks_file=str(tasks_path),
+        source_max_bytes=8_388_608,
         feed_interval_seconds=1,
         max_open_tasks=2,
         bidding_deadline_seconds=BIDDING_DEADLINE_SECONDS,
@@ -168,7 +174,13 @@ def _build_feeder_loops(
         bidding_deadline_seconds=BIDDING_DEADLINE_SECONDS,
     )
 
-    feed_loop = TaskFeederLoop(agent=feeder, config=feeder_config)
+    posting_store = journal_stack.enter_context(
+        FileTaskPostingStore.attach(intent_store, max_source_bytes=feeder_config.source_max_bytes)
+    )
+    posting = TaskFeederPostingCoordinator(feeder, posting_store)
+    snapshot = load_task_snapshot(tasks_path, max_bytes=feeder_config.source_max_bytes)
+    posting.bind_current_source(snapshot, feeder_config)
+    feed_loop = TaskFeederLoop(agent=feeder, config=feeder_config, posting=posting)
     acceptance_loop = AcceptanceLoop(
         agent=feeder,
         config=acceptance_config,
@@ -236,7 +248,7 @@ def _leased_commands(
     profile: str,
     handle: str,
     journal_stack: ExitStack,
-) -> RuntimeTaskCommands:
+) -> tuple[RuntimeTaskCommands, FileTaskIntentStore]:
     owner = runtime_owner_from_agent(
         runtime_config=runtime_config,
         agent=agent,
@@ -252,7 +264,7 @@ def _leased_commands(
             max_record_bytes=runtime_config.max_record_bytes,
         )
     )
-    return RuntimeTaskCommands(agent, store)
+    return RuntimeTaskCommands(agent, store), store
 
 
 async def _build_rig(make_funded_agent: Any, tasks_path: Path) -> _Rig:
@@ -267,7 +279,7 @@ async def _build_rig(make_funded_agent: Any, tasks_path: Path) -> _Rig:
         worker_wrong = await make_funded_agent(name="WP09 Worker Wrong", balance=1000)
         agents.append(worker_wrong)
         runtime_config = _runtime_config(tasks_path.parent / "runtime-state")
-        feeder_commands = _leased_commands(
+        feeder_commands, feeder_store = _leased_commands(
             agent=feeder,
             runtime_config=runtime_config,
             role="task-feeder",
@@ -275,7 +287,7 @@ async def _build_rig(make_funded_agent: Any, tasks_path: Path) -> _Rig:
             handle="wp09_feeder",
             journal_stack=journal_stack,
         )
-        correct_commands = _leased_commands(
+        correct_commands, _ = _leased_commands(
             agent=worker_correct,
             runtime_config=runtime_config,
             role="math-worker",
@@ -283,7 +295,7 @@ async def _build_rig(make_funded_agent: Any, tasks_path: Path) -> _Rig:
             handle="wp09_worker_correct",
             journal_stack=journal_stack,
         )
-        wrong_commands = _leased_commands(
+        wrong_commands, _ = _leased_commands(
             agent=worker_wrong,
             runtime_config=runtime_config,
             role="math-worker",
@@ -295,7 +307,9 @@ async def _build_rig(make_funded_agent: Any, tasks_path: Path) -> _Rig:
         worker_wrong_balance_before = (await worker_wrong.get_balance())["balance"]
 
         _write_tasks_jsonl(tasks_path)
-        feed_loop, feeder_loops = _build_feeder_loops(feeder, tasks_path, feeder_commands)
+        feed_loop, feeder_loops = _build_feeder_loops(
+            feeder, tasks_path, feeder_commands, feeder_store, journal_stack
+        )
         acceptance_loop, review_loop = feeder_loops[1], feeder_loops[2]
         worker_loop_correct, worker_loop_wrong, llm_correct, llm_wrong = _build_worker_loops(
             worker_correct,

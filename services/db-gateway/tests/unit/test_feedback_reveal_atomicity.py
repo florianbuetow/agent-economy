@@ -25,6 +25,7 @@ from db_gateway_service.services.task_operation_writer import TaskOperationWrite
 from db_gateway_service.task_operation_requests import parse_task_operation_request
 from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
+from tests.fakes.native_publication_fixture import publish_native_task
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -52,23 +53,21 @@ def _seed_task(
     """Complete a real approved history before the original reveal/race checks."""
     now_text = "2026-02-28T10:16:00Z"
     now_us = parse_utc_text_to_epoch_us(now_text)
-    writer.create_task(
-        {
-            "task_id": task_id,
-            "poster_id": poster_id,
-            "title": "Test Task",
-            "spec": "Build a login page",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 172800,
-            "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:15:00Z",
-            "escrow_id": escrow_id,
-            "created_at": "2026-02-28T10:15:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=task_id),
-        }
+    publish_native_task(
+        writer,
+        caller_kid="gateway-task-board",
+        clock_us=parse_utc_text_to_epoch_us("2026-02-28T10:15:00Z"),
+        task_id=task_id,
+        poster_id=poster_id,
+        escrow_id=escrow_id,
+        title="Test Task",
+        spec="Build a login page",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=172800,
+        review_deadline_seconds=43200,
+        lock_timestamp="2026-02-28T10:10:00Z",
     )
     platform_key = Ed25519PrivateKey.generate().public_key()
     operations = TaskOperationWriter(
@@ -214,20 +213,6 @@ class _Fixture:
                         "timestamp": "2026-02-28T10:00:00Z",
                     },
                     "event": make_event(source="bank", event_type="account.created"),
-                }
-            )
-            writer.escrow_lock(
-                {
-                    "operation_id": f"op-{uuid4()}",
-                    "escrow_id": escrow_id,
-                    "payer_account_id": self.alice,
-                    "amount": 100,
-                    "task_id": self.task_id,
-                    "created_at": "2026-02-28T10:10:00Z",
-                    "tx_id": f"tx-{uuid4()}",
-                    "event": make_event(
-                        source="bank", event_type="escrow.locked", task_id=self.task_id
-                    ),
                 }
             )
             writer.create_account(

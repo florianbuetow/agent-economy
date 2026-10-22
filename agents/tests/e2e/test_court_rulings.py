@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import httpx
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -21,7 +21,8 @@ async def _create_disputed_task(
     poster: BaseAgent, worker: BaseAgent, reward: int = 1000
 ) -> tuple[dict[str, Any], str]:
     """Drive a task through the full lifecycle to disputed state."""
-    task = await poster.post_task(
+    task = await publish_task(
+        poster,
         title="Court ruling task",
         spec="Implement the feature as specified",
         reward=reward,
