@@ -159,6 +159,7 @@ def _write_config(tmp_path: Path) -> tuple[Path, Path]:
         "task_feeder": {
             "handle": "feeder",
             "tasks_file": str(tmp_path / "tasks.jsonl"),
+            "source_max_bytes": 8_388_608,
             "feed_interval_seconds": 1,
             "max_open_tasks": 1,
             "bidding_deadline_seconds": 30,
@@ -210,6 +211,7 @@ def _feeder_config(tmp_path: Path) -> TaskFeederConfig:
     return TaskFeederConfig(
         handle="feeder",
         tasks_file=str(tmp_path / "tasks.jsonl"),
+        source_max_bytes=8_388_608,
         feed_interval_seconds=1,
         max_open_tasks=1,
         bidding_deadline_seconds=30,
@@ -571,9 +573,18 @@ async def test_feeder_resolves_one_config_shares_commands_and_holds_lease(
     command_ids: list[int] = []
 
     class FeederLoop:
-        def __init__(self, *, agent: _FakeAgent, config: TaskFeederConfig) -> None:
+        def __init__(
+            self,
+            agent: _FakeAgent,
+            config: TaskFeederConfig,
+            posting: object,
+        ) -> None:
             assert agent.agent_id == "a-startup-feeder" and config is feeder_config
+            assert posting is not None
             self.task_map: dict[str, object] = {}
+
+        def rebuild_task_map(self) -> dict[str, object]:
+            return self.task_map
 
         async def run(self) -> None:
             events.append("feed-run")

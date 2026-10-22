@@ -14,6 +14,8 @@ from base_agent.agent import BaseAgent
 from base_agent.config import AgentConfig
 from base_agent.signing import TokenPolicy
 
+from .native_task_contract import publish_task
+
 if TYPE_CHECKING:
     from base_agent.platform import PlatformAgent
 
@@ -78,7 +80,8 @@ async def test_registered_agent_can_post_task_after_account_creation(
             operation_id=operation_id_for("e2e-credit", (agent.agent_id, "startup_funding")),
         )
 
-        task = await agent.post_task(
+        task = await publish_task(
+            agent,
             title="Startup flow task",
             spec="Verify startup flow creates bank account",
             reward=100,

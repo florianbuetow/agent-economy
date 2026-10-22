@@ -112,7 +112,7 @@ class TestBidListingGaps:
 
             # Bid-bearing native tasks expire at the selected acceptance cutoff.
             assert created.status_code == 201, created.text
-            frozen.move_to(created.json()["acceptance_deadline"])
+            frozen.move_to(created.json()["result"]["acceptance_deadline"])
 
             # No Authorization header — task should now be lazily EXPIRED, bids public.
             resp = await client.get(f"/tasks/{task_id}/bids")

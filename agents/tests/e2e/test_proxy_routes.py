@@ -1,7 +1,7 @@
 """E2E tests for every ``/api/proxy/*`` route (T-049 test side, WP-08 item 9).
 
 Enumerates the UI's proxy router (services/ui/src/ui_service/routers/proxy.py):
-GET /api/proxy/identity, POST /api/proxy/tasks, POST
+GET /api/proxy/identity, POST task-posting prepare/submit, POST
 /api/proxy/tasks/{id}/bids/{id}/accept, POST /api/proxy/tasks/{id}/approve,
 POST /api/proxy/tasks/{id}/dispute.
 
@@ -29,6 +29,7 @@ import pytest
 
 from base_agent.factory import AgentFactory
 
+from .native_proxy_posting import create_task_via_proxy
 from .native_task_contract import lifecycle_version, new_operation_id
 
 if TYPE_CHECKING:
@@ -81,10 +82,8 @@ async def proxy_client():
 
 @pytest.fixture()
 async def task_via_proxy(proxy_client: httpx.AsyncClient):
-    """Post one task through the proxy; returns (task_id, poster_id)."""
-    resp = await proxy_client.post("/api/proxy/tasks", json=_task_payload("Proxy lifecycle task"))
-    assert resp.status_code == 200, resp.text
-    body = resp.json()
+    """Post one native task through the proxy; returns (task_id, poster_id)."""
+    body = await create_task_via_proxy(proxy_client, _task_payload("Proxy lifecycle task"))
     return body["task_id"], body["poster_id"]
 
 
@@ -130,15 +129,16 @@ async def test_proxy_identity_is_operator_not_platform(
     assert acting_agent_id != platform_agent.agent_id
 
 
-# ── POST /api/proxy/tasks ────────────────────────────────────────────────
+# ── POST task-posting prepare and submit ─────────────────────────────────
 async def test_proxy_create_task_posts_as_operator_not_platform(
     proxy_client: httpx.AsyncClient,
     operator_agent_id: str,
     platform_agent: PlatformAgent,
 ) -> None:
-    resp = await proxy_client.post("/api/proxy/tasks", json=_task_payload("Proxy create_task test"))
-    assert resp.status_code == 200, resp.text
-    body = resp.json()
+    body = await create_task_via_proxy(
+        proxy_client,
+        _task_payload("Proxy create_task test"),
+    )
 
     assert body["status"] == "open"
     assert body["poster_id"] == operator_agent_id

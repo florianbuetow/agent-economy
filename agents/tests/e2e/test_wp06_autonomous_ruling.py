@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -42,7 +42,8 @@ async def test_disputed_task_reaches_ruled_via_polling(
         agents_to_close.extend([poster, worker])
 
         reward = 1000
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="WP06 GAP-A1 task",
             spec="Implement the addition function as specified",
             reward=reward,

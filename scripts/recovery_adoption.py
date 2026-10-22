@@ -67,6 +67,7 @@ def _copy_verification(result: VerificationResult) -> VerificationResult:
         identity_complete=result.identity_complete,
         migration_eligible=result.migration_eligible,
         operational_restore_verified=result.operational_restore_verified,
+        posting_recovery=result.posting_recovery,
         finding_codes=tuple(result.finding_codes),
         manifest_sha256=result.manifest_sha256,
     )

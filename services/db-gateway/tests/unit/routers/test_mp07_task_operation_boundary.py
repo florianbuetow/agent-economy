@@ -23,7 +23,10 @@ from service_auth.signing import generate_keypair
 
 from db_gateway_service.config import clear_settings_cache
 from db_gateway_service.core.state import init_app_state
+from db_gateway_service.services import db_writer as db_writer_module
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
+from tests.fakes.native_board_history import BusinessClock, publish_task
 from tests.unit.conftest import _create_test_config
 
 if TYPE_CHECKING:
@@ -96,6 +99,10 @@ def operation_gateway(
         )
 
     monkeypatch.setenv("CONFIG_PATH", str(config_path))
+    monkeypatch.setattr(
+        "db_gateway_service.task_time.utc_now_us",
+        BusinessClock(now_us=parse_utc_text_to_epoch_us("2099-01-01T00:00:00Z")),
+    )
     clear_settings_cache()
     from db_gateway_service.app import create_app
 
@@ -104,6 +111,11 @@ def operation_gateway(
         client.auth = _DomainAuth(signers)
         state = init_app_state()
         state.db_writer = db_writer
+        monkeypatch.setattr(
+            db_writer_module.task_time,
+            "utc_now_us",
+            BusinessClock(now_us=parse_utc_text_to_epoch_us("2099-01-01T00:00:00Z")),
+        )
         yield _OperationGateway(client, signers)
 
     os.environ.pop("CONFIG_PATH", None)
@@ -158,42 +170,20 @@ def _seed_graph(client: TestClient) -> _Graph:
         },
     )
     assert worker_account.status_code == 201, worker_account.text
-    lock = client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": f"op-{uuid4()}",
-            "escrow_id": escrow_id,
-            "payer_account_id": poster_id,
-            "amount": 100,
-            "task_id": task_id,
-            "created_at": "2026-10-17T09:00:03Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=task_id),
-        },
+    publish_task(
+        client,
+        task_id=task_id,
+        poster_id=poster_id,
+        escrow_id=escrow_id,
+        title="MP-07 operation boundary",
+        spec="Exercise native command claim and finalization semantics.",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=86400,
+        execution_deadline_seconds=86400,
+        review_deadline_seconds=86400,
+        lock_timestamp="2026-10-17T09:00:03Z",
     )
-    assert lock.status_code == 201, lock.text
-    task = client.post(
-        "/board/tasks",
-        json={
-            "task_id": task_id,
-            "poster_id": poster_id,
-            "title": "MP-07 operation boundary",
-            "spec": "Exercise native command claim and finalization semantics.",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "acceptance_window_seconds": 86400,
-            "deadline_seconds": 86400,
-            "review_deadline_seconds": 86400,
-            "bidding_deadline": "2099-01-02T00:00:00Z",
-            "bidding_cutoff_us": 4070995200000000,
-            "acceptance_cutoff_us": 4071081600000000,
-            "escrow_id": escrow_id,
-            "created_at": "2099-01-01T00:00:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=task_id),
-        },
-    )
-    assert task.status_code == 201, task.text
     bid = client.post(
         _CLAIM_PATH,
         json={
@@ -294,7 +284,8 @@ def _task_snapshot(writer: DbWriter, graph: _Graph) -> tuple[object, ...]:
         (graph.task_id,),
     ).fetchall()
     event_rows = writer.connection.execute(
-        "SELECT event_type FROM events WHERE task_id = ? AND event_source = 'board' "
+        "SELECT event_type FROM events WHERE task_id = ? "
+        "AND event_source IN ('board','task-board') "
         "ORDER BY event_id",
         (graph.task_id,),
     ).fetchall()

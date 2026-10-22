@@ -11,14 +11,20 @@ from __future__ import annotations
 import sqlite3
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
 import pytest
-from service_auth.financial_identity import operation_id_for
+from db_gateway_service.task_time import utc_now_us
 
 from task_board_service.core.state import get_app_state
-from tests.integration.conftest import make_jws_token, register_identity_agent
+from tests.helpers import make_jws_token
+from tests.integration.conftest import register_identity_agent
+from tests.integration.mp05_posting_setup import (
+    native_escrow_payload,
+    native_task_payload,
+    persist_lock_after_admission,
+)
 from tests.integration.test_mp07_native_public_lifecycle import (
     _create_zero_balance_account,
     _install_persisting_release,
@@ -56,18 +62,13 @@ def _read_one(
         conn.close()
 
 
-async def _seed_funded_escrow(
+async def _seed_funded_poster(
     gateway_client: httpx.AsyncClient,
     *,
     payer_id: str,
     amount: int,
-    task_id: str,
-    escrow_id: str,
-) -> dict[str, object]:
-    """Seed the real gateway rows a task creation's FKs require: an identity
-    agent, a funded bank account, and a locked bank_escrow row — everything
-    the mocked BankClient's escrow_lock() would have produced against a real
-    Central Bank, so board_tasks.escrow_id resolves against a real row."""
+) -> None:
+    """Seed the identity and funded account required for native admission."""
     await register_identity_agent(gateway_client, payer_id)
     resp = await gateway_client.post(
         "/bank/accounts",
@@ -94,40 +95,6 @@ async def _seed_funded_escrow(
     )
     assert resp.status_code == 201, resp.text
 
-    resp = await gateway_client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": operation_id_for("task-lock", (task_id, payer_id)),
-            "escrow_id": escrow_id,
-            "payer_account_id": payer_id,
-            "amount": amount,
-            "task_id": task_id,
-            "created_at": "2026-03-01T09:00:01Z",
-            "tx_id": f"tx-{uuid.uuid4()}",
-            "event": {
-                "event_source": "central-bank",
-                "event_type": "escrow.locked",
-                "timestamp": "2026-03-01T09:00:01Z",
-                "agent_id": payer_id,
-                "summary": f"Escrow locked for {task_id}",
-                "payload": "{}",
-            },
-        },
-    )
-    assert resp.status_code == 201, resp.text
-    result = resp.json()
-    assert isinstance(result, dict)
-    assert result["outcome"] == "native_receipt"
-    return result
-
-
-def _mock_escrow_lock_returns(envelope: dict[str, object]) -> None:
-    """Return the actual seeded lock receipt from the mocked Bank boundary."""
-    state = get_app_state()
-    state.central_bank_client.escrow_lock = AsyncMock(return_value=envelope)
-    if state.escrow_coordinator is not None:
-        state.escrow_coordinator._central_bank_client = state.central_bank_client
-
 
 class TestTaskLifecycleGatewayBacked:
     async def test_full_lifecycle_persists_through_real_gateway(
@@ -147,37 +114,47 @@ class TestTaskLifecycleGatewayBacked:
 
         await register_identity_agent(gateway_client, worker_id)
         await _create_zero_balance_account(gateway_client, account_id=worker_id)
-        escrow_result = await _seed_funded_escrow(
-            gateway_client, payer_id=poster_id, amount=100, task_id=task_id, escrow_id=escrow_id
+        await _seed_funded_poster(gateway_client, payer_id=poster_id, amount=100)
+        task_payload = native_task_payload(
+            task_id=task_id,
+            poster_id=poster_id,
+            title="Integration test task",
+            spec="Prove the real gateway-backed path end to end",
+            reward=100,
+            bidding_deadline_seconds=3600,
+            acceptance_window_seconds=1800,
+            execution_deadline_seconds=86400,
+            review_deadline_seconds=86400,
         )
-        _mock_escrow_lock_returns(escrow_result)
+        state = get_app_state()
+        assert state.central_bank_client is not None
 
-        task_payload = {
-            "action": "create_task",
-            "task_id": task_id,
-            "poster_id": poster_id,
-            "title": "Integration test task",
-            "spec": "Prove the real gateway-backed path end to end",
-            "reward": 100,
-            "bidding_deadline_seconds": 3600,
-            "acceptance_window_seconds": 1800,
-            "execution_deadline_seconds": 86400,
-            "review_deadline_seconds": 86400,
-        }
+        async def persist_lock(escrow_token: str) -> dict[str, Any]:
+            assert escrow_token
+            return await persist_lock_after_admission(
+                gateway_client,
+                task_payload=task_payload,
+                escrow_id=escrow_id,
+                clock_us=utc_now_us,
+            )
+
+        state.central_bank_client.escrow_lock = AsyncMock(side_effect=persist_lock)
+        if state.escrow_coordinator is not None:
+            state.escrow_coordinator._central_bank_client = state.central_bank_client
+
         task_token = make_jws_token(poster_keypair[0], poster_id, task_payload)
-        escrow_payload = {
-            "action": "escrow_lock",
-            "operation_id": operation_id_for("task-lock", (task_id, poster_id)),
-            "task_id": task_id,
-            "agent_id": poster_id,
-            "amount": 100,
-        }
-        escrow_token = make_jws_token(poster_keypair[0], poster_id, escrow_payload)
+        escrow_token = make_jws_token(
+            poster_keypair[0],
+            poster_id,
+            native_escrow_payload(task_payload),
+            audience="central-bank",
+            resource="POST /escrow/lock",
+        )
         create_resp = await client.post(
             "/tasks", json={"task_token": task_token, "escrow_token": escrow_token}
         )
         assert create_resp.status_code == 201, create_resp.text
-        created_task = create_resp.json()
+        created_task = create_resp.json()["result"]
         assert created_task["status"] == "open"
         assert created_task["lifecycle_version"] == 0
 

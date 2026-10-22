@@ -21,6 +21,7 @@ from db_gateway_service.task_operation_requests import (
 )
 from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
+from tests.fakes.native_publication_fixture import publish_native_task
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -61,7 +62,7 @@ def v3_writer(tmp_path: Path) -> Iterator[DbWriter]:
         db_path=str(tmp_path / "operation-regressions.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V3),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
     )
     yield writer
     writer.close()
@@ -194,35 +195,21 @@ def _seed_graph(writer: DbWriter, *, submitted: bool) -> _Graph:
                 "event": make_event(source="bank", event_type="account.created", agent_id=agent_id),
             }
         )
-    writer.escrow_lock(
-        {
-            "operation_id": f"op-{uuid4()}",
-            "escrow_id": graph.escrow_id,
-            "payer_account_id": graph.poster_id,
-            "amount": 100,
-            "task_id": graph.task_id,
-            "created_at": "2098-12-31T23:59:58Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=graph.task_id),
-        }
-    )
-    writer.create_task(
-        {
-            "task_id": graph.task_id,
-            "poster_id": graph.poster_id,
-            "title": "MP-07 regression fixture",
-            "spec": "Exercise native operation persistence and receipt finalization.",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "acceptance_window_seconds": 86400,
-            "deadline_seconds": 86400,
-            "review_deadline_seconds": 86400,
-            "bidding_deadline": _BIDDING_DEADLINE,
-            "escrow_id": graph.escrow_id,
-            "created_at": _CREATED_AT,
-            "event": make_event(source="board", event_type="task.created", task_id=graph.task_id),
-        }
+    publish_native_task(
+        writer,
+        caller_kid=_BOARD_KID,
+        clock_us=parse_utc_text_to_epoch_us(_CREATED_AT),
+        task_id=graph.task_id,
+        poster_id=graph.poster_id,
+        escrow_id=graph.escrow_id,
+        title="MP-07 regression fixture",
+        spec="Exercise native operation persistence and receipt finalization.",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=86400,
+        execution_deadline_seconds=86400,
+        review_deadline_seconds=86400,
+        lock_timestamp="2098-12-31T23:59:58Z",
     )
     _seed_stored_bid_history(writer, graph)
     if submitted:

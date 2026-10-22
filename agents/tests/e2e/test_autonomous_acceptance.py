@@ -24,6 +24,8 @@ from base_agent.runtime_task_commands import RuntimeTaskCommands, runtime_owner_
 from task_feeder.acceptance import AcceptanceLoop
 from task_feeder.config import AcceptanceConfig
 
+from .native_task_contract import publish_task
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -83,7 +85,8 @@ async def test_feeder_autonomously_accepts_lowest_bid(
         assert worker_low.agent_id is not None
         low_balance_before = (await worker_low.get_balance())["balance"]
 
-        task = await feeder.post_task(
+        task = await publish_task(
+            feeder,
             title="WP15 autonomous acceptance",
             spec="Compute 2 + 2",
             reward=REWARD,

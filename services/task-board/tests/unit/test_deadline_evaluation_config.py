@@ -58,6 +58,10 @@ request:
   max_body_size: 1048576
 recovery:
   maintenance_lock_path: "maintenance.lock"
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10

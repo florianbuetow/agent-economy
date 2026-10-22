@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from service_auth.financial_identity import operation_id_for
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def check_answer(submitted: str, solutions: list[str]) -> bool:
+def check_answer(submitted: str, solutions: Sequence[str]) -> bool:
     """Return True when submitted answer matches any expected solution."""
     normalized_submitted = submitted.strip().lower()
     if normalized_submitted == "":
@@ -66,7 +66,9 @@ class ReviewLoop:
                 reason = None
             else:
                 action = "dispute_task"
-                reason = f"Expected one of {raw_task.solutions!r} but got {submitted_answer!r}"
+                reason = (
+                    f"Expected one of {list(raw_task.solutions)!r} but got {submitted_answer!r}"
+                )
             source_version = payload.get("lifecycle_version")
             if type(source_version) is not int:
                 raise ValueError("lifecycle_version must be an integer")

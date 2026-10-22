@@ -90,34 +90,6 @@ async def _create_task_with_escrow(
     poster_id: str,
     reward: int,
 ) -> None:
-    lock_response = await client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": "op-00000000-0000-4000-8000-000000000103",
-            "escrow_id": f"esc-{task_id}",
-            "payer_account_id": poster_id,
-            "amount": reward,
-            "task_id": task_id,
-            "created_at": "2026-03-02T04:21:00Z",
-            "tx_id": f"tx-escrow-{task_id}",
-            "event": {
-                "event_source": "bank",
-                "event_type": "escrow.locked",
-                "timestamp": "2026-03-02T04:21:00Z",
-                "agent_id": poster_id,
-                "task_id": task_id,
-                "summary": f"Escrow locked for {task_id}",
-                "payload": json.dumps({"escrow_id": f"esc-{task_id}", "amount": reward}),
-            },
-        },
-    )
-    assert lock_response.status_code == 201
-    lock_envelope = lock_response.json()
-    assert lock_envelope["outcome"] == "native_receipt"
-    assert lock_envelope["receipt"]["operation_kind"] == "escrow_lock"
-    assert lock_envelope["receipt"]["source_reference"] == task_id
-    assert lock_envelope["current_escrow"]["status"] == "locked"
-
     task_response = await publish_open_task(
         client,
         task_id=task_id,
@@ -126,21 +98,10 @@ async def _create_task_with_escrow(
         spec="Implement something useful",
         reward=reward,
         escrow_id=f"esc-{task_id}",
-        created_at="2026-03-02T04:21:00Z",
-        bidding_deadline="2026-03-02T05:21:00Z",
         bidding_deadline_seconds=3600,
         acceptance_window_seconds=1800,
         execution_deadline_seconds=7200,
         review_deadline_seconds=3600,
-        event={
-            "event_source": "board",
-            "event_type": "task.created",
-            "timestamp": "2026-03-02T04:21:00Z",
-            "agent_id": poster_id,
-            "task_id": task_id,
-            "summary": "Task created: Test Task",
-            "payload": json.dumps({"title": "Test Task", "reward": reward}),
-        },
     )
     assert task_response.status_code == 201
 
@@ -160,13 +121,15 @@ class TestTaskBoardGatewayWrites:
         gw_client: httpx.AsyncClient,
         initialized_db: str,
     ) -> None:
-        await _create_task_with_escrow(gw_client, "t-test-001", "a-poster", 200)
+        await _create_task_with_escrow(
+            gw_client, "t-00000000-0000-4000-8000-000000000401", "a-poster", 200
+        )
 
         row = read_one(
             initialized_db,
             "SELECT task_id, poster_id, title, spec, reward, status, escrow_id "
             "FROM board_tasks WHERE task_id = ?",
-            ("t-test-001",),
+            ("t-00000000-0000-4000-8000-000000000401",),
         )
         assert row is not None
         assert row["poster_id"] == "a-poster"
@@ -174,19 +137,21 @@ class TestTaskBoardGatewayWrites:
         assert row["spec"] == "Implement something useful"
         assert row["reward"] == 200
         assert row["status"] == "open"
-        assert row["escrow_id"] == "esc-t-test-001"
+        assert row["escrow_id"] == "esc-t-00000000-0000-4000-8000-000000000401"
 
     async def test_submit_bid_writes_bid_row(
         self,
         gw_client: httpx.AsyncClient,
         initialized_db: str,
     ) -> None:
-        await _create_task_with_escrow(gw_client, "t-bid-001", "a-poster", 200)
+        await _create_task_with_escrow(
+            gw_client, "t-00000000-0000-4000-8000-000000000402", "a-poster", 200
+        )
 
         response = await submit_native_bid(
             gw_client,
             operation_id="op-00000000-0000-4000-8000-000000000104",
-            task_id="t-bid-001",
+            task_id="t-00000000-0000-4000-8000-000000000402",
             bid_id="bid-001",
             bidder_id="a-worker",
             amount=180,
@@ -199,7 +164,7 @@ class TestTaskBoardGatewayWrites:
             ("bid-001",),
         )
         assert bid is not None
-        assert bid["task_id"] == "t-bid-001"
+        assert bid["task_id"] == "t-00000000-0000-4000-8000-000000000402"
         assert bid["bidder_id"] == "a-worker"
         assert bid["proposal"] == "180"
         assert bid["amount"] == 180
@@ -209,12 +174,14 @@ class TestTaskBoardGatewayWrites:
         gw_client: httpx.AsyncClient,
         initialized_db: str,
     ) -> None:
-        await _create_task_with_escrow(gw_client, "t-status-001", "a-poster", 300)
+        await _create_task_with_escrow(
+            gw_client, "t-00000000-0000-4000-8000-000000000403", "a-poster", 300
+        )
 
         bid_response = await submit_native_bid(
             gw_client,
             operation_id="op-00000000-0000-4000-8000-000000000105",
-            task_id="t-status-001",
+            task_id="t-00000000-0000-4000-8000-000000000403",
             bid_id="bid-accepted-001",
             bidder_id="a-worker",
             amount=275,
@@ -223,11 +190,11 @@ class TestTaskBoardGatewayWrites:
         response = await accept_native_bid(
             gw_client,
             operation_id="op-00000000-0000-4000-8000-000000000106",
-            task_id="t-status-001",
+            task_id="t-00000000-0000-4000-8000-000000000403",
             bid_id="bid-accepted-001",
             poster_id="a-poster",
             worker_id="a-worker",
-            escrow_id="esc-t-status-001",
+            escrow_id="esc-t-00000000-0000-4000-8000-000000000403",
             reward=300,
             bid_amount=275,
         )
@@ -237,7 +204,7 @@ class TestTaskBoardGatewayWrites:
             initialized_db,
             "SELECT status, worker_id, accepted_bid_id, accepted_at, execution_deadline "
             "FROM board_tasks WHERE task_id = ?",
-            ("t-status-001",),
+            ("t-00000000-0000-4000-8000-000000000403",),
         )
         assert task is not None
         assert task["status"] == "accepted"
@@ -250,13 +217,15 @@ class TestTaskBoardGatewayWrites:
         gw_client: httpx.AsyncClient,
         initialized_db: str,
     ) -> None:
-        await _create_task_with_escrow(gw_client, "t-asset-001", "a-poster", 200)
+        await _create_task_with_escrow(
+            gw_client, "t-00000000-0000-4000-8000-000000000404", "a-poster", 200
+        )
 
         response = await gw_client.post(
             "/board/assets",
             json={
                 "asset_id": "asset-001",
-                "task_id": "t-asset-001",
+                "task_id": "t-00000000-0000-4000-8000-000000000404",
                 "uploader_id": "a-worker",
                 "filename": "deliverable.zip",
                 "content_type": "application/zip",
@@ -269,7 +238,7 @@ class TestTaskBoardGatewayWrites:
                     "event_type": "asset.uploaded",
                     "timestamp": "2026-03-02T04:35:00Z",
                     "agent_id": "a-worker",
-                    "task_id": "t-asset-001",
+                    "task_id": "t-00000000-0000-4000-8000-000000000404",
                     "summary": "Asset uploaded",
                     "payload": json.dumps({"filename": "deliverable.zip"}),
                 },

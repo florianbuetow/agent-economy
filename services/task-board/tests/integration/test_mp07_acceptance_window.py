@@ -19,7 +19,12 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from service_auth.financial_identity import operation_id_for
 
 from task_board_service.core.state import get_app_state
+from tests.helpers import make_jws_token as make_scoped_jws_token
 from tests.integration.conftest import make_jws_token, register_identity_agent
+from tests.integration.mp05_posting_setup import (
+    native_escrow_payload,
+    persist_lock_after_admission,
+)
 
 if TYPE_CHECKING:
     import httpx
@@ -109,6 +114,10 @@ def _install_domain_clock(monkeypatch: pytest.MonkeyPatch) -> _MutableDomainCloc
 
 def _iso(value: datetime) -> str:
     return value.isoformat(timespec="auto").replace("+00:00", "Z")
+
+
+def _publication_iso(value: datetime) -> str:
+    return value.isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def _read_rows(
@@ -254,14 +263,12 @@ def _assert_refund_completion(
     }
 
 
-async def _seed_funded_escrow(
+async def _seed_funded_account(
     gateway_client: httpx.AsyncClient,
     *,
     payer_id: str,
     amount: int,
-    task_id: str,
-    escrow_id: str,
-) -> dict[str, object]:
+) -> None:
     await register_identity_agent(gateway_client, payer_id)
     account_response = await gateway_client.post(
         "/bank/accounts",
@@ -288,32 +295,6 @@ async def _seed_funded_escrow(
     )
     assert account_response.status_code == 201, account_response.text
 
-    lock_response = await gateway_client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": operation_id_for("task-lock", (task_id, payer_id)),
-            "escrow_id": escrow_id,
-            "payer_account_id": payer_id,
-            "amount": amount,
-            "task_id": task_id,
-            "created_at": "2026-10-17T11:59:59Z",
-            "tx_id": f"tx-{uuid.uuid4()}",
-            "event": {
-                "event_source": "central-bank",
-                "event_type": "escrow.locked",
-                "timestamp": "2026-10-17T11:59:59Z",
-                "agent_id": payer_id,
-                "summary": f"Escrow locked for {task_id}",
-                "payload": "{}",
-            },
-        },
-    )
-    assert lock_response.status_code == 201, lock_response.text
-    envelope = lock_response.json()
-    assert isinstance(envelope, dict)
-    assert envelope["outcome"] == "native_receipt"
-    return envelope
-
 
 async def _create_task(
     client: httpx.AsyncClient,
@@ -325,24 +306,24 @@ async def _create_task(
     poster_id = f"a-mp07-window-poster-{uuid.uuid4()}"
     task_id = f"t-{uuid.uuid4()}"
     escrow_id = f"esc-{uuid.uuid4()}"
-    lock_envelope = await _seed_funded_escrow(
+    await _seed_funded_account(
         gateway_client,
         payer_id=poster_id,
         amount=100,
-        task_id=task_id,
-        escrow_id=escrow_id,
     )
 
     state = get_app_state()
     assert state.central_bank_client is not None
     bank = cast("AsyncMock", state.central_bank_client)
-    bank.escrow_lock = AsyncMock(return_value=lock_envelope)
     bank.escrow_release.reset_mock()
 
     task_payload: dict[str, Any] = {
         "action": "create_task",
+        "protocol_version": 1,
+        "operation_id": f"op-{uuid.uuid4()}",
         "task_id": task_id,
         "poster_id": poster_id,
+        "lock_operation_id": operation_id_for("task-lock", (task_id, poster_id)),
         "title": "MP-07 explicit acceptance window",
         "spec": "Preserve the selected acceptance window and enforce both cutoffs.",
         "reward": 100,
@@ -352,25 +333,34 @@ async def _create_task(
     }
     if acceptance_window_seconds is not _MISSING:
         task_payload["acceptance_window_seconds"] = acceptance_window_seconds
-    escrow_operation_id = operation_id_for("task-lock", (task_id, poster_id))
+
+    async def _persist_lock(_escrow_token: str) -> dict[str, Any]:
+        return await persist_lock_after_admission(
+            gateway_client,
+            task_payload=task_payload,
+            escrow_id=escrow_id,
+            clock_us=_ClockDateTime.clock.epoch_us,
+        )
+
+    bank.escrow_lock = AsyncMock(side_effect=_persist_lock)
     response = await client.post(
         "/tasks",
         json={
             "task_token": make_jws_token(poster_key, poster_id, task_payload),
-            "escrow_token": make_jws_token(
+            "escrow_token": make_scoped_jws_token(
                 poster_key,
                 poster_id,
-                {
-                    "action": "escrow_lock",
-                    "operation_id": escrow_operation_id,
-                    "task_id": task_id,
-                    "agent_id": poster_id,
-                    "amount": 100,
-                },
+                native_escrow_payload(task_payload),
+                audience="central-bank",
+                resource="POST /escrow/lock",
             ),
         },
     )
-    response_data = response.json() if response.status_code in {200, 201} else {}
+    if response.status_code in {200, 201}:
+        response_data = response.json()["result"]
+        assert isinstance(response_data, dict)
+    else:
+        response_data = {}
     setup = _TaskSetup(task_id, poster_id, escrow_id, response_data)
     return setup, response, bank
 
@@ -487,7 +477,12 @@ async def test_create_rejects_missing_or_invalid_acceptance_window_before_writes
         "invalid_payload" if acceptance_window_seconds is _MISSING else "invalid_deadline"
     )
     assert response.json()["error"] == expected_error, diagnostics
-    assert "acceptance_window_seconds" in response.json()["message"], diagnostics
+    if acceptance_window_seconds is _MISSING:
+        assert response.json()["message"] == (
+            "Task token must contain exactly the required fields"
+        ), diagnostics
+    else:
+        assert "acceptance_window_seconds" in response.json()["message"], diagnostics
 
 
 async def test_two_selected_windows_are_preserved_and_expose_distinct_deadlines(
@@ -524,7 +519,7 @@ async def test_two_selected_windows_are_preserved_and_expose_distinct_deadlines(
     expected = [
         (
             window,
-            _iso(_START + timedelta(seconds=_BIDDING_SECONDS + window)),
+            _publication_iso(_START + timedelta(seconds=_BIDDING_SECONDS + window)),
             window,
             _iso(_START + timedelta(seconds=_BIDDING_SECONDS + window)),
             2,

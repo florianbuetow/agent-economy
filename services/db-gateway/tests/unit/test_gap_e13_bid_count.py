@@ -32,6 +32,7 @@ from tests.conftest import make_event
 from tests.fakes.native_board_history import (
     BusinessClock,
     TaskGraph,
+    publish_task,
 )
 from tests.fakes.native_board_history import (
     submit_bid as submit_native_bid,
@@ -100,40 +101,20 @@ def _create_funded_account(client: TestClient, name: str, balance: int) -> str:
 def _create_task(client: TestClient, poster_id: str) -> TaskGraph:
     task_id = f"t-{uuid4()}"
     escrow_id = f"esc-{uuid4()}"
-    lock = client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": f"op-{uuid4()}",
-            "escrow_id": escrow_id,
-            "payer_account_id": poster_id,
-            "amount": 100,
-            "task_id": task_id,
-            "created_at": "2026-03-01T09:10:00Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=task_id),
-        },
+    publish_task(
+        client,
+        task_id=task_id,
+        poster_id=poster_id,
+        escrow_id=escrow_id,
+        title="bid_count test task",
+        spec="Build a thing",
+        reward=100,
+        bidding_deadline_seconds=3600,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=7200,
+        review_deadline_seconds=1800,
+        lock_timestamp="2026-03-01T09:10:00Z",
     )
-    assert lock.status_code == 201
-    created = client.post(
-        "/board/tasks",
-        json={
-            "task_id": task_id,
-            "poster_id": poster_id,
-            "title": "bid_count test task",
-            "spec": "Build a thing",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 3600,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 7200,
-            "review_deadline_seconds": 1800,
-            "bidding_deadline": "2026-03-01T10:12:00Z",
-            "escrow_id": escrow_id,
-            "created_at": "2026-03-01T09:12:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=task_id),
-        },
-    )
-    assert created.status_code == 201
     return TaskGraph(task_id=task_id, poster_id=poster_id, escrow_id=escrow_id)
 
 

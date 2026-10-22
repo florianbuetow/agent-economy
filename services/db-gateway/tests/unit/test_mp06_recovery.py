@@ -472,6 +472,11 @@ def test_public_results_serialize_distinct_recovery_states(tmp_path: Path) -> No
         "identity_complete": True,
         "migration_eligible": False,
         "operational_restore_verified": False,
+        "posting_recovery": {
+            "applicability": "not_applicable",
+            "operational_ready": True,
+            "ledgers": [],
+        },
         "finding_codes": ["unknown_schema"],
         "manifest_sha256": verification.manifest_sha256,
     }

@@ -2,8 +2,7 @@
 
 TaskManager itself no longer holds business logic — it constructs one
 coordinator per lifecycle domain (creation, bidding, review, ruling) and
-delegates every public method to the matching coordinator, keeping the
-public method names/signatures routers depend on byte-stable. Each
+delegates every public method to the matching coordinator. Each
 coordinator reads its dependencies through this facade at call time (not a
 constructor-captured snapshot) so tests that reassign
 ``task_manager._store``/``._central_bank_client`` post-construction (see
@@ -25,6 +24,7 @@ if TYPE_CHECKING:
     import logging
 
     from service_auth.platform import PlatformAgent
+    from service_auth.task_postings import TaskPostingResponse
     from service_clients.bank import BankClient, TokenSigner
 
     from task_board_service.services.asset_manager import AssetManager
@@ -123,9 +123,21 @@ class TaskManager:
     # that owns the corresponding lifecycle domain.
     # ------------------------------------------------------------------
 
-    async def create_task(self, task_token: str, escrow_token: str) -> dict[str, Any]:
+    async def create_task(
+        self,
+        task_token: str,
+        escrow_token: str,
+    ) -> TaskPostingResponse:
         """Create a new task with escrow. See TaskCreationCoordinator.create_task."""
         return await self._creation.create_task(task_token, escrow_token)
+
+    async def get_task_publication(
+        self,
+        operation_id: str,
+        token: str,
+    ) -> TaskPostingResponse:
+        """Read one owner-visible native publication state."""
+        return await self._creation.get_task_publication(operation_id, token)
 
     async def get_task(self, task_id: str) -> dict[str, Any]:
         """Get a single task by ID with deadline evaluation."""

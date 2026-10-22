@@ -54,7 +54,7 @@ def _writer(database_path: Path, *, bootstrap: bool) -> DbWriter:
         db_path=str(database_path),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V3) if bootstrap else None,
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V4) if bootstrap else None,
     )
 
 

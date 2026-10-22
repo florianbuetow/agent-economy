@@ -26,7 +26,9 @@ from uuid import uuid4
 import pytest
 
 from db_gateway_service.services.db_writer import DbWriter
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
+from tests.fakes.native_board_history import BusinessClock, publish_task
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
@@ -39,6 +41,12 @@ _DB_WRITER_PATH = (
     / "services"
     / "db_writer.py"
 )
+
+
+@pytest.fixture(autouse=True)
+def _task_business_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    clock = BusinessClock(parse_utc_text_to_epoch_us("2026-03-01T09:12:00Z"))
+    monkeypatch.setattr("db_gateway_service.task_time.utc_now_us", clock)
 
 
 # ---------------------------------------------------------------------------
@@ -108,40 +116,21 @@ def _create_funded_account(client: TestClient, name: str, balance: int) -> str:
 def _create_task(client: TestClient, poster_id: str) -> str:
     task_id = f"t-{uuid4()}"
     escrow_id = f"esc-{uuid4()}"
-    lock = client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": f"op-{uuid4()}",
-            "escrow_id": escrow_id,
-            "payer_account_id": poster_id,
-            "amount": 100,
-            "task_id": task_id,
-            "created_at": "2026-03-01T09:10:00Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=task_id),
-        },
+    created = publish_task(
+        client,
+        task_id=task_id,
+        poster_id=poster_id,
+        escrow_id=escrow_id,
+        title="Dispute test task",
+        spec="Build a thing",
+        reward=100,
+        bidding_deadline_seconds=3600,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=7200,
+        review_deadline_seconds=1800,
+        lock_timestamp="2026-03-01T09:12:00Z",
     )
-    assert lock.status_code == 201
-    created = client.post(
-        "/board/tasks",
-        json={
-            "task_id": task_id,
-            "poster_id": poster_id,
-            "title": "Dispute test task",
-            "spec": "Build a thing",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 3600,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 7200,
-            "review_deadline_seconds": 1800,
-            "bidding_deadline": "2026-03-01T10:12:00Z",
-            "escrow_id": escrow_id,
-            "created_at": "2026-03-01T09:12:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=task_id),
-        },
-    )
-    assert created.status_code == 201
+    assert created.status_code == 201, created.text
     return task_id
 
 

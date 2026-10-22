@@ -29,6 +29,7 @@ class TaskFeederConfig(BaseModel):
 
     handle: str
     tasks_file: str
+    source_max_bytes: int = Field(strict=True, ge=1)
     feed_interval_seconds: int
     max_open_tasks: int
     bidding_deadline_seconds: int

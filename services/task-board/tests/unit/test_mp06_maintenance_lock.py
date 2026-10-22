@@ -101,6 +101,11 @@ def _settings(lock_path: Path) -> SimpleNamespace:
             evaluation_interval_seconds=60, actor_id="system-maintenance-test-deadline"
         ),
         recovery=SimpleNamespace(maintenance_lock_path=lock_path),
+        posting_recovery=SimpleNamespace(
+            interval_seconds=2,
+            batch_size=100,
+            diagnostic_limit=100,
+        ),
     )
 
 

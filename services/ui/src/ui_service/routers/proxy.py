@@ -1,7 +1,5 @@
 """Proxy route handlers — task lifecycle via UserAgent."""
 
-from typing import Any
-
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
@@ -9,11 +7,12 @@ from ui_service.config import get_settings
 from ui_service.core.deps import DbConn
 from ui_service.schemas import (
     BidItem,
-    CreateTaskRequest,
     FileDisputeRequest,
     NativeMutationRequest,
     OperatorBidListResponse,
     ProxyIdentityResponse,
+    TaskPostingPrepareRequest,
+    TaskPostingRecord,
 )
 from ui_service.services import proxy as proxy_service
 from ui_service.services import tasks as tasks_service
@@ -38,10 +37,10 @@ async def get_identity() -> ProxyIdentityResponse:
     return ProxyIdentityResponse(agent_id=agent_id)
 
 
-@router.post("/proxy/tasks")
-async def create_task(body: CreateTaskRequest) -> dict[str, Any]:
-    """Create a new task via UserAgent."""
-    return await proxy_service.create_task(
+@router.post("/proxy/task-postings/prepare")
+async def prepare_task_posting(body: TaskPostingPrepareRequest) -> dict[str, object]:
+    """Allocate an effect-free immutable task-posting record."""
+    return proxy_service.prepare_task_posting(
         title=body.title,
         spec=body.spec,
         reward=body.reward,
@@ -50,6 +49,26 @@ async def create_task(body: CreateTaskRequest) -> dict[str, Any]:
         execution_deadline_seconds=body.execution_deadline_seconds,
         review_deadline_seconds=body.review_deadline_seconds,
     )
+
+
+@router.post("/proxy/task-postings/{operation_id}/submit")
+async def submit_task_posting(operation_id: str, body: TaskPostingRecord) -> JSONResponse:
+    """Submit one previously persisted task-posting record."""
+    result = await proxy_service.submit_task_posting(
+        operation_id=operation_id,
+        record=body.model_dump(),
+    )
+    return JSONResponse(status_code=result[0], content=result[1])
+
+
+@router.post("/proxy/task-postings/{operation_id}/status")
+async def get_task_posting_status(operation_id: str, body: TaskPostingRecord) -> JSONResponse:
+    """Reconcile one previously persisted task-posting record."""
+    result = await proxy_service.get_task_posting_status(
+        operation_id=operation_id,
+        record=body.model_dump(),
+    )
+    return JSONResponse(status_code=result[0], content=result[1])
 
 
 @router.get("/proxy/tasks/{task_id}/bids")

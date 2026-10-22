@@ -35,7 +35,7 @@ def v3_writer(tmp_path: Path) -> Iterator[DbWriter]:
         db_path=str(tmp_path / "native-receipt-integration.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V3),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
     )
     yield writer
     writer.close()

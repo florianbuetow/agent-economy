@@ -20,6 +20,7 @@ from task_board_service.logging import get_logger, setup_logging
 from task_board_service.services.asset_manager import AssetManager
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
+from task_board_service.services.posting_recovery import PostingRecovery
 from task_board_service.services.task_db_client import TaskDbClient
 from task_board_service.services.task_manager import TaskManager
 from task_board_service.services.token_validator import TokenValidator
@@ -52,6 +53,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         store: TaskStorageInterface | None = None
         task_manager = None
         deadline_sweep_task: asyncio.Task[None] | None = None
+        posting_recovery_task: asyncio.Task[None] | None = None
         try:
             # db_gateway configuration is required by Settings and has no fallback.
             gateway_signer = GatewayRequestSigner(
@@ -157,6 +159,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 platform_agent_id=platform_agent_id,
             )
             state.task_manager = task_manager
+            posting_recovery = PostingRecovery(
+                store=store,
+                bank=central_bank_client,
+                batch_size=settings.posting_recovery.batch_size,
+                diagnostic_limit=settings.posting_recovery.diagnostic_limit,
+            )
+            state.posting_recovery = posting_recovery
+            posting_recovery_task = asyncio.create_task(
+                posting_recovery.run_periodic(
+                    interval_seconds=settings.posting_recovery.interval_seconds
+                )
+            )
+            state.posting_recovery_task = posting_recovery_task
 
             logger.info(
                 "Service starting",
@@ -174,6 +189,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             yield
         finally:
             logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
+            if posting_recovery_task is not None:
+                posting_recovery_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await posting_recovery_task
             if deadline_sweep_task is not None:
                 deadline_sweep_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):

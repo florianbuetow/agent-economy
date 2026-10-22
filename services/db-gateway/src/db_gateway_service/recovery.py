@@ -57,6 +57,13 @@ from service_commons.recovery_contract import (
     canonical_json_bytes,
 )
 
+from db_gateway_service.posting_recovery_audit import (
+    PostingRecoveryAdmissionError,
+    PostingRecoveryResult,
+    admit_posting_recovery_source,
+    audit_posting_recovery,
+)
+
 BUNDLE_FORMAT_VERSION = 1
 _DATABASE_RESOURCE_ID = "database.primary"
 _ASSET_RESOURCE_ID = "assets.root"
@@ -173,6 +180,7 @@ class VerificationResult:
     identity_complete: bool
     migration_eligible: bool
     operational_restore_verified: bool
+    posting_recovery: PostingRecoveryResult
     finding_codes: tuple[str, ...]
     manifest_sha256: str
 
@@ -187,6 +195,7 @@ class VerificationResult:
             "identity_complete": self.identity_complete,
             "migration_eligible": self.migration_eligible,
             "operational_restore_verified": self.operational_restore_verified,
+            "posting_recovery": self.posting_recovery.model_dump(mode="json"),
             "finding_codes": list(self.finding_codes),
             "manifest_sha256": self.manifest_sha256,
         }
@@ -2684,6 +2693,119 @@ def _audit_captured_database(
     return audit
 
 
+def _parsed_recovery_mapping(path: Path | None, *, label: str) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    try:
+        data, _mode = _read_pinned_regular(path, label=label)
+        return parse_yaml_config_bytes(data, source=label)
+    except (RecoveryError, ConfigurationError):
+        return None
+
+
+def _payload_resource_path(
+    payload: Path,
+    resources: dict[str, dict[str, object]],
+    logical_id: str,
+) -> Path | None:
+    record = resources.get(logical_id)
+    if record is None or record.get("capture_kind") != CaptureKind.COPY.value:
+        return None
+    relative = record.get("payload_path")
+    return payload / relative if isinstance(relative, str) else None
+
+
+def _payload_config_path(
+    payload: Path,
+    resources: dict[str, dict[str, object]],
+    config_id: str,
+) -> Path | None:
+    matches = tuple(
+        record
+        for record in resources.values()
+        if record.get("config_id") == config_id and isinstance(record.get("payload_path"), str)
+    )
+    if len(matches) != 1:
+        return None
+    return payload / cast("str", matches[0]["payload_path"])
+
+
+def _posting_recovery_from_payload(
+    *,
+    payload: Path,
+    inventory: RecoveryInventoryV1,
+    resources: dict[str, dict[str, object]],
+    keypairs: dict[str, dict[str, object]],
+    database_identity_findings: list[dict[str, object]],
+) -> PostingRecoveryResult:
+    runtime_path = _payload_resource_path(payload, resources, _AGENT_RUNTIME_RESOURCE_ID)
+    runtime_directory: _PinnedDirectory | None = None
+    try:
+        if runtime_path is not None:
+            runtime_directory = _open_pinned_directory(runtime_path, label="captured agent runtime")
+            if stat.S_IMODE(os.fstat(runtime_directory.descriptor).st_mode) != 0o700:
+                raise PostingRecoveryAdmissionError("posting_permissions_invalid")
+        return audit_posting_recovery(
+            runtime_directory=runtime_directory,
+            inventory=inventory,
+            agent_config=_parsed_recovery_mapping(
+                _payload_config_path(payload, resources, "agents"),
+                label="captured agents config",
+            ),
+            roster=_parsed_recovery_mapping(
+                _payload_resource_path(payload, resources, "agents.roster"),
+                label="captured agent roster",
+            ),
+            captured_keypairs=keypairs,
+            identity_findings=database_identity_findings,
+        )
+    except PostingRecoveryAdmissionError as exc:
+        raise RecoveryError("unsafe_bundle", "Posting journal topology is unsafe") from exc
+    finally:
+        if runtime_directory is not None:
+            runtime_directory.close(primary_error=None)
+
+
+def _posting_recovery_from_target(
+    *,
+    inventory: RecoveryInventoryV1,
+    target_bindings: TargetBindingsV1,
+    keypairs: dict[str, dict[str, object]],
+    database_identity_findings: list[dict[str, object]],
+) -> PostingRecoveryResult:
+    runtime_resource = _agent_runtime_resource(inventory)
+    runtime_path = (
+        target_bindings.resource_paths.get(_AGENT_RUNTIME_RESOURCE_ID)
+        if runtime_resource is not None and runtime_resource.capture_kind is CaptureKind.COPY
+        else None
+    )
+    runtime_directory: _PinnedDirectory | None = None
+    try:
+        if runtime_path is not None:
+            runtime_directory = _open_pinned_directory(runtime_path, label="restored agent runtime")
+            if stat.S_IMODE(os.fstat(runtime_directory.descriptor).st_mode) != 0o700:
+                raise PostingRecoveryAdmissionError("posting_permissions_invalid")
+        return audit_posting_recovery(
+            runtime_directory=runtime_directory,
+            inventory=inventory,
+            agent_config=_parsed_recovery_mapping(
+                target_bindings.resource_paths.get("config.agents"),
+                label="restored agents config",
+            ),
+            roster=_parsed_recovery_mapping(
+                target_bindings.resource_paths.get("agents.roster"),
+                label="restored agent roster",
+            ),
+            captured_keypairs=keypairs,
+            identity_findings=database_identity_findings,
+        )
+    except PostingRecoveryAdmissionError as exc:
+        raise RecoveryError("unsafe_resource", "Posting journal topology is unsafe") from exc
+    finally:
+        if runtime_directory is not None:
+            runtime_directory.close(primary_error=None)
+
+
 def _capture_payload(
     inventory: RecoveryInventoryV1,
     *,
@@ -2748,7 +2870,16 @@ def _capture_payload(
         )
         identity_findings.extend(cast("list[dict[str, object]]", audit["identity_findings"]))
         audit_findings = cast("list[dict[str, object]]", audit["findings"])
-        finding_codes = {str(item["code"]) for item in [*audit_findings, *identity_findings]}
+        posting_recovery = _posting_recovery_from_payload(
+            payload=payload,
+            inventory=inventory,
+            resources=state.resources,
+            keypairs=keypairs,
+            database_identity_findings=cast("list[dict[str, object]]", audit["identity_findings"]),
+        )
+        finding_codes = {str(item["code"]) for item in [*audit_findings, *identity_findings]} | set(
+            posting_recovery.finding_codes
+        )
         return {
             "resources": state.resources,
             "files": sorted(state.files, key=lambda item: str(item["path"])),
@@ -3028,6 +3159,29 @@ def _capture_under_maintenance_lock(
                     inventory,
                     identity_locks,
                 )
+                runtime_resource = _agent_runtime_resource(inventory)
+                runtime_root = (
+                    runtime_resource.captured_path
+                    if runtime_resource is not None
+                    and runtime_resource.capture_kind is CaptureKind.COPY
+                    else None
+                )
+                runtime_directory: _PinnedDirectory | None = None
+                try:
+                    if runtime_root is not None:
+                        runtime_directory = _open_pinned_directory(
+                            runtime_root, label="agent runtime posting source"
+                        )
+                        if stat.S_IMODE(os.fstat(runtime_directory.descriptor).st_mode) != 0o700:
+                            raise PostingRecoveryAdmissionError("posting_permissions_invalid")
+                    admit_posting_recovery_source(runtime_directory)
+                except PostingRecoveryAdmissionError as exc:
+                    raise RecoveryError(
+                        "unsafe_resource", "Posting journal source topology is unsafe"
+                    ) from exc
+                finally:
+                    if runtime_directory is not None:
+                        runtime_directory.close(primary_error=None)
                 captured = _capture_payload(
                     inventory,
                     payload=payload,
@@ -3819,8 +3973,18 @@ def _verify_backup_data_with_work_root(
     audit_identity = cast("list[dict[str, object]]", audit["identity_findings"])
     identity_findings = [*key_findings, *config_findings, *audit_identity]
     audit_findings = cast("list[dict[str, object]]", audit["findings"])
+    posting_recovery = _posting_recovery_from_payload(
+        payload=payload,
+        inventory=inventory,
+        resources=resources,
+        keypairs=keypairs,
+        database_identity_findings=audit_identity,
+    )
     finding_codes = sorted(
-        {str(finding["code"]) for finding in [*audit_findings, *identity_findings]}
+        {
+            *(str(finding["code"]) for finding in [*audit_findings, *identity_findings]),
+            *posting_recovery.finding_codes,
+        }
     )
     root = backup_root / backup_id
     root_metadata = _authority_lstat(root, label="verified backup directory")
@@ -3831,6 +3995,7 @@ def _verify_backup_data_with_work_root(
         identity_complete=not identity_findings,
         migration_eligible=False,
         operational_restore_verified=False,
+        posting_recovery=posting_recovery,
         finding_codes=tuple(finding_codes),
         manifest_sha256=manifest_digest,
     )
@@ -5248,6 +5413,14 @@ def _populate_restored_target(
     )
     if cast("list[dict[str, object]]", target_audit["identity_findings"]):
         raise RecoveryError("restore_ineligible", "Restored identity state differs")
+    _posting_recovery_from_target(
+        inventory=inventory,
+        target_bindings=target_bindings,
+        keypairs=target_keypairs,
+        database_identity_findings=cast(
+            "list[dict[str, object]]", target_audit["identity_findings"]
+        ),
+    )
     source_audit = manifest.get("audit")
     if not isinstance(source_audit, dict):
         raise RecoveryError("invalid_manifest", "Source audit evidence is invalid")
@@ -5418,6 +5591,13 @@ def _restore_audits(manifest: dict[str, Any]) -> dict[str, object]:
         or source_verification.get("manifest_sha256") != manifest.get("source_manifest_sha256")
     ):
         raise RecoveryError("invalid_manifest", "Source verification states are invalid")
+    if "posting_recovery" in source_verification:
+        try:
+            PostingRecoveryResult.from_json(source_verification["posting_recovery"])
+        except ValueError as exc:
+            raise RecoveryError(
+                "invalid_manifest", "Source posting verification is invalid"
+            ) from exc
     source_audit = manifest.get("source_audit")
     target_audit = manifest.get("target_audit")
     if not isinstance(source_audit, dict) or not isinstance(target_audit, dict):
@@ -5493,7 +5673,11 @@ def _verify_restored_contents(
     *,
     target_root: Path,
     work_root: _PinnedDirectory,
-) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+) -> tuple[
+    list[dict[str, object]],
+    list[dict[str, object]],
+    PostingRecoveryResult,
+]:
     special_files = frozenset({"COMPLETE", verified.marker_alias, "restore-manifest.json"})
     _validate_target_tree(target_root, verified.evidence, special_files=special_files)
     _verify_target_maintenance_lock(
@@ -5536,7 +5720,17 @@ def _verify_restored_contents(
     _validate_target_tree(target_root, verified.evidence, special_files=special_files)
     audit_findings = cast("list[dict[str, object]]", target_audit["findings"])
     identity_findings = cast("list[dict[str, object]]", target_audit["identity_findings"])
-    return audit_findings, [*key_findings, *identity_findings, *agent_owner_findings]
+    posting_recovery = _posting_recovery_from_target(
+        inventory=verified.inventory,
+        target_bindings=verified.target_bindings,
+        keypairs=target_keypairs,
+        database_identity_findings=identity_findings,
+    )
+    return (
+        audit_findings,
+        [*key_findings, *identity_findings, *agent_owner_findings],
+        posting_recovery,
+    )
 
 
 def _verify_restore_with_workspace(
@@ -5551,11 +5745,14 @@ def _verify_restore_with_workspace(
     if _paths_overlap(target_root, work_root):
         raise RecoveryError("path_overlap", "work_root overlaps restored target")
     verified = _load_restore_manifest(target_root)
-    audit_findings, all_identity_findings = _verify_restored_contents(
+    audit_findings, all_identity_findings, posting_recovery = _verify_restored_contents(
         verified, target_root=target_root, work_root=work_output
     )
     finding_codes = sorted(
-        {str(finding["code"]) for finding in [*audit_findings, *all_identity_findings]}
+        {
+            *(str(finding["code"]) for finding in [*audit_findings, *all_identity_findings]),
+            *posting_recovery.finding_codes,
+        }
     )
     return VerificationResult(
         artifact_verified=True,
@@ -5563,6 +5760,7 @@ def _verify_restore_with_workspace(
         identity_complete=not all_identity_findings,
         migration_eligible=False,
         operational_restore_verified=False,
+        posting_recovery=posting_recovery,
         finding_codes=tuple(finding_codes),
         manifest_sha256=verified.digest,
     )

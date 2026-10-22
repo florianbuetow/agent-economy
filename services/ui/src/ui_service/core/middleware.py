@@ -15,7 +15,9 @@ if TYPE_CHECKING:
 
 
 _JSON_VALIDATION_ENDPOINTS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("POST", re.compile(r"^/api/proxy/tasks$")),
+    ("POST", re.compile(r"^/api/proxy/task-postings/prepare$")),
+    ("POST", re.compile(r"^/api/proxy/task-postings/[^/]+/submit$")),
+    ("POST", re.compile(r"^/api/proxy/task-postings/[^/]+/status$")),
     ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/bids/[^/]+/accept$")),
     ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/approve$")),
     ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/dispute$")),

@@ -16,8 +16,9 @@ from service_commons.exceptions import ServiceError
 from db_gateway_service.services import court_writer
 from db_gateway_service.services.task_operation_writer import TaskOperationWriter
 from db_gateway_service.task_operation_requests import parse_task_operation_request
-from db_gateway_service.task_time import parse_utc_text_to_epoch_us
+from db_gateway_service.task_time import epoch_us_to_utc_text, parse_utc_text_to_epoch_us
 from tests.conftest import make_event
+from tests.fakes.native_board_history import publish_task
 
 if TYPE_CHECKING:
     import sqlite3
@@ -107,40 +108,28 @@ def _lock_escrow(
 
 
 def _create_task_for_agent(
-    db_writer: DbWriter,
+    client: TestClient,
     poster_id: str,
+    task_id: str,
     escrow_id: str,
 ) -> str:
-    """Create a task and return task_id."""
-    escrow = db_writer.connection.execute(
-        "SELECT task_id FROM bank_escrow WHERE escrow_id=?", (escrow_id,)
-    ).fetchone()
-    assert escrow is not None
-    tid = str(escrow[0])
-    db_writer.create_task(
-        {
-            "task_id": tid,
-            "poster_id": poster_id,
-            "title": "Test task",
-            "spec": "Do something",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 3600,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 86400,
-            "review_deadline_seconds": 3600,
-            "bidding_deadline": "2026-02-28T11:00:00Z",
-            "escrow_id": escrow_id,
-            "created_at": "2026-02-28T10:00:00Z",
-            "event": make_event(
-                source="board",
-                event_type="task.created",
-                task_id=tid,
-                agent_id=poster_id,
-            ),
-        }
+    """Create a task through native publication and return task_id."""
+    response = publish_task(
+        client,
+        task_id=task_id,
+        poster_id=poster_id,
+        escrow_id=escrow_id,
+        title="Test task",
+        spec="Do something",
+        reward=100,
+        bidding_deadline_seconds=3600,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=86400,
+        review_deadline_seconds=3600,
+        lock_timestamp=epoch_us_to_utc_text(parse_utc_text_to_epoch_us("2026-02-28T10:00:00Z")),
     )
-    return tid
+    assert response.status_code == 201, response.text
+    return task_id
 
 
 def _file_claim(
@@ -362,7 +351,10 @@ class TestEventIntegrity:
         assert row2[1] == "salary.paid"
 
     def test_event_task_id_and_agent_id_match_request(
-        self, app_with_writer: TestClient, db_writer: DbWriter
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """EVT-03: Event task_id and agent_id match request."""
         # Setup: register agent, create account, fund, lock escrow, create task
@@ -393,47 +385,28 @@ class TestEventIntegrity:
                 "event": make_event(source="bank", event_type="account.created"),
             },
         )
-        esc_id = f"esc-{uuid4()}"
         task_id = f"t-{uuid4()}"
-        app_with_writer.post(
-            "/bank/escrow/lock",
-            json={
-                "operation_id": f"op-{uuid4()}",
-                "escrow_id": esc_id,
-                "payer_account_id": poster_id,
-                "amount": 100,
-                "task_id": task_id,
-                "created_at": "2026-02-28T10:01:00Z",
-                "tx_id": f"tx-{uuid4()}",
-                "event": make_event(source="bank", event_type="escrow.locked"),
-            },
+        monkeypatch.setattr(
+            "db_gateway_service.task_time.utc_now_us",
+            lambda: parse_utc_text_to_epoch_us("2026-02-28T10:00:00Z"),
         )
-        resp = app_with_writer.post(
-            "/board/tasks",
-            json={
-                "task_id": task_id,
-                "poster_id": poster_id,
-                "title": "Test task",
-                "spec": "Do something",
-                "reward": 100,
-                "status": "open",
-                "bidding_deadline_seconds": 3600,
-                "acceptance_window_seconds": 3600,
-                "deadline_seconds": 86400,
-                "review_deadline_seconds": 3600,
-                "bidding_deadline": "2026-02-28T11:00:00Z",
-                "escrow_id": esc_id,
-                "created_at": "2026-02-28T10:00:00Z",
-                "event": make_event(
-                    source="board",
-                    event_type="task.created",
-                    task_id=task_id,
-                    agent_id=poster_id,
-                ),
-            },
+        esc_id = f"esc-{uuid4()}"
+        resp = publish_task(
+            app_with_writer,
+            task_id=task_id,
+            poster_id=poster_id,
+            escrow_id=esc_id,
+            title="Test task",
+            spec="Do something",
+            reward=100,
+            bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
+            execution_deadline_seconds=86400,
+            review_deadline_seconds=3600,
+            lock_timestamp="2026-02-28T10:00:00Z",
         )
         assert resp.status_code == 201
-        eid = resp.json()["event_id"]
+        eid = resp.json()["result"]["event_id"]
 
         row = db_writer._db.execute(
             "SELECT task_id, agent_id FROM events WHERE event_id = ?",
@@ -638,14 +611,22 @@ class TestAtomicity:
         assert _count_rows(db_writer._db, "events") == events_before
 
     def test_rebuttal_with_fk_violation_is_atomic(
-        self, db_writer: DbWriter, monkeypatch: pytest.MonkeyPatch
+        self,
+        db_writer: DbWriter,
+        app_with_writer: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """ATOM-05: A real event FK failure rolls back all preceding rebuttal writes."""
         alice = _register_agent(db_writer, name="Alice")
         bob = _register_agent(db_writer, name="Bob")
         _create_funded_account(db_writer, alice, balance=500)
-        esc_id = _lock_escrow(db_writer, alice, amount=100)
-        task_id = _create_task_for_agent(db_writer, alice, esc_id)
+        task_id = f"t-{uuid4()}"
+        esc_id = f"esc-{uuid4()}"
+        monkeypatch.setattr(
+            "db_gateway_service.task_time.utc_now_us",
+            lambda: parse_utc_text_to_epoch_us("2026-02-28T10:00:00Z"),
+        )
+        task_id = _create_task_for_agent(app_with_writer, alice, task_id, esc_id)
         claim_id = _prepare_disputed_claim(db_writer, task_id, alice, bob, esc_id)
 
         rebuttals_before = _count_rows(db_writer._db, "court_rebuttals")

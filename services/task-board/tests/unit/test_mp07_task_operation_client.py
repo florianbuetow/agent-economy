@@ -12,6 +12,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from service_auth.financial_identity import operation_id_for
 from service_auth.gateway import (
     GatewayRequestSigner,
     GatewaySignerConfig,
@@ -19,6 +20,7 @@ from service_auth.gateway import (
 )
 from service_auth.jws import TokenPolicy
 from service_auth.signing import generate_keypair, load_public_key
+from service_auth.task_postings import TaskPostingIntent
 from service_commons.exceptions import ServiceError
 
 from task_board_service.services.task_db_client import TaskDbClient
@@ -666,18 +668,47 @@ def test_task_reads_fail_closed_when_any_v3_contract_field_is_missing(
 def test_task_publication_forwards_explicit_acceptance_window_unchanged(
     signer: GatewayRequestSigner,
 ) -> None:
-    graph = _recording_client(signer, [httpx.Response(201, json={"task_id": _TASK_ID})])
-    task = _task_projection(legacy=False)
-    task["status"] = "open"
-    task["bid_count"] = 0
-    task["worker_id"] = None
-    task["accepted_bid_id"] = None
-    task["acceptance_window_seconds"] = 37
+    intent = TaskPostingIntent.from_json(
+        {
+            "protocol_version": 1,
+            "operation_id": _OPERATION_ID,
+            "task_id": _TASK_ID,
+            "actor_kind": "agent",
+            "actor_id": _POSTER_ID,
+            "lock_operation_id": operation_id_for("task-lock", (_TASK_ID, _POSTER_ID)),
+            "title": "Explicit acceptance window",
+            "spec": "Forward the exact poster-selected window to native admission.",
+            "reward": 100,
+            "bidding_deadline_seconds": 60,
+            "acceptance_window_seconds": 37,
+            "execution_deadline_seconds": 120,
+            "review_deadline_seconds": 90,
+        }
+    )
+    pending = {
+        "protocol_version": 1,
+        "operation_id": intent.operation_id,
+        "task_id": intent.task_id,
+        "request_sha256": intent.request_sha256,
+        "publication_state": "awaiting_lock",
+        "lock_operation_id": intent.lock_operation_id,
+        "escrow_id": None,
+        "admitted_at": "2099-01-01T00:00:00.000000Z",
+        "published_at": None,
+        "result": None,
+        "error": None,
+    }
+    graph = _recording_client(signer, [httpx.Response(202, json=pending)])
     try:
-        graph.client.insert_task(task)
+        response = graph.client.admit_task_publication(intent)
     finally:
         graph.client.close()
 
     assert len(graph.requests) == 1
+    assert graph.requests[0].method == "POST"
+    assert graph.requests[0].url.path == "/board/task-publications"
     payload = json.loads(graph.requests[0].content)
     assert payload.get("acceptance_window_seconds") == 37
+    assert payload == intent.as_json()
+    assert response.status_code == 202
+    assert response.body == pending

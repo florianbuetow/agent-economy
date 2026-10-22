@@ -614,65 +614,7 @@
 
   // ── Form bindings ──────────────────────────────────────────
   function bindCreateForm() {
-    var btn = document.getElementById('btn-post-task');
-    if (!btn) return;
-    btn.addEventListener('click', async function() {
-      var title = document.getElementById('f-title').value.trim();
-      var spec = document.getElementById('f-spec').value.trim();
-      var reward = parseInt(document.getElementById('f-reward').value, 10);
-      var bidDl = parseInt(document.getElementById('f-bid-dl').value, 10);
-      var acceptWindowRaw = document.getElementById('f-accept-window').value.trim();
-      var acceptWindow = Number(acceptWindowRaw);
-      var execDl = parseInt(document.getElementById('f-exec-dl').value, 10);
-      var revDl = parseInt(document.getElementById('f-rev-dl').value, 10);
-      var errEl = document.getElementById('post-error');
-
-      if (!title || !spec || !reward || !bidDl || !acceptWindowRaw || !execDl || !revDl) {
-        errEl.textContent = 'All fields are required.';
-        return;
-      }
-      if (!Number.isSafeInteger(acceptWindow) || acceptWindow <= 0 || acceptWindow > 9223372036854) {
-        errEl.textContent = 'Acceptance window must be a positive whole number.';
-        return;
-      }
-
-      btn.disabled = true;
-      errEl.textContent = '';
-
-      try {
-        var resp = await ATE.proxyFetch('/api/proxy/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: title,
-            spec: spec,
-            reward: reward,
-            bidding_deadline_seconds: bidDl,
-            acceptance_window_seconds: acceptWindow,
-            execution_deadline_seconds: execDl,
-            review_deadline_seconds: revDl
-          })
-        });
-        if (!resp.ok) {
-          var err = await resp.json().catch(function() { return {}; });
-          throw new Error(err.message || 'Failed to create task (HTTP ' + resp.status + ')');
-        }
-        var data = await resp.json();
-        state.taskId = data.task_id;
-        state.mode = 'view';
-
-        // Update URL without reload
-        var url = new URL(window.location);
-        url.searchParams.set('task_id', state.taskId);
-        window.history.pushState({}, '', url);
-
-        await refreshTaskData(state.taskId);
-        connectTaskSSE(state.taskId);
-      } catch (e) {
-        errEl.textContent = e.message;
-        btn.disabled = false;
-      }
-    });
+    ATE.TaskPosting.bindCreateForm();
   }
 
   // ── Action button bindings ─────────────────────────────────
@@ -882,7 +824,9 @@
       connectTaskSSE(taskId);
     } else {
       state.mode = 'create';
+      await ATE.TaskPosting.ready();
       updateView();
+      await ATE.TaskPosting.recoverExisting();
     }
 
     // Start metrics polling for ticker updates

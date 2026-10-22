@@ -1,5 +1,97 @@
 # Task Board Service — Production Release Test Specification
 
+## MP-05 native posting acceptance amendment
+
+The real-process restart proof now prepares a durable native SDK intent and
+submits it once. Its crash-only harness drains earlier reconciliation calls and
+blocks subsequent publication before dispatching the real Bank lock, so the
+new background reconciler cannot publish in the process being deliberately
+killed. The normal restarted process has no fault barrier and must publish from
+the saved receipt without a second submission. Existing exact task, money,
+process-ownership and sentinel assertions remain; owner status/hash assertions
+add proof that the same admitted operation completes. The original pre-native
+red harness and logs remain archived under `mp05-posting/process-red`.
+
+The durable publication contract linked by the API specification supersedes
+conflicting creation examples below. Preserve original signature, field type,
+amount, ownership and no-duplicate-effect assertions while supplying the new
+explicit intent fields and reading the frozen result within the publication
+envelope. Replace the old execution-duration input alias with the declared
+`execution_deadline_seconds` field. An exact same-intent replay succeeds with
+the same creation result; a different operation claiming the same task conflicts.
+Extra signed business fields are invalid payloads, not ignored mass assignment.
+
+For creation fault fixtures, the Bank effect must occur only after the real
+Gateway admitted the full immutable intent. A pre-created historical lock is
+not a valid native posting fixture. Move response-loss hooks to native reconcile
+and keep the exact one-lock/task/event and zero-refund assertions. The historical
+stale-precheck/rollback defects remain archived; native task-ID reservation
+replaces that obsolete path. Recovery assertions run after actual restart or
+reconciliation, never demand an immediate refund after a storage failure.
+
+The native Board fixture's private status lookup must sign `gateway.board.write`;
+using the ordinary read capability produces a fixture authorization failure,
+not evidence that an intent is absent. A direct admitted-status control proves
+the fixture before Bank-order assertions. Separate certificate negatives require
+the task token to remain valid while the escrow signature or audience/resource
+is invalid, and assert no admitted intent or Bank call.
+
+The new create/status routes declare a publication response model rather than
+the mutable task-detail model. Response-model wiring checks may change that
+specific model identity while retaining every other route assertion. This does
+not authorize weakening lifecycle, financial, privacy or malformed-response
+requirements, and no package closes before the complete root gate.
+
+The seven old `new_lock_escrow_id` helper cases are replaced by the matching
+native publication integration proof, the 19-case persisted-financial-fact
+matrix, and direct legacy-response/wrong-operation boundary cases. Parent runs
+verified all 14 Board integration cases and all 19 Gateway matrix cases before
+retiring that private-helper import and its replaced cases. The exact behavior
+and error-status mapping is recorded in
+`docs/plans/2026-10-19-mp05-funding-test-reconciliation.md`. A missing receipt
+remains pending; contradictory persisted facts durably block publication.
+Remaining lifecycle financial-intent assertions are retained; fresh posting
+fixture IDs use canonical UUID-shaped task IDs consistently in inputs and
+expected references.
+
+TC-01 asserts the exact 11-field publication envelope and 19-field frozen result;
+mutable task details and their original null/count assertions use a subsequent
+successful task GET. TC-02 rejects a different posting operation for the same
+task with `409 task_id_conflict`, with no second Bank effect. TC-15 still reports
+typed `402 insufficient_funds`. TC-16 reconciles a typed Bank-unavailable result
+to `202 awaiting_lock` when no receipt exists, with no visible task, financial
+change or refund. TC-26 rejects extra signed fields with `400 invalid_payload`
+and no writes. These replace the conflicting legacy examples below.
+
+TC-28 now proves that a stale caller-side task lookup cannot bypass the Gateway's
+native reservation: the second poster gets `409 task_id_conflict` before any Bank
+call, all rows and the losing poster's balance stay unchanged, and the original
+task retains its one locked winner escrow. Historical compensation remains
+separately covered by the verified migration/refund cases. A legacy-shaped Bank
+acknowledgment without a persisted receipt is only pending evidence; neither its
+claimed locked nor released status can authorize publication or settlement.
+
+## MP-05 posting recovery configuration and fixture amendment
+
+The native publication contract in
+`docs/plans/2026-10-18-mp05-publication-contract.md` requires an explicit
+`posting_recovery` section: finite positive `interval_seconds`, strict integer
+`batch_size` and `diagnostic_limit` in 1..1000. Missing sections/fields, booleans,
+coercible strings, nonfinite intervals and unknown fields fail startup. Values
+come from YAML; application code does not supply defaults. New cause-specific
+tests require the exact missing/nested validation location.
+
+Valid Task Board test configuration producers may add explicit isolated values
+for those three settings, preserving every existing behavioral assertion and
+other intentionally invalid field. The captured pre-reconciliation run had four
+failures and three setup errors because `posting_recovery` was absent before the
+old assertions. Extra-field and missing-deadline tests must continue to exercise
+their original causes with this unrelated required section present. Do not add
+this section to Gateway configurations, suppress errors, skip tests, or introduce
+a production fallback. This fixture amendment is limited to configuration input;
+it does not authorize changing task-posting expectations before their separate
+native API reconciliation.
+
 ## MP-04 ruling retry acceptance amendment
 
 A replay of a stored ruling must match its ruling identity, strict integer percentage, and exact

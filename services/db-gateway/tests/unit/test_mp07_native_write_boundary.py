@@ -12,9 +12,15 @@ from service_commons.exceptions import ServiceError
 from db_gateway_service.schema import SchemaState, load_schema_sql
 from db_gateway_service.services.db_writer import DbWriter
 from db_gateway_service.services.task_operation_writer import TaskOperationWriter
+from db_gateway_service.services.task_publication_writer import TaskPublicationWriter
 from db_gateway_service.task_operation_requests import parse_task_operation_request
+from db_gateway_service.task_publication_requests import parse_task_publication_request
 from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 from tests.conftest import make_event
+from tests.fakes.native_publication_fixture import (
+    native_publication_payload,
+    publish_native_task,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -42,7 +48,7 @@ def writer(tmp_path: Path) -> Iterator[DbWriter]:
         db_path=str(tmp_path / "native-write-boundary.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V3),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
     )
     yield value
     value.close()
@@ -99,43 +105,41 @@ def _seed_financial_graph(writer: DbWriter) -> _Graph:
             ),
         }
     )
-    writer.escrow_lock(
-        {
-            "operation_id": f"op-{uuid4()}",
-            "escrow_id": graph.escrow_id,
-            "payer_account_id": graph.poster_id,
-            "amount": 100,
-            "task_id": graph.task_id,
-            "created_at": "2098-12-31T23:59:53Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=graph.task_id),
-        }
-    )
     return graph
 
 
 def _publication(graph: _Graph) -> dict[str, object]:
-    return {
-        "task_id": graph.task_id,
-        "poster_id": graph.poster_id,
-        "title": "Native write boundary",
-        "spec": "Require every v3 lifecycle mutation to use a native operation.",
-        "reward": 100,
-        "status": "open",
-        "bidding_deadline_seconds": 86400,
-        "acceptance_window_seconds": 86400,
-        "deadline_seconds": 86400,
-        "review_deadline_seconds": 86400,
-        "bidding_deadline": _BIDDING_DEADLINE,
-        "escrow_id": graph.escrow_id,
-        "created_at": _CREATED_AT,
-        "event": make_event(source="board", event_type="task.created", task_id=graph.task_id),
-    }
+    return native_publication_payload(
+        task_id=graph.task_id,
+        poster_id=graph.poster_id,
+        title="Native write boundary",
+        spec="Require every v4 lifecycle mutation to use a native operation.",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=86400,
+        execution_deadline_seconds=86400,
+        review_deadline_seconds=86400,
+    )
 
 
 def _seed_open_task(writer: DbWriter) -> _Graph:
     graph = _seed_financial_graph(writer)
-    writer.create_task(_publication(graph))
+    publish_native_task(
+        writer,
+        caller_kid=_BOARD_KID,
+        clock_us=parse_utc_text_to_epoch_us(_CREATED_AT),
+        task_id=graph.task_id,
+        poster_id=graph.poster_id,
+        escrow_id=graph.escrow_id,
+        title="Native write boundary",
+        spec="Require every v4 lifecycle mutation to use a native operation.",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=86400,
+        execution_deadline_seconds=86400,
+        review_deadline_seconds=86400,
+        lock_timestamp="2098-12-31T23:59:53Z",
+    )
     return graph
 
 
@@ -255,12 +259,13 @@ def test_publication_cannot_bootstrap_native_lifecycle_state(
     value: object,
 ) -> None:
     graph = _seed_financial_graph(writer)
-    publication = _publication(graph)
-    publication[field] = value
+    publication = {**_publication(graph), field: value}
     before = _snapshot(writer)
 
     with pytest.raises(ServiceError) as raised:
-        writer.create_task(publication)
+        TaskPublicationWriter(writer.connection, clock_us=lambda: _NOW_US).admit(
+            parse_task_publication_request(publication), _BOARD_KID
+        )
 
     assert raised.value.status_code == 400
     assert raised.value.error == "invalid_payload"
@@ -271,6 +276,25 @@ def test_publication_cannot_bootstrap_native_lifecycle_state(
         ).fetchone()[0]
         == 0
     )
+
+
+def test_generic_task_creation_writer_remains_retired(writer: DbWriter) -> None:
+    graph = _seed_financial_graph(writer)
+    before = _snapshot(writer)
+
+    with pytest.raises(ServiceError) as raised:
+        writer.create_task(
+            {
+                "task_id": graph.task_id,
+                "poster_id": graph.poster_id,
+                "title": "Retired generic creation",
+                "spec": "This path must not create current tasks.",
+                "reward": 100,
+            }
+        )
+
+    assert (raised.value.status_code, raised.value.error) == (409, "native_publication_required")
+    assert _snapshot(writer) == before
     assert (
         writer.connection.execute(
             "SELECT COUNT(*) FROM board_task_contracts WHERE task_id = ?", (graph.task_id,)

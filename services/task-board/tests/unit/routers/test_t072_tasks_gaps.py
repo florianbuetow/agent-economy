@@ -10,6 +10,7 @@ test file is modified.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
@@ -114,7 +115,7 @@ class TestTaskCreationGaps:
         assert resp.json()["error"] == "forbidden"
 
     @pytest.mark.unit
-    async def test_tc28_escrow_rollback_on_db_insert_race(
+    async def test_tc28_native_task_id_conflict_has_no_financial_side_effects(
         self,
         client: AsyncClient,
         alice_keypair,
@@ -123,7 +124,7 @@ class TestTaskCreationGaps:
         bob_agent_id: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """TC-28: A real insert collision refunds the new poster's escrow only."""
+        """TC-28: Native admission rejects an existing task before any Bank call."""
         state = get_app_state()
         task_id = make_task_id()
 
@@ -135,9 +136,22 @@ class TestTaskCreationGaps:
         assert isinstance(store, GatewayTaskStore)
         existing_task = store.reader.get_task(task_id)
         assert existing_task is not None
+        existing_task_bytes = json.dumps(
+            existing_task,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
         balance_before = store.writer.connection.execute(
             "SELECT balance FROM bank_accounts WHERE account_id=?", (alice_agent_id,)
         ).fetchone()[0]
+        escrow_before = store.writer.connection.execute(
+            "SELECT payer_account_id,status FROM bank_escrow WHERE task_id=? "
+            "ORDER BY payer_account_id",
+            (task_id,),
+        ).fetchall()
+        assert [tuple(row) for row in escrow_before] == [(bob_agent_id, "locked")]
         assert state.central_bank_client is not None
         lock = state.central_bank_client.escrow_lock
         release = state.central_bank_client.escrow_release
@@ -145,34 +159,37 @@ class TestTaskCreationGaps:
         lock.reset_mock()
         release.reset_mock()
         monkeypatch.setattr(store, "get_task", MagicMock(return_value=None))
+        database_before = tuple(store.writer.connection.iterdump())
 
         resp = await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
 
         assert resp.status_code == 409
-        assert resp.json()["error"] == "task_already_exists"
-        lock.assert_awaited_once()
-        release.assert_awaited_once()
-        assert release.await_args is not None
-        assert release.await_args.kwargs["recipient_account_id"] == alice_agent_id
-        refund = store.writer.connection.execute(
-            "SELECT r.operation_kind,l.account_id,l.direction,l.amount,t.balance_after "
-            "FROM bank_operation_receipts AS r JOIN bank_operation_legs AS l "
-            "ON l.operation_id=r.operation_id JOIN bank_transactions AS t "
-            "ON t.tx_id=l.transaction_id WHERE r.operation_id=?",
-            (release.await_args.kwargs["operation_id"],),
-        ).fetchall()
-        assert [tuple(row) for row in refund] == [
-            ("escrow_release", alice_agent_id, "credit", 100, balance_before)
-        ]
-        assert store.reader.get_task(task_id) == existing_task
+        assert resp.json()["error"] == "task_id_conflict"
+        lock.assert_not_awaited()
+        release.assert_not_awaited()
+        assert (
+            store.writer.connection.execute(
+                "SELECT balance FROM bank_accounts WHERE account_id=?", (alice_agent_id,)
+            ).fetchone()[0]
+            == balance_before
+        )
+        task_after = store.reader.get_task(task_id)
+        assert task_after is not None
+        task_after_bytes = json.dumps(
+            task_after,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
+        assert task_after_bytes == existing_task_bytes
+        assert tuple(store.writer.connection.iterdump()) == database_before
         escrows = store.writer.connection.execute(
             "SELECT payer_account_id,status FROM bank_escrow WHERE task_id=? "
             "ORDER BY payer_account_id",
             (task_id,),
         ).fetchall()
-        assert [tuple(row) for row in escrows] == sorted(
-            [(alice_agent_id, "released"), (bob_agent_id, "locked")]
-        )
+        assert [tuple(row) for row in escrows] == [(bob_agent_id, "locked")]
 
 
 class TestTaskQueryGaps:

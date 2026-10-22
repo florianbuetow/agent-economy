@@ -548,6 +548,7 @@ class QuarterlyReportResponse(BaseModel):
 # ---------------------------------------------------------------------------
 SQLITE_MAX_INTEGER = (1 << 63) - 1
 MAX_ACCEPTANCE_WINDOW_SECONDS = SQLITE_MAX_INTEGER // 1_000_000
+MAX_SAFE_INTEGER = (1 << 53) - 1
 OperationId = Annotated[
     str,
     Field(
@@ -558,17 +559,67 @@ OperationId = Annotated[
 LifecycleVersion = Annotated[int, Field(strict=True, ge=0, le=SQLITE_MAX_INTEGER)]
 
 
-class CreateTaskRequest(BaseModel):
-    """Request to create a new task via UserAgent."""
+class TaskPostingPrepareRequest(BaseModel):
+    """Exact user-selected terms for a new durable task posting."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
     title: str = Field(min_length=1, max_length=200)
     spec: str = Field(min_length=1, max_length=10000)
-    reward: int = Field(gt=0, le=SQLITE_MAX_INTEGER)
-    bidding_deadline_seconds: int = Field(gt=0, le=SQLITE_MAX_INTEGER)
+    reward: int = Field(gt=0, le=MAX_SAFE_INTEGER)
+    bidding_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
     acceptance_window_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
-    execution_deadline_seconds: int = Field(gt=0, le=SQLITE_MAX_INTEGER)
-    review_deadline_seconds: int = Field(gt=0, le=SQLITE_MAX_INTEGER)
+    execution_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    review_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+
+
+class TaskPostingServiceUrls(BaseModel):
+    """Exact service URL binding for a browser-owned posting record."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    identity_url: str
+    bank_url: str
+    task_board_url: str
+    reputation_url: str
+    court_url: str
+
+
+class TaskPostingScope(BaseModel):
+    """Operator and platform binding for a browser-owned posting record."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    schema_version: Literal[1]
+    operator_agent_id: str = Field(min_length=1)
+    operator_public_fingerprint_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    service_urls: TaskPostingServiceUrls
+
+
+class TaskPostingIntentPayload(BaseModel):
+    """Strict JSON projection of service-auth's immutable posting intent."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    protocol_version: Literal[1]
+    operation_id: OperationId
+    task_id: str
+    actor_kind: Literal["agent"]
+    actor_id: str = Field(min_length=1)
+    lock_operation_id: OperationId
+    title: str = Field(min_length=1, max_length=200)
+    spec: str = Field(min_length=1, max_length=10000)
+    reward: int = Field(gt=0, le=MAX_SAFE_INTEGER)
+    bidding_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    acceptance_window_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    execution_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    review_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+
+
+class TaskPostingRecord(BaseModel):
+    """Complete immutable record persisted by the browser before transport."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    record_version: Literal[1]
+    scope: TaskPostingScope
+    intent: TaskPostingIntentPayload
+    request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 class NativeMutationRequest(BaseModel):

@@ -25,6 +25,7 @@ from service_commons.recovery_contract import (
 )
 
 from db_gateway_service.recovery import VerificationResult
+from db_gateway_service.posting_recovery_audit import PostingRecoveryResult
 
 if TYPE_CHECKING:
     from scripts.recovery_adoption import RestoredRuntimeView
@@ -127,6 +128,7 @@ def _verification(payload: bytes, **changes: object) -> VerificationResult:
         "identity_complete": False,
         "migration_eligible": False,
         "operational_restore_verified": False,
+        "posting_recovery": PostingRecoveryResult.not_applicable(),
         "finding_codes": ("identity_incomplete",),
         "manifest_sha256": hashlib.sha256(payload).hexdigest(),
     }

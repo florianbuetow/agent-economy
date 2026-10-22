@@ -17,6 +17,7 @@ from uuid import uuid4
 import pytest
 
 from tests.conftest import make_event
+from tests.fakes.native_board_history import publish_task
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
@@ -61,39 +62,20 @@ def _setup_funded_account(client: TestClient, name: str = "Test", balance: int =
 def _create_task(client: TestClient, poster_id: str) -> str:
     tid = f"t-{uuid4()}"
     eid = f"esc-{uuid4()}"
-    client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": f"op-{uuid4()}",
-            "escrow_id": eid,
-            "payer_account_id": poster_id,
-            "amount": 100,
-            "task_id": tid,
-            "created_at": "2026-02-28T10:10:00Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=tid),
-        },
+    publish_task(
+        client,
+        task_id=tid,
+        poster_id=poster_id,
+        escrow_id=eid,
+        title="Test Task",
+        spec="Build a login page",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=172800,
+        review_deadline_seconds=43200,
+        lock_timestamp="2026-02-28T10:10:00Z",
     )
-    response = client.post(
-        "/board/tasks",
-        json={
-            "task_id": tid,
-            "poster_id": poster_id,
-            "title": "Test Task",
-            "spec": "Build a login page",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 172800,
-            "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:15:00Z",
-            "escrow_id": eid,
-            "created_at": "2026-02-28T10:15:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=tid),
-        },
-    )
-    assert response.status_code == 201
     return tid
 
 

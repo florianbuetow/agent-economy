@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, Any
 import httpx
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_proxy_posting import create_task_via_proxy
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -57,11 +58,10 @@ async def test_real_operator_bids_stay_sealed_then_reveal_losing_bidder_history(
         resources.push_async_callback(winner.close)
         loser = await make_funded_agent(name="MP12 unchosen worker", balance=0)
         resources.push_async_callback(loser.close)
-        created = await bid_proxy_client.post(
-            "/api/proxy/tasks", json=_task_input("MP12 operator-owned task")
+        task = await create_task_via_proxy(
+            bid_proxy_client,
+            _task_input("MP12 operator-owned task"),
         )
-        assert created.status_code == 200, created.text
-        task = created.json()
         task_id = task["task_id"]
         winning_bid_response = await winner.submit_bid(
             task_id=task_id,
@@ -136,7 +136,7 @@ async def test_real_operator_cannot_list_another_posters_open_bids(
         resources.push_async_callback(poster.close)
         worker = await make_funded_agent(name="MP12 private bidder", balance=0)
         resources.push_async_callback(worker.close)
-        task = await poster.post_task(**_task_input("MP12 independent task"))
+        task = await publish_task(poster, **_task_input("MP12 independent task"))
         bid_response = await worker.submit_bid(
             task_id=task["task_id"],
             amount=31,

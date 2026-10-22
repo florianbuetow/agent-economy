@@ -4,9 +4,16 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING
+from uuid import uuid4
+
+from service_auth.financial_identity import operation_id_for
+from service_auth.task_postings import TaskPostingIntent
 
 from db_gateway_service import task_time
-from db_gateway_service.task_time import parse_utc_text_to_epoch_us
+from db_gateway_service.task_time import (
+    epoch_us_to_utc_text,
+    parse_utc_text_to_epoch_us,
+)
 
 if TYPE_CHECKING:
     import httpx
@@ -28,36 +35,97 @@ async def publish_open_task(
     spec: str,
     reward: int,
     escrow_id: str,
-    created_at: str,
-    bidding_deadline: str,
     bidding_deadline_seconds: int,
     acceptance_window_seconds: int,
     execution_deadline_seconds: int,
     review_deadline_seconds: int,
-    event: dict[str, object],
 ) -> httpx.Response:
-    """Publish the only authoritative initial task state."""
-    return await client.post(
-        "/board/tasks",
-        json={
+    """Admit, fund, and reconcile an ordinary task through native Gateway routes."""
+    intent = TaskPostingIntent.from_json(
+        {
+            "protocol_version": 1,
+            "operation_id": operation_id_for(
+                "cross-service-task-publication",
+                (task_id, poster_id),
+            ),
             "task_id": task_id,
-            "poster_id": poster_id,
+            "actor_kind": "agent",
+            "actor_id": poster_id,
+            "lock_operation_id": operation_id_for("task-lock", (task_id, poster_id)),
             "title": title,
             "spec": spec,
             "reward": reward,
-            "status": "open",
             "bidding_deadline_seconds": bidding_deadline_seconds,
             "acceptance_window_seconds": acceptance_window_seconds,
-            "deadline_seconds": execution_deadline_seconds,
+            "execution_deadline_seconds": execution_deadline_seconds,
             "review_deadline_seconds": review_deadline_seconds,
-            "bidding_deadline": bidding_deadline,
-            "bid_count": 0,
-            "escrow_pending": 0,
+        }
+    )
+    admitted = await client.post("/board/task-publications", json=intent.as_json())
+    assert admitted.status_code == 202, admitted.text
+    admission = admitted.json()
+    assert admission["publication_state"] == "awaiting_lock"
+    assert admission["operation_id"] == intent.operation_id
+    assert admission["task_id"] == intent.task_id
+    assert admission["lock_operation_id"] == intent.lock_operation_id
+    lock_timestamp = epoch_us_to_utc_text(
+        parse_utc_text_to_epoch_us(admission["admitted_at"])
+    )
+
+    lock_response = await client.post(
+        "/bank/escrow/lock",
+        json={
+            "operation_id": intent.lock_operation_id,
             "escrow_id": escrow_id,
-            "created_at": created_at,
-            "event": event,
+            "payer_account_id": poster_id,
+            "amount": reward,
+            "task_id": task_id,
+            "created_at": lock_timestamp,
+            "tx_id": f"tx-{uuid4()}",
+            "event": {
+                "event_source": "central-bank",
+                "event_type": "escrow.locked",
+                "timestamp": lock_timestamp,
+                "agent_id": poster_id,
+                "task_id": task_id,
+                "summary": f"Escrow locked for {task_id}",
+                "payload": json.dumps({"escrow_id": escrow_id, "amount": reward}),
+            },
         },
     )
+    assert lock_response.status_code == 201, lock_response.text
+    lock_envelope = lock_response.json()
+    assert lock_envelope["outcome"] == "native_receipt"
+    assert lock_envelope["receipt"]["operation_id"] == intent.lock_operation_id
+    assert lock_envelope["receipt"]["operation_kind"] == "escrow_lock"
+    assert lock_envelope["receipt"]["source_reference"] == task_id
+    assert lock_envelope["current_escrow"]["escrow_id"] == escrow_id
+    assert lock_envelope["current_escrow"]["task_id"] == task_id
+    assert lock_envelope["current_escrow"]["payer_account_id"] == poster_id
+    assert lock_envelope["current_escrow"]["amount"] == reward
+    assert lock_envelope["current_escrow"]["status"] == "locked"
+    assert lock_envelope["current_escrow"]["created_at"] == lock_timestamp
+
+    reconciled = await client.post(
+        f"/board/task-publications/{intent.operation_id}/reconcile",
+        json={},
+    )
+    assert reconciled.status_code == 201, reconciled.text
+    envelope = reconciled.json()
+    assert envelope["publication_state"] == "published"
+    assert envelope["operation_id"] == intent.operation_id
+    assert envelope["task_id"] == task_id
+    assert envelope["lock_operation_id"] == intent.lock_operation_id
+    assert envelope["escrow_id"] == escrow_id
+    result = envelope["result"]
+    assert result["task_id"] == task_id
+    assert result["poster_id"] == poster_id
+    assert result["title"] == title
+    assert result["spec"] == spec
+    assert result["reward"] == reward
+    assert result["status"] == "open"
+    assert isinstance(result["event_id"], int)
+    return reconciled
 
 
 async def claim_task_operation(
@@ -265,7 +333,9 @@ async def approve_with_bank_receipt(
             },
         },
     )
-    finalized = await client.post(f"/board/task-operations/{operation_id}/finalize", json={})
+    finalized = await client.post(
+        f"/board/task-operations/{operation_id}/finalize", json={}
+    )
     return claim, receipt, finalized
 
 
@@ -299,5 +369,7 @@ async def claim_dispute(
     )
 
 
-async def finalize_task_operation(client: httpx.AsyncClient, operation_id: str) -> httpx.Response:
+async def finalize_task_operation(
+    client: httpx.AsyncClient, operation_id: str
+) -> httpx.Response:
     return await client.post(f"/board/task-operations/{operation_id}/finalize", json={})

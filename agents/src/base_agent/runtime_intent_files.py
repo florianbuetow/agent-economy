@@ -244,6 +244,9 @@ def read_record_bytes(
         latest = os.stat(name, dir_fd=directory.descriptor, follow_symlinks=False)
         if (
             not stat.S_ISREG(opened.st_mode)
+            or before.st_nlink != 1
+            or opened.st_nlink != 1
+            or latest.st_nlink != 1
             or (opened.st_dev, opened.st_ino) != (latest.st_dev, latest.st_ino)
             or (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino)
         ):
@@ -261,7 +264,7 @@ def read_record_bytes(
         content = b"".join(chunks)
         after = os.fstat(descriptor)
         current = os.stat(name, dir_fd=directory.descriptor, follow_symlinks=False)
-        stable_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        stable_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns", "st_nlink")
         if any(getattr(after, field) != getattr(opened, field) for field in stable_fields) or any(
             getattr(current, field) != getattr(after, field) for field in stable_fields
         ):
@@ -285,8 +288,11 @@ def read_record_bytes(
 def validate_record_admission(directory: SafeDirectory, name: str) -> None:
     """Reject unsafe file kinds and modes without parsing record contents."""
 
-    if _record_kind(directory, name) is None:
+    metadata = _record_kind(directory, name)
+    if metadata is None:
         raise RuntimeIntentError("unsafe_path", f"record disappeared during admission: {name}")
+    if metadata.st_nlink != 1:
+        raise RuntimeIntentError("unsafe_path", f"record has multiple links: {name}")
 
 
 def remove_private_staging_record(directory: SafeDirectory, name: str) -> None:

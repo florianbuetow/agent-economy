@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -25,7 +25,8 @@ async def test_task_board_dispute_auto_files_court_claim(make_funded_agent) -> N
         worker = await make_funded_agent(name="Worker DCH", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Dispute Court handoff task",
             spec="Deliver the requested artifact.",
             reward=500,

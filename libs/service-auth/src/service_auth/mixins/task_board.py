@@ -11,6 +11,12 @@ from service_auth.task_board_responses import (
     TaskBoardCommandResponse,
     parse_task_board_command_response,
 )
+from service_auth.task_postings import (
+    TaskPostingIntent,
+    TaskPostingResponse,
+    parse_task_posting_status_response,
+    parse_task_posting_submit_response,
+)
 
 if TYPE_CHECKING:
     import httpx
@@ -69,6 +75,112 @@ async def _send_task_board_command(
 
 class TaskBoardMixin:
     """Methods for interacting with the Task Board service (port 8003)."""
+
+    def prepare_task_posting(
+        self: _TaskBoardClient,
+        title: str,
+        spec: str,
+        reward: int,
+        bidding_deadline_seconds: int,
+        acceptance_window_seconds: int,
+        execution_deadline_seconds: int,
+        review_deadline_seconds: int,
+    ) -> TaskPostingIntent:
+        """Allocate and validate one immutable task-publication intent."""
+        poster_id = self.agent_id
+        if poster_id is None:
+            raise RuntimeError("Agent must be registered before preparing a task posting")
+        task_id = f"t-{uuid.uuid4()}"
+        lock_operation_id = operation_id_for("task-lock", (task_id, poster_id))
+        operation_id = f"op-{uuid.uuid4()}"
+        while operation_id == lock_operation_id:
+            operation_id = f"op-{uuid.uuid4()}"
+        return TaskPostingIntent.from_json(
+            {
+                "protocol_version": 1,
+                "operation_id": operation_id,
+                "task_id": task_id,
+                "actor_kind": "agent",
+                "actor_id": poster_id,
+                "lock_operation_id": lock_operation_id,
+                "title": title,
+                "spec": spec,
+                "reward": reward,
+                "bidding_deadline_seconds": bidding_deadline_seconds,
+                "acceptance_window_seconds": acceptance_window_seconds,
+                "execution_deadline_seconds": execution_deadline_seconds,
+                "review_deadline_seconds": review_deadline_seconds,
+            }
+        )
+
+    async def submit_task_posting(
+        self: _TaskBoardClient, intent: TaskPostingIntent
+    ) -> TaskPostingResponse:
+        """Sign fresh tokens and submit one previously prepared posting intent."""
+        poster_id = self.agent_id
+        if poster_id is None:
+            raise RuntimeError("Agent must be registered before submitting a task posting")
+        if not isinstance(intent, TaskPostingIntent):
+            raise ValueError("intent must be a TaskPostingIntent")
+        if intent.actor_id != poster_id:
+            raise ValueError("task posting intent owner does not match the registered actor")
+        url = f"{self.config.task_board_url}/tasks"
+        task_token = self._sign_jws(
+            {
+                "action": "create_task",
+                "protocol_version": intent.protocol_version,
+                "operation_id": intent.operation_id,
+                "task_id": intent.task_id,
+                "poster_id": intent.actor_id,
+                "lock_operation_id": intent.lock_operation_id,
+                "title": intent.title,
+                "spec": intent.spec,
+                "reward": intent.reward,
+                "bidding_deadline_seconds": intent.bidding_deadline_seconds,
+                "acceptance_window_seconds": intent.acceptance_window_seconds,
+                "execution_deadline_seconds": intent.execution_deadline_seconds,
+                "review_deadline_seconds": intent.review_deadline_seconds,
+            },
+            audience="task-board",
+            resource="POST /tasks",
+        )
+        escrow_token = self._sign_jws(
+            {
+                "action": "escrow_lock",
+                "operation_id": intent.lock_operation_id,
+                "task_id": intent.task_id,
+                "amount": intent.reward,
+                "agent_id": intent.actor_id,
+            },
+            audience="central-bank",
+            resource="POST /escrow/lock",
+        )
+        response = await self._request_raw(
+            "POST", url, json={"task_token": task_token, "escrow_token": escrow_token}
+        )
+        return parse_task_posting_submit_response(response, intent)
+
+    async def get_task_posting(self: _TaskBoardClient, operation_id: str) -> TaskPostingResponse:
+        """Read one owner-visible publication state using fresh signed authority."""
+        poster_id = self.agent_id
+        if poster_id is None:
+            raise RuntimeError("Agent must be registered before reading a task posting")
+        validated_operation_id = validate_operation_id(operation_id)
+        resource = f"GET /task-publications/{validated_operation_id}"
+        response = await self._request_raw(
+            "GET",
+            f"{self.config.task_board_url}/task-publications/{validated_operation_id}",
+            headers=self._auth_header(
+                {
+                    "action": "get_task_publication",
+                    "operation_id": validated_operation_id,
+                    "poster_id": poster_id,
+                },
+                audience="task-board",
+                resource=resource,
+            ),
+        )
+        return parse_task_posting_status_response(response, validated_operation_id)
 
     async def post_task(
         self: _TaskBoardClient,

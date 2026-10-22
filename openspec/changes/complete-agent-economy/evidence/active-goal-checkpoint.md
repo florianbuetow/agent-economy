@@ -1,5 +1,11 @@
 # Active implementation checkpoint
 
+> **Session handover:** The user requested that implementation stop and a handover
+> be written. See repository-root `HANDOFF-2026-10-19.md` for the exact goal,
+> final focused verification, known failures and resume order. It supersedes
+> ongoing-work wording below. The full goal remains unfinished; no commits or
+> pushes were made in this continuation.
+
 ## Goal and standing rules
 
 Goal ACTIVE, unbounded: implement the entire masterplan and OpenSpec complete-agent-economy,
@@ -17,6 +23,432 @@ data/assets/keys/processes. Python only through uv run. Gate environment:
 UV_CACHE_DIR=/tmp/agent-economy-review-uv UV_FROZEN=1.
 
 ## Latest verified producer and Gateway checkpoint
+
+### Latest continuation: feeder and Gateway unit repairs verified; root CI running
+
+The user resumed the full Core + Vision objective and requested smaller-model
+subagents for bounded work. OpenSpec remains 52/125 complete, 73 open. The native
+goal API still reports the older blocked state and exposes no resume operation;
+that is not a new stop or a replacement goal. No ticket closes at this checkpoint.
+
+Parent verification now shows Gateway **1325 unit tests passed**. A genuine
+registered-actor admission/audit gap was first reproduced and repaired without
+requiring a funded account; 133 focused actor/publication/historical cases pass,
+and independent review approves. Native fixture reconciliation retains financial,
+transaction, clock/race and historical V1/V2/V3-to-V4 proof. Gateway dependency
+and three Semgrep findings are repaired without new dependencies or exclusions.
+The latest component CI reached its audit step and hit a PyPI read timeout; the
+same audit command then passed on retry. This is not a component/root CI success.
+
+Task Board's parent isolated `just ci-quiet` exits 0. Its separate full integration
+suite passes **79 tests** after native posting setup reconciliation. Two subsequent
+private helper renames passed seven focused cases. An earlier 64-failure integration
+log remains historical evidence. The new recovery-connection regression reproduced
+cross-transaction rollback; separate request/recovery SQLite connections repaired
+it, 19 focused cases passed and independent review approves.
+
+Feeder journal/source/coordinator review is approved. Parent agents component CI
+exits 0: 889 passed, three unchanged optional provider credential skips and 107 E2E
+deselections. Service-auth component CI exits 0 with 556 passed. These are bounded
+component results; provider, E2E and whole-project gates remain required.
+
+Fresh root `just ci-quiet` completed with exit 1 at the per-service integration
+phase. Every shared-library and all seven service component gates passed first.
+Integration results: Identity 7 pass; Bank 17 pass/8 setup errors; Board 79 pass;
+Reputation 12 pass; Court 1 failure; Gateway 6 pass; UI 251 pass. Bank's historical
+fixture stops at verified V3 and needs true V3-to-V4 migration; Court's seed still
+uses retired creation. Both fixture-only repairs are assigned to mp05_ci_triage.
+Root log: `/private/tmp/agent-economy-root-ci-formatted-20261019.log` and `.exit`.
+Earlier launch/full logs preserve the invocation error and repaired blank-line
+format failure separately. No root success is claimed.
+
+Cross-service shared posting setup is now native admission -> actual Bank lock
+-> reconcile. Nine initial retired-route failures were captured; child and parent
+independent reruns both pass nine tests. Parent log:
+`/private/tmp/agent-economy-crossservice-parent-20261019.log` and `.exit`.
+Independent review of this and E2E fixture changes is running.
+
+All 47 old SDK posting calls across 19 E2E modules are migrated. Ordinary setup
+uses one strict prepared/submitted intent; response-loss proof owns and retries
+one exact saved intent. Insufficient funds now requires real402 rather than
+accepting validation400; its original weak assertion was the sole replaced
+assertion in an AST comparison. Parent focused 23 cases pass. Full E2E then ran:
+101 passed, 3 failed, 3 errors. Five failures/errors are the real UI production
+posting path still on the retired SDK; one is the unattended fixture missing its
+posting coordinator. Parent has wired that coordinator with the existing leased
+store and is running the focused unattended proof. Full E2E raw:
+`/private/tmp/agent-economy-e2e-native-baseline-20261019.log` and `.exit`.
+
+Posting recovery audit is implemented and independently APPROVED after two
+additional reviewer ownership findings. Parent initial red:23fail/5controls;
+parent regression selection253pass plus11recovery-adoption cases. Reviewer found
+valid ledger under wrong fingerprint directory (parent1red), then invalid
+identity-name artifact acceptance (parent1red/1control). Both repaired; parent
+and reviewer focused46pass, independent review APPROVE. Parser11red/3controls
+exist only in worker transcript; two additional I/O/limit regressions have only
+green evidence. Preserve those limitations, do not invent pre-fix raw logs.
+Gateway full component CI is now running under a disposable runtime:
+`/private/tmp/agent-economy-gateway-posting-audit-ci-20261019.log`.
+
+Central Bank's remaining issue proved a product bug: final V4 audit incorrectly
+required native timestamps/events for marker-proven legacy lock facts. Parent
+new tests capture3migration failures/1control through actual verified historical
+cutovers. A narrow provenance-specific audit fix preserves originalblank/null
+metadata without rewriting Bankrows or inventing events. Parent94migration/audit/
+recovery cases and8historical integration cases pass. Child fullBank25 andCourt1
+integration pass. This financial fix and fixturecontext are now under independent
+review. See `docs/plans/2026-10-19-mp05-legacy-metadata-audit.md`; original pending
+posting locks stay unlinked, while approved/released and disputed/split-awaiting-
+Board-ruling fixture context preserves every original Bank/events row. Completed
+ruled-task migration is not claimed.
+
+The unattended economy fixture now uses the real leased posting store/coordinator
+and passes its approval/dispute/ruling/payout end-to-end case (parent focused1pass).
+Full E2E last result remains101pass/3fail/3error; five remaining UIproduction
+posting failures/errors require its planned rollout, and no new fullpass yet.
+
+Architect-reviewed UI protocol is recorded in
+`docs/plans/2026-10-19-mp05-ui-posting-contract.md`: effect-free prepare, strict
+scope-bound submit/status, immutable browser intent and completion records,
+readback before transport/completion, explicit separate posting. New backend44
+cases parent43red/1control and browser17cases parent13red/4controls captured in
+`/private/tmp/agent-economy-ui-posting-parent-red-20261019.log` and
+`/private/tmp/agent-economy-ui-posting-browser-parent-red-20261019.log` with exits.
+Worker mp05_ui_posting_impl owns UIproduction and appropriate oldUIfixture
+reconciliation; parent owns agents/tests/e2e proxy caller migration. Implementation
+is in progress, not complete. Real feeder process-restart proof, demo durability,
+retired SDK removal and the rest of Core + Vision remain open.
+
+Evidence archive is being extended by mp05_ci_triage; parent does not concurrently
+edit its manifest/README. Its previous count307 is historical; use manifest for
+latest count. Keep no private keys/runtimeDB/basetemps in evidence archive.
+
+No commit or push since 3444fb4 and no branch change from refactor. Weekday
+08:00–18:00 Europe/Amsterdam restrictions and ordinary-runtime isolation remain
+in force. Ignored plan files require explicit inclusion at an eventual permitted
+commit. Earlier sections below are historical and do not supersede this entry.
+
+### Latest: Board review approved; Gateway 145 / Board 84 + 12 green
+
+This entry supersedes the status in the older checkpoints below. Full Core +
+Vision remains ACTIVE, 52/125 closed, 73 open. This continuation made production,
+test, review and retained-evidence progress; no item was prematurely closed.
+
+The final Board review found four additional defects and approved their repairs:
+
+1. Legacy non-UUID task references now remain exact nonempty UTF-8 text through
+   the client and scheduler (six genuine reds plus four invalid-input controls).
+2. A native typed blocked409 now enters bounded recovery diagnostics (one genuine
+   real-client-boundary red), rather than disappearing after leaving enumeration.
+3. All invalid duration fields, including acceptance windows, return
+   `invalid_deadline` before effects (seven reds, one valid control).
+4. Gateway validates fresh composed bidding/acceptance cutoffs against its
+   admission clock before reservation or Bank dispatch (three reds, three
+   boundary/replay controls). Existing replay/conflict still precedes fresh-clock
+   checks. Final writer hash is
+   `26d53da9992e1e95fb75038ea42cd72f9b501efff230c77d25443a3deab28c0b`.
+
+Fresh parent results: Gateway 145 pass, Board 84 unit cases pass, Board 12 native
+integration cases pass, and Board 19 repair cases pass after final formatting.
+Scoped source typing, Ruff, Bandit and spelling checks pass. Two static SQL column
+concatenations were replaced by the same literal SQL without new suppressions.
+The independent audit/legacy-writer and Board/coordinator reviews both APPROVE
+their bounded scopes. Evidence: `mp05-posting/board-review-repairs/`.
+All parent command handles are terminal and no child agent remains doing edits.
+The retained real crash proof in `process-native-green/` precedes these narrow
+review repairs; it is not represented as a full final-source root certificate.
+
+Read-only production caller mapping confirms the next rollout targets:
+
+- Feeder `agents/src/task_feeder/loop.py` still calls old `post_task` and keeps
+  `_task_map` in memory. `__main__.py` already owns a leased FileTaskIntentStore
+  and RuntimeTaskCommands, but those are mutation slots, not posting records.
+  Add a distinct posting record/coordinator using the existing safe filesystem
+  primitives, binding source snapshot/entry and persisting before transport.
+- UI `services/ui/src/ui_service/services/proxy.py:create_task` still calls
+  operator `post_task`. The accepted contract requires the complete intent saved
+  before effectful proxy fetch, bound to operator/service scope and retained over
+  timeout/202/refresh/restart. No private key may enter browser storage. Choose
+  the concrete browser/proxy protocol against that contract; do not assume the
+  read-only mapper's suggestion of a server journal is itself an accepted design.
+- Demo `tools/src/demo_replay/clients.py` signs the old request directly. Its
+  engine maps and actor keys are currently process-local. Durable scenario/step
+  identity, actor keys/IDs and posting state must precede effects and survive
+  resume; the original scenario binding must reject mismatches.
+- Remove SDK `post_task` only after production and test callers use the saved
+  prepare/submit/status protocol. Do not weaken MP-07 mutation journals to fit
+  posting into a fake lifecycle version.
+
+Broader fixture reconciliation, protected persistent recovery diagnostics,
+remaining crash boundaries/conservation cases, affected component gates and a
+fresh isolated root CI still remain. The old Gateway unit baseline's 286 failures
+and 87 setup errors are not fixed by the focused selections. All original goal,
+Git/time, runtime-isolation and unresolved-policy constraints remain in force.
+No commits/pushes since 3444fb4; no branch change from refactor.
+
+### MP-05 native recovery now has a retained real-process green proof
+
+This is the latest authoritative checkpoint; older paragraphs below are history.
+The complete Core + Vision goal is active, with 52/125 tasks closed and 73 open.
+No MP-05 ticket closed and no Git commit/push occurred in this continuation.
+
+Implemented since the prior entry:
+
+- Task Board native posting and owner status, verified task/escrow signatures and
+  context before admission, exact replay, and persisted-fact reconciliation.
+- Gateway legacy refund finalization with complete receipt/escrow/leg/event proof,
+  winner-escrow protection, durable blocking, and merged native/legacy pagination.
+- Strict Board recovery HTTP adapters, startup/periodic bounded recovery,
+  fair cursor progression after failures, no background poster debit, fresh
+  semantic platform refund delivery, and draining HTTP calls before shutdown.
+- Publication audit fixes for immutable refund-origin/state/receipt binding and
+  exact stored blocked diagnostics. Independent final review approved the audit,
+  origin, legacy writer, and pagination scope with no unresolved finding.
+- Canonical stored publication requests now include the operation ID; only the
+  separately computed semantic hash excludes it. Two direct red assertions and
+  the Board integration assertion proved the storage mismatch before repair.
+
+Fresh parent evidence:
+
+- 139 focused Gateway cases pass; source mypy (53 files) and Pyright pass.
+- 12 native Board integration cases pass; 65 recovery-client/loop/config cases
+  pass; Board source mypy (36 files) and Pyright pass.
+- A real Bank lock commits, the owned Board is killed before publication, and a
+  normal restart publishes the same admitted task/escrow/hash without a second
+  submit. The retained run passed in 9.85 seconds. Sentinel survival is asserted
+  and 20 captured process groups were independently confirmed absent.
+- Evidence is retained in `mp05-posting/native-rollout-progress/` and
+  `mp05-posting/process-native-green/`. The first test-call typo and the subsequent
+  passing run whose default pytest temp directory was rotated are explicitly
+  recorded as fixture/retention limitations, not substituted for retained proof.
+- All parent command handles used for these proofs are terminal; no live parent
+  test process remains. Do not poll their old session IDs again.
+
+Next work remains substantial: independent Board review is in progress;
+production feeder/UI/demo callers need durable intent rollout and old SDK
+`post_task` removal; broader Gateway/Board fixtures need recorded reconciliation
+to native creation and explicit V4 migration; protected blocked diagnostics and
+remaining process-death/conservation cases are still needed. The broader Gateway
+unit baseline was 286 failed, 909 passed, 87 errors, principally retired generic
+creation and V3 startup fixtures. Do not add a production compatibility path or
+weaken assertions to restore that baseline. Some fixture IDs such as `t-1` are
+historical IDs and cannot be silently admitted as new native UUID-shaped IDs.
+Full service/root CI has not passed for MP-05. Ordinary data, keys, assets and
+unrelated processes remain outside the permitted test resources.
+
+Outstanding owner decisions remain Q-M1/Q-M2 (unanswered) and Q-M3 (not yet
+accepted). Continue independent work; do not infer answers or narrow the goal.
+
+### MP-05 native Gateway and migration implemented; Board rollout in progress
+
+This entry supersedes the older implementation-status paragraphs below. The full
+goal remains active, with 52/125 tasks closed and 73 remaining. The preceding
+status-only user question produced no implementation progress; this continuation
+resumed from the actual working tree and verified the next safe work.
+
+- Native Gateway admission, reconciliation, owner-filtered reads, and native
+  recovery enumeration pass 49 focused cases. Production startup requires schema
+  v4; generic task insertion rejects `native_publication_required`.
+- Verified v3-to-v4 migration passes 12 cases, including complete source/backup
+  preservation and honest historical refund provenance. The test-only historical
+  v3 writer preserves frozen source construction; production has no v3 fallback.
+- Two independently identified publication-audit defects have 45 regressions:
+  the original run had 19 intended failures and 26 passing controls. Repairs scope
+  legacy transactions by payer and validate exact JSON types/closed shapes before
+  comparison. Parent independently ran all 106 audit/migration/native cases:
+  exit 0, 106 passed. Evidence: `mp05-posting/audit-review-green/`.
+- The migration CLI has two passing real backup/authority cases; its original
+  missing-command failure is retained as a capability gap, not a product assertion
+  failure. Evidence: `mp05-posting/migration-cli-proof/`.
+- Required Board recovery configuration has 31 focused cases and a parent
+  43-case config/response run passing. Seven valid fixture producers gained
+  explicit configuration only; the documented negative contracts remain intact.
+- The native Board integration suite is frozen at 10 intended failures and two
+  passing controls (`mp05-posting/native-board-red/`). An executor owns the Board
+  coordinator, token verification, HTTP storage boundary, manager/protocol,
+  router and response schemas. It does not own scheduler/state or existing tests.
+- Legacy refund finalization and merged recovery enumeration are not implemented.
+  A separate test owner is building real migrated-history acceptance tests before
+  product changes. The private response contract is now explicit in the MP-05
+  publication contract.
+
+Independent final audit review and the broader Gateway unit baseline are in
+progress. Full root CI has not certified any current MP-05 changes. All MP-05
+items stay open. No commit/push since 3444fb4. Q-M1/Q-M2 remain unanswered, and
+Q-M3 policy is not accepted. Do not infer answers from preselected options.
+
+### MP-05 SDK slice independently green; migration proof repair remains
+
+SDK source is implemented in libs/service-auth/src/service_auth/task_postings.py,
+mixins/task_board.py and __init__.py. Independent final code review APPROVE after
+4 concrete parser repairs captured as5 real reds. Parent2087 TERMINAL0 verifies
+556 full service-auth unit cases pass (177 MP05); source Ruff/Mypy/Pyright/Bandit/
+codespell pass. sdk-green/ contains12 indexed artifacts and source/test hashes;
+sdk-review-red/ contains original551green plus5 genuine review reds/sourcebefore.
+All reviewed testfiles preserved. Old post_task remains onlyfor stagedrollout;
+do not claim completedMP05 or fullrootCI. No parentlivehandles.
+
+Gateway/config test gate independently APPROVED:41 native cases are route-policy
+absence gaps;31 Board config cases are cause-specific required/nested-validation
+reds. Parent42729 TERMINAL1 and configexit1, archived gateway-contract-red/.
+Native Gateway/Board product implementation has NOTstarted. Migration source/test
+initial7case slice parent36788 TERMINAL1 gives6 capabilitygaps +1 genuinefixture
+control, archived migration-red/. Independent review REQUIRED3repairs before
+migration productwork: expectedfacts fromverifiedbackup nottarget; preserveALLold
+DBobjects/rows/sequences on success +reverifybackup; prove legacy-onlyrefund with
+NULLnativeIDs; rejectwrongbackedupKID/key/capability andacceptvalidnondefaultKID.
+/root/mp05_migration_red is actively correcting its2ownedNEWfiles only.
+
+Contract now freezes full cutover/observationcolumns and exact observedfacts;
+legacy-only priorrefunds nevergetinventednativeIDs. Errorcodes are
+posting_orphan_split, posting_orphan_foreign_recipient, posting_orphan_lock_unproven,
+task_escrow_reference_conflict, posting_authority_invalid. Source snapshot hash
+isverifiedbackupDBartifactSHA, andcaller derivesverifiedTaskBoardconfig+Gateway
+keybinding. More complete details in docs/plans/2026-10-18-mp05-publication-contract.md.
+
+Next: finish/reviewmigrationtestrepairs; implementGatewayv4/schema/audit/migration
+andnativepublicationwriter/commands; implementBoardcoordinator/status/reconciler;
+completeSDKliveproducer rollout anddurablefeeder/UI/demo callers, removingold
+post_task; allfault/conservation/migration/browser/rootgates beforeMP05closure.
+Countsstill52/125; fullCore/VisiongoalACTIVE. Q-M1threequestions/Q-M2unanswered.
+No commits or pushes since3444fb4. Weekend permission unchanged.
+
+### MP-05 restart red approved; SDK implementation started
+
+Real nested six-service/owned-Board SIGKILL proof is independently APPROVED.
+Parent10972 TERMINAL1 reproduced exact no-task/one-lock/no-refund/balance400 state
+after restart. process-red/ has18 indexed artifacts and30 exact absent groups,
+retained child identities and sentinel survival. Do not poll10972 again.
+
+Initial native Gateway15 policy-absence failures and SDK2 absent-export errors
+are archived in interface-red-initial, explicitly capability gaps. Parent81005
+TERMINAL1. SDK review fixes are complete and parent rerun captured in
+sdk-contract-red; its pre-implementation snapshot matches all1059 Root22 sources.
+
+Active ownership now:
+- /root/mp05_sdk_implementation (executor): NEW service_auth/task_postings.py,
+  optional response module, mixins/task_board.py and __init__.py ONLY. Implement
+  frozen SDK intent/response/prepare/submit/status; tests remain untouched. Existing
+  post_task temporarily remains for staged rollout, must be removed in fullMP05.
+- /root/mp05_gateway_contract_tests: correct2 NEW Gateway files + NEW
+  services/task-board/tests/unit/test_mp05_posting_recovery_config.py. Fix coherent
+  real Bank timestamps/keys, pagination/config, eventtime/caller/integrity checks.
+- /root/mp05_migration_red: NEW verifiedv3→v4 migration tests/helpers ONLY; proposed
+  entrypoint publication_migration.migrate_v3_to_v4 uses existing migration API.
+Native absent-interface failures are never claimed genuine product red proof.
+
+SDK contract refinements pinned: exact6digitUTC Z timestamps; syncprepare;
+statuscode/body typedresponse; fullblocked409wrapper; ordinaryHTTPerrors preserved;
+unregisteredRuntimeError, invalidlocal/foreignregisteredownerValueError. Physical
+publication columns state/lock_request_sha256/creation_event_id are explicitly
+frozen in the approved contract. Futurenewsourcechanges are not Root22-certified.
+
+Counts52/125; all MP05 itemsopen. Q-M1 threequestions + Q-M2 remain unanswered.
+No parent live test process, no new commit/push. Reuse mp05_red_review and
+mp05_sdk_contract_review for bounded final reviews after implementation/tests.
+
+### MP-05 contract approved; native tests and corrected process proof in flight
+
+Final architect APPROVE: docs/plans/2026-10-18-mp05-publication-contract.md is ready
+for native-interface test authoring. It now fixes exact response/creation schemas,
+owner status404, board.write for all Gateway routes, KID scope, per-task financial
+history exclusion regardless payer, immutable cutover hashes, cursor/config,
+historical-refund identity exception and fresh platform signing. Masterplan,
+OpenSpec design/scenarios/tasks and MP07 timing supersession match. Validation0.
+
+Active bounded test owners:
+- /root/mp05_server_red: correct real restart harness, own nested dependencies
+  without another Board, full public details, funded-native-only outcome, durable
+  PID/PGID/SID/cleanup/sentinel evidence. Original real red is genuine but harness
+  had false-green/KeyError risks; preserved at mp05-posting/process-baseline-initial.
+- /root/mp05_gateway_contract_tests: NEW Gateway native contract tests/helper only.
+- /root/mp05_sdk_red: NEW service-auth posting intent/response contract tests only.
+Their absent-interface failures must not be called fresh behavioral red proof.
+No MP05 product edits; do not implement until corrected process proof and native
+interface tests are verified. /root/mp05_red_review is the reusable reviewer.
+
+No parent live test handles. Counts still52/125. Q-M1 visibility/model/evidence
+questions and earlier Q-M2 are pending; no answer inferred. No new Git mutation.
+
+### MP-05 corrected proof and contract review; real restart red underway
+
+See evidence/mp05-posting/review-checkpoint.md. Corrected server author/parent
+runs reproduce4 genuine reds plus1 historical bug characterization pass. Reviewer
+approved real concurrent prechecks and distinct identity compensation evidence.
+Original and corrected sources/logs are separately immutable and indexed. Parent
+added4 Gateway financial-binding reds (wrong payer/task/amount/released escrow),
+also independently reviewed. Parent server39936 and typecheck59827 are terminal;
+the ordinary Gateway source Mypy gate passed separately. No product edits yet.
+
+/root/mp05_server_red now owns removal of2 baseline-only active cases after their
+archive and NEW owned-process Task Board restart proof in
+agents/tests/e2e/test_mp05_posting_server_restart.py with narrowly named helper.
+It must use real Bank effects/public observations and only signal its own child,
+not the outer runtime services. Do not claim real restart proof until reported
+and independently verified. Its process handles remain agent-owned.
+
+Concrete docs/plans/2026-10-18-mp05-publication-contract.md is written and in final
+read-only architecture review. OpenSpec design/scenarios and MP07 timestamp
+supersession updated; strict OpenSpec validation passes. Native states exclude
+undefined refunds; legacy observations own per-escrow compensation and permanent
+task-ID reservation. Native fresh admission rejects old financial-only history.
+
+Q-M1/Q-M3 proposals repaired and independently approved for staged owner questions.
+Three Q-M1 async questions (visibility/model boundary/evidence capability) are now
+pending. Q-M2 remains pending. No policy is accepted or applied. Q-M1 retention,
+shared appeal, then Q-M3 choices still need to be asked after these answers.
+Full goal remains ACTIVE52/125; no new closures/commit/push since3444fb4.
+
+### MP-05 initial reds reproduced; acceptance corrections in progress
+
+Parent independently reproduced the initial server four assertion failures and
+SDK one failure/one control pass on unchanged checkpoint3444fb4 product sources.
+All1059 Root22 source/config hashes still match. Complete raw logs, frozen tests,
+source hashes, two selected SDK runtime manifests and20 absent owned process
+groups are archived under evidence/mp05-posting/baseline with an index.
+
+Independent review approved the committed-publication-loss and SDK identity
+proofs. It rejected immediate terminal convergence after a storage failure and
+the legacy fixture's same key for two agent IDs. A fabricated stale read needs a
+real barrier-controlled concurrent-precheck proof. /root/mp05_server_red owns
+corrections to its new test file; original bytes remain archived. No product
+implementation or ticket closure yet. Real server/process restart proofs remain
+required, as do all MP05 caller, migration, authority and conservation gates.
+
+The parent SDK launch initially failed before startup due to --directory path
+resolution; corrected --project command completed with the intended assertion
+failure. Both handles are terminal (server72072→1, SDK84375→1); do not restart or
+poll them. Exact command and scope limitations are in baseline/README.md.
+
+/root/mp05_contract_review is preparing a read-only concrete publication contract.
+Legacy differing-payer collisions are feasible: Bank uniqueness is payer+task.
+Recovery must preserve the published winner and safely identify the other escrow;
+operation IDs for refunds must not collide merely because task IDs match.
+/root/policy_draft_repairs owns proposed Q-M1/Q-M3 documentation corrections only.
+Q-M2 remains unanswered; no policy decision has been inferred or implemented.
+
+### MP-07 checkpoint pushed; MP-05 red proofs started
+
+Verified checkpoint is3444fb46809201b058362be7c30c25126ff9807d on refactor, pushed
+to origin/refactor. Commit time: Sunday2026-10-18 10:54:17 CEST; push started10:54:42
+CEST after a second local-time check. This follows the standing all-weekend permission,
+not a one-time exception. No branch switch, merge, rebase, cherry-pick or force push.
+All1059 staged source/config blobs matched the Root22 after-snapshot before commit.
+Raw evidence keeps original whitespace; source/human-document checks pass separately.
+
+The full Core/Vision goal stays ACTIVE at52/125 complete. The working tree may now
+gain intentionally failing MP05 tests; Root22 certifies3444fb4's implementation, not
+later changes. /root/mp05_server_red owns new server posting/fault tests and a note;
+/root/mp05_sdk_red owns new SDK lost-response/identity tests and a note. Both are
+TEST-ONLY until genuine T118 reds are captured and reviewed. No MP05 product edits yet.
+Server scope includes orphan lock, lost publication response, stale matching-task
+collision and failed compensation. Caller scope must distinguish retry of one logical
+posting from two intentional postings with identical content.
+
+Q-M2 owner choice remains pending via async question; no response is inferred. Q-M1
+and Q-M3 drafts need the critic's explicit-axis/eligibility/visibility corrections
+before owner questions. Their proposed policies are not implemented. MP05 continues
+with fixed-reward Core semantics and the reviewed authority/timing boundary.
 
 ### MP-07 closed at Root22; full goal remains active
 

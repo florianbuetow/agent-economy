@@ -119,6 +119,22 @@ MP-05/16/17/18 packages or their prerequisite gates.
 
 Prerequisites: MP-04 and MP-07.
 
+Reviewed contract: `docs/plans/2026-10-18-mp05-publication-contract.md`.
+Initial/corrected baseline proof is under `evidence/mp05-posting/`. Native
+publication, legacy refund reconciliation, and the Board recovery loop are now
+implemented with bounded green evidence in `native-rollout-progress/`; the real
+lock-commit/process-death/restart proof is retained in `process-native-green/`.
+Feeder posting now uses a leased durable source/intent journal and status-first
+replay; its bounded journal review is approved and parent agents component CI
+passes (889 tests, three unchanged optional credential skips). UI/demo caller
+rollout remains underway. Posting-journal backup/restore auditing now passes
+focused recovery/migration checks and independent review; fresh component/root
+gates, real feeder restart proof, remaining fault cases and demo rollout remain
+pending. Full E2E last reports101pass/3fail/3errors, with UIproduction posting
+under implementation and the stale unattended fixture now repaired. Current evidence is
+indexed in `evidence/mp05-posting/feeder-and-ci-progress/`. These bounded results
+do not close the items.
+
 - [ ] 8.1 [T-118] Inject lock-success/insert-failure, post-commit response loss and failed-compensation histories; verify orphaned or incorrectly refunded work on the current baseline.
 - [ ] 8.2 [T-119] Persist stable posting intent and reconcile ambiguous publication before refund; verify one correctly funded public task or one documented refund after each restart.
 - [ ] 8.3 [T-119] Add payload-bound create replay to SDK/proxy and document pending publication; verify duplicate submits return one task and changed terms under one ID conflict.

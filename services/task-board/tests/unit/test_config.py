@@ -43,6 +43,10 @@ request:
   max_body_size: 1048576
 recovery:
   maintenance_lock_path: "maintenance.lock"
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
@@ -110,6 +114,10 @@ request:
   max_body_size: 1048576
 recovery:
   maintenance_lock_path: "maintenance.lock"
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
@@ -189,6 +197,10 @@ request:
   max_body_size: 1048576
 recovery:
   maintenance_lock_path: "maintenance.lock"
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20

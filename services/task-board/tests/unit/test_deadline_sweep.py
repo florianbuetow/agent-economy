@@ -23,6 +23,13 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.unit
 _SHORT_TERMS = TaskTerms(100, 1, 1, 1, 1)
 _LONG_TERMS = TaskTerms(100, 3600, 600, 3600, 3600)
+_TASK = "t-00000000-0000-4000-8000-000000000401"
+_OPEN = "t-00000000-0000-4000-8000-000000000402"
+_ACCEPTED = "t-00000000-0000-4000-8000-000000000403"
+_SUBMITTED = "t-00000000-0000-4000-8000-000000000404"
+_DISPUTED = "t-00000000-0000-4000-8000-000000000405"
+_BAD = "t-00000000-0000-4000-8000-000000000406"
+_GOOD = "t-00000000-0000-4000-8000-000000000407"
 
 
 @pytest.fixture(name="native_tasks")
@@ -47,35 +54,35 @@ async def _run_sweep_briefly(evaluator: DeadlineEvaluator, interval_seconds: int
 async def test_sweep_expires_open_task_without_any_api_read(
     native_tasks: NativeTaskFixture,
 ) -> None:
-    native_tasks.open_task("t-1", _SHORT_TERMS)
+    native_tasks.open_task(_TASK, _SHORT_TERMS)
     native_tasks.clock.at_seconds(5)
     await _run_sweep_briefly(native_tasks.evaluator(None), interval_seconds=1)
     operation_id = native_tasks.assert_settlement(
-        "t-1",
+        _TASK,
         command="expire_bidding",
         status="expired",
         recipient=native_tasks.poster_id,
         event_type="task.expired",
     )
     native_tasks.bank.escrow_release.assert_awaited_once_with(
-        escrow_id="esc-t-1",
+        escrow_id=f"esc-{_TASK}",
         recipient_account_id=native_tasks.poster_id,
         operation_id=operation_id,
-        source_reference="task:t-1:expired",
+        source_reference=f"task:{_TASK}:expired",
     )
 
 
 async def test_sweep_visits_accepted_submitted_and_disputed_statuses(
     native_tasks: NativeTaskFixture,
 ) -> None:
-    for task_id in ("t-open", "t-accepted", "t-submitted", "t-disputed"):
+    for task_id in (_OPEN, _ACCEPTED, _SUBMITTED, _DISPUTED):
         native_tasks.open_task(task_id, _SHORT_TERMS)
-    for task_id in ("t-accepted", "t-submitted", "t-disputed"):
+    for task_id in (_ACCEPTED, _SUBMITTED, _DISPUTED):
         native_tasks.bid(task_id, 90)
         native_tasks.accept(task_id, 90)
-    for task_id in ("t-submitted", "t-disputed"):
+    for task_id in (_SUBMITTED, _DISPUTED):
         native_tasks.submit(task_id)
-    native_tasks.dispute("t-disputed", rebuttal_seconds=1)
+    native_tasks.dispute(_DISPUTED, rebuttal_seconds=1)
     platform = AsyncMock()
     platform.trigger_ruling.return_value = {"status": "ruled"}
     native_tasks.clock.at_seconds(5)
@@ -83,39 +90,39 @@ async def test_sweep_visits_accepted_submitted_and_disputed_statuses(
     await _run_sweep_briefly(native_tasks.evaluator(cast("PlatformAgent", platform)), 1)
 
     native_tasks.assert_settlement(
-        "t-open",
+        _OPEN,
         command="expire_bidding",
         status="expired",
         recipient=native_tasks.poster_id,
         event_type="task.expired",
     )
     native_tasks.assert_settlement(
-        "t-accepted",
+        _ACCEPTED,
         command="expire_execution",
         status="expired",
         recipient=native_tasks.poster_id,
         event_type="task.expired",
     )
     native_tasks.assert_settlement(
-        "t-submitted",
+        _SUBMITTED,
         command="auto_approve",
         status="approved",
         recipient=native_tasks.worker_id,
         event_type="task.auto_approved",
     )
-    platform.trigger_ruling.assert_awaited_once_with("clm-t-disputed")
+    platform.trigger_ruling.assert_awaited_once_with(f"clm-{_DISPUTED}")
     # Trigger acknowledgment is not a persisted ruling or a judging proof.
-    assert native_tasks.task("t-disputed")["status"] == "disputed"
+    assert native_tasks.task(_DISPUTED)["status"] == "disputed"
 
 
 async def test_sweep_leaves_task_not_past_deadline_untouched(
     native_tasks: NativeTaskFixture,
 ) -> None:
-    native_tasks.open_task("t-1", _LONG_TERMS)
-    before = native_tasks.task("t-1")
+    native_tasks.open_task(_TASK, _LONG_TERMS)
+    before = native_tasks.task(_TASK)
     before_events = native_tasks.store.writer.get_total_events()
     await _run_sweep_briefly(native_tasks.evaluator(None), interval_seconds=1)
-    assert native_tasks.task("t-1") == before
+    assert native_tasks.task(_TASK) == before
     assert native_tasks.store.writer.get_total_events() == before_events
     native_tasks.bank.escrow_release.assert_not_awaited()
 
@@ -124,10 +131,10 @@ async def test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation(
     native_tasks: NativeTaskFixture,
 ) -> None:
     """Overlapping deliveries reuse one claim and produce one settlement/event."""
-    native_tasks.open_task("t-1", _SHORT_TERMS)
+    native_tasks.open_task(_TASK, _SHORT_TERMS)
     native_tasks.clock.at_seconds(5)
     evaluator = native_tasks.evaluator(None)
-    task = native_tasks.task("t-1")
+    task = native_tasks.task(_TASK)
     both_entered = asyncio.Event()
     deliveries = 0
 
@@ -138,7 +145,7 @@ async def test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation(
         source_reference: str,
     ) -> dict[str, Any]:
         nonlocal deliveries
-        pending = native_tasks.task("t-1")
+        pending = native_tasks.task(_TASK)
         assert pending["status"] == "open"
         assert pending["pending_transition"]["operation_id"] == operation_id
         deliveries += 1
@@ -157,7 +164,7 @@ async def test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation(
         timeout=5,
     )
     operation_id = native_tasks.assert_settlement(
-        "t-1",
+        _TASK,
         command="expire_bidding",
         status="expired",
         recipient=native_tasks.poster_id,
@@ -167,14 +174,14 @@ async def test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation(
     assert all(
         call.kwargs
         == {
-            "escrow_id": "esc-t-1",
+            "escrow_id": f"esc-{_TASK}",
             "recipient_account_id": native_tasks.poster_id,
             "operation_id": operation_id,
-            "source_reference": "task:t-1:expired",
+            "source_reference": f"task:{_TASK}:expired",
         }
         for call in native_tasks.bank.escrow_release.await_args_list
     )
-    await evaluator.evaluate_deadline(native_tasks.task("t-1"))
+    await evaluator.evaluate_deadline(native_tasks.task(_TASK))
     assert native_tasks.bank.escrow_release.await_count == 2
 
 
@@ -182,25 +189,25 @@ async def test_sweep_survives_a_failing_task_and_continues_with_others(
     native_tasks: NativeTaskFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    native_tasks.open_task("t-bad", _SHORT_TERMS)
-    native_tasks.open_task("t-good", _SHORT_TERMS)
+    native_tasks.open_task(_BAD, _SHORT_TERMS)
+    native_tasks.open_task(_GOOD, _SHORT_TERMS)
     native_tasks.clock.at_seconds(5)
     evaluator = native_tasks.evaluator(None)
     original_evaluate = evaluator.evaluate_deadline
 
     async def _flaky_evaluate(task: dict[str, Any]) -> dict[str, Any]:
-        if task["task_id"] == "t-bad":
+        if task["task_id"] == _BAD:
             raise RuntimeError("simulated evaluation failure")
         return await original_evaluate(task)
 
     monkeypatch.setattr(evaluator, "evaluate_deadline", _flaky_evaluate)
     await _run_sweep_briefly(evaluator, interval_seconds=1)
     native_tasks.assert_settlement(
-        "t-good",
+        _GOOD,
         command="expire_bidding",
         status="expired",
         recipient=native_tasks.poster_id,
         event_type="task.expired",
     )
-    assert native_tasks.task("t-bad")["status"] == "open"
-    assert native_tasks.task("t-bad")["pending_transition"] is None
+    assert native_tasks.task(_BAD)["status"] == "open"
+    assert native_tasks.task(_BAD)["pending_transition"] is None

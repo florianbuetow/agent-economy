@@ -14,7 +14,13 @@ from service_auth.financial_identity import operation_id_for
 from service_commons.exceptions import ServiceError
 
 from task_board_service.core.state import get_app_state
+from tests.helpers import make_jws_token as make_scoped_jws_token
 from tests.integration.conftest import make_jws_token, register_identity_agent
+from tests.integration.mp05_posting_setup import (
+    native_escrow_payload,
+    native_task_payload,
+    persist_lock_after_admission,
+)
 
 if TYPE_CHECKING:
     import httpx
@@ -180,13 +186,11 @@ def _rows(
         connection.close()
 
 
-async def _seed_escrow(
+async def _seed_funded_account(
     gateway_client: httpx.AsyncClient,
     *,
     poster_id: str,
-    task_id: str,
-    escrow_id: str,
-) -> dict[str, object]:
+) -> None:
     await register_identity_agent(gateway_client, poster_id)
     account = await gateway_client.post(
         "/bank/accounts",
@@ -205,24 +209,6 @@ async def _seed_escrow(
         },
     )
     assert account.status_code == 201, account.text
-    operation_id = operation_id_for("task-lock", (task_id, poster_id))
-    lock = await gateway_client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": operation_id,
-            "escrow_id": escrow_id,
-            "payer_account_id": poster_id,
-            "amount": _REWARD,
-            "task_id": task_id,
-            "created_at": _iso(_START - timedelta(seconds=1)),
-            "tx_id": f"tx-{uuid.uuid4()}",
-            "event": _event("central-bank", "escrow.locked", task_id),
-        },
-    )
-    assert lock.status_code == 201, lock.text
-    body = lock.json()
-    assert isinstance(body, dict)
-    return body
 
 
 async def _create_task(
@@ -235,45 +221,48 @@ async def _create_task(
         poster_id=f"a-deadline-poster-{uuid.uuid4()}",
         escrow_id=f"esc-{uuid.uuid4()}",
     )
-    lock = await _seed_escrow(
+    await _seed_funded_account(
         gateway_client,
         poster_id=task.poster_id,
-        task_id=task.task_id,
-        escrow_id=task.escrow_id,
     )
     state = get_app_state()
     assert state.central_bank_client is not None
     bank = cast("AsyncMock", state.central_bank_client)
-    bank.escrow_lock = AsyncMock(return_value=lock)
+    task_payload = native_task_payload(
+        task_id=task.task_id,
+        poster_id=task.poster_id,
+        title="Native deadline task",
+        spec="Use authoritative bid existence and native deadline claims.",
+        reward=_REWARD,
+        bidding_deadline_seconds=_BIDDING_SECONDS,
+        acceptance_window_seconds=_WINDOW_SECONDS,
+        execution_deadline_seconds=_EXECUTION_SECONDS,
+        review_deadline_seconds=_REVIEW_SECONDS,
+    )
+
+    async def _persist_lock(_escrow_token: str) -> dict[str, Any]:
+        return await persist_lock_after_admission(
+            gateway_client,
+            task_payload=task_payload,
+            escrow_id=task.escrow_id,
+            clock_us=_ClockDateTime.clock.epoch_us,
+        )
+
+    bank.escrow_lock = AsyncMock(side_effect=_persist_lock)
     response = await client.post(
         "/tasks",
         json={
             "task_token": make_jws_token(
                 poster_key,
                 task.poster_id,
-                {
-                    "action": "create_task",
-                    "task_id": task.task_id,
-                    "poster_id": task.poster_id,
-                    "title": "Native deadline task",
-                    "spec": "Use authoritative bid existence and native deadline claims.",
-                    "reward": _REWARD,
-                    "bidding_deadline_seconds": _BIDDING_SECONDS,
-                    "acceptance_window_seconds": _WINDOW_SECONDS,
-                    "execution_deadline_seconds": _EXECUTION_SECONDS,
-                    "review_deadline_seconds": _REVIEW_SECONDS,
-                },
+                task_payload,
             ),
-            "escrow_token": make_jws_token(
+            "escrow_token": make_scoped_jws_token(
                 poster_key,
                 task.poster_id,
-                {
-                    "action": "escrow_lock",
-                    "operation_id": operation_id_for("task-lock", (task.task_id, task.poster_id)),
-                    "task_id": task.task_id,
-                    "agent_id": task.poster_id,
-                    "amount": _REWARD,
-                },
+                native_escrow_payload(task_payload),
+                audience="central-bank",
+                resource="POST /escrow/lock",
             ),
         },
     )

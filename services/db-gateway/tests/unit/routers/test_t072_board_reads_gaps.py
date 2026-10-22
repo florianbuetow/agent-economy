@@ -20,7 +20,6 @@ New file — no existing test file was modified.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -30,15 +29,17 @@ from db_gateway_service import task_time
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.services.db_reader import DbReader
 from tests.conftest import make_event
+from tests.fakes.native_board_history import BusinessClock, publish_task
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
 
 
 @pytest.fixture(autouse=True)
-def _task_business_clock(monkeypatch: pytest.MonkeyPatch) -> None:
-    now_us = task_time.parse_utc_text_to_epoch_us("2026-02-28T15:00:00Z")
-    monkeypatch.setattr(task_time, "utc_now_us", lambda: now_us)
+def _task_business_clock(monkeypatch: pytest.MonkeyPatch) -> BusinessClock:
+    clock = BusinessClock(task_time.parse_utc_text_to_epoch_us("2026-02-28T15:00:00Z"))
+    monkeypatch.setattr(task_time, "utc_now_us", clock)
+    return clock
 
 
 def _wire_db_reader() -> None:
@@ -85,55 +86,32 @@ def _setup_funded_account(
     return aid
 
 
-def _lock_escrow(
-    client: TestClient, payer_id: str, amount: int = 100, task_id: str | None = None
-) -> tuple[str, str]:
-    tid = task_id or f"t-{uuid4()}"
-    eid = f"esc-{uuid4()}"
-    client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": f"op-{uuid4()}",
-            "escrow_id": eid,
-            "payer_account_id": payer_id,
-            "amount": amount,
-            "task_id": tid,
-            "created_at": "2026-02-28T10:10:00Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=tid),
-        },
-    )
-    return eid, tid
-
-
 def _create_task(
     client: TestClient,
     poster_id: str | None = None,
     created_at: str = "2026-02-28T10:15:00Z",
+    business_clock: BusinessClock | None = None,
 ) -> tuple[str, str, str]:
     """Create a full task. Returns (task_id, poster_id, escrow_id)."""
     pid = poster_id or _setup_funded_account(client)
-    eid, tid = _lock_escrow(client, pid)
-    response = client.post(
-        "/board/tasks",
-        json={
-            "task_id": tid,
-            "poster_id": pid,
-            "title": "Test Task",
-            "spec": "Build a login page",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 172800,
-            "review_deadline_seconds": 43200,
-            "bidding_deadline": (datetime.fromisoformat(created_at) + timedelta(days=1))
-            .isoformat()
-            .replace("+00:00", "Z"),
-            "escrow_id": eid,
-            "created_at": created_at,
-            "event": make_event(source="board", event_type="task.created", task_id=tid),
-        },
+    if business_clock is not None:
+        business_clock.now_us = task_time.parse_utc_text_to_epoch_us(created_at)
+    tid = f"t-{uuid4()}"
+    eid = f"esc-{uuid4()}"
+    lock_timestamp = task_time.epoch_us_to_utc_text(task_time.utc_now_us())
+    response = publish_task(
+        client,
+        task_id=tid,
+        poster_id=pid,
+        escrow_id=eid,
+        title="Test Task",
+        spec="Build a login page",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=172800,
+        review_deadline_seconds=43200,
+        lock_timestamp=lock_timestamp,
     )
     assert response.status_code == 201, response.text
     return tid, pid, eid
@@ -243,7 +221,7 @@ class TestReadTaskListLimitOffset:
     """READ-15: GET /board/tasks supports limit and offset (happy path)."""
 
     def test_limit_and_offset_together_skip_and_bound_results(
-        self, app_with_writer: TestClient
+        self, app_with_writer: TestClient, _task_business_clock: BusinessClock
     ) -> None:
         poster_id = _setup_funded_account(app_with_writer)
         created_ids = []
@@ -252,6 +230,7 @@ class TestReadTaskListLimitOffset:
                 app_with_writer,
                 poster_id=poster_id,
                 created_at=f"2026-02-28T{10 + i:02d}:00:00Z",
+                business_clock=_task_business_clock,
             )
             created_ids.append(tid)
         _wire_db_reader()

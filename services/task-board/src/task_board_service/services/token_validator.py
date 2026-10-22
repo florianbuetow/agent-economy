@@ -52,6 +52,38 @@ class TokenValidator:
             ) from exc
         return self._admit(verified, expected_action, expected_resource)
 
+    async def validate_escrow_jws_token(self, token: str) -> dict[str, Any]:
+        """Verify a poster escrow token and bind it to Central Bank lock context."""
+        self._require_compact_format(token)
+        if self._identity_client is None:
+            raise ServiceError(
+                "service_not_ready",
+                "Identity client not initialized",
+                503,
+                {},
+            )
+        try:
+            verified = await self._identity_client.verify_jws(token)
+        except InvalidSignature as exc:
+            raise ServiceError(
+                "forbidden",
+                "JWS signature verification failed",
+                403,
+                {},
+            ) from exc
+        try:
+            require_context(
+                verified,
+                audience="central-bank",
+                resource="POST /escrow/lock",
+                allowed_action="escrow_lock",
+            )
+        except JwsAdmissionError as exc:
+            raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
+        payload = dict(verified.payload)
+        payload["_signer_id"] = verified.header.kid
+        return payload
+
     async def validate_platform_jws_token(
         self,
         token: str,

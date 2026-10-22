@@ -7,11 +7,14 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
+from service_auth.financial_identity import operation_id_for
 
+from db_gateway_service.core.state import get_app_state
 from tests.conftest import make_event
 from tests.fakes.native_board_history import (
     ACCEPTANCE_CUTOFF_US,
     BIDDING_CUTOFF_US,
+    FIXED_NOW_TEXT,
     FIXED_NOW_US,
     BusinessClock,
     TaskGraph,
@@ -23,12 +26,12 @@ from tests.fakes.native_board_history import (
     lock_escrow,
     operation_body,
     prepare_submitted,
+    publish_task,
     register_agent,
     register_worker,
     settle_release,
     settle_split,
     submit_bid,
-    task_body,
 )
 
 if TYPE_CHECKING:
@@ -85,17 +88,22 @@ def _create_task(
 ) -> tuple[str, str, str]:
     """Create a full task with all prerequisites. Returns (task_id, poster_id, escrow_id)."""
     pid = poster_id or _setup_funded_account(client)
-    if escrow_id is None:
-        eid, tid = _lock_escrow(client, pid)
-    else:
-        eid = escrow_id
-        tid = task_id or f"t-{uuid4()}"
-    actual_tid = task_id or tid
-    response = client.post(
-        "/board/tasks",
-        json=task_body(actual_tid, pid, eid),
+    eid = escrow_id or f"esc-{uuid4()}"
+    actual_tid = task_id or f"t-{uuid4()}"
+    publish_task(
+        client,
+        task_id=actual_tid,
+        poster_id=pid,
+        escrow_id=eid,
+        title="Test Task",
+        spec="Build a login page",
+        reward=100,
+        bidding_deadline_seconds=43200,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=172800,
+        review_deadline_seconds=43200,
+        lock_timestamp="2099-01-01T11:59:02Z",
     )
-    assert response.status_code == 201, response.text
     return actual_tid, pid, eid
 
 
@@ -124,6 +132,33 @@ def _database_snapshot(writer: DbWriter) -> tuple[str, ...]:
     return tuple(writer.connection.iterdump())
 
 
+def _native_publication_payload(
+    *,
+    task_id: str,
+    poster_id: str,
+    operation_id: str,
+    title: str,
+    spec: str,
+    reward: int,
+) -> dict[str, object]:
+    """Build a valid native publication intent with ordinary task terms."""
+    return {
+        "protocol_version": 1,
+        "operation_id": operation_id,
+        "task_id": task_id,
+        "actor_kind": "agent",
+        "actor_id": poster_id,
+        "lock_operation_id": operation_id_for("task-lock", (task_id, poster_id)),
+        "title": title,
+        "spec": spec,
+        "reward": reward,
+        "bidding_deadline_seconds": 43200,
+        "acceptance_window_seconds": 3600,
+        "execution_deadline_seconds": 172800,
+        "review_deadline_seconds": 43200,
+    }
+
+
 # ===================================================================
 # Category 7: Task Creation (POST /board/tasks)
 # ===================================================================
@@ -136,42 +171,44 @@ class TestTaskCreation:
     def test_create_valid_task(
         self,
         app_with_writer: TestClient,
-        db_writer: DbWriter,
     ) -> None:
-        """TASK-01: Create a valid task returns 201 with task_id and event_id."""
+        """TASK-01: Native publication returns task and event facts with exact cutoffs."""
         pid = _setup_funded_account(app_with_writer)
-        eid, tid = _lock_escrow(app_with_writer, pid)
+        tid = f"t-{uuid4()}"
+        eid = f"esc-{uuid4()}"
 
-        resp = app_with_writer.post(
-            "/board/tasks",
-            json={
-                "task_id": tid,
-                "poster_id": pid,
-                "title": "Test Task",
-                "spec": "Build a login page",
-                "reward": 100,
-                "status": "open",
-                "bidding_deadline_seconds": 43200,
-                "acceptance_window_seconds": 3600,
-                "deadline_seconds": 172800,
-                "review_deadline_seconds": 43200,
-                "bidding_deadline": "2099-01-02T00:00:00Z",
-                "escrow_id": eid,
-                "created_at": "2099-01-01T12:00:00Z",
-                "event": make_event(source="board", event_type="task.created", task_id=tid),
-            },
+        resp = publish_task(
+            app_with_writer,
+            task_id=tid,
+            poster_id=pid,
+            escrow_id=eid,
+            title="Test Task",
+            spec="Build a login page",
+            reward=100,
+            bidding_deadline_seconds=43200,
+            acceptance_window_seconds=3600,
+            execution_deadline_seconds=172800,
+            review_deadline_seconds=43200,
+            lock_timestamp=FIXED_NOW_TEXT,
         )
         assert resp.status_code == 201
-        data = resp.json()
+        envelope = resp.json()
+        assert envelope["publication_state"] == "published"
+        data = envelope["result"]
+        assert data is not None
         assert "task_id" in data
         assert "event_id" in data
         assert data["task_id"] == tid
-        contract = db_writer.connection.execute(
-            "SELECT lifecycle_version,timing_contract_version,acceptance_window_seconds,"
-            "bidding_cutoff_us,acceptance_cutoff_us FROM board_task_contracts WHERE task_id=?",
-            (tid,),
-        ).fetchone()
-        assert contract is not None and tuple(contract) == (
+        assert tuple(
+            data[field]
+            for field in (
+                "lifecycle_version",
+                "timing_contract_version",
+                "acceptance_window_seconds",
+                "bidding_cutoff_us",
+                "acceptance_cutoff_us",
+            )
+        ) == (
             0,
             2,
             3600,
@@ -180,88 +217,77 @@ class TestTaskCreation:
         )
 
     def test_duplicate_task_id_rejected(self, app_with_writer: TestClient) -> None:
-        """TASK-02: Duplicate task_id is rejected with 409 task_exists."""
+        """TASK-02: A fresh intent cannot reuse an already published task ID."""
         tid, pid, _eid = _create_task(app_with_writer)
-
-        # Lock another escrow for the second task attempt
-        eid2, _ = _lock_escrow(app_with_writer, pid)
-        resp = app_with_writer.post(
-            "/board/tasks",
-            json={
-                "task_id": tid,
-                "poster_id": pid,
-                "title": "Another Task",
-                "spec": "Different spec",
-                "reward": 200,
-                "status": "open",
-                "bidding_deadline_seconds": 43200,
-                "acceptance_window_seconds": 3600,
-                "deadline_seconds": 172800,
-                "review_deadline_seconds": 43200,
-                "bidding_deadline": "2099-01-02T00:00:00Z",
-                "escrow_id": eid2,
-                "created_at": "2099-01-01T12:00:00Z",
-                "event": make_event(source="board", event_type="task.created", task_id=tid),
-            },
+        writer = get_app_state().db_writer
+        assert writer is not None
+        before = _database_snapshot(writer)
+        duplicate = _native_publication_payload(
+            task_id=tid,
+            poster_id=pid,
+            operation_id=operation_id_for(
+                "gateway-native-http-fixture",
+                (tid, "duplicate-attempt"),
+            ),
+            title="Another Task",
+            spec="Different spec",
+            reward=200,
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"] == "task_exists"
+        response = app_with_writer.post("/board/task-publications", json=duplicate)
+        assert response.status_code == 409
+        assert response.json()["error"] == "task_id_conflict"
+        assert _database_snapshot(writer) == before
 
     def test_fk_violation_poster_id(self, app_with_writer: TestClient) -> None:
-        """TASK-03: Foreign key violation on poster_id returns 409."""
-        pid = _setup_funded_account(app_with_writer)
-        eid, tid = _lock_escrow(app_with_writer, pid)
+        """TASK-03: An unregistered publication actor returns 409 foreign_key_violation."""
+        tid = f"t-{uuid4()}"
         fake_poster = f"a-{uuid4()}"
-
-        resp = app_with_writer.post(
-            "/board/tasks",
-            json={
-                "task_id": tid,
-                "poster_id": fake_poster,
-                "title": "Test Task",
-                "spec": "Build a login page",
-                "reward": 100,
-                "status": "open",
-                "bidding_deadline_seconds": 43200,
-                "acceptance_window_seconds": 3600,
-                "deadline_seconds": 172800,
-                "review_deadline_seconds": 43200,
-                "bidding_deadline": "2099-01-02T00:00:00Z",
-                "escrow_id": eid,
-                "created_at": "2099-01-01T12:00:00Z",
-                "event": make_event(source="board", event_type="task.created", task_id=tid),
-            },
+        writer = get_app_state().db_writer
+        assert writer is not None
+        before = _database_snapshot(writer)
+        payload = _native_publication_payload(
+            task_id=tid,
+            poster_id=fake_poster,
+            operation_id=operation_id_for(
+                "gateway-native-http-fixture",
+                (tid, "unregistered-actor"),
+            ),
+            title="Test Task",
+            spec="Build a login page",
+            reward=100,
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"] == "foreign_key_violation"
+        response = app_with_writer.post("/board/task-publications", json=payload)
+        assert response.status_code == 409
+        assert response.json()["error"] == "foreign_key_violation"
+        assert _database_snapshot(writer) == before
 
-    def test_fk_violation_escrow_id(self, app_with_writer: TestClient) -> None:
-        """TASK-04: Foreign key violation on escrow_id returns 409."""
+    def test_supplied_escrow_id_is_rejected_before_publication(
+        self,
+        app_with_writer: TestClient,
+    ) -> None:
+        """TASK-04: Caller-supplied escrow_id is forbidden on native publication."""
         pid = _setup_funded_account(app_with_writer)
         fake_escrow = f"esc-{uuid4()}"
         tid = f"t-{uuid4()}"
-
-        resp = app_with_writer.post(
-            "/board/tasks",
-            json={
-                "task_id": tid,
-                "poster_id": pid,
-                "title": "Test Task",
-                "spec": "Build a login page",
-                "reward": 100,
-                "status": "open",
-                "bidding_deadline_seconds": 43200,
-                "acceptance_window_seconds": 3600,
-                "deadline_seconds": 172800,
-                "review_deadline_seconds": 43200,
-                "bidding_deadline": "2099-01-02T00:00:00Z",
-                "escrow_id": fake_escrow,
-                "created_at": "2099-01-01T12:00:00Z",
-                "event": make_event(source="board", event_type="task.created", task_id=tid),
-            },
+        payload = _native_publication_payload(
+            task_id=tid,
+            poster_id=pid,
+            operation_id=operation_id_for(
+                "gateway-native-http-fixture",
+                (tid, "unknown-escrow"),
+            ),
+            title="Test Task",
+            spec="Build a login page",
+            reward=100,
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"] == "foreign_key_violation"
+        payload["escrow_id"] = fake_escrow
+        writer = get_app_state().db_writer
+        assert writer is not None
+        before = _database_snapshot(writer)
+        response = app_with_writer.post("/board/task-publications", json=payload)
+        assert response.status_code == 400
+        assert response.json()["error"] == "invalid_payload"
+        assert _database_snapshot(writer) == before
 
     def test_missing_title(self, app_with_writer: TestClient) -> None:
         """TASK-05: Missing title returns 400 missing_field."""

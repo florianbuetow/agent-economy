@@ -13,6 +13,7 @@ import logging
 import signal
 import sys
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import httpx
@@ -21,7 +22,8 @@ from service_commons.config import get_config_path as resolve_config_path
 from base_agent.agent import BaseAgent
 from base_agent.config import load_agent_config
 from base_agent.runtime_config import load_runtime_state_config
-from base_agent.runtime_intents import FileTaskIntentStore
+from base_agent.runtime_intents import FileTaskIntentStore, RuntimeIntentError
+from base_agent.runtime_postings import FileTaskPostingStore
 from base_agent.runtime_task_commands import (
     RuntimeTaskCommands,
     log_runtime_replay,
@@ -30,6 +32,8 @@ from base_agent.runtime_task_commands import (
 from task_feeder.acceptance import AcceptanceLoop
 from task_feeder.config import load_acceptance_settings, load_task_feeder_settings
 from task_feeder.loop import TaskFeederLoop
+from task_feeder.posting import TaskFeederPostingCoordinator
+from task_feeder.reader import load_task_snapshot
 from task_feeder.review import ReviewLoop
 
 if TYPE_CHECKING:
@@ -62,10 +66,12 @@ async def _run_loops(
     feeder_config: TaskFeederConfig,
     acceptance_config: AcceptanceConfig,
     commands: RuntimeTaskCommands,
+    posting: TaskFeederPostingCoordinator,
     logger: logging.Logger,
 ) -> None:
     """Keep all feeder tasks inside the caller's identity-lease lifetime."""
-    loop = TaskFeederLoop(agent=agent, config=feeder_config)
+    loop = TaskFeederLoop(agent, feeder_config, posting)
+    loop.rebuild_task_map()
     acceptance = AcceptanceLoop(
         agent=agent,
         config=acceptance_config,
@@ -115,20 +121,53 @@ async def _main() -> None:
             profile=feeder_config.handle,
             handle=feeder_config.handle,
         )
-        with FileTaskIntentStore(
-            root_directory=runtime_config.directory,
-            owner=owner,
-            diagnostic_limit=runtime_config.diagnostic_limit,
-            max_record_bytes=runtime_config.max_record_bytes,
-        ) as store:
+        with (
+            FileTaskIntentStore(
+                root_directory=runtime_config.directory,
+                owner=owner,
+                diagnostic_limit=runtime_config.diagnostic_limit,
+                max_record_bytes=runtime_config.max_record_bytes,
+            ) as store,
+            FileTaskPostingStore.attach(
+                store,
+                max_source_bytes=feeder_config.source_max_bytes,
+            ) as posting_store,
+        ):
             try:
-                await _create_account(agent, logger)
+                posting = TaskFeederPostingCoordinator(agent, posting_store)
+                await posting.replay_unfinished()
+                posting.rebuild_task_map()
+
+                source_path = Path(feeder_config.tasks_file)
+                if not source_path.is_absolute():
+                    source_path = (config_path.parent / source_path).resolve()
+                try:
+                    snapshot = load_task_snapshot(
+                        source_path,
+                        max_bytes=feeder_config.source_max_bytes,
+                    )
+                    posting.bind_current_source(snapshot, feeder_config)
+                except RuntimeIntentError as exc:
+                    if exc.reason != "source_conflict":
+                        raise
+                    logger.error("Fresh task feeding disabled: %s", exc)
+                except (OSError, ValueError) as exc:
+                    logger.error("Fresh task feeding disabled: %s", exc)
+
                 commands = RuntimeTaskCommands(agent, store)
                 replayed = await commands.replay_unfinished()
                 log_runtime_replay(
                     replayed, logger=logger, diagnostic_limit=runtime_config.diagnostic_limit
                 )
-                await _run_loops(agent, feeder_config, acceptance_config, commands, logger)
+                await _create_account(agent, logger)
+                await _run_loops(
+                    agent,
+                    feeder_config,
+                    acceptance_config,
+                    commands,
+                    posting,
+                    logger,
+                )
             finally:
                 client_closed = True
                 await agent.close()

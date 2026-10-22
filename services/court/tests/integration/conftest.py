@@ -41,11 +41,13 @@ from db_gateway_service.core.state import init_app_state as init_gateway_state
 from db_gateway_service.core.state import reset_app_state as reset_gateway_state
 from db_gateway_service.services.db_reader import DbReader
 from db_gateway_service.services.db_writer import DbWriter
-from db_gateway_service.task_time import parse_utc_text_to_epoch_us
+from db_gateway_service.task_time import epoch_us_to_utc_text, parse_utc_text_to_epoch_us
 from httpx import ASGITransport, AsyncClient
+from service_auth.financial_identity import operation_id_for
 from service_auth.gateway import GatewayRequestSigner, GatewaySignerConfig
 from service_auth.platform import PlatformAgent
 from service_auth.signing import generate_keypair
+from service_auth.task_postings import TaskPostingIntent
 
 from court_service.app import create_app
 from court_service.config import clear_settings_cache
@@ -307,6 +309,94 @@ async def register_identity_agent(gateway_client: httpx.AsyncClient, agent_id: s
     assert response.status_code == 201, response.text
 
 
+async def _publish_native_task(
+    gateway_client: httpx.AsyncClient,
+    *,
+    task_id: str,
+    poster_id: str,
+    escrow_id: str,
+) -> None:
+    intent = TaskPostingIntent.from_json(
+        {
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid.uuid4()}",
+            "task_id": task_id,
+            "actor_kind": "agent",
+            "actor_id": poster_id,
+            "lock_operation_id": operation_id_for("task-lock", (task_id, poster_id)),
+            "title": "Court integration test task",
+            "spec": "Prove the real gateway-backed dispute path end to end",
+            "reward": 100,
+            "bidding_deadline_seconds": 3600,
+            "acceptance_window_seconds": 1800,
+            "execution_deadline_seconds": 86400,
+            "review_deadline_seconds": 86400,
+        }
+    )
+    admitted = await gateway_client.post("/board/task-publications", json=intent.as_json())
+    assert admitted.status_code == 202, admitted.text
+    admission = admitted.json()
+    assert admission["publication_state"] == "awaiting_lock"
+    assert admission["operation_id"] == intent.operation_id
+    assert admission["task_id"] == task_id
+    assert admission["lock_operation_id"] == intent.lock_operation_id
+    lock_timestamp = epoch_us_to_utc_text(parse_utc_text_to_epoch_us(admission["admitted_at"]))
+
+    lock_response = await gateway_client.post(
+        "/bank/escrow/lock",
+        json={
+            "operation_id": intent.lock_operation_id,
+            "escrow_id": escrow_id,
+            "payer_account_id": poster_id,
+            "amount": intent.reward,
+            "task_id": task_id,
+            "created_at": lock_timestamp,
+            "tx_id": f"tx-{uuid.uuid4()}",
+            "event": {
+                "event_source": "central-bank",
+                "event_type": "escrow.locked",
+                "timestamp": lock_timestamp,
+                "agent_id": poster_id,
+                "task_id": task_id,
+                "summary": f"Escrow locked for {task_id}",
+                "payload": "{}",
+            },
+        },
+    )
+    assert lock_response.status_code == 201, lock_response.text
+    lock_envelope = lock_response.json()
+    assert lock_envelope["outcome"] == "native_receipt"
+    assert lock_envelope["receipt"]["operation_id"] == intent.lock_operation_id
+    assert lock_envelope["receipt"]["operation_kind"] == "escrow_lock"
+    assert lock_envelope["receipt"]["source_reference"] == task_id
+    assert lock_envelope["current_escrow"]["escrow_id"] == escrow_id
+    assert lock_envelope["current_escrow"]["task_id"] == task_id
+    assert lock_envelope["current_escrow"]["payer_account_id"] == poster_id
+    assert lock_envelope["current_escrow"]["amount"] == intent.reward
+    assert lock_envelope["current_escrow"]["status"] == "locked"
+    assert lock_envelope["current_escrow"]["created_at"] == lock_timestamp
+
+    reconciled = await gateway_client.post(
+        f"/board/task-publications/{intent.operation_id}/reconcile",
+        json={},
+    )
+    assert reconciled.status_code == 201, reconciled.text
+    publication = reconciled.json()
+    assert publication["publication_state"] == "published"
+    assert publication["operation_id"] == intent.operation_id
+    assert publication["task_id"] == task_id
+    assert publication["lock_operation_id"] == intent.lock_operation_id
+    assert publication["escrow_id"] == escrow_id
+    result = publication["result"]
+    assert result["task_id"] == task_id
+    assert result["poster_id"] == poster_id
+    assert result["title"] == intent.title
+    assert result["spec"] == intent.spec
+    assert result["reward"] == intent.reward
+    assert result["status"] == "open"
+    assert isinstance(result["event_id"], int)
+
+
 async def seed_task(
     gateway_client: httpx.AsyncClient,
     *,
@@ -345,56 +435,12 @@ async def seed_task(
     )
     assert resp.status_code == 201, resp.text
 
-    resp = await gateway_client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": f"op-{uuid.uuid4()}",
-            "escrow_id": escrow_id,
-            "payer_account_id": poster_id,
-            "amount": 100,
-            "task_id": task_id,
-            "created_at": "2026-03-01T09:00:01Z",
-            "tx_id": f"tx-{uuid.uuid4()}",
-            "event": {
-                "event_source": "central-bank",
-                "event_type": "escrow.locked",
-                "timestamp": "2026-03-01T09:00:01Z",
-                "agent_id": poster_id,
-                "summary": f"Escrow locked for {task_id}",
-                "payload": "{}",
-            },
-        },
+    await _publish_native_task(
+        gateway_client,
+        task_id=task_id,
+        poster_id=poster_id,
+        escrow_id=escrow_id,
     )
-    assert resp.status_code == 201, resp.text
-
-    resp = await gateway_client.post(
-        "/board/tasks",
-        json={
-            "task_id": task_id,
-            "poster_id": poster_id,
-            "title": "Court integration test task",
-            "spec": "Prove the real gateway-backed dispute path end to end",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 3600,
-            "acceptance_window_seconds": 1800,
-            "deadline_seconds": 86400,
-            "review_deadline_seconds": 86400,
-            "bidding_deadline": "2026-03-01T10:00:00Z",
-            "escrow_id": escrow_id,
-            "created_at": "2026-03-01T09:00:00Z",
-            "event": {
-                "event_source": "board",
-                "event_type": "task.created",
-                "timestamp": "2026-03-01T09:00:00Z",
-                "task_id": task_id,
-                "agent_id": poster_id,
-                "summary": "Court integration test task created",
-                "payload": "{}",
-            },
-        },
-    )
-    assert resp.status_code == 201, resp.text
 
     bid_id = f"bid-{uuid.uuid4()}"
     await _complete_task_operation(

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -24,7 +24,8 @@ async def test_mutual_feedback_exchange(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker 86U", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Feedback task",
             spec="Do something",
             reward=500,

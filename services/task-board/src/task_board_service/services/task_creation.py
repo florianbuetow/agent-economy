@@ -4,134 +4,159 @@ Extracted from task_manager.py. Reads its dependencies through the owning
 TaskManager facade (``self._manager``) rather than snapshotting them at
 construction — tests reach into ``task_manager.store`` etc. and reassign it
 post-construction (see routers/conftest.py), and a snapshot copy would go
-stale the moment that happens. Router surfaces are byte-stable: TaskManager's
-public methods still exist with identical signatures and just delegate here.
+stale the moment that happens. TaskManager delegates the native publication
+and established lifecycle surfaces here.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
-from service_auth.financial_identity import operation_id_for
-from service_auth.jws import parse_jws
+from service_auth.financial_responses import SQLITE_MAX_INTEGER
+from service_auth.task_postings import TaskPostingIntent, TaskPostingResponse
 from service_commons.exceptions import ServiceError
 
-from task_board_service.services.errors import DuplicateTaskError
-from task_board_service.services.task_helpers import (
-    TASK_ID_RE,
-    is_positive_int,
-    now_iso,
-    task_to_response,
-    task_to_summary,
-)
+from task_board_service.services.task_helpers import task_to_response, task_to_summary
 from task_board_service.services.task_operations import (
     complete_bank_operation,
     operation_response,
     public_operation_identity,
 )
-from task_board_service.task_operation_contract import MAX_INTEGER
+from task_board_service.task_operation_contract import validate_operation_id
 
 if TYPE_CHECKING:
     from task_board_service.services.task_manager import TaskManager
 
-_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
-_MICROSECONDS_PER_SECOND = 1_000_000
+_TASK_FIELDS = frozenset(
+    {
+        "action",
+        "protocol_version",
+        "operation_id",
+        "task_id",
+        "poster_id",
+        "lock_operation_id",
+        "title",
+        "spec",
+        "reward",
+        "bidding_deadline_seconds",
+        "acceptance_window_seconds",
+        "execution_deadline_seconds",
+        "review_deadline_seconds",
+        "_signer_id",
+    }
+)
+_ESCROW_FIELDS = frozenset(
+    {"action", "operation_id", "task_id", "agent_id", "amount", "_signer_id"}
+)
 
 
-def _invalid_acceptance_window() -> ServiceError:
-    return ServiceError(
-        "invalid_deadline",
-        "acceptance_window_seconds must produce a representable cutoff",
-        400,
-        {},
-    )
+def _invalid_posting(exc: Exception) -> ServiceError:
+    message = str(exc)
+    if "reward" in message:
+        return ServiceError("invalid_reward", "Reward must be a positive integer", 400, {})
+    if "deadline" in message or "duration" in message or "cutoff" in message:
+        return ServiceError("invalid_deadline", "Task deadlines are invalid", 400, {})
+    if "task_id" in message:
+        return ServiceError("invalid_task_id", "task_id must match the format t-<uuid>", 400, {})
+    return ServiceError("invalid_payload", "Invalid task posting intent", 400, {})
 
 
-def _validate_acceptance_cutoff(
-    created_at: str,
-    bidding_deadline_seconds: int,
-    acceptance_window_seconds: int,
-) -> None:
-    try:
-        created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-        if created.tzinfo is None or created.utcoffset() != UTC.utcoffset(created):
-            raise ValueError("created_at must use UTC")
-        delta = created - _EPOCH
-        created_us = (
-            delta.days * 86_400 * _MICROSECONDS_PER_SECOND
-            + delta.seconds * _MICROSECONDS_PER_SECOND
-            + delta.microseconds
+def _intent_from_payload(payload: dict[str, Any]) -> TaskPostingIntent:
+    if frozenset(payload) != _TASK_FIELDS:
+        raise ServiceError(
+            "invalid_payload",
+            "Task token must contain exactly the required fields",
+            400,
+            {},
         )
-        duration_seconds = bidding_deadline_seconds + acceptance_window_seconds
-        if (
-            created_us < 0
-            or duration_seconds > (MAX_INTEGER - created_us) // _MICROSECONDS_PER_SECOND
-        ):
-            raise OverflowError("cutoff exceeds the SQLite integer range")
-        _ = created + timedelta(seconds=duration_seconds)
-    except (OverflowError, ValueError):
-        raise _invalid_acceptance_window() from None
+    signer_id = payload["_signer_id"]
+    poster_id = payload["poster_id"]
+    if not isinstance(signer_id, str) or signer_id != poster_id:
+        raise ServiceError("forbidden", "Signer does not match poster_id", 403, {})
+    for field in (
+        "bidding_deadline_seconds",
+        "acceptance_window_seconds",
+        "execution_deadline_seconds",
+        "review_deadline_seconds",
+    ):
+        duration = payload[field]
+        if type(duration) is not int or not 1 <= duration <= SQLITE_MAX_INTEGER // 1_000_000:
+            raise ServiceError(
+                "invalid_deadline",
+                f"{field} must be a positive integer in the supported range",
+                400,
+                {},
+            )
+    try:
+        return TaskPostingIntent.from_json(
+            {
+                "protocol_version": payload["protocol_version"],
+                "operation_id": payload["operation_id"],
+                "task_id": payload["task_id"],
+                "actor_kind": "agent",
+                "actor_id": poster_id,
+                "lock_operation_id": payload["lock_operation_id"],
+                "title": payload["title"],
+                "spec": payload["spec"],
+                "reward": payload["reward"],
+                "bidding_deadline_seconds": payload["bidding_deadline_seconds"],
+                "acceptance_window_seconds": payload["acceptance_window_seconds"],
+                "execution_deadline_seconds": payload["execution_deadline_seconds"],
+                "review_deadline_seconds": payload["review_deadline_seconds"],
+            }
+        )
+    except (TypeError, ValueError) as exc:
+        raise _invalid_posting(exc) from exc
 
 
-def _invalid_lock_response() -> ServiceError:
-    return ServiceError(
-        "central_bank_unavailable",
-        "Central Bank returned an invalid escrow lock receipt",
-        502,
-        {},
+def _validate_escrow_payload(
+    payload: dict[str, Any],
+    intent: TaskPostingIntent,
+) -> None:
+    if frozenset(payload) != _ESCROW_FIELDS:
+        raise ServiceError(
+            "invalid_payload",
+            "Escrow token must contain exactly the required fields",
+            400,
+            {},
+        )
+    if payload["_signer_id"] != intent.actor_id:
+        raise ServiceError("token_mismatch", "Escrow signer does not match task signer", 400, {})
+    expected = {
+        "action": "escrow_lock",
+        "operation_id": intent.lock_operation_id,
+        "task_id": intent.task_id,
+        "agent_id": intent.actor_id,
+        "amount": intent.reward,
+    }
+    if any(
+        type(payload[name]) is not type(value) or payload[name] != value
+        for name, value in expected.items()
+    ):
+        raise ServiceError(
+            "token_mismatch",
+            "Escrow token does not match the task posting intent",
+            400,
+            {},
+        )
+
+
+def _raise_blocked(response: TaskPostingResponse) -> None:
+    body = response.body
+    details = body.get("details")
+    if (
+        response.status_code != 409
+        or body.get("error") != "publication_integrity_blocked"
+        or body.get("message") != "Publication evidence requires reconciliation"
+        or not isinstance(details, dict)
+    ):
+        raise RuntimeError("Invalid blocked task publication response")
+    raise ServiceError(
+        "publication_integrity_blocked",
+        "Publication evidence requires reconciliation",
+        409,
+        details,
     )
-
-
-def new_lock_escrow_id(
-    envelope: dict[str, Any],
-    *,
-    operation_id: str,
-    task_id: str,
-    poster_id: str,
-    reward: int,
-) -> str:
-    """Return the escrow ID only for a matching, currently locked native receipt."""
-    receipt = envelope.get("receipt")
-    current = envelope.get("current_escrow")
-    if envelope.get("outcome") != "native_receipt":
-        raise _invalid_lock_response()
-    if not isinstance(receipt, dict) or not isinstance(current, dict):
-        raise _invalid_lock_response()
-    result = receipt.get("result")
-    legs = receipt.get("legs")
-    if not isinstance(result, dict) or not isinstance(legs, list) or len(legs) != 1:
-        raise _invalid_lock_response()
-    leg = legs[0]
-    if not isinstance(leg, dict):
-        raise _invalid_lock_response()
-    escrow_id = receipt.get("escrow_id")
-    if not isinstance(escrow_id, str) or escrow_id == "":
-        raise _invalid_lock_response()
-    valid_receipt = (
-        receipt.get("receipt_version") == 1
-        and receipt.get("operation_id") == operation_id
-        and receipt.get("operation_kind") == "escrow_lock"
-        and receipt.get("source_reference") == task_id
-        and result.get("escrow_status_at_commit") == "locked"
-        and leg.get("role") == "payer"
-        and leg.get("account_id") == poster_id
-        and leg.get("direction") == "debit"
-        and leg.get("amount") == reward
-        and not isinstance(leg.get("amount"), bool)
-    )
-    valid_current = (
-        current.get("escrow_id") == escrow_id
-        and current.get("payer_account_id") == poster_id
-        and current.get("task_id") == task_id
-        and current.get("amount") == reward
-        and not isinstance(current.get("amount"), bool)
-        and current.get("status") == "locked"
-        and current.get("resolved_at") is None
-    )
-    if not valid_receipt or not valid_current:
-        raise _invalid_lock_response()
-    return escrow_id
 
 
 class TaskCreationCoordinator:
@@ -140,324 +165,78 @@ class TaskCreationCoordinator:
     def __init__(self, manager: TaskManager) -> None:
         self._manager = manager
 
-    async def create_task(self, task_token: str, escrow_token: str) -> dict[str, Any]:
-        """
-        Create a new task with escrow.
-
-        Error precedence:
-        1. invalid_jws — malformed task_token (via _validate_jws_token)
-        2. identity_service_unavailable — Identity unreachable
-        3. forbidden — invalid signature or signer mismatch (payload-level)
-        4. invalid_payload — wrong action, missing fields, invalid values
-        5. token_mismatch — cross-token validation
-        6. task_already_exists — duplicate task_id
-        7. central_bank_unavailable / insufficient_funds — escrow lock
-        """
+    async def create_task(
+        self,
+        task_token: str,
+        escrow_token: str,
+    ) -> TaskPostingResponse:
+        """Admit, fund, and reconcile one immutable native task publication."""
         manager = self._manager
-        # Steps 4-7a: Verify task_token via Identity service, validate action
-        payload = await manager.token_validator.validate_jws_token(
+        task_payload = await manager.token_validator.validate_jws_token(
             task_token,
             "create_task",
             expected_resource="POST /tasks",
         )
-        signer_id: str = payload["_signer_id"]
+        intent = _intent_from_payload(task_payload)
+        escrow_payload = await manager.token_validator.validate_escrow_jws_token(escrow_token)
+        _validate_escrow_payload(escrow_payload, intent)
 
-        # Step 7b: Validate required fields in task_token payload
-        required_fields = [
-            "task_id",
-            "poster_id",
-            "title",
-            "spec",
-            "reward",
-            "bidding_deadline_seconds",
-            "acceptance_window_seconds",
-            "review_deadline_seconds",
-        ]
-        for field_name in required_fields:
-            if field_name not in payload:
-                raise ServiceError(
-                    "invalid_payload",
-                    f"Missing required field: {field_name}",
-                    400,
-                    {},
-                )
+        admitted = manager.store.admit_task_publication(intent)
+        if admitted.status_code == 409:
+            _raise_blocked(admitted)
+        if admitted.body["publication_state"] == "published":
+            return admitted
 
-        if "deadline_seconds" in payload:
-            deadline_seconds_field = "deadline_seconds"
-        elif "execution_deadline_seconds" in payload:
-            deadline_seconds_field = "execution_deadline_seconds"
-        else:
-            raise ServiceError(
-                "invalid_payload",
-                "Missing required field: execution_deadline_seconds",
-                400,
-                {},
-            )
+        reconciled = manager.store.reconcile_task_publication(intent.operation_id, intent)
+        if reconciled.status_code == 409:
+            _raise_blocked(reconciled)
+        if reconciled.body["publication_state"] == "published":
+            return reconciled
 
-        # Step 9a: Signer must match poster_id in payload (payload-level check)
-        poster_id: str = payload["poster_id"]
-        if signer_id != poster_id:
-            raise ServiceError(
-                "forbidden",
-                "Signer does not match poster_id",
-                403,
-                {},
-            )
-
-        task_id_obj: object = payload["task_id"]
-        title_obj: object = payload["title"]
-        spec_obj: object = payload["spec"]
-        reward: object = payload["reward"]
-        bidding_deadline_seconds: object = payload["bidding_deadline_seconds"]
-        acceptance_window_seconds: object = payload["acceptance_window_seconds"]
-        deadline_seconds: object = payload[deadline_seconds_field]
-        review_deadline_seconds: object = payload["review_deadline_seconds"]
-
-        # Step 7c: Validate task_id format
-        if not isinstance(task_id_obj, str) or not TASK_ID_RE.match(task_id_obj):
-            raise ServiceError(
-                "invalid_task_id",
-                "task_id must match the format t-<uuid4>",
-                400,
-                {},
-            )
-        task_id = task_id_obj
-
-        # Step 7d: Validate title
-        if not isinstance(title_obj, str) or len(title_obj) < 1:
-            raise ServiceError(
-                "invalid_payload",
-                "Title must be a non-empty string",
-                400,
-                {},
-            )
-        # T-037 (exception #9): the custom 'title_too_long' code contradicted
-        # test spec TC-15 (task-board-service-tests.md), which expects the
-        # generic invalid_payload code here — the message stays specific.
-        if len(title_obj) > 200:
-            raise ServiceError(
-                "invalid_payload",
-                "Title must not exceed 200 characters",
-                400,
-                {},
-            )
-        title = title_obj
-
-        # Step 7e: Validate spec
-        if not isinstance(spec_obj, str) or len(spec_obj) < 1 or len(spec_obj) > 10000:
-            raise ServiceError(
-                "invalid_payload",
-                "Spec must be between 1 and 10,000 characters",
-                400,
-                {},
-            )
-        spec = spec_obj
-
-        # Step 7f: Validate reward (must be positive integer, not float, not bool)
-        if not is_positive_int(reward):
-            raise ServiceError(
-                "invalid_reward",
-                "Reward must be a positive integer",
-                400,
-                {},
-            )
-
-        # Step 7g: Validate deadlines (each must be a positive integer)
-        for dl_name, dl_value in [
-            ("bidding_deadline_seconds", bidding_deadline_seconds),
-            ("deadline_seconds", deadline_seconds),
-            ("review_deadline_seconds", review_deadline_seconds),
-        ]:
-            if not is_positive_int(dl_value):
-                raise ServiceError(
-                    "invalid_deadline",
-                    f"{dl_name} must be a positive integer",
-                    400,
-                    {},
-                )
-        if not is_positive_int(acceptance_window_seconds):
-            raise ServiceError(
-                "invalid_deadline",
-                "acceptance_window_seconds must be a positive representable integer",
-                400,
-                {},
-            )
-        acceptance_window_seconds_int = cast("int", acceptance_window_seconds)
-
-        reward_int = cast("int", reward)
-        bidding_deadline_seconds_int = cast("int", bidding_deadline_seconds)
-        deadline_seconds_int = cast("int", deadline_seconds)
-        review_deadline_seconds_int = cast("int", review_deadline_seconds)
-        created_at = now_iso()
-        _validate_acceptance_cutoff(
-            created_at,
-            bidding_deadline_seconds_int,
-            acceptance_window_seconds_int,
-        )
-
-        # Step 8: Cross-validate escrow_token payload (decoded without sig verification)
-        escrow_payload = manager.token_validator.decode_escrow_token_payload(escrow_token)
-        escrow_header = parse_jws(escrow_token).header
-
-        escrow_task_id = escrow_payload.get("task_id")
-        escrow_amount = escrow_payload.get("amount")
-        escrow_operation_id = escrow_payload.get("operation_id")
-
-        # Missing fields in escrow payload means cross-validation cannot proceed
-        if escrow_task_id is None or escrow_amount is None or escrow_operation_id is None:
-            raise ServiceError(
-                "token_mismatch",
-                "Escrow token payload must include task_id, amount, and operation_id",
-                400,
-                {},
-            )
-
-        if escrow_task_id != task_id:
-            raise ServiceError(
-                "token_mismatch",
-                "task_id mismatch between task_token and escrow_token",
-                400,
-                {},
-            )
-
-        if escrow_amount != reward_int:
-            raise ServiceError(
-                "token_mismatch",
-                "reward/amount mismatch between task_token and escrow_token",
-                400,
-                {},
-            )
-
-        expected_operation_id = operation_id_for("task-lock", (task_id, poster_id))
-        if escrow_operation_id != expected_operation_id:
-            raise ServiceError(
-                "token_mismatch",
-                "escrow operation_id does not match the task posting intent",
-                400,
-                {},
-            )
-
-        escrow_signer_id = escrow_header.kid
-        if escrow_signer_id != signer_id:
-            raise ServiceError(
-                "token_mismatch",
-                "escrow signer does not match task signer",
-                400,
-                {},
-            )
-
-        escrow_agent_id = escrow_payload.get("agent_id")
-        if isinstance(escrow_agent_id, str) and escrow_agent_id != poster_id:
-            raise ServiceError(
-                "token_mismatch",
-                "escrow signer agent_id does not match poster_id",
-                400,
-                {},
-            )
-
-        # Step 10 (variant): Check task_id not already in DB
-        existing = manager.store.get_task(task_id)
-        if existing is not None:
-            raise ServiceError(
-                "task_already_exists",
-                f"A task with task_id '{task_id}' already exists",
-                409,
-                {},
-            )
-
-        # Step 13: Lock escrow via Central Bank (forwards the poster's escrow_token)
-        # BankClient.lock_escrow raises:
-        #   ServiceError("central_bank_unavailable", ..., 502) on connection/timeout
-        #   ServiceError("insufficient_funds", ..., 402) when CB reports insufficient funds
         try:
-            escrow_result = await manager.central_bank_client.escrow_lock(escrow_token)
-        except ServiceError:
-            raise
-        except Exception as exc:
-            error_text = str(exc).lower()
-            if "insufficient_funds" in error_text:
-                raise ServiceError(
-                    "insufficient_funds",
-                    "Poster has insufficient funds to cover the task reward",
-                    402,
-                    {},
-                ) from exc
-            raise ServiceError(
-                "central_bank_unavailable",
-                "Cannot connect to Central Bank",
-                502,
-                {},
-            ) from exc
-        escrow_id = new_lock_escrow_id(
-            escrow_result,
-            operation_id=expected_operation_id,
-            task_id=task_id,
-            poster_id=poster_id,
-            reward=reward_int,
+            await manager.central_bank_client.escrow_lock(escrow_token)
+        except ServiceError as bank_error:
+            after_error = manager.store.reconcile_task_publication(intent.operation_id, intent)
+            if after_error.status_code == 409:
+                _raise_blocked(after_error)
+            if after_error.body["publication_state"] == "published":
+                return after_error
+            if bank_error.status_code < 500:
+                raise bank_error
+            return after_error
+
+        published = manager.store.reconcile_task_publication(intent.operation_id, intent)
+        if published.status_code == 409:
+            _raise_blocked(published)
+        return published
+
+    async def get_task_publication(
+        self,
+        operation_id: str,
+        token: str,
+    ) -> TaskPostingResponse:
+        """Return one private publication state for its freshly verified owner."""
+        validated_operation_id = validate_operation_id(operation_id)
+        payload = await self._manager.token_validator.validate_jws_token(
+            token,
+            "get_task_publication",
+            expected_resource=f"GET /task-publications/{validated_operation_id}",
         )
-
-        # Insert task into DB
-        try:
-            manager.store.insert_task(
-                {
-                    "task_id": task_id,
-                    "poster_id": poster_id,
-                    "title": title,
-                    "spec": spec,
-                    "reward": reward_int,
-                    "bidding_deadline_seconds": bidding_deadline_seconds_int,
-                    "acceptance_window_seconds": acceptance_window_seconds_int,
-                    "deadline_seconds": deadline_seconds_int,
-                    "review_deadline_seconds": review_deadline_seconds_int,
-                    "status": "open",
-                    "escrow_id": escrow_id,
-                    "bid_count": 0,
-                    "worker_id": None,
-                    "accepted_bid_id": None,
-                    "created_at": created_at,
-                    "accepted_at": None,
-                    "submitted_at": None,
-                    "approved_at": None,
-                    "cancelled_at": None,
-                    "disputed_at": None,
-                    "dispute_reason": None,
-                    "dispute_id": None,
-                    "rebuttal_deadline": None,
-                    "rebuttal_submitted_at": None,
-                    "ruling_id": None,
-                    "ruled_at": None,
-                    "worker_pct": None,
-                    "ruling_summary": None,
-                    "expired_at": None,
-                    "escrow_pending": 0,
-                }
-            )
-        except DuplicateTaskError as exc:
-            # DB insert failed (e.g., race condition on duplicate task_id)
-            # Rollback escrow: release back to poster
-            try:
-                await manager.escrow_coordinator.release_posting_compensation(
-                    task_id,
-                    escrow_id,
-                    poster_id,
-                )
-            except ServiceError:
-                manager.logger.error(
-                    "Failed to release escrow during rollback",
-                    extra={"task_id": task_id, "escrow_id": escrow_id},
-                )
+        expected_fields = frozenset({"action", "operation_id", "poster_id", "_signer_id"})
+        if (
+            frozenset(payload) != expected_fields
+            or payload["operation_id"] != validated_operation_id
+        ):
             raise ServiceError(
-                "task_already_exists",
-                f"A task with task_id '{task_id}' already exists",
-                409,
+                "invalid_payload",
+                "Task publication status token is invalid",
+                400,
                 {},
-            ) from exc
-
-        task = manager.store.get_task(task_id)
-        if task is None:
-            msg = f"Task {task_id} not found after insert"
-            raise RuntimeError(msg)
-        return task_to_response(task)
+            )
+        poster_id = payload["poster_id"]
+        if not isinstance(poster_id, str) or payload["_signer_id"] != poster_id:
+            raise ServiceError("forbidden", "Signer does not match poster_id", 403, {})
+        return self._manager.store.get_task_publication(validated_operation_id, poster_id)
 
     async def get_task(self, task_id: str) -> dict[str, Any]:
         """

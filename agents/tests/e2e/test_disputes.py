@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -17,7 +17,8 @@ async def _close_agents(agents_to_close: list[BaseAgent]) -> None:
 
 
 async def _create_disputed_task(poster: BaseAgent, worker: BaseAgent) -> tuple[dict[str, Any], str]:
-    task = await poster.post_task(
+    task = await publish_task(
+        poster,
         title="Court dispute task",
         spec="Do something",
         reward=500,

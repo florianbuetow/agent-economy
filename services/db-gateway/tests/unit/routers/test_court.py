@@ -16,6 +16,7 @@ from tests.fakes.native_board_history import (
     accept_bid,
     finalize,
     operation_body,
+    publish_task,
     submit_bid,
 )
 
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
 _BUSINESS_START_US = parse_utc_text_to_epoch_us("2026-02-28T12:00:00Z")
 _CLAIM_TIME_US = parse_utc_text_to_epoch_us("2026-02-28T16:00:00Z")
 _REBUTTAL_TIME_US = parse_utc_text_to_epoch_us("2026-02-28T17:00:00Z")
+_TASK_CREATED_US = parse_utc_text_to_epoch_us("2026-02-28T10:15:00Z")
 _DISPUTE_REASON = "The login page does not validate email format"
 _REBUTTAL_DEADLINE = "2026-03-01T17:00:00Z"
 
@@ -114,41 +116,42 @@ def _lock_escrow(
 
 def _create_task(
     client: TestClient,
+    clock: BusinessClock,
     poster_id: str | None = None,
 ) -> tuple[str, str, str]:
     """Create a full task. Returns (task_id, poster_id, escrow_id)."""
     pid = poster_id or _setup_funded_account(client)
-    eid, tid = _lock_escrow(client, pid)
-    response = client.post(
-        "/board/tasks",
-        json={
-            "task_id": tid,
-            "poster_id": pid,
-            "title": "Test Task",
-            "spec": "Build a login page",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "acceptance_window_seconds": 3600,
-            "deadline_seconds": 172800,
-            "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:15:00Z",
-            "escrow_id": eid,
-            "created_at": "2026-02-28T10:15:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=tid),
-        },
-    )
-    assert response.status_code == 201
+    eid, tid = f"esc-{uuid4()}", f"t-{uuid4()}"
+    previous = clock.now_us
+    clock.now_us = _TASK_CREATED_US
+    try:
+        publish_task(
+            client,
+            task_id=tid,
+            poster_id=pid,
+            escrow_id=eid,
+            title="Test Task",
+            spec="Build a login page",
+            reward=100,
+            bidding_deadline_seconds=86400,
+            acceptance_window_seconds=3600,
+            execution_deadline_seconds=172800,
+            review_deadline_seconds=43200,
+            lock_timestamp="2026-02-28T10:10:00Z",
+        )
+    finally:
+        clock.now_us = previous
     return tid, pid, eid
 
 
 def _setup_court_prerequisites(
     client: TestClient,
+    clock: BusinessClock,
 ) -> tuple[str, str, str]:
     """Create alice, bob, and a task. Returns (alice, bob, task_id)."""
     alice = _setup_funded_account(client, name="Alice")
     bob = _register_agent(client, name="Bob")
-    tid, _pid, _eid = _create_task(client, poster_id=alice)
+    tid, _pid, _eid = _create_task(client, clock, poster_id=alice)
     return alice, bob, tid
 
 
@@ -186,7 +189,7 @@ def _prepare_disputed_claim(
     """Persist a real Board history and matching Court claim for rebuttal tests."""
     alice = _setup_funded_account(client, name="Alice")
     bob = _register_agent(client, name="Bob")
-    task_id, _poster_id, escrow_id = _create_task(client, poster_id=alice)
+    task_id, _poster_id, escrow_id = _create_task(client, clock, poster_id=alice)
     graph = TaskGraph(task_id=task_id, poster_id=alice, escrow_id=escrow_id)
 
     bid_id, bid = submit_bid(client, graph, bob)
@@ -268,9 +271,11 @@ def _prepare_disputed_claim(
 class TestDisputeClaims:
     """Dispute claims tests — CLM-01 through CLM-08."""
 
-    def test_file_valid_claim(self, app_with_writer: TestClient) -> None:
+    def test_file_valid_claim(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """CLM-01: File a valid claim returns 201 with claim_id and event_id."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = f"clm-{uuid4()}"
 
         resp = app_with_writer.post(
@@ -292,9 +297,11 @@ class TestDisputeClaims:
         assert "event_id" in data
         assert data["claim_id"] == claim_id
 
-    def test_duplicate_claim_id_rejected(self, app_with_writer: TestClient) -> None:
+    def test_duplicate_claim_id_rejected(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """CLM-02: Duplicate claim_id is rejected with 409 claim_exists."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = f"clm-{uuid4()}"
 
         _file_claim(app_with_writer, tid, alice, bob, claim_id=claim_id)
@@ -337,9 +344,13 @@ class TestDisputeClaims:
         assert resp.status_code == 409
         assert resp.json()["error"] == "foreign_key_violation"
 
-    def test_fk_violation_claimant_id(self, app_with_writer: TestClient) -> None:
+    def test_fk_violation_claimant_id(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """CLM-04: Foreign key violation on claimant_id returns 409."""
-        _alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        _alice, bob, tid = _setup_court_prerequisites(
+            app_with_writer, _fixed_gateway_business_clock
+        )
         fake_claimant = f"a-{uuid4()}"
 
         resp = app_with_writer.post(
@@ -358,9 +369,13 @@ class TestDisputeClaims:
         assert resp.status_code == 409
         assert resp.json()["error"] == "foreign_key_violation"
 
-    def test_fk_violation_respondent_id(self, app_with_writer: TestClient) -> None:
+    def test_fk_violation_respondent_id(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """CLM-05: Foreign key violation on respondent_id returns 409."""
-        alice, _bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, _bob, tid = _setup_court_prerequisites(
+            app_with_writer, _fixed_gateway_business_clock
+        )
         fake_respondent = f"a-{uuid4()}"
 
         resp = app_with_writer.post(
@@ -379,9 +394,11 @@ class TestDisputeClaims:
         assert resp.status_code == 409
         assert resp.json()["error"] == "foreign_key_violation"
 
-    def test_missing_reason(self, app_with_writer: TestClient) -> None:
+    def test_missing_reason(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """CLM-06: Missing reason returns 400 missing_field."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
 
         resp = app_with_writer.post(
             "/court/claims",
@@ -399,9 +416,11 @@ class TestDisputeClaims:
         assert resp.status_code == 400
         assert resp.json()["error"] == "missing_field"
 
-    def test_missing_event(self, app_with_writer: TestClient) -> None:
+    def test_missing_event(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """CLM-07: Missing event returns 400 missing_field."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
 
         resp = app_with_writer.post(
             "/court/claims",
@@ -419,9 +438,14 @@ class TestDisputeClaims:
         assert resp.status_code == 400
         assert resp.json()["error"] == "missing_field"
 
-    def test_claim_and_event_atomic(self, app_with_writer: TestClient, db_writer: DbWriter) -> None:
+    def test_claim_and_event_atomic(
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+        _fixed_gateway_business_clock: BusinessClock,
+    ) -> None:
         """CLM-08: Claim and event are written atomically."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = f"clm-{uuid4()}"
 
         resp = app_with_writer.post(
@@ -601,9 +625,12 @@ class TestRebuttals:
         self,
         app_with_writer: TestClient,
         db_writer: DbWriter,
+        _fixed_gateway_business_clock: BusinessClock,
     ) -> None:
         """REB-05: Unknown claims are rejected before the rebuttal insert."""
-        _alice, bob, _tid = _setup_court_prerequisites(app_with_writer)
+        _alice, bob, _tid = _setup_court_prerequisites(
+            app_with_writer, _fixed_gateway_business_clock
+        )
         fake_claim = f"clm-{uuid4()}"
         before = db_writer.connection.execute(
             "SELECT (SELECT COUNT(*) FROM court_rebuttals), (SELECT COUNT(*) FROM events)"
@@ -660,9 +687,11 @@ class TestRebuttals:
         ).fetchone()
         assert after == before
 
-    def test_missing_content(self, app_with_writer: TestClient) -> None:
+    def test_missing_content(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """REB-07: Missing content returns 400 missing_field."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
 
         resp = app_with_writer.post(
@@ -679,9 +708,11 @@ class TestRebuttals:
         assert resp.status_code == 400
         assert resp.json()["error"] == "missing_field"
 
-    def test_missing_event(self, app_with_writer: TestClient) -> None:
+    def test_missing_event(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """REB-08: Missing event returns 400 missing_field."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
 
         resp = app_with_writer.post(
@@ -759,9 +790,11 @@ class TestRebuttals:
 class TestRulings:
     """Ruling tests — RUL-01 through RUL-10."""
 
-    def test_record_valid_ruling(self, app_with_writer: TestClient) -> None:
+    def test_record_valid_ruling(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """RUL-01: Record a valid ruling returns 201 with ruling_id and event_id."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
         ruling_id = f"rul-{uuid4()}"
 
@@ -791,10 +824,13 @@ class TestRulings:
         assert data["ruling_id"] == ruling_id
 
     def test_ruling_with_claim_status_update(
-        self, app_with_writer: TestClient, db_writer: DbWriter
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+        _fixed_gateway_business_clock: BusinessClock,
     ) -> None:
         """RUL-02: Ruling with claim_status_update changes claim status to 'ruled'."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob, status="rebuttal")
 
         resp = app_with_writer.post(
@@ -829,10 +865,13 @@ class TestRulings:
         assert row[0] == "ruled"
 
     def test_ruling_without_claim_status_update(
-        self, app_with_writer: TestClient, db_writer: DbWriter
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+        _fixed_gateway_business_clock: BusinessClock,
     ) -> None:
         """RUL-03: Ruling without claim_status_update leaves claim unchanged."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob, status="rebuttal")
 
         resp = app_with_writer.post(
@@ -865,9 +904,11 @@ class TestRulings:
         assert row is not None
         assert row[0] == "rebuttal"
 
-    def test_duplicate_ruling_id_rejected(self, app_with_writer: TestClient) -> None:
+    def test_duplicate_ruling_id_rejected(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """RUL-04: Duplicate ruling_id is rejected with 409 ruling_exists."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
         ruling_id = f"rul-{uuid4()}"
 
@@ -911,9 +952,13 @@ class TestRulings:
         assert resp.status_code == 409
         assert resp.json()["error"] == "ruling_exists"
 
-    def test_fk_violation_claim_id(self, app_with_writer: TestClient) -> None:
+    def test_fk_violation_claim_id(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """RUL-05: Foreign key violation on claim_id returns 409."""
-        _alice, _bob, tid = _setup_court_prerequisites(app_with_writer)
+        _alice, _bob, tid = _setup_court_prerequisites(
+            app_with_writer, _fixed_gateway_business_clock
+        )
         fake_claim = f"clm-{uuid4()}"
 
         resp = app_with_writer.post(
@@ -937,9 +982,11 @@ class TestRulings:
         assert resp.status_code == 409
         assert resp.json()["error"] == "foreign_key_violation"
 
-    def test_fk_violation_task_id(self, app_with_writer: TestClient) -> None:
+    def test_fk_violation_task_id(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """RUL-06: Foreign key violation on task_id returns 409."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
         fake_task = f"t-{uuid4()}"
 
@@ -964,9 +1011,11 @@ class TestRulings:
         assert resp.status_code == 409
         assert resp.json()["error"] == "foreign_key_violation"
 
-    def test_missing_summary(self, app_with_writer: TestClient) -> None:
+    def test_missing_summary(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """RUL-07: Missing summary returns 400 missing_field."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
 
         resp = app_with_writer.post(
@@ -990,9 +1039,11 @@ class TestRulings:
         assert resp.status_code == 400
         assert resp.json()["error"] == "missing_field"
 
-    def test_missing_judge_votes(self, app_with_writer: TestClient) -> None:
+    def test_missing_judge_votes(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """RUL-08: Missing judge_votes returns 400 missing_field."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
 
         resp = app_with_writer.post(
@@ -1016,9 +1067,11 @@ class TestRulings:
         assert resp.status_code == 400
         assert resp.json()["error"] == "missing_field"
 
-    def test_missing_event(self, app_with_writer: TestClient) -> None:
+    def test_missing_event(
+        self, app_with_writer: TestClient, _fixed_gateway_business_clock: BusinessClock
+    ) -> None:
         """RUL-09: Missing event returns 400 missing_field."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
 
         resp = app_with_writer.post(
@@ -1038,10 +1091,13 @@ class TestRulings:
         assert resp.json()["error"] == "missing_field"
 
     def test_ruling_and_claim_update_atomic(
-        self, app_with_writer: TestClient, db_writer: DbWriter
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+        _fixed_gateway_business_clock: BusinessClock,
     ) -> None:
         """RUL-10: Ruling, claim update, and event are all written atomically."""
-        alice, bob, tid = _setup_court_prerequisites(app_with_writer)
+        alice, bob, tid = _setup_court_prerequisites(app_with_writer, _fixed_gateway_business_clock)
         claim_id = _file_claim(app_with_writer, tid, alice, bob)
         ruling_id = f"rul-{uuid4()}"
 

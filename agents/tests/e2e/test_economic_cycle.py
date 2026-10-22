@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -24,7 +24,8 @@ async def test_economic_cycle_earn_then_spend(make_funded_agent) -> None:
         agent_b = await make_funded_agent(name="Agent B 3A9", balance=0)
         agents_to_close.extend([agent_a, agent_b])
 
-        first_task = await agent_a.post_task(
+        first_task = await publish_task(
+            agent_a,
             title="A to B task",
             spec="Do something",
             reward=500,
@@ -71,7 +72,8 @@ async def test_economic_cycle_earn_then_spend(make_funded_agent) -> None:
         balance_b_after_earn = await agent_b.get_balance()
         assert balance_b_after_earn["balance"] == 500
 
-        second_task = await agent_b.post_task(
+        second_task = await publish_task(
+            agent_b,
             title="B to A task",
             spec="Do something else",
             reward=300,

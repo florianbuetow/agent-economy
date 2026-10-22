@@ -10,6 +10,7 @@ from service_commons.exceptions import ServiceError
 
 from db_gateway_service.schema import SchemaState, classify_schema, load_schema_sql
 from db_gateway_service.services.db_writer import DbWriter
+from tests.fakes.mp05_publication_migration_history import prepare_v3_source
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -25,14 +26,19 @@ def _write_schema(path: Path, state: SchemaState) -> None:
         connection.close()
 
 
-def test_existing_exact_v3_is_the_only_admitted_runtime_schema(tmp_path: Path) -> None:
-    path = tmp_path / "v3.db"
-    _write_schema(path, SchemaState.CURRENT_V3)
-    writer = DbWriter(str(path), 5000, "wal", None)
-    try:
-        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V3
-    finally:
-        writer.close()
+def test_existing_verified_v3_requires_explicit_migration_without_startup_mutation(
+    tmp_path: Path,
+) -> None:
+    source = prepare_v3_source(tmp_path)
+    before = source.database.read_bytes()
+
+    with pytest.raises(ServiceError) as captured:
+        DbWriter(str(source.database), 5000, "wal", None)
+
+    assert captured.value.status_code == 503
+    assert captured.value.error == "migration_required"
+    assert captured.value.details["version"] == 3
+    assert source.database.read_bytes() == before
 
 
 @pytest.mark.parametrize("state", [SchemaState.CURRENT_V1, SchemaState.CURRENT_V2])
@@ -50,16 +56,16 @@ def test_older_schema_requires_explicit_migration_before_persistent_configuratio
     assert path.read_bytes() == before
 
 
-def test_empty_database_bootstraps_exact_v3_transactionally(tmp_path: Path) -> None:
+def test_empty_database_bootstraps_exact_v4_transactionally(tmp_path: Path) -> None:
     path = tmp_path / "fresh.db"
     writer = DbWriter(
         str(path),
         5000,
         "wal",
-        load_schema_sql(SchemaState.CURRENT_V3),
+        load_schema_sql(SchemaState.CURRENT_V4),
     )
     try:
-        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V3
+        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V4
         assert (
             writer.connection.execute("SELECT cutover_kind FROM bank_receipt_cutover").fetchone()[0]
             == "fresh_v2"
@@ -70,7 +76,7 @@ def test_empty_database_bootstraps_exact_v3_transactionally(tmp_path: Path) -> N
 
 def test_tampered_current_bootstrap_rolls_back_every_schema_object(tmp_path: Path) -> None:
     path = tmp_path / "tampered-bootstrap.db"
-    schema = load_schema_sql(SchemaState.CURRENT_V3).replace(
+    schema = load_schema_sql(SchemaState.CURRENT_V4).replace(
         "a81b1a47e8cd319a73362c83a992f181986e799b1e82753bf139e60b35d0a4f6",
         "f" * 64,
         1,
@@ -94,7 +100,7 @@ def test_receipt_ownership_failure_is_rejected_before_configuration(
     tamper: str,
 ) -> None:
     path = tmp_path / f"{tamper}.db"
-    _write_schema(path, SchemaState.CURRENT_V3)
+    _write_schema(path, SchemaState.CURRENT_V4)
     connection = sqlite3.connect(path)
     if tamper == "missing-cutover":
         connection.execute("DELETE FROM bank_receipt_cutover")

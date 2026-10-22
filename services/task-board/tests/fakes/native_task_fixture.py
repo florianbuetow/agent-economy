@@ -16,6 +16,7 @@ from db_gateway_service.schema import SchemaState, load_schema_sql
 from db_gateway_service.task_time import epoch_us_to_utc_text, parse_utc_text_to_epoch_us
 from service_auth.financial_identity import operation_id_for
 from service_auth.signing import public_key_to_b64
+from service_auth.task_postings import TaskPostingIntent
 
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
@@ -60,6 +61,58 @@ class FixtureClock:
         return epoch_us_to_utc_text(self.value_us)
 
 
+def publish_open_task(
+    store: GatewayTaskStore,
+    *,
+    task_id: str,
+    poster_id: str,
+    title: str,
+    spec: str,
+    terms: TaskTerms,
+    timestamp: str,
+    event: dict[str, Any],
+) -> TaskPostingIntent:
+    """Persist one fresh task through native admission, Bank proof, and reconciliation."""
+
+    intent = TaskPostingIntent.from_json(
+        {
+            "protocol_version": 1,
+            "operation_id": operation_id_for("native-task-fixture", (task_id, "publication")),
+            "task_id": task_id,
+            "actor_kind": "agent",
+            "actor_id": poster_id,
+            "lock_operation_id": operation_id_for("task-lock", (task_id, poster_id)),
+            "title": title,
+            "spec": spec,
+            "reward": terms.reward,
+            "bidding_deadline_seconds": terms.bidding_seconds,
+            "acceptance_window_seconds": terms.acceptance_window_seconds,
+            "execution_deadline_seconds": terms.execution_seconds,
+            "review_deadline_seconds": terms.review_seconds,
+        }
+    )
+    admitted = store.admit_task_publication(intent)
+    assert admitted.status_code == 202
+    assert admitted.body["publication_state"] == "awaiting_lock"
+    store.writer.escrow_lock(
+        {
+            "operation_id": intent.lock_operation_id,
+            "escrow_id": f"esc-{task_id}",
+            "payer_account_id": poster_id,
+            "amount": terms.reward,
+            "task_id": task_id,
+            "created_at": timestamp,
+            "tx_id": f"tx-lock-{task_id}",
+            "event": {**event, "agent_id": poster_id},
+        }
+    )
+    published = store.reconcile_task_publication(intent.operation_id, intent)
+    assert published.status_code == 201
+    assert published.body["publication_state"] == "published"
+    assert published.body["task_id"] == task_id
+    return intent
+
+
 class NativeTaskFixture:
     """Build real facts explicitly; the underlying adapter invents no history."""
 
@@ -97,35 +150,15 @@ class NativeTaskFixture:
         return task
 
     def open_task(self, task_id: str, terms: TaskTerms) -> None:
-        self.store.writer.escrow_lock(
-            {
-                "operation_id": operation_id_for("deadline-fixture", (task_id, "lock")),
-                "escrow_id": f"esc-{task_id}",
-                "payer_account_id": self.poster_id,
-                "amount": terms.reward,
-                "task_id": task_id,
-                "created_at": self.clock.iso(),
-                "tx_id": f"tx-lock-{task_id}",
-                "event": self.event("bank", "escrow.locked", task_id),
-            }
-        )
-        self.store.insert_task(
-            {
-                "task_id": task_id,
-                "poster_id": self.poster_id,
-                "title": task_id,
-                "spec": "Explicit deadline fixture terms",
-                "reward": terms.reward,
-                "bidding_deadline_seconds": terms.bidding_seconds,
-                "acceptance_window_seconds": terms.acceptance_window_seconds,
-                "deadline_seconds": terms.execution_seconds,
-                "review_deadline_seconds": terms.review_seconds,
-                "status": "open",
-                "escrow_id": f"esc-{task_id}",
-                "bid_count": 0,
-                "escrow_pending": 0,
-                "created_at": self.clock.iso(),
-            }
+        publish_open_task(
+            self.store,
+            task_id=task_id,
+            poster_id=self.poster_id,
+            title=task_id,
+            spec="Explicit deadline fixture terms",
+            terms=terms,
+            timestamp=self.clock.iso(),
+            event=self.event("central-bank", "escrow.locked", task_id),
         )
 
     def command(
@@ -405,7 +438,7 @@ def native_task_context(
         db_path=tmp_path / "native-deadlines.db",
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V3),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
         caller_kid="gateway-task-board",
         authority=authority,
         clock_us=clock,

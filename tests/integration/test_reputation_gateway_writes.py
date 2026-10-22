@@ -83,35 +83,7 @@ async def _setup_prerequisite_data(client: httpx.AsyncClient) -> str:
         assert account_envelope["receipt"]["result"]["balance_after"] == 5000
         assert account_envelope["current_escrow"] is None
 
-    task_id = "t-rep-001"
-
-    lock_response = await client.post(
-        "/bank/escrow/lock",
-        json={
-            "operation_id": "op-00000000-0000-4000-8000-000000000303",
-            "escrow_id": f"esc-{task_id}",
-            "payer_account_id": "a-poster",
-            "amount": 200,
-            "task_id": task_id,
-            "created_at": "2026-03-02T05:31:00Z",
-            "tx_id": f"tx-esc-{task_id}",
-            "event": {
-                "event_source": "bank",
-                "event_type": "escrow.locked",
-                "timestamp": "2026-03-02T05:31:00Z",
-                "agent_id": "a-poster",
-                "task_id": task_id,
-                "summary": "Escrow locked",
-                "payload": "{}",
-            },
-        },
-    )
-    assert lock_response.status_code == 201
-    lock_envelope = lock_response.json()
-    assert lock_envelope["outcome"] == "native_receipt"
-    assert lock_envelope["receipt"]["operation_kind"] == "escrow_lock"
-    assert lock_envelope["receipt"]["source_reference"] == task_id
-    assert lock_envelope["current_escrow"]["status"] == "locked"
+    task_id = "t-00000000-0000-4000-8000-000000000501"
 
     task_response = await publish_open_task(
         client,
@@ -121,21 +93,10 @@ async def _setup_prerequisite_data(client: httpx.AsyncClient) -> str:
         spec="Do something",
         reward=200,
         escrow_id=f"esc-{task_id}",
-        created_at="2026-03-02T05:31:00Z",
-        bidding_deadline="2026-03-02T06:31:00Z",
         bidding_deadline_seconds=3600,
         acceptance_window_seconds=1800,
         execution_deadline_seconds=7200,
         review_deadline_seconds=3600,
-        event={
-            "event_source": "board",
-            "event_type": "task.created",
-            "timestamp": "2026-03-02T05:31:00Z",
-            "agent_id": "a-poster",
-            "task_id": task_id,
-            "summary": "Task created",
-            "payload": "{}",
-        },
     )
     assert task_response.status_code == 201
     await advance_task_to_submitted(

@@ -9,8 +9,17 @@ from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
 from task_board_service.core.state import get_app_state
-from task_board_service.routers.validation import extract_token, parse_json_body
-from task_board_service.schemas import TaskListResponse, TaskMutationResponse, TaskResponse
+from task_board_service.routers.validation import (
+    extract_bearer_token,
+    extract_token,
+    parse_json_body,
+)
+from task_board_service.schemas import (
+    TaskListResponse,
+    TaskMutationResponse,
+    TaskPublicationEnvelope,
+    TaskResponse,
+)
 
 router = APIRouter()
 
@@ -25,8 +34,8 @@ def _mutation_response(result: dict[str, Any], response: Response) -> dict[str, 
 # ---------------------------------------------------------------------------
 
 
-@router.post("/tasks", status_code=201, response_model=TaskResponse)
-async def create_task(request: Request) -> dict[str, Any]:
+@router.post("/tasks", status_code=201, response_model=TaskPublicationEnvelope)
+async def create_task(request: Request, response: Response) -> dict[str, Any]:
     """Create a new task with escrow."""
     body = await request.body()
     data = {} if body == b"" else parse_json_body(body)
@@ -44,7 +53,31 @@ async def create_task(request: Request) -> dict[str, Any]:
             details={},
         )
 
-    return await state.task_manager.create_task(task_token, escrow_token)
+    result = await state.task_manager.create_task(task_token, escrow_token)
+    response.status_code = result.status_code
+    return result.body
+
+
+@router.get(
+    "/task-publications/{operation_id}",
+    response_model=TaskPublicationEnvelope,
+)
+async def get_task_publication(operation_id: str, request: Request) -> dict[str, Any]:
+    """Return one publication state to its freshly authenticated poster."""
+    token = extract_bearer_token(request.headers.get("authorization"), required=True)
+    if token is None:
+        raise ServiceError("invalid_jws", "Authorization token must be present", 400, {})
+
+    state = get_app_state()
+    if state.task_manager is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="TaskManager not initialized",
+            status_code=503,
+            details={},
+        )
+    result = await state.task_manager.get_task_publication(operation_id, token)
+    return result.body
 
 
 # ---------------------------------------------------------------------------

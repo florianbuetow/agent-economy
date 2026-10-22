@@ -14,7 +14,7 @@ import httpx
 import pytest
 import yaml
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -278,7 +278,8 @@ async def test_task_board_remote_identity_admission_matrix_has_no_bid_effect(
     poster: BaseAgent = await make_funded_agent(name=f"MP03 Board Poster {case}", balance=20)
     worker: BaseAgent = await make_funded_agent(name=f"MP03 Board Worker {case}", balance=0)
     assert worker.agent_id is not None
-    task = await poster.post_task(
+    task = await publish_task(
+        poster,
         title=f"MP03 admission {case}",
         spec="A rejected token must not create a bid",
         reward=10,

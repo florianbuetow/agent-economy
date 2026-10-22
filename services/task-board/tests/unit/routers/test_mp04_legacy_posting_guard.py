@@ -1,4 +1,4 @@
-"""Historical escrow observations cannot fund newly posted tasks."""
+"""Legacy-shaped Bank bodies are not proof of native escrow receipts."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from service_auth.financial_identity import operation_id_for
 from service_auth.financial_responses import parse_financial_envelope
 
 from task_board_service.core.state import get_app_state
+from tests.fakes.gateway_task_store import GatewayTaskStore
 from tests.unit.routers.conftest import create_task, make_task_id
 
 if TYPE_CHECKING:
@@ -107,7 +108,7 @@ def _legacy_lock_observation(
 
 
 @pytest.mark.parametrize("current_status", ["locked", "released"])
-async def test_posting_rejects_historical_lock_without_task_or_settlement_side_effects(
+async def test_legacy_shaped_bank_body_leaves_publication_pending_without_a_receipt(
     client: AsyncClient,
     alice_keypair: Any,
     alice_agent_id: str,
@@ -124,8 +125,16 @@ async def test_posting_rejects_historical_lock_without_task_or_settlement_side_e
         current_status=current_status,
     )
     state = get_app_state()
-    state.central_bank_client.escrow_lock.side_effect = None
-    state.central_bank_client.escrow_lock.return_value = legacy
+    store = state.store
+    assert isinstance(store, GatewayTaskStore)
+    central_bank = state.central_bank_client
+    assert central_bank is not None
+    connection = store.writer.connection
+    financial_dump_before = tuple(
+        line for line in connection.iterdump() if line.startswith('INSERT INTO "bank_')
+    )
+    central_bank.escrow_lock.side_effect = None
+    central_bank.escrow_lock.return_value = legacy
 
     response = await create_task(
         client,
@@ -135,9 +144,36 @@ async def test_posting_rejects_historical_lock_without_task_or_settlement_side_e
         reward=reward,
     )
 
-    assert response.status_code == 502
-    assert response.json()["error"] == "central_bank_unavailable"
-    assert state.store.get_task(task_id) is None
-    state.central_bank_client.escrow_lock.assert_awaited_once()
-    state.central_bank_client.escrow_release.assert_not_awaited()
-    state.central_bank_client.escrow_split.assert_not_awaited()
+    assert response.status_code == 202
+    publication = response.json()
+    assert set(publication) == {
+        "protocol_version",
+        "operation_id",
+        "task_id",
+        "request_sha256",
+        "publication_state",
+        "lock_operation_id",
+        "escrow_id",
+        "admitted_at",
+        "published_at",
+        "result",
+        "error",
+    }
+    assert publication["protocol_version"] == 1
+    assert publication["task_id"] == task_id
+    assert publication["lock_operation_id"] == operation_id
+    assert publication["publication_state"] == "awaiting_lock"
+    assert publication["escrow_id"] is None
+    assert publication["published_at"] is None
+    assert publication["result"] is None
+    assert publication["error"] is None
+    stored = store.get_task_publication(publication["operation_id"], alice_agent_id)
+    assert stored.body == publication
+    assert store.get_task(task_id) is None
+    financial_dump_after = tuple(
+        line for line in connection.iterdump() if line.startswith('INSERT INTO "bank_')
+    )
+    assert financial_dump_after == financial_dump_before
+    central_bank.escrow_lock.assert_awaited_once()
+    central_bank.escrow_release.assert_not_awaited()
+    central_bank.escrow_split.assert_not_awaited()

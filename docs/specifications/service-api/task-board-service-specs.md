@@ -1,5 +1,41 @@
 # Task Board Service — API Specification
 
+## MP-05 native publication amendment
+
+The [durable publication contract](../../plans/2026-10-18-mp05-publication-contract.md)
+supersedes the legacy creation request, replay, timing and compensation behavior
+below. The signed task payload requires protocol version 1, caller-owned
+operation/task IDs, the deterministic lock operation ID, exact poster/title/spec/
+reward, and all four explicit durations. The execution duration's signed field
+is `execution_deadline_seconds`; current task reads retain `deadline_seconds`.
+Both task and escrow certificates must pass signature, freshness and route-context
+validation before a durable intent is admitted.
+
+`POST /tasks` returns the exact publication envelope: 201 for a published result,
+202 for an admitted posting awaiting lock confirmation. Exact replay returns the
+frozen creation result even after later lifecycle changes; changed terms conflict.
+Unknown signed business fields are rejected instead of silently ignored. A
+transport-ambiguous Bank result is reconciled before any response, and an absent
+receipt leaves a durable pending intent. Funding/authorization errors do not
+erase or terminalize that intent; a previous dispatch may still commit.
+
+The Gateway also rejects a fresh intent for an unregistered actor before any
+durable claim (`409 foreign_key_violation`). A registered actor without a Bank
+account may still be admitted pending funding; identity and funding are separate
+conditions. Existing publication artifacts must retain valid registered actors
+to pass publication audit and startup.
+
+`GET /task-publications/{operation_id}` requires a fresh owner-signed bearer token
+for action `get_task_publication`, with matching operation ID, poster ID, audience
+and exact resource. Missing and foreign-owner operations return the identical
+`404 publication_not_found` response. Pending work is not discoverable in public
+task lists. The Gateway lookup always includes the verified economic owner.
+
+New publication starts deadlines at atomic visibility, after proven funding.
+Native storage failures remain recoverable; they never authorize a refund of a
+matching published task. Historical orphan refunds require the separate verified
+cutover observations and receipt-bound recovery contract.
+
 ## MP-07 native lifecycle amendment
 
 The [native operation contract](task-board-native-operations.md) defines the current refactor

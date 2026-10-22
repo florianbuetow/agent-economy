@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -25,7 +25,8 @@ async def test_download_uploaded_asset(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker AS1", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Asset download task",
             spec="Upload a file",
             reward=500,
@@ -86,7 +87,8 @@ async def test_multiple_asset_uploads(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker AS2", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Multi asset task",
             spec="Upload multiple files",
             reward=500,
@@ -144,7 +146,8 @@ async def test_submit_without_assets_rejected(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker AS3", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="No assets task",
             spec="Do something",
             reward=500,

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .native_task_contract import lifecycle_version, new_operation_id
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -24,7 +24,8 @@ async def test_post_task_with_escrow(make_funded_agent) -> None:
         poster = await make_funded_agent(name="Poster DJB", balance=5000)
         agents_to_close.append(poster)
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Test task",
             spec="Do something",
             reward=500,
@@ -57,7 +58,8 @@ async def test_submit_bid_on_task(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker OQK", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Bid test task",
             spec="Do something",
             reward=500,
@@ -99,7 +101,8 @@ async def test_accept_bid_and_assign_worker(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker DEG", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Accept bid task",
             spec="Do something",
             reward=500,
@@ -149,7 +152,8 @@ async def test_post_and_cancel_task(make_funded_agent) -> None:
         poster = await make_funded_agent(name="Poster M6I", balance=5000)
         agents_to_close.append(poster)
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Cancel task",
             spec="Do something",
             reward=500,
@@ -192,7 +196,8 @@ async def test_happy_path_submit_and_approve(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker QIC", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Happy path task",
             spec="Do something",
             reward=500,
@@ -270,7 +275,8 @@ async def test_competing_bidders(make_funded_agent) -> None:
         worker3 = await make_funded_agent(name="Worker BOT 3", balance=0)
         agents_to_close.extend([poster, worker1, worker2, worker3])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Competing bidders task",
             spec="Do something",
             reward=500,
@@ -346,7 +352,8 @@ async def test_sealed_bid_visibility(make_funded_agent) -> None:
         observer = await make_funded_agent(name="Observer CIO", balance=0)
         agents_to_close.extend([poster, worker, observer])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Sealed bid task",
             spec="Do something",
             reward=500,
@@ -396,7 +403,8 @@ async def test_file_dispute(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker 8BX", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Dispute task",
             spec="Do something",
             reward=500,
@@ -461,7 +469,8 @@ async def test_execution_deadline_expiry(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker NB6", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Execution deadline task",
             spec="Do something quickly",
             reward=500,
@@ -508,7 +517,8 @@ async def test_auto_approve_on_review_timeout(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker ZYY", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Review timeout task",
             spec="Do something quickly",
             reward=500,

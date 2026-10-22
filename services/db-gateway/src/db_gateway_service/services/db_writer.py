@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING, Any
 from service_commons.exceptions import ServiceError
 
 from db_gateway_service import task_time
+from db_gateway_service.publication_audit import audit_publications
 from db_gateway_service.receipt_audit import audit_receipt_ownership
 from db_gateway_service.schema import (
     SchemaClassification,
@@ -46,13 +47,16 @@ from db_gateway_service.services.bank_writer import BankWriter
 from db_gateway_service.services.board_writer import BoardWriter
 from db_gateway_service.services.court_writer import CourtWriter
 from db_gateway_service.services.identity_writer import IdentityWriter
+from db_gateway_service.services.legacy_posting_writer import LegacyPostingWriter
 from db_gateway_service.services.reputation_writer import ReputationWriter
 from db_gateway_service.services.task_operation_writer import TaskOperationWriter
+from db_gateway_service.services.task_publication_writer import TaskPublicationWriter
 from db_gateway_service.task_contract_audit import audit_task_contracts
 
 if TYPE_CHECKING:
     from db_gateway_service.board_authority import BoardAuthority
     from db_gateway_service.task_operation_requests import TaskOperationRequest
+    from db_gateway_service.task_publication_requests import TaskPublicationRequest
 
 
 def _schema_statements(schema_sql: str) -> tuple[str, ...]:
@@ -84,6 +88,7 @@ def _validate_bootstrap_statement(statement: str) -> None:
         or body[:2] == ("create", "index")
         or body[:3] == ("insert", "into", "schema_metadata")
         or body[:3] == ("insert", "into", "bank_receipt_cutover")
+        or body[:3] == ("insert", "into", "board_publication_cutover")
     )
     if not allowed or ";" in body:
         first_word = body[0] if body else "empty"
@@ -148,6 +153,7 @@ class DbWriter:
             self._admit_database_health()
             self._admit_receipt_ownership()
             self._admit_task_contracts()
+            self._admit_publications()
 
             self._configure_connection(busy_timeout_ms, journal_mode)
 
@@ -230,8 +236,20 @@ class DbWriter:
             {"finding_codes": sorted({finding.code for finding in result.findings})},
         )
 
+    def _admit_publications(self) -> None:
+        """Reject inconsistent posting and historical refund ownership at startup."""
+        result = audit_publications(self._db)
+        if result.publications_clean:
+            return
+        raise ServiceError(
+            "database_publication_contract_failed",
+            "Publication contract admission failed",
+            500,
+            {"finding_codes": sorted({finding.code for finding in result.findings})},
+        )
+
     def _bootstrap_schema(self, schema_sql: str | None) -> SchemaClassification:
-        """Create the exact current v3 schema atomically without implicit commits."""
+        """Create the exact current v4 schema atomically without implicit commits."""
         if schema_sql is None:
             raise ServiceError(
                 "schema_required",
@@ -249,6 +267,7 @@ class DbWriter:
             self._admit_database_health()
             self._admit_receipt_ownership()
             self._admit_task_contracts()
+            self._admit_publications()
             self._db.commit()
             return classification
         except BaseException as primary:
@@ -290,7 +309,7 @@ class DbWriter:
 
     @staticmethod
     def _admit_existing_schema(classification: SchemaClassification) -> None:
-        if classification.state is SchemaState.CURRENT_V3:
+        if classification.state is SchemaState.CURRENT_V4:
             return
         details: dict[str, object] = {
             "state": classification.state.value,
@@ -303,6 +322,7 @@ class DbWriter:
             SchemaState.SUPPORTED_V0,
             SchemaState.CURRENT_V1,
             SchemaState.CURRENT_V2,
+            SchemaState.CURRENT_V3,
         }:
             raise ServiceError(
                 "migration_required",
@@ -398,6 +418,37 @@ class DbWriter:
     def create_task(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new task."""
         return self._board.create_task(data)
+
+    def admit_task_publication(
+        self, command: TaskPublicationRequest, caller_kid: str
+    ) -> dict[str, Any]:
+        """Reserve or replay one immutable posting before Bank transport."""
+        writer = TaskPublicationWriter(self._db, clock_us=task_time.utc_now_us)
+        return writer.admit(command, caller_kid)
+
+    def reconcile_task_publication(self, operation_id: str, caller_kid: str) -> dict[str, Any]:
+        """Publish only from authoritative persisted funding evidence."""
+        writer = TaskPublicationWriter(self._db, clock_us=task_time.utc_now_us)
+        return writer.reconcile(operation_id, caller_kid)
+
+    def get_task_publication(
+        self, operation_id: str, caller_kid: str, *, expected_actor_id: str | None
+    ) -> dict[str, Any]:
+        """Return one verified caller's durable publication state."""
+        writer = TaskPublicationWriter(self._db, clock_us=task_time.utc_now_us)
+        return writer.get(operation_id, caller_kid, expected_actor_id=expected_actor_id)
+
+    def list_posting_recovery(self, after: str, limit: int, caller_kid: str) -> dict[str, object]:
+        """Enumerate bounded unfinished posting work for the verified caller."""
+        writer = TaskPublicationWriter(self._db, clock_us=task_time.utc_now_us)
+        return writer.recovery(after, limit, caller_kid)
+
+    def reconcile_legacy_posting_observation(
+        self, observation_id: str, caller_kid: str
+    ) -> dict[str, Any]:
+        """Finalize a migrated posting refund from persisted Bank evidence."""
+        writer = LegacyPostingWriter(self._db)
+        return writer.reconcile(observation_id, caller_kid)
 
     def claim_task_operation(
         self,

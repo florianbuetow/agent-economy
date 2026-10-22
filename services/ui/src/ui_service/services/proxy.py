@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, NoReturn, cast
+import hashlib
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast
 
 import httpx
+from cryptography.hazmat.primitives import serialization
 from service_auth import TaskBoardCommandContractError, TaskBoardCommandResponse
 from service_auth.financial_responses import SQLITE_MAX_INTEGER, validate_operation_id
+from service_auth.posting_journal import PostingJournalError, normalize_observation
+from service_auth.task_postings import TaskPostingIntent, TaskPostingResponse
 from service_commons.exceptions import ServiceError
 
 from ui_service.core.state import get_app_state
@@ -46,18 +50,6 @@ def _get_user_agent() -> UserAgent:
             {},
         )
     return state.user_agent
-
-
-def _ensure_dict_response(value: Any, error_code: str) -> dict[str, Any]:
-    """Ensure proxy operations return object payloads."""
-    if not isinstance(value, dict):
-        raise ServiceError(
-            error_code,
-            "Unexpected response type from task-board operation.",
-            502,
-            {},
-        )
-    return value
 
 
 def _invalid_response(error_code: str) -> NoReturn:
@@ -282,7 +274,34 @@ async def get_identity() -> str:
     return agent_id
 
 
-async def create_task(
+def _posting_scope(agent: UserAgent) -> dict[str, object]:
+    agent_id = agent.agent_id
+    if not isinstance(agent_id, str) or agent_id == "":
+        raise ServiceError(
+            "user_agent_not_registered",
+            "UserAgent is not registered with the Identity service.",
+            503,
+            {},
+        )
+    raw_public = agent.config.public_key.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    return {
+        "schema_version": 1,
+        "operator_agent_id": agent_id,
+        "operator_public_fingerprint_sha256": hashlib.sha256(raw_public).hexdigest(),
+        "service_urls": {
+            "identity_url": agent.config.identity_url,
+            "bank_url": agent.config.bank_url,
+            "task_board_url": agent.config.task_board_url,
+            "reputation_url": agent.config.reputation_url,
+            "court_url": agent.config.court_url,
+        },
+    }
+
+
+def prepare_task_posting(
     title: str,
     spec: str,
     reward: int,
@@ -290,11 +309,11 @@ async def create_task(
     acceptance_window_seconds: int,
     execution_deadline_seconds: int,
     review_deadline_seconds: int,
-) -> dict[str, Any]:
-    """Post a new task via UserAgent."""
+) -> dict[str, object]:
+    """Allocate a complete posting record without performing transport."""
     agent = _get_user_agent()
     try:
-        result = await agent.post_task(
+        intent = agent.prepare_task_posting(
             title=title,
             spec=spec,
             reward=reward,
@@ -303,13 +322,120 @@ async def create_task(
             execution_deadline_seconds=execution_deadline_seconds,
             review_deadline_seconds=review_deadline_seconds,
         )
-        return _ensure_dict_response(result, "task_creation_failed")
+        return {
+            "record_version": 1,
+            "scope": _posting_scope(agent),
+            "intent": intent.as_json(),
+            "request_sha256": intent.request_sha256,
+        }
+    except ServiceError:
+        raise
+    except Exception as exc:
+        _request_failed("task_posting_failed", exc)
+
+
+def _validated_posting_record(
+    *, operation_id: str, record: dict[str, object], agent: UserAgent
+) -> TaskPostingIntent:
+    try:
+        validated_operation_id = validate_operation_id(operation_id)
+        intent = TaskPostingIntent.from_json(record["intent"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ServiceError(
+            "invalid_task_posting_record",
+            "Task posting record is invalid",
+            422,
+            {},
+        ) from exc
+    if (
+        record.get("record_version") != 1
+        or record.get("scope") != _posting_scope(agent)
+        or intent.operation_id != validated_operation_id
+        or intent.actor_id != agent.agent_id
+        or record.get("request_sha256") != intent.request_sha256
+    ):
+        raise ServiceError(
+            "invalid_task_posting_record",
+            "Task posting record does not match the current operator or intent",
+            422,
+            {},
+        )
+    return intent
+
+
+def _posting_result(
+    response: object,
+    *,
+    intent: TaskPostingIntent,
+    observation: Literal["submit", "status"],
+) -> tuple[int, dict[str, object]]:
+    try:
+        normalized_response = response
+        if (
+            observation == "submit"
+            and isinstance(response, TaskPostingResponse)
+            and response.status_code == 409
+            and response.body.get("publication_state") == "blocked_integrity"
+        ):
+            normalized_response = TaskPostingResponse(
+                status_code=409,
+                body={
+                    "error": "publication_integrity_blocked",
+                    "message": "Publication evidence requires reconciliation",
+                    "details": {"publication": response.body},
+                },
+            )
+        status_code, publication, _state = normalize_observation(
+            normalized_response,
+            intent=intent,
+            observation=observation,
+        )
+    except (PostingJournalError, RuntimeError, TypeError, ValueError) as exc:
+        raise ServiceError(
+            "task_posting_failed",
+            "Task Board returned a malformed posting acknowledgment",
+            502,
+            {},
+        ) from exc
+    return status_code, {
+        "observation": observation,
+        "status_code": status_code,
+        "publication": publication,
+    }
+
+
+async def submit_task_posting(
+    *, operation_id: str, record: dict[str, object]
+) -> tuple[int, dict[str, object]]:
+    """Submit an exact browser-owned posting intent."""
+    agent = _get_user_agent()
+    intent = _validated_posting_record(operation_id=operation_id, record=record, agent=agent)
+    try:
+        response = await agent.submit_task_posting(intent)
     except ServiceError:
         raise
     except httpx.HTTPStatusError as exc:
-        _raise_task_board_error(exc, "task_creation_failed")
+        _raise_task_board_error(exc, "task_posting_failed")
     except Exception as exc:
-        _request_failed("task_creation_failed", exc)
+        _request_failed("task_posting_failed", exc)
+    return _posting_result(response, intent=intent, observation="submit")
+
+
+async def get_task_posting_status(
+    *, operation_id: str, record: dict[str, object]
+) -> tuple[int, dict[str, object]]:
+    """Read and bind an exact browser-owned posting intent."""
+    agent = _get_user_agent()
+    intent = _validated_posting_record(operation_id=operation_id, record=record, agent=agent)
+    try:
+        response = await agent.get_task_posting(operation_id)
+    except ServiceError:
+        raise
+    except httpx.HTTPStatusError as exc:
+        _raise_task_board_error(exc, "task_posting_failed")
+    except Exception as exc:
+        _request_failed("task_posting_failed", exc)
+    return _posting_result(response, intent=intent, observation="status")
 
 
 async def list_bids(task_id: str) -> list[dict[str, Any]]:

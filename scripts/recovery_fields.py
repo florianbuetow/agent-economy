@@ -119,7 +119,7 @@ def _specific_fields(config_id: str, config: Mapping[str, object]) -> list[Field
                 _file("runtime_state.directory", parent),
                 _file("data.keys_dir", parent),
                 _file("data.roster_path", parent),
-                _file("task_feeder.tasks_file", PathResolutionBase.AGENTS_PACKAGE_ROOT),
+                _file("task_feeder.tasks_file", parent),
             )
         )
         for profile in _members(config, ("workers",)):

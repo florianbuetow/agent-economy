@@ -193,7 +193,7 @@ The Reputation routes expose raw records, not the ratified score endpoint (Q-12)
 
 **Impact/root cause:** Funds can become permanently unavailable with no task owner/state representing them. The root cause is an incomplete saga around the required lock-before-open sequence.
 
-**Fix:** Persist a durable task-creation operation record/outbox keyed by `task_id`, or implement a recoverable saga: use the stable escrow lock identity, attempt task creation, and on ambiguous failure query task and escrow state before deciding. If no task exists, issue an idempotent refund settlement and persist/emit the compensation result. If task exists with the same escrow/spec identity, return the created task. Never swallow failed compensation without a durable pending record.
+**Fix:** Persist and reserve the complete caller-owned posting intent before Bank transport. Reconcile the exact persisted lock receipt and publish the task, timing contract, event and immutable result atomically. Missing task/receipt reads or transport failures are not refund authority: an earlier dispatch may still commit. Exact replay returns the original result; changed terms conflict. Verified historical cutover observations retain separate per-escrow refund intents and retry them durably, without refunding a published winner or adopting old financial-only locks into new specifications. See `docs/plans/2026-10-18-mp05-publication-contract.md` for the reviewed native and legacy boundaries.
 
 **Regression/acceptance test:** Inject (a) definite pre-commit task insert failure, (b) post-commit response loss, and (c) refund response loss. Assert respectively: refund exactly once/no task; task retained/no refund; refund exactly once after retry. In every case, `account balances + locked escrow` conserves value.
 
@@ -1189,6 +1189,20 @@ are absent. Scope and evidence limitations remain explicit in
 #### MP-05 — Make task posting and compensation recoverable
 
 **Tickets:** T-118 → T-119. **Priority:** P0. **Depends on:** MP-04, MP-07. **Owner:** Task Board posting. **Findings:** F-M03, F-M08.
+
+The reviewed implementation contract is
+`docs/plans/2026-10-18-mp05-publication-contract.md`. Initial and corrected failure
+evidence is indexed under
+`openspec/changes/complete-agent-economy/evidence/mp05-posting/`. Native publication
+recovery and verified historical compensation are distinct; the full package
+remains open pending implementation and all required proof.
+
+Feeder rollout checkpoint: durable source/intent storage, status-first replay
+and map reconstruction are implemented with scoped review approval. Parent agents
+component CI passes (889 tests; three unchanged optional credential skips).
+UI/demo rollout, backup/restore journal validation, broader fixture reconciliation,
+remaining fault proofs and fresh isolated root CI still gate this package. See
+the `feeder-and-ci-progress` evidence index; no MP-05 item closes at this checkpoint.
 
 - [ ] **Red proof:** fail after escrow lock but before task insert; lose task-insert response after commit; fail/refuse compensation; restart the process at each boundary.
 - [ ] **Implement:** a durable posting intent with stable task/request identity; lock escrow, publish exactly once, and reconcile ambiguous insertion before refunding. Keep incomplete postings out of public open-job discovery. Record and retry compensation as an operation even when no task row exists.

@@ -297,6 +297,12 @@ Creation samples one explicit timestamp before external effects, checks the comp
 and acceptance cutoffs against both integer storage and ISO datetime bounds, and uses that same
 timestamp for publication. An unrepresentable acceptance window fails before escrow locking.
 
+MP-05 supersession for new schema-v4 native postings: retain separate intent admission and
+atomic publication timestamps. The latter starts the signed bidding/acceptance durations, so
+invisible recovery time cannot consume them. Existing published timestamps remain unchanged;
+see `2026-10-18-mp05-publication-contract.md`. The pre-effect rule above describes the v3
+publication boundary verified by MP-07, not the new durable posting contract.
+
 Public create-task validation retains the established duration error vocabulary: a missing
 acceptance_window_seconds is400 invalid_payload; a supplied non-positive, boolean, non-integer
 or unrepresentable duration is400 invalid_deadline. The message identifies that field. Both
