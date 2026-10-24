@@ -120,8 +120,7 @@ Docker is not currently supported or maintained — compose files and per-servic
 
 ## Prerequisites
 
-- Python >=3.12
-- [uv](https://docs.astral.sh/uv/) — Python package manager (handles virtual environments and dependencies)
+- [uv](https://docs.astral.sh/uv/) — Python and package manager (installs the declared Python >=3.12 runtime and dependencies)
 - [just](https://github.com/casey/just) — command runner (like `make` but simpler)
 - `curl`, `jq`, `lsof` — used by `just check`/`start-all`/`status` for health polling
 - Run `just check` to verify all required tools are installed
@@ -176,31 +175,34 @@ target before writing, uses a per-handle process lock, creates only absent valid
 targets, and safely converges when repeated. `just check-keys` performs the same
 whole-set validation without generating keys or changing private-key permissions.
 
+Startup skips services that already return a valid healthy response. After each
+dependency tier, `just start-all` stops immediately if any required service does
+not become healthy, so later dependents are not launched and no success banner is
+printed. `just status` checks every service, reports every unhealthy or malformed
+response, and exits nonzero when any check fails.
+
 Legacy private keys with mode `0644` are rejected by normal loading. After
 backing up and verifying a valid matching pair, run `just adopt-key-permissions`
-to validate the complete roster-and-Gateway set first, then change only private
-modes to `0600`; key bytes and public fingerprints remain unchanged. Adoption
-never generates missing pairs. If an existing checkout has legacy `0644` agent
-keys but no Gateway pairs yet, adopt the roster alone first, then provision the
-complete set:
+to prevalidate every complete existing roster and Gateway pair, then change only
+those private modes to `0600`; key bytes and public fingerprints remain
+unchanged. Fully absent configured pairs are reported as requiring provisioning
+and remain absent. Adoption never generates missing pairs. Then provision the
+reported missing pairs and run the strict check:
 
 ```bash
-cd agents
-uv run python -m key_provision_cli adopt-permissions
-cd ..
+just adopt-key-permissions
 just provision-keys
 just check-keys
 ```
 
-The agent-only invocation intentionally omits `--gateway-config`. The following
-root provision validates the now-hardened roster and creates the five missing
-Gateway pairs. A missing half, corrupt PEM, mismatched pair, duplicated
-cross-domain fingerprint, or missing private key is never repaired or replaced
-automatically. Restore both matching files from backup and compare the public
-fingerprint with the registered Identity record. If no valid private-key backup
-exists, provision a new identity and explicitly migrate its accounts and resource
-ownership. Backups must include both files, preserve private mode `0600`, and
-record the printed SHA-256 public fingerprint.
+All existing pairs and their fingerprint ownership are validated before any mode
+changes. A missing half, corrupt PEM, mismatched pair, duplicated fingerprint,
+symlinked key path, or missing private key from an otherwise partial pair is
+never repaired or replaced automatically. Restore both matching files from
+backup and compare the public fingerprint with the registered Identity record.
+If no valid private-key backup exists, provision a new identity and explicitly
+migrate its accounts and resource ownership. Backups must include both files,
+preserve private mode `0600`, and record the printed SHA-256 public fingerprint.
 
 The demo reads `platform.platform_key_path` from `tools/config.yaml`; that path is
 resolved relative to the tools config file and must identify the matching
@@ -231,8 +233,16 @@ just fund-feeder <amount> <operation-id> <reference>  # Fund the feeder with an 
 just start-feeder             # Start the task feeder (posts, accepts bids, auto-reviews)
 just start-mathbot [profile]  # Start a math worker agent (requires LM Studio or another configured provider)
 just stop-feeder
-just stop-mathbot
+just stop-mathbot [profile]   # Stop only that profile (default: mathbot)
 ```
+
+Agent stop commands are checkout-scoped and fail closed. Before sending `SIGTERM`,
+they capture and revalidate the host process UID, start identity, argv, working
+directory, and effective agent configuration. `stop-mathbot` additionally requires
+an exact profile match. A same-module process from another checkout, configuration,
+or profile is never selected; an inspection or identity ambiguity makes the command
+exit nonzero without signaling that process. The selected configuration is the
+existing `AGENT_CONFIG_PATH`, or `agents/config.yaml` when the variable is unset.
 
 ### Run a single service
 
@@ -249,15 +259,18 @@ Every service exposes `GET /health`, which returns `{"status": "ok", "uptime_sec
 ```bash
 just start-all
 just provision
-just demo run-00000000-0000-4000-8000-000000000001
-# Or: just demo-scale <a separate run-UUID>
+just demo
+# Or: just demo-scale
 just help             # See all available commands
 ```
 
-Demo commands use the running stack and preserve its data. Repeat the same
-command and run ID to resume interrupted work; completed runs do nothing.
-Use a new run ID for a separate run. Changing a scenario under an existing run
-ID is rejected. Demo commands do not stop services or reset databases.
+Demo commands print the UI URL, open it in the default browser before replay,
+use the running stack, preserve its data, and print the generated run ID. If the
+browser cannot be opened, the command reports the manual URL and stops before
+replay. Resume interrupted work with `just demo-resume <run-id>` or
+`just demo-scale-resume <run-id>`; completed runs do nothing. Changing a
+scenario under an existing run ID is rejected. Demo commands do not stop
+services or reset databases.
 
 ## Development
 

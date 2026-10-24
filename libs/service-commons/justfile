@@ -4,7 +4,6 @@ _default:
 
 # Show help information
 help:
-    @clear
     @echo ""
     @printf "\033[0;34m=== service-commons ===\033[0m\n"
     @echo ""

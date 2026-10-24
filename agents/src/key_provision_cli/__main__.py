@@ -128,10 +128,11 @@ def _preflight_targets(
     gateway_targets: dict[str, Path],
     *,
     action: _Action,
-) -> dict[str, str]:
-    allow_absent = action == "provision"
+) -> tuple[dict[str, str], tuple[str, ...]]:
+    allow_absent = action in {"provision", "adopt-permissions"}
     allow_legacy_private_mode = action == "adopt-permissions"
     fingerprints: dict[str, str] = {}
+    absent_handles: list[str] = []
     for handle, public_path in (*agent_targets.items(), *gateway_targets.items()):
         try:
             fingerprints[handle] = keypair_fingerprint(
@@ -141,15 +142,12 @@ def _preflight_targets(
             )
         except KeyMaterialError as exc:
             if allow_absent and exc.reason == "absent_pair":
+                absent_handles.append(handle)
                 continue
             raise
 
     fingerprint_owners: dict[str, str] = {}
-    for handle in agent_targets:
-        fingerprint = fingerprints.get(handle)
-        if fingerprint is not None:
-            fingerprint_owners.setdefault(fingerprint, handle)
-    for handle in gateway_targets:
+    for handle in (*agent_targets, *gateway_targets):
         fingerprint = fingerprints.get(handle)
         if fingerprint is None:
             continue
@@ -158,7 +156,49 @@ def _preflight_targets(
             msg = f"Duplicate key identity fingerprint shared by {owner!r} and {handle!r}"
             raise KeyMaterialError("duplicate_identity", msg)
         fingerprint_owners[fingerprint] = handle
-    return fingerprints
+    return fingerprints, tuple(absent_handles)
+
+
+def _adopt_existing_pairs(
+    agent_targets: dict[str, Path],
+    gateway_targets: dict[str, Path],
+    fingerprints: dict[str, str],
+) -> None:
+    for handle, public_path in (*agent_targets.items(), *gateway_targets.items()):
+        if handle in fingerprints:
+            adopt_keypair_permissions(handle, public_path.parent)
+
+
+def _verify_adoption(
+    agent_targets: dict[str, Path],
+    gateway_targets: dict[str, Path],
+    expected_fingerprints: dict[str, str],
+    expected_absent_handles: tuple[str, ...],
+) -> None:
+    expected_absent = set(expected_absent_handles)
+    for handle, public_path in (*agent_targets.items(), *gateway_targets.items()):
+        if handle in expected_absent:
+            try:
+                keypair_fingerprint(
+                    handle,
+                    public_path.parent,
+                    allow_legacy_private_mode=True,
+                )
+            except KeyMaterialError as exc:
+                if exc.reason == "absent_pair":
+                    continue
+                raise
+            msg = f"Absent keypair appeared while adopting permissions for handle {handle!r}"
+            raise KeyMaterialError("unexpected_key_material", msg)
+
+        fingerprint = keypair_fingerprint(
+            handle,
+            public_path.parent,
+            allow_legacy_private_mode=False,
+        )
+        if fingerprint != expected_fingerprints[handle]:
+            msg = f"Public key changed while adopting permissions for handle {handle!r}"
+            raise KeyMaterialError("mismatched_pair", msg)
 
 
 def _administer_gateway_pairs(
@@ -187,7 +227,7 @@ def main(argv: list[str]) -> int:
         )
         factory = AgentFactory(config_path=args.config)
         agent_targets, gateway_targets = _configured_targets(factory, gateway_pairs)
-        fingerprints = _preflight_targets(
+        fingerprints, absent_handles = _preflight_targets(
             agent_targets,
             gateway_targets,
             action=args.action,
@@ -196,7 +236,7 @@ def main(argv: list[str]) -> int:
             factory.provision_configured_keys()
             _administer_gateway_pairs(gateway_pairs, action=args.action)
             result_label = "provisioned"
-            fingerprints = _preflight_targets(
+            fingerprints, _absent_handles = _preflight_targets(
                 agent_targets,
                 gateway_targets,
                 action="check",
@@ -204,14 +244,14 @@ def main(argv: list[str]) -> int:
         elif args.action == "check":
             result_label = "valid"
         else:
-            factory.adopt_configured_key_permissions()
-            _administer_gateway_pairs(gateway_pairs, action=args.action)
-            result_label = "adopted"
-            fingerprints = _preflight_targets(
+            _adopt_existing_pairs(agent_targets, gateway_targets, fingerprints)
+            _verify_adoption(
                 agent_targets,
                 gateway_targets,
-                action="check",
+                fingerprints,
+                absent_handles,
             )
+            result_label = "adopted"
     except (KeyMaterialError, OSError, ValidationError, ValueError, yaml.YAMLError) as exc:
         reason = exc.reason if isinstance(exc, KeyMaterialError) else "invalid_config"
         print(
@@ -226,6 +266,9 @@ def main(argv: list[str]) -> int:
 
     for handle, fingerprint in fingerprints.items():
         print(f"{result_label} handle={handle} fingerprint_sha256={fingerprint}")
+    if args.action == "adopt-permissions":
+        for handle in absent_handles:
+            print(f"absent handle={handle} next_action=provision")
     return 0
 
 

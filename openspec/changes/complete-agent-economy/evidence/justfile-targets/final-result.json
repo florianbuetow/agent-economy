@@ -1,0 +1,23 @@
+{
+  "command": [
+    "/Users/flo/.local/share/mise/shims/just",
+    "ci-quiet"
+  ],
+  "exit_code": 0,
+  "started_at_utc": "2026-10-24T22:06:49.566189+00:00",
+  "finished_at_utc": "2026-10-24T23:14:28.200570+00:00",
+  "source_files_unchanged": 1349,
+  "tests": {
+    "agents_passed": 892,
+    "agents_provider_key_skips": 3,
+    "tools_passed": 331,
+    "runtime_passed": 463,
+    "ui_browser_passed": 319,
+    "live_e2e_passed": 113
+  },
+  "post_ci_services_healthy": 7,
+  "verification_scope": "Full root CI, focused command regressions, successful no-argument demo, visible dashboard, and read-only live process ownership selection. Destructive commands tested with disposable fixtures; no live stop was used in final verification.",
+  "incident_record": "docs/explanations/2026-10-24-root-stop-all-test-incident.md",
+  "scope_decision": "Removed unsupported performance commands under feature-first/basic-testing direction; retained performance test files.",
+  "log": "root-ci-targets-final.log"
+}

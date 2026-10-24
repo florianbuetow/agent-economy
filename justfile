@@ -46,13 +46,12 @@ _default:
 # Show available commands
 [private]
 help:
-    @clear
     @echo ""
     @printf "\033[0;34m=== Agent Task Economy ===\033[0m\n"
     @echo ""
     @printf "\033[1;33mSetup\033[0m\n"
     @printf "  \033[0;37mjust check            \033[0;34m Check if all required tools are installed\033[0m\n"
-    @printf "  \033[0;37mjust init-all         \033[0;34m Initialize all service environments\033[0m\n"
+    @printf "  \033[0;37mjust init-all         \033[0;34m Initialize all project environments\033[0m\n"
     @printf "  \033[0;37mjust destroy-all      \033[0;34m Destroy all virtual environments\033[0m\n"
     @printf "  \033[0;37mjust setup-guard      \033[0;34m Set up guard file integrity collections\033[0m\n"
     @echo ""
@@ -79,18 +78,20 @@ help:
     @printf "  \033[0;37mjust start-feeder     \033[0;34m Start task feeder (posts math tasks)\033[0m\n"
     @printf "  \033[0;37mjust stop-feeder      \033[0;34m Stop task feeder\033[0m\n"
     @printf "  \033[0;37mjust start-mathbot [profile]\033[0;34m Start math worker agent from a named profile (default: mathbot; requires services + LM Studio)\033[0m\n"
-    @printf "  \033[0;37mjust stop-mathbot     \033[0;34m Stop math worker agent\033[0m\n"
+    @printf "  \033[0;37mjust stop-mathbot [profile]\033[0;34m Stop the exact local math worker profile (default: mathbot)\033[0m\n"
     @printf "  \033[0;37mjust fund-feeder <amount> <operation-id> <reference>\033[0;34m Fund the feeder agent\033[0m\n"
     @printf "  \033[0;37mjust provision        \033[0;34m Provision the treasury (idempotent; run once after first start-all)\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
     @printf "  \033[0;37mjust logs             \033[0;34m Tail all service logs (color-coded)\033[0m\n"
     @echo ""
     @printf "\033[1;33mTask Generation\033[0m\n"
-    @printf "  \033[0;37mjust generate-tasks    \033[0;34m Generate math tasks to data/math_tasks.jsonl\033[0m\n"
+    @printf "  \033[0;37mjust generate-tasks    \033[0;34m Replace data/math_tasks.jsonl with generated math tasks\033[0m\n"
     @echo ""
     @printf "\033[1;33mDemo\033[0m\n"
-    @printf "  \033[0;37mjust demo <run-id>    \033[0;34m Run quick demo (3 agents, ~25s)\033[0m\n"
-    @printf "  \033[0;37mjust demo-scale <run-id>\033[0;34m Run scaled demo (10 agents, ~60s)\033[0m\n"
+    @printf "  \033[0;37mjust demo             \033[0;34m Run a new quick demo (3 agents, ~25s)\033[0m\n"
+    @printf "  \033[0;37mjust demo-scale       \033[0;34m Run a new scaled demo (10 agents, ~60s)\033[0m\n"
+    @printf "  \033[0;37mjust demo-resume <run-id>\033[0;34m Resume a quick demo\033[0m\n"
+    @printf "  \033[0;37mjust demo-scale-resume <run-id>\033[0;34m Resume a scaled demo\033[0m\n"
     @echo ""
     @printf "\033[1;33mCI & Code Quality\033[0m\n"
     @printf "  \033[0;37mjust test-all         \033[0;34m Run tests for all services\033[0m\n"
@@ -134,7 +135,6 @@ check:
     }
 
     check_tool "uv"     uv     "--version"
-    check_tool "python"  python3 "--version"
     check_tool "curl"    curl    "--version"
     check_tool "jq"      jq      "--version"
     check_tool "lsof"    lsof    "-v"
@@ -162,7 +162,10 @@ setup-guard:
 # Initialize all service environments
 init-all:
     @echo ""
-    @printf "\033[0;34m=== Initializing All Services ===\033[0m\n"
+    @printf "\033[0;34m=== Initializing All Environments ===\033[0m\n"
+    cd libs/service-commons && just init
+    cd libs/service-clients && just init
+    cd libs/service-auth && just init
     cd services/identity && just init
     cd services/central-bank && just init
     cd services/task-board && just init
@@ -172,7 +175,7 @@ init-all:
     cd services/ui && just init
     cd agents && just init
     cd tools && just init
-    @printf "\033[0;32m✓ All services initialized\033[0m\n"
+    @printf "\033[0;32m✓ All environments initialized\033[0m\n"
     @echo ""
 
 # Start identity service locally
@@ -217,6 +220,36 @@ start-ui:
     cd services/ui && just run
     @echo ""
 
+# Internal background launches used by start-all. These intentionally omit
+# hot reload while preserving Court's explicit local environment loading.
+_launch-db-gateway:
+    cd services/db-gateway && uv run uvicorn db_gateway_service.app:create_app --factory --host 127.0.0.1 --port {{port_db_gateway}}
+
+_launch-identity:
+    cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host 127.0.0.1 --port {{port_identity}}
+
+_launch-reputation:
+    cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 127.0.0.1 --port {{port_reputation}}
+
+_launch-bank:
+    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 127.0.0.1 --port {{port_central_bank}}
+
+_launch-taskboard:
+    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 127.0.0.1 --port {{port_task_board}}
+
+_launch-court:
+    #!/usr/bin/env bash
+    cd services/court
+    if [ -f .env ]; then
+        set -a
+        . .env
+        set +a
+    fi
+    uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port {{port_court}}
+
+_launch-ui:
+    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host 127.0.0.1 --port {{port_ui}}
+
 # Start all services in background (respects dependency order)
 start-all:
     #!/usr/bin/env bash
@@ -224,8 +257,7 @@ start-all:
     printf "\033[0;34m=== Starting All Services (Background) ===\033[0m\n"
     printf "\n"
 
-    if ! (cd agents && uv run python -m key_provision_cli check \
-        --gateway-config ../services/db-gateway/config.yaml); then
+    if ! just check-keys; then
         printf "\033[0;31m✗ Key preflight failed before service startup.\033[0m\n"
         printf "Run 'just provision-keys' for an empty key store.\n"
         printf "For valid legacy 0644 keys, run 'just adopt-key-permissions' explicitly.\n"
@@ -238,7 +270,9 @@ start-all:
         local max_attempts=60
         local attempt=0
         while [ $attempt -lt $max_attempts ]; do
-            if curl -s --connect-timeout 1 "http://localhost:${port}/health" | grep -q '"ok"' 2>/dev/null; then
+            if curl --fail --silent --max-time 2 --connect-timeout 1 \
+                "http://localhost:${port}/health" 2>/dev/null \
+                | jq -e '.status == "ok"' >/dev/null 2>&1; then
                 printf "\033[0;32m✓ %s ready (port %s)\033[0m\n" "$name" "$port"
                 return 0
             fi
@@ -249,10 +283,31 @@ start-all:
         return 1
     }
 
+    is_healthy() {
+        local port=$1
+        curl --fail --silent --max-time 2 --connect-timeout 1 \
+            "http://localhost:${port}/health" 2>/dev/null \
+            | jq -e '.status == "ok"' >/dev/null 2>&1
+    }
+
+    start_unless_healthy() {
+        local name=$1
+        local port=$2
+        local recipe=$3
+        if is_healthy "$port"; then
+            printf "\033[0;32m✓ %s already healthy (port %s)\033[0m\n" "$name" "$port"
+            return 0
+        fi
+        just "$recipe" &
+    }
+
     # Tier 1: DB Gateway first (creates economy.db needed by UI)
     printf "Starting tier 1 (DB Gateway)...\n"
-    cd services/db-gateway && uv run uvicorn db_gateway_service.app:create_app --factory --host 127.0.0.1 --port {{port_db_gateway}} &
-    wait_for_health "DB Gateway" {{port_db_gateway}}
+    start_unless_healthy "DB Gateway" {{port_db_gateway}} _launch-db-gateway
+    if ! wait_for_health "DB Gateway" {{port_db_gateway}}; then
+        printf "\033[0;31m✗ DB Gateway did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
 
     # Tier 2: Identity first. It is the leaf service that central-bank,
     # task-board, reputation, and court each register their platform agent
@@ -261,7 +316,7 @@ start-all:
     # had bound its socket, raising httpx.ConnectError and aborting that
     # service's lifespan ("Application startup failed. Exiting.").
     printf "Starting tier 2 (Identity)...\n"
-    cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host 127.0.0.1 --port {{port_identity}} &
+    start_unless_healthy "Identity" {{port_identity}} _launch-identity
     if ! wait_for_health "Identity" {{port_identity}}; then
         printf "\033[0;31m✗ Identity did not become healthy; aborting startup\033[0m\n"
         exit 1
@@ -269,7 +324,9 @@ start-all:
     # Fully-online gate: confirm the registry actually serves reads, not just
     # that the port is bound. Dependents will POST /agents/register, so assert
     # GET /agents answers before launching them.
-    if ! curl -s --connect-timeout 1 "http://localhost:{{port_identity}}/agents" | grep -q '"agents"'; then
+    if ! curl --fail --silent --max-time 2 --connect-timeout 1 \
+        "http://localhost:{{port_identity}}/agents" 2>/dev/null \
+        | jq -e '.agents | type == "array"' >/dev/null 2>&1; then
         printf "\033[0;31m✗ Identity health OK but /agents not serving; aborting startup\033[0m\n"
         exit 1
     fi
@@ -278,30 +335,36 @@ start-all:
     # Tier 3: economy services in parallel. Identity is healthy, so
     # platform-agent registration can no longer race.
     printf "Starting tier 3 (economy services)...\n"
-    cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 127.0.0.1 --port {{port_reputation}} &
-    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 127.0.0.1 --port {{port_central_bank}} &
-    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 127.0.0.1 --port {{port_task_board}} &
-    (
-        cd services/court
-        if [ -f .env ]; then
-            set -a
-            . .env
-            set +a
-        fi
-        uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port {{port_court}}
-    ) &
+    start_unless_healthy "Reputation" {{port_reputation}} _launch-reputation
+    start_unless_healthy "Central Bank" {{port_central_bank}} _launch-bank
+    start_unless_healthy "Task Board" {{port_task_board}} _launch-taskboard
+    start_unless_healthy "Court" {{port_court}} _launch-court
 
     # Wait for the rest in dependency order
-    wait_for_health "Central Bank" {{port_central_bank}}
-    wait_for_health "Task Board" {{port_task_board}}
-    wait_for_health "Reputation" {{port_reputation}}
-    wait_for_health "Court" {{port_court}}
+    if ! wait_for_health "Central Bank" {{port_central_bank}}; then
+        printf "\033[0;31m✗ Central Bank did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
+    if ! wait_for_health "Task Board" {{port_task_board}}; then
+        printf "\033[0;31m✗ Task Board did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
+    if ! wait_for_health "Reputation" {{port_reputation}}; then
+        printf "\033[0;31m✗ Reputation did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
+    if ! wait_for_health "Court" {{port_court}}; then
+        printf "\033[0;31m✗ Court did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
 
-    # Tier 4: UI last. Its UserAgent mints the platform treasury against the
-    # Central Bank during startup, so the bank must be healthy first.
+    # Tier 4: UI last, after every service it calls is healthy.
     printf "Starting tier 4 (UI)...\n"
-    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host 127.0.0.1 --port {{port_ui}} &
-    wait_for_health "UI" {{port_ui}}
+    start_unless_healthy "UI" {{port_ui}} _launch-ui
+    if ! wait_for_health "UI" {{port_ui}}; then
+        printf "\033[0;31m✗ UI did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
 
     printf "\n"
     printf "\033[0;32m✓ All services started\033[0m\n"
@@ -359,16 +422,15 @@ stop-all:
 
     failed=0
     for svc in identity central-bank task-board reputation court db-gateway ui; do
-        cd "services/$svc" && just kill || failed=$((failed + 1))
-        cd - > /dev/null
+        if ! (cd "services/$svc" && just kill); then
+            failed=$((failed + 1))
+        fi
     done
 
-    # Also stop agents if running
-    pkill -f "python -m task_feeder" 2>/dev/null && printf "Task feeder stopped\n" || true
-    pkill -f "python -m math_worker" 2>/dev/null && printf "Math worker stopped\n" || true
-
     if [ "$failed" -gt 0 ]; then
-        printf "\033[0;33m⚠ %d service(s) could not be stopped\033[0m\n" "$failed"
+        printf "\033[0;31m✗ %d service(s) could not be stopped\033[0m\n" "$failed"
+        printf "\n"
+        exit 1
     else
         printf "\033[0;32m✓ All services stopped\033[0m\n"
     fi
@@ -389,29 +451,44 @@ stop-feeder:
     #!/usr/bin/env bash
     printf "\n"
     printf "\033[0;34m=== Stopping Task Feeder ===\033[0m\n"
-    pkill -f "python -m task_feeder" 2>/dev/null && \
-        printf "\033[0;32m✓ Task feeder stopped\033[0m\n" || \
-        printf "\033[0;33m⚠ Task feeder not running\033[0m\n"
+    repo_root=$PWD
+    agent_config=${AGENT_CONFIG_PATH:-"$repo_root/agents/config.yaml"}
+    if ! uv run --project agents scripts/stop_agent.py \
+        --repo-root "$repo_root" \
+        --config "$agent_config" \
+        --module task_feeder; then
+        printf "\033[0;31m✗ Task feeder stop refused: ownership could not be proven\033[0m\n"
+        exit 1
+    fi
+    printf "\033[0;32m✓ Task feeder termination requested safely\033[0m\n"
     printf "\n"
 
 # Start math worker agent from a named profile (requires running services + LM Studio)
 start-mathbot profile="mathbot":
     #!/usr/bin/env bash
     printf "\n"
-    printf "\033[0;34m=== Starting Math Worker Agent (profile: {{profile}}) ===\033[0m\n"
+    printf "\033[0;34m=== Starting Math Worker Agent (profile: %s) ===\033[0m\n" {{quote(profile)}}
     printf "\n"
-    cd agents && uv run python -m math_worker {{profile}} &
+    cd agents && uv run python -m math_worker {{quote(profile)}} &
     printf "Math worker agent starting in background (PID: $!)\n"
     printf "\n"
 
-# Stop math worker agent
-stop-mathbot:
+# Stop one exact math worker profile
+stop-mathbot profile="mathbot":
     #!/usr/bin/env bash
     printf "\n"
-    printf "\033[0;34m=== Stopping Math Worker Agent ===\033[0m\n"
-    pkill -f "python -m math_worker" 2>/dev/null && \
-        printf "\033[0;32m✓ Math worker agent stopped\033[0m\n" || \
-        printf "\033[0;33m⚠ Math worker agent not running\033[0m\n"
+    printf "\033[0;34m=== Stopping Math Worker Agent (profile: %s) ===\033[0m\n" {{quote(profile)}}
+    repo_root=$PWD
+    agent_config=${AGENT_CONFIG_PATH:-"$repo_root/agents/config.yaml"}
+    if ! uv run --project agents scripts/stop_agent.py \
+        --repo-root "$repo_root" \
+        --config "$agent_config" \
+        --module math_worker \
+        --profile {{quote(profile)}}; then
+        printf "\033[0;31m✗ Math worker stop refused: ownership could not be proven\033[0m\n"
+        exit 1
+    fi
+    printf "\033[0;32m✓ Math worker termination requested safely\033[0m\n"
     printf "\n"
 
 # Fund the feeder agent with initial coins
@@ -481,26 +558,38 @@ status:
     printf "\n"
     printf "\033[0;34m=== Service Status ===\033[0m\n"
     printf "\n"
+    failed=0
 
     check_service() {
         local name=$1
         local port=$2
         local health_response
 
-        if health_response=$(curl -s --connect-timeout 2 "http://localhost:${port}/health" 2>/dev/null); then
-            status=$(echo "$health_response" | jq -r '.status // empty' 2>/dev/null)
+        local status
+        local uptime
+        local agents
+
+        if health_response=$(curl --fail --silent --max-time 3 --connect-timeout 2 \
+            "http://localhost:${port}/health" 2>/dev/null); then
+            if ! status=$(printf "%s" "$health_response" | jq -er '.status' 2>/dev/null); then
+                printf "\033[0;31m✗ %s\033[0m (port %s) - malformed health response\n" "$name" "$port"
+                failed=$((failed + 1))
+                return
+            fi
             if [ "$status" = "ok" ]; then
-                uptime=$(echo "$health_response" | jq -r '.uptime_seconds // empty' 2>/dev/null)
-                agents=$(echo "$health_response" | jq -r '.registered_agents // empty' 2>/dev/null)
+                uptime=$(printf "%s" "$health_response" | jq -r '.uptime_seconds // empty')
+                agents=$(printf "%s" "$health_response" | jq -r '.registered_agents // empty')
                 printf "\033[0;32m✓ %s\033[0m (port %s) - ok" "$name" "$port"
                 [ -n "$uptime" ] && printf " (uptime: %ss)" "$uptime"
                 [ -n "$agents" ] && printf " (agents: %s)" "$agents"
                 printf "\n"
             else
-                printf "\033[0;33m⚠ %s\033[0m (port %s) - %s\n" "$name" "$port" "${status:-unknown}"
+                printf "\033[0;31m✗ %s\033[0m (port %s) - %s\n" "$name" "$port" "$status"
+                failed=$((failed + 1))
             fi
         else
             printf "\033[0;31m✗ %s\033[0m (port %s) - not responding\n" "$name" "$port"
+            failed=$((failed + 1))
         fi
     }
 
@@ -513,15 +602,21 @@ status:
     check_service "UI"           {{port_ui}}
 
     printf "\n"
+    if [ "$failed" -gt 0 ]; then
+        printf "\033[0;31m✗ %d service(s) unhealthy\033[0m\n" "$failed"
+        exit 1
+    fi
+    printf "\033[0;32m✓ All services healthy\033[0m\n"
+    printf "\n"
 
 # Tail all service logs (color-coded, today by default)
 logs date="":
     #!/usr/bin/env bash
     printf "\n"
-    if [ -n "{{date}}" ]; then
-        python3 scripts/tail_logs.py --date "{{date}}"
+    if [ -n {{quote(date)}} ]; then
+        uv run --project services/db-gateway python scripts/tail_logs.py --date {{quote(date)}}
     else
-        python3 scripts/tail_logs.py
+        uv run --project services/db-gateway python scripts/tail_logs.py
     fi
 
 # Destroy all virtual environments
@@ -537,26 +632,41 @@ destroy-all:
     cd services/ui && just destroy
     cd agents && just destroy
     cd tools && just destroy
+    cd libs/service-auth && just destroy
+    cd libs/service-clients && just destroy
+    cd libs/service-commons && just destroy
     @printf "\033[0;32m✓ All virtual environments removed\033[0m\n"
     @echo ""
 
 # --- Task Generation ---
 
-# Generate math tasks (appends 10,000 tasks to data/math_tasks.jsonl)
+# Generate a replacement set of 10,000 tasks in data/math_tasks.jsonl
 generate-tasks:
     @echo ""
     cd tools && uv run python -m math_task_factory --total 10000
-    @printf "\033[0;32m✓ Tasks appended to data/math_tasks.jsonl\033[0m\n"
+    @printf "\033[0;32m✓ Replaced data/math_tasks.jsonl with generated tasks\033[0m\n"
     @echo ""
 
 # --- Demo ---
 
-# Run or resume the quick scenario against the existing stack
-demo run_id:
+# Run a new quick scenario against the existing stack
+demo:
+    uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
+    cd tools && uv run python -m demo_replay scenarios/quick.yaml
+
+# Run a new scale scenario against the existing stack
+demo-scale:
+    uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
+    cd tools && uv run python -m demo_replay scenarios/scale.yaml
+
+# Resume a quick scenario against the existing stack
+demo-resume run_id:
+    uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
     cd tools && uv run python -m demo_replay scenarios/quick.yaml --run-id {{quote(run_id)}}
 
-# Run or resume the scale scenario against the existing stack
-demo-scale run_id:
+# Resume a scale scenario against the existing stack
+demo-scale-resume run_id:
+    uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
     cd tools && uv run python -m demo_replay scenarios/scale.yaml --run-id {{quote(run_id)}}
 
 # --- CI & Code Quality ---
@@ -643,15 +753,31 @@ _test-all-suites:
 
 # Run tests for a specific service
 test service:
-    @echo ""
-    cd services/{{service}} && just test
-    @echo ""
+    #!/usr/bin/env bash
+    set -euo pipefail
+    service={{quote(service)}}
+    case "$service" in
+        identity|central-bank|task-board|reputation|court|db-gateway|ui) ;;
+        *) printf "\033[0;31m✗ Unknown service: %s\033[0m\n" "$service" >&2; exit 1 ;;
+    esac
+    printf "\n"
+    cd "services/$service"
+    just test
+    printf "\n"
 
 # Run CI checks for a specific service
 ci-service service:
-    @echo ""
-    cd services/{{service}} && just ci
-    @echo ""
+    #!/usr/bin/env bash
+    set -euo pipefail
+    service={{quote(service)}}
+    case "$service" in
+        identity|central-bank|task-board|reputation|court|db-gateway|ui) ;;
+        *) printf "\033[0;31m✗ Unknown service: %s\033[0m\n" "$service" >&2; exit 1 ;;
+    esac
+    printf "\n"
+    cd "services/$service"
+    just ci
+    printf "\n"
 
 # Test and enforce the repository-wide inherited-PATH policy
 code-semgrep-path-policy:
