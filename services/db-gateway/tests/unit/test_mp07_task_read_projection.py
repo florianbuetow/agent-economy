@@ -129,7 +129,8 @@ def task_reader(tmp_path: Path) -> Iterator[tuple[DbWriter, DbReader, dict[str, 
         db_path=str(tmp_path / "task-read-projection.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        current_task_board_caller_kid="gateway-task-board",
     )
     graph = _seed_submitted(writer)
     reader = DbReader(writer.connection)

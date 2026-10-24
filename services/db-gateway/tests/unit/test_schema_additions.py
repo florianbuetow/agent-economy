@@ -13,6 +13,7 @@ from tests.conftest import make_event
 from tests.fakes.native_board_history import (
     BusinessClock,
     TaskGraph,
+    accept_bid,
     operation_body,
     publish_task,
     submit_bid,
@@ -95,6 +96,17 @@ def _create_task(client: TestClient, *, poster_id: str) -> tuple[str, str]:
         lock_timestamp="2026-03-01T10:10:00Z",
     )
     return task_id, escrow_id
+
+
+def _create_accepted_task(client: TestClient, *, poster_id: str) -> tuple[str, str]:
+    task_id, escrow_id = _create_task(client, poster_id=poster_id)
+    worker_id = _register_agent(client, name="Worker")
+    graph = TaskGraph(task_id=task_id, poster_id=poster_id, escrow_id=escrow_id)
+    bid_id, bid = submit_bid(client, graph, worker_id, amount=90)
+    assert bid.status_code == 200, bid.text
+    accepted = accept_bid(client, graph, worker_id, bid_id, bid_amount=90)
+    assert accepted.status_code == 200, accepted.text
+    return task_id, worker_id
 
 
 def _read_one(db_writer: DbWriter, query: str, params: tuple[Any, ...]) -> sqlite3.Row | None:
@@ -183,15 +195,20 @@ class TestSchemaAdditions:
     ) -> None:
         """board_assets accepts optional content_hash."""
         poster_id = _create_funded_account(app_with_writer, name="Poster", balance=500)
-        task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+        task_id, worker_id = _create_accepted_task(app_with_writer, poster_id=poster_id)
 
         asset_id = f"asset-{uuid4()}"
         response = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": asset_id,
                 "task_id": task_id,
-                "uploader_id": poster_id,
+                "uploader_id": worker_id,
                 "filename": "artifact.zip",
                 "content_type": "application/zip",
                 "size_bytes": 2048,
@@ -216,15 +233,20 @@ class TestSchemaAdditions:
     ) -> None:
         """board_assets stores NULL when content_hash is omitted."""
         poster_id = _create_funded_account(app_with_writer, name="Poster", balance=500)
-        task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+        task_id, worker_id = _create_accepted_task(app_with_writer, poster_id=poster_id)
 
         asset_id = f"asset-{uuid4()}"
         response = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": asset_id,
                 "task_id": task_id,
-                "uploader_id": poster_id,
+                "uploader_id": worker_id,
                 "filename": "artifact.zip",
                 "content_type": "application/zip",
                 "size_bytes": 2048,

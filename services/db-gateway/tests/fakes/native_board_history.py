@@ -342,6 +342,11 @@ def record_asset(client: TestClient, graph: TaskGraph, worker_id: str) -> str:
     response = client.post(
         "/board/assets",
         json={
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": asset_id,
             "task_id": graph.task_id,
             "uploader_id": worker_id,

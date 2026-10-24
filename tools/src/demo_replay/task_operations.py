@@ -9,8 +9,6 @@ from typing import Any
 
 from service_auth.financial_responses import SQLITE_MAX_INTEGER, validate_operation_id
 
-from demo_replay.wallet import DemoAgent
-
 PHASES = {
     "bid": ("submit_bid", "open", "open"),
     "accept_bid": ("accept_bid", "open", "accepted"),
@@ -83,12 +81,66 @@ class TaskIntent:
     step_json: str
     operation_id: str
     expected_lifecycle_version: int
-    actor: DemoAgent
+    actor_handle: str
     actor_id: str
     actor_public_key: str
     task_id: str
     arguments_json: str
     observed_task_json: str
+
+    @classmethod
+    def from_json(cls, value: object) -> TaskIntent:
+        if not isinstance(value, dict):
+            raise ValueError("Stored task intent must be an object")
+        expected = {
+            "action",
+            "step_json",
+            "operation_id",
+            "expected_lifecycle_version",
+            "actor_handle",
+            "actor_id",
+            "actor_public_key",
+            "task_id",
+            "arguments_json",
+            "observed_task_json",
+        }
+        if set(value) != expected:
+            raise ValueError("Stored task intent fields differ")
+        texts = expected - {"expected_lifecycle_version"}
+        if any(not isinstance(value[field], str) or not value[field] for field in texts):
+            raise ValueError("Stored task intent text is invalid")
+        operation_id, version = operation_identity(
+            value["operation_id"], value["expected_lifecycle_version"]
+        )
+        intent = cls(
+            action=value["action"],
+            step_json=value["step_json"],
+            operation_id=operation_id,
+            expected_lifecycle_version=version,
+            actor_handle=value["actor_handle"],
+            actor_id=value["actor_id"],
+            actor_public_key=value["actor_public_key"],
+            task_id=value["task_id"],
+            arguments_json=value["arguments_json"],
+            observed_task_json=value["observed_task_json"],
+        )
+        intent.arguments()
+        intent.observed_task()
+        return intent
+
+    def as_json(self) -> dict[str, object]:
+        return {
+            "action": self.action,
+            "step_json": self.step_json,
+            "operation_id": self.operation_id,
+            "expected_lifecycle_version": self.expected_lifecycle_version,
+            "actor_handle": self.actor_handle,
+            "actor_id": self.actor_id,
+            "actor_public_key": self.actor_public_key,
+            "task_id": self.task_id,
+            "arguments_json": self.arguments_json,
+            "observed_task_json": self.observed_task_json,
+        }
 
     def arguments(self) -> dict[str, Any]:
         return _object(self.arguments_json)
@@ -96,10 +148,11 @@ class TaskIntent:
     def observed_task(self) -> dict[str, Any]:
         return _object(self.observed_task_json)
 
-    def verify_actor(self) -> None:
+    def verify_actor(self, actor_handle: str, actor_id: str, actor_public_key: str) -> None:
         if (
-            self.actor.agent_id != self.actor_id
-            or self.actor.public_key_string() != self.actor_public_key
+            actor_handle != self.actor_handle
+            or actor_id != self.actor_id
+            or actor_public_key != self.actor_public_key
         ):
             raise ValueError("The original task intent actor changed")
 

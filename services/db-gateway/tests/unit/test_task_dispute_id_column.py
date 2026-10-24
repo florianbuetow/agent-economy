@@ -86,6 +86,7 @@ def _init_writer(db_path: str, schema_sql: str) -> None:
         busy_timeout_ms=BUSY_TIMEOUT_MS,
         journal_mode=JOURNAL_MODE,
         schema_sql=schema_sql,
+        current_task_board_caller_kid="gateway-task-board",
     )
     writer.close()
 
@@ -173,6 +174,11 @@ def _prepare_disputed_task(
     asset = client.post(
         "/board/assets",
         json={
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": f"asset-{uuid4()}",
             "task_id": graph.task_id,
             "uploader_id": worker_id,

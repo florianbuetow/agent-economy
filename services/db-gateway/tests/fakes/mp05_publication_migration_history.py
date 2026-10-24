@@ -207,19 +207,19 @@ def invalidate_posting_authority(source: V3Source, *, defect: str) -> V3Source:
     configs = {config.logical_id: config for config in source.inventory.configs}
     bindings = source.inventory.field_bindings
     if defect == "missing_board_write":
-        gateway_path = configs["gateway"].captured_path
+        gateway_path = configs["db-gateway"].captured_path
         value = json.loads(gateway_path.read_text(encoding="utf-8"))
         value["auth"]["trusted_callers"][source.caller_kid]["capabilities"] = ["gateway.board.read"]
         gateway_path.write_text(_canonical_json(value), encoding="utf-8")
     elif defect == "caller_mismatch":
-        gateway_path = configs["gateway"].captured_path
+        gateway_path = configs["db-gateway"].captured_path
         value = json.loads(gateway_path.read_text(encoding="utf-8"))
         del value["auth"]["trusted_callers"][source.caller_kid]
         gateway_path.write_text(_canonical_json(value), encoding="utf-8")
         bindings = tuple(
             binding
             for binding in bindings
-            if binding.binding_id != f"gateway.auth.{source.caller_kid}.public_key_path"
+            if binding.binding_id != f"db-gateway.auth.{source.caller_kid}.public_key_path"
         )
     else:
         raise ValueError(f"Unknown posting authority defect: {defect}")
@@ -238,6 +238,7 @@ def open_v3_writer(source: V3Source) -> HistoricalV3Writer:
         str(source.database),
         busy_timeout_ms=5000,
         journal_mode="wal",
+        current_task_board_caller_kid=source.caller_kid,
     )
 
 
@@ -519,6 +520,8 @@ def _with_task_board_authority(
     keys = source_root / "keys"
     generate_keypair(handle, keys)
 
+    assert sum(config.logical_id == "gateway" for config in inventory.configs) == 1
+    assert all(config.logical_id != "db-gateway" for config in inventory.configs)
     gateway_config = next(config for config in inventory.configs if config.logical_id == "gateway")
     gateway_value = json.loads(gateway_config.captured_path.read_text(encoding="utf-8"))
     gateway_value["auth"]["trusted_callers"][handle] = {
@@ -546,7 +549,7 @@ def _with_task_board_authority(
     configs = (
         *(
             SourceConfigV1(
-                logical_id=config.logical_id,
+                logical_id=("db-gateway" if config.logical_id == "gateway" else config.logical_id),
                 captured_path=config.captured_path,
                 capture_root=config.capture_root,
                 process_cwd=config.process_cwd,
@@ -567,7 +570,12 @@ def _with_task_board_authority(
         ),
     )
     resources = (
-        *inventory.resources,
+        *(
+            resource.model_copy(update={"logical_id": "config.db-gateway"})
+            if resource.logical_id == "config.gateway"
+            else resource
+            for resource in inventory.resources
+        ),
         SourceResourceV1(
             logical_id="config.task-board",
             kind=ResourceKind.FILE,
@@ -591,10 +599,20 @@ def _with_task_board_authority(
         ),
     )
     bindings = (
-        *inventory.field_bindings,
+        *(
+            binding.model_copy(
+                update={
+                    "binding_id": binding.binding_id.replace("gateway.", "db-gateway.", 1),
+                    "config_id": "db-gateway",
+                }
+            )
+            if binding.config_id == "gateway"
+            else binding
+            for binding in inventory.field_bindings
+        ),
         SourceFieldBindingV1(
-            binding_id=f"gateway.auth.{handle}.public_key_path",
-            config_id="gateway",
+            binding_id=f"db-gateway.auth.{handle}.public_key_path",
+            config_id="db-gateway",
             field_path=("auth", "trusted_callers", handle, "public_key_path"),
             binding_kind=BindingKind.FILESYSTEM,
             captured_value=f"../keys/{handle}.pub",
@@ -631,7 +649,12 @@ def _with_task_board_authority(
         ),
     )
     processes = (
-        *inventory.process_ownership,
+        *(
+            process.model_copy(update={"config_id": "db-gateway"})
+            if process.config_id == "gateway"
+            else process
+            for process in inventory.process_ownership
+        ),
         OwnedProcessV1(
             logical_id="task-board",
             config_id="task-board",

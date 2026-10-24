@@ -220,10 +220,36 @@ class TestTaskBoardGatewayWrites:
         await _create_task_with_escrow(
             gw_client, "t-00000000-0000-4000-8000-000000000404", "a-poster", 200
         )
+        bid = await submit_native_bid(
+            gw_client,
+            operation_id="op-00000000-0000-4000-8000-000000000107",
+            task_id="t-00000000-0000-4000-8000-000000000404",
+            bid_id="bid-asset-001",
+            bidder_id="a-worker",
+            amount=180,
+        )
+        assert bid.status_code == 200, bid.text
+        accepted = await accept_native_bid(
+            gw_client,
+            operation_id="op-00000000-0000-4000-8000-000000000108",
+            task_id="t-00000000-0000-4000-8000-000000000404",
+            bid_id="bid-asset-001",
+            poster_id="a-poster",
+            worker_id="a-worker",
+            escrow_id="esc-t-00000000-0000-4000-8000-000000000404",
+            reward=200,
+            bid_amount=180,
+        )
+        assert accepted.status_code == 200, accepted.text
 
         response = await gw_client.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": "asset-001",
                 "task_id": "t-00000000-0000-4000-8000-000000000404",
                 "uploader_id": "a-worker",

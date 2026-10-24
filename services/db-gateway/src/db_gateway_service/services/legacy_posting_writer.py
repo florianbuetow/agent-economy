@@ -92,6 +92,15 @@ class LegacyPostingWriter:
     def __init__(self, connection: sqlite3.Connection) -> None:
         self._db = connection
 
+    def get(self, observation_id: str, caller_kid: str) -> dict[str, Any]:
+        """Read persisted diagnostics without reconciling or changing a transaction."""
+        owner = self._caller_kid(caller_kid)
+        cursor = self._db.cursor()
+        try:
+            return self._envelope(self._owned_observation(cursor, observation_id, owner))
+        finally:
+            cursor.close()
+
     def reconcile(self, observation_id: str, caller_kid: str) -> dict[str, Any]:
         """Reconcile one observation exclusively from persisted authoritative facts."""
         owner = self._caller_kid(caller_kid)

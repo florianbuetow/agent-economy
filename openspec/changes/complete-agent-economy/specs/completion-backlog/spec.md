@@ -1,5 +1,8 @@
 # Spec Delta
 
+> **Owner scope update — 2026-10-23:** Follow `MASTERPLAN-TO-COMPLETE-THE-PROJECT.md` and `FEATURE-COMPLETENESS.md` for feature-first execution. Existing data is disposable test data: old-schema/data migration, historical asset conversion and backward compatibility are out of scope. Initialize fresh databases directly. Reuse existing tests and add only missing basic feature checks; no exhaustive fault matrices or repeated planning/review gates. Older migration/testing obligations below are historical where they conflict with this update. Completed work stays complete; no feature is closed by this scope change.
+
+
 ## ADDED Requirements
 
 ### Requirement: MP-01 Isolated runtime and baseline
@@ -129,13 +132,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-08 is selected
 - **THEN** the acceptance proof demonstrates the gap: A terminal task with a failed or ambiguously acknowledged payout/refund remains unfinished without reads or after process restart.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-10-22 — Chronological behavioral reds and independently accepted retrospective equivalence prove the pending-work gap. The original exact-command/legacy-builder limitation remains explicit. Root R4 exits 0 with 1261 unchanged source files and independent cleanup verification. [Closure evidence](../../evidence/mp08-recovery/completion-audit.md).
 
 #### Scenario: T-125 Deliver pending financial effect recovery
 - **WHEN** T-124 is red-proven and the prerequisites are satisfied: MP-04, MP-07
 - **THEN** Pending financial/task effects are recovered regardless of business status, with one receipt, bounded retries and visible persistent failures; this package does not claim Court rebuttal-delivery completion.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-10-22 — V5 fenced financial recovery, receipt-first finalization, fair bounded scheduling, operator diagnostics/retry and truthful Board/UI projections are verified, including all 14 process cuts. Root R4 exits 0; Court adjudication/rebuttal delivery remains MP-10. [Closure evidence](../../evidence/mp08-recovery/completion-audit.md).
 
 ### Requirement: MP-09 Safe immutable artifacts
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-09. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -144,13 +147,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-09 is selected
 - **THEN** the acceptance proof demonstrates the gap: Hostile filenames, concurrent quotas, state races, failed metadata/file publication and missing poster input paths demonstrate unsafe or incomplete evidence handling.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** OPEN, partial red proof through 2026-10-23 — Parent reproduced storage, quota/lifecycle, upload-ledger, publication/receipt, native/legacy acceptance and legacy-continuation failures before bounded repairs; oracle corrections retain original evidence and explicit reclassification. Parent848 and full Gateway CI14672 pass with 332 inputs/path set unchanged, and independent source review approves new-upload legacy continuation. Evidence: `openspec/changes/complete-agent-economy/evidence/mp09-artifacts/`. Live streaming/byte publication, poster inputs, immutable submission, grants and archive checks remain open; historical migration is excluded by the owner; this does not close T-126 or T-127.
 
 #### Scenario: T-127 Deliver safe immutable artifacts
 - **WHEN** T-126 is red-proven and the prerequisites are satisfied: MP-07; Q-M1 before policy closure
 - **THEN** Supported inputs and submissions have immutable attributable manifests and exact retrievable bytes; no outside-root writes or quota/state bypass occurs; interrupted uploads reconcile; authorized users can download safely under the accepted artifact policy.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** OPEN — Bounded path/storage, upload-ledger, input-publication, manifest, receipt-adoption and native acceptance-binding components are implemented and verified at component scope. Actual byte staging, public input/upload routes, immutable submission, fresh current-schema runtime admission, grants/archive and the final root gate remain outstanding. Historical conversion, legacy continuation and mixed historical manifests are no longer release prerequisites.
 
 ### Requirement: MP-10 Recoverable immutable adjudication
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-10. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -328,7 +331,7 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 
 #### Scenario: T-151 Deliver operational readiness and restoration
 - **WHEN** T-150 is red-proven and the prerequisites are satisfied: MP-01, MP-03, MP-06, MP-08, MP-10
-- **THEN** Startup/teardown honor exact process ownership and readiness; restore recovers matching keys/evidence/money and pending work once; migrations preserve original backups; diagnostics and recovery operations are actionable and do not expose secrets.
+- **THEN** Startup/teardown honor exact process ownership and readiness; restore recovers matching keys/evidence/money and pending work once; current-format backups preserve the running economy; diagnostics and recovery operations are actionable and do not expose secrets.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
 - **Status:** OPEN — Implementation and item-specific proof pending.
 
@@ -418,7 +421,7 @@ The completion backlog SHALL track unresolved evidence/privacy, post-v1 pricing 
 
 #### Scenario: T-163 Decide Q-M2 post-v1 price-forming economics
 - **WHEN** the accountable project owner resolves Q-M2
-- **THEN** the accepted decision defines whether post-v1 price formation is enabled, including excess-refund timing, rounding and existing-contract treatment before MP-24 pricing claims close; fixed-reward Core remains valid
+- **THEN** the accepted decision defines whether post-v1 price formation is enabled, including excess-refund timing and rounding; accepted-bid pricing is required for the finished Core product, with no historical-data conversion
 - **AND** the accepted record is linked from the affected specifications and implementation proofs without closing those implementations prematurely
 - **Status:** OPEN — Explicit owner decision pending; no default option is accepted.
 
@@ -426,7 +429,7 @@ The completion backlog SHALL track unresolved evidence/privacy, post-v1 pricing 
 - **WHEN** the accountable project owner resolves Q-M3
 - **THEN** the accepted versioned contract defines separate quality dimensions, payout separation, source weighting, no-history treatment and scored examples before MP-11 and MP-14 close
 - **AND** the accepted record is linked from the affected specifications and implementation proofs without closing those implementations prematurely
-- **Status:** OPEN — Explicit owner decision pending; no default option is accepted.
+- **Status:** OPEN — Owner selected equal weighting per task, final Court override of peer feedback for that task, eligibility limited to approved/auto-approved/ruled submissions, and public scores/counts with source detail restricted to the subject, relevant participants and operator. See the owner decision record. Implementation and basic verification remain open; do not ask these choices again.
 
 ### Requirement: MP-01 Discovered deadline precision baseline
 The completion backlog SHALL track the independently repairable deadline truncation exposed by the isolated root baseline as T-169/T-170. This prerequisite SHALL preserve configured durations without weakening existing expiry assertions. It SHALL NOT close or bypass MP-07's schema, atomic-transition or concurrency obligations.
@@ -556,3 +559,17 @@ The built-in feeder and worker SHALL retain an immutable native mutation intent 
 - **AND** the feeder publishes its explicitly configured acceptance window without conflating it with its selection delay or introducing a platform-wide default
 - **AND** item-specific restart/fault evidence, independent review and fresh isolated root CI pass before closure, while posting identity, asset/execution/oracle/rebuttal recovery and authoritative discovery remain mapped to their original full packages
 - **Status:** CLOSED — Owner-bound atomic journals, exact public SDK replay, typed ACK validation, leased startup/cleanup and explicit feeder windows are implemented and independently verified. Root22 passes all required gates. Posting, execution/assets/oracle/rebuttal/discovery recovery, distributed leases and external rollback detection remain outside this bounded package. [Closure evidence](../../evidence/mp07-transitions/completion-audit.md).
+
+### Requirement: Secure filelock dependency baseline
+The completion backlog SHALL track the filelock audit regression discovered by root CI R7 without suppressing its advisories or widening unrelated dependency changes.
+
+#### Scenario: T-193 Record failing filelock security and compatibility evidence
+- **WHEN** the installed dependency audit reports the three filelock advisories
+- **THEN** retain the failing audit, affected installed/locked versions, upstream fixed-version evidence and consumer constraints before implementation
+- **Status:** CLOSED 2026-10-24 — R7 retained the three advisory failures, affected versions and upstream compatibility evidence; full root R8 exited zero with 1,334 unchanged inputs. Evidence: `openspec/changes/complete-agent-economy/evidence/ci-feature-first-2026-10-23/ci-result.md`. Publication remains a separate scope decision.
+
+#### Scenario: T-194 Update filelock without audit exclusions
+- **WHEN** T-193 is red-proven and consumer compatibility is established
+- **THEN** resolve a verified secure filelock release with uv-generated locks; use no new advisory exclusions; permit only a documented version-scoped Court override with actual consumer compatibility checks
+- **AND** all affected audits and consumer checks pass, followed by fresh isolated root `just ci-quiet` exit zero before closure
+- **Status:** CLOSED 2026-10-24 — All seven services resolve filelock 4.2.4; audits, consumer checks and full root R8 pass. The exact-version Court override and removal condition are documented. Evidence: `openspec/changes/complete-agent-economy/evidence/ci-feature-first-2026-10-23/ci-result.md`. No publication is claimed.

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast
 
 import httpx
-from cryptography.hazmat.primitives import serialization
-from service_auth import TaskBoardCommandContractError, TaskBoardCommandResponse
+from service_auth import TaskBoardCommandContractError, TaskBoardCommandResponse, public_key_to_b64
 from service_auth.financial_responses import SQLITE_MAX_INTEGER, validate_operation_id
 from service_auth.posting_journal import PostingJournalError, normalize_observation
-from service_auth.task_postings import TaskPostingIntent, TaskPostingResponse
+from service_auth.task_postings import TaskPostingIntent
 from service_commons.exceptions import ServiceError
 
 from ui_service.core.state import get_app_state
@@ -283,10 +283,7 @@ def _posting_scope(agent: UserAgent) -> dict[str, object]:
             503,
             {},
         )
-    raw_public = agent.config.public_key.public_bytes(
-        encoding=serialization.Encoding.Raw,
-        format=serialization.PublicFormat.Raw,
-    )
+    raw_public = base64.b64decode(public_key_to_b64(agent.config.public_key), validate=True)
     return {
         "schema_version": 1,
         "operator_agent_id": agent_id,
@@ -370,23 +367,8 @@ def _posting_result(
     observation: Literal["submit", "status"],
 ) -> tuple[int, dict[str, object]]:
     try:
-        normalized_response = response
-        if (
-            observation == "submit"
-            and isinstance(response, TaskPostingResponse)
-            and response.status_code == 409
-            and response.body.get("publication_state") == "blocked_integrity"
-        ):
-            normalized_response = TaskPostingResponse(
-                status_code=409,
-                body={
-                    "error": "publication_integrity_blocked",
-                    "message": "Publication evidence requires reconciliation",
-                    "details": {"publication": response.body},
-                },
-            )
         status_code, publication, _state = normalize_observation(
-            normalized_response,
+            response,
             intent=intent,
             observation=observation,
         )

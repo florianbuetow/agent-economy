@@ -72,6 +72,7 @@ _V3_TASK_FIELDS = (
     "accepted_bid_amount",
     "pending_transition",
     "legacy_reconciliations",
+    "financial_effect",
 )
 
 
@@ -600,6 +601,16 @@ def _task_projection(*, legacy: bool) -> dict[str, Any]:
         "accepted_bid_amount": 90,
         "pending_transition": pending_transition,
         "legacy_reconciliations": legacy_reconciliations,
+        "financial_effect": {
+            "schema_version": 1,
+            "settlement_state": "pending",
+            "receipt_state": "absent",
+            "outcome": None,
+            "operation_id": _OPERATION_ID,
+            "receipt_reference": None,
+            "business_projection_pending": True,
+            "pending_target_status": "approved",
+        },
     }
 
 

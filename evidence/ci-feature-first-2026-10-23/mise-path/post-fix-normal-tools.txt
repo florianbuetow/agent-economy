@@ -1,0 +1,49 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/tests
+configfile: pytest.ini
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 38 items
+
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-identity] PASSED [  2%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-central-bank] PASSED [  5%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-task-board] PASSED [  7%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-reputation] PASSED [ 10%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-court] PASSED [ 13%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-db-gateway] PASSED [ 15%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-ui] PASSED [ 18%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-identity] PASSED [ 21%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-central-bank] PASSED [ 23%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-task-board] PASSED [ 26%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-reputation] PASSED [ 28%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-court] PASSED [ 31%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-db-gateway] PASSED [ 34%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-ui] PASSED [ 36%]
+../../tests/runtime/test_ci_readonly.py::test_explicit_formatter_remains_available[identity] PASSED [ 39%]
+../../tests/runtime/test_ci_readonly.py::test_explicit_formatter_remains_available[central-bank] PASSED [ 42%]
+../../tests/runtime/test_ci_readonly.py::test_explicit_formatter_remains_available[task-board] PASSED [ 44%]
+../../tests/runtime/test_ci_readonly.py::test_explicit_formatter_remains_available[reputation] PASSED [ 47%]
+../../tests/runtime/test_ci_readonly.py::test_explicit_formatter_remains_available[court] PASSED [ 50%]
+../../tests/runtime/test_ci_readonly.py::test_explicit_formatter_remains_available[db-gateway] PASSED [ 52%]
+../../tests/runtime/test_ci_readonly.py::test_explicit_formatter_remains_available[ui] PASSED [ 55%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-identity] PASSED [ 57%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-central-bank] PASSED [ 60%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-task-board] PASSED [ 63%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-reputation] PASSED [ 65%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-court] PASSED [ 68%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-db-gateway] PASSED [ 71%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-ui] PASSED [ 73%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-quiet-identity] PASSED [ 76%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-quiet-central-bank] PASSED [ 78%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-quiet-task-board] PASSED [ 81%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-quiet-reputation] PASSED [ 84%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-quiet-court] PASSED [ 86%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-quiet-db-gateway] PASSED [ 89%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-quiet-ui] PASSED [ 92%]
+../../tests/runtime/test_ci_tool_shims.py::test_ci_sandbox_does_not_interpose_path_tools PASSED [ 94%]
+../../tests/runtime/test_ci_tool_shims.py::test_ci_recipe_runs_through_each_available_just_entry[/opt/homebrew/bin/just] PASSED [ 97%]
+../../tests/runtime/test_ci_tool_shims.py::test_ci_recipe_runs_through_each_available_just_entry[/Users/flo/.local/share/mise/shims/just] PASSED [100%]
+
+============================= 38 passed in 13.22s ==============================

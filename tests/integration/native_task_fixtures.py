@@ -247,6 +247,11 @@ async def advance_task_to_submitted(
     asset = await client.post(
         "/board/assets",
         json={
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": f"asset-{operation_suffix}",
             "task_id": task_id,
             "uploader_id": worker_id,

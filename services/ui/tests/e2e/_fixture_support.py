@@ -116,8 +116,17 @@ def _stop_server(process: subprocess.Popen[str]) -> None:
         process.wait(timeout=5)
 
 
-def _child_environment(config_path: Path, *, frozen_clock: bool) -> dict[str, str]:
-    env = {**os.environ, "CONFIG_PATH": str(config_path)}
+def _child_environment(
+    config_path: Path,
+    *,
+    frozen_clock: bool,
+    database_path: Path,
+) -> dict[str, str]:
+    env = {
+        **os.environ,
+        "CONFIG_PATH": str(config_path),
+        "UI_E2E_DATABASE_PATH": str(database_path),
+    }
     env.pop("UI_E2E_FROZEN_CLOCK", None)
     if frozen_clock:
         env["UI_E2E_FROZEN_CLOCK"] = "1"
@@ -208,7 +217,11 @@ user_agent:
                 str(_E2E_SUPPORT),
             ],
             cwd=str(_PROJECT_ROOT / "services" / "ui"),
-            env=_child_environment(config_path, frozen_clock=frozen_clock),
+            env=_child_environment(
+                config_path,
+                frozen_clock=frozen_clock,
+                database_path=db_path,
+            ),
             pass_fds=(server_socket.fileno(),),
             stdout=server_log,
             stderr=subprocess.STDOUT,

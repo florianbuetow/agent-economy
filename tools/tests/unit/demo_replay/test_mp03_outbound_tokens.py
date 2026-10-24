@@ -7,15 +7,18 @@ import json
 import httpx
 import pytest
 from service_auth.financial_identity import operation_id_for
+from service_auth.task_postings import TaskPostingResponse
 
-from demo_replay.clients import create_account, post_task
+from demo_replay.clients import create_account
 from demo_replay.wallet import DemoAgent
 from service_auth.jws import parse_jws
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_demo_bank_and_two_token_task_post_contexts() -> None:
+async def test_demo_bank_and_two_token_task_post_contexts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     requests: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -35,20 +38,23 @@ async def test_demo_bank_and_two_token_task_post_contexts() -> None:
     platform.agent_id = "a-platform"
     poster = DemoAgent.create("poster", "Poster", 45)
     poster.agent_id = "a-poster"
+    monkeypatch.setattr(
+        "service_auth.mixins.task_board.parse_task_posting_submit_response",
+        lambda response, intent: TaskPostingResponse(response.status_code, {"accepted": True}),
+    )
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         await create_account(client, platform, "a-worker", "https://bank")
-        await post_task(
-            client,
-            poster,
+        poster.configure_task_board(client, "https://board")
+        intent = poster.prepare_task_posting(
             "Title",
             "Spec",
             10,
-            "https://board",
-            bidding_deadline_seconds=3600,
-            execution_deadline_seconds=7200,
-            review_deadline_seconds=3600,
-            acceptance_window_seconds=300,
+            3600,
+            300,
+            7200,
+            3600,
         )
+        await poster.submit_task_posting(intent)
 
     account = parse_jws(json.loads(requests[0].content)["token"])
     assert account.header.aud == "central-bank"

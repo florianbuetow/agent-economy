@@ -14,6 +14,7 @@ from service_auth.agent import BaseAgent
 from service_auth.config import AgentConfig
 from service_auth.financial_responses import SQLITE_MAX_INTEGER
 from service_auth.jws import TokenPolicy, parse_jws
+from tests.unit.posting_transport import pending_posting_response
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
@@ -41,7 +42,7 @@ async def _agent(captured: list[httpx.Request]) -> BaseAgent:
     def handler(request: httpx.Request) -> httpx.Response:
         captured.append(request)
         if request.url.path == "/tasks":
-            return httpx.Response(200, json={"status": "ok"}, request=request)
+            return pending_posting_response(request)
         if request.url.path.endswith("/bids"):
             return httpx.Response(
                 201,
@@ -171,15 +172,19 @@ async def test_post_task_binds_explicit_window_and_distinct_escrow_token() -> No
     captured: list[httpx.Request] = []
     agent = await _agent(captured)
     try:
-        await agent.post_task(
+        intent = agent.prepare_task_posting(
             "Title",
             "Specification",
             25,
             10,
-            20,
-            30,
             acceptance_window_seconds=40,
+            execution_deadline_seconds=20,
+            review_deadline_seconds=30,
         )
+        assert captured == []
+        response = await agent.submit_task_posting(intent)
+        assert response.status_code == 202
+        assert response.body["operation_id"] == intent.operation_id
     finally:
         await agent.close()
 
@@ -203,7 +208,7 @@ async def test_post_task_binds_explicit_window_and_distinct_escrow_token() -> No
 @pytest.mark.parametrize(
     ("method", "args"),
     [
-        ("post_task", ("Title", "Spec", 25, 10, 20, 30)),
+        ("prepare_task_posting", ("Title", "Spec", 25, 10, 20, 30)),
         ("cancel_task", ("t-1",)),
         ("submit_bid", ("t-1", 75)),
         ("accept_bid", ("t-1", "bid-1")),
@@ -233,14 +238,14 @@ async def test_invalid_acceptance_window_is_rejected_before_signing(window: obje
     try:
         with patch.object(agent, "_sign_jws", wraps=agent._sign_jws) as signer:
             with pytest.raises(ValueError, match="acceptance_window_seconds"):
-                await agent.post_task(
+                agent.prepare_task_posting(
                     "Title",
                     "Spec",
                     25,
                     10,
-                    20,
-                    30,
                     acceptance_window_seconds=window,
+                    execution_deadline_seconds=20,
+                    review_deadline_seconds=30,
                 )
             signer.assert_not_called()
     finally:
@@ -293,15 +298,16 @@ async def test_sqlite_boundary_values_are_signed_exactly() -> None:
     captured: list[httpx.Request] = []
     agent = await _agent(captured)
     try:
-        await agent.post_task(
+        intent = agent.prepare_task_posting(
             "Title",
             "Spec",
             25,
             10,
-            20,
-            30,
             acceptance_window_seconds=_MAX_DURATION_SECONDS,
+            execution_deadline_seconds=20,
+            review_deadline_seconds=30,
         )
+        await agent.submit_task_posting(intent)
         await agent.cancel_task(
             "t-1",
             operation_id=_OPERATION_ID,

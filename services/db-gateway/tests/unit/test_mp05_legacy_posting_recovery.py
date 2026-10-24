@@ -19,7 +19,7 @@ from service_commons.exceptions import ServiceError
 
 from db_gateway_service.config import clear_settings_cache
 from db_gateway_service.core.state import init_app_state
-from db_gateway_service.migration import migrate_v3_to_v4
+from db_gateway_service.migration import migrate_v3_to_v4, migrate_v4_to_v5
 from db_gateway_service.services.db_writer import DbWriter
 from tests.fakes.mp05_publication_history import publication_intent
 from tests.fakes.mp05_publication_migration_history import (
@@ -109,7 +109,9 @@ def legacy_gateway(
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[tuple[PublicationGateway, _PendingTemplate]]:
     database = _copy_database(pending_template.database, tmp_path / "gateway.db")
-    writer = DbWriter(str(database), 5000, "wal", None)
+    writer = DbWriter(
+        str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+    )
     foreign_kid = "gateway-task-board-foreign"
     generate_keypair(foreign_kid, tmp_path)
     foreign = GatewayRequestSigner(
@@ -179,7 +181,9 @@ def test_exact_release_finalizes_once_and_replays_after_reopen(
 ) -> None:
     database = _copy_database(pending_template.database, tmp_path / "release.db")
     observation_id = pending_template.pending_observation_ids[0]
-    writer = DbWriter(str(database), 5000, "wal", None)
+    writer = DbWriter(
+        str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+    )
     try:
         pending = _reconcile(writer, observation_id, pending_template.caller_kid)
         receipt = _persist_exact_refund(writer, observation_id)
@@ -192,7 +196,9 @@ def test_exact_release_finalizes_once_and_replays_after_reopen(
     finally:
         writer.close()
 
-    reopened = DbWriter(str(database), 5000, "wal", None)
+    reopened = DbWriter(
+        str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+    )
     try:
         assert _reconcile(reopened, observation_id, pending_template.caller_kid) == completed
         assert _refund_receipt_count(reopened.connection, observation_id) == 1
@@ -251,7 +257,9 @@ def test_historical_refund_replay_preserves_honest_identity_without_new_effect(
     else:
         template, caller_kid, observation_id = legacy_refunded_template
         database = _copy_database(template, tmp_path / "legacy-refunded.db")
-    writer = DbWriter(str(database), 5000, "wal", None)
+    writer = DbWriter(
+        str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+    )
     before = _money_snapshot(writer.connection)
     try:
         response = _reconcile(writer, observation_id, caller_kid)
@@ -432,6 +440,17 @@ def _migrate(source: V3Source, *, backup_id: str) -> V3Source:
         busy_timeout_ms=5000,
     )
     assert result.observation == "committed_v4_verified"
+    v5_backup_id = f"{backup_id}-v5"
+    publish_verified_backup(source, backup_id=v5_backup_id)
+    v5 = migrate_v4_to_v5(
+        source.inventory,
+        backup_root=source.backup_root,
+        backup_id=v5_backup_id,
+        work_root=source.work_root,
+        busy_timeout_ms=5000,
+        current_task_board_caller_kid=source.caller_kid,
+    )
+    assert v5.observation == "committed_v5_verified"
     return source
 
 
@@ -600,7 +619,13 @@ def _posting_command(intent: Any) -> Any:
 
 
 def _open_copy(source: Path, target: Path) -> DbWriter:
-    return DbWriter(str(_copy_database(source, target)), 5000, "wal", None)
+    return DbWriter(
+        str(_copy_database(source, target)),
+        5000,
+        "wal",
+        None,
+        current_task_board_caller_kid="gateway-task-board",
+    )
 
 
 def _copy_database(source: Path, target: Path) -> Path:

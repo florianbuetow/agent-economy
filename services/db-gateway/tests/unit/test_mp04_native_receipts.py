@@ -56,7 +56,13 @@ def _install_fresh_receipt_sidecar(writer: DbWriter) -> None:
 
 @pytest.fixture
 def receipt_writer(initialized_db: str) -> Iterator[DbWriter]:
-    writer = DbWriter(initialized_db, 5000, "wal", None)
+    writer = DbWriter(
+        initialized_db,
+        5000,
+        "wal",
+        None,
+        current_task_board_caller_kid="gateway-task-board",
+    )
     yield writer
     writer.close()
 
@@ -412,8 +418,20 @@ def test_opposing_settlements_across_independent_writers_have_one_receipt_winner
     initialized_db: str,
 ) -> None:
     """Direct sidecar fixture isolates the writer race, not startup admission."""
-    first_writer = DbWriter(initialized_db, 5000, "wal", None)
-    second_writer = DbWriter(initialized_db, 5000, "wal", None)
+    first_writer = DbWriter(
+        initialized_db,
+        5000,
+        "wal",
+        None,
+        current_task_board_caller_kid="gateway-task-board",
+    )
+    second_writer = DbWriter(
+        initialized_db,
+        5000,
+        "wal",
+        None,
+        current_task_board_caller_kid="gateway-task-board",
+    )
     try:
         payer_id = f"a-payer-{uuid4()}"
         worker_id = f"a-worker-{uuid4()}"

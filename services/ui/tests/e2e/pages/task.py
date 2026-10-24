@@ -235,7 +235,7 @@ class TaskPage:
 
     @property
     def escrow_status(self) -> Locator:
-        """The escrow status text (LOCKED/RELEASED/etc)."""
+        """The evidence-based settlement status text."""
         return self._page.locator(".escrow-status")
 
     # --- Dispute / Ruling Display ---

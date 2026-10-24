@@ -5,6 +5,12 @@
 **Ratified by:** plan §5.-1 Step E1 — the §9 recommendation adopted as-is (no owner override)
 **Source question:** docs/plans/2026-07-09-target-architecture-and-refactoring-plan.md §9 Q-8
 
+**Later decision:** [Q-M2 accepted-bid pricing, 2026-10-23](2026-10-23-q-m2-accepted-bid-pricing-decision.md)
+resolves the deferred economic policy. The owner selected accepted bids as
+prices, refunds at final settlement and immutable per-job rule versions for
+future changes. The historical decision below describes the current engineering
+baseline until MP-24 implements and verifies that change.
+
 ## Question
 
 Bids carry an integer `amount` (ratified R5) but it has zero monetary effect: escrow equals the

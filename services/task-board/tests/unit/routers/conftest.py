@@ -31,6 +31,7 @@ from task_board_service.core.state import get_app_state, reset_app_state
 from task_board_service.services.asset_manager import AssetManager
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
+from task_board_service.services.financial_effect_recovery import FinancialEffectRecovery
 from task_board_service.services.posting_recovery import PostingRecovery
 from task_board_service.services.task_manager import TaskManager
 from task_board_service.services.token_validator import TokenValidator
@@ -204,6 +205,13 @@ central_bank:
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
   agent_config_path: "{agent_config_path}"
+asset_upload:
+  stream_chunk_bytes: 262144
+  max_multipart_overhead_bytes: 1048576
+  max_header_count: 8
+  max_header_size: 4224
+  max_boundary_bytes: 70
+  max_display_filename_utf8_bytes: 255
 request:
   max_body_size: 1048576
 recovery:
@@ -212,6 +220,9 @@ posting_recovery:
   interval_seconds: 2
   batch_size: 100
   diagnostic_limit: 100
+financial_effect_recovery:
+  interval_seconds: 2.0
+  max_delivery_attempts_per_cycle: 10
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
@@ -237,6 +248,7 @@ deadline_evaluation:
     reset_app_state()
     monkeypatch.setattr(PlatformAgent, "register", _register_test_platform)
     fixture_posting_recovery_task: asyncio.Task[None] | None = None
+    fixture_financial_effect_recovery_task: asyncio.Task[None] | None = None
 
     try:
         test_app = create_app()
@@ -270,7 +282,7 @@ deadline_evaluation:
                         db_path=db_path,
                         busy_timeout_ms=5000,
                         journal_mode="wal",
-                        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+                        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
                         caller_kid="gateway-task-board",
                         authority=BoardAuthority(
                             platform_public_key=platform_keypair[1],
@@ -307,12 +319,16 @@ deadline_evaluation:
                 assert state.store is not None
                 assert state.deadline_sweep_task is not None
                 assert state.posting_recovery_task is not None
+                assert state.financial_effect_recovery_task is not None
                 state.deadline_sweep_task.cancel()
                 with suppress(asyncio.CancelledError):
                     await state.deadline_sweep_task
                 state.posting_recovery_task.cancel()
                 with suppress(asyncio.CancelledError):
                     await state.posting_recovery_task
+                state.financial_effect_recovery_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await state.financial_effect_recovery_task
                 state.store.close()
                 state.store = gateway_store
                 settings = get_settings()
@@ -352,6 +368,21 @@ deadline_evaluation:
                     )
                 )
                 state.posting_recovery_task = fixture_posting_recovery_task
+                financial_effect_recovery = FinancialEffectRecovery(
+                    store=recovery_store,
+                    bank=mock_bank,
+                    worker_id=None,
+                    max_delivery_attempts_per_cycle=(
+                        settings.financial_effect_recovery.max_delivery_attempts_per_cycle
+                    ),
+                )
+                state.financial_effect_recovery = financial_effect_recovery
+                fixture_financial_effect_recovery_task = asyncio.create_task(
+                    financial_effect_recovery.run_periodic(
+                        interval_seconds=settings.financial_effect_recovery.interval_seconds
+                    )
+                )
+                state.financial_effect_recovery_task = fixture_financial_effect_recovery_task
 
                 mock_identity = AsyncMock()
                 mock_identity.close = AsyncMock()
@@ -406,6 +437,11 @@ deadline_evaluation:
                     fixture_posting_recovery_task.cancel()
                     with suppress(asyncio.CancelledError):
                         await fixture_posting_recovery_task
+                    assert fixture_financial_effect_recovery_task is not None
+                    fixture_financial_effect_recovery_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await fixture_financial_effect_recovery_task
+                    assets.close()
                     manager.close()
 
     finally:

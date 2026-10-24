@@ -81,6 +81,7 @@ def _asset(scenario: NativeTaskFixture, filename: str = "result.txt") -> dict[st
         "filename": filename,
         "content_type": "text/plain",
         "size_bytes": 5,
+        "storage_path": f"{_TASK_ID}/asset-1/{filename}",
         "content_hash": "abc",
         "uploaded_at": scenario.clock.iso(),
     }
@@ -102,7 +103,10 @@ async def test_upload_asset_success(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         assert persisted is not None
         assert persisted["content_hash"] == expected_hash
         assert persisted["size_bytes"] == len(content)
-        file_path = tmp_path / "assets" / _TASK_ID / str(result["asset_id"]) / "file.txt"
+        storage_root = tmp_path / "assets"
+        file_path = storage_root / str(persisted["storage_path"])
+        assert file_path.resolve().is_relative_to(storage_root.resolve())
+        assert file_path.name != result["filename"]
         assert file_path.exists()
         assert file_path.read_bytes() == content
 
@@ -173,7 +177,9 @@ async def test_upload_asset_wrong_worker(tmp_path: Path, monkeypatch: pytest.Mon
 async def test_list_assets_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """list_assets returns task_id and persisted metadata."""
     with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
-        scenario.store.insert_asset(_asset(scenario))
+        scenario.store.insert_asset(
+            _asset(scenario), expected_lifecycle_version=1, max_files_per_task=2
+        )
         manager = _manager(scenario, tmp_path, scenario.worker_id)
         result = await manager.list_assets(_TASK_ID)
         assert result["task_id"] == _TASK_ID
@@ -245,7 +251,11 @@ async def test_download_asset_path_traversal(
 ) -> None:
     """download_asset blocks path traversal via stored filename."""
     with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
-        scenario.store.insert_asset(_asset(scenario, "../../../../outside.txt"))
+        scenario.store.insert_asset(
+            _asset(scenario, "../../../../outside.txt"),
+            expected_lifecycle_version=1,
+            max_files_per_task=2,
+        )
         manager = _manager(scenario, tmp_path, scenario.worker_id)
         with pytest.raises(ServiceError) as raised:
             await manager.download_asset(_TASK_ID, "asset-1")
@@ -257,6 +267,8 @@ async def test_download_asset_path_traversal(
 def test_count_assets_delegates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """count_assets returns the persisted Gateway count."""
     with _scenario(tmp_path, monkeypatch, "accepted") as scenario:
-        scenario.store.insert_asset(_asset(scenario))
+        scenario.store.insert_asset(
+            _asset(scenario), expected_lifecycle_version=1, max_files_per_task=2
+        )
         manager = _manager(scenario, tmp_path, scenario.worker_id)
         assert manager.count_assets(_TASK_ID) == 1

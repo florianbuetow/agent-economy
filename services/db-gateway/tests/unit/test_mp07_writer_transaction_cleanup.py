@@ -25,6 +25,7 @@ def _native(writer: DbWriter) -> TaskOperationWriter:
         clock_us=lambda: 1,
         deadline_actor_id="system-task-board-deadline",
         platform_public_key="ed25519:test-platform-authority",
+        current_task_board_caller_kid=boundary._BOARD_KID,
     )
 
 

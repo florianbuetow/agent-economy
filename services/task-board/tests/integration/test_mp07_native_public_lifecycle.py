@@ -118,7 +118,9 @@ def _insert_owned_asset(setup: _TaskSetup) -> None:
             "storage_path": f"assets/{setup.task_id}/completed-work.txt",
             "content_hash": "c" * 64,
             "uploaded_at": "2026-10-17T09:00:05Z",
-        }
+        },
+        expected_lifecycle_version=1,
+        max_files_per_task=10,
     )
 
 

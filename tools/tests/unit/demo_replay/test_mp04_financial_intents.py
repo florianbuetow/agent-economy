@@ -4,19 +4,23 @@ from __future__ import annotations
 
 import hashlib
 import json
+import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
+from uuid import UUID
 
 import httpx
 import pytest
 import yaml
 from service_auth.financial_identity import operation_id_for
 from service_auth.jws import parse_jws
+from service_auth.task_postings import TaskPostingResponse
 
 from demo_replay import clients
 from demo_replay import engine as engine_module
 from demo_replay.config import PlatformConfig
 from demo_replay.engine import ReplayEngine
+from demo_replay.run_store import ActorDefinition, RunEnvironment, RunStore
 from demo_replay.wallet import DemoAgent
 
 pytestmark = pytest.mark.unit
@@ -93,6 +97,52 @@ def _config() -> PlatformConfig:
         platform_key_path=Path("keys/platform.key"),
         token_ttl_seconds=60,
     )
+
+
+def _durable_funding_engine(steps: list[dict[str, object]]) -> ReplayEngine:
+    config = _config()
+    scenario = {
+        "name": "durable funding",
+        "agents": [{"handle": "alice", "name": "Alice"}],
+        "steps": steps,
+    }
+    engine = ReplayEngine(scenario, config)
+    state = Path(tempfile.mkdtemp(prefix="mp05-funding-unit-")).resolve()
+    store = RunStore.open(
+        state_directory=state,
+        run_id=f"run-{UUID(int=id(engine) % (1 << 128))}",
+        environment=RunEnvironment(
+            environment_id="funding-unit",
+            identity_url=config.identity_url,
+            bank_url=config.bank_url,
+            task_board_url=config.task_board_url,
+            reputation_url=config.reputation_url,
+            court_url=config.court_url,
+            platform_public_fingerprint_sha256="d" * 64,
+        ),
+        scenario_bytes=yaml.safe_dump(scenario, sort_keys=False).encode(),
+        scenario=scenario,
+        actor_definitions=(ActorDefinition(handle="alice", name="Alice"),),
+        effective_delay_seconds=0.0,
+        max_record_bytes=1_048_576,
+        diagnostic_limit=32,
+    )
+    actor = store.actors["alice"]
+    store.record_registration(
+        actor_handle="alice",
+        response={
+            "agent_id": "a-alice",
+            "name": "Alice",
+            "public_key": actor.public_key,
+            "registered_at": "2026-10-22T00:00:00Z",
+        },
+    )
+    loaded = DemoAgent.from_pem("alice", "Alice", actor.private_key_path, 60)
+    loaded.agent_id = "a-alice"
+    engine.agents["alice"] = loaded
+    engine.platform = _agent("platform", "a-platform")
+    engine._store = store
+    return engine
 
 
 @pytest.mark.asyncio
@@ -197,7 +247,9 @@ async def test_zero_account_retains_existing_account_conflict_behavior() -> None
 
 
 @pytest.mark.asyncio
-async def test_post_task_derives_lock_identity_from_allocated_task_intent() -> None:
+async def test_post_task_derives_lock_identity_from_allocated_task_intent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     requests: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -205,19 +257,22 @@ async def test_post_task_derives_lock_identity_from_allocated_task_intent() -> N
         return httpx.Response(201, json={"task_id": "created"})
 
     poster = _agent("poster", "a-poster")
+    monkeypatch.setattr(
+        "service_auth.mixins.task_board.parse_task_posting_submit_response",
+        lambda response, intent: TaskPostingResponse(response.status_code, {"accepted": True}),
+    )
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
-        await clients.post_task(
-            http,
-            poster,
+        poster.configure_task_board(http, "https://board")
+        intent = poster.prepare_task_posting(
             "Title",
             "Spec",
             10,
-            "https://board",
-            bidding_deadline_seconds=3600,
-            execution_deadline_seconds=7200,
-            review_deadline_seconds=3600,
-            acceptance_window_seconds=300,
+            3600,
+            300,
+            7200,
+            3600,
         )
+        await poster.submit_task_posting(intent)
 
     body = json.loads(requests[0].content)
     task = parse_jws(body["task_token"])
@@ -237,20 +292,18 @@ async def test_post_task_derives_lock_identity_from_allocated_task_intent() -> N
 async def test_fund_step_derives_stable_identity_and_prints_receipt_facts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    engine = ReplayEngine({"name": "test", "agents": [], "steps": []}, _config())
-    engine.agents["alice"] = _agent("alice", "a-alice")
-    engine.platform = _agent("platform", "a-platform")
+    step = {"action": "fund", "agent": "alice", "amount": 100, "reference": _REFERENCE}
+    engine = _durable_funding_engine([step])
     operation_id = operation_id_for("demo-funding", ("a-alice", _REFERENCE))
     credit = AsyncMock(return_value=_credit_envelope("a-alice", 100, _REFERENCE, operation_id))
     console = MagicMock()
     monkeypatch.setattr(clients, "credit_account", credit)
     monkeypatch.setattr(engine_module, "console", console)
 
-    step = {"action": "fund", "agent": "alice", "amount": 100, "reference": _REFERENCE}
-    await engine._do_fund(MagicMock(), step)
-    await engine._do_fund(MagicMock(), step)
+    await engine._execute_step(MagicMock(), step)
+    assert engine._restore_completed_step(0, step)
 
-    assert credit.await_count == 2
+    assert credit.await_count == 1
     for call in credit.await_args_list:
         assert call.kwargs == {
             "operation_id": operation_id,
@@ -268,16 +321,15 @@ async def test_fund_step_derives_stable_identity_and_prints_receipt_facts(
 async def test_fund_step_requires_reference_before_transport_or_output(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    engine = ReplayEngine({"name": "test", "agents": [], "steps": []}, _config())
-    engine.agents["alice"] = _agent("alice", "a-alice")
-    engine.platform = _agent("platform", "a-platform")
+    step = {"action": "fund", "agent": "alice", "amount": 100}
+    engine = _durable_funding_engine([step])
     credit = AsyncMock()
     console = MagicMock()
     monkeypatch.setattr(clients, "credit_account", credit)
     monkeypatch.setattr(engine_module, "console", console)
 
     with pytest.raises(ValueError, match="reference"):
-        await engine._do_fund(MagicMock(), {"action": "fund", "agent": "alice", "amount": 100})
+        await engine._execute_step(MagicMock(), step)
 
     credit.assert_not_awaited()
     console.print.assert_not_called()
@@ -287,9 +339,9 @@ async def test_fund_step_requires_reference_before_transport_or_output(
 async def test_changed_amount_under_one_reference_reuses_identity_without_false_output(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    engine = ReplayEngine({"name": "test", "agents": [], "steps": []}, _config())
-    engine.agents["alice"] = _agent("alice", "a-alice")
-    engine.platform = _agent("platform", "a-platform")
+    first = {"action": "fund", "agent": "alice", "amount": 100, "reference": _REFERENCE}
+    second = {"action": "fund", "agent": "alice", "amount": 101, "reference": _REFERENCE}
+    engine = _durable_funding_engine([first, second])
     operation_id = operation_id_for("demo-funding", ("a-alice", _REFERENCE))
     credit = AsyncMock(
         side_effect=[
@@ -301,15 +353,9 @@ async def test_changed_amount_under_one_reference_reuses_identity_without_false_
     monkeypatch.setattr(clients, "credit_account", credit)
     monkeypatch.setattr(engine_module, "console", console)
 
-    await engine._do_fund(
-        MagicMock(),
-        {"action": "fund", "agent": "alice", "amount": 100, "reference": _REFERENCE},
-    )
+    await engine._execute_step(MagicMock(), first, step_index=0)
     with pytest.raises(RuntimeError, match="financial operation conflict"):
-        await engine._do_fund(
-            MagicMock(),
-            {"action": "fund", "agent": "alice", "amount": 101, "reference": _REFERENCE},
-        )
+        await engine._execute_step(MagicMock(), second, step_index=1)
 
     assert [call.kwargs["operation_id"] for call in credit.await_args_list] == [
         operation_id,

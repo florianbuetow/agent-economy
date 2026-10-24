@@ -47,13 +47,15 @@ build-backend = "hatchling.build"
 constraint-dependencies = [
     "aiohttp>=3.14.3",
     "anyio>=4.14.2",
+    "certifi>=2026.10.19",
     "cryptography>=50.0.0",
+    "filelock>=4.2.1,<5",
     "gitpython>=3.1.60",
     "idna>=3.15",
     "fsspec>=2026.6.0",
     "msgpack>=1.2.1",
     "multidict>=6.9.1",
-    "pillow>=12.2.0",
+    "pillow>=13.0.0",
     "pip>=26.2",
     "pydantic-settings>=2.14.2",
     "python-dotenv>=1.2.2",
@@ -63,10 +65,21 @@ constraint-dependencies = [
     "urllib3>=2.8.0",
 ]
 
-# Semgrep 1.181.0 pins vulnerable mcp==1.29.0. Keep Semgrep on the patched
-# 1.x API line until upstream relaxes its exact pin.
+# Semgrep 1.181.0 pins vulnerable MCP and OpenTelemetry releases. Keep its
+# development-only dependency family coherent until upstream relaxes its pins.
 override-dependencies = [
-    { package = { name = "semgrep", version = "1.181.0" }, dependencies = ["mcp==1.30.0"] },
+    # Remove this override when a released LiteLLM version allows secure filelock 4.x.
+    { package = { name = "litellm", version = "1.105.1" }, dependencies = [
+        "filelock>=4.2.1,<5",
+    ] },
+    { package = { name = "semgrep", version = "1.181.0" }, dependencies = [
+        "mcp==1.30.0",
+        "opentelemetry-api==1.45.1",
+        "opentelemetry-sdk==1.45.1",
+        "opentelemetry-exporter-otlp-proto-http==1.45.1",
+        "opentelemetry-instrumentation-requests==0.66b1",
+        "opentelemetry-instrumentation-threading==0.66b1",
+    ] },
 ]
 
 [tool.uv.sources]

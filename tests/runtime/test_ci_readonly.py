@@ -22,11 +22,26 @@ SERVICE_NAMES = (
     "ui",
 )
 CI_RECIPES = ("ci", "ci-quiet")
+NOOP_CI_RECIPES = (
+    "init",
+    "test-prerequisites",
+    "code-typecheck",
+    "code-lspchecks",
+    "code-security",
+    "code-deptry",
+    "code-spell",
+    "code-semgrep",
+    "code-audit",
+    "test-unit",
+    "test-architecture",
+)
 
 
-def _write_executable(path: Path, content: str) -> None:
-    path.write_text(content, encoding="utf-8")
-    path.chmod(0o755)
+@pytest.fixture
+def just_executable() -> str:
+    executable = shutil.which("just")
+    assert executable is not None
+    return executable
 
 
 def _ci_sandbox(tmp_path: Path, service_name: str) -> tuple[Path, dict[str, str]]:
@@ -35,43 +50,20 @@ def _ci_sandbox(tmp_path: Path, service_name: str) -> tuple[Path, dict[str, str]
     sandbox.mkdir()
     shutil.copyfile(service_root / "justfile", sandbox / "justfile")
     shutil.copyfile(service_root / "config.yaml", sandbox / "config.yaml")
-
-    real_just = shutil.which("just")
-    real_uv = shutil.which("uv")
-    assert real_just is not None
-    assert real_uv is not None
-
-    tool_bin = sandbox / "tool-bin"
-    tool_bin.mkdir()
-    _write_executable(
-        tool_bin / "just",
-        "\n".join(
-            (
-                "#!/bin/sh",
-                'case "$1" in',
-                "  code-format|code-style)",
-                f'    exec "{real_just}" --justfile "$PWD/justfile" "$1"',
-                "    ;;",
-                "  *) exit 0 ;;",
-                "esac",
-                "",
-            )
-        ),
+    justfile = sandbox / "justfile"
+    override_recipes = "\n".join(f"{recipe}:\n    @:" for recipe in NOOP_CI_RECIPES)
+    justfile.write_text(
+        justfile.read_text(encoding="utf-8")
+        + "\nset allow-duplicate-recipes\n\n"
+        + override_recipes
+        + "\n",
+        encoding="utf-8",
     )
-    _write_executable(
-        tool_bin / "uv",
-        "\n".join(
-            (
-                "#!/bin/sh",
-                'test "$1" = "run" || exit 97',
-                "shift",
-                f'exec "{real_uv}" run --project "{service_root}" --frozen --no-sync "$@"',
-                "",
-            )
-        ),
-    )
+
     env = os.environ.copy()
-    env["PATH"] = f"{tool_bin}{os.pathsep}{env['PATH']}"
+    env["UV_PROJECT"] = str(service_root)
+    env["UV_FROZEN"] = "1"
+    env["UV_NO_SYNC"] = "1"
     return sandbox, env
 
 
@@ -79,11 +71,10 @@ def _run_recipe(
     sandbox: Path,
     env: dict[str, str],
     recipe: str,
+    just_executable: str,
 ) -> subprocess.CompletedProcess[str]:
-    real_just = shutil.which("just")
-    assert real_just is not None
     return subprocess.run(
-        (real_just, "--justfile", str(sandbox / "justfile"), recipe),
+        (just_executable, "--justfile", str(sandbox / "justfile"), recipe),
         cwd=sandbox,
         env=env,
         check=False,
@@ -98,26 +89,31 @@ def test_ci_rejects_formatting_defects_without_rewriting_source(
     tmp_path: Path,
     service_name: str,
     recipe: str,
+    just_executable: str,
 ) -> None:
     sandbox, env = _ci_sandbox(tmp_path, service_name)
     source = sandbox / "sample.py"
     original = b"value={'answer':[1,2,3]}\n"
     source.write_bytes(original)
 
-    result = _run_recipe(sandbox, env, recipe)
+    result = _run_recipe(sandbox, env, recipe, just_executable)
 
     assert result.returncode != 0, result.stdout + result.stderr
     assert source.read_bytes() == original
 
 
 @pytest.mark.parametrize("service_name", SERVICE_NAMES)
-def test_explicit_formatter_remains_available(tmp_path: Path, service_name: str) -> None:
+def test_explicit_formatter_remains_available(
+    tmp_path: Path,
+    service_name: str,
+    just_executable: str,
+) -> None:
     sandbox, env = _ci_sandbox(tmp_path, service_name)
     source = sandbox / "sample.py"
     original = b"value={'answer':[1,2,3]}\n"
     source.write_bytes(original)
 
-    result = _run_recipe(sandbox, env, "code-format")
+    result = _run_recipe(sandbox, env, "code-format", just_executable)
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert source.read_bytes() != original
@@ -130,13 +126,14 @@ def test_ci_accepts_already_formatted_source(
     tmp_path: Path,
     service_name: str,
     recipe: str,
+    just_executable: str,
 ) -> None:
     sandbox, env = _ci_sandbox(tmp_path, service_name)
     source = sandbox / "sample.py"
     original = b'VALUE = {"answer": [1, 2, 3]}\n'
     source.write_bytes(original)
 
-    result = _run_recipe(sandbox, env, recipe)
+    result = _run_recipe(sandbox, env, recipe, just_executable)
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert source.read_bytes() == original

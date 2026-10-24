@@ -1,6 +1,13 @@
 # Q-M1 / T-162 owner decision draft: evidence and artifact privacy
 
-**Status: DRAFT — no option or policy choice below is accepted.** Owner acceptance or revision is required before an ADR, specification, test, configuration, or product change. The choices below are independent axes; selecting one option on one axis does not select an option on another.
+**Status: historical alternatives, superseded where decided by the owner on
+2026-10-22.** See [the accepted decision record](owner-decisions-2026-10-22.md)
+for public access, configurable OpenAI-compatible Court providers, initial
+text/source/JSON/CSV evidence, immediate terminal-job download closure and
+archiving after more than three days. Other draft values are not accepted.
+The existing Court specification already excludes appeals; that is not an open
+choice. Do not apply the private-access, provider-approval or deletion proposals
+below as additional owner requirements.
 
 ## Existing constraints (not new choices)
 

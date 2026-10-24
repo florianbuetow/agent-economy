@@ -57,7 +57,7 @@ def _new_store(path: Path, schema_sql: str | None, caller_kid: str) -> Any:
 @pytest.fixture
 def store(tmp_path: Path) -> Iterator[Any]:
     adapter = _new_store(
-        tmp_path / "gateway.db", load_schema_sql(SchemaState.CURRENT_V4), "gateway-task-board"
+        tmp_path / "gateway.db", load_schema_sql(SchemaState.CURRENT_V5), "gateway-task-board"
     )
     try:
         yield adapter
@@ -189,7 +189,9 @@ def _seed_submitted(store: Any) -> None:
             "storage_path": f"{_TASK_ID}/asset-fixture/answer.txt",
             "content_hash": "a" * 64,
             "uploaded_at": _AT,
-        }
+        },
+        expected_lifecycle_version=1,
+        max_files_per_task=10,
     )
     store.claim_task_operation(
         _command(
@@ -362,7 +364,13 @@ def test_task_asset_and_bid_reads_share_real_projection_and_counts(store: Any) -
     assert store.get_bid("bid-fixture", _TASK_ID)["amount"] == 90
     assets = store.get_assets_for_task(_TASK_ID)
     assert len(assets) == store.count_assets(_TASK_ID) == 1
-    assert assets[0] == store.get_asset("asset-fixture", _TASK_ID)
+    internal_asset = store.get_asset("asset-fixture", _TASK_ID)
+    assert internal_asset is not None
+    assert internal_asset["storage_path"] == f"{_TASK_ID}/asset-fixture/answer.txt"
+    assert "storage_path" not in assets[0]
+    assert assets[0] == {
+        field: value for field, value in internal_asset.items() if field != "storage_path"
+    }
     assert assets[0]["content_hash"] == "a" * 64
 
 
@@ -422,7 +430,7 @@ def test_malformed_projection_still_uses_real_client_validation(
 
 def test_close_reopen_and_other_caller_preserve_owned_database(tmp_path: Path) -> None:
     path = tmp_path / "persistent.db"
-    first = _new_store(path, load_schema_sql(SchemaState.CURRENT_V4), "gateway-task-board")
+    first = _new_store(path, load_schema_sql(SchemaState.CURRENT_V5), "gateway-task-board")
     try:
         _seed_open(first)
         result = first.claim_task_operation(_bid())
@@ -454,7 +462,7 @@ def test_explicit_clock_controls_native_cutoff(tmp_path: Path) -> None:
         db_path=tmp_path / "clock.db",
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
         caller_kid="gateway-task-board",
         authority=_AUTHORITY,
         clock_us=lambda: clock[0],
@@ -491,7 +499,7 @@ def test_constructor_failure_releases_its_connection_without_deleting_database(
     path = tmp_path / "failed-initialization.db"
     try:
         with pytest.raises(RuntimeError, match="injected operation writer"):
-            _new_store(path, load_schema_sql(SchemaState.CURRENT_V4), "gateway-task-board")
+            _new_store(path, load_schema_sql(SchemaState.CURRENT_V5), "gateway-task-board")
         assert len(captured) == 1
         with pytest.raises(sqlite3.ProgrammingError, match="closed"):
             captured[0].connection.execute("SELECT 1")

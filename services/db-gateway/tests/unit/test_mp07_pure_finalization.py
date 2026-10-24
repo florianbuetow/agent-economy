@@ -46,7 +46,8 @@ def writer(tmp_path: Path) -> Iterator[DbWriter]:
         db_path=str(tmp_path / "pure-finalization.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        current_task_board_caller_kid=_BOARD_KID,
     )
     yield value
     value.close()
@@ -58,6 +59,7 @@ def _native(writer: DbWriter) -> TaskOperationWriter:
         clock_us=lambda: _NOW_US,
         deadline_actor_id="system-task-board-deadline",
         platform_public_key="ed25519:test-platform-authority",
+        current_task_board_caller_kid=_BOARD_KID,
     )
 
 
@@ -259,6 +261,11 @@ def _pure_command(
         assert accepted["operation_state"] == "completed"
         writer.record_asset(
             {
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": f"asset-{uuid4()}",
                 "task_id": graph.task_id,
                 "uploader_id": graph.worker_id,
@@ -336,6 +343,11 @@ def test_completed_external_operation_finalization_replays_original_result(
     _complete_accept(writer, graph)
     writer.record_asset(
         {
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": f"asset-{uuid4()}",
             "task_id": graph.task_id,
             "uploader_id": graph.worker_id,

@@ -15,7 +15,7 @@ from uuid import uuid4
 import pytest
 from service_commons.exceptions import ServiceError
 
-from db_gateway_service.migration import MigrationError, migrate_v3_to_v4
+from db_gateway_service.migration import MigrationError, migrate_v3_to_v4, migrate_v4_to_v5
 from db_gateway_service.publication_audit import audit_publications
 from db_gateway_service.schema import SchemaState, classify_schema
 from db_gateway_service.services.db_writer import DbWriter
@@ -177,6 +177,7 @@ def test_two_legacy_payers_for_one_task_remain_independently_auditable(
         assert result.publications_clean, result.findings
     finally:
         connection.close()
+    _migrate_v4_source(source, backup_id="shared-before-mp08")
     _assert_startup_accepts(source.database)
 
 
@@ -252,11 +253,27 @@ def _migrate(source: V3Source, *, backup_id: str) -> V3Source:
         busy_timeout_ms=5000,
     )
     assert result.observation == "committed_v4_verified"
+    _migrate_v4_source(source, backup_id=f"{backup_id}-v5")
     return source
 
 
+def _migrate_v4_source(source: V3Source, *, backup_id: str) -> None:
+    publish_verified_backup(source, backup_id=backup_id)
+    result = migrate_v4_to_v5(
+        source.inventory,
+        backup_root=source.backup_root,
+        backup_id=backup_id,
+        work_root=source.work_root,
+        busy_timeout_ms=5000,
+        current_task_board_caller_kid=source.caller_kid,
+    )
+    assert result.observation == "committed_v5_verified"
+
+
 def _publish_native_task(source: V3Source) -> str:
-    writer = DbWriter(str(source.database), 5000, "wal", None)
+    writer = DbWriter(
+        str(source.database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+    )
     try:
         poster_id = create_funded_payer(writer, name="Publication audit poster")
         intent = publication_intent(poster_id)
@@ -391,7 +408,9 @@ def _assert_audit_and_startup_reject(database: Path, expected_code: str | None) 
     writer: DbWriter | None = None
     try:
         with pytest.raises(ServiceError) as raised:
-            writer = DbWriter(str(database), 5000, "wal", None)
+            writer = DbWriter(
+                str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+            )
         assert raised.value.error == "database_publication_contract_failed"
         if expected_code is not None:
             assert expected_code in raised.value.details["finding_codes"]
@@ -403,7 +422,9 @@ def _assert_audit_and_startup_reject(database: Path, expected_code: str | None) 
 
 def _assert_startup_accepts(database: Path) -> None:
     before = database.read_bytes()
-    writer = DbWriter(str(database), 5000, "wal", None)
+    writer = DbWriter(
+        str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+    )
     writer.close()
     assert database.read_bytes() == before
 

@@ -12,12 +12,14 @@ import json
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
 from service_auth.financial_identity import operation_id_for
 
 from base_agent.agent import BaseAgent
 from base_agent.platform import PlatformAgent
 from base_agent.signing import parse_jws
+from tests.fakes.mp05_posting_fixtures import posting_response
 
 if TYPE_CHECKING:
     from base_agent.config import AgentConfig
@@ -350,10 +352,17 @@ async def test_task_posting_derives_the_lock_identity_from_its_existing_intent(
 ) -> None:
     agent = BaseAgent(sample_config)
     agent.agent_id = "a-poster"
-    transport = AsyncMock(return_value={"task_id": "transport-task-probe"})
-    monkeypatch.setattr(agent, "_request", transport)
+    transport = AsyncMock()
+    monkeypatch.setattr(agent, "_request_raw", transport)
     try:
-        await agent.post_task("Title", "Spec", 100, 10, 20, 30, acceptance_window_seconds=40)
+        intent = agent.prepare_task_posting("Title", "Spec", 100, 10, 40, 20, 30)
+        transport.assert_not_awaited()
+        transport.return_value = httpx.Response(
+            201,
+            json=posting_response(intent, "published").body,
+            request=httpx.Request("POST", f"{sample_config.task_board_url}/tasks"),
+        )
+        await agent.submit_task_posting(intent)
         transport.assert_awaited_once()
         assert transport.await_args is not None
         body = transport.await_args.kwargs["json"]
@@ -361,6 +370,8 @@ async def test_task_posting_derives_the_lock_identity_from_its_existing_intent(
         escrow = parse_jws(body["escrow_token"])
         task_id = task.payload["task_id"]
         assert isinstance(task_id, str)
+        assert task_id == intent.task_id
+        assert task.payload["operation_id"] == intent.operation_id
         assert escrow.payload["operation_id"] == operation_id_for(
             "task-lock", (task_id, "a-poster")
         )

@@ -207,7 +207,13 @@ def test_startup_rejects_historical_pending_publication_with_missing_actor_witho
     _operation_id, before = _corrupted_pending_database(publication_gateway, db_writer, path)
 
     with pytest.raises(ServiceError) as raised:
-        DbWriter(str(path), 5000, "wal", None)
+        DbWriter(
+            str(path),
+            5000,
+            "wal",
+            None,
+            current_task_board_caller_kid="gateway-task-board",
+        )
 
     assert raised.value.error == "database_publication_contract_failed"
     assert raised.value.details["finding_codes"] == ["publication_actor_missing"]

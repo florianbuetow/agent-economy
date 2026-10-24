@@ -9,6 +9,7 @@ from fastapi import Depends
 from service_commons.exceptions import ServiceError
 
 from ui_service.core.state import get_app_state
+from ui_service.services.task_board_reads import TaskBoardReader
 
 
 def get_db() -> aiosqlite.Connection:
@@ -32,3 +33,19 @@ def get_db() -> aiosqlite.Connection:
 
 DbConn = Annotated[aiosqlite.Connection, Depends(get_db)]
 """Injectable database connection that yields a 503 when unavailable."""
+
+
+def get_task_board_reader() -> TaskBoardReader:
+    """Return the live authoritative Task Board reader."""
+    reader = get_app_state().task_board_reader
+    if reader is None:
+        raise ServiceError(
+            error="task_board_reader_unavailable",
+            message="Task Board reader not available yet",
+            status_code=503,
+            details=None,
+        )
+    return reader
+
+
+TaskBoardRead = Annotated[TaskBoardReader, Depends(get_task_board_reader)]

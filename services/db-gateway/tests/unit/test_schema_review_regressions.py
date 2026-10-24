@@ -27,13 +27,13 @@ def test_current_schema_requires_its_version_row() -> None:
         connection.close()
 
 
-def test_future_version_in_exact_current_table_shape_is_not_admitted() -> None:
+def test_version_six_in_exact_current_table_shape_is_not_admitted() -> None:
     connection = sqlite3.connect(":memory:")
     try:
         connection.executescript(load_schema_sql(SchemaState.CURRENT_V4))
         assert classify_schema(connection).state is SchemaState.CURRENT_V4
         connection.execute("PRAGMA ignore_check_constraints=ON")
-        connection.execute("UPDATE schema_metadata SET version=5")
+        connection.execute("UPDATE schema_metadata SET version=6")
         connection.execute("PRAGMA ignore_check_constraints=OFF")
         assert classify_schema(connection).state is SchemaState.FUTURE
     finally:
@@ -93,7 +93,13 @@ def test_commented_transaction_control_cannot_escape_bootstrap_rollback(tmp_path
         + "\nSELECT unavailable FROM missing_table;\n"
     )
     with pytest.raises((sqlite3.DatabaseError, ServiceError)):
-        DbWriter(str(path), busy_timeout_ms=5000, journal_mode="wal", schema_sql=candidate)
+        DbWriter(
+            str(path),
+            busy_timeout_ms=5000,
+            journal_mode="wal",
+            schema_sql=candidate,
+            current_task_board_caller_kid="gateway-task-board",
+        )
     connection = sqlite3.connect(path)
     try:
         objects = connection.execute(
@@ -125,4 +131,10 @@ def test_failed_admission_keeps_primary_error_when_close_also_fails(
 
     monkeypatch.setattr(sqlite3, "connect", connect)
     with pytest.raises(ServiceError, match="incomplete or unknown"):
-        DbWriter(str(path), busy_timeout_ms=5000, journal_mode="wal", schema_sql=None)
+        DbWriter(
+            str(path),
+            busy_timeout_ms=5000,
+            journal_mode="wal",
+            schema_sql=None,
+            current_task_board_caller_kid="gateway-task-board",
+        )

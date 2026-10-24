@@ -35,7 +35,13 @@ def _snapshot(connection: sqlite3.Connection) -> tuple[str, ...]:
 
 
 def _operation_writer(connection: sqlite3.Connection, now_us: int) -> TaskOperationWriter:
-    return TaskOperationWriter(connection, lambda: now_us, "a-deadline", "platform-key")
+    return TaskOperationWriter(
+        connection,
+        lambda: now_us,
+        "a-deadline",
+        "platform-key",
+        current_task_board_caller_kid="gateway-task-board",
+    )
 
 
 def _claim(
@@ -171,6 +177,11 @@ def test_execution_expiry_claim_blocks_legacy_asset_metadata(
     _assert_transition_pending(
         lambda: db_writer.record_asset(
             {
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": f"asset-{uuid.uuid4()}",
                 "task_id": graph.task_id,
                 "uploader_id": graph.worker_id,
@@ -263,7 +274,24 @@ def test_unresolved_legacy_observation_blocks_generic_task_writes(
         busy_timeout_ms=5000,
     )
     assert v4_result.observation == "committed_v4_verified"
-    writer = DbWriter(str(database), 5000, "wal", None)
+    recovery_backup_id = "legacy-write-exclusion-v5"
+    publish_verified_backup(source, backup_id=recovery_backup_id)
+    v5_result = migration.migrate_v4_to_v5(
+        inventory,
+        backup_root=backup_root,
+        backup_id=recovery_backup_id,
+        work_root=work_root,
+        busy_timeout_ms=5000,
+        current_task_board_caller_kid=caller_kid,
+    )
+    assert v5_result.observation == "committed_v5_verified"
+    writer = DbWriter(
+        str(database),
+        5000,
+        "wal",
+        None,
+        current_task_board_caller_kid=caller_kid,
+    )
     try:
         observation_id = str(
             writer.connection.execute(

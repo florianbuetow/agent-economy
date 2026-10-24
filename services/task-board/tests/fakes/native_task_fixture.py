@@ -228,7 +228,9 @@ class NativeTaskFixture:
                 "storage_path": f"{task_id}/asset-{task_id}/answer.txt",
                 "content_hash": "a" * 64,
                 "uploaded_at": self.clock.iso(),
-            }
+            },
+            expected_lifecycle_version=1,
+            max_files_per_task=10,
         )
         result = self.store.claim_task_operation(
             self.command(
@@ -438,7 +440,7 @@ def native_task_context(
         db_path=tmp_path / "native-deadlines.db",
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
         caller_kid="gateway-task-board",
         authority=authority,
         clock_us=clock,

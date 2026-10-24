@@ -1,5 +1,126 @@
 # Database Gateway Service — API Specification
 
+## MP-08 durable financial-effect recovery amendment
+
+The [MP-08 financial recovery contract](../../plans/2026-10-22-mp08-financial-recovery-contract.md)
+defines the current schema, recovery queue and public settlement projection. It
+supersedes older statements below that call schema V2 or V4 current, treat the UI
+as an authoritative direct-SQLite task reader, or leave release/split recovery
+for future work. Court delivery remains MP-10. Aggregate earnings and GDP remain
+unchanged; MP-19 owns their redesign.
+
+The executable schema is V5: `SchemaState.CURRENT_V5`, `current_v5.sql`, and the
+isolated `task_effect_recovery_v5.sql` extension. Fresh initialization creates an
+empty `board_task_effect_delivery_cutover` attestation. An existing exact V4
+database may advance only through the explicit `migrate-v4-to-v5` command (or
+the matching migration API), under exclusive maintenance and an already
+verified backup. The CLI requires an explicit
+`--current-task-board-caller-kid`; the API requires the same value as a named
+argument. The migration records that backup identity and manifest hash,
+the source snapshot, the migration-plan hash, exact native/legacy membership
+hashes, and the configured Task Board caller KID. It preserves prior domain rows,
+stored facts and `sqlite_sequence`; there is no implicit startup migration.
+Partial, unknown, nonexact and future schemas remain fail-closed inputs.
+
+Gateway configuration requires an explicit `board_effect_recovery` section. It
+names `current_task_board_caller_kid` and the retry, backoff, lease, evidence and
+request-timeout limits. The current KID must be trusted for
+`gateway.board.write`. Fresh startup, V4-to-V5 migration and every recovery
+audit fail closed if that authority is absent, differs from a recoverable source
+owner, or if cutover membership, source identity, delivery coverage, receipt
+evidence or completion-event binding is inconsistent.
+
+V5 stores scheduling state in `board_task_effect_deliveries`; immutable native
+intent remains in `board_task_operations`, and eligible migrated worker
+settlements retain their exact legacy observation. Only native `bank_release`
+and `bank_split`, plus unresolved `worker_settlement_pending` and
+`worker_settlement_succeeded`, enter this queue. Authenticated Court observations
+are preserved but excluded. A delivery never invents a second financial identity
+or treats task status, an HTTP acknowledgment, or a competing settlement receipt
+as success authority.
+
+All recovery routes require `gateway.board.write`, bind results to the
+authenticated caller KID, and accept no money, party, intent or replacement
+operation identity:
+
+| Method and path | Contract |
+|---|---|
+| `POST /board/task-effect-deliveries/lease` | Exact protocol-v1 worker request. Performs one due dead-letter evidence check before leasing at most one due delivery. |
+| `POST /board/task-effect-deliveries/{effect_operation_id}/finalize` | Exact `{}` body; native sources only. Returns 200 for completed evidence, 202 when the intended receipt is absent and the nonterminal state is unchanged, 400 for a same-owner legacy source, or 409 for conflicting evidence. |
+| `POST /board/task-effect-deliveries/{effect_operation_id}/attempts/{lease_generation}/fail` | Reports one fenced worker attempt. It may reschedule, dead-letter, complete from exact evidence, or integrity-block conflicting evidence. |
+| `GET /board/task-effect-deliveries/{effect_operation_id}` | Returns one caller-owned bounded diagnostic. |
+| `GET /board/task-effect-deliveries` | Requires exactly one `state`, `after`, and `limit`; returns a bounded operation-ID-ordered diagnostic page. |
+| `POST /board/task-effect-deliveries/{effect_operation_id}/retry` | Exact `{}` body; requeues only a dead letter while preserving immutable identity and historical failure diagnostics. |
+| `POST /board/legacy-effect-observations/{observation_id}/finalize` | Finalizes only the supported legacy worker evidence rules; it never dispatches a Bank command. |
+
+Authorization and ownership checks precede state/fence checks. A missing,
+duplicate or malformed Authorization header is 401; a malformed strict-profile
+JWS retains the shared 400 mapping. Missing capability is 403, a capable foreign
+owner observes 404, and a same-owner stale
+worker/generation/state fence is 409 `effect_delivery_attempt_stale`. Conflicting
+financial evidence is 409 `effect_evidence_conflict`; invalid operator state or
+exhausted counters is 409 with the corresponding typed code. Unrepresentable
+Gateway time or derived schedules return 503 `effect_delivery_clock_exhausted`
+with the transaction unchanged. Native source state and sidecar state change in
+the same `BEGIN IMMEDIATE` transaction. The older
+`POST /board/task-operations/{operation_id}/finalize` envelope is unchanged.
+
+Leases use an inclusive per-delivery attempt budget, exponential configured
+backoff, a fresh process worker UUID and lease generation fencing. Before any
+dead-letter transition, Gateway performs the exact intended-receipt lookup.
+Each later lease also checks one due dead letter for newly arrived evidence,
+without a Bank call or attempt-counter change. This makes late authoritative
+receipts adoptable without task reads or operator retry and prevents duplicate
+financial dispatch from diagnostic evidence.
+
+Queue branching belongs to the pure
+`db_gateway_service.effect_delivery_transitions` boundary. Its frozen inputs are
+`DeliveryQueueState` and `DeliveryQueuePolicy`. `effective_due_us` selects the
+state's due timestamp; the lease, expiry, failure, operator-retry and evidence
+planners return `ApplyTransition`, `EvidenceRequired`, or `RejectTransition`.
+`EvidenceRequired` carries failure metadata without calculating a future
+schedule. Only after receipt absence is proven does `plan_evidence_absent`
+calculate the dead-letter schedule; a confirmed receipt can therefore complete
+even when that unused future timestamp would overflow.
+The financial writer remains responsible for SQL,
+transactions, authorization, receipt adoption and applying a returned plan.
+This boundary must not query SQLite, authenticate callers or classify financial
+evidence. Its focused proof is in `test_effect_delivery_transitions.py` and
+`test_mp08_receipt_first_ceiling.py`; the complete release gate remains required.
+
+Gateway task detail and list reads add the required eight-field
+`financial_effect` projection: `schema_version`, `settlement_state`,
+`receipt_state`, `outcome`, `operation_id`, `receipt_reference`,
+`business_projection_pending`, and `pending_target_status`. Confirmed money
+requires the exact intended receipt and complete request/hash/escrow/party/
+amount/leg/event validation. A competing winner never supplies a public outcome
+or receipt reference. Historical `worker_paid` requires the exhaustive,
+recomputed pre-receipt audit; terminal status alone maps to unconfirmed
+attention, not payment. The Task Board preserves this projection on public task
+reads and mutation responses. The UI consumes that Board authority and uses its
+read-only SQLite connection only for permitted local enrichment.
+
+## MP-05 publication and protected diagnostics amendment
+
+The [native publication contract](../../plans/2026-10-18-mp05-publication-contract.md)
+defines schema V4 admission, funded publication and historical orphan-refund
+recovery, superseding older creation shapes below. In migration history, V3
+databases require the explicit verified-backup-bound V3-to-V4 migration before
+V4 admission; the MP-08 amendment above defines current V5 startup.
+
+`GET /board/legacy-posting-observations/{observation_id}` is a private diagnostic
+read requiring `gateway.board.write` and the authenticated caller KID that owns
+the observation. It returns HTTP 200 with the exact existing legacy envelope,
+including observation state and refund identity, for `refund_pending`, `refunded`
+and `blocked_integrity`. Foreign callers receive 403 `operation_caller_mismatch`;
+missing observations receive 404 `posting_observation_not_found`.
+
+This read does not reconcile, adopt Bank receipts, update rows or affect an open
+transaction. It reports persisted recovery status; a Bank refund can already be
+committed while the observation is still pending reconciliation. The separate
+POST reconciliation command remains the mutating operation. No public agent,
+Task Board or browser route is introduced by this private read.
+
 ## MP-07 native Board operation amendment
 
 The [native operation contract](task-board-native-operations.md) defines v3 publication, Board
@@ -22,7 +143,7 @@ review are complete; root19 exit0 and the final evidence audit close T-116/T-117
 
 ## Purpose
 
-The Database Gateway is the persistence layer for the Agent Task Economy. It owns the shared `economy.db` SQLite database and is the only process that writes to it. All other services send structured write requests to the gateway, which executes them atomically within SQLite transactions, and read through the gateway's **blessed read API** — one `GET` route per query the rest of the system actually needs, mirroring the write side's one-endpoint-per-operation design (the single exception is the UI service's direct read-only SQLite connection, see §2.2/Q-4 of the target-architecture plan; that is a documented exception, not a second gateway).
+The Database Gateway is the persistence layer for the Agent Task Economy. It owns the shared `economy.db` SQLite database and is the only process that writes to it. Domain services send structured write requests to the gateway, which executes them atomically within SQLite transactions, and read through the gateway's **blessed read API** — one `GET` route per query the rest of the system actually needs, mirroring the write side's one-endpoint-per-operation design. The UI obtains authoritative task and financial projections through the Task Board public API. Its direct read-only SQLite access is limited to local enrichment that cannot replace or recompute those authoritative fields.
 
 Domain services own agent/user authority and lifecycle decisions. The gateway separately
 authenticates each calling service and authorizes its persistence capability. It also owns the
@@ -62,7 +183,7 @@ Reputation (8004) ────────────┤
 Court (8005) ─────────────────┘
 ```
 
-Each service authenticates with its own Gateway keypair and receives only the grants listed below. Court legitimately reads task context via the singular `GET /board/tasks/{task_id}` exception. The UI has no Gateway capability and continues to read `economy.db` directly through its documented read-only SQLite connection.
+Each service authenticates with its own Gateway keypair and receives only the grants listed below. Court legitimately reads task context via the singular `GET /board/tasks/{task_id}` exception. The UI has no Gateway capability: it reads authoritative task and `financial_effect` projections from Task Board and uses `economy.db` read-only only for permitted local enrichment.
 
 ---
 
@@ -113,9 +234,10 @@ Admission mappings are stable: missing, duplicate, or malformed Bearer headers a
 ## Data Model
 
 The Gateway's current executable schema is
-`services/db-gateway/src/db_gateway_service/schema_resources/current_v2.sql`; MP-04's receipt
-extension is also isolated in `receipt_v2.sql`. `docs/specifications/schema.sql` remains the broad
-domain schema reference. The current schema includes:
+`services/db-gateway/src/db_gateway_service/schema_resources/current_v5.sql`. The frozen V2
+receipt extension remains in `receipt_v2.sql`; V3 native operations, V4 publication, and V5
+financial-effect recovery each retain their versioned migration resources. `docs/specifications/schema.sql`
+remains the broad domain schema reference. The current schema includes:
 
 | Table                   | Domain     | Primary Key    | Description                                |
 |-------------------------|------------|----------------|--------------------------------------------|
@@ -131,14 +253,19 @@ domain schema reference. The current schema includes:
 | `board_tasks`           | Board      | `task_id`      | Task lifecycle records                     |
 | `board_bids`            | Board      | `bid_id`       | Submitted bids                             |
 | `board_assets`          | Board      | `asset_id`     | Uploaded deliverable metadata              |
+| `board_task_operations` | Board      | `operation_id` | Immutable native lifecycle command and effect intent |
+| `board_legacy_effect_observations` | Board | `observation_id` | Preserved authenticated legacy recovery evidence |
+| `board_task_effect_delivery_cutover` | Board | singleton | V5 migration provenance and frozen recovery membership |
+| `board_task_effect_deliveries` | Board | `effect_operation_id` | Durable financial-effect scheduling and diagnostics sidecar |
 | `reputation_feedback`   | Reputation | `feedback_id`  | Bidirectional feedback records             |
 | `court_claims`          | Court      | `claim_id`     | Dispute claims                             |
 | `court_rebuttals`       | Court      | `rebuttal_id`  | Worker rebuttals                           |
 | `court_rulings`         | Court      | `ruling_id`    | Judge panel rulings                        |
 | `events`                | Shared     | `event_id`     | Event log (autoincrement, monotonic cursor)|
 
-Refer to `current_v2.sql` and the linked MP-04 schema-v2 contract for executable financial receipt,
-foreign-key, index, and CHECK constraints.
+Refer to `current_v5.sql`, the linked versioned contracts, and the MP-08 recovery contract for
+executable financial receipt, operation, publication, recovery, foreign-key, index, and CHECK
+constraints. V2 remains migration history rather than the current startup norm.
 
 ### Schema initialization and migration admission
 
@@ -677,6 +804,12 @@ amount returns `legacy_operation_conflict`.
 
 ### POST /bank/escrow/release
 
+For a new release or split, the writer binds the event's `task_id` to the
+authoritative escrow row within the settlement transaction. An omitted/null
+event task ID is filled from that row; a supplied different task ID returns
+400 `payload_mismatch` before money, receipt or event changes. Exact replay
+returns the original committed receipt without rewriting historical events.
+
 Release escrowed funds in full to a recipient. Credits the recipient's account, resolves the escrow,
 logs the transaction/event, and persists the receipt and leg atomically. The writer owns the
 locked-state predicate; caller-controlled `constraints` are rejected.
@@ -1055,7 +1188,7 @@ The gateway constructs the `SET` clause dynamically from the keys in `updates`. 
 
 ### POST /board/assets
 
-Record an asset upload. Inserts into `board_assets` and logs an event. The gateway stores metadata only — the actual file is stored by the Task Board service. Accepts an optional `content_hash` field and an optional `constraints` object (see "Compare-and-Set Constraints" above), checked against the referenced `board_tasks` row.
+Record an asset upload. Inserts into `board_assets` and logs an event. The gateway stores metadata only — the actual file is stored by the Task Board service. Accepts an optional `content_hash` field and an optional `constraints` object (see "Compare-and-Set Constraints" above), checked against the referenced `board_tasks` row. The required `admission` object is the final authoritative upload guard; optional constraints may narrow it but cannot replace it.
 
 **Request:**
 ```json
@@ -1069,6 +1202,11 @@ Record an asset upload. Inserts into `board_assets` and logs an event. The gatew
   "storage_path": "data/assets/t-123/login-page.zip",
   "content_hash": "sha256:9f86d0...",
   "uploaded_at": "2026-02-28T14:00:00Z",
+  "admission": {
+    "expected_status": "accepted",
+    "expected_lifecycle_version": 1,
+    "max_files_per_task": 10
+  },
   "event": {
     "event_source": "board",
     "event_type": "asset.uploaded",
@@ -1081,12 +1219,16 @@ Record an asset upload. Inserts into `board_assets` and logs an event. The gatew
 }
 ```
 
-`content_hash` is optional and stored verbatim (`NULL` if omitted) — the gateway does not compute or verify it.
+`content_hash` is optional and stored verbatim (`NULL` if omitted) — the gateway does not compute or verify it. `admission` has exactly the three fields shown: status must be `accepted`, lifecycle version must be a nonnegative signed-64-bit SQLite integer (and not a boolean), and quota must be a positive signed-64-bit SQLite integer (and not a boolean).
 
 **Transaction:**
 ```sql
 BEGIN IMMEDIATE;
--- Only if constraints is provided: verify board_tasks matches {task_id, **constraints}
+-- Reject competing native task work.
+-- Read board_tasks joined to board_task_contracts and require accepted status,
+-- the exact lifecycle version, and uploader_id equal to the assigned worker.
+-- Only if constraints is provided: verify board_tasks matches {task_id, **constraints}.
+-- Reject a duplicate asset_id before enforcing the per-task asset count quota.
 INSERT INTO board_assets (asset_id, task_id, uploader_id, filename, content_type, size_bytes, storage_path, content_hash, uploaded_at)
   VALUES (:asset_id, :task_id, :uploader_id, :filename, :content_type, :size_bytes, :storage_path, :content_hash, :uploaded_at);
 INSERT INTO events (event_source, event_type, timestamp, task_id, agent_id, summary, payload)
@@ -1107,10 +1249,15 @@ COMMIT;
 | Status | Code                    | Description                                    |
 |--------|-------------------------|------------------------------------------------|
 | 400    | `missing_field`         | Required field missing or empty                |
+| 400    | `invalid_payload`       | `admission` is missing, malformed, out of SQLite integer range, or does not require `accepted` |
 | 400    | `invalid_constraints`   | `constraints` is present but not an object, or a constraint column is not a valid identifier |
+| 403    | `forbidden`             | `uploader_id` is not the task's assigned worker |
+| 404    | `task_not_found`        | No task with this `task_id` exists             |
 | 409    | `asset_exists`          | Asset with this `asset_id` already exists      |
 | 409    | `foreign_key_violation` | `task_id` or `uploader_id` reference invalid   |
 | 409    | `constraint_violation`  | `constraints` was supplied and the referenced task did not match |
+| 409    | `task_version_conflict` | Task status is no longer `accepted` or lifecycle version changed |
+| 409    | `too_many_assets`       | Current task asset count reached `max_files_per_task` |
 
 ---
 
@@ -1479,7 +1626,7 @@ Complete list of error codes used by the Database Gateway service:
 | 400    | `missing_field`           | Required field missing, null, or empty string            |
 | 400    | `invalid_amount`          | Amount is not a valid integer in the required range      |
 | 400    | `amount_out_of_range`     | Input exceeds the signed-64-bit monetary representation |
-| 400    | `payload_mismatch`        | Initial issuance differs from balance, or split poster differs from payer |
+| 400    | `payload_mismatch`        | Initial issuance differs from balance, split poster differs from payer, or a settlement event names another task |
 | 400    | `unknown_field`           | Request contains an unknown or disallowed field name     |
 | 400    | `invalid_field`           | A supported nonfinancial update object names a disallowed column |
 | 400    | `invalid_operation_id`    | Financial operation ID is noncanonical or is supplied for zero account creation |
@@ -1501,6 +1648,8 @@ Complete list of error codes used by the Database Gateway service:
 | 409    | `task_exists`             | Task with this ID already exists                         |
 | 409    | `bid_exists`              | Agent already bid on this task                           |
 | 409    | `asset_exists`            | Asset with this ID already exists                        |
+| 409    | `task_version_conflict`   | Asset admission observed another task status or lifecycle version |
+| 409    | `too_many_assets`         | Task asset count reached the admitted configured quota   |
 | 409    | `feedback_exists`         | Feedback already submitted for this (task, from, to)     |
 | 409    | `claim_exists`            | Claim with this ID already exists                        |
 | 409    | `rebuttal_exists`         | Rebuttal with this ID already exists                     |
@@ -1511,11 +1660,11 @@ Complete list of error codes used by the Database Gateway service:
 | 400    | `invalid_constraints`     | `constraints` is not a non-empty object of valid column identifiers |
 | 400    | `invalid_json`            | Request body is not valid JSON, or not a JSON object      |
 | 400    | `invalid_jws`             | Compact token violates the strict seven-field JWS profile |
-| 400    | `invalid_payload`         | Audience, resource, action, body digest, or query digest does not match the received request |
+| 400    | `invalid_payload`         | Request content or authenticated request binding is malformed or inconsistent |
 | 401    | `invalid_authorization`   | Missing, duplicate, or malformed Bearer Authorization header |
 | 401    | `token_expired`           | Authenticated service token is expired under Gateway policy |
 | 401    | `token_not_yet_valid`     | Authenticated service token was issued too far in the future |
-| 403    | `forbidden`               | Unknown KID, invalid signature, missing capability, or unclassified route |
+| 403    | `forbidden`               | Unknown KID, invalid signature, missing capability, unclassified route, or asset uploader is not the assigned worker |
 | 404    | `not_found`               | Generic not-found from a `constraints` check whose target row doesn't exist |
 | 404    | `agent_not_found` / `bid_not_found` / `asset_not_found` / `feedback_not_found` / `claim_not_found` / `rebuttal_not_found` / `ruling_not_found` | Domain-specific not-found on a read route |
 | 405    | `method_not_allowed`      | Path-segment collision on a route that reuses a literal (read routes) |

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import Field, ValidationError
+from pydantic import Field, ValidationError, model_validator
 
 from task_board_service.task_operation_contract import (
     COMMANDS,
@@ -49,8 +49,73 @@ class LegacyReconciliation(StrictModel):
     target_outcome_hint: Literal["approved", "disputed"]
 
 
+class FinancialEffect(StrictModel):
+    """Receipt-backed financial truth, independent of the task's business status."""
+
+    schema_version: Annotated[int, Field(ge=1, le=1)]
+    settlement_state: Literal[
+        "locked", "pending", "attention_required", "conflict", "complete", "historical"
+    ]
+    receipt_state: Literal["absent", "confirmed", "historical"]
+    outcome: Literal["worker_paid", "poster_refunded", "split"] | None
+    operation_id: OperationId | None
+    receipt_reference: OperationId | None
+    business_projection_pending: bool
+    pending_target_status: Literal["approved", "cancelled", "expired", "ruled"] | None
+
+    @model_validator(mode="after")
+    def validate_evidence(self) -> Self:
+        """Reject contradictory evidence without inferring payment from status."""
+        if self.business_projection_pending != (self.pending_target_status is not None):
+            raise ValueError("Pending business projection requires its frozen target")
+        if self.receipt_state == "absent":
+            if self.outcome is not None or self.receipt_reference is not None:
+                raise ValueError("Absent receipt cannot claim a financial outcome")
+            if self.settlement_state not in {"locked", "pending", "attention_required", "conflict"}:
+                raise ValueError("Absent receipt cannot establish settlement")
+        elif self.receipt_state == "confirmed":
+            if (
+                self.operation_id is None
+                or self.receipt_reference != self.operation_id
+                or self.outcome is None
+                or self.settlement_state not in {"pending", "complete", "conflict"}
+            ):
+                raise ValueError("Confirmed outcome requires the intended operation receipt")
+        elif (
+            self.settlement_state != "historical"
+            or self.outcome != "worker_paid"
+            or self.operation_id is not None
+            or self.receipt_reference is not None
+            or self.business_projection_pending
+        ):
+            raise ValueError("Historical payment cannot claim a modern receipt")
+        if self.settlement_state == "locked" and (
+            self.operation_id is not None or self.business_projection_pending
+        ):
+            raise ValueError("Locked escrow cannot have an active financial effect")
+        if self.settlement_state == "pending" and self.operation_id is None:
+            raise ValueError("Pending settlement requires an operation")
+        if self.receipt_state == "confirmed" and (
+            self.business_projection_pending != (self.settlement_state == "pending")
+        ):
+            raise ValueError("Confirmed pending settlement must await its business projection")
+        if self.business_projection_pending and self.operation_id is None:
+            raise ValueError("Pending business projection requires an operation")
+        if self.settlement_state == "conflict" and self.business_projection_pending:
+            raise ValueError("Contradictory evidence cannot promise a pending business update")
+        if self.receipt_state == "confirmed" and self.business_projection_pending:
+            targets = {
+                "worker_paid": {"approved", "ruled"},
+                "poster_refunded": {"cancelled", "expired", "ruled"},
+                "split": {"ruled"},
+            }
+            if self.pending_target_status not in targets[str(self.outcome)]:
+                raise ValueError("Receipt outcome contradicts the pending business target")
+        return self
+
+
 class TaskContractProjection(StrictModel):
-    """Required v3 sidecar fields and separately labeled recovery state."""
+    """Required frozen task terms and separately labeled recovery state."""
 
     lifecycle_version: Integer
     timing_contract_version: Annotated[int, Field(ge=1, le=2)]
@@ -63,6 +128,7 @@ class TaskContractProjection(StrictModel):
     accepted_bid_amount: Integer | None
     pending_transition: PendingTransition | None
     legacy_reconciliations: list[LegacyReconciliation]
+    financial_effect: FinancialEffect
 
 
 def validate_task_projection(data: dict[str, Any]) -> None:

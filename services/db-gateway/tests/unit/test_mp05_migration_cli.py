@@ -29,6 +29,22 @@ def test_cli_runs_explicit_verified_v3_to_v4_migration(
     valid_authority: bool,
 ) -> None:
     source = prepare_v3_source(tmp_path, caller_kid="gateway-board-cli-proof")
+    config_ids = {config.logical_id for config in source.inventory.configs}
+    assert "db-gateway" in config_ids
+    assert "gateway" not in config_ids
+    authority_bindings = [
+        binding
+        for binding in source.inventory.field_bindings
+        if binding.field_path
+        == (
+            "auth",
+            "trusted_callers",
+            source.caller_kid,
+            "public_key_path",
+        )
+    ]
+    assert len(authority_bindings) == 1
+    assert authority_bindings[0].config_id == "db-gateway"
     if not valid_authority:
         source = invalidate_posting_authority(source, defect="missing_board_write")
     backup_id = "cli-publication-cutover"

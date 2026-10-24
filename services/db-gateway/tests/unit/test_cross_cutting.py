@@ -173,6 +173,7 @@ def _prepare_disputed_claim(
         lambda: clock["now"],
         "system-atomicity-test",
         f"ed25519:{public_key_to_b64(key)}",
+        current_task_board_caller_kid="gateway-task-board",
     )
 
     def claim(
@@ -216,6 +217,11 @@ def _prepare_disputed_claim(
     assert accepted["operation_state"] == "completed"
     writer.record_asset(
         {
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": f"asset-{uuid4()}",
             "task_id": task_id,
             "uploader_id": worker_id,

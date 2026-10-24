@@ -10,8 +10,9 @@ retired design is at `observatory-service-specs.md` (superseded).
 The service has two roles:
 
 1. **Read side (Observatory).** Dashboards, tickers, leaderboards, quarterly reports and
-   task/agent drilldowns, computed from a direct read-only connection to the shared economy
-   database. Mostly a pure observer.
+   task/agent drilldowns. Task list/detail core fields and `financial_effect` come from one
+   public Task Board snapshot; permitted identity, bid, asset, feedback and claim/rebuttal
+   enrichment comes from the direct read-only database connection.
 2. **Write side (Operator).** A small set of `/api/proxy/*` routes let a human, through the
    browser, post tasks, accept bids, approve tasks and file disputes — signed and submitted by a
    registered `UserAgent` economic identity (the **operator**), not by the human directly.
@@ -59,11 +60,11 @@ ui (8008)
   ├── Shared SQLite database (read-only, mode=ro) ── metrics, agents, tasks, events, quarterly
   ├── identity (8001)     via operator UserAgent    ── register, verify
   ├── central-bank (8002) via operator UserAgent     ── balance reads (through task-board flows)
-  └── task-board (8003)   via operator UserAgent     ── post/bid-accept/approve/dispute
+  └── task-board (8003)   via operator UserAgent     ── task reads and post/bid-accept/approve/dispute
 ```
 
-No direct HTTP dependency on reputation or court; their data reaches the UI only via the shared
-database (read side).
+No direct HTTP dependency on reputation or court; permitted enrichment reaches the UI only via
+the shared database.
 
 ## Tech Stack
 
@@ -102,6 +103,27 @@ startup-mint code (frozen-test exception #10).
 
 ## Read Path — Direct Read-Only SQLite (Q-4 sanctioned exception)
 
+MP-08 narrows the exception for `GET /api/tasks` and `GET /api/tasks/{task_id}`. Those routes
+read the complete base task snapshot, including the exact eight-key `financial_effect`, from
+the public Task Board API through the existing `UserAgent`. List pagination performs one
+ordered `list_tasks(status=...)` read, computes `total_count`, then applies `offset`/`limit` to
+that same snapshot. Detail performs one `get_task(task_id)` read. The database may enrich that
+snapshot with public identity names, authorized bids, assets, visible feedback, and local
+claim/rebuttal narrative; it never replaces status, reward, accepted bid, timestamps, ruling
+fields, or settlement truth. Open-task bid details remain sealed according to the upstream
+status. Task Board 404 maps to `404 task_not_found`; unavailable or malformed upstream data maps
+to `502 task_board_unavailable`; an uninitialized reader maps to
+`503 task_board_reader_unavailable`. There is no SQLite fallback for a core task snapshot.
+
+Task detail also returns the exact Board `lifecycle_version`, a required nonnegative
+integer. Browser commands bind to that version. Missing, null, boolean, negative or
+otherwise malformed upstream versions produce `502 task_board_unavailable` rather than
+a task view from which an unsafe command could be prepared.
+
+The reader is created before Identity registration. Registration failure disables mutation
+routes but leaves public Task Board reads available, and lifespan shutdown closes the shared
+agent/client exactly once.
+
 - Connection: `aiosqlite.connect(f"file:{settings.database.path}?mode=ro", uri=True)`, opened
   once at startup (`ui_service/core/lifespan.py`) and reused for the process lifetime.
 - If the database file is unreachable at startup, the service still starts; every endpoint that
@@ -126,14 +148,20 @@ need an initialized operator.
 | `GET` | `/api/proxy/browser-config` | — | Returns required `csrf_header_name` and `csrf_header_value`; neither is secret. |
 | `GET` | `/api/proxy/identity` | — | Returns `{"agent_id": "<operator's agent_id>"}`. `503 user_agent_not_registered` if the UserAgent has no `agent_id` yet. |
 | `GET` | `/api/proxy/tasks/{task_id}/bids` | — | Delegates to the operator's signed public `UserAgent.list_bids` contract. Task Board authorizes poster access to open bids; preserve its 403 rejection. Return canonical amounts and enrich authorized rows with public bidder identity and visible quality. Responses are `Cache-Control: private, no-store`. |
-| `POST` | `/api/proxy/tasks` | `{title, spec, reward, bidding_deadline_seconds, execution_deadline_seconds, review_deadline_seconds}` | Posts a new task as the operator (two-token create + escrow lock, per Task Board contract). `502 task_creation_failed` on downstream failure. |
-| `POST` | `/api/proxy/tasks/{task_id}/bids/{bid_id}/accept` | — | Accepts a bid on `task_id` as the operator (poster). `502 bid_acceptance_failed` on downstream failure. |
-| `POST` | `/api/proxy/tasks/{task_id}/approve` | — | Approves a submitted task as the operator (poster). `502 task_approval_failed` on downstream failure. |
-| `POST` | `/api/proxy/tasks/{task_id}/dispute` | `{reason}` | Files a dispute on a submitted task as the operator (poster). `502 dispute_filing_failed` on downstream failure. |
+| `POST` | `/api/proxy/task-postings/prepare` | `{title, spec, reward, bidding_deadline_seconds, acceptance_window_seconds, execution_deadline_seconds, review_deadline_seconds}` | Allocates and returns a complete immutable posting record without transport or economic effect. |
+| `POST` | `/api/proxy/task-postings/{operation_id}/submit` | Complete prepared posting record | Validates the saved record and submits its exact intent. Preserves native published `201`, awaiting-lock `202`, and blocked-integrity `409` outcomes. |
+| `POST` | `/api/proxy/task-postings/{operation_id}/status` | Complete prepared posting record | Validates the saved record and reconciles the same operation identity without allocating a replacement. |
+| `POST` | `/api/proxy/tasks/{task_id}/bids/{bid_id}/accept` | `{operation_id, expected_lifecycle_version}` | Accepts a bid on `task_id` as the operator (poster), retaining native response status. `502 bid_acceptance_failed` on transport or malformed response. |
+| `POST` | `/api/proxy/tasks/{task_id}/approve` | `{operation_id, expected_lifecycle_version}` | Approves a submitted task as the operator (poster), retaining native response status. `502 task_approval_failed` on transport or malformed response. |
+| `POST` | `/api/proxy/tasks/{task_id}/dispute` | `{operation_id, expected_lifecycle_version, reason}` | Files a dispute on a submitted task as the operator (poster), retaining native response status. `502 dispute_filing_failed` on transport or malformed response. |
 
-Request bodies: `CreateTaskRequest` (`title` 1–200 chars, `spec` 1–10,000 chars, `reward > 0`, all
-three deadline-seconds fields `> 0`) and `FileDisputeRequest` (`reason` 1–5,000 chars) — both
-`extra="forbid"` Pydantic models (`ui_service/schemas.py`). There is no proxy route for
+Request bodies: `TaskPostingPrepareRequest` (`title` 1–200 chars, `spec` 1–10,000 chars,
+strict positive integer `reward`, and all four duration fields including the poster-selected
+acceptance window), `TaskPostingRecord` (the exact prepared scope, intent and request hash),
+`NativeMutationRequest` (caller-owned operation ID and strict nonnegative lifecycle version), and
+`FileDisputeRequest` (the same native identity/version plus `reason` 1–5,000 chars)
+are `extra="forbid"` Pydantic models
+(`ui_service/schemas.py`). There is no proxy route for
 submitting work, uploading assets, or rebutting a dispute — the operator only exercises the
 poster-side actions listed above; worker-side flows belong to the agent runtime, not the UI.
 
@@ -148,11 +176,12 @@ inputs fail closed. Forwarded headers do not grant authority.
 The helper validates same-origin proxy write targets before fetching configuration or sending
 the marker. Other origins, embedded credentials, fragments and non-mutating methods are rejected.
 
-**Request validation** bounds actual streamed bytes on all mutating requests, including
-bodyless accept/approve actions (`413 payload_too_large` above `request.max_body_size`, currently
-1,572,864 bytes). The two JSON-bodied create/dispute routes additionally require
-`Content-Type: application/json` (`415 unsupported_media_type`). Empty bodyless actions do not
-require JSON content type. Accepted bytes are replayed unchanged to routing.
+**Request validation** bounds actual streamed bytes on all mutating requests
+(`413 payload_too_large` above `request.max_body_size`, currently 1,572,864 bytes).
+All posting prepare/submit/status and native accept/approve/dispute routes require
+`Content-Type: application/json` (`415 unsupported_media_type`). Missing or invalid native
+identity/version fields fail with 422 before operator transport. Accepted bytes are replayed
+unchanged to routing.
 
 The required `browser_security` configuration declares `allowed_hosts`, `allowed_origins`,
 `csrf_header_name`, `csrf_header_value` and `content_security_policy` without defaults. Hosts
@@ -305,7 +334,8 @@ ratified Q-9 decision, `docs/plans/2026-07-10-q9-treasury-bootstrap-decision.md`
 
 Genesis funds the **operator**, not the `platform` account: `platform.credit` mints unboundedly
 by design (the platform is the sovereign issuer) and needs no seeded balance, while the operator
-needs real funds to post task escrows through `/api/proxy/tasks`. This supersedes any earlier
+needs real funds to post task escrows through the native `/api/proxy/task-postings/*` protocol.
+This supersedes any earlier
 "the `platform` account is seeded with 1,000,000 coins" wording — see the ratified contract delta
 recorded in the target-architecture plan's §5.0 (Q-2 × Q-9 interaction, 2026-07-13).
 
@@ -326,11 +356,16 @@ All failing responses use the **3-field** envelope everywhere in this service (t
 }
 ```
 
-Error codes observed in this service (non-exhaustive elsewhere, exhaustive for the routes listed
-above): `database_unavailable` (503), `invalid_parameter` (400), `invalid_status` (400),
+Local error codes include: `database_unavailable` (503), `invalid_parameter` (400), `invalid_status` (400),
 `invalid_quarter` (400), `agent_not_found` (404), `task_not_found` (404), `no_data` (404),
-`user_agent_unavailable` (503), `user_agent_not_registered` (503), `task_creation_failed` (502),
-`bid_acceptance_failed` (502), `task_approval_failed` (502), `dispute_filing_failed` (502),
+`user_agent_unavailable` (503), `user_agent_not_registered` (503), `task_posting_failed` (502),
+`invalid_task_posting_record` (422), `bid_listing_failed` (502), `bid_acceptance_failed` (502),
+`task_approval_failed` (502), `dispute_filing_failed` (502),
 `unsupported_media_type` (415), `payload_too_large` (413), `method_not_allowed` (405),
 `invalid_host` (400), `non_loopback_client` (403), `forbidden_origin` (403), `csrf_failed` (403),
 `http_error` (varies), `internal_error` (500).
+
+Validated Task Board errors retain their upstream status and error envelope. A malformed
+upstream response becomes the route's 502 error; the proxy does not synthesize missing
+publication evidence. Native blocked posting replies must carry the SDK's complete 409
+error wrapper before normalization to the browser observation envelope.

@@ -113,6 +113,16 @@ board_authority:
   platform_public_key_path: "{key_dir / "contract-platform.pub"}"
   deadline_actor_id: "system-contract-deadlines"
 
+board_effect_recovery:
+  current_task_board_caller_kid: "gateway-task-board"
+  max_attempts_per_delivery: 8
+  initial_backoff_seconds: 2
+  max_backoff_seconds: 60
+  lease_duration_seconds: 45
+  evidence_interval_seconds: 60
+  gateway_timeout_seconds: 10
+  bank_timeout_seconds: 10
+
 recovery:
   maintenance_lock_path: "{key_dir / "maintenance.lock"}"
   backup_root: "{key_dir / "backups"}"
@@ -132,6 +142,10 @@ auth:
       capabilities:
         - "gateway.bank.read"
         - "gateway.bank.write"
+    gateway-task-board:
+      public_key_path: "{key_dir / "gateway-task-board.pub"}"
+      capabilities:
+        - "gateway.board.write"
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(content)
@@ -147,6 +161,7 @@ async def _gateway_backed_client(db_path: str) -> AsyncIterator[LedgerDbClient]:
     key_dir = Path(db_path).parent
     generate_keypair("gateway-identity", key_dir)
     generate_keypair("gateway-central-bank", key_dir)
+    generate_keypair("gateway-task-board", key_dir)
     generate_keypair("contract-platform", key_dir)
     async with AsyncExitStack() as cleanup:
         config_path = _write_gateway_config(db_path, key_dir)
@@ -160,6 +175,7 @@ async def _gateway_backed_client(db_path: str) -> AsyncIterator[LedgerDbClient]:
             busy_timeout_ms=5000,
             journal_mode="wal",
             schema_sql=_SCHEMA_PATH.read_text(),
+            current_task_board_caller_kid="gateway-task-board",
         )
         cleanup.callback(writer.close)
         state.db_writer = writer

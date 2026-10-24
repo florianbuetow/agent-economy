@@ -1,5 +1,8 @@
 # Tasks
 
+> **Owner scope update — 2026-10-23:** Follow `MASTERPLAN-TO-COMPLETE-THE-PROJECT.md` and `FEATURE-COMPLETENESS.md` for feature-first execution. Existing data is disposable test data: old-schema/data migration, historical asset conversion and backward compatibility are out of scope. Initialize fresh databases directly. Reuse existing tests and add only missing basic feature checks; no exhaustive fault matrices or repeated planning/review gates. Older migration/testing obligations below are historical where they conflict with this update. Completed work stays complete; no feature is closed by this scope change.
+
+
 Checkboxes record verified task progress. Canonical implementation and decision tickets remain OPEN until their required closure evidence is complete. Complete only the relevant numbered checkbox after its stated verification. Stable T-IDs identify the canonical backlog obligations; MP IDs group the master plan. Red proof precedes each implementation pair. Supplied CI output is historical evidence, not a substitute for fresh reproduction. Policy tasks require an accepted owner decision; do not silently choose a policy.
 
 Work in the existing refactor workspace. The latest owner instruction permits commits and pushes throughout Saturday and Sunday and outside 08:00–18:00 on weekdays, in Europe/Amsterdam time. Both remain prohibited Monday through Friday from 08:00 inclusive until 18:00 exclusive. This overrides the initial goal's all-hours prohibition for commits and pushes only. Branch switches, merges, cherry-picks and rebases remain prohibited. Preserve unrelated changes and verify the local time before any permitted Git write; read-only inspection is allowed. Full-root CI must use MP-01 isolation.
@@ -43,6 +46,27 @@ Prerequisites: None; MP-00 focused proofs can precede this group.
 
 - [x] 2.15 [T-179] Prove that audited standalone integration/unit startup log directories escape their temporary roots without starting services or writing ordinary logs; distinguish config-only inputs and manual ASGI helpers.
 - [x] 2.16 [T-180] Configure distinct owned temporary log directories for all audited service startup fixtures; verify boundary proofs and live regression runs with unchanged ordinary log hashes, preserving existing contents; require fresh root CI before closure.
+
+Baseline repairs verified on 2026-10-22 (independent of MP-03). T-183–T-190 have
+item-specific proof/review and the fresh root37981 gate. See
+`evidence/mp05-posting/root-ci-2026-10-22.md` and the resume evidence index:
+
+- [x] 2.17 [T-183] Preserve the current isolated Gateway audit failure, verify official advisory/fix evidence and inventory every affected environment for certifi and Pillow; distinguish environment/setup errors from vulnerable-version failures.
+- [x] 2.18 [T-184] Update only verified affected dependency constraints and uv-generated locks, with no new ignores; run affected gates and fresh isolated root CI before closure.
+- [x] 2.19 [T-185] Preserve exact installed-path audits and lock metadata for remaining agents/tools/shared-library dependency findings; verify upstream corrected-version compatibility, separating temporary audit overlays from project dependencies.
+- [x] 2.20 [T-186] Apply targeted corrections for those verified non-service findings; require clean exact-path audits, affected component gates and fresh isolated root CI without new ignores.
+- [x] 2.21 [T-187] Reproduce fast command exit before owned process-group/session capture with deterministic scheduling, retaining foreign-group and cleanup-retry controls.
+- [x] 2.22 [T-188] Repair command identity capture without PID-only signaling authority; verify actual exit codes, safe teardown and fresh isolated root CI.
+- [x] 2.23 [T-189] Capture the missing commit/push hook baseline and test weekday boundaries, weekends and clock failures without attempting either Git action.
+- [x] 2.24 [T-190] Restore and install the Europe/Amsterdam office-hours hooks, preserving any existing hooks; verify both guards and fresh isolated root CI before closure.
+
+Additional prerequisite surfaced during MP-08 component CI (2026-10-22):
+
+- [x] 2.25 [T-191] Preserve the failing installed OpenTelemetry audit, verify official advisory and compatible family metadata, and inventory the seven Semgrep consumers.
+- [x] 2.26 [T-192] Apply only the verified Semgrep-scoped dependency correction with uv-generated locks; require Semgrep smoke/rule execution, clean audits and a fresh isolated root gate without exclusions.
+
+- [x] 2.27 [T-193] Retain the R7 filelock audit failure and verify upstream fixed versions and consumer bounds; preserve the compatibility exception rationale.
+- [x] 2.28 [T-194] Apply targeted secure filelock constraints and uv-generated locks; verify consumers, audits and fresh root CI without exclusions.
 
 ## 3. MP-03: Durable keys and one token contract
 
@@ -119,6 +143,14 @@ MP-05/16/17/18 packages or their prerequisite gates.
 
 Prerequisites: MP-04 and MP-07.
 
+Current 2026-10-22 checkpoint supersedes the historical progress below: UI,
+feeder, SDK and durable demo rollout are implemented and reviewed. Creation,
+late-request, legacy refund and demo restart proofs pass their bounded checks;
+the retired posting API is removed. Supplied demo scenarios and completed replay
+pass in an isolated mock-Court runtime. Fresh root CI handle54816 and independent
+item-level completion audit are pending. No checkbox or ticket closes yet; see
+`evidence/mp05-posting/resume-2026-10-22/checkpoint.md` for exact evidence and gaps.
+
 Reviewed contract: `docs/plans/2026-10-18-mp05-publication-contract.md`.
 Initial/corrected baseline proof is under `evidence/mp05-posting/`. Native
 publication, legacy refund reconciliation, and the Board recovery loop are now
@@ -135,19 +167,23 @@ under implementation and the stale unattended fixture now repaired. Current evid
 indexed in `evidence/mp05-posting/feeder-and-ci-progress/`. These bounded results
 do not close the items.
 
-- [ ] 8.1 [T-118] Inject lock-success/insert-failure, post-commit response loss and failed-compensation histories; verify orphaned or incorrectly refunded work on the current baseline.
-- [ ] 8.2 [T-119] Persist stable posting intent and reconcile ambiguous publication before refund; verify one correctly funded public task or one documented refund after each restart.
-- [ ] 8.3 [T-119] Add payload-bound create replay to SDK/proxy and document pending publication; verify duplicate submits return one task and changed terms under one ID conflict.
-- [ ] 8.4 [T-119] Run creation fault and conservation integration cases; verify incomplete tasks are not discoverable as open and no orphan escrow remains.
+- [x] 8.1 [T-118] Inject lock-success/insert-failure, post-commit response loss and failed-compensation histories; verify orphaned or incorrectly refunded work on the current baseline.
+- [x] 8.2 [T-119] Persist stable posting intent and reconcile ambiguous publication before refund; verify one correctly funded public task or one documented refund after each restart.
+- [x] 8.3 [T-119] Add payload-bound create replay to SDK/proxy and document pending publication; verify duplicate submits return one task and changed terms under one ID conflict.
+- [x] 8.4 [T-119] Run creation fault and conservation integration cases; verify incomplete tasks are not discoverable as open and no orphan escrow remains.
+
+MP-05 closure: independent item review and root37981 pass, with1180 unchanged
+source/config files and365 recorded process groups absent. See
+`evidence/mp05-posting/completion-audit.md`. Later Core/Vision work remains open.
 
 ## 9. MP-08: Recover terminal financial effects
 
 Prerequisites: MP-04 and MP-07. Court handoffs close in MP-10.
 
-- [ ] 9.1 [T-124] Write no-reader and restart proofs for terminal tasks with failed/ambiguous payout or refund; verify the existing pending-work gap.
-- [ ] 9.2 [T-125] Persist and schedule financial/task effects independently of business status with bounded retries and fenced ownership; verify one final receipt and cleared pending state after recovery.
-- [ ] 9.3 [T-125] Expose pending-age/failure diagnostics and safe retry operations; verify one persistent failure does not starve other work and no unpaid task appears paid.
-- [ ] 9.4 [T-125] Document the recovery contract and exercise kill/response-loss histories; verify generic operation primitives are available to Court without claiming rebuttal recovery in this package.
+- [x] 9.1 [T-124] Write no-reader and restart proofs for terminal tasks with failed/ambiguous payout or refund; verify the existing pending-work gap.
+- [x] 9.2 [T-125] Persist and schedule financial/task effects independently of business status with bounded retries and fenced ownership; verify one final receipt and cleared pending state after recovery.
+- [x] 9.3 [T-125] Expose pending-age/failure diagnostics and safe retry operations; verify one persistent failure does not starve other work and no unpaid task appears paid.
+- [x] 9.4 [T-125] Document the recovery contract and exercise kill/response-loss histories; verify generic operation primitives are available to Court without claiming rebuttal recovery in this package.
 
 ## 10. MP-09: Safe files and immutable manifests
 
@@ -159,6 +195,14 @@ Prerequisites: MP-07. Storage safety is independent; policy closure requires Q-M
 - [ ] 10.4 [T-127] After T-162 acceptance, apply the artifact access/retention contract and safe UI/SDK downloads; verify the authorized-access matrix and document supported evidence formats/limits.
 
 ## 11. Decision gates Q-M1 and Q-M3
+
+The owner's 2026-10-22 Q-M1 choices are recorded in
+`evidence/policy-options/owner-decisions-2026-10-22.md`: public instructions/files,
+configurable OpenAI-compatible Court providers, initial text/source/JSON/CSV,
+immediate terminal-job page download closure and archive after more than three
+days. Existing no-appeal finality remains settled. These choices supersede draft
+recommendations but do not close T-162 or supply the remaining evidence limits
+and implementation proof. The owner has now selected Q-M3 flat task weighting, Court override, completed-submission eligibility, and public aggregates with restricted provenance; implementation remains open.
 
 Prerequisites: Prepare evidence now; dependent policy tasks remain OPEN until accepted decisions exist.
 
@@ -268,7 +312,7 @@ Prerequisites: MP-01, MP-03, MP-06, MP-08 and MP-10.
 - [ ] 23.1 [T-150] Add wrong-port/missing-dependency, failed-readiness and inconsistent-restore cases; verify current false success and stranded-work histories.
 - [ ] 23.2 [T-151] Implement owned-process readiness/startup/teardown with explicit config limits; verify failed dependencies return nonzero and unrelated processes survive.
 - [ ] 23.3 [T-151] Implement complete DB/key/asset restore and reconciliation reports; verify a disputed/pending-settlement snapshot continues once with conserved money and original evidence.
-- [ ] 23.4 [T-151] Document disk-full, permissions, failed-migration and stuck-effect operations; verify runbook drills and redacted correlated diagnostics in isolated runs.
+- [ ] 23.4 [T-151] Document disk-full, permissions, failed fresh-initialization and stuck-effect operations; verify runbook drills and redacted correlated diagnostics in isolated runs.
 
 ## 24. MP-22: Full verification infrastructure
 
@@ -297,9 +341,9 @@ Prerequisites: MP-15 through MP-22 and MP-25; Q-M1/Q-M3 must be accepted.
 
 ## 27. Q-M2 and MP-24: Full economic Vision
 
-Prerequisites: MP-04, MP-14, MP-16, MP-17 and MP-18; pricing branch waits for accepted T-163.
+Pricing implementation starts now from MP-04/MP-07 using the accepted T-163 owner decision; it does not wait for reputation or the non-math experiment. The non-math/adaptation branch uses MP-14, MP-16, MP-17 and MP-18.
 
-- [ ] 27.1 [T-163] Prepare fixed-reward versus accepted-price worked economic examples for the project owner; verify the accepted ADR covers rounding, excess refund timing, dispute shares and existing tasks before implementing changed pricing.
+- [ ] 27.1 [T-163] Apply the already selected accepted-bid price, final unused-budget refund, and floor-rounded Court share; reconcile the decision/specification with basic examples. No historical-data conversion or repeated owner choice is required.
 - [ ] 27.2 [T-156] Add non-math input/multi-output and multi-round measurement proofs; verify missing capability or unsupported market-pricing/specialization claims on the current baseline.
 - [ ] 27.3 [T-157] Implement only the accepted economic policy and reusable non-math examples; verify all settlement outcomes conserve value and preserve outstanding accepted terms.
 - [ ] 27.4 [T-157] Run reproducible classification/adaptation rounds through real APIs and publish measured outcomes/uncertainty; verify no hard-coded winner or mock result is presented as emergent behavior and update economic docs.

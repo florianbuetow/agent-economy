@@ -16,14 +16,12 @@ from service_auth.jws import TokenPolicy
 from service_auth.task_board_responses import TaskBoardCommandResponse
 from service_auth.task_postings import TaskPostingIntent
 from service_auth.user_agent import UserAgent
-from service_commons.exceptions import ServiceError
 
 from ui_service.app import create_app
 from ui_service.config import clear_settings_cache
 from ui_service.core import lifespan as lifespan_module
 from ui_service.core.lifespan import lifespan
 from ui_service.core.state import get_app_state, reset_app_state
-from ui_service.services import tasks as tasks_service
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -715,91 +713,3 @@ async def test_malformed_task_board_conflict_becomes_typed_502(
         "message": "Task Board returned a malformed error response",
         "details": {},
     }
-
-
-async def _constant(value: Any, *_args: Any, **_kwargs: Any) -> Any:
-    return value
-
-
-async def test_drilldown_reads_authoritative_contract_version_in_task_snapshot(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    sql_calls: list[str] = []
-
-    async def fake_fetchone(_db: object, sql: str, _params: tuple[Any, ...]) -> Any:
-        sql_calls.append(sql)
-        if len(sql_calls) == 1:
-            return (
-                "t-native-ui",
-                "a-ui-native",
-                None,
-                "Native UI task",
-                "Keep the caller intent explicit.",
-                75,
-                "open",
-                None,
-                "2026-10-18T12:00:00Z",
-                None,
-                None,
-                "2026-10-18T11:58:00Z",
-                None,
-                None,
-                None,
-                17,
-            )
-        return None
-
-    monkeypatch.setattr(tasks_service, "execute_fetchone", fake_fetchone)
-    monkeypatch.setattr(tasks_service, "_resolve_agent_name", lambda *_args: _constant("Operator"))
-    monkeypatch.setattr(tasks_service, "_load_worker", lambda *_args: _constant(None))
-    monkeypatch.setattr(tasks_service, "execute_scalar", lambda *_args: _constant(0))
-    monkeypatch.setattr(tasks_service, "_load_bids", lambda *_args: _constant([]))
-    monkeypatch.setattr(tasks_service, "_load_assets", lambda *_args: _constant([]))
-    monkeypatch.setattr(tasks_service, "_load_feedback", lambda *_args: _constant([]))
-    monkeypatch.setattr(tasks_service, "_load_dispute", lambda *_args: _constant(None))
-
-    result = await tasks_service.get_task_drilldown(object(), "t-native-ui")
-
-    assert "LEFT JOIN board_task_contracts btc ON btc.task_id = bt.task_id" in sql_calls[0]
-    assert result is not None
-    assert result["lifecycle_version"] == 17
-
-
-async def test_drilldown_reports_missing_contract_as_integrity_error(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    async def missing_contract_row(_db: object, _sql: str, _params: tuple[Any, ...]) -> Any:
-        return (
-            "t-native-ui",
-            "a-ui-native",
-            None,
-            "Native UI task",
-            "Keep the caller intent explicit.",
-            75,
-            "open",
-            None,
-            "2026-10-18T12:00:00Z",
-            None,
-            None,
-            "2026-10-18T11:58:00Z",
-            None,
-            None,
-            None,
-            None,
-        )
-
-    monkeypatch.setattr(tasks_service, "execute_fetchone", missing_contract_row)
-
-    with pytest.raises(ServiceError) as caught:
-        await tasks_service.get_task_drilldown(object(), "t-native-ui")
-
-    assert caught.value.status_code == 500
-    assert caught.value.error == "task_contract_missing"
-
-
-async def test_drilldown_still_returns_none_for_actual_missing_task(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(tasks_service, "execute_fetchone", lambda *_args: _constant(None))
-
-    assert await tasks_service.get_task_drilldown(object(), "t-missing") is None

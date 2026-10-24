@@ -75,6 +75,7 @@ def _seed_task(
         lambda: now_us,
         "system-feedback-fixture-deadline",
         f"ed25519:{public_key_to_b64(platform_key)}",
+        current_task_board_caller_kid="gateway-task-board",
     )
 
     def claim(
@@ -122,6 +123,11 @@ def _seed_task(
     assert accepted["operation_state"] == "completed"
     writer.record_asset(
         {
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": f"asset-{uuid4()}",
             "task_id": task_id,
             "uploader_id": worker_id,
@@ -198,6 +204,7 @@ class _Fixture:
             busy_timeout_ms=BUSY_TIMEOUT_MS,
             journal_mode=JOURNAL_MODE,
             schema_sql=None,
+            current_task_board_caller_kid="gateway-task-board",
         )
         try:
             writer.create_account(
@@ -240,6 +247,7 @@ def writer(seeded: _Fixture) -> Iterator[DbWriter]:
         busy_timeout_ms=BUSY_TIMEOUT_MS,
         journal_mode=JOURNAL_MODE,
         schema_sql=None,
+        current_task_board_caller_kid="gateway-task-board",
     )
     yield w
     w.close()
@@ -504,6 +512,7 @@ class TestConcurrentReveal:
                 busy_timeout_ms=BUSY_TIMEOUT_MS,
                 journal_mode=JOURNAL_MODE,
                 schema_sql=None,
+                current_task_board_caller_kid="gateway-task-board",
             )
             for _ in range(2)
         ]

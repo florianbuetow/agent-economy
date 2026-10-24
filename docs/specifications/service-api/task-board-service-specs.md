@@ -1,5 +1,58 @@
 # Task Board Service — API Specification
 
+## MP-08 financial-effect recovery and public truth amendment
+
+The [MP-08 financial recovery contract](../../plans/2026-10-22-mp08-financial-recovery-contract.md)
+defines current release/split recovery and settlement presentation. It supersedes
+older implications below that Bank acknowledgment or task status proves payment,
+that recovery depends on a task GET, or that the UI may derive financial truth
+from local tables. Court command delivery remains MP-10; aggregate earnings and
+GDP remain unchanged until MP-19.
+
+Task Board starts one lifespan-owned `FinancialEffectRecovery` process with a
+fresh worker UUID. It runs one bounded startup cycle and repeats at the required
+configured interval, processing at most the explicit
+`max_delivery_attempts_per_cycle` value (10 in production). Each cycle attempts
+the Gateway lease route at least once, contains per-item failures, validates the
+lease and stored immutable intent, checks receipt evidence before dispatch,
+uses the exact existing Bank operation ID, and finalizes through the protected
+Gateway boundary after any success or ambiguous response. It never waits for a
+public GET and never treats an HTTP acknowledgment as settlement authority.
+
+The signed operator CLI provides strict `effects list`, `effects show`, and
+dead-letter-only `effects retry` commands using the configured Gateway signer.
+Every argument is explicit. Success writes only the validated JSON result to
+stdout; invalid, foreign, malformed, failed or ambiguous results exit 1 with a
+generic stderr diagnostic.
+
+All public task detail and summary responses include `financial_effect`, and the
+same field is preserved by bid acceptance, cancellation, submission, approval,
+dispute, and ruling mutation responses. Its exact eight fields are:
+`schema_version`, `settlement_state`, `receipt_state`, `outcome`, `operation_id`,
+`receipt_reference`, `business_projection_pending`, and
+`pending_target_status`. Settlement may be locked, pending, attention-required,
+conflicting, complete, or exhaustively historical. Only the exact intended,
+fully validated receipt may claim `worker_paid`, `poster_refunded`, or `split`;
+terminal status alone never does so. Exhaustively audited pre-receipt history may
+claim historical `worker_paid` while keeping modern operation and receipt IDs
+null.
+
+Rulings at 0 or 100 percent remain full Bank releases, but their public outcomes
+are evidence-derived: 100 percent confirms `worker_paid`; 0 percent confirms
+`poster_refunded`. An unfinished ruled projection with a confirmed receipt is
+reported as payment/refund confirmed with `business_projection_pending=true`
+and pending target `ruled`; a ruled task without exact receipt evidence remains
+attention-required and unconfirmed. Intermediate percentages confirm `split`
+only from the exact split receipt.
+
+The UI treats Task Board task reads as the authority for task lifecycle and
+`financial_effect`. It may join read-only local identity, bid, asset, feedback,
+or dispute data for display, but it does not recompute settlement or replace the
+Board snapshot. UI `GET /api/tasks` and `GET /api/tasks/{task_id}` expose the
+field. Its bid-accept, approve and dispute proxy responses preserve the upstream
+field exactly. Competitive/uncontested and other aggregate views are outside
+MP-08.
+
 ## MP-05 native publication amendment
 
 The [durable publication contract](../../plans/2026-10-18-mp05-publication-contract.md)
@@ -140,7 +193,12 @@ Bids carry an `amount`, not a free-text proposal. **`amount` is a competitive si
 | `content_hash` | string   | SHA-256 hex digest of the file content, computed server-side at upload time |
 | `uploaded_at`  | datetime | ISO 8601 timestamp |
 
-Assets are stored on the filesystem under `{assets.storage_path}/{task_id}/{asset_id}/{filename}`.
+New uploads use an independent generated storage key:
+`{assets.storage_path}/live/<two-hex-shard>/<uuid4>.blob`. The display filename
+is metadata and never forms a filesystem path. The Gateway's stored
+`storage_path` is authoritative, including for historical rows; downloads do
+not reconstruct it from a filename. The service pins its owned mode-0700 root
+and uses descriptor-relative, no-follow operations with exclusive creation.
 
 ---
 
@@ -313,7 +371,7 @@ This prevents bidders from seeing competing proposals and adjusting their bids. 
 Deadlines are evaluated two ways, not one:
 
 1. **Lazy evaluation** — on every read operation (`GET /tasks/{task_id}`, `GET /tasks`) and at the top of every mutating operation, the service checks whether any active deadline for that task has passed and applies the transition before proceeding.
-2. **Periodic background sweep** — a lifespan-owned asyncio background task wakes up every `deadline_evaluation.evaluation_interval_seconds` (required config key; see Configuration below) and evaluates every task currently in `open`, `accepted`, `submitted`, or `disputed` status. This guarantees forward progress (status transitions, escrow releases, and the disputed-task ruling trigger) even when nothing polls a task via the API — including direct-DB readers like the UI, which would otherwise see stale states indefinitely.
+2. **Periodic background sweep** — a lifespan-owned asyncio background task wakes up every `deadline_evaluation.evaluation_interval_seconds` (required config key; see Configuration below) and evaluates every task currently in `open`, `accepted`, `submitted`, or `disputed` status. This guarantees deadline and ruling-trigger progress even when nothing polls a task via the API. MP-08 financial-effect recovery is a separate lifespan worker, and the UI obtains its authoritative task and settlement snapshot from Task Board before local enrichment.
 
 Both paths call the same `evaluate_deadline` logic, so behavior is identical regardless of which one fires first.
 
@@ -734,6 +792,10 @@ Upload a deliverable asset.
 |---------|--------|-------------|
 | `file`  | file   | The deliverable file |
 
+The multipart `filename` is unsigned display metadata. It is validated and
+stored for presentation, but it is not a storage path and is not added to the
+signed upload payload.
+
 **Authentication:** `Authorization: Bearer <JWS>` header.
 
 **JWS Payload:**
@@ -751,7 +813,17 @@ Upload a deliverable asset.
 2. Signer must match `worker_id` and must be the task's assigned worker
 3. Task must be in ACCEPTED status
 4. File size must not exceed `assets.max_file_size`
-5. Total assets for this task must not exceed `assets.max_files_per_task`
+5. The complete request must not exceed `request.max_body_size`
+6. Multipart parsing uses the required positive limits in `asset_upload`
+7. Total assets for this task must not exceed `assets.max_files_per_task`
+
+Before reading file bytes, Task Board records the accepted task's current
+`lifecycle_version`, assigned worker, and configured asset quota. After file
+validation and private staging, metadata admission is one atomic Gateway write
+guarded by status `accepted`, that exact lifecycle version and worker, and the
+quota. A lifecycle transition or competing upload during streaming is rejected
+without publishing metadata; no database transaction is held while request
+bytes are received.
 
 **Response (201 Created):**
 ```json
@@ -779,6 +851,7 @@ Upload a deliverable asset.
 | 403    | `forbidden`                     | Signer is not the assigned worker |
 | 404    | `task_not_found`                | No task with this `task_id` |
 | 409    | `invalid_status`                | Task is not in ACCEPTED status |
+| 409    | `task_version_conflict`         | Task status or lifecycle version changed during upload |
 | 413    | `file_too_large`                | File exceeds `assets.max_file_size` |
 | 409    | `too_many_assets`               | Max assets per task reached |
 | 502    | `identity_service_unavailable`  | Cannot reach Identity service |
@@ -821,13 +894,27 @@ List all assets for a task.
 
 Download an asset file.
 
+Public bytes are available only while the authoritative task read is nonterminal.
+Reads observing `approved`, `ruled`, `cancelled` or `expired` return
+`410 artifact_unavailable`; listing and stored evidence remain intact. The
+current status check is preparatory: the atomic Gateway grant and dedicated
+Court evidence route remain open MP-09 work.
+
 **Response (200 OK):**
 
-Returns the file content with appropriate `Content-Type` and `Content-Disposition` headers.
+Returns the exact file content after checking its size and SHA-256 against the
+authoritative metadata using the same opened file descriptor. Corrupt bytes
+are not returned or silently rewritten.
+
+Responses include `Content-Type`, `Cache-Control: no-store`,
+`X-Content-Type-Options: nosniff`, and `Content-Disposition` with a safely quoted
+ASCII fallback plus an exact UTF-8 encoded `filename*` parameter.
 
 ```
 Content-Type: application/zip
-Content-Disposition: attachment; filename="login-page.zip"
+Content-Disposition: attachment; filename="login-page.zip"; filename*=UTF-8''login-page.zip
+Cache-Control: no-store
+X-Content-Type-Options: nosniff
 ```
 
 **Errors:**
@@ -836,6 +923,8 @@ Content-Disposition: attachment; filename="login-page.zip"
 |--------|-------------------|-------------|
 | 404    | `task_not_found`  | No task with this `task_id` |
 | 404    | `asset_not_found` | No asset with this `asset_id` for this task |
+| 409    | `artifact_integrity_blocked` | Stored file size or SHA-256 does not match its recorded metadata |
+| 410    | `artifact_unavailable` | The task is approved, ruled, cancelled or expired |
 
 ---
 
@@ -1195,6 +1284,14 @@ assets:
   max_file_size: 10485760
   max_files_per_task: 10
 
+asset_upload:
+  stream_chunk_bytes: 262144
+  max_multipart_overhead_bytes: 1048576
+  max_header_count: 8
+  max_header_size: 4224
+  max_boundary_bytes: 70
+  max_display_filename_utf8_bytes: 255
+
 request:
   max_body_size: 10485760
 
@@ -1209,7 +1306,7 @@ deadline_evaluation:
   evaluation_interval_seconds: 10
 ```
 
-All fields are required except `identity`, `assets`, `limits`, and `deadline_evaluation` at the schema level — `db_gateway` and `deadline_evaluation` are enforced as required at startup (the service raises and refuses to start without them) even though they are `Optional` in the Pydantic schema. The service fails fast on any missing required value. No default values.
+All fields are required except `identity`, `assets`, `limits`, and `deadline_evaluation` at the schema level — `db_gateway` and `deadline_evaluation` are enforced as required at startup (the service raises and refuses to start without them) even though they are `Optional` in the Pydantic schema. The service fails fast on any missing required value. No default values. Every `asset_upload` value is a strict positive integer; the checked-in values above are the active parser limits. `assets.max_file_size` remains the file-content maximum and `request.max_body_size` remains the complete-request maximum.
 
 `platform.agent_id` is the agent ID of the platform agent. `platform.private_key_path` points to the Ed25519 private key file used for signing platform operations (escrow release/split, and the outbound Court calls). `platform.agent_config_path` points at the shared `agents/config.yaml` that builds the full `PlatformAgent` (including the Court base URL used for dispute filing, rebuttal forwarding, and ruling triggers) — when set, it takes precedence over `platform.private_key_path` for key material. `db_gateway.url` is the DB Gateway's base URL; all task/bid/asset persistence goes through it, not a local SQLite file opened directly by this service. `deadline_evaluation.evaluation_interval_seconds` is the wake interval for the periodic background sweep (see "Deadline Evaluation: Lazy AND Periodic" above).
 

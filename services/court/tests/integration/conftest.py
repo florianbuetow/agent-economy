@@ -128,6 +128,16 @@ board_authority:
   platform_public_key_path: "{Path(db_path).parent / "platform.pub"}"
   deadline_actor_id: "system-task-board-deadline"
 
+board_effect_recovery:
+  current_task_board_caller_kid: "gateway-task-board"
+  max_attempts_per_delivery: 8
+  initial_backoff_seconds: 2
+  max_backoff_seconds: 60
+  lease_duration_seconds: 45
+  evidence_interval_seconds: 60
+  gateway_timeout_seconds: 10
+  bank_timeout_seconds: 10
+
 request:
   max_body_size: 1048576
 auth:
@@ -203,6 +213,7 @@ async def _start_live_gateway(db_path: str) -> tuple[_LiveGateway, DbWriter]:
         busy_timeout_ms=5000,
         journal_mode="wal",
         schema_sql=_SCHEMA_PATH.read_text(),
+        current_task_board_caller_kid="gateway-task-board",
     )
     state.db_writer = writer
     state.db_reader = DbReader(db=writer.connection)
@@ -486,6 +497,11 @@ async def seed_task(
     resp = await gateway_client.post(
         "/board/assets",
         json={
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": asset_id,
             "task_id": task_id,
             "uploader_id": worker_id,

@@ -189,6 +189,9 @@ The `agents/` runtime (task-feeder + math-worker loops) can drive steps 1–7 en
 
 ## Git Rules
 
+- **Never commit or push on weekdays from 08:00 inclusive until 18:00 exclusive, Europe/Amsterdam.** Both are allowed outside those hours and all day Saturday/Sunday. Check the actual local date and time immediately before either action.
+- The office-hours rule overrides session-completion instructions to commit or push. Never bypass the hooks or retry a blocked action through another route.
+- This checkout uses `.githooks/pre-commit` and `.githooks/pre-push`, sharing the office-hours guard. Git must resolve `core.hooksPath` to this checkout's `.githooks` directory; cloning does not copy local Git configuration. Preserve any existing hooks when configuring another checkout.
 - **Never use `git -C <path>`** to operate on other worktrees. Always use the full `git` command from the current working directory.
 
 ## Operating Mode
@@ -433,6 +436,12 @@ Start a new session. Delegate to a sub-agent to implement the service features.
 
 ## Session Management
 
+- Preserve the user's normal `PATH` during verification. Never prepend fake executables or override `PATH` to make tests pass. Isolate test behavior through disposable project fixtures, and support normal version-manager shims when running `just ci`.
+- After every multi-hour work session, run the full root `just ci-quiet` in an isolated verification environment to find underlying issues before handing off.
+- Diagnose and fix concrete CI failures until the full pipeline passes. Use scoped native subagents for independent investigation and fixes, with clear file ownership and concise context to conserve tokens; the parent owns integration and final verification.
+- Fix root causes without shortcuts: do not skip checks, suppress failures, weaken tests, or substitute a narrow passing check for full CI. Run targeted checks during repairs, then rerun the full pipeline on the integrated result.
+- If CI investigation reveals a major missing component or business-logic gap, inventory the missing behavior, affected files, and failure evidence, then report it to the user before implementing that larger work. Wait for the user's decision on how to continue; do not silently expand a CI repair into feature development.
+- Report the actual CI result, fixes, and any unresolved gaps. A green pipeline does not by itself establish feature completeness.
 - At 150 turns: proactively suggest checkpointing: "This session has 150+ turns. I recommend we commit, push, and start fresh to avoid context degradation."
 - At 200 turns: strongly recommend wrapping up.
 - Marathon sessions (>200 turns) correlate with 3x higher frustration and 2x higher correction rates.

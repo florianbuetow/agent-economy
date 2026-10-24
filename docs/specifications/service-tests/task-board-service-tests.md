@@ -1,5 +1,109 @@
 # Task Board Service — Production Release Test Specification
 
+## MP-09 bounded storage and download acceptance amendment
+
+The initial MP-09 slice requires generated storage keys independent of display
+filenames, pinned owned roots, no-follow descendant operations, exclusive
+creation, explicit key projection and deterministic descriptor cleanup.
+`test_mp09_asset_storage_safety.py`, `test_mp09_asset_storage_projection.py`,
+`test_mp09_asset_descriptor_ownership.py`, `test_mp09_asset_root_bootstrap.py`,
+`test_mp09_asset_storage_insert_contract.py` and
+`test_mp09_asset_lifespan_cleanup.py` cover these requirements. Download header
+proof in `routers/test_mp09_asset_download_headers.py` preserves exact Unicode,
+quotes, percent and plus characters without malformed headers.
+
+`test_mp09_asset_download_integrity.py` uploads through the real manager and
+Gateway store, then changes only its disposable stored bytes. Same-size
+tampering, truncation and extension must each return no content and report
+`409 artifact_integrity_blocked`. Original recorded metadata, the altered file
+and unrelated sentinels remain unchanged. Untouched files retain their exact
+filename, media type, byte count, hash and content.
+
+These focused proofs do not close MP-09. Atomic reservations, multipart
+streaming, immutable manifests, durable publication/reconciliation, terminal
+access grants and archive migration remain covered by the open acceptance plan
+in `docs/plans/2026-10-22-mp09-acceptance-plan.md`.
+
+`test_mp09_completed_asset_access.py` and `test_mp09_asset_access_matrix.py`
+require public downloads to succeed in open, accepted, submitted and disputed
+states, and return `410 artifact_unavailable` in approved, ruled, cancelled and
+expired states. Metadata, task state, events and stored bytes remain unchanged.
+The open/cancelled historical asset fixture is explicitly distinguished from
+native poster-input support. These are status-observing checks, not proof of
+atomic grant ordering during a concurrent transition.
+
+The isolated parser's contracts are exercised by
+`routers/test_mp09_streaming_parser_component.py` and
+`routers/test_mp09_streaming_large_chunk.py`: strict explicit bounds, exact
+framing errors, UTF-8 names, complete closing boundary, one file, bounded writes
+before the next request chunk, and bounded parser-owned memory even when ASGI
+delivers a whole large file in one chunk. Live upload-route integration remains
+open; component success must not be reported as fixing the route baselines.
+
+## MP-08 financial-effect recovery acceptance amendment
+
+Use the [MP-08 financial recovery contract](../../plans/2026-10-22-mp08-financial-recovery-contract.md)
+for current recovery and public-settlement expectations. These focused mappings
+do not assert that the full repository release gate has passed.
+
+Configuration, lifecycle and operator proof maps to
+`test_mp08_financial_recovery_config.py`,
+`test_mp08_financial_recovery_loop.py`, and `test_mp08_recovery_cli.py`.
+Configuration must require explicit finite positive interval and exact integer
+cycle bound, with production explicitly set to 10 and no application fallback.
+Lifespan must run one bounded startup cycle, continue configured periodic cycles,
+cancel and await the task on shutdown, and close its dedicated client. The CLI
+must sign exact protected requests from explicit configuration; list/show/retry
+must validate strict result shapes and immutable retry identity, write one JSON
+result to stdout only on success, and exit 1 generically for invalid, foreign,
+malformed, failed, ambiguous, or non-retryable cases.
+
+Worker proof maps to `test_mp08_financial_recovery_worker.py`,
+`test_mp08_worker_dispatch_fences.py`, `test_mp08_worker_error_diagnostics.py`,
+`test_mp08_worker_postdispatch_failure.py`,
+`test_mp08_worker_temporal_and_ack.py`, and
+`test_mp08_worker_timeout_boundary.py`. It must prove:
+
+- each startup/periodic cycle calls lease at least once and processes no more
+  than the configured 10 deliveries while containing item failures;
+- strict lease validation and exact immutable native/legacy intent validation;
+- authoritative receipt lookup before Bank dispatch and zero dispatch for
+  legacy succeeded evidence, conflicts, malformed leases or already committed
+  receipts;
+- exact Bank operation identity across retries, native release/split dispatch,
+  legacy pending release only, and finalize after success, timeout, lost,
+  malformed or otherwise ambiguous acknowledgment;
+- only recognized transport/timeout/dependency causes reach the fenced failure
+  route, without raw exception or credential leakage; stale/conflict results do
+  not cause a second dispatch.
+
+End-to-end Board boundary proof maps to
+`test_mp08_native_effect_finalizer_http.py`,
+`test_mp08_recovery_fairness.py`, `test_mp08_terminal_effect_recovery.py`, and
+`test_mp08_current_pending_gap.py`. It covers recovery without public GET
+polling, terminal task recovery, late receipt adoption, fairness past failed or
+exhausted rows, process-fence behavior, native finalization status/error mapping,
+and exactly-once settlement through restarts and ambiguous responses.
+
+Public projection proof maps to `test_mp08_public_financial_projection.py`,
+`test_mp08_financial_projection_integrity.py`, and
+`test_mp08_ruling_release_projection.py`. Detail, list, and all six current
+mutation responses must preserve the exact eight-field `financial_effect`
+object. No task status or Bank acknowledgment may claim payment. Exact intended
+receipts map approval and 100-percent rulings to `worker_paid`, cancellation,
+expiry and 0-percent rulings to `poster_refunded`, and intermediate rulings to
+`split`; confirmed money with unfinished task projection remains explicitly
+pending its frozen target. Missing or contradictory evidence remains
+unconfirmed or conflicting. Historical paid output requires exhaustive audited
+history and carries no modern receipt identity.
+
+UI integration coverage is owned by the UI suite's authoritative Task Board
+read, financial projection, proxy-preservation and browser-status MP-08 cases.
+Those tests must show that UI task/list routes take lifecycle and settlement from
+the Board response and use local SQLite only for permitted display enrichment.
+Competitive/uncontested and aggregate GDP/earnings surfaces are unchanged and
+remain outside this package for MP-19. Durable Court delivery remains MP-10.
+
 ## MP-05 native posting acceptance amendment
 
 The real-process restart proof now prepares a durable native SDK intent and

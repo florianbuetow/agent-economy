@@ -40,15 +40,31 @@ def assert_completion_marker(page: Any, record: dict[str, Any]) -> None:
     )
     assert isinstance(raw, str)
     marker = json.loads(raw)
+    assert set(marker) == {
+        "scope",
+        "operation_id",
+        "task_id",
+        "request_sha256",
+        "observed_status_code",
+        "publication",
+    }
+    assert marker["scope"] == record["scope"]
     assert marker["operation_id"] == operation_id
     assert marker["task_id"] == record["intent"]["task_id"]
     assert marker["request_sha256"] == record["request_sha256"]
-    assert marker["publication"]["publication_state"] == "published"
+    assert marker["observed_status_code"] in {200, 201}
+    publication = marker["publication"]
+    assert publication["protocol_version"] == 1
+    assert publication["operation_id"] == operation_id
+    assert publication["task_id"] == record["intent"]["task_id"]
+    assert publication["request_sha256"] == record["request_sha256"]
+    assert publication["lock_operation_id"] == record["intent"]["lock_operation_id"]
+    assert publication["publication_state"] == "published"
 
 
 def operator_balance(database_path: Path, operator_id: str) -> int:
     """Read the operator balance without mutating the isolated Gateway database."""
-    with sqlite3.connect(database_path) as connection:
+    with sqlite3.connect(f"{database_path.as_uri()}?mode=ro", uri=True) as connection:
         row = connection.execute(
             "SELECT balance FROM bank_accounts WHERE account_id=?",
             (operator_id,),
@@ -70,11 +86,18 @@ def assert_conserved_publication(
     operator_id = intent["actor_id"]
     reward = intent["reward"]
 
-    with sqlite3.connect(database_path) as connection:
+    with sqlite3.connect(f"{database_path.as_uri()}?mode=ro", uri=True) as connection:
         connection.row_factory = sqlite3.Row
+        global_counts = connection.execute(
+            "SELECT (SELECT COUNT(*) FROM board_tasks),"
+            "(SELECT COUNT(*) FROM board_task_publications),"
+            "(SELECT COUNT(*) FROM bank_escrow),"
+            "(SELECT COUNT(*) FROM bank_transactions WHERE type='escrow_lock'),"
+            "(SELECT COUNT(*) FROM events WHERE event_type='task.created'),"
+            "(SELECT COUNT(*) FROM events WHERE event_type='escrow.locked')"
+        ).fetchone()
         tasks = connection.execute(
-            "SELECT task_id,poster_id,reward,escrow_id,event_id FROM board_tasks "
-            "WHERE task_id=?",
+            "SELECT task_id,poster_id,reward,escrow_id FROM board_tasks WHERE task_id=?",
             (task_id,),
         ).fetchall()
         publications = connection.execute(
@@ -103,6 +126,8 @@ def assert_conserved_publication(
             (operator_id,),
         ).fetchone()
 
+    assert global_counts is not None
+    assert tuple(global_counts) == (1, 1, 1, 1, 1, 1)
     assert len(tasks) == len(publications) == len(escrows) == len(locks) == 1
     task = tasks[0]
     publication = publications[0]
@@ -115,7 +140,6 @@ def assert_conserved_publication(
         "poster_id": operator_id,
         "reward": reward,
         "escrow_id": escrow["escrow_id"],
-        "event_id": publication["creation_event_id"],
     }
     assert dict(publication) == {
         "operation_id": operation_id,
@@ -125,7 +149,7 @@ def assert_conserved_publication(
         "state": "published",
         "escrow_id": escrow["escrow_id"],
         "lock_receipt_event_id": escrow["event_id"],
-        "creation_event_id": task["event_id"],
+        "creation_event_id": events[1]["event_id"],
     }
     assert dict(escrow) == {
         "escrow_id": task["escrow_id"],
@@ -145,11 +169,10 @@ def assert_conserved_publication(
         "event_id": escrow["event_id"],
     }
     assert [
-        (event["event_id"], event["event_source"], event["event_type"])
-        for event in events
+        (event["event_id"], event["event_source"], event["event_type"]) for event in events
     ] == [
         (escrow["event_id"], "central-bank", "escrow.locked"),
-        (task["event_id"], "board", "task.created"),
+        (publication["creation_event_id"], "task-board", "task.created"),
     ]
     assert all(event["task_id"] == task_id for event in events)
     assert all(event["agent_id"] == operator_id for event in events)

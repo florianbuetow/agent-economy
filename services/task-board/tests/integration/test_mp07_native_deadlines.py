@@ -523,6 +523,11 @@ async def _submit_natively(
     asset = await gateway_client.post(
         "/board/assets",
         json={
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": f"asset-{uuid.uuid4()}",
             "task_id": bid.task.task_id,
             "uploader_id": bid.worker_id,

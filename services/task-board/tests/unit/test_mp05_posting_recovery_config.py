@@ -39,6 +39,14 @@ def _valid_config() -> dict[str, Any]:
             "agent_config_path": "agents.yaml",
         },
         "request": {"max_body_size": 1_048_576},
+        "asset_upload": {
+            "stream_chunk_bytes": 262_144,
+            "max_multipart_overhead_bytes": 1_048_576,
+            "max_header_count": 8,
+            "max_header_size": 4_224,
+            "max_boundary_bytes": 70,
+            "max_display_filename_utf8_bytes": 255,
+        },
         "db_gateway": {
             "url": "http://127.0.0.1:8007",
             "timeout_seconds": 10,
@@ -63,6 +71,10 @@ def _valid_config() -> dict[str, Any]:
             "interval_seconds": 0.25,
             "batch_size": 100,
             "diagnostic_limit": 200,
+        },
+        "financial_effect_recovery": {
+            "interval_seconds": 2.0,
+            "max_delivery_attempts_per_cycle": 10,
         },
     }
 

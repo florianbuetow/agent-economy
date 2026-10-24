@@ -266,7 +266,7 @@ code-audit:
     @# PYSEC-2026-2132 (click 8.1.8): fix is click>=8.3.3, unreachable while semgrep
     @# pins click~=8.1.8 (verified vs semgrep 1.169.0). Dev-only tool; tracked as T-108 —
     @# remove the ignore when semgrep unpins.
-    @uv run pip-audit --ignore-vuln PYSEC-2026-2132
+    @uv run pip-audit --cache-dir "${TMPDIR:?TMPDIR must name writable verification storage}/pip-audit-cache" --ignore-vuln PYSEC-2026-2132
     @echo ""
     @printf "\033[0;32m✓ No known vulnerabilities found\033[0m\n"
     @echo ""

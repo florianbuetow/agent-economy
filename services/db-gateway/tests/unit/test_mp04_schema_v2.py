@@ -87,15 +87,15 @@ def test_v2_exact_migrated_metadata_is_recognized() -> None:
         connection.close()
 
 
-def test_version_five_remains_future_even_with_v2_catalog() -> None:
+def test_version_six_remains_future_even_with_v2_catalog() -> None:
     connection = sqlite3.connect(":memory:")
     try:
-        sql = _candidate_v2_sql().replace("CHECK (version = 2)", "CHECK (version = 5)")
-        sql = sql.replace("VALUES (1, 2, NULL, NULL, NULL)", "VALUES (1, 5, NULL, NULL, NULL)")
+        sql = _candidate_v2_sql().replace("CHECK (version = 2)", "CHECK (version = 6)")
+        sql = sql.replace("VALUES (1, 2, NULL, NULL, NULL)", "VALUES (1, 6, NULL, NULL, NULL)")
         connection.executescript(sql)
         classification = classify_schema(connection)
         assert classification.state is SchemaState.FUTURE
-        assert classification.version == 5
+        assert classification.version == 6
     finally:
         connection.close()
 

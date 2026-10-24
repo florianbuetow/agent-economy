@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -13,9 +12,7 @@ from service_auth.financial_responses import LegacyFinancialEnvelope
 
 from demo_replay import clients
 from demo_replay import engine as engine_module
-from demo_replay.config import PlatformConfig
-from demo_replay.engine import ReplayEngine
-from demo_replay.wallet import DemoAgent
+from test_mp04_financial_intents import _durable_funding_engine
 
 pytestmark = pytest.mark.unit
 
@@ -70,28 +67,12 @@ def _legacy_credit(operation_id: str) -> dict[str, object]:
     return LegacyFinancialEnvelope.model_validate(raw).model_dump(mode="json")
 
 
-def _config() -> PlatformConfig:
-    return PlatformConfig(
-        identity_url="https://identity",
-        bank_url="https://bank",
-        task_board_url="https://board",
-        reputation_url="https://reputation",
-        court_url="https://court",
-        platform_key_path=Path("keys/platform.key"),
-        token_ttl_seconds=60,
-    )
-
-
 @pytest.mark.asyncio
 async def test_demo_fund_rejects_historical_credit_before_success_output(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    engine = ReplayEngine({"name": "test", "agents": [], "steps": []}, _config())
-    agent = DemoAgent.create("alice", "Alice", 60)
-    agent.agent_id = "a-alice"
-    engine.agents["alice"] = agent
-    engine.platform = DemoAgent.create("platform", "Platform", 60)
-    engine.platform.agent_id = "a-platform"
+    step = {"action": "fund", "agent": "alice", "amount": 100, "reference": _REFERENCE}
+    engine = _durable_funding_engine([step])
     operation_id = operation_id_for("demo-funding", ("a-alice", _REFERENCE))
     credit = AsyncMock(return_value=_legacy_credit(operation_id))
     console = MagicMock()
@@ -102,10 +83,7 @@ async def test_demo_fund_rejects_historical_credit_before_success_output(
         RuntimeError,
         match=r"historical observation.*no native operation confirmation",
     ) as error:
-        await engine._do_fund(
-            MagicMock(),
-            {"action": "fund", "agent": "alice", "amount": 100, "reference": _REFERENCE},
-        )
+        await engine._execute_step(MagicMock(), step)
 
     assert _HISTORICAL_TX_ID in str(error.value)
     credit.assert_awaited_once()

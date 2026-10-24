@@ -179,9 +179,7 @@ _POSTING_INTENT = TaskPostingIntent.from_json(
         "task_id": POSTING_TASK_ID,
         "actor_kind": "agent",
         "actor_id": "a-ui-native",
-        "lock_operation_id": operation_id_for(
-            "task-lock", (POSTING_TASK_ID, "a-ui-native")
-        ),
+        "lock_operation_id": operation_id_for("task-lock", (POSTING_TASK_ID, "a-ui-native")),
         **POSTING_TERMS,
     }
 )
@@ -992,7 +990,10 @@ def test_recovery_surface_replays_frozen_intent_after_task_advances(
     expect(recovery).to_be_visible()
     expect(recovery).to_be_enabled()
     assert len(scenario.mutation_bodies) == 1
-    with page.expect_response(lambda response: response.url.endswith(scenario.path)):
+    with (
+        page.expect_response(lambda response: response.url.endswith(scenario.path)),
+        page.expect_response(lambda response: response.url.endswith(f"/api/tasks/{TASK_ID}")),
+    ):
         recovery.click()
 
     assert len(scenario.mutation_bodies) == 2

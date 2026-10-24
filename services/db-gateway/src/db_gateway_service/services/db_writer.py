@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING, Any
 from service_commons.exceptions import ServiceError
 
 from db_gateway_service import task_time
+from db_gateway_service.effect_recovery_audit import audit_effect_recovery
 from db_gateway_service.publication_audit import audit_publications
 from db_gateway_service.receipt_audit import audit_receipt_ownership
 from db_gateway_service.schema import (
@@ -46,6 +47,7 @@ from db_gateway_service.schema import (
 from db_gateway_service.services.bank_writer import BankWriter
 from db_gateway_service.services.board_writer import BoardWriter
 from db_gateway_service.services.court_writer import CourtWriter
+from db_gateway_service.services.effect_delivery_writer import EffectDeliveryWriter
 from db_gateway_service.services.identity_writer import IdentityWriter
 from db_gateway_service.services.legacy_posting_writer import LegacyPostingWriter
 from db_gateway_service.services.reputation_writer import ReputationWriter
@@ -55,6 +57,7 @@ from db_gateway_service.task_contract_audit import audit_task_contracts
 
 if TYPE_CHECKING:
     from db_gateway_service.board_authority import BoardAuthority
+    from db_gateway_service.config import BoardEffectRecoveryConfig
     from db_gateway_service.task_operation_requests import TaskOperationRequest
     from db_gateway_service.task_publication_requests import TaskPublicationRequest
 
@@ -89,6 +92,7 @@ def _validate_bootstrap_statement(statement: str) -> None:
         or body[:3] == ("insert", "into", "schema_metadata")
         or body[:3] == ("insert", "into", "bank_receipt_cutover")
         or body[:3] == ("insert", "into", "board_publication_cutover")
+        or body[:3] == ("insert", "into", "board_task_effect_delivery_cutover")
     )
     if not allowed or ";" in body:
         first_word = body[0] if body else "empty"
@@ -140,8 +144,13 @@ class DbWriter:
         busy_timeout_ms: int,
         journal_mode: str,
         schema_sql: str | None,
+        *,
+        current_task_board_caller_kid: str,
     ) -> None:
+        if not isinstance(current_task_board_caller_kid, str) or not current_task_board_caller_kid:
+            raise ValueError("current_task_board_caller_kid must be a nonempty string")
         self._db_path = db_path
+        self._current_task_board_caller_kid = current_task_board_caller_kid
         _validate_database_configuration(busy_timeout_ms, journal_mode)
         self._db = sqlite3.connect(db_path, check_same_thread=False)
         try:
@@ -154,6 +163,7 @@ class DbWriter:
             self._admit_receipt_ownership()
             self._admit_task_contracts()
             self._admit_publications()
+            self._admit_effect_recovery()
 
             self._configure_connection(busy_timeout_ms, journal_mode)
 
@@ -209,6 +219,26 @@ class DbWriter:
             },
         )
 
+    def _admit_effect_recovery(self) -> None:
+        """Reject incomplete coverage or owners unreachable by the current Board key."""
+        audit = audit_effect_recovery(self._db)
+        foreign = self._db.execute(
+            "SELECT effect_operation_id FROM board_task_effect_deliveries "
+            "WHERE owner_caller_kid<>? ORDER BY effect_operation_id LIMIT 1",
+            (self._current_task_board_caller_kid,),
+        ).fetchone()
+        if audit.recovery_clean and foreign is None:
+            return
+        findings = [finding.code for finding in audit.findings]
+        if foreign is not None:
+            findings.append("delivery_owner_not_current")
+        raise ServiceError(
+            "effect_recovery_audit_failed",
+            "Financial-effect recovery admission failed",
+            503,
+            {"findings": sorted(set(findings))},
+        )
+
     def _admit_receipt_ownership(self) -> None:
         """Reject incomplete or corrupt financial ownership before configuration."""
         result = audit_receipt_ownership(self._db)
@@ -249,7 +279,7 @@ class DbWriter:
         )
 
     def _bootstrap_schema(self, schema_sql: str | None) -> SchemaClassification:
-        """Create the exact current v4 schema atomically without implicit commits."""
+        """Create the exact current V5 schema atomically without implicit commits."""
         if schema_sql is None:
             raise ServiceError(
                 "schema_required",
@@ -268,6 +298,7 @@ class DbWriter:
             self._admit_receipt_ownership()
             self._admit_task_contracts()
             self._admit_publications()
+            self._admit_effect_recovery()
             self._db.commit()
             return classification
         except BaseException as primary:
@@ -309,7 +340,7 @@ class DbWriter:
 
     @staticmethod
     def _admit_existing_schema(classification: SchemaClassification) -> None:
-        if classification.state is SchemaState.CURRENT_V4:
+        if classification.state is SchemaState.CURRENT_V5:
             return
         details: dict[str, object] = {
             "state": classification.state.value,
@@ -323,6 +354,7 @@ class DbWriter:
             SchemaState.CURRENT_V1,
             SchemaState.CURRENT_V2,
             SchemaState.CURRENT_V3,
+            SchemaState.CURRENT_V4,
         }:
             raise ServiceError(
                 "migration_required",
@@ -450,6 +482,12 @@ class DbWriter:
         writer = LegacyPostingWriter(self._db)
         return writer.reconcile(observation_id, caller_kid)
 
+    def get_legacy_posting_observation(
+        self, observation_id: str, caller_kid: str
+    ) -> dict[str, Any]:
+        """Read one caller-owned legacy refund observation without effects."""
+        return LegacyPostingWriter(self._db).get(observation_id, caller_kid)
+
     def claim_task_operation(
         self,
         command: TaskOperationRequest,
@@ -462,6 +500,7 @@ class DbWriter:
             task_time.utc_now_us,
             authority.deadline_actor_id,
             authority.platform_public_key,
+            current_task_board_caller_kid=self._current_task_board_caller_kid,
         )
         return writer.claim_operation(command, caller_kid)
 
@@ -477,8 +516,108 @@ class DbWriter:
             task_time.utc_now_us,
             authority.deadline_actor_id,
             authority.platform_public_key,
+            current_task_board_caller_kid=self._current_task_board_caller_kid,
         )
         return writer.finalize_operation(operation_id, caller_kid)
+
+    def get_effect_delivery(
+        self,
+        operation_id: str,
+        caller_kid: str,
+        authority: BoardAuthority,
+    ) -> dict[str, object]:
+        """Return one owner-filtered financial-effect diagnostic."""
+        return self._effect_writer(authority).get(operation_id, caller_kid)
+
+    def list_effect_deliveries(
+        self,
+        *,
+        state: str,
+        after: str,
+        limit: int,
+        caller_kid: str,
+        authority: BoardAuthority,
+    ) -> dict[str, object]:
+        """Return one bounded financial-effect diagnostics page."""
+        return self._effect_writer(authority).list(
+            state=state,
+            after=after,
+            limit=limit,
+            caller_kid=caller_kid,
+        )
+
+    def lease_effect_delivery(
+        self,
+        worker_id: str,
+        caller_kid: str,
+        authority: BoardAuthority,
+        settings: BoardEffectRecoveryConfig,
+    ) -> dict[str, object]:
+        """Lease one due financial effect after bounded evidence observation."""
+        return self._effect_writer(authority).lease(worker_id, caller_kid, settings)
+
+    def fail_effect_delivery(
+        self,
+        operation_id: str,
+        generation: int,
+        worker_id: str,
+        failure_code: str,
+        caller_kid: str,
+        authority: BoardAuthority,
+        settings: BoardEffectRecoveryConfig,
+    ) -> dict[str, object]:
+        """Record one fenced recovery attempt failure."""
+        return self._effect_writer(authority).fail(
+            operation_id,
+            generation,
+            worker_id,
+            failure_code,
+            caller_kid,
+            settings,
+        )
+
+    def retry_effect_delivery(
+        self,
+        operation_id: str,
+        caller_kid: str,
+        authority: BoardAuthority,
+        settings: BoardEffectRecoveryConfig,
+    ) -> dict[str, object]:
+        """Requeue one dead-letter delivery."""
+        return self._effect_writer(authority).retry(operation_id, caller_kid, settings)
+
+    def finalize_effect_delivery(
+        self,
+        operation_id: str,
+        caller_kid: str,
+        authority: BoardAuthority,
+    ) -> dict[str, object]:
+        """Adopt one native financial receipt atomically."""
+        return self._effect_writer(authority).finalize_native(operation_id, caller_kid)
+
+    def finalize_legacy_effect_observation(
+        self,
+        observation_id: str,
+        caller_kid: str,
+    ) -> dict[str, object]:
+        """Adopt one supported migrated settlement receipt atomically."""
+        writer = EffectDeliveryWriter(
+            self._db,
+            task_time.utc_now_us,
+            self._current_task_board_caller_kid,
+            None,
+            None,
+        )
+        return writer.finalize_legacy(observation_id, caller_kid)
+
+    def _effect_writer(self, authority: BoardAuthority) -> EffectDeliveryWriter:
+        return EffectDeliveryWriter(
+            self._db,
+            task_time.utc_now_us,
+            self._current_task_board_caller_kid,
+            authority.deadline_actor_id,
+            authority.platform_public_key,
+        )
 
     def submit_bid(
         self,

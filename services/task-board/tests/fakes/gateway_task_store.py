@@ -51,7 +51,13 @@ class GatewayTaskStore(TaskDbClient):
             raise ValueError("Test database path must be an explicit absolute file path")
         if not caller_kid or caller_kid.strip() != caller_kid:
             raise ValueError("Test caller KID must be a nonblank canonical string")
-        self._writer = DbWriter(str(db_path), busy_timeout_ms, journal_mode, schema_sql)
+        self._writer = DbWriter(
+            str(db_path),
+            busy_timeout_ms,
+            journal_mode,
+            schema_sql,
+            current_task_board_caller_kid=caller_kid,
+        )
         try:
             self._reader = DbReader(self._writer.connection)
             self._operations = TaskOperationWriter(
@@ -59,6 +65,7 @@ class GatewayTaskStore(TaskDbClient):
                 clock_us,
                 authority.deadline_actor_id,
                 authority.platform_public_key,
+                current_task_board_caller_kid=caller_kid,
             )
             self._publications = TaskPublicationWriter(
                 self._writer.connection,

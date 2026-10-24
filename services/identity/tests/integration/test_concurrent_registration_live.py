@@ -95,6 +95,15 @@ recovery:
 board_authority:
   platform_public_key_path: "{log_dir / "platform.pub"}"
   deadline_actor_id: "system-task-board-deadline"
+board_effect_recovery:
+  current_task_board_caller_kid: "gateway-task-board"
+  max_attempts_per_delivery: 8
+  initial_backoff_seconds: 2
+  max_backoff_seconds: 60
+  lease_duration_seconds: 45
+  evidence_interval_seconds: 60
+  gateway_timeout_seconds: 10
+  bank_timeout_seconds: 10
 request:
   max_body_size: 1048576
 auth:
@@ -107,6 +116,10 @@ auth:
       capabilities:
         - "gateway.identity.read"
         - "gateway.identity.write"
+    gateway-task-board:
+      public_key_path: "{log_dir / "gateway-task-board.pub"}"
+      capabilities:
+        - "gateway.board.write"
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, dir=str(log_dir)) as f:
         f.write(content)
@@ -159,6 +172,7 @@ def live_identity(tmp_path: Path) -> Iterator[str]:
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
     generate_keypair("gateway-identity", log_dir)
+    generate_keypair("gateway-task-board", log_dir)
     generate_keypair("platform", log_dir)
     db_path = tmp_path / "economy.db"
 

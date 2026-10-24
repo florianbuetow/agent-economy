@@ -28,16 +28,24 @@ UserAgent.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from service_auth.config import AgentConfig
+from service_auth.financial_identity import operation_id_for
+from service_auth.jws import TokenPolicy
 from service_auth.task_board_responses import TaskBoardCommandResponse
+from service_auth.task_postings import TaskPostingIntent, TaskPostingResponse
 
 from ui_service.core.state import get_app_state
 
 pytestmark = pytest.mark.integration
 
 OPERATION_ID = "op-00000000-0000-4000-8000-000000000072"
+POSTING_OPERATION_ID = "op-00000000-0000-4000-8000-000000000073"
+POSTING_TASK_ID = "t-00000000-0000-4000-8000-000000000074"
 NATIVE_IDENTITY = {
     "operation_id": OPERATION_ID,
     "expected_lifecycle_version": 7,
@@ -92,22 +100,87 @@ class _FakeUserAgent:
 
     def __init__(self, agent_id: str = "a-operator-fake") -> None:
         self.agent_id = agent_id
-        self.post_task_calls: list[dict[str, Any]] = []
+        private_key = Ed25519PrivateKey.generate()
+        self.config = AgentConfig(
+            name="UI operator",
+            private_key=private_key,
+            public_key=private_key.public_key(),
+            identity_url="https://identity.test",
+            bank_url="https://bank.test",
+            task_board_url="https://board.test",
+            reputation_url="https://reputation.test",
+            court_url="https://court.test",
+            token_ttl_seconds=30,
+            token_policy=TokenPolicy(max_lifetime_seconds=30, clock_skew_seconds=0),
+        )
+        self.prepare_task_posting_calls: list[dict[str, Any]] = []
+        self.submit_task_posting_calls: list[TaskPostingIntent] = []
         self.accept_bid_calls: list[dict[str, Any]] = []
         self.approve_task_calls: list[dict[str, Any]] = []
         self.dispute_task_calls: list[dict[str, Any]] = []
-        self.post_task_result: dict[str, Any] = {
-            "task_id": "t-fake-1",
-            "poster_id": agent_id,
-            "status": "open",
-        }
-        self.post_task_raises: Exception | None = None
+        self.submit_task_posting_raises: Exception | None = None
 
-    async def post_task(self, **kwargs: Any) -> dict[str, Any]:
-        self.post_task_calls.append(kwargs)
-        if self.post_task_raises is not None:
-            raise self.post_task_raises
-        return self.post_task_result
+    def prepare_task_posting(self, **kwargs: Any) -> TaskPostingIntent:
+        self.prepare_task_posting_calls.append(kwargs)
+        return TaskPostingIntent.from_json(
+            {
+                "protocol_version": 1,
+                "operation_id": POSTING_OPERATION_ID,
+                "task_id": POSTING_TASK_ID,
+                "actor_kind": "agent",
+                "actor_id": self.agent_id,
+                "lock_operation_id": operation_id_for(
+                    "task-lock", (POSTING_TASK_ID, self.agent_id)
+                ),
+                **kwargs,
+            }
+        )
+
+    async def submit_task_posting(self, intent: TaskPostingIntent) -> TaskPostingResponse:
+        self.submit_task_posting_calls.append(intent)
+        if self.submit_task_posting_raises is not None:
+            raise self.submit_task_posting_raises
+        admitted = datetime(2026, 10, 19, 9, 0, tzinfo=UTC)
+        published = admitted + timedelta(seconds=1)
+        bidding = published + timedelta(seconds=intent.bidding_deadline_seconds)
+        acceptance = bidding + timedelta(seconds=intent.acceptance_window_seconds)
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
+        return TaskPostingResponse(
+            status_code=201,
+            body={
+                "protocol_version": 1,
+                "operation_id": intent.operation_id,
+                "task_id": intent.task_id,
+                "request_sha256": intent.request_sha256,
+                "publication_state": "published",
+                "lock_operation_id": intent.lock_operation_id,
+                "escrow_id": "esc-fake-1",
+                "admitted_at": admitted.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                "published_at": published.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                "result": {
+                    "task_id": intent.task_id,
+                    "poster_id": intent.actor_id,
+                    "title": intent.title,
+                    "spec": intent.spec,
+                    "reward": intent.reward,
+                    "bidding_deadline_seconds": intent.bidding_deadline_seconds,
+                    "acceptance_window_seconds": intent.acceptance_window_seconds,
+                    "execution_deadline_seconds": intent.execution_deadline_seconds,
+                    "review_deadline_seconds": intent.review_deadline_seconds,
+                    "status": "open",
+                    "escrow_id": "esc-fake-1",
+                    "created_at": published.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    "bidding_deadline": bidding.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    "acceptance_deadline": acceptance.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    "bidding_cutoff_us": int((bidding - epoch).total_seconds() * 1_000_000),
+                    "acceptance_cutoff_us": int((acceptance - epoch).total_seconds() * 1_000_000),
+                    "lifecycle_version": 0,
+                    "timing_contract_version": 2,
+                    "event_id": 73,
+                },
+                "error": None,
+            },
+        )
 
     async def accept_bid(self, **kwargs: Any) -> TaskBoardCommandResponse:
         self.accept_bid_calls.append(kwargs)
@@ -166,16 +239,23 @@ async def test_identity_unavailable_when_user_agent_missing(client) -> None:
 
 
 async def test_create_task_passthrough_no_auth_header_required(client) -> None:
-    """PROXY-03 (passthrough) + SEC-02: a valid create-task call with a
-    working UserAgent succeeds with no auth header of any kind, and the
-    fields are forwarded to UserAgent.post_task unchanged."""
+    """PROXY-03 + SEC-02: prepare and submit need no browser auth header."""
     fake = _FakeUserAgent()
     get_app_state().user_agent = fake
 
-    response = await client.post("/api/proxy/tasks", json=VALID_CREATE_BODY)
-    assert response.status_code == 200
-    assert response.json() == fake.post_task_result
-    assert fake.post_task_calls == [VALID_CREATE_BODY]
+    prepared = await client.post("/api/proxy/task-postings/prepare", json=VALID_CREATE_BODY)
+    assert prepared.status_code == 200
+    operation_id = prepared.json()["intent"]["operation_id"]
+    response = await client.post(
+        f"/api/proxy/task-postings/{operation_id}/submit", json=prepared.json()
+    )
+    assert response.status_code == 201
+    assert response.json()["publication"]["result"]["poster_id"] == fake.agent_id
+    assert response.json()["publication"]["result"]["acceptance_window_seconds"] == 1800
+    assert fake.prepare_task_posting_calls == [VALID_CREATE_BODY]
+    assert fake.submit_task_posting_calls == [
+        TaskPostingIntent.from_json(prepared.json()["intent"])
+    ]
 
 
 @pytest.mark.parametrize(
@@ -195,20 +275,25 @@ async def test_create_task_field_bounds_rejected_with_422(
     get_app_state().user_agent = fake
     body = {**VALID_CREATE_BODY, **overrides}
 
-    response = await client.post("/api/proxy/tasks", json=body)
+    response = await client.post("/api/proxy/task-postings/prepare", json=body)
     assert response.status_code == 422
-    assert fake.post_task_calls == []
+    assert fake.prepare_task_posting_calls == []
+    assert fake.submit_task_posting_calls == []
 
 
 async def test_create_task_downstream_failure_surfaces_as_502(client) -> None:
-    """PROXY-05: a UserAgent.post_task failure maps to 502 task_creation_failed."""
+    """PROXY-05: a native submit failure maps to 502 task_posting_failed."""
     fake = _FakeUserAgent()
-    fake.post_task_raises = RuntimeError("Task Board unreachable")
     get_app_state().user_agent = fake
 
-    response = await client.post("/api/proxy/tasks", json=VALID_CREATE_BODY)
+    prepared = await client.post("/api/proxy/task-postings/prepare", json=VALID_CREATE_BODY)
+    assert prepared.status_code == 200
+    fake.submit_task_posting_raises = RuntimeError("Task Board unreachable")
+    response = await client.post(
+        f"/api/proxy/task-postings/{POSTING_OPERATION_ID}/submit", json=prepared.json()
+    )
     assert response.status_code == 502
-    assert response.json()["error"] == "task_creation_failed"
+    assert response.json()["error"] == "task_posting_failed"
 
 
 async def test_accept_bid_passthrough(client) -> None:
@@ -272,26 +357,28 @@ async def test_create_task_extra_field_rejected_with_422(client) -> None:
     get_app_state().user_agent = fake
     body = {**VALID_CREATE_BODY, "unexpected_field": "nope"}
 
-    response = await client.post("/api/proxy/tasks", json=body)
+    response = await client.post("/api/proxy/task-postings/prepare", json=body)
     assert response.status_code == 422
-    assert fake.post_task_calls == []
+    assert fake.prepare_task_posting_calls == []
+    assert fake.submit_task_posting_calls == []
 
 
 async def test_non_json_content_type_rejected_with_415(client) -> None:
-    """VAL-01: wrong Content-Type on POST /api/proxy/tasks -> 415, rejected
+    """VAL-01: wrong Content-Type on posting prepare -> 415, rejected
     by the middleware before the route handler (and therefore the
     UserAgent) ever runs."""
     fake = _FakeUserAgent()
     get_app_state().user_agent = fake
 
     response = await client.post(
-        "/api/proxy/tasks",
+        "/api/proxy/task-postings/prepare",
         content=b"not json",
         headers={"Content-Type": "text/plain"},
     )
     assert response.status_code == 415
     assert response.json()["error"] == "unsupported_media_type"
-    assert fake.post_task_calls == []
+    assert fake.prepare_task_posting_calls == []
+    assert fake.submit_task_posting_calls == []
 
 
 @pytest.mark.parametrize(

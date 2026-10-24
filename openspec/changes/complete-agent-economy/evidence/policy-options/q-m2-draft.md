@@ -1,7 +1,24 @@
-# Q-M2 / T-163: pricing in the economic Vision — proposed, not accepted
+# Q-M2 / T-163: pricing options — superseded by accepted decision
+
+The owner resolved the pricing choices. The current decision is
+`docs/plans/2026-10-23-q-m2-accepted-bid-pricing-decision.md`. The owner clarified
+that no pricing policies exist today: apply this initial rule to all pricing
+introduced now, then preserve each job's rule when policies change in the
+future. The rollout proposal below is historical and does not override that
+clarification. No further Q-M2 owner answer is pending.
+
+**Owner decision, 2026-10-23:** the accepted bid sets the price: an offered
+budget of 100 and an accepted bid of 60 pay the worker 60 on approval. This
+selects accepted-price formation. The owner also selected returning unused
+budget when the job ends, together with the final payment or refund: option A's
+refund timing. The owner also selected Court percentages of the accepted price,
+rounding the worker's payment down and returning the rest to the poster.
+The final initial-rollout clarification is recorded in the accepted decision. The
+exact answer is recorded in `owner-decisions-2026-10-22.md`.
 
 Fixed posted rewards remain the ratified Core contract. Nothing in this draft
-changes an existing task or authorizes implementation before the owner decides.
+changes an existing task or authorizes pricing implementation before the
+remaining settlement and rollout decisions are recorded.
 
 ## Proposed starting rule
 
@@ -75,7 +92,10 @@ change or an unannounced formula reinterpretation.
 
 ## Owner decision required
 
-Select A, B or C, or specify another complete pricing/rounding/refund rule.
+Accepted-price formation and unused-budget return at settlement (A) are selected;
+early refund at acceptance (B) and fixed reward as the future model (C) are not
+selected. Accepted-price Court percentages and rounding down are selected.
+Resolve existing-contract/versioning treatment before recording the final ADR.
 Acceptance will be recorded separately with the worked outcomes before MP-24's
 price-forming implementation or claims. This draft is not an accepted ADR and
 does not close T-163.

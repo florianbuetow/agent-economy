@@ -211,6 +211,7 @@ class TestDatabaseSizeIncludesWalAndShm:
             busy_timeout_ms=5000,
             journal_mode="wal",
             schema_sql=schema_sql,
+            current_task_board_caller_kid="gateway-task-board",
         )
         try:
             agent_id = f"a-{uuid4()}"

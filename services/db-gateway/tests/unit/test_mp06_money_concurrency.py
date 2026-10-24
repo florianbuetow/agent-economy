@@ -123,7 +123,13 @@ def test_competing_maximum_locks_have_one_atomic_winner(
     before_transactions = db_writer.connection.execute(
         "SELECT COUNT(*) FROM bank_transactions"
     ).fetchone()[0]
-    other = DbWriter(initialized_db, 5000, "wal", None)
+    other = DbWriter(
+        initialized_db,
+        5000,
+        "wal",
+        None,
+        current_task_board_caller_kid="gateway-task-board",
+    )
     try:
         outcomes = _run_competing(
             Barrier(2),
@@ -194,7 +200,13 @@ def test_competing_maximum_settlements_have_one_atomic_winner(
     before_transactions = db_writer.connection.execute(
         "SELECT COUNT(*) FROM bank_transactions"
     ).fetchone()[0]
-    other = DbWriter(initialized_db, 5000, "wal", None)
+    other = DbWriter(
+        initialized_db,
+        5000,
+        "wal",
+        None,
+        current_task_board_caller_kid="gateway-task-board",
+    )
     try:
         outcomes = _run_competing(
             Barrier(2),

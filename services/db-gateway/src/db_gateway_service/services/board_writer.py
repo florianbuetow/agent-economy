@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service.asset_admission import parse_asset_admission
 from db_gateway_service.services.db_writer_helpers import (
     insert_event,
     is_foreign_key_violation,
@@ -148,11 +149,72 @@ class BoardWriter:
         try:
             cursor.execute("BEGIN IMMEDIATE")
             assert_no_competing_task_work(cursor, str(data["task_id"]))
+            admission = parse_asset_admission(data.get("admission"))
+            task = cursor.execute(
+                "SELECT t.status,t.worker_id,c.lifecycle_version "
+                "FROM board_tasks AS t "
+                "LEFT JOIN board_task_contracts AS c ON c.task_id=t.task_id "
+                "WHERE t.task_id=?",
+                (data["task_id"],),
+            ).fetchone()
+            if task is None:
+                raise ServiceError(
+                    "task_not_found",
+                    "Task not found",
+                    404,
+                    {"task_id": data["task_id"]},
+                )
+            if (
+                task["status"] != "accepted"
+                or task["lifecycle_version"] != admission.expected_lifecycle_version
+            ):
+                raise ServiceError(
+                    "task_version_conflict",
+                    "Task status or lifecycle version changed",
+                    409,
+                    {
+                        "expected_lifecycle_version": admission.expected_lifecycle_version,
+                        "actual_lifecycle_version": task["lifecycle_version"],
+                        "current_status": task["status"],
+                    },
+                )
+            if task["worker_id"] != data["uploader_id"]:
+                raise ServiceError(
+                    "forbidden",
+                    "Only the assigned worker may upload task assets",
+                    403,
+                    {},
+                )
             if constraints is not None:
                 verify_cross_table_constraint(
                     cursor,
                     "board_tasks",
                     {"task_id": data["task_id"], **constraints},
+                )
+            duplicate = cursor.execute(
+                "SELECT 1 FROM board_assets WHERE asset_id=?",
+                (data["asset_id"],),
+            ).fetchone()
+            if duplicate is not None:
+                raise ServiceError(
+                    "asset_exists",
+                    "Asset with this asset_id already exists",
+                    409,
+                    {},
+                )
+            asset_count = cursor.execute(
+                "SELECT COUNT(*) FROM board_assets WHERE task_id=?",
+                (data["task_id"],),
+            ).fetchone()[0]
+            if asset_count >= admission.max_files_per_task:
+                raise ServiceError(
+                    "too_many_assets",
+                    "Task asset quota has been reached",
+                    409,
+                    {
+                        "max_files_per_task": admission.max_files_per_task,
+                        "current_asset_count": asset_count,
+                    },
                 )
             cursor.execute(
                 "INSERT INTO board_assets "

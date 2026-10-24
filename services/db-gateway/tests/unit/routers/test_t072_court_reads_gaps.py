@@ -196,6 +196,11 @@ def _prepare_disputed_claim(
     asset = client.post(
         "/board/assets",
         json={
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": f"asset-{uuid4()}",
             "task_id": task_id,
             "uploader_id": bob,

@@ -54,7 +54,8 @@ def _writer(database_path: Path, *, bootstrap: bool) -> DbWriter:
         db_path=str(database_path),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V4) if bootstrap else None,
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V5) if bootstrap else None,
+        current_task_board_caller_kid="gateway-task-board",
     )
 
 
@@ -230,10 +231,14 @@ def test_missing_court_row_requires_a_completed_native_ruling_proof(tmp_path: Pa
     authority = _platform_authority(tmp_path)
     with closing(_writer(database_path, bootstrap=True)) as writer:
         completed = _complete_board_first_ruling(writer, authority, 50)
-        writer.connection.execute(
-            "DELETE FROM board_task_operations WHERE task_id=? AND command='record_ruling'",
-            (completed.graph.task_id,),
-        )
-        writer.connection.commit()
+        writer.connection.execute("PRAGMA foreign_keys=OFF")
+        try:
+            writer.connection.execute(
+                "DELETE FROM board_task_operations WHERE task_id=? AND command='record_ruling'",
+                (completed.graph.task_id,),
+            )
+            writer.connection.commit()
+        finally:
+            writer.connection.execute("PRAGMA foreign_keys=ON")
         assert not audit_task_contracts(writer.connection).contracts_clean
     assert _reopen_outcome(database_path)["kind"] == "service_error"

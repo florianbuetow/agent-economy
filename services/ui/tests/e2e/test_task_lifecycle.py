@@ -435,7 +435,9 @@ def test_t13_t18_post_phase(
     elif ticket == "T14":
         _open_task_view(task_page, e2e_page, "t-task12")
         assert task_page.escrow_bar.is_visible()
-        assert "LOCKED" in (task_page.escrow_status.text_content() or "")
+        status = task_page.escrow_status.text_content() or ""
+        assert "SETTLEMENT NEEDS ATTENTION" in status
+        assert "PAID" not in status
     elif ticket == "T15":
         _open_task_view(task_page, e2e_page, "t-task12")
         content = task_page.get_lifecycle_panel_content()
@@ -609,7 +611,7 @@ def test_t34_t39_deliver_phase(
             "Worker is executing... no assets yet." not in task_page.get_lifecycle_panel_content()
         )
     elif ticket == "T39":
-        assert "LOCKED" in (task_page.escrow_status.text_content() or "")
+        assert "PAID" in (task_page.escrow_status.text_content() or "")
     else:
         raise AssertionError(f"Unhandled ticket: {ticket}")
 
@@ -664,7 +666,9 @@ def test_t40_t46_review_phase(
             assert rebuttal is not None
             assert rebuttal["content"] in content
         elif ticket == "T46":
-            assert "FROZEN" in (task_page.escrow_status.text_content() or "")
+            status = task_page.escrow_status.text_content() or ""
+            assert "SETTLEMENT NEEDS ATTENTION" in status
+            assert "PAID" not in status
     else:
         raise AssertionError(f"Unhandled ticket: {ticket}")
 
@@ -746,8 +750,8 @@ def test_t57_t62_settlement_phase(
             assert (task_page.panel_title.text_content() or "").strip() == "Settle"
             assert (task_page.task_status.text_content() or "").strip() == "APPROVED"
         elif ticket == "T58":
-            assert "RELEASED" in (task_page.escrow_amount.text_content() or "")
-            assert "SETTLED" in (task_page.escrow_status.text_content() or "")
+            assert f"{api_task['reward']} ©" in (task_page.escrow_amount.text_content() or "")
+            assert "PAID" in (task_page.escrow_status.text_content() or "")
         elif ticket == "T59":
             assert "TASK LIFECYCLE COMPLETE" in content
         elif ticket == "T61":

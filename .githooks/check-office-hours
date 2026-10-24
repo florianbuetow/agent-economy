@@ -1,0 +1,21 @@
+#!/bin/sh
+# Read the actual local clock on every invocation; no override or bypass flag.
+fail_clock() {
+    echo "Git action blocked: cannot read a valid Europe/Amsterdam clock." >&2
+    exit 1
+}
+
+stamp=$(TZ=Europe/Amsterdam date '+%u %H') || fail_clock
+case "$stamp" in
+    [1-7]' '[0-2][0-9]) ;;
+    *) fail_clock ;;
+esac
+day=${stamp% *}
+hour=${stamp#* }
+[ "$hour" -le 23 ] || fail_clock
+
+if [ "$day" -le 5 ] && [ "$hour" -ge 8 ] && [ "$hour" -lt 18 ]; then
+    echo "Commits and pushes are blocked weekdays 08:00–18:00 Europe/Amsterdam." >&2
+    exit 1
+fi
+exit 0

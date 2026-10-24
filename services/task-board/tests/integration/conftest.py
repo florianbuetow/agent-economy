@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import json
 import os
 import socket
@@ -51,9 +52,10 @@ from service_auth.signing import generate_keypair as provision_keypair
 from service_commons.exceptions import ServiceError
 
 from task_board_service.app import create_app
-from task_board_service.config import clear_settings_cache
+from task_board_service.config import clear_settings_cache, get_settings
 from task_board_service.core.lifespan import lifespan
 from task_board_service.core.state import get_app_state, reset_app_state
+from task_board_service.services.financial_effect_recovery import FinancialEffectRecovery
 from tests.helpers import make_jws_token as make_strict_jws_token
 from tests.helpers import verify_compact_jws
 
@@ -169,6 +171,15 @@ recovery:
 board_authority:
   platform_public_key_path: "{Path(db_path).parent / "agent-keys" / "platform.pub"}"
   deadline_actor_id: "system-task-board-deadline"
+board_effect_recovery:
+  current_task_board_caller_kid: "gateway-task-board"
+  max_attempts_per_delivery: 8
+  initial_backoff_seconds: 2
+  max_backoff_seconds: 60
+  lease_duration_seconds: 45
+  evidence_interval_seconds: 60
+  gateway_timeout_seconds: 10
+  bank_timeout_seconds: 10
 auth:
   audience: "db-gateway"
   max_lifetime_seconds: 300
@@ -247,6 +258,7 @@ async def _start_live_gateway(db_path: str) -> tuple[_LiveGateway, DbWriter]:
         busy_timeout_ms=5000,
         journal_mode="wal",
         schema_sql=_SCHEMA_PATH.read_text(),
+        current_task_board_caller_kid="gateway-task-board",  # type: ignore[call-arg]
     )
     state.db_writer = writer
     state.db_reader = DbReader(db=writer.connection)
@@ -407,6 +419,13 @@ central_bank:
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
   agent_config_path: "{agent_config_path}"
+asset_upload:
+  stream_chunk_bytes: 262144
+  max_multipart_overhead_bytes: 1048576
+  max_header_count: 8
+  max_header_size: 4224
+  max_boundary_bytes: 70
+  max_display_filename_utf8_bytes: 255
 request:
   max_body_size: 1048576
 recovery:
@@ -415,6 +434,9 @@ posting_recovery:
   interval_seconds: 2
   batch_size: 100
   diagnostic_limit: 100
+financial_effect_recovery:
+  interval_seconds: 2.0
+  max_delivery_attempts_per_cycle: 10
 limits:
   max_file_size: 10485760
   max_assets_per_task: 20
@@ -442,6 +464,10 @@ deadline_evaluation:
     test_app = create_app()
     async with lifespan(test_app):
         state = get_app_state()
+        assert state.financial_effect_recovery_task is not None
+        state.financial_effect_recovery_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await state.financial_effect_recovery_task
 
         mock_platform = MagicMock()
         mock_platform.agent_id = PLATFORM_AGENT_ID
@@ -474,7 +500,29 @@ deadline_evaluation:
         if state.escrow_coordinator is not None:
             state.escrow_coordinator._central_bank_client = mock_bank
 
-        yield test_app
+        assert state.store is not None
+        settings = get_settings()
+        replacement_recovery = FinancialEffectRecovery(
+            store=state.store,
+            bank=mock_bank,
+            worker_id=None,
+            max_delivery_attempts_per_cycle=(
+                settings.financial_effect_recovery.max_delivery_attempts_per_cycle
+            ),
+        )
+        state.financial_effect_recovery = replacement_recovery
+        replacement_recovery_task = asyncio.create_task(
+            replacement_recovery.run_periodic(
+                interval_seconds=settings.financial_effect_recovery.interval_seconds
+            )
+        )
+        state.financial_effect_recovery_task = replacement_recovery_task
+        try:
+            yield test_app
+        finally:
+            replacement_recovery_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await replacement_recovery_task
 
     reset_app_state()
     clear_settings_cache()

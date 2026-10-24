@@ -35,11 +35,23 @@ GATEWAY_ROUTE_POLICIES: dict[tuple[str, str], tuple[str, ...]] = {
     ("POST", "/board/task-publications/{operation_id}/reconcile"): ("gateway.board.write",),
     ("GET", "/board/task-publications/{operation_id}"): ("gateway.board.write",),
     ("GET", "/board/posting-recovery"): ("gateway.board.write",),
+    ("GET", "/board/legacy-posting-observations/{observation_id}"): ("gateway.board.write",),
     ("POST", "/board/legacy-posting-observations/{observation_id}/reconcile"): (
         "gateway.board.write",
     ),
     ("POST", "/board/task-operations"): ("gateway.board.write",),
     ("POST", "/board/task-operations/{operation_id}/finalize"): ("gateway.board.write",),
+    ("POST", "/board/task-effect-deliveries/lease"): ("gateway.board.write",),
+    ("POST", "/board/task-effect-deliveries/{operation_id}/finalize"): ("gateway.board.write",),
+    ("POST", "/board/task-effect-deliveries/{operation_id}/attempts/{generation}/fail"): (
+        "gateway.board.write",
+    ),
+    ("GET", "/board/task-effect-deliveries/{operation_id}"): ("gateway.board.write",),
+    ("GET", "/board/task-effect-deliveries"): ("gateway.board.write",),
+    ("POST", "/board/task-effect-deliveries/{operation_id}/retry"): ("gateway.board.write",),
+    ("POST", "/board/legacy-effect-observations/{observation_id}/finalize"): (
+        "gateway.board.write",
+    ),
     ("POST", "/identity/agents"): ("gateway.identity.write",),
     ("GET", "/identity/agents/count"): ("gateway.identity.read",),
     ("GET", "/identity/agents"): ("gateway.identity.read",),
@@ -153,7 +165,7 @@ class RequestValidationMiddleware:
             raw_headers: list[tuple[bytes, bytes]] = list(scope.get("headers", []))
             self._validate_content_type(method, raw_headers)
             full_body = await self._read_body(receive)
-            token = self._bearer_token(raw_headers)
+            token = self._bearer_token(raw_headers, route_path)
             verified_caller_kid = self._authenticate(
                 token,
                 method=method,
@@ -223,11 +235,23 @@ class RequestValidationMiddleware:
                 return b"".join(body_parts)
 
     @staticmethod
-    def _bearer_token(raw_headers: list[tuple[bytes, bytes]]) -> str:
+    def _bearer_token(
+        raw_headers: list[tuple[bytes, bytes]],
+        route_path: str,
+    ) -> str:
         authorization_values = [
             value for name, value in raw_headers if name.lower() == b"authorization"
         ]
         if len(authorization_values) != 1:
+            if not authorization_values and (
+                route_path.startswith("/board/task-effect-deliveries")
+                or route_path.startswith("/board/legacy-effect-observations/")
+            ):
+                raise _MiddlewareFailure(
+                    "missing_authorization",
+                    "Authorization header is required",
+                    401,
+                )
             raise _MiddlewareFailure(
                 "invalid_authorization",
                 "Exactly one Authorization header is required",

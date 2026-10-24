@@ -38,11 +38,19 @@ def _parse_arguments(arguments: list[str]) -> argparse.Namespace:
     for name in ("verify", "finalize"):
         _backup_options(actions.add_parser(name))
 
-    for name in ("migrate", "migrate-v1-to-v2", "migrate-v2-to-v3", "migrate-v3-to-v4"):
+    for name in (
+        "migrate",
+        "migrate-v1-to-v2",
+        "migrate-v2-to-v3",
+        "migrate-v3-to-v4",
+        "migrate-v4-to-v5",
+    ):
         migrate = commands.add_parser(name)
         _backup_options(migrate)
         migrate.add_argument("--inventory", type=Path, required=True)
         migrate.add_argument("--busy-timeout-ms", type=int, required=True)
+        if name == "migrate-v4-to-v5":
+            migrate.add_argument("--current-task-board-caller-kid", required=True)
 
     restore = commands.add_parser("restore")
     _backup_options(restore)
@@ -91,6 +99,15 @@ def _execute_backup(
 
 def _execute_migration(args: argparse.Namespace) -> tuple[str, migration.MigrationResult]:
     inventory = _load_contract(args.inventory, RecoveryInventoryV1, "invalid_inventory")
+    if args.command == "migrate-v4-to-v5":
+        return str(args.command), migration.migrate_v4_to_v5(
+            inventory,
+            backup_root=args.backup_root,
+            backup_id=args.backup_id,
+            work_root=args.work_root,
+            busy_timeout_ms=args.busy_timeout_ms,
+            current_task_board_caller_kid=args.current_task_board_caller_kid,
+        )
     migrations = {
         "migrate": migration.migrate_v0_to_v1,
         "migrate-v1-to-v2": migration.migrate_v1_to_v2,
@@ -114,7 +131,13 @@ def _execute(
 ]:
     if args.command == "backup":
         return _execute_backup(args)
-    if args.command in {"migrate", "migrate-v1-to-v2", "migrate-v2-to-v3", "migrate-v3-to-v4"}:
+    if args.command in {
+        "migrate",
+        "migrate-v1-to-v2",
+        "migrate-v2-to-v3",
+        "migrate-v3-to-v4",
+        "migrate-v4-to-v5",
+    }:
         return _execute_migration(args)
     if args.command == "restore":
         bindings = _load_contract(args.target_bindings, TargetBindingsV1, "invalid_target_bindings")
@@ -171,6 +194,7 @@ def _result_exit_code(
             "migrate-v1-to-v2": (2, "committed_v2_verified"),
             "migrate-v2-to-v3": (3, "committed_v3_verified"),
             "migrate-v3-to-v4": (4, "committed_v4_verified"),
+            "migrate-v4-to-v5": (5, "committed_v5_verified"),
         }.get(operation)
         return (
             0

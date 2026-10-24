@@ -1,8 +1,28 @@
 ## Purpose
 
+> **Owner scope update — 2026-10-23:** Follow `MASTERPLAN-TO-COMPLETE-THE-PROJECT.md` and `FEATURE-COMPLETENESS.md` for feature-first execution. Existing data is disposable test data: old-schema/data migration, historical asset conversion and backward compatibility are out of scope. Initialize fresh databases directly. Reuse existing tests and add only missing basic feature checks; no exhaustive fault matrices or repeated planning/review gates. Older migration/testing obligations below are historical where they conflict with this update. Completed work stays complete; no feature is closed by this scope change.
+
+
 This spec is the canonical migration of `tickets.md` and `tickets-test-plans.md`. It preserves the known completion backlog, stable T-IDs, dependencies, ratified choices, and proof obligations so the markdown tracker files can be removed.
 
 ## Requirements
+
+### Requirement: Office-hours Git guard
+Commit and push hooks SHALL reject Monday through Friday from 08:00 inclusive
+until 18:00 exclusive in Europe/Amsterdam, permit weekends and other hours,
+and fail closed if the clock cannot be read. T-190 depends on red-proven T-189.
+
+#### Scenario: T-189 Write acceptance tests for the office-hours Git guard
+- **WHEN** either hook runs at a weekday boundary, during the weekend, or with an invalid clock result
+- **THEN** deterministic tests assert the agreed allowance or rejection without attempting a commit or push
+- **AND** the missing hook baseline is preserved separately from behavioral verification
+- **Status:** CLOSED 2026-10-22 — Missing-hook capability baseline is explicit; all30 boundary/weekend/clock-error checks pass with independent review. Fresh isolated root37981 exited0 with1180 unchanged source/config hashes and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp05-posting/root-ci-2026-10-22.md).
+
+#### Scenario: T-190 Restore the office-hours Git hooks
+- **WHEN** T-189 is red-proven
+- **THEN** both executable hooks share the Europe/Amsterdam guard and this checkout resolves Git hooks to that directory
+- **AND** existing hooks are never silently overwritten, boundaries pass, and fresh isolated root CI passes before closure
+- **Status:** CLOSED 2026-10-22 — Both executable hooks are installed through this checkout’s core.hooksPath; live-clock checks and root tests pass without a commit or push. Fresh isolated root37981 exited0 with1180 unchanged source/config hashes and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp05-posting/root-ci-2026-10-22.md).
 
 ### Requirement: Repository Gate
 The repository SHALL have a green full CI gate before any ticket can be closed.
@@ -421,13 +441,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-05 is selected
 - **THEN** the acceptance proof demonstrates the gap: Failures before and after acknowledged or ambiguous publication, including failed compensation, expose orphaned escrow or incorrect refunds.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-10-22 — Original publication/compensation behavioral reds are independently verified; later harness evidence limitations remain explicit. Fresh isolated root37981 exited0 with1180 unchanged source/config hashes and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp05-posting/completion-audit.md).
 
 #### Scenario: T-119 Deliver recoverable task publication
 - **WHEN** T-118 is red-proven and the prerequisites are satisfied: MP-04, MP-07
 - **THEN** Recovery produces one funded published task or one documented refund; the same posting identity cannot create a duplicate job or refund an already published matching task.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-10-22 — Durable Gateway, SDK, feeder, UI and demo posting plus exact replay, historical refunds, crash recovery and conservation are independently verified. Fresh isolated root37981 exited0 with1180 unchanged source/config hashes and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp05-posting/completion-audit.md).
 
 ### Requirement: MP-01 Read-only CI checks
 CI SHALL reject formatting and lint failures without modifying source files. Explicit formatting commands SHALL remain available separately. Implementation T-174 depends on red-proven test ticket T-173; both retain the universal closure gate.
@@ -481,13 +501,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-08 is selected
 - **THEN** the acceptance proof demonstrates the gap: A terminal task with a failed or ambiguously acknowledged payout/refund remains unfinished without reads or after process restart.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-10-22 — Chronological behavioral reds and independently accepted retrospective equivalence prove the pending-work gap. The original exact-command/legacy-builder limitation remains explicit. Root R4 exits 0 with 1261 unchanged source files and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp08-recovery/completion-audit.md).
 
 #### Scenario: T-125 Deliver pending financial effect recovery
 - **WHEN** T-124 is red-proven and the prerequisites are satisfied: MP-04, MP-07
 - **THEN** Pending financial/task effects are recovered regardless of business status, with one receipt, bounded retries and visible persistent failures; this package does not claim Court rebuttal-delivery completion.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-10-22 — V5 fenced financial recovery, receipt-first finalization, fair bounded scheduling, operator diagnostics/retry and truthful Board/UI projections are verified, including all 14 process cuts. Root R4 exits 0; Court adjudication/rebuttal delivery remains MP-10. [Closure evidence](../../changes/complete-agent-economy/evidence/mp08-recovery/completion-audit.md).
 
 ### Requirement: MP-09 Safe immutable artifacts
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-09. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -496,13 +516,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-09 is selected
 - **THEN** the acceptance proof demonstrates the gap: Hostile filenames, concurrent quotas, state races, failed metadata/file publication and missing poster input paths demonstrate unsafe or incomplete evidence handling.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** OPEN, partial red proof through 2026-10-23 — Parent reproduced storage, quota/lifecycle, upload-ledger, publication/receipt, native/legacy acceptance and legacy-continuation failures before bounded repairs; oracle corrections retain original evidence and explicit reclassification. Parent848 and full Gateway CI14672 pass with 332 inputs/path set unchanged, and independent source review approves new-upload legacy continuation. Evidence: `openspec/changes/complete-agent-economy/evidence/mp09-artifacts/`. Live streaming/byte publication, poster inputs, immutable submission, grants and archive checks remain open; historical migration is excluded by the owner; this does not close T-126 or T-127.
 
 #### Scenario: T-127 Deliver safe immutable artifacts
 - **WHEN** T-126 is red-proven and the prerequisites are satisfied: MP-07; Q-M1 before policy closure
 - **THEN** Supported inputs and submissions have immutable attributable manifests and exact retrievable bytes; no outside-root writes or quota/state bypass occurs; interrupted uploads reconcile; authorized users can download safely under the accepted artifact policy.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** OPEN — Bounded path/storage, upload-ledger, input-publication, manifest, receipt-adoption and native acceptance-binding components are implemented and verified at component scope. Actual byte staging, public input/upload routes, immutable submission, fresh current-schema runtime admission, grants/archive and the final root gate remain outstanding. Historical conversion, legacy continuation and mixed historical manifests are no longer release prerequisites.
 
 ### Requirement: MP-10 Recoverable immutable adjudication
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-10. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -680,7 +700,7 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 
 #### Scenario: T-151 Deliver operational readiness and restoration
 - **WHEN** T-150 is red-proven and the prerequisites are satisfied: MP-01, MP-03, MP-06, MP-08, MP-10
-- **THEN** Startup/teardown honor exact process ownership and readiness; restore recovers matching keys/evidence/money and pending work once; migrations preserve original backups; diagnostics and recovery operations are actionable and do not expose secrets.
+- **THEN** Startup/teardown honor exact process ownership and readiness; restore recovers matching keys/evidence/money and pending work once; current-format backups preserve the running economy; diagnostics and recovery operations are actionable and do not expose secrets.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
 - **Status:** OPEN — Implementation and item-specific proof pending.
 
@@ -759,6 +779,62 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
 - **Status:** OPEN — Implementation and item-specific proof pending.
 
+### Requirement: Current dependency audit baseline
+The completion work SHALL resolve newly reported dependency vulnerabilities without
+weakening audit coverage or adding vulnerability exclusions.
+
+#### Scenario: T-191 Write acceptance evidence for the OpenTelemetry audit regression
+- **WHEN** the affected installed service environments are audited before dependency changes
+- **THEN** the audit records opentelemetry-api 1.37.0 and GHSA-xcq7-p3pf-p88h as a failing baseline
+- **AND** official advisory and package metadata identify a coherent corrected dependency family and all affected consumers
+- **Status:** CLOSED 2026-10-22 — Exact vulnerable OpenTelemetry audit and official coherent-family compatibility evidence retained; seven service consumers verified. Root R4 exits 0 without audit exclusions. [Closure evidence](../../changes/complete-agent-economy/evidence/mp08-recovery/completion-audit.md).
+
+#### Scenario: T-192 Repair the OpenTelemetry audit regression
+- **WHEN** T-191 is red-proven and upstream compatibility has been evaluated
+- **THEN** the seven affected service environments use a coherent patched OpenTelemetry family through a narrowly scoped Semgrep override and uv-generated locks
+- **AND** Semgrep startup/rule execution, unchanged vulnerability audits, affected component checks and fresh isolated root CI pass without new advisory exclusions
+- **Status:** CLOSED 2026-10-22 — Seven Semgrep-scoped patched dependency families use uv-generated locks; all audits, Semgrep, components and root R4 pass. 1261 source files unchanged; independent owned-process cleanup passes. [Closure evidence](../../changes/complete-agent-economy/evidence/mp08-recovery/completion-audit.md).
+
+#### Scenario: T-183 Write acceptance tests for the October dependency audit regression
+- **WHEN** the current isolated Gateway component gate is reproduced
+- **THEN** the audit records the exact vulnerable installed versions and advisory identities before any dependency change
+- **AND** official upstream evidence and affected dependency paths identify compatible corrected versions across all consumers
+- **Status:** CLOSED 2026-10-22 — Exact certifi/Pillow vulnerable-version baseline and upstream compatibility evidence retained. Fresh isolated root37981 exited0 with1180 unchanged source/config hashes and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp05-posting/root-ci-2026-10-22.md).
+
+#### Scenario: T-184 Repair the October dependency audit regression
+- **WHEN** T-183 is red-proven and dependency compatibility is verified
+- **THEN** existing dependencies and uv-generated locks resolve corrected versions without new audit ignores or removal of required checks
+- **AND** affected component checks and a fresh isolated root `just ci-quiet` pass before closure
+- **Status:** CLOSED 2026-10-22 — Targeted existing dependency constraints and generated locks pass affected audits and all root gates, without new audit exclusions. Fresh isolated root37981 exited0 with1180 unchanged source/config hashes and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp05-posting/root-ci-2026-10-22.md).
+
+#### Scenario: T-185 Write acceptance tests for remaining non-service dependency audit findings
+- **WHEN** the eleven affected environments are audited after the certifi/Pillow repair
+- **THEN** exact installed-path audits and lock metadata distinguish real remaining findings from temporary audit-tool overlay packages
+- **AND** official upstream compatibility evidence establishes corrected versions for anyio, cryptography, idna, pytest and Starlette before changing their consumers
+- **Status:** CLOSED 2026-10-22 — Exact installed-path non-service audit reds and compatible fixed-version evidence retained; overlay-only findings remain excluded. Fresh isolated root37981 exited0 with1180 unchanged source/config hashes and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp05-posting/root-ci-2026-10-22.md).
+
+#### Scenario: T-186 Repair remaining non-service dependency audit findings
+- **WHEN** T-185 is red-proven and the affected dependency combinations are verified
+- **THEN** targeted uv-generated locks resolve the identified vulnerabilities without new audit exclusions or unrelated upgrades
+- **AND** all affected exact-path audits, component gates and fresh isolated root `just ci-quiet` pass before closure
+- **Status:** CLOSED 2026-10-22 — Targeted non-service lock corrections pass exact-path audits, affected components and all root gates without new audit exclusions. Fresh isolated root37981 exited0 with1180 unchanged source/config hashes and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp05-posting/root-ci-2026-10-22.md).
+
+### Requirement: Race-free owned command identity
+The isolated runtime SHALL preserve command exit and cleanup semantics when a
+spawned command exits before the parent can inspect its process-group identity.
+
+#### Scenario: T-187 Write acceptance tests for fast owned-command exit
+- **WHEN** a privately spawned command exits before group/session inspection
+- **THEN** deterministic tests reproduce the current ProcessLookupError and require the command's actual exit status and cleanup state to remain observable
+- **AND** controls preserve wrong-session rejection, unrelated-process safety and retryable cleanup-failure bookkeeping
+- **Status:** CLOSED 2026-10-22 — Fast-exit ownership race has deterministic red/green proof and preserved foreign-group/cleanup controls. Fresh isolated root37981 exited0 with1180 unchanged source/config hashes and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp05-posting/root-ci-2026-10-22.md).
+
+#### Scenario: T-188 Preserve owned-command identity across fast exit
+- **WHEN** T-187 is red-proven
+- **THEN** command startup and identity capture cannot race a fast exit, without granting signaling authority from an arbitrary PID or stale manifest
+- **AND** targeted lifecycle/cleanup tests and fresh isolated root `just ci-quiet` pass before closure
+- **Status:** CLOSED 2026-10-22 — Owned launch gate preserves exact process identity, exit results and cleanup; independent review and full runtime gate pass. Fresh isolated root37981 exited0 with1180 unchanged source/config hashes and independent cleanup verification. [Closure evidence](../../changes/complete-agent-economy/evidence/mp05-posting/root-ci-2026-10-22.md).
+
 ### Requirement: Explicit completion policy decisions
 The completion backlog SHALL track unresolved evidence/privacy, post-v1 pricing and quality-aggregation decisions with an accountable project owner, accepted examples and dependent-task gates. Existing local single-operator, manual issuance and fixed-reward v1 decisions SHALL remain effective until explicitly superseded.
 
@@ -766,19 +842,19 @@ The completion backlog SHALL track unresolved evidence/privacy, post-v1 pricing 
 - **WHEN** the accountable project owner resolves Q-M1
 - **THEN** the accepted decision defines supported formats/limits, immutable provenance, participant and bidder access, retention, external-provider disclosure and unsupported-evidence outcomes before MP-09 policy and MP-11 close
 - **AND** the accepted record is linked from the affected specifications and implementation proofs without closing those implementations prematurely
-- **Status:** OPEN — Explicit owner decision pending; no default option is accepted.
+- **Status:** OPEN — Owner selected public task instructions/files, configurable OpenAI-compatible Court providers, initial text/source/JSON/CSV evidence, immediate job-page download closure for completed/cancelled/expired jobs and archive after more than three days. See `openspec/changes/complete-agent-economy/evidence/policy-options/owner-decisions-2026-10-22.md`. Complete bounded-evidence specification, worked examples and closure proof remain pending; no other draft option is accepted.
 
 #### Scenario: T-163 Decide Q-M2 post-v1 price-forming economics
 - **WHEN** the accountable project owner resolves Q-M2
-- **THEN** the accepted decision defines whether post-v1 price formation is enabled, including excess-refund timing, rounding and existing-contract treatment before MP-24 pricing claims close; fixed-reward Core remains valid
+- **THEN** the accepted decision defines whether post-v1 price formation is enabled, including excess-refund timing and rounding; accepted-bid pricing is required for the finished Core product, with no historical-data conversion
 - **AND** the accepted record is linked from the affected specifications and implementation proofs without closing those implementations prematurely
-- **Status:** OPEN — Explicit owner decision pending; no default option is accepted.
+- **Status:** OPEN — Owner choices resolved on 2026-10-23: accepted-bid pricing, unused-budget return at final settlement, Court percentages of the accepted price with worker payment rounded down, and the poster receiving the remainder. There are no existing pricing policies: use this initial rule for all pricing introduced now, and preserve each job's rule on future changes. Accepted decision: `docs/plans/2026-10-23-q-m2-accepted-bid-pricing-decision.md`. Specification reconciliation, independent review and required verification remain open; no pricing implementation is claimed.
 
 #### Scenario: T-164 Decide Q-M3 independent quality aggregation
 - **WHEN** the accountable project owner resolves Q-M3
 - **THEN** the accepted versioned contract defines separate quality dimensions, payout separation, source weighting, no-history treatment and scored examples before MP-11 and MP-14 close
 - **AND** the accepted record is linked from the affected specifications and implementation proofs without closing those implementations prematurely
-- **Status:** OPEN — Explicit owner decision pending; no default option is accepted.
+- **Status:** OPEN — Owner selected equal weighting per task, final Court override of peer feedback for that task, eligibility limited to approved/auto-approved/ruled submissions, and public scores/counts with source detail restricted to the subject, relevant participants and operator. See the owner decision record. Implementation and basic verification remain open; do not ask these choices again.
 
 ### Requirement: MP-01 Discovered deadline precision baseline
 The completion backlog SHALL track the independently repairable deadline truncation exposed by the isolated root baseline as T-169/T-170. This prerequisite SHALL preserve configured durations without weakening existing expiry assertions. It SHALL NOT close or bypass MP-07's schema, atomic-transition or concurrency obligations.
@@ -908,3 +984,17 @@ The built-in feeder and worker SHALL retain an immutable native mutation intent 
 - **AND** the feeder publishes its explicitly configured acceptance window without conflating it with its selection delay or introducing a platform-wide default
 - **AND** item-specific restart/fault evidence, independent review and fresh isolated root CI pass before closure, while posting identity, asset/execution/oracle/rebuttal recovery and authoritative discovery remain mapped to their original full packages
 - **Status:** CLOSED — Owner-bound atomic journals, exact public SDK replay, typed ACK validation, leased startup/cleanup and explicit feeder windows are implemented and independently verified. Root22 passes all required gates. Posting, execution/assets/oracle/rebuttal/discovery recovery, distributed leases and external rollback detection remain outside this bounded package. [Closure evidence](../../changes/complete-agent-economy/evidence/mp07-transitions/completion-audit.md).
+
+### Requirement: Secure filelock dependency baseline
+The completion backlog SHALL track the filelock audit regression discovered by root CI R7 without suppressing its advisories or widening unrelated dependency changes.
+
+#### Scenario: T-193 Record failing filelock security and compatibility evidence
+- **WHEN** the installed dependency audit reports the three filelock advisories
+- **THEN** retain the failing audit, affected installed/locked versions, upstream fixed-version evidence and consumer constraints before implementation
+- **Status:** CLOSED 2026-10-24 — R7 retained the three advisory failures, affected versions and upstream compatibility evidence; full root R8 exited zero with 1,334 unchanged inputs. Evidence: `openspec/changes/complete-agent-economy/evidence/ci-feature-first-2026-10-23/ci-result.md`. Publication remains a separate scope decision.
+
+#### Scenario: T-194 Update filelock without audit exclusions
+- **WHEN** T-193 is red-proven and consumer compatibility is established
+- **THEN** resolve a verified secure filelock release with uv-generated locks; use no new advisory exclusions; permit only a documented version-scoped Court override with actual consumer compatibility checks
+- **AND** all affected audits and consumer checks pass, followed by fresh isolated root `just ci-quiet` exit zero before closure
+- **Status:** CLOSED 2026-10-24 — All seven services resolve filelock 4.2.4; audits, consumer checks and full root R8 pass. The exact-version Court override and removal condition are documented. Evidence: `openspec/changes/complete-agent-economy/evidence/ci-feature-first-2026-10-23/ci-result.md`. No publication is claimed.

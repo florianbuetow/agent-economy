@@ -10,16 +10,16 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from db_gateway_service.schema import SchemaState, load_schema_sql
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
 @pytest.fixture
 def schema_sql() -> str:
-    """Load the shared economy.db schema used by production configuration."""
-    base = Path(__file__).parent.parent.parent.parent
-    schema_path = base / "docs" / "specifications" / "schema.sql"
-    return schema_path.read_text()
+    """Load the exact composed V5 schema admitted by the current runtime."""
+    return load_schema_sql(SchemaState.CURRENT_V5)
 
 
 @pytest.fixture

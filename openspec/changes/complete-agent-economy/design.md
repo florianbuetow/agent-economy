@@ -1,5 +1,8 @@
 # Design
 
+> **Owner scope update — 2026-10-23:** Follow `MASTERPLAN-TO-COMPLETE-THE-PROJECT.md` and `FEATURE-COMPLETENESS.md` for feature-first execution. Existing data is disposable test data: old-schema/data migration, historical asset conversion and backward compatibility are out of scope. Initialize fresh databases directly. Reuse existing tests and add only missing basic feature checks; no exhaustive fault matrices or repeated planning/review gates. Older migration/testing obligations below are historical where they conflict with this update. Completed work stays complete; no feature is closed by this scope change.
+
+
 ## Context
 
 The Agent Task Economy already implements its normal seven-service lifecycle, autonomous feeder and worker loops, Court integration, a vanilla-JavaScript observatory, and gateway-owned SQLite persistence. The completion work therefore repairs the current architecture rather than replacing it. The source of truth for scope is `MASTERPLAN-TO-COMPLETE-THE-PROJECT.md`: all 54 audit findings remain in scope, MP-01 through MP-26 remain intact, and ticket IDs T-110 through T-164 retain their existing meaning.
@@ -243,6 +246,15 @@ Alternative rejected: production defaults, global fixture backfills, skipped bro
 MP-20 response schemas are designed in wave 1 and land incrementally with producers. MP-25 corpus authoring may start early, but live evaluation waits for MP-11. Arrows express technical dependencies rather than permission handoffs.
 
 ### 15. Keep major unresolved policies as explicit BLOCKING gates
+
+Owner decisions on 2026-10-22 partially resolve Q-M1 and supersede conflicting
+recommendations in this design: task instructions/files are public; each Court
+agent can use any configured OpenAI-compatible local or remote provider; initial
+automatic evidence supports plain text, source code, JSON and CSV. Keep open-job
+files indefinitely, stop job-page downloads on completion/cancellation/expiry,
+and archive after more than three days. The Court specification already forbids
+appeals. See `evidence/policy-options/owner-decisions-2026-10-22.md`; complete
+format/limit examples and proof remain required before closing T-162.
 
 - **Q-M1 / T-162 — artifact admissibility, visibility, retention, and model-data policy: BLOCKING.** An accepted ADR with supported-format table, access matrix, failure/appeal behavior, retention/redaction rules, bidder-input access, and external-provider treatment is required before MP-09 policy and MP-11 can close. It also gates relevant MP-15 downloads and MP-25 corpus use. Safe storage and traversal repairs may proceed.
 - **Q-M2 / T-163 — post-v1 price formation: BLOCKING for the Vision gate.** Fixed posted reward and signal-only bids remain settled for Core. An accepted economic ADR with approve/cancel/expire and 0/partial/100% dispute examples, rounding, excess-refund timing, and migration treatment is required before the price-forming branch of MP-24 or claims of a functioning price market.

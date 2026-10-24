@@ -1,5 +1,74 @@
 # Database Gateway Service — Production Release Test Specification
 
+## MP-08 durable financial-effect recovery acceptance amendment
+
+Use the [MP-08 financial recovery contract](../../plans/2026-10-22-mp08-financial-recovery-contract.md)
+as the normative expected behavior. These cases extend the release gate; their
+presence and focused results do not claim that the repository-wide gate has
+passed.
+
+Required V5 schema and migration proof maps to
+`test_mp08_current_schema_classification.py`, `test_mp08_schema_v5.py`,
+`test_mp08_migration.py`, `test_mp08_migration_rejection.py`, and
+`test_mp08_migration_cli.py`. It must prove exact current-V5 classification,
+fresh empty cutover, explicit verified-backup-bound V4-to-V5 migration, exact
+metadata and attestation, preservation of prior domain bytes and
+`sqlite_sequence`, current Task Board KID ownership, and fail-closed rejection
+of partial, unknown, nonexact, future, corrupt, conflicting, unsupported or
+foreign-owned sources. Older V2/V3/V4 classifiers remain migration-history
+controls rather than the current startup norm.
+
+Required startup audit proof maps to `test_mp08_effect_recovery_audit.py` and
+the MP-08 review audit regressions. It recomputes frozen membership and dynamic
+coverage, verifies source/delivery identity and ownership, proves exact receipt
+event binding, rejects duplicate or overlapping sources, and preserves valid
+Court observations without creating a financial delivery. Court delivery itself
+is excluded for MP-10.
+
+Queue, fencing and protected API proof maps to
+`test_mp08_effect_delivery_queue.py`, `test_mp08_effect_finalization.py`,
+`routers/test_mp08_effect_delivery_boundary.py`,
+`routers/test_mp08_native_effect_finalizer_boundary.py`, and the MP-08 queue,
+precedence, state and blocked-evidence regressions. It must cover:
+
+- atomic native claim plus sidecar creation and exact supported legacy import;
+- one due dead-letter evidence check before each lease, without Bank dispatch or
+  attempt-counter change;
+- due ordering, lease expiry, inclusive attempt budget, checked exponential
+  backoff, total/cycle/operator/generation exhaustion and no starvation;
+- exact worker UUID and generation fences, monotonic completion after lease
+  expiry, and direct-retry overlap without reopening completed work;
+- pre-dead-letter exact receipt lookup, confirmed completion, contradictory
+  evidence blocking, and receipt absence only then becoming a dead letter;
+- required `gateway.board.write`, 403-before-lookup, capable foreign-owner 404,
+  same-owner stale 409, native-only finalizer 400, evidence-conflict 409, and
+  clock-exhaustion 503 with byte-identical transactional state;
+- bounded diagnostics, strict list query shape, dead-letter-only retry, preserved
+  immutable identity and historical failure diagnostics, and no secret/raw
+  receipt leakage.
+
+Focused pure-transition tests must also exercise
+`db_gateway_service.effect_delivery_transitions` directly. They must prove each
+planner is deterministic over frozen `DeliveryQueueState` and
+`DeliveryQueuePolicy`, returns only `ApplyTransition`, `EvidenceRequired`, or
+`RejectTransition`, handles inclusive budgets and checked time/counter bounds,
+and performs no SQL, authorization or receipt classification. Writer-level tests
+must separately prove that applying the plans retains the same atomic and
+authorization behavior. This requirement is not itself a claim that those
+focused tests or the full release gate have passed.
+
+Public truth proof maps to `test_mp08_financial_projection.py`,
+`test_mp08_legacy_pending_public_truth.py`, and the historical read-cost and
+history regression cases. Gateway detail/list projections must contain exactly
+the versioned eight-field `financial_effect` contract. Confirmed outcomes require
+the intended receipt's complete immutable validation. Competing winners and
+status-only terminals remain unconfirmed. Historical worker payment requires
+the exhaustive predicate and remains stable across startup/read recomputation.
+Ruling releases at 100 and 0 percent map to `worker_paid` and
+`poster_refunded`; intermediate rulings map to `split` only when the matching
+receipt is confirmed. GDP and aggregate earnings assertions remain unchanged
+for MP-19.
+
 ## MP-04 receipt acceptance amendment
 
 This amendment supersedes historical flat-response, split-amount and caller financial-constraint

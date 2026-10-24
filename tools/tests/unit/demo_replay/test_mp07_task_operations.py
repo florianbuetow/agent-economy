@@ -5,6 +5,8 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import tempfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -15,11 +17,16 @@ import pytest
 import yaml
 from service_auth.financial_responses import SQLITE_MAX_INTEGER
 from service_auth.jws import parse_jws
+from service_auth.task_postings import TaskPostingResponse
+from service_auth.task_postings import TaskPostingIntent
+from service_auth.financial_identity import operation_id_for
 
 from demo_replay import clients
 from demo_replay import engine as engine_module
 from demo_replay.config import PlatformConfig
 from demo_replay.engine import ReplayEngine, load_scenario
+from demo_replay.run_store import ActorDefinition, RunEnvironment, RunStore
+from demo_replay.task_operations import TaskIntent, canonical_json
 from demo_replay.wallet import DemoAgent
 
 pytestmark = pytest.mark.unit
@@ -245,12 +252,211 @@ def _engine(steps: list[dict[str, Any]]) -> ReplayEngine:
         platform_key_path=Path("unused-platform.key"),
         token_ttl_seconds=60,
     )
-    engine = ReplayEngine(
-        {"name": "Native demo", "default_delay": 0, "agents": [], "steps": steps}, config
+    first_action = steps[0]["action"] if steps else "bid"
+    order = ["bid", "accept_bid", "submit_deliverable", "approve"]
+    needed = order[: order.index(first_action)] if first_action in order else order[:3]
+    post_step = {
+        "action": "post_task",
+        "poster": "alice",
+        "ref": "task",
+        "title": "Demo task",
+        "spec": "Exact task",
+        "reward": 100,
+        "bidding_deadline_seconds": 60,
+        "acceptance_window_seconds": 60,
+        "execution_deadline_seconds": 120,
+        "review_deadline_seconds": 180,
+    }
+    producers = [_step(action) for action in needed]
+    scenario = {
+        "name": "Native demo",
+        "default_delay": 0,
+        "agents": [
+            {"handle": "alice", "name": "Alice"},
+            {"handle": "bob", "name": "Bob"},
+        ],
+        "steps": [post_step, *producers, *steps],
+    }
+    engine = ReplayEngine(scenario, config)
+    state = Path(tempfile.mkdtemp(prefix="mp05-native-unit-")).resolve()
+    store = RunStore.open(
+        state_directory=state,
+        run_id=f"run-{UUID(int=id(engine) % (1 << 128))}",
+        environment=RunEnvironment(
+            environment_id="native-unit",
+            identity_url=config.identity_url,
+            bank_url=config.bank_url,
+            task_board_url=config.task_board_url,
+            reputation_url=config.reputation_url,
+            court_url=config.court_url,
+            platform_public_fingerprint_sha256="c" * 64,
+        ),
+        scenario_bytes=yaml.safe_dump(scenario, sort_keys=False).encode(),
+        scenario=scenario,
+        actor_definitions=(
+            ActorDefinition(handle="alice", name="Alice"),
+            ActorDefinition(handle="bob", name="Bob"),
+        ),
+        effective_delay_seconds=0.0,
+        max_record_bytes=1_048_576,
+        diagnostic_limit=32,
     )
-    engine.agents = {handle: _agent(handle) for handle in ("alice", "bob")}
+    for handle in ("alice", "bob"):
+        actor = store.actors[handle]
+        store.record_registration(
+            actor_handle=handle,
+            response={
+                "agent_id": f"a-{handle}",
+                "name": actor.name,
+                "public_key": actor.public_key,
+                "registered_at": AT,
+            },
+        )
+    engine.agents = {}
+    for handle, actor in store.actors.items():
+        loaded = DemoAgent.from_pem(handle, actor.name, actor.private_key_path, 60)
+        loaded.agent_id = actor.agent_id
+        engine.agents[handle] = loaded
+    engine._store = store
+    _seed_posting(store, post_step)
+    for offset, producer in enumerate(producers, start=1):
+        _seed_native(store, offset, producer, engine.agents)
     engine._refs["task"] = TASK
     return engine
+
+
+def _seed_posting(store: RunStore, step: dict[str, Any]) -> None:
+    intent = TaskPostingIntent.from_json(
+        {
+            "protocol_version": 1,
+            "operation_id": "op-00000000-0000-4000-8000-000000000090",
+            "task_id": TASK,
+            "actor_kind": "agent",
+            "actor_id": "a-alice",
+            "lock_operation_id": operation_id_for("task-lock", (TASK, "a-alice")),
+            "title": step["title"],
+            "spec": step["spec"],
+            "reward": step["reward"],
+            "bidding_deadline_seconds": step["bidding_deadline_seconds"],
+            "acceptance_window_seconds": step["acceptance_window_seconds"],
+            "execution_deadline_seconds": step["execution_deadline_seconds"],
+            "review_deadline_seconds": step["review_deadline_seconds"],
+        }
+    )
+    response = _published_response(intent)
+    prepared = store.reserve_posting(index=0, step=step, actor_handle="alice", intent=intent)
+    sent = store.mark_dispatching(index=0, expected_revision=prepared.revision)
+    store.complete_posting(index=0, expected_revision=sent.revision, response=response)
+
+
+def _published_response(intent: TaskPostingIntent) -> TaskPostingResponse:
+    created = datetime(2026, 10, 18, 12, tzinfo=UTC)
+
+    def stamp(value: datetime) -> str:
+        return value.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+    def micros(value: datetime) -> int:
+        return int(value.timestamp() * 1_000_000)
+
+    result = {
+        "task_id": intent.task_id,
+        "poster_id": intent.actor_id,
+        "title": intent.title,
+        "spec": intent.spec,
+        "reward": intent.reward,
+        "bidding_deadline_seconds": intent.bidding_deadline_seconds,
+        "acceptance_window_seconds": intent.acceptance_window_seconds,
+        "execution_deadline_seconds": intent.execution_deadline_seconds,
+        "review_deadline_seconds": intent.review_deadline_seconds,
+        "status": "open",
+        "escrow_id": "esc-demo",
+        "created_at": stamp(created),
+        "bidding_deadline": stamp(created + timedelta(seconds=intent.bidding_deadline_seconds)),
+        "acceptance_deadline": stamp(
+            created
+            + timedelta(seconds=intent.bidding_deadline_seconds + intent.acceptance_window_seconds)
+        ),
+        "bidding_cutoff_us": micros(created + timedelta(seconds=intent.bidding_deadline_seconds)),
+        "acceptance_cutoff_us": micros(
+            created
+            + timedelta(seconds=intent.bidding_deadline_seconds + intent.acceptance_window_seconds)
+        ),
+        "lifecycle_version": 0,
+        "timing_contract_version": 2,
+        "event_id": 1,
+    }
+    body = {
+        "protocol_version": 1,
+        "operation_id": intent.operation_id,
+        "task_id": intent.task_id,
+        "request_sha256": intent.request_sha256,
+        "publication_state": "published",
+        "lock_operation_id": intent.lock_operation_id,
+        "escrow_id": "esc-demo",
+        "admitted_at": stamp(created),
+        "published_at": stamp(created),
+        "result": result,
+        "error": None,
+    }
+    return TaskPostingResponse(201, body)
+
+
+def _seed_native(
+    store: RunStore,
+    index: int,
+    step: dict[str, Any],
+    agents: dict[str, DemoAgent],
+) -> None:
+    action = step["action"]
+    command, source, _target, version = COMMANDS[action]
+    del command
+    actor_handle = "bob" if action in {"bid", "submit_deliverable"} else "alice"
+    arguments: dict[str, Any] = {}
+    if action == "bid":
+        arguments = {"amount": 90}
+    elif action == "accept_bid":
+        arguments = {
+            "bid_id": BID,
+            "worker_id": "a-bob",
+            "bidder_handle": "bob",
+            "bid_amount": 90,
+        }
+    operation_id = (
+        OPERATION if action == "bid" else f"op-00000000-0000-4000-8000-00000000009{index}"
+    )
+    intent = TaskIntent(
+        action=action,
+        step_json=canonical_json(step),
+        operation_id=operation_id,
+        expected_lifecycle_version=version,
+        actor_handle=actor_handle,
+        actor_id=f"a-{actor_handle}",
+        actor_public_key=agents[actor_handle].public_key_string(),
+        task_id=TASK,
+        arguments_json=canonical_json(arguments),
+        observed_task_json=canonical_json(_task(source, version)),
+    )
+    prepared = store.reserve_step(
+        index=index,
+        step=step,
+        actor_handle=actor_handle,
+        intent=intent.as_json(),
+    )
+    sent = store.mark_dispatching(index=index, expected_revision=prepared.revision)
+    response = _response(action, intent.operation_id, version, pending=False)
+    if action == "bid":
+        result: dict[str, object] = {"task_id": TASK, "bid": response}
+    elif action == "accept_bid":
+        result = {"task_id": TASK, "bidder_handle": "bob", "response": response}
+    else:
+        result = {"task_id": TASK, "response": response}
+    store.finish_step(
+        index=index,
+        expected_revision=sent.revision,
+        state="completed",
+        result=result,
+        diagnostic=None,
+    )
 
 
 def _printed(console: MagicMock) -> str:
@@ -325,27 +531,32 @@ async def test_invalid_native_identity_never_reaches_http(
 
 
 @pytest.mark.asyncio
-async def test_posting_signs_the_explicit_poster_window() -> None:
+async def test_posting_signs_the_explicit_poster_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     requests: list[httpx.Request] = []
 
     def _capture(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         return httpx.Response(201, json={"task_id": TASK})
 
-    post: Any = clients.post_task
+    monkeypatch.setattr(
+        "service_auth.mixins.task_board.parse_task_posting_submit_response",
+        lambda response, intent: TaskPostingResponse(response.status_code, {"accepted": True}),
+    )
     async with httpx.AsyncClient(transport=httpx.MockTransport(_capture)) as client:
-        await post(
-            client,
-            _agent("alice"),
+        poster = _agent("alice")
+        poster.configure_task_board(client, "https://board.invalid")
+        intent = poster.prepare_task_posting(
             "Title",
             "Spec",
             100,
-            "https://board.invalid",
-            bidding_deadline_seconds=120,
-            execution_deadline_seconds=900,
-            review_deadline_seconds=240,
-            acceptance_window_seconds=45,
+            120,
+            45,
+            900,
+            240,
         )
+        await poster.submit_task_posting(intent)
     signed = parse_jws(json.loads(requests[0].content)["task_token"])
     assert signed.payload["acceptance_window_seconds"] == 45
     assert signed.payload["bidding_deadline_seconds"] == 120
@@ -356,22 +567,20 @@ async def test_posting_signs_the_explicit_poster_window() -> None:
 @pytest.mark.asyncio
 @pytest.mark.parametrize("window", [0, True, 1.5, "45", SQLITE_MAX_INTEGER // 1_000_000 + 1])
 async def test_invalid_window_never_reaches_http(window: object) -> None:
-    post: Any = clients.post_task
     client = AsyncMock()
+    poster = _agent("alice")
+    poster.configure_task_board(client, "https://board.invalid")
     with pytest.raises(ValueError):
-        await post(
-            client,
-            _agent("alice"),
+        poster.prepare_task_posting(
             "Title",
             "Spec",
             100,
-            "https://board.invalid",
-            bidding_deadline_seconds=120,
-            execution_deadline_seconds=900,
-            review_deadline_seconds=240,
-            acceptance_window_seconds=window,
+            120,
+            window,
+            900,
+            240,
         )
-    client.post.assert_not_awaited()
+    client.request.assert_not_awaited()
 
 
 @pytest.mark.parametrize("window", [None, 0, True, "45"])
@@ -410,13 +619,29 @@ async def test_engine_forwards_all_explicit_posting_terms(monkeypatch: pytest.Mo
         "acceptance_window_seconds": 45,
     }
     engine = _engine([step])
-    post = AsyncMock(return_value=_task("open", 0))
-    monkeypatch.setattr(clients, "post_task", post)
+    poster = engine.agents["alice"]
+    prepare = MagicMock(wraps=poster.prepare_task_posting)
+    monkeypatch.setattr(poster, "prepare_task_posting", prepare)
+    missing = httpx.Response(
+        404,
+        request=httpx.Request("GET", "https://board.invalid/task-publications/missing"),
+    )
+    monkeypatch.setattr(
+        poster,
+        "get_task_posting",
+        AsyncMock(
+            side_effect=httpx.HTTPStatusError("missing", request=missing.request, response=missing)
+        ),
+    )
+    monkeypatch.setattr(
+        poster,
+        "submit_task_posting",
+        AsyncMock(side_effect=lambda intent: _published_response(intent)),
+    )
+
     await engine._execute_step(MagicMock(), step)
-    assert post.call_args.kwargs["acceptance_window_seconds"] == 45
-    assert post.call_args.kwargs["bidding_deadline_seconds"] == 120
-    assert post.call_args.kwargs["execution_deadline_seconds"] == 900
-    assert post.call_args.kwargs["review_deadline_seconds"] == 240
+
+    prepare.assert_called_once_with("Task", "Spec", 100, 120, 45, 900, 240)
 
 
 @pytest.mark.asyncio

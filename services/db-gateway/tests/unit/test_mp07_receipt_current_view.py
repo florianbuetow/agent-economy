@@ -25,7 +25,8 @@ def test_finalization_accepts_receipt_after_later_authorized_balance_change(tmp_
         str(tmp_path / "receipt-current-view.db"),
         5000,
         "wal",
-        load_schema_sql(SchemaState.CURRENT_V4),
+        load_schema_sql(SchemaState.CURRENT_V5),
+        current_task_board_caller_kid="gateway-task-board",
     )
     try:
         graph = setup._seed_graph(writer, submitted=True)
@@ -85,7 +86,8 @@ def test_finalizer_rejects_disagreement_in_settlement_timestamps(
         str(tmp_path / "receipt-timestamps.db"),
         5000,
         "wal",
-        load_schema_sql(SchemaState.CURRENT_V4),
+        load_schema_sql(SchemaState.CURRENT_V5),
+        current_task_board_caller_kid="gateway-task-board",
     )
     try:
         graph = setup._seed_graph(writer, submitted=True)

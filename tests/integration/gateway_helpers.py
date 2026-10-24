@@ -128,6 +128,16 @@ board_authority:
   platform_public_key_path: "{config_dir / "platform.pub"}"
   deadline_actor_id: "system-task-board-deadline"
 
+board_effect_recovery:
+  current_task_board_caller_kid: "gateway-task-board"
+  max_attempts_per_delivery: 8
+  initial_backoff_seconds: 2
+  max_backoff_seconds: 60
+  lease_duration_seconds: 45
+  evidence_interval_seconds: 60
+  gateway_timeout_seconds: 10
+  bank_timeout_seconds: 10
+
 request:
   max_body_size: 1048576
 
@@ -248,6 +258,9 @@ def create_gateway_client(db_path: str) -> httpx.AsyncClient:
                 busy_timeout_ms=settings.database.busy_timeout_ms,
                 journal_mode=settings.database.journal_mode,
                 schema_sql=schema_sql,
+                current_task_board_caller_kid=(
+                    settings.board_effect_recovery.current_task_board_caller_kid
+                ),
             )
             state.db_reader = DbReader(db=state.db_writer._db)
 

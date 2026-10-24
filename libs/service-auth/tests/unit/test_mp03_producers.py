@@ -16,6 +16,7 @@ from service_auth.config import AgentConfig, load_agent_config
 from service_auth.financial_identity import operation_id_for
 from service_auth.jws import TokenPolicy, parse_jws
 from service_auth.signing import generate_keypair
+from tests.unit.posting_transport import pending_posting_response
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -93,14 +94,17 @@ async def test_post_task_emits_separate_context_bound_tokens() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured.append(request)
-        return httpx.Response(200, json={"task_id": "ok"})
+        return pending_posting_response(request)
 
     agent = BaseAgent(_config())
     agent.agent_id = "a-alice"
     await agent._http.aclose()
     agent._http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     try:
-        await agent.post_task("Title", "Spec", 25, 10, 20, 30, acceptance_window_seconds=40)
+        intent = agent.prepare_task_posting("Title", "Spec", 25, 10, 40, 20, 30)
+        assert captured == []
+        response = await agent.submit_task_posting(intent)
+        assert response.status_code == 202
     finally:
         await agent.close()
 
@@ -117,9 +121,31 @@ async def test_post_task_emits_separate_context_bound_tokens() -> None:
         "resource": "POST /tasks",
     }
     assert task.payload["action"] == "create_task"
+    assert task.payload == {
+        "action": "create_task",
+        "protocol_version": 1,
+        "operation_id": intent.operation_id,
+        "task_id": intent.task_id,
+        "poster_id": "a-alice",
+        "lock_operation_id": intent.lock_operation_id,
+        "title": "Title",
+        "spec": "Spec",
+        "reward": 25,
+        "bidding_deadline_seconds": 10,
+        "acceptance_window_seconds": 40,
+        "execution_deadline_seconds": 20,
+        "review_deadline_seconds": 30,
+    }
     assert escrow.header.aud == "central-bank"
     assert escrow.header.resource == "POST /escrow/lock"
     assert escrow.payload["action"] == "escrow_lock"
+    assert escrow.payload == {
+        "action": "escrow_lock",
+        "operation_id": intent.lock_operation_id,
+        "task_id": intent.task_id,
+        "amount": 25,
+        "agent_id": "a-alice",
+    }
     assert escrow.payload["operation_id"] == operation_id_for(
         "task-lock",
         (str(task.payload["task_id"]), "a-alice"),
