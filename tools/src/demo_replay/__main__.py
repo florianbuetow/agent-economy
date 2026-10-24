@@ -3,8 +3,9 @@
 Usage::
 
     cd tools/
+    uv run python -m demo_replay scenarios/quick.yaml
+    uv run python -m demo_replay scenarios/scale.yaml --delay 1.0
     uv run python -m demo_replay scenarios/quick.yaml --run-id run-<uuid>
-    uv run python -m demo_replay scenarios/scale.yaml --run-id run-<uuid> --delay 1.0
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import asyncio
 import sys
 from pathlib import Path
 from typing import cast
+from uuid import uuid4
 
 from demo_replay.config import load_demo_settings, load_platform_settings
 from demo_replay.engine import ReplayEngine, load_scenario
@@ -30,8 +32,8 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--run-id",
-        required=True,
-        help="Durable run identity in run-<uuid> form.",
+        default=None,
+        help="Existing durable run identity in run-<uuid> form; omit to start a new run.",
     )
     parser.add_argument(
         "--delay",
@@ -40,6 +42,14 @@ def _parse_args() -> argparse.Namespace:
         help="Override default delay between steps (seconds).",
     )
     return parser.parse_args()
+
+
+def _resolve_run_id(run_id: str | None) -> str:
+    if run_id is not None:
+        return run_id
+    generated_run_id = f"run-{uuid4()}"
+    print(f"Generated demo run ID: {generated_run_id}")
+    return generated_run_id
 
 
 def main() -> None:
@@ -64,7 +74,7 @@ def main() -> None:
     demo_config = load_demo_settings()
     engine = ReplayEngine(scenario, config)
     engine.bind_durable_run(
-        run_id=args.run_id,
+        run_id=_resolve_run_id(args.run_id),
         scenario_bytes=scenario_bytes,
         demo_config=demo_config,
         effective_delay_seconds=float(effective_delay_number),

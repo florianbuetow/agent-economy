@@ -5,13 +5,21 @@
 set -euo pipefail
 
 loc() {
+    local pattern
+    local name_predicates=()
+    for pattern in "$@"; do
+        if [ "${#name_predicates[@]}" -gt 0 ]; then
+            name_predicates+=(-o)
+        fi
+        name_predicates+=(-name "$pattern")
+    done
     find . \
         -path './.git' -prune -o \
         -path '*/.venv' -prune -o \
         -path '*/node_modules' -prune -o \
         -path './.claude' -prune -o \
-        "$@" -type f -print 2>/dev/null \
-        | xargs cat 2>/dev/null | wc -l | tr -d ' '
+        \( "${name_predicates[@]}" \) -type f -print0 2>/dev/null \
+        | xargs -0 cat 2>/dev/null | wc -l | tr -d ' '
 }
 
 total=0
@@ -27,28 +35,28 @@ py_src=$(find . \
     -path '*/.venv' -prune -o \
     -path '*/node_modules' -prune -o \
     -path './.claude' -prune -o \
-    -name '*.py' -path '*/src/*' -type f -print 2>/dev/null \
-    | xargs cat 2>/dev/null | wc -l | tr -d ' ')
+    -name '*.py' -path '*/src/*' -type f -print0 2>/dev/null \
+    | xargs -0 cat 2>/dev/null | wc -l | tr -d ' ')
 
 py_test=$(find . \
     -path './.git' -prune -o \
     -path '*/.venv' -prune -o \
     -path '*/node_modules' -prune -o \
     -path './.claude' -prune -o \
-    -name '*.py' -path '*/tests/*' -type f -print 2>/dev/null \
-    | xargs cat 2>/dev/null | wc -l | tr -d ' ')
+    -name '*.py' -path '*/tests/*' -type f -print0 2>/dev/null \
+    | xargs -0 cat 2>/dev/null | wc -l | tr -d ' ')
 
 printf "\n"
 printf "\033[1;34m  Lines of Code\033[0m\n\n"
 
 row "Python (source)"  "$py_src"
 row "Python (tests)"   "$py_test"
-row "TypeScript"       "$(loc -name '*.ts' -o -name '*.tsx')"
-row "Shell"            "$(loc -name '*.sh')"
-row "Justfiles"        "$(loc -name 'justfile')"
-row "YAML"             "$(loc -name '*.yaml' -o -name '*.yml')"
-row "TOML"             "$(loc -name '*.toml')"
-row "Specs (md)"       "$(loc -name '*.md')"
+row "TypeScript"       "$(loc '*.ts' '*.tsx')"
+row "Shell"            "$(loc '*.sh')"
+row "Justfiles"        "$(loc 'justfile')"
+row "YAML"             "$(loc '*.yaml' '*.yml')"
+row "TOML"             "$(loc '*.toml')"
+row "Specs (md)"       "$(loc '*.md')"
 
 printf "  %-20s ────────\n" ""
 printf "  \033[1;37m%-20s\033[0m \033[1;33m%'8d\033[0m\n" "Total" "$total"

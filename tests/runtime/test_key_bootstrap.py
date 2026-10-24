@@ -46,7 +46,9 @@ def _configured_handles(runtime: IsolatedRuntime) -> tuple[str, ...]:
 
 
 def _assert_matching_pair(private_path: Path, public_path: Path) -> None:
-    private_key = serialization.load_pem_private_key(private_path.read_bytes(), password=None)
+    private_key = serialization.load_pem_private_key(
+        private_path.read_bytes(), password=None
+    )
     public_key = serialization.load_pem_public_key(public_path.read_bytes())
     assert isinstance(private_key, Ed25519PrivateKey)
     assert isinstance(public_key, Ed25519PublicKey)
@@ -144,7 +146,9 @@ def test_concurrent_platform_registration_converges_per_runtime_and_isolates_run
         second.stop()
 
 
-def test_runtime_bootstrap_failure_prevents_service_launch(runtime: IsolatedRuntime) -> None:
+def test_runtime_bootstrap_failure_prevents_service_launch(
+    runtime: IsolatedRuntime,
+) -> None:
     keys_dir = runtime.run_dir / "keys"
     handles = _configured_handles(runtime)
     damaged_handle = handles[0]
@@ -180,7 +184,9 @@ def test_bootstrap_owned_runner_drains_child_after_parent_exit(
         "\nsys.exit(0)"
     )
     runner = getattr(runtime, "_run_key_bootstrap_command", None)
-    assert callable(runner), "bootstrap must use the reviewed exact-owned command runner"
+    assert callable(runner), (
+        "bootstrap must use the reviewed exact-owned command runner"
+    )
 
     result = runner(
         [
@@ -215,8 +221,16 @@ def test_bootstrap_owned_runner_drains_child_after_parent_exit(
 def test_start_all_checks_keys_before_first_service_launch() -> None:
     root_justfile = (REPO_ROOT / "justfile").read_text()
     start_all = root_justfile.index("start-all:")
-    preflight = root_justfile.index("key_provision_cli check", start_all)
-    first_service = root_justfile.index("Starting tier 1 (DB Gateway)", start_all)
+    stop_recipes = root_justfile.index("# Stop identity service", start_all)
+    start_all_body = root_justfile[start_all:stop_recipes]
+    preflight = start_all_body.index("just check-keys")
+    first_service = start_all_body.index("Starting tier 1 (DB Gateway)")
+
+    check_keys = root_justfile.index("\ncheck-keys:\n")
+    adoption = root_justfile.index("# Explicit one-time adoption", check_keys)
+    check_keys_body = root_justfile[check_keys:adoption]
 
     assert preflight < first_service
-    assert "just provision-keys" in root_justfile[start_all:first_service]
+    assert "just provision-keys" in start_all_body[:first_service]
+    assert "uv run python -m key_provision_cli check" in check_keys_body
+    assert "--gateway-config ../services/db-gateway/config.yaml" in check_keys_body

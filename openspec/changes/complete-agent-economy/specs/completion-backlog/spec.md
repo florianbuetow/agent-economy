@@ -573,3 +573,17 @@ The completion backlog SHALL track the filelock audit regression discovered by r
 - **THEN** resolve a verified secure filelock release with uv-generated locks; use no new advisory exclusions; permit only a documented version-scoped Court override with actual consumer compatibility checks
 - **AND** all affected audits and consumer checks pass, followed by fresh isolated root `just ci-quiet` exit zero before closure
 - **Status:** CLOSED 2026-10-24 — All seven services resolve filelock 4.2.4; audits, consumer checks and full root R8 pass. The exact-version Court override and removal condition are documented. Evidence: `openspec/changes/complete-agent-economy/evidence/ci-feature-first-2026-10-23/ci-result.md`. No publication is claimed.
+
+### Requirement: Usable and truthful justfile entry points
+The repository SHALL expose working developer commands without arbitrary manual run identities, terminal-only help assumptions, false health/startup success, or misleading file-write descriptions. Destructive operations SHALL be verified only against disposable resources. Missing benchmark functionality requires an explicit scope decision rather than a fake passing command.
+
+#### Scenario: T-195 Verify developer-command failures
+- **WHEN** developer commands are audited against their documented normal use
+- **THEN** retain failures for zero-argument demo, headless help, unhealthy status, failed startup dependency handling and mixed existing/missing key administration; preserve required security rejection cases
+- **Status:** CLOSED 2026-10-25 — Failing-first command evidence retained; focused regressions and full root CI passed. Evidence: `openspec/changes/complete-agent-economy/evidence/justfile-targets/final-result.json`.
+
+#### Scenario: T-196 Repair developer-command entry points
+- **WHEN** T-195 has failing evidence for a concrete command defect
+- **THEN** normal demo allocates its internal ID, explicit resume remains available, help works without a terminal, health/startup failures return nonzero, file-write descriptions match behavior, and existing-key permission adoption can precede provisioning of missing keys without replacing identity
+- **AND** safe target checks and fresh full CI pass; performance-target handling follows the owner's recorded choice
+- **Status:** CLOSED 2026-10-25 — Automatic demo IDs and browser opening, truthful health/startup failures, headless help, safe process selection, existing-key adoption, argument validation, and statistics repairs passed full root CI (exit 0; 1,349 source files unchanged). Unsupported performance commands were removed under the owner's feature-first/basic-testing scope; performance test files were preserved. All seven ordinary services remained healthy after final verification. Evidence: `openspec/changes/complete-agent-economy/evidence/justfile-targets/final-result.json`.

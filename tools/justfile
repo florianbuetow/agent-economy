@@ -4,7 +4,6 @@ _default:
 
 # Show help information
 help:
-    @clear
     @echo ""
     @printf "\033[0;34m=== Agent Economy Tools ===\033[0m\n"
     @echo ""
@@ -13,10 +12,11 @@ help:
     @printf "  \033[0;37mjust destroy          \033[0;34m Remove virtual environment\033[0m\n"
     @echo ""
     @printf "\033[1;33mSimulation\033[0m\n"
-    @printf "  \033[0;37mjust simulate <file> <run-id>\033[0;34m Run or resume a demo scenario\033[0m\n"
+    @printf "  \033[0;37mjust simulate <file>\033[0;34m          Start a demo scenario\033[0m\n"
+    @printf "  \033[0;37mjust simulate-resume <file> <run-id>\033[0;34m Resume a demo scenario\033[0m\n"
     @echo ""
     @printf "\033[1;33mTask Generation\033[0m\n"
-    @printf "  \033[0;37mjust generate-tasks  \033[0;34m Generate math tasks to data/math_tasks.jsonl\033[0m\n"
+    @printf "  \033[0;37mjust generate-tasks  \033[0;34m Replaces data/math_tasks.jsonl with generated tasks\033[0m\n"
     @echo ""
     @printf "\033[1;33mCode Quality\033[0m\n"
     @printf "  \033[0;37mjust code-format      \033[0;34m Auto-fix formatting\033[0m\n"
@@ -51,17 +51,23 @@ destroy:
     @printf "\033[0;32m✓ Virtual environment removed\033[0m\n"
     @echo ""
 
-# Run a demo scenario (pass scenario file as argument)
-simulate scenario run_id:
+# Start a demo scenario with a generated run ID
+simulate scenario:
+    @echo ""
+    uv run python -m demo_replay {{quote(scenario)}}
+    @echo ""
+
+# Resume a demo scenario with an existing run ID
+simulate-resume scenario run_id:
     @echo ""
     uv run python -m demo_replay {{quote(scenario)}} --run-id {{quote(run_id)}}
     @echo ""
 
-# Generate math tasks (appends 10,000 tasks to data/math_tasks.jsonl)
+# Generate 10,000 math tasks, replacing data/math_tasks.jsonl
 generate-tasks:
     @echo ""
     uv run python -m math_task_factory --total 10000
-    @printf "\033[0;32m✓ Tasks appended to data/math_tasks.jsonl\033[0m\n"
+    @printf "\033[0;32m✓ Tasks written to data/math_tasks.jsonl\033[0m\n"
     @echo ""
 
 # Auto-fix formatting
