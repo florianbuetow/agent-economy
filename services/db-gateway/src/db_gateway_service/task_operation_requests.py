@@ -1,4 +1,4 @@
-"""Strict version-1 identity for native Task Board operations."""
+"""Strict identity for native Task Board operations."""
 
 from __future__ import annotations
 
@@ -90,6 +90,17 @@ COMMAND_ARGUMENT_FIELDS: Final[dict[TaskCommand, frozenset[str]]] = {
         }
     ),
 }
+_SUBMISSION_V2_ARGUMENT_FIELDS: Final[frozenset[str]] = frozenset(
+    {
+        "worker_id",
+        "manifest_id",
+        "accepted_binding_kind",
+        "accepted_binding_sha256",
+    }
+)
+_ACCEPTED_BINDING_KINDS: Final[frozenset[str]] = frozenset(
+    {"publication_contract", "legacy_accepted_continuation"}
+)
 
 COMMAND_SOURCE_STATUS: Final[dict[TaskCommand, str]] = {
     "submit_bid": "open",
@@ -147,6 +158,7 @@ _INTEGER_FIELDS: Final[dict[str, tuple[int, int]]] = {
 class TaskOperationRequest:
     """Validated immutable command and its canonical business identity."""
 
+    protocol_version: int
     operation_id: str
     task_id: str
     command: TaskCommand
@@ -208,11 +220,19 @@ def _command(value: object) -> TaskCommand:
     raise _invalid("Unknown task operation command", {"field": "command"})
 
 
-def _arguments(command: TaskCommand, value: object) -> MappingProxyType[str, TaskArgument]:
+def _arguments(
+    command: TaskCommand,
+    protocol_version: int,
+    value: object,
+) -> MappingProxyType[str, TaskArgument]:
     if not isinstance(value, dict) or any(not isinstance(key, str) for key in value):
         raise _invalid("arguments must be an object", {"field": "arguments"})
     raw_arguments: dict[str, object] = dict(value)
-    expected = COMMAND_ARGUMENT_FIELDS[command]
+    expected = (
+        _SUBMISSION_V2_ARGUMENT_FIELDS
+        if command == "submit_deliverable" and protocol_version == 2
+        else COMMAND_ARGUMENT_FIELDS[command]
+    )
     if tuple(sorted(raw_arguments)) != tuple(sorted(expected)):
         raise _invalid(
             "arguments fields do not match the command",
@@ -229,6 +249,22 @@ def _arguments(command: TaskCommand, value: object) -> MappingProxyType[str, Tas
             validated[field] = _integer(raw, field)
         else:
             validated[field] = _string(raw, field)
+    binding_kind = validated.get("accepted_binding_kind")
+    if binding_kind is not None and binding_kind not in _ACCEPTED_BINDING_KINDS:
+        raise _invalid(
+            "accepted_binding_kind is not supported",
+            {"field": "accepted_binding_kind"},
+        )
+    binding_sha256 = validated.get("accepted_binding_sha256")
+    if binding_sha256 is not None and (
+        not isinstance(binding_sha256, str)
+        or len(binding_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in binding_sha256)
+    ):
+        raise _invalid(
+            "accepted_binding_sha256 must be lowercase hexadecimal SHA-256",
+            {"field": "accepted_binding_sha256"},
+        )
     return MappingProxyType(validated)
 
 
@@ -239,17 +275,23 @@ def parse_task_operation_request(payload: object) -> TaskOperationRequest:
     raw_payload: dict[str, object] = dict(payload)
     if tuple(sorted(raw_payload)) != tuple(sorted(TOP_LEVEL_FIELDS)):
         raise _invalid(
-            "Task operation fields do not match protocol version 1",
+            "Task operation fields do not match the protocol contract",
             {
                 "required_fields": sorted(TOP_LEVEL_FIELDS),
                 "provided_fields": sorted(raw_payload),
             },
         )
-    if type(raw_payload["protocol_version"]) is not int or raw_payload["protocol_version"] != 1:
-        raise _invalid("protocol_version must be integer 1", {"field": "protocol_version"})
+    protocol_version = raw_payload["protocol_version"]
+    if type(protocol_version) is not int or protocol_version not in {1, 2}:
+        raise _invalid("protocol_version must be integer 1 or 2", {"field": "protocol_version"})
 
     operation_id = parse_operation_id(raw_payload["operation_id"])
     command = _command(raw_payload["command"])
+    if protocol_version == 2 and command != "submit_deliverable":
+        raise _invalid(
+            "protocol_version 2 is supported only for submit_deliverable",
+            {"field": "protocol_version", "command": command},
+        )
     task_id = _string(raw_payload["task_id"], "task_id")
     expected_status = _string(raw_payload["expected_status"], "expected_status")
     if expected_status != COMMAND_SOURCE_STATUS[command]:
@@ -267,7 +309,7 @@ def parse_task_operation_request(payload: object) -> TaskOperationRequest:
             {"field": "actor_kind", "command": command},
         )
     actor_id = _string(raw_payload["actor_id"], "actor_id")
-    arguments = _arguments(command, raw_payload["arguments"])
+    arguments = _arguments(command, protocol_version, raw_payload["arguments"])
 
     canonical_payload: dict[str, object] = {
         "actor_id": actor_id,
@@ -276,7 +318,7 @@ def parse_task_operation_request(payload: object) -> TaskOperationRequest:
         "command": command,
         "expected_lifecycle_version": lifecycle_version,
         "expected_status": expected_status,
-        "protocol_version": 1,
+        "protocol_version": protocol_version,
         "task_id": task_id,
     }
     canonical_json = json.dumps(
@@ -287,6 +329,7 @@ def parse_task_operation_request(payload: object) -> TaskOperationRequest:
         allow_nan=False,
     )
     return TaskOperationRequest(
+        protocol_version=protocol_version,
         operation_id=operation_id,
         task_id=task_id,
         command=command,

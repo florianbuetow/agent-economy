@@ -1,4 +1,4 @@
-"""The running Gateway must use v4 and reject older or incomplete task state."""
+"""The running Gateway must use V5 and reject older or incomplete task state."""
 
 from __future__ import annotations
 
@@ -31,15 +31,16 @@ def _dump(database: Path) -> tuple[str, ...]:
         connection.close()
 
 
-def test_gateway_bootstraps_the_explicit_v4_catalog(tmp_path: Path) -> None:
+def test_gateway_bootstraps_the_explicit_v5_catalog(tmp_path: Path) -> None:
     writer = DbWriter(
         db_path=str(tmp_path / "fresh.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        current_task_board_caller_kid="gateway-task-board",
     )
     try:
-        assert writer.connection.execute("SELECT version FROM schema_metadata").fetchone()[0] == 4
+        assert writer.connection.execute("SELECT version FROM schema_metadata").fetchone()[0] == 5
         assert audit_task_contracts(writer.connection).contracts_clean
     finally:
         writer.close()
@@ -56,7 +57,13 @@ def test_existing_exact_v2_requires_migration_without_startup_mutation(tmp_path:
     writer: DbWriter | None = None
     try:
         with pytest.raises(ServiceError) as error:
-            writer = DbWriter(str(database), 5000, "wal", None)
+            writer = DbWriter(
+                str(database),
+                5000,
+                "wal",
+                None,
+                current_task_board_caller_kid="gateway-task-board",
+            )
         assert error.value.error == "migration_required"
         assert error.value.status_code == 503
         assert error.value.details["version"] == 2
@@ -66,7 +73,7 @@ def test_existing_exact_v2_requires_migration_without_startup_mutation(tmp_path:
             writer.close()
 
 
-def test_v4_startup_rejects_a_task_missing_its_contract_sidecar(tmp_path: Path) -> None:
+def test_v5_startup_rejects_a_task_missing_its_contract_sidecar(tmp_path: Path) -> None:
     source = prepare_v3_source(tmp_path)
     backup_id = "before-mp05-runtime-sidecar"
     publish_verified_backup(source, backup_id=backup_id)
@@ -78,6 +85,17 @@ def test_v4_startup_rejects_a_task_missing_its_contract_sidecar(tmp_path: Path) 
         busy_timeout_ms=5000,
     )
     assert result.observation == "committed_v4_verified"
+    v5_backup_id = "before-mp08-runtime-sidecar"
+    publish_verified_backup(source, backup_id=v5_backup_id)
+    v5 = migration.migrate_v4_to_v5(
+        source.inventory,
+        backup_root=source.backup_root,
+        backup_id=v5_backup_id,
+        work_root=source.work_root,
+        busy_timeout_ms=5000,
+        current_task_board_caller_kid=source.caller_kid,
+    )
+    assert v5.observation == "committed_v5_verified"
     connection = sqlite3.connect(source.database)
     try:
         connection.execute("DELETE FROM board_task_contracts WHERE task_id='t-1'")
@@ -86,7 +104,13 @@ def test_v4_startup_rejects_a_task_missing_its_contract_sidecar(tmp_path: Path) 
         connection.close()
     before = _dump(source.database)
     with pytest.raises(ServiceError) as error:
-        DbWriter(str(source.database), 5000, "wal", None)
+        DbWriter(
+            str(source.database),
+            5000,
+            "wal",
+            None,
+            current_task_board_caller_kid="gateway-task-board",
+        )
     assert error.value.error == "database_task_contract_failed"
     assert "missing_task_contract" in error.value.details["finding_codes"]
     assert _dump(source.database) == before

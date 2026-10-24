@@ -282,7 +282,7 @@ def test_unexpected_view_or_trigger_is_unknown(tmp_path: Path, extra_sql: str) -
         (
             "CREATE TABLE schema_metadata ("
             "singleton INTEGER PRIMARY KEY, version INTEGER NOT NULL);"
-            "INSERT INTO schema_metadata VALUES (1, 5)",
+            "INSERT INTO schema_metadata VALUES (1, 6)",
             SchemaState.FUTURE,
         ),
     ],
@@ -332,6 +332,7 @@ def test_empty_constructor_requires_exact_current_schema_and_closes_connection(
             busy_timeout_ms=BUSY_TIMEOUT_MS,
             journal_mode=JOURNAL_MODE,
             schema_sql=sql,
+            current_task_board_caller_kid="gateway-task-board",
         )
 
     assert raised.value.error == expected_error
@@ -350,7 +351,7 @@ def test_empty_constructor_requires_exact_current_schema_and_closes_connection(
         (
             "CREATE TABLE schema_metadata ("
             "singleton INTEGER PRIMARY KEY, version INTEGER NOT NULL);"
-            "INSERT INTO schema_metadata VALUES (1, 5)",
+            "INSERT INTO schema_metadata VALUES (1, 6)",
             "unsupported_schema_version",
         ),
     ],
@@ -369,6 +370,7 @@ def test_existing_rejected_schema_fails_before_persistent_journal_change(
             busy_timeout_ms=BUSY_TIMEOUT_MS,
             journal_mode=JOURNAL_MODE,
             schema_sql=load_schema_sql(SchemaState.CURRENT_V1),
+            current_task_board_caller_kid="gateway-task-board",
         )
 
     assert raised.value.error == expected_error
@@ -420,6 +422,7 @@ def test_bootstrap_fault_rolls_back_all_application_objects(
             busy_timeout_ms=BUSY_TIMEOUT_MS,
             journal_mode=JOURNAL_MODE,
             schema_sql=load_schema_sql(SchemaState.CURRENT_V1),
+            current_task_board_caller_kid="gateway-task-board",
         )
 
     check = real_connect(path)
@@ -431,10 +434,10 @@ def test_bootstrap_fault_rolls_back_all_application_objects(
 
 
 @pytest.mark.unit
-def test_existing_current_v4_allows_omitted_schema_sql(tmp_path: Path) -> None:
+def test_existing_current_v5_allows_omitted_schema_sql(tmp_path: Path) -> None:
     path = tmp_path / "current.db"
     connection = _open(path)
-    connection.executescript(load_schema_sql(SchemaState.CURRENT_V4))
+    connection.executescript(load_schema_sql(SchemaState.CURRENT_V5))
     connection.close()
 
     writer = DbWriter(
@@ -442,9 +445,10 @@ def test_existing_current_v4_allows_omitted_schema_sql(tmp_path: Path) -> None:
         busy_timeout_ms=BUSY_TIMEOUT_MS,
         journal_mode=JOURNAL_MODE,
         schema_sql=None,
+        current_task_board_caller_kid="gateway-task-board",
     )
     try:
-        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V4
+        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V5
     finally:
         writer.close()
 
@@ -455,7 +459,7 @@ def test_journal_setup_failure_closes_admitted_connection(
 ) -> None:
     path = tmp_path / "journal-failure.db"
     bootstrap = _open(path)
-    bootstrap.executescript(load_schema_sql(SchemaState.CURRENT_V4))
+    bootstrap.executescript(load_schema_sql(SchemaState.CURRENT_V5))
     bootstrap.close()
     opened: list[sqlite3.Connection] = []
     real_connect = sqlite3.connect
@@ -482,6 +486,7 @@ def test_journal_setup_failure_closes_admitted_connection(
             busy_timeout_ms=BUSY_TIMEOUT_MS,
             journal_mode=JOURNAL_MODE,
             schema_sql=None,
+            current_task_board_caller_kid="gateway-task-board",
         )
 
     assert len(opened) == 1
@@ -592,7 +597,7 @@ def test_constructor_rejects_invalid_pragma_configuration(
 ) -> None:
     path = tmp_path / "invalid-pragma.db"
     connection = _open(path)
-    connection.executescript(load_schema_sql(SchemaState.CURRENT_V4))
+    connection.executescript(load_schema_sql(SchemaState.CURRENT_V5))
     connection.close()
 
     with pytest.raises(ServiceError, match="database configuration"):
@@ -601,6 +606,7 @@ def test_constructor_rejects_invalid_pragma_configuration(
             busy_timeout_ms=busy_timeout_ms,
             journal_mode=journal_mode,
             schema_sql=None,
+            current_task_board_caller_kid="gateway-task-board",
         )
 
 
@@ -611,7 +617,7 @@ def test_constructor_verifies_effective_pragma_postconditions(
 ) -> None:
     path = tmp_path / f"ignored-{ignored_pragma}.db"
     connection = _open(path)
-    connection.executescript(load_schema_sql(SchemaState.CURRENT_V4))
+    connection.executescript(load_schema_sql(SchemaState.CURRENT_V5))
     connection.close()
     original_connect = sqlite3.connect
 
@@ -631,7 +637,13 @@ def test_constructor_verifies_effective_pragma_postconditions(
 
     monkeypatch.setattr(sqlite3, "connect", connect)
     with pytest.raises(ServiceError, match="database configuration"):
-        DbWriter(str(path), busy_timeout_ms=5000, journal_mode="wal", schema_sql=None)
+        DbWriter(
+            str(path),
+            busy_timeout_ms=5000,
+            journal_mode="wal",
+            schema_sql=None,
+            current_task_board_caller_kid="gateway-task-board",
+        )
 
 
 @pytest.mark.unit
@@ -661,6 +673,12 @@ def test_bootstrap_preserves_primary_error_when_rollback_and_close_fail(
         + "\nCREATE TABLE broken (duplicate TEXT, duplicate INTEGER);\n"
     )
     with pytest.raises(sqlite3.OperationalError, match="duplicate column") as raised:
-        DbWriter(str(path), busy_timeout_ms=5000, journal_mode="wal", schema_sql=candidate)
+        DbWriter(
+            str(path),
+            busy_timeout_ms=5000,
+            journal_mode="wal",
+            schema_sql=candidate,
+            current_task_board_caller_kid="gateway-task-board",
+        )
     assert "secondary rollback failure" in "\n".join(raised.value.__notes__)
     assert "secondary close failure" in "\n".join(raised.value.__notes__)

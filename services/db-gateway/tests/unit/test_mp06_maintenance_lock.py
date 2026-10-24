@@ -35,6 +35,7 @@ def _settings(lock_path: Path) -> SimpleNamespace:
             journal_mode="wal",
         ),
         recovery=SimpleNamespace(maintenance_lock_path=lock_path, backup_root=Path("backups")),
+        board_effect_recovery=SimpleNamespace(current_task_board_caller_kid="gateway-task-board"),
     )
 
 

@@ -33,7 +33,13 @@ def test_existing_verified_v3_requires_explicit_migration_without_startup_mutati
     before = source.database.read_bytes()
 
     with pytest.raises(ServiceError) as captured:
-        DbWriter(str(source.database), 5000, "wal", None)
+        DbWriter(
+            str(source.database),
+            5000,
+            "wal",
+            None,
+            current_task_board_caller_kid="gateway-task-board",
+        )
 
     assert captured.value.status_code == 503
     assert captured.value.error == "migration_required"
@@ -50,22 +56,29 @@ def test_older_schema_requires_explicit_migration_before_persistent_configuratio
     _write_schema(path, state)
     before = path.read_bytes()
     with pytest.raises(ServiceError) as captured:
-        DbWriter(str(path), 5000, "wal", None)
+        DbWriter(
+            str(path),
+            5000,
+            "wal",
+            None,
+            current_task_board_caller_kid="gateway-task-board",
+        )
 
     assert captured.value.error == "migration_required"
     assert path.read_bytes() == before
 
 
-def test_empty_database_bootstraps_exact_v4_transactionally(tmp_path: Path) -> None:
+def test_empty_database_bootstraps_exact_v5_transactionally(tmp_path: Path) -> None:
     path = tmp_path / "fresh.db"
     writer = DbWriter(
         str(path),
         5000,
         "wal",
-        load_schema_sql(SchemaState.CURRENT_V4),
+        load_schema_sql(SchemaState.CURRENT_V5),
+        current_task_board_caller_kid="gateway-task-board",
     )
     try:
-        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V4
+        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V5
         assert (
             writer.connection.execute("SELECT cutover_kind FROM bank_receipt_cutover").fetchone()[0]
             == "fresh_v2"
@@ -76,13 +89,19 @@ def test_empty_database_bootstraps_exact_v4_transactionally(tmp_path: Path) -> N
 
 def test_tampered_current_bootstrap_rolls_back_every_schema_object(tmp_path: Path) -> None:
     path = tmp_path / "tampered-bootstrap.db"
-    schema = load_schema_sql(SchemaState.CURRENT_V4).replace(
+    schema = load_schema_sql(SchemaState.CURRENT_V5).replace(
         "a81b1a47e8cd319a73362c83a992f181986e799b1e82753bf139e60b35d0a4f6",
         "f" * 64,
         1,
     )
     with pytest.raises((ServiceError, sqlite3.Error)):
-        DbWriter(str(path), 5000, "wal", schema)
+        DbWriter(
+            str(path),
+            5000,
+            "wal",
+            schema,
+            current_task_board_caller_kid="gateway-task-board",
+        )
 
     connection = sqlite3.connect(path)
     try:
@@ -100,7 +119,7 @@ def test_receipt_ownership_failure_is_rejected_before_configuration(
     tamper: str,
 ) -> None:
     path = tmp_path / f"{tamper}.db"
-    _write_schema(path, SchemaState.CURRENT_V4)
+    _write_schema(path, SchemaState.CURRENT_V5)
     connection = sqlite3.connect(path)
     if tamper == "missing-cutover":
         connection.execute("DELETE FROM bank_receipt_cutover")
@@ -115,6 +134,12 @@ def test_receipt_ownership_failure_is_rejected_before_configuration(
     connection.commit()
     connection.close()
     with pytest.raises(ServiceError) as captured:
-        DbWriter(str(path), 5000, "wal", None)
+        DbWriter(
+            str(path),
+            5000,
+            "wal",
+            None,
+            current_task_board_caller_kid="gateway-task-board",
+        )
 
     assert captured.value.error == "receipt_ownership_failed"

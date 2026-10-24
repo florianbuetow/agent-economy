@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from service_auth.signing import KeyMaterialError, generate_keypair, public_key_to_b64
 
 from demo_replay import clients
-from demo_replay.config import PlatformConfig, load_platform_settings
+from demo_replay.config import DemoReplayConfig, PlatformConfig, load_platform_settings
 from demo_replay.engine import ReplayEngine
 from demo_replay.wallet import DemoAgent
 
@@ -96,14 +96,42 @@ async def test_replay_uses_only_the_configured_platform_pair(
 ) -> None:
     _, public = generate_keypair("platform", tmp_path)
     config = PlatformConfig(**_settings(tmp_path / "platform.key"))
-    register = AsyncMock(return_value={"agent_id": "a-platform"})
+
+    async def _register(_http: object, agent: DemoAgent, _url: str) -> dict[str, str]:
+        agent.agent_id = f"a-{agent.handle}"
+        return {
+            "agent_id": agent.agent_id,
+            "name": agent.name,
+            "public_key": agent.public_key_string(),
+            "registered_at": "2026-10-22T00:00:00Z",
+        }
+
+    register = AsyncMock(side_effect=_register)
     monkeypatch.setattr(clients, "register_agent", register)
-    engine = ReplayEngine({"name": "Explicit keys", "agents": [], "steps": []}, config)
+    monkeypatch.setattr(clients, "create_account", AsyncMock(return_value={"account_id": "a-user"}))
+    scenario = {
+        "name": "Explicit keys",
+        "agents": [{"handle": "user", "name": "User"}],
+        "steps": [{"action": "register", "agent": "user"}],
+    }
+    scenario_bytes = yaml.safe_dump(scenario, sort_keys=False).encode()
+    engine = ReplayEngine(scenario, config)
+    engine.bind_durable_run(
+        run_id="run-00000000-0000-4000-8000-000000000012",
+        scenario_bytes=scenario_bytes,
+        demo_config=DemoReplayConfig(
+            environment_id="key-test",
+            state_directory=tmp_path / "state",
+            max_record_bytes=1_048_576,
+            diagnostic_limit=16,
+        ),
+        effective_delay_seconds=0.0,
+    )
 
     await engine.run()
 
     assert engine.platform is not None
     assert engine.platform.public_key_string() == f"ed25519:{public_key_to_b64(public)}"
-    register.assert_awaited_once()
-    assert register.await_args.args[1] is engine.platform
-    assert register.await_args.args[2] == config.identity_url
+    assert register.await_count == 2
+    assert register.await_args_list[0].args[1] is engine.platform
+    assert register.await_args_list[0].args[2] == config.identity_url

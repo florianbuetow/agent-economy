@@ -1,6 +1,6 @@
 # Q-M3 / T-164: independent quality standing — proposed, not accepted
 
-**Status: DRAFT — no formula, eligibility rule, visibility rule, or appeal policy below is accepted.** Q-12 assigns aggregation to Reputation; Q-13 requires a three-judge real panel and an explicit ambiguity rubric. Q-16 compares delivery quality after bid amounts tie. This draft proposes the missing versioned contract; it does not authorize a policy change or close T-164.
+**Status: DRAFT — no formula, eligibility rule, or visibility rule below is accepted.** Court finality is already settled: rulings have no appeals. Q-12 assigns aggregation to Reputation; Q-13 requires a three-judge real panel and an explicit ambiguity rubric. Q-16 compares delivery quality after bid amounts tie. This draft proposes the missing versioned contract; it does not authorize a policy change or close T-164.
 
 ## Proposed `quality-v1` starting rule
 
@@ -28,7 +28,7 @@ Cancellation, bidding or acceptance expiry with no contract, and execution expir
 
 This exclusion has a deliberate limit: delivery standing does not penalize a worker for abandonment, missed execution deadlines, or other reliability failures, and specification standing does not penalize a poster for a no-contract outcome. If the owner wants those outcomes to affect selection, the project must define a separate reliability/contract-performance dimension or explicitly revise the quality semantics before implementation. They must not be smuggled into delivery/specification quality as invented zeroes.
 
-A Court finding is eligible only from the task's immutable final ruling. Under the proposed no-merits-appeal policy, that ruling cannot be replaced or superseded. Operational replay redelivers the identical ruling and cannot add an observation. If the owner selects merits appeals, a ruling-version contract must first define which version is current, when an earlier observation is replaced, how counts/provenance change, and how downstream selection replays are reconciled.
+A Court finding is eligible only from the task's immutable final ruling. The existing Court finality rule means that ruling cannot be replaced or superseded through an appeal. Operational replay redelivers the identical ruling and cannot add an observation.
 
 ## Proposed visibility and authorized consumers
 
@@ -83,6 +83,6 @@ All formula choices retain separate specification/delivery dimensions, payout in
 - Choose F-A, F-B, or F-C for source weighting and aggregation.
 - Confirm the recommended eligible outcomes, or explicitly define how cancellation, no-contract expiry, and execution expiry affect a named quality or reliability dimension.
 - Choose P-A, P-B, or P-C for aggregate/provenance visibility and confirm the feeder's authorized ranking projection.
-- Confirm the proposed no-merits-appeal rule. If appeals are required, define ruling versioning, supersession, score replacement, and downstream replay before implementation.
+- Preserve the existing Court finality rule: a ruling is final, with no appeals. This is already settled in the Court API specification and recorded in `owner-decisions-2026-10-22.md`; it is not an outstanding owner question.
 
 These choices affect reputation-driven selection and the later economic Vision. They do not change the ratified fixed-reward Core settlement rule, introduce fees/caps, or authorize implementation before an explicit owner decision.

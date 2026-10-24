@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/tests
+configfile: pytest.ini
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 35 items / 30 deselected / 5 selected
+
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-identity] PASSED [ 20%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-identity] PASSED [ 40%]
+../../tests/runtime/test_ci_readonly.py::test_explicit_formatter_remains_available[identity] PASSED [ 60%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-identity] PASSED [ 80%]
+../../tests/runtime/test_ci_readonly.py::test_ci_accepts_already_formatted_source[ci-quiet-identity] PASSED [100%]
+
+======================= 5 passed, 30 deselected in 2.02s =======================

@@ -315,7 +315,13 @@ async def test_opposing_public_settlements_have_one_immutable_native_winner(
     assert original_state.db_writer is not None
     barrier = Barrier(2)
     first_writer = cast("DbWriter", _BarrierWriter(original_state.db_writer, barrier))
-    second_raw_writer = DbWriter(gateway_db_path, 5000, "wal", None)
+    second_raw_writer = DbWriter(
+        gateway_db_path,
+        5000,
+        "wal",
+        None,
+        current_task_board_caller_kid="gateway-task-board",
+    )
     second_writer = cast("DbWriter", _BarrierWriter(second_raw_writer, barrier))
     release_id = f"op-{uuid4()}"
     split_id = f"op-{uuid4()}"

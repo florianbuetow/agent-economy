@@ -43,25 +43,66 @@
   }
 
   // ── Escrow bar ─────────────────────────────────────────────
-  function escrowBar(task, settled) {
-    if (!task) return '';
-    if (settled) {
-      return '<div class="escrow-bar" style="background:var(--green-dim)">' +
-        '<span class="escrow-icon">&#10003;</span>' +
-        '<span class="escrow-label">Escrow</span>' +
-        '<span class="escrow-amount" style="color:var(--green)">' + task.reward + ' &copy; RELEASED</span>' +
-        '<span class="escrow-status">SETTLED</span>' +
-        '</div>';
+  function financialEffect(task) {
+    var effect = task.financial_effect;
+    var fields = ['schema_version', 'settlement_state', 'receipt_state', 'outcome',
+      'operation_id', 'receipt_reference', 'business_projection_pending', 'pending_target_status'];
+    var operationId = /^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    if (!effect || typeof effect !== 'object' || Array.isArray(effect) ||
+        Object.keys(effect).length !== fields.length ||
+        !fields.every(function(key) { return Object.prototype.hasOwnProperty.call(effect, key); }) ||
+        effect.schema_version !== 1 || typeof effect.business_projection_pending !== 'boolean' ||
+        ['locked', 'pending', 'attention_required', 'conflict', 'complete', 'historical'].indexOf(effect.settlement_state) < 0 ||
+        (effect.operation_id !== null && (typeof effect.operation_id !== 'string' || !operationId.test(effect.operation_id))) ||
+        (effect.business_projection_pending
+          ? ['approved', 'cancelled', 'expired', 'ruled'].indexOf(effect.pending_target_status) < 0
+          : effect.pending_target_status !== null)) return null;
+
+    if (effect.receipt_state === 'confirmed') {
+      if (effect.operation_id === null || effect.receipt_reference !== effect.operation_id ||
+          ['worker_paid', 'poster_refunded', 'split'].indexOf(effect.outcome) < 0 ||
+          ['pending', 'complete', 'conflict'].indexOf(effect.settlement_state) < 0) return null;
+    } else if (effect.receipt_state === 'historical') {
+      if (effect.settlement_state !== 'historical' || effect.outcome !== 'worker_paid' ||
+          effect.operation_id !== null || effect.receipt_reference !== null ||
+          effect.business_projection_pending) return null;
+    } else if (effect.receipt_state === 'absent') {
+      if (effect.outcome !== null || effect.receipt_reference !== null ||
+          ['locked', 'pending', 'attention_required', 'conflict'].indexOf(effect.settlement_state) < 0 ||
+          (effect.settlement_state === 'locked' &&
+            (effect.operation_id !== null || effect.business_projection_pending))) return null;
+    } else {
+      return null;
     }
-    var frozen = task.status === 'disputed';
-    var icon = frozen ? '&#9878;&#65039;' : '&#128274;';
-    var statusText = frozen ? 'FROZEN &middot; DISPUTE ACTIVE' : 'LOCKED';
-    var statusStyle = frozen ? ' style="color:var(--red)"' : '';
-    return '<div class="escrow-bar">' +
-      '<span class="escrow-icon">' + icon + '</span>' +
+    return effect;
+  }
+
+  function escrowBar(task) {
+    if (!task) return '';
+    var effect = financialEffect(task);
+    var statusText = 'SETTLEMENT UNCONFIRMED';
+    var confirmed = effect && effect.receipt_state === 'confirmed';
+    var historical = effect && effect.receipt_state === 'historical';
+    if (confirmed) {
+      statusText = {worker_paid: 'PAID', poster_refunded: 'REFUNDED', split: 'SPLIT'}[effect.outcome];
+      if (effect.business_projection_pending) statusText += ' · TASK UPDATE PENDING';
+      else if (effect.settlement_state === 'conflict') statusText += ' · TASK CONFLICT';
+    } else if (historical) {
+      statusText = 'PAID · HISTORICAL';
+    } else if (effect) {
+      statusText = {locked: 'LOCKED', pending: 'SETTLEMENT PENDING',
+        attention_required: 'SETTLEMENT NEEDS ATTENTION', conflict: 'SETTLEMENT CONFLICT'}[effect.settlement_state];
+      if (effect.settlement_state === 'locked' && task.status === 'disputed') {
+        statusText = 'FROZEN · DISPUTE ACTIVE';
+      }
+    }
+    var amount = Number.isSafeInteger(task.reward) && task.reward > 0 ? String(task.reward) + ' &copy;' : 'Amount unavailable';
+    var success = confirmed || historical;
+    return '<div class="escrow-bar"' + (success ? ' style="background:var(--green-dim)"' : '') + '>' +
+      '<span class="escrow-icon">' + (success ? '&#10003;' : '&#128274;') + '</span>' +
       '<span class="escrow-label">Escrow</span>' +
-      '<span class="escrow-amount">' + task.reward + ' &copy;</span>' +
-      '<span class="escrow-status"' + statusStyle + '>' + statusText + '</span>' +
+      '<span class="escrow-amount">' + amount + '</span>' +
+      '<span class="escrow-status">' + statusText + '</span>' +
       '</div>';
   }
 
@@ -270,12 +311,17 @@
   }
 
   function renderSettlePhase(task) {
-    var html = escrowBar(task, true);
+    var html = escrowBar(task);
+    var effect = financialEffect(task);
 
-    // If there was a ruling, show payout breakdown
-    if (task.dispute && task.dispute.ruling) {
+    // A ruling alone is not proof that either payout happened.
+    if (effect && effect.receipt_state === 'confirmed' && effect.outcome === 'split' &&
+        task.dispute && task.dispute.ruling && Number.isSafeInteger(task.reward) && task.reward > 0 &&
+        Number.isInteger(task.dispute.ruling.worker_pct) &&
+        task.dispute.ruling.worker_pct >= 0 && task.dispute.ruling.worker_pct <= 100) {
       var ruling = task.dispute.ruling;
-      var workerPayout = Math.round(task.reward * ruling.worker_pct / 100);
+      // Match the Bank's integer floor and give the exact remainder to the poster.
+      var workerPayout = Number(BigInt(task.reward) * BigInt(ruling.worker_pct) / 100n);
       var posterPayout = task.reward - workerPayout;
       html += '<div class="ruling-card"><div class="ruling-header">' +
         '<span class="gavel">&#9878;&#65039;</span><span class="ruling-title">Settlement</span>' +

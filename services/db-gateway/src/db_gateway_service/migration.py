@@ -239,6 +239,30 @@ def migrate_v3_to_v4(
     )
 
 
+def migrate_v4_to_v5(
+    inventory: RecoveryInventoryV1,
+    *,
+    backup_root: Path,
+    backup_id: str,
+    work_root: Path,
+    busy_timeout_ms: int,
+    current_task_board_caller_kid: str,
+) -> MigrationResult:
+    """Run the explicit verified financial-effect recovery migration from v4 to v5."""
+    from db_gateway_service.effect_recovery_migration import (
+        migrate_v4_to_v5 as implementation,
+    )
+
+    return implementation(
+        inventory,
+        backup_root=backup_root,
+        backup_id=backup_id,
+        work_root=work_root,
+        busy_timeout_ms=busy_timeout_ms,
+        current_task_board_caller_kid=current_task_board_caller_kid,
+    )
+
+
 def _migrate_bound_source(
     *,
     bound: BackupBoundSource,

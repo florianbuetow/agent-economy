@@ -1,0 +1,51 @@
+rules:
+  - id: agent-economy.no-python-path-environment-overrides
+    languages: [python]
+    message: >
+      Do not replace PATH in a Python process environment. Preserve the inherited
+      PATH and isolate test doubles through explicit fixtures or executable paths.
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: |
+              os.environ["PATH"] = $VALUE
+          - pattern: |
+              $ENV["PATH"] = $VALUE
+          - pattern: |
+              os.environ.update({... , "PATH": $VALUE, ...})
+          - pattern: |
+              os.environ.update(..., PATH=$VALUE, ...)
+          - pattern: |
+              os.environ.setdefault("PATH", $VALUE)
+          - pattern: |
+              os.environ.put("PATH", $VALUE)
+
+  - id: agent-economy.no-python-subprocess-path-overrides
+    languages: [python]
+    message: >
+      Do not pass a replacement PATH to a subprocess. Preserve the inherited PATH
+      and invoke the intended executable explicitly.
+    severity: ERROR
+    pattern-either:
+      - pattern: |
+          subprocess.$FUNC(..., env={"PATH": $VALUE, ...}, ...)
+      - pattern: |
+          subprocess.$FUNC(..., env={**$BASE, ..., "PATH": $VALUE, ...}, ...)
+
+  - id: agent-economy.no-python-monkeypatch-path-overrides
+    languages: [python]
+    message: >
+      Do not monkeypatch PATH. Preserve the inherited PATH and inject the test
+      dependency through a scoped fixture or explicit executable path.
+    severity: ERROR
+    pattern: |
+      $MONKEYPATCH.setenv("PATH", $VALUE, ...)
+
+  - id: agent-economy.no-shell-path-overrides
+    languages: [bash]
+    message: >
+      Do not assign or export PATH in shell commands. Preserve the caller's PATH
+      and invoke the intended executable explicitly.
+    severity: ERROR
+    pattern-regex: >-
+      (?m)^\s*(?:(?:export\s+)?PATH\s*=|env\s+PATH\s*=)

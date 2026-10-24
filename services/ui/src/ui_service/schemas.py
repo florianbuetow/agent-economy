@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -289,6 +289,90 @@ class AgentEarningsResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------
+class FinancialEffect(BaseModel):
+    """Strict public settlement evidence received from Task Board."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    schema_version: Literal[1]
+    settlement_state: Literal[
+        "locked", "pending", "attention_required", "conflict", "complete", "historical"
+    ]
+    receipt_state: Literal["absent", "confirmed", "historical"]
+    outcome: Literal["worker_paid", "poster_refunded", "split"] | None
+    operation_id: str | None = Field(
+        pattern=r"^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    )
+    receipt_reference: str | None = Field(
+        pattern=r"^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    )
+    business_projection_pending: bool
+    pending_target_status: Literal["approved", "cancelled", "expired", "ruled"] | None
+
+    @model_validator(mode="after")
+    def validate_evidence_shape(self) -> Self:
+        """Reject contradictory public claims without re-auditing receipts."""
+        if self.business_projection_pending != (self.pending_target_status is not None):
+            raise ValueError("pending projection requires its target")
+        self._validate_receipt_state()
+        self._validate_settlement_state()
+        self._validate_pending_target()
+        return self
+
+    def _validate_receipt_state(self) -> None:
+        if self.receipt_state == "absent":
+            if self.outcome is not None or self.receipt_reference is not None:
+                raise ValueError("absent receipt cannot claim an outcome")
+            if self.settlement_state not in {
+                "locked",
+                "pending",
+                "attention_required",
+                "conflict",
+            }:
+                raise ValueError("absent receipt cannot establish settlement")
+        elif self.receipt_state == "confirmed":
+            if (
+                self.operation_id is None
+                or self.receipt_reference != self.operation_id
+                or self.outcome is None
+                or self.settlement_state not in {"pending", "complete", "conflict"}
+            ):
+                raise ValueError("confirmed outcome requires its operation receipt")
+        elif (
+            self.settlement_state != "historical"
+            or self.outcome != "worker_paid"
+            or self.operation_id is not None
+            or self.receipt_reference is not None
+            or self.business_projection_pending
+        ):
+            raise ValueError("historical payment cannot claim a modern receipt")
+
+    def _validate_settlement_state(self) -> None:
+        if self.settlement_state == "locked" and (
+            self.operation_id is not None or self.business_projection_pending
+        ):
+            raise ValueError("locked escrow cannot have an active effect")
+        if self.settlement_state == "pending" and self.operation_id is None:
+            raise ValueError("pending settlement requires an operation")
+        if self.receipt_state == "confirmed" and (
+            self.business_projection_pending != (self.settlement_state == "pending")
+        ):
+            raise ValueError("confirmed pending settlement must await its projection")
+        if self.business_projection_pending and self.operation_id is None:
+            raise ValueError("pending business projection requires an operation")
+        if self.settlement_state == "conflict" and self.business_projection_pending:
+            raise ValueError("conflicting evidence cannot promise a business update")
+
+    def _validate_pending_target(self) -> None:
+        if self.receipt_state == "confirmed" and self.business_projection_pending:
+            targets = {
+                "worker_paid": {"approved", "ruled"},
+                "poster_refunded": {"cancelled", "expired", "ruled"},
+                "split": {"ruled"},
+            }
+            if self.pending_target_status not in targets[str(self.outcome)]:
+                raise ValueError("receipt outcome contradicts the pending target")
+
+
 class BidderInfo(BaseModel):
     model_config = ConfigDict(extra="forbid")
     agent_id: str
@@ -372,6 +456,7 @@ class TaskTimestamps(BaseModel):
 class TaskDrilldownResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     task_id: str
+    lifecycle_version: Annotated[int, Field(strict=True, ge=0, le=(1 << 63) - 1)]
     poster: AgentRef
     worker: AgentRef | None
     title: str
@@ -385,6 +470,7 @@ class TaskDrilldownResponse(BaseModel):
     assets: list[AssetItem]
     feedback: list[FeedbackDetail]
     dispute: DisputeInfo | None
+    financial_effect: FinancialEffect
 
 
 class CompetitiveTaskItem(BaseModel):
@@ -429,6 +515,7 @@ class TaskListItem(BaseModel):
     poster_id: str
     created_at: str
     bid_count: int
+    financial_effect: FinancialEffect
 
 
 class TaskListResponse(BaseModel):

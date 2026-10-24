@@ -53,6 +53,11 @@ SERVICE_MODULES = {
 }
 PROCESS_INSPECTION_TIMEOUT_SECONDS = 2.0
 LITELLM_LOCAL_MODEL_COST_MAP_ENV = "LITELLM_LOCAL_MODEL_COST_MAP"
+OWNED_LAUNCHER_PATH = Path(__file__).with_name("owned_launch_gate.py")
+OWNED_LAUNCH_AUTHORIZATION = b"\x01"
+UNPROVEN_LAUNCH_WAIT_SECONDS = 5.0
+UNPROVEN_LAUNCH_TERMINATE_SECONDS = 1.0
+UNPROVEN_LAUNCH_KILL_SECONDS = 5.0
 
 
 class _ProcessRecord(TypedDict):
@@ -93,6 +98,24 @@ class RuntimeCleanupError(RuntimeError):
         self.failures = failures
         detail = "; ".join(f"{owner}: {error}" for owner, error in failures)
         super().__init__(f"Runtime cleanup failed: {detail}")
+
+
+class UnprovenLaunchCleanupError(RuntimeError):
+    """Pre-ownership cleanup failed while retaining the exact child handle."""
+
+    def __init__(
+        self,
+        *,
+        process: subprocess.Popen[bytes],
+        primary_error: BaseException,
+        cleanup_error: BaseException,
+    ) -> None:
+        self.process = process
+        self.primary_error = primary_error
+        self.cleanup_error = cleanup_error
+        super().__init__(
+            f"Exact cleanup of unproven launcher {process.pid} failed: {cleanup_error}"
+        )
 
 
 @dataclass
@@ -156,8 +179,9 @@ class IsolatedRuntime:
             artifacts_root.mkdir(parents=True, exist_ok=True)
             run_dir = Path(tempfile.mkdtemp(prefix=f"runtime-{run_id}-", dir=artifacts_root))
         run_dir = run_dir.resolve()
-        for directory in ("configs", "data", "assets", "backups", "keys", "logs"):
+        for directory in ("configs", "data", "backups", "keys", "logs"):
             (run_dir / directory).mkdir()
+        (run_dir / "assets").mkdir(mode=0o700)
 
         reservations = {service: _reserve_port() for service in services}
         ports = {service: reserved.port for service, reserved in reservations.items()}
@@ -391,13 +415,15 @@ class IsolatedRuntime:
         command_cwd = (cwd if cwd is not None else self.repo_root).resolve(strict=True)
         executed_command = list(command)
         self._stop_completed = False
-        process = subprocess.Popen(
+        process, pgid, sid, launch_descriptor = _start_owned_launch(
             executed_command,
             cwd=str(command_cwd),
             env=self.environment(),
-            start_new_session=True,
+            stdout=None,
+            stderr=None,
+            pass_fds=(),
         )
-        pgid, sid = _owned_group_identity(process)
+        pending_launch_descriptor: int | None = launch_descriptor
         self.active_command = process
         self.active_command_group = (pgid, sid)
         record: _CommandRecord = {
@@ -416,12 +442,20 @@ class IsolatedRuntime:
         self.active_command_owner = owner
         try:
             self._write_manifest()
+            if pending_launch_descriptor is None:
+                raise RuntimeError("Owned launch gate was already released")
+            descriptor_to_release = pending_launch_descriptor
+            pending_launch_descriptor = None
+            _release_owned_launch(descriptor_to_release)
             while process.poll() is None and self.shutdown_signal is None:
                 time.sleep(0.05)
             captured_return_code = process.returncode
             if self.shutdown_signal is None and captured_return_code is None:
                 raise RuntimeError("Phase command stopped without a return code")
         except BaseException:
+            if pending_launch_descriptor is not None:
+                with contextlib.suppress(OSError):
+                    os.close(pending_launch_descriptor)
             self._cleanup_active_command()
             raise
         self._cleanup_active_command()
@@ -490,7 +524,7 @@ class IsolatedRuntime:
         log_handle = self.log_paths[service].open("ab")
         self._log_handles[service] = log_handle
         env = self.service_environment(service)
-        process = subprocess.Popen(
+        process, pgid, sid, launch_descriptor = _start_owned_launch(
             [
                 "uv",
                 "run",
@@ -506,11 +540,8 @@ class IsolatedRuntime:
             env=env,
             stdout=log_handle,
             stderr=subprocess.STDOUT,
-            start_new_session=True,
             pass_fds=(reserved.socket.fileno(),),
         )
-        reserved.release()
-        pgid, sid = _owned_group_identity(process)
         self.processes[service] = process
         self.process_records[service] = {
             "pid": process.pid,
@@ -521,7 +552,22 @@ class IsolatedRuntime:
             "group_drained": False,
             "cleanup_error": None,
         }
-        self._write_manifest()
+        pending_launch_descriptor: int | None = launch_descriptor
+        try:
+            self._write_manifest()
+            reserved.release()
+            if pending_launch_descriptor is None:
+                raise RuntimeError("Owned service launch gate was already released")
+            descriptor_to_release = pending_launch_descriptor
+            pending_launch_descriptor = None
+            _release_owned_launch(descriptor_to_release)
+        except BaseException:
+            if pending_launch_descriptor is not None:
+                with contextlib.suppress(OSError):
+                    os.close(pending_launch_descriptor)
+            reserved.release()
+            self.stop_service(service)
+            raise
         self._wait_for_health(service, process)
         self._assert_startup_inputs(service)
         if service in {"db-gateway", "task-board", "ui"}:
@@ -955,6 +1001,108 @@ def _owned_group_identity(process: subprocess.Popen[bytes]) -> tuple[int, int]:
             f"Owned process {process.pid} did not create the expected private session/group"
         )
     return pgid, sid
+
+
+def _start_owned_launch(
+    command: list[str],
+    *,
+    cwd: str,
+    env: dict[str, str],
+    stdout: BinaryIO | int | None,
+    stderr: BinaryIO | int | None,
+    pass_fds: tuple[int, ...],
+) -> tuple[subprocess.Popen[bytes], int, int, int]:
+    read_descriptor, write_descriptor = os.pipe()
+    launcher_command = [
+        sys.executable,
+        "-I",
+        "-S",
+        str(OWNED_LAUNCHER_PATH),
+        str(read_descriptor),
+        "--",
+        *command,
+    ]
+    inherited_descriptors = tuple(dict.fromkeys((read_descriptor, *pass_fds)))
+    try:
+        process = subprocess.Popen(
+            launcher_command,
+            cwd=cwd,
+            env=env,
+            stdout=stdout,
+            stderr=stderr,
+            start_new_session=True,
+            pass_fds=inherited_descriptors,
+        )
+    except BaseException:
+        os.close(read_descriptor)
+        os.close(write_descriptor)
+        raise
+    try:
+        os.close(read_descriptor)
+        pgid, sid = _owned_group_identity(process)
+    except BaseException as exc:
+        _reap_unproven_launcher(
+            process,
+            gate_descriptor=write_descriptor,
+            primary_error=exc,
+        )
+        raise
+    return process, pgid, sid, write_descriptor
+
+
+def _reap_unproven_launcher(
+    process: subprocess.Popen[bytes],
+    *,
+    gate_descriptor: int,
+    primary_error: BaseException,
+) -> None:
+    try:
+        os.close(gate_descriptor)
+    except BaseException as cleanup_error:
+        primary_error.add_note(f"Unproven launch gate close also failed: {cleanup_error}")
+    try:
+        process.wait(timeout=UNPROVEN_LAUNCH_WAIT_SECONDS)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    except BaseException as cleanup_error:
+        primary_error.add_note(f"Initial exact launcher wait also failed: {cleanup_error}")
+    try:
+        process.terminate()
+    except ProcessLookupError:
+        pass
+    except BaseException as cleanup_error:
+        primary_error.add_note(f"Exact launcher terminate also failed: {cleanup_error}")
+    try:
+        process.wait(timeout=UNPROVEN_LAUNCH_TERMINATE_SECONDS)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    except BaseException as cleanup_error:
+        primary_error.add_note(f"Post-terminate exact launcher wait also failed: {cleanup_error}")
+    try:
+        process.kill()
+    except ProcessLookupError:
+        pass
+    except BaseException as cleanup_error:
+        primary_error.add_note(f"Exact launcher kill also failed: {cleanup_error}")
+    try:
+        process.wait(timeout=UNPROVEN_LAUNCH_KILL_SECONDS)
+    except BaseException as cleanup_error:
+        raise UnprovenLaunchCleanupError(
+            process=process,
+            primary_error=primary_error,
+            cleanup_error=cleanup_error,
+        ) from primary_error
+
+
+def _release_owned_launch(descriptor: int) -> None:
+    try:
+        written = os.write(descriptor, OWNED_LAUNCH_AUTHORIZATION)
+        if written != len(OWNED_LAUNCH_AUTHORIZATION):
+            raise RuntimeError("Owned launch authorization write was incomplete")
+    finally:
+        os.close(descriptor)
 
 
 def _drain_owned_process_group(

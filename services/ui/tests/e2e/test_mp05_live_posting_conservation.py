@@ -12,7 +12,7 @@ import pytest
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from playwright.sync_api import Browser, Route
+    from playwright.sync_api import BrowserContext, Route
 
 from mp05_live_posting_conservation import (
     assert_completion_marker,
@@ -98,21 +98,49 @@ def _recover_in_two_tabs(
     return second
 
 
-def _retry_from_both_tabs(first: Any, second: Any) -> None:
+def _retry_from_both_tabs(first: Any, second: Any, operation_id: str) -> None:
+    submit_pattern = f"**/api/proxy/task-postings/{operation_id}/submit"
+    status_pattern = f"**/api/proxy/task-postings/{operation_id}/status"
+    lost_retry_responses: list[str] = []
+
+    def lose_committed_retry_response(route: Route) -> None:
+        response = route.fetch()
+        assert response.status == 201
+        assert response.json()["publication"]["publication_state"] == "published"
+        route.abort("failed")
+        lost_retry_responses.append(response.url)
+
+    def wait_for_lost_retries(page: Any, expected: int) -> None:
+        for _attempt in range(200):
+            if len(lost_retry_responses) == expected:
+                return
+            page.wait_for_timeout(50)
+        assert len(lost_retry_responses) == expected
+
+    first.route(submit_pattern, lose_committed_retry_response)
+    second.route(submit_pattern, lose_committed_retry_response)
     first.get_by_role("button", name="Retry exact intent").click()
+    wait_for_lost_retries(first, 1)
     second.get_by_role("button", name="Retry exact intent").click()
+    wait_for_lost_retries(second, 2)
+
+    for page in (first, second):
+        page.unroute(submit_pattern, lose_committed_retry_response)
+        page.unroute(status_pattern)
+    first.get_by_role("button", name="Check status").click()
     first.get_by_text("Posting completed.").wait_for(state="visible")
+    second.get_by_role("button", name="Check status").click()
     second.get_by_text("Posting completed.").wait_for(state="visible")
 
 
 def test_lost_committed_response_and_two_tab_retry_conserve_one_publication(
-    e2e_browser: Browser,
+    e2e_context: BrowserContext,
     live_runtime: IsolatedRuntime,
 ) -> None:
     """The real browser/proxy/Board/Bank path conserves one logical posting."""
     ui_url = live_runtime.service_url("ui")
     database_path = live_runtime.run_dir / "data" / "economy.db"
-    context = e2e_browser.new_context(viewport={"width": 1280, "height": 720})
+    context = e2e_context
     submit_requests: list[tuple[str, str | None]] = []
     committed: dict[str, object] = {}
 
@@ -125,10 +153,9 @@ def test_lost_committed_response_and_two_tab_retry_conserve_one_publication(
     first.goto(f"{ui_url}/task.html")
     first.locator("#btn-post-task").wait_for(state="visible")
 
-    browser_config = first.request.get(f"{ui_url}/api/proxy/browser-config")
-    assert browser_config.status == 200
-    config = browser_config.json()
-    operator_id = config["operator_agent_id"]
+    identity = first.request.get(f"{ui_url}/api/proxy/identity")
+    assert identity.status == 200
+    operator_id = identity.json()["agent_id"]
     initial_balance = operator_balance(database_path, operator_id)
 
     submit_pattern = "**/api/proxy/task-postings/*/submit"
@@ -156,7 +183,7 @@ def test_lost_committed_response_and_two_tab_retry_conserve_one_publication(
         operation_id=operation_id,
         record=record,
     )
-    _retry_from_both_tabs(first, second)
+    _retry_from_both_tabs(first, second, operation_id)
 
     assert len(submit_requests) == 3
     expected_url = f"{ui_url}/api/proxy/task-postings/{operation_id}/submit"
@@ -166,5 +193,3 @@ def test_lost_committed_response_and_two_tab_retry_conserve_one_publication(
     assert_completion_marker(first, record)
     assert_completion_marker(second, record)
     assert_conserved_publication(database_path, record, initial_balance)
-
-    context.close()

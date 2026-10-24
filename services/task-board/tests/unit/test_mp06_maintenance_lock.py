@@ -106,6 +106,10 @@ def _settings(lock_path: Path) -> SimpleNamespace:
             batch_size=100,
             diagnostic_limit=100,
         ),
+        financial_effect_recovery=SimpleNamespace(
+            interval_seconds=2.0,
+            max_delivery_attempts_per_cycle=10,
+        ),
     )
 
 
@@ -123,7 +127,9 @@ def _patch_dependencies(monkeypatch: pytest.MonkeyPatch, lock_path: Path) -> Non
     monkeypatch.setattr(lifespan_module, "EscrowCoordinator", lambda **_kwargs: object())
     monkeypatch.setattr(lifespan_module, "TokenValidator", lambda **_kwargs: object())
     monkeypatch.setattr(lifespan_module, "DeadlineEvaluator", _DeadlineEvaluator)
-    monkeypatch.setattr(lifespan_module, "AssetManager", lambda **_kwargs: object())
+    monkeypatch.setattr(
+        lifespan_module, "AssetManager", lambda **_kwargs: SimpleNamespace(close=lambda: None)
+    )
     monkeypatch.setattr(lifespan_module, "TaskManager", _TaskManager)
 
 

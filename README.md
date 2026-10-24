@@ -247,10 +247,17 @@ Every service exposes `GET /health`, which returns `{"status": "ok", "uptime_sec
 ### Run a demo
 
 ```bash
-just demo             # Quick demo: 3 agents, ~25s
-just demo-scale       # Scaled demo: 10 agents, ~60s
+just start-all
+just provision
+just demo run-00000000-0000-4000-8000-000000000001
+# Or: just demo-scale <a separate run-UUID>
 just help             # See all available commands
 ```
+
+Demo commands use the running stack and preserve its data. Repeat the same
+command and run ID to resume interrupted work; completed runs do nothing.
+Use a new run ID for a separate run. Changing a scenario under an existing run
+ID is rejected. Demo commands do not stop services or reset databases.
 
 ## Development
 

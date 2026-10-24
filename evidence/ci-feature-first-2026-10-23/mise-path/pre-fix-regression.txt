@@ -1,0 +1,23 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/tests
+configfile: pytest.ini
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+../../tests/runtime/test_ci_tool_shims.py::test_ci_helpers_preserve_redispatching_just_and_uv_shims FAILED [100%]
+
+=================================== FAILURES ===================================
+___________ test_ci_helpers_preserve_redispatching_just_and_uv_shims ___________
+../../tests/runtime/test_ci_tool_shims.py:72: in test_ci_helpers_preserve_redispatching_just_and_uv_shims
+    assert ci_result.returncode != 0, ci_result.stdout + ci_result.stderr
+E   AssertionError: 
+E   assert 0 != 0
+E    +  where 0 = CompletedProcess(args=('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-4316/test_ci_helpers_preserve_redis0/shim-bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-4316/test_ci_helpers_preserve_redis0/identity/justfile', 'ci'), returncode=0, stdout='', stderr='').returncode
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_ci_tool_shims.py::test_ci_helpers_preserve_redispatching_just_and_uv_shims - AssertionError: 
+assert 0 != 0
+ +  where 0 = CompletedProcess(args=('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-4316/test_ci_helpers_preserve_redis0/shim-bin/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-4316/test_ci_helpers_preserve_redis0/identity/justfile', 'ci'), returncode=0, stdout='', stderr='').returncode
+============================== 1 failed in 0.47s ===============================

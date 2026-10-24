@@ -24,6 +24,7 @@ from tests.runtime.test_recovery_live_restore import (
 )
 
 from db_gateway_service.money_audit import audit_money
+from db_gateway_service.publication_audit import audit_publications
 from db_gateway_service.receipt_audit import audit_receipt_ownership
 from db_gateway_service.recovery import (
     PublicationState,
@@ -57,7 +58,9 @@ def _logical_rows(connection):
     """Snapshot frozen v0/v1 domain rows, storage types, rowids and sequences."""
     result = {}
     for table in _LEGACY_DOMAIN_TABLES:
-        columns = sorted(row[1] for row in connection.execute(f'PRAGMA table_info("{table}")'))
+        columns = sorted(
+            row[1] for row in connection.execute(f'PRAGMA table_info("{table}")')
+        )
         assert columns, f"Missing frozen legacy domain table: {table}"
         selected = ", ".join(f'"{column}"' for column in columns)
         storage_types = ", ".join(f'typeof("{column}")' for column in columns)
@@ -131,7 +134,10 @@ async def _resume_signed_workload(config_path, receipt):
         assert task["status"] == "submitted"
         assert task["worker_id"] == receipt["worker_id"]
         assert (await poster.get_balance())["balance"] == receipt["balance"]
-        assert await poster.download_asset(receipt["task_id"], receipt["asset_id"]) == DELIVERABLE
+        assert (
+            await poster.download_asset(receipt["task_id"], receipt["asset_id"])
+            == DELIVERABLE
+        )
         before_worker = (await worker.get_balance())["balance"]
         submitted_version = _task_version(task, expected_status="submitted")
         assert poster.agent_id is not None
@@ -159,7 +165,9 @@ def _assert_pre_migration_restore(
     bindings = build_target_bindings(
         inventory,
         target_root=target,
-        process_cwds={config.logical_id: config.process_cwd for config in inventory.configs},
+        process_cwds={
+            config.logical_id: config.process_cwd for config in inventory.configs
+        },
         agents_package_root=REPO_ROOT / "agents",
         endpoint_values=_endpoints(inventory, runtime),
     )
@@ -340,10 +348,12 @@ def _assert_v3_database(database, original_rows, v3_backup):
             "before-task-migration",
             v3_backup.manifest_sha256,
         )
-        assert migrated.execute("SELECT COUNT(*) FROM board_task_operations").fetchone() == (0,)
-        assert migrated.execute("SELECT COUNT(*) FROM board_task_contracts").fetchone() == (
-            len(original_rows["board_tasks"][1]),
-        )
+        assert migrated.execute(
+            "SELECT COUNT(*) FROM board_task_operations"
+        ).fetchone() == (0,)
+        assert migrated.execute(
+            "SELECT COUNT(*) FROM board_task_contracts"
+        ).fetchone() == (len(original_rows["board_tasks"][1]),)
 
 
 def _upgrade_v2_to_v3(
@@ -381,12 +391,152 @@ def _upgrade_v2_to_v3(
     return v3_backup, v3_backup_hashes
 
 
+def _migrate_v3_to_v4(runtime, inventory_path, backup_root, backup_id, work_root):
+    try:
+        assert (
+            runtime.run_command(
+                [
+                    "uv",
+                    "run",
+                    "python",
+                    "-m",
+                    "db_gateway_service.recovery_cli",
+                    "migrate-v3-to-v4",
+                    "--inventory",
+                    str(inventory_path),
+                    "--backup-root",
+                    str(backup_root),
+                    "--backup-id",
+                    backup_id,
+                    "--work-root",
+                    str(work_root),
+                    "--busy-timeout-ms",
+                    "5000",
+                ],
+                cwd=REPO_ROOT / "services/db-gateway",
+            )
+            == 0
+        )
+    finally:
+        runtime.stop()
+
+
+def _assert_v4_database(database, original_rows, v4_backup):
+    with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as migrated:
+        assert classify_schema(migrated).state is SchemaState.CURRENT_V4
+        assert _logical_rows(migrated) == original_rows
+        assert audit_money(migrated).financially_clean
+        assert audit_receipt_ownership(migrated).ownership_clean
+        assert audit_task_contracts(migrated).contracts_clean
+        assert audit_publications(migrated).publications_clean
+        assert migrated.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
+        assert migrated.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert migrated.execute("SELECT * FROM schema_metadata").fetchone() == (
+            1,
+            4,
+            3,
+            "before-publication-migration",
+            v4_backup.manifest_sha256,
+        )
+
+
+def _upgrade_v3_to_v4(
+    runtime,
+    inventory,
+    inventory_path,
+    database,
+    original_rows,
+    backup_root,
+    work_root,
+):
+    v4_backup = create_backup(
+        inventory,
+        backup_root=backup_root,
+        backup_id="before-publication-migration",
+        work_root=work_root,
+    )
+    assert v4_backup.state is PublicationState.COMPLETE
+    v4_backup_hashes = _file_hashes(v4_backup.location)
+    verified = verify_backup(
+        backup_root=backup_root,
+        backup_id="before-publication-migration",
+        work_root=work_root,
+    )
+    assert verified.artifact_verified and verified.identity_complete
+    _migrate_v3_to_v4(
+        runtime,
+        inventory_path,
+        backup_root,
+        "before-publication-migration",
+        work_root,
+    )
+    _assert_v4_database(database, original_rows, v4_backup)
+    assert _file_hashes(v4_backup.location) == v4_backup_hashes
+    return v4_backup, v4_backup_hashes
+
+
 def _assert_runtime_artifacts_unchanged(runtime, original_keys, original_assets):
     assert _file_hashes(runtime.run_dir / "keys") == original_keys
     assert _file_hashes(runtime.run_dir / "assets") == original_assets
 
 
-def _upgrade_v2_to_v3_preserving_v2(
+def _upgrade_v4_to_v5(
+    runtime, inventory, inventory_path, database, original_rows, backup_root, work_root
+):
+    """Preserve the verified V4 result, then explicitly admit the current runtime."""
+    backup_id = "before-effect-recovery-migration"
+    backup = create_backup(
+        inventory, backup_root=backup_root, backup_id=backup_id, work_root=work_root
+    )
+    assert backup.state is PublicationState.COMPLETE
+    hashes = _file_hashes(backup.location)
+    try:
+        assert (
+            runtime.run_command(
+                [
+                    "uv",
+                    "run",
+                    "--no-sync",
+                    "python",
+                    "-m",
+                    "db_gateway_service.recovery_cli",
+                    "migrate-v4-to-v5",
+                    "--inventory",
+                    str(inventory_path),
+                    "--backup-root",
+                    str(backup_root),
+                    "--backup-id",
+                    backup_id,
+                    "--work-root",
+                    str(work_root),
+                    "--busy-timeout-ms",
+                    "5000",
+                    "--current-task-board-caller-kid",
+                    "gateway-task-board",
+                ],
+                cwd=REPO_ROOT / "services/db-gateway",
+            )
+            == 0
+        )
+    finally:
+        runtime.stop()
+    with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as migrated:
+        assert classify_schema(migrated).state is SchemaState.CURRENT_V5
+        assert _logical_rows(migrated) == original_rows
+        assert migrated.execute("SELECT * FROM schema_metadata").fetchone() == (
+            1,
+            5,
+            4,
+            backup_id,
+            backup.manifest_sha256,
+        )
+        assert migrated.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
+        assert migrated.execute("PRAGMA foreign_key_check").fetchall() == []
+    assert _file_hashes(backup.location) == hashes
+    return backup, hashes
+
+
+def _upgrade_v2_to_v4_preserving_v2(
     runtime,
     inventory,
     inventory_path,
@@ -397,7 +547,7 @@ def _upgrade_v2_to_v3_preserving_v2(
     v2_backup,
     v2_backup_hashes,
 ):
-    result = _upgrade_v2_to_v3(
+    v3_backup, v3_backup_hashes = _upgrade_v2_to_v3(
         runtime,
         inventory,
         inventory_path,
@@ -407,15 +557,36 @@ def _upgrade_v2_to_v3_preserving_v2(
         work_root,
     )
     assert _file_hashes(v2_backup.location) == v2_backup_hashes
-    return result
-
-
-def _assert_upgrade_backups_unchanged(v2_backup, v2_backup_hashes, v3_backup, v3_backup_hashes):
+    v4_backup, v4_backup_hashes = _upgrade_v3_to_v4(
+        runtime,
+        inventory,
+        inventory_path,
+        database,
+        original_rows,
+        backup_root,
+        work_root,
+    )
     assert _file_hashes(v2_backup.location) == v2_backup_hashes
     assert _file_hashes(v3_backup.location) == v3_backup_hashes
+    return v3_backup, v3_backup_hashes, v4_backup, v4_backup_hashes
 
 
-def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(tmp_path: Path):
+def _assert_upgrade_backups_unchanged(
+    v2_backup,
+    v2_backup_hashes,
+    v3_backup,
+    v3_backup_hashes,
+    v4_backup,
+    v4_backup_hashes,
+):
+    assert _file_hashes(v2_backup.location) == v2_backup_hashes
+    assert _file_hashes(v3_backup.location) == v3_backup_hashes
+    assert _file_hashes(v4_backup.location) == v4_backup_hashes
+
+
+def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(
+    tmp_path: Path,
+):
     runtime = IsolatedRuntime.create(repo_root=REPO_ROOT, artifacts_root=tmp_path)
     try:
         runtime.start()
@@ -429,9 +600,12 @@ def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(tm
     (tmp_path / "runtime-before-migration.json").write_bytes(
         (runtime.run_dir / "runtime.json").read_bytes()
     )
-    inventory = RecoveryInventoryV1.model_validate_json(prepared.inventory_path.read_bytes())
+    inventory = RecoveryInventoryV1.model_validate_json(
+        prepared.inventory_path.read_bytes()
+    )
     assert all(
-        not record.running and record.group_drained for record in inventory.process_ownership
+        not record.running and record.group_drained
+        for record in inventory.process_ownership
     )
     database = runtime.run_dir / "data/economy.db"
     original_rows = _install_legacy_fixture(database)
@@ -441,7 +615,10 @@ def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(tm
     work_root.mkdir(mode=0o700)
     backup_root = runtime.run_dir / "backups"
     backup = create_backup(
-        inventory, backup_root=backup_root, backup_id="legacy-live-work", work_root=work_root
+        inventory,
+        backup_root=backup_root,
+        backup_id="legacy-live-work",
+        work_root=work_root,
     )
     assert backup.state is PublicationState.COMPLETE
     original_artifact = _file_hashes(backup.location)
@@ -505,7 +682,21 @@ def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(tm
     )
     assert _file_hashes(backup.location) == original_artifact
 
-    v3_backup, v3_backup_hashes = _upgrade_v2_to_v3_preserving_v2(
+    v3_backup, v3_backup_hashes, v4_backup, v4_backup_hashes = (
+        _upgrade_v2_to_v4_preserving_v2(
+            runtime,
+            inventory,
+            prepared.inventory_path,
+            database,
+            original_rows,
+            backup_root,
+            work_root,
+            v2_backup,
+            v2_backup_hashes,
+        )
+    )
+
+    v5_backup, v5_backup_hashes = _upgrade_v4_to_v5(
         runtime,
         inventory,
         prepared.inventory_path,
@@ -513,14 +704,19 @@ def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(tm
         original_rows,
         backup_root,
         work_root,
-        v2_backup,
-        v2_backup_hashes,
     )
-
     try:
         runtime.start()
         asyncio.run(_resume_signed_workload(runtime.agent_config_path, receipt))
     finally:
         runtime.stop()
     _assert_runtime_artifacts_unchanged(runtime, original_keys, original_assets)
-    _assert_upgrade_backups_unchanged(v2_backup, v2_backup_hashes, v3_backup, v3_backup_hashes)
+    assert _file_hashes(v5_backup.location) == v5_backup_hashes
+    _assert_upgrade_backups_unchanged(
+        v2_backup,
+        v2_backup_hashes,
+        v3_backup,
+        v3_backup_hashes,
+        v4_backup,
+        v4_backup_hashes,
+    )

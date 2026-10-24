@@ -17,10 +17,13 @@ from typing import TYPE_CHECKING
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from db_gateway_service import recovery
+from db_gateway_service.effect_recovery_audit import audit_effect_recovery
 from db_gateway_service.migration import (
+    MigrationError,
     migrate_v1_to_v2,
     migrate_v2_to_v3,
     migrate_v3_to_v4,
+    migrate_v4_to_v5,
 )
 from db_gateway_service.receipt_audit import audit_receipt_ownership
 from db_gateway_service.schema import SchemaState, classify_schema, load_schema_sql
@@ -60,6 +63,7 @@ _CREDIT_REFERENCE = "historical-genesis"
 _V1_BACKUP_ID = "before-mp04-public-history"
 _V2_BACKUP_ID = "before-mp07-bank-history"
 _V3_BACKUP_ID = "before-mp05-publication-history"
+_V4_BACKUP_ID = "before-mp08-effect-recovery-history"
 _RELEASED_TASK_ID = "task-released"
 _SPLIT_TASK_ID = "task-split"
 
@@ -134,6 +138,29 @@ def _seed_v1(database: Path) -> None:
             ],
         )
         _seed_historical_task_context(connection)
+        settled_at = "2026-03-01T11:00:00Z"
+        event = connection.execute(
+            "INSERT INTO events "
+            "(event_source,event_type,timestamp,task_id,agent_id,summary,payload) "
+            "VALUES ('central-bank','escrow.released',?,?,?,?,?)",
+            (
+                settled_at,
+                _RELEASED_TASK_ID,
+                _WORKER,
+                "Preserved historical worker settlement",
+                "{}",
+            ),
+        )
+        assert event.lastrowid is not None
+        release_event_id = int(event.lastrowid)
+        connection.execute(
+            "UPDATE bank_transactions SET timestamp=?,event_id=? WHERE tx_id='tx-release'",
+            (settled_at, release_event_id),
+        )
+        connection.execute(
+            "UPDATE bank_escrow SET resolved_at=? WHERE escrow_id='esc-released'",
+            (settled_at,),
+        )
         connection.commit()
     finally:
         connection.close()
@@ -302,7 +329,7 @@ def _inventory(source: Path, database: Path) -> RecoveryInventoryV1:
             captured_path=database,
         ),
         SourceResourceV1(
-            logical_id="config.gateway",
+            logical_id="config.db-gateway",
             kind=ResourceKind.FILE,
             capture_kind=CaptureKind.CONFIG,
             capture_root=config.parent,
@@ -343,7 +370,7 @@ def _inventory(source: Path, database: Path) -> RecoveryInventoryV1:
         resources=resources,
         configs=(
             SourceConfigV1(
-                logical_id="gateway",
+                logical_id="db-gateway",
                 capture_root=config.parent,
                 captured_path=config,
                 process_cwd=source,
@@ -352,8 +379,8 @@ def _inventory(source: Path, database: Path) -> RecoveryInventoryV1:
         ),
         field_bindings=(
             SourceFieldBindingV1(
-                binding_id="gateway.database.path",
-                config_id="gateway",
+                binding_id="db-gateway.database.path",
+                config_id="db-gateway",
                 field_path=("database", "path"),
                 binding_kind=BindingKind.FILESYSTEM,
                 captured_value=str(database),
@@ -362,8 +389,8 @@ def _inventory(source: Path, database: Path) -> RecoveryInventoryV1:
                 resource_id="database.primary",
             ),
             SourceFieldBindingV1(
-                binding_id="gateway.recovery.maintenance_lock_path",
-                config_id="gateway",
+                binding_id="db-gateway.recovery.maintenance_lock_path",
+                config_id="db-gateway",
                 field_path=("recovery", "maintenance_lock_path"),
                 binding_kind=BindingKind.FILESYSTEM,
                 captured_value=str(maintenance_lock),
@@ -372,8 +399,8 @@ def _inventory(source: Path, database: Path) -> RecoveryInventoryV1:
                 resource_id="runtime.maintenance_lock",
             ),
             SourceFieldBindingV1(
-                binding_id="gateway.auth.gateway-service.public_key_path",
-                config_id="gateway",
+                binding_id="db-gateway.auth.gateway-service.public_key_path",
+                config_id="db-gateway",
                 field_path=(
                     "auth",
                     "trusted_callers",
@@ -414,7 +441,9 @@ def _with_task_board_authority(inventory: RecoveryInventoryV1) -> RecoveryInvent
     public_key_path = keys / f"{handle}.pub"
     private_key_path = keys / f"{handle}.key"
 
-    gateway_config = next(config for config in inventory.configs if config.logical_id == "gateway")
+    gateway_config = next(
+        config for config in inventory.configs if config.logical_id == "db-gateway"
+    )
     gateway_value = json.loads(gateway_config.captured_path.read_text(encoding="utf-8"))
     gateway_value["auth"]["trusted_callers"][handle] = {
         "public_key_path": str(public_key_path),
@@ -459,7 +488,7 @@ def _with_task_board_authority(inventory: RecoveryInventoryV1) -> RecoveryInvent
                 process_cwd=config.process_cwd,
                 sha256=(
                     hashlib.sha256(gateway_bytes).hexdigest()
-                    if config.logical_id == "gateway"
+                    if config.logical_id == "db-gateway"
                     else config.sha256
                 ),
             )
@@ -500,8 +529,8 @@ def _with_task_board_authority(inventory: RecoveryInventoryV1) -> RecoveryInvent
     bindings = (
         *inventory.field_bindings,
         SourceFieldBindingV1(
-            binding_id=f"gateway.auth.{handle}.public_key_path",
-            config_id="gateway",
+            binding_id=f"db-gateway.auth.{handle}.public_key_path",
+            config_id="db-gateway",
             field_path=("auth", "trusted_callers", handle, "public_key_path"),
             binding_kind=BindingKind.FILESYSTEM,
             captured_value=str(public_key_path),
@@ -615,6 +644,50 @@ def _migrate_current_v3_to_v4(
             publication_migration.manifest_sha256,
         )
     assert _file_hashes(v3_backup.location) == v3_backup_hashes
+    v4_backup = recovery.create_backup(
+        v3_inventory,
+        backup_root=backup_root,
+        backup_id=_V4_BACKUP_ID,
+        work_root=work_root,
+    )
+    assert v4_backup.state is recovery.PublicationState.COMPLETE
+    v4_backup_hashes = _file_hashes(v4_backup.location)
+    v4_verification = recovery.verify_backup(
+        backup_root=backup_root,
+        backup_id=_V4_BACKUP_ID,
+        work_root=work_root,
+    )
+    assert v4_verification.artifact_verified and v4_verification.identity_complete
+    try:
+        effect_migration = migrate_v4_to_v5(
+            v3_inventory,
+            backup_root=backup_root,
+            backup_id=_V4_BACKUP_ID,
+            work_root=work_root,
+            busy_timeout_ms=5000,
+            current_task_board_caller_kid="gateway-task-board",
+        )
+    except MigrationError as exc:
+        pytest.fail(f"V4-to-V5 fixture migration failed: {exc.reason} {exc.safe_details}")
+    assert effect_migration.applied is True
+    assert effect_migration.schema_version == 5
+    assert effect_migration.observation == "committed_v5_verified"
+    with closing(sqlite3.connect(database)) as connection:
+        assert classify_schema(connection).state is SchemaState.CURRENT_V5
+        assert _snapshot(str(database)) == financial_history
+        assert audit_receipt_ownership(connection).ownership_clean
+        assert audit_task_contracts(connection).contracts_clean
+        assert audit_effect_recovery(connection).recovery_clean
+        assert connection.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert connection.execute("SELECT * FROM schema_metadata").fetchone() == (
+            1,
+            5,
+            4,
+            _V4_BACKUP_ID,
+            effect_migration.manifest_sha256,
+        )
+    assert _file_hashes(v4_backup.location) == v4_backup_hashes
 
 
 @pytest.fixture

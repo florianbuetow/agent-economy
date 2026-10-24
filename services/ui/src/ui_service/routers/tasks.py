@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
-from ui_service.core.deps import DbConn
+from ui_service.core.deps import DbConn, TaskBoardRead
 from ui_service.schemas import (
     AgentRef,
     AssetItem,
@@ -32,7 +32,7 @@ router = APIRouter()
 
 @router.get("/tasks")  # nosemgrep
 async def get_task_list(
-    db: DbConn,
+    task_board_reader: TaskBoardRead,
     status: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -48,7 +48,7 @@ async def get_task_list(
         )
 
     tasks_data, total_count = await tasks_service.get_task_list(
-        db, status=status, limit=limit, offset=offset
+        task_board_reader, status=status, limit=limit, offset=offset
     )
 
     tasks = [
@@ -60,6 +60,7 @@ async def get_task_list(
             poster_id=t["poster_id"],
             created_at=t["created_at"],
             bid_count=t["bid_count"],
+            financial_effect=t["financial_effect"],
         )
         for t in tasks_data
     ]
@@ -132,17 +133,10 @@ async def get_uncontested_tasks(
 async def get_task_drilldown(
     task_id: str,
     db: DbConn,
+    task_board_reader: TaskBoardRead,
 ) -> JSONResponse:
     """Return full task drilldown with bids, assets, feedback, and dispute."""
-    data = await tasks_service.get_task_drilldown(db, task_id)
-
-    if data is None:
-        raise ServiceError(
-            error="task_not_found",
-            message=f"Task '{task_id}' not found",
-            status_code=404,
-            details={"task_id": task_id},
-        )
+    data = await tasks_service.get_task_drilldown(db, task_board_reader, task_id)
 
     bids = [
         BidItem(
@@ -220,6 +214,7 @@ async def get_task_drilldown(
         spec=data["spec"],
         reward=data["reward"],
         status=data["status"],
+        lifecycle_version=data["lifecycle_version"],
         bid_count=data["bid_count"],
         deadlines=TaskDeadlines(**data["deadlines"]),
         timestamps=TaskTimestamps(**data["timestamps"]),
@@ -227,6 +222,7 @@ async def get_task_drilldown(
         assets=assets,
         feedback=feedback,
         dispute=dispute,
+        financial_effect=data["financial_effect"],
     )
 
     return JSONResponse(content=response.model_dump(by_alias=True))

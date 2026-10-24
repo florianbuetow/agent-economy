@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from service_commons.exceptions import ServiceError
-
 from ui_service.services.database import (
     execute_fetchall,
     execute_fetchone,
     execute_scalar,
+)
+from ui_service.services.task_board_reads import (
+    get_authoritative_task,
+    list_authoritative_tasks,
 )
 from ui_service.taxonomy import (
     COMPETITIVE_OPEN_STATUSES,
@@ -22,6 +24,8 @@ if TYPE_CHECKING:
     from typing import Any
 
     import aiosqlite
+
+    from ui_service.services.task_board_reads import TaskBoardReader
 
 # Re-exported from ``ui_service.taxonomy`` so existing consumers (the tasks
 # router) keep importing it from this module.
@@ -193,8 +197,16 @@ async def _load_feedback(db: aiosqlite.Connection, task_id: str) -> list[dict[st
     ]
 
 
-async def _load_dispute(db: aiosqlite.Connection, task_id: str) -> dict[str, Any] | None:
-    """Load the dispute (with rebuttal and ruling) for a task, if any."""
+async def _load_dispute(
+    db: aiosqlite.Connection,
+    task_id: str,
+    *,
+    ruling_id: str | None,
+    worker_pct: int | None,
+    ruling_summary: str | None,
+    ruled_at: str | None,
+) -> dict[str, Any] | None:
+    """Enrich authoritative ruling facts with local claim and rebuttal narrative."""
     claim_row = await execute_fetchone(
         db,
         "SELECT claim_id, reason, filed_at FROM court_claims WHERE task_id = ?",
@@ -218,19 +230,15 @@ async def _load_dispute(db: aiosqlite.Connection, task_id: str) -> dict[str, Any
             "submitted_at": reb_row[1],
         }
 
-    # Ruling
     ruling = None
-    rul_row = await execute_fetchone(
-        db,
-        "SELECT ruling_id, worker_pct, summary, ruled_at FROM court_rulings WHERE claim_id = ?",
-        (claim_id,),
-    )
-    if rul_row is not None:
+    if ruling_id is not None:
+        if worker_pct is None or ruling_summary is None or ruled_at is None:
+            raise ValueError("Authoritative ruling projection is incomplete")
         ruling = {
-            "ruling_id": rul_row[0],
-            "worker_pct": rul_row[1],
-            "summary": rul_row[2],
-            "ruled_at": rul_row[3],
+            "ruling_id": ruling_id,
+            "worker_pct": worker_pct,
+            "summary": ruling_summary,
+            "ruled_at": ruled_at,
         }
 
     return {
@@ -242,91 +250,57 @@ async def _load_dispute(db: aiosqlite.Connection, task_id: str) -> dict[str, Any
     }
 
 
-async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str, Any] | None:
-    """Get a full task drilldown with bids, assets, feedback, and dispute."""
-    # 1. Query the task
-    task_row = await execute_fetchone(
-        db,
-        "SELECT bt.task_id, bt.poster_id, bt.worker_id, bt.title, bt.spec, "
-        "bt.reward, bt.status, bt.accepted_bid_id, "
-        "bt.bidding_deadline, bt.execution_deadline, bt.review_deadline, "
-        "bt.created_at, bt.accepted_at, bt.submitted_at, bt.approved_at, "
-        "btc.lifecycle_version "
-        "FROM board_tasks bt "
-        "LEFT JOIN board_task_contracts btc ON btc.task_id = bt.task_id "
-        "WHERE bt.task_id = ?",
-        (task_id,),
+async def get_task_drilldown(
+    db: aiosqlite.Connection,
+    reader: TaskBoardReader,
+    task_id: str,
+) -> dict[str, Any]:
+    """Enrich one authoritative Task Board snapshot with permitted local data."""
+    task = await get_authoritative_task(reader, task_id=task_id)
+    poster_name = await _resolve_agent_name(db, task.poster_id)
+    worker = await _load_worker(db, task.worker_id)
+    bids = (
+        []
+        if task.status == TaskStatus.OPEN
+        else await _load_bids(db, task_id, task.accepted_bid_id)
     )
-    if task_row is None:
-        return None
-
-    (
-        tid,
-        poster_id,
-        worker_id,
-        title,
-        spec,
-        reward,
-        status,
-        accepted_bid_id,
-        bidding_deadline,
-        execution_deadline,
-        review_deadline,
-        created_at,
-        accepted_at,
-        submitted_at,
-        approved_at,
-        lifecycle_version,
-    ) = task_row
-    if type(lifecycle_version) is not int:
-        raise ServiceError(
-            "task_contract_missing",
-            "Task lifecycle contract is missing",
-            500,
-            {"task_id": task_id},
-        )
-
-    # 2-7. Load related records (poster, worker, bids, assets, feedback, dispute)
-    poster_name = await _resolve_agent_name(db, poster_id)
-    worker = await _load_worker(db, worker_id)
-    bid_count = int(
-        await execute_scalar(
-            db,
-            "SELECT COUNT(*) FROM board_bids WHERE task_id = ?",
-            (task_id,),
-        )
-        or 0
-    )
-    bids = [] if status == TaskStatus.OPEN else await _load_bids(db, task_id, accepted_bid_id)
     assets = await _load_assets(db, task_id)
     feedback = await _load_feedback(db, task_id)
-    dispute = await _load_dispute(db, task_id)
+    dispute = await _load_dispute(
+        db,
+        task_id,
+        ruling_id=task.ruling_id,
+        worker_pct=task.worker_pct,
+        ruling_summary=task.ruling_summary,
+        ruled_at=task.ruled_at,
+    )
 
     return {
-        "task_id": tid,
-        "poster": {"agent_id": poster_id, "name": poster_name},
+        "task_id": task.task_id,
+        "poster": {"agent_id": task.poster_id, "name": poster_name},
         "worker": worker,
-        "title": title,
-        "spec": spec,
-        "reward": reward,
-        "status": status,
-        "lifecycle_version": lifecycle_version,
-        "bid_count": bid_count,
+        "title": task.title,
+        "spec": task.spec,
+        "reward": task.reward,
+        "status": task.status,
+        "lifecycle_version": task.lifecycle_version,
+        "bid_count": task.bid_count,
         "deadlines": {
-            "bidding_deadline": bidding_deadline,
-            "execution_deadline": execution_deadline,
-            "review_deadline": review_deadline,
+            "bidding_deadline": task.bidding_deadline,
+            "execution_deadline": task.execution_deadline,
+            "review_deadline": task.review_deadline,
         },
         "timestamps": {
-            "created_at": created_at,
-            "accepted_at": accepted_at,
-            "submitted_at": submitted_at,
-            "approved_at": approved_at,
+            "created_at": task.created_at,
+            "accepted_at": task.accepted_at,
+            "submitted_at": task.submitted_at,
+            "approved_at": task.approved_at,
         },
         "bids": bids,
         "assets": assets,
         "feedback": feedback,
         "dispute": dispute,
+        "financial_effect": task.financial_effect.model_dump(),
     }
 
 
@@ -420,63 +394,11 @@ async def get_uncontested_tasks(
 
 
 async def get_task_list(
-    db: aiosqlite.Connection,
+    reader: TaskBoardReader,
     status: str | None,
     limit: int,
     offset: int,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Return a paginated list of tasks with optional status filter."""
-    if status is None:
-        total_count = int(
-            await execute_scalar(
-                db,
-                "SELECT COUNT(*) FROM board_tasks",
-                (),
-            )
-            or 0
-        )
-        rows = await execute_fetchall(
-            db,
-            "SELECT bt.task_id, bt.title, bt.status, bt.reward, bt.poster_id, "
-            "bt.created_at, "
-            "(SELECT COUNT(*) FROM board_bids bb WHERE bb.task_id = bt.task_id) as bid_count "
-            "FROM board_tasks bt "
-            "ORDER BY bt.created_at DESC "
-            "LIMIT ? OFFSET ?",
-            (limit, offset),
-        )
-    else:
-        total_count = int(
-            await execute_scalar(
-                db,
-                "SELECT COUNT(*) FROM board_tasks WHERE status = ?",
-                (status,),
-            )
-            or 0
-        )
-        rows = await execute_fetchall(
-            db,
-            "SELECT bt.task_id, bt.title, bt.status, bt.reward, bt.poster_id, "
-            "bt.created_at, "
-            "(SELECT COUNT(*) FROM board_bids bb WHERE bb.task_id = bt.task_id) as bid_count "
-            "FROM board_tasks bt "
-            "WHERE bt.status = ? "
-            "ORDER BY bt.created_at DESC "
-            "LIMIT ? OFFSET ?",
-            (status, limit, offset),
-        )
-
-    tasks = [
-        {
-            "task_id": r[0],
-            "title": r[1],
-            "status": r[2],
-            "reward": r[3],
-            "poster_id": r[4],
-            "created_at": r[5],
-            "bid_count": r[6],
-        }
-        for r in rows
-    ]
-
-    return tasks, total_count
+    """Slice one coherent, ordered Task Board list snapshot."""
+    tasks = await list_authoritative_tasks(reader, status=status)
+    return tasks[offset : offset + limit], len(tasks)

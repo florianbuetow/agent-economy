@@ -1,6 +1,11 @@
 # Pending owner policy decisions
 
-Status: questions sent through the asynchronous user-input tool; **no answer received yet**. Suggested choices are not accepted decisions. Keep T-162/T-163/T-164 and dependent policy implementation open until an explicit user answer is recorded.
+Current status: the owner answered Q-M1 visibility, provider, initial format and
+archive questions on 2026-10-22. See
+[the accepted decision record](policy-options/owner-decisions-2026-10-22.md).
+It supersedes conflicting proposals below. Q-M2 and Q-M3 remain unanswered;
+T-162/T-163/T-164 remain open pending their complete decision and closure gates.
+The remaining text preserves historical proposals, not accepted defaults.
 
 ## Q-M1 / T-162
 

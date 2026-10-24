@@ -9,6 +9,16 @@ from typing import TYPE_CHECKING, Any, Final
 from service_commons.exceptions import ServiceError
 
 from db_gateway_service.financial_requests import canonical_request
+from db_gateway_service.services.artifact_acceptance import (
+    AcceptedArtifactBinding,
+    commit_acceptance_binding,
+    inspect_acceptance_binding,
+)
+from db_gateway_service.services.artifact_submission import (
+    FrozenSubmissionManifest,
+    freeze_submission_manifest,
+    reject_governed_protocol_v1_submission,
+)
 from db_gateway_service.services.db_writer_helpers import (
     is_foreign_key_violation,
     is_unique_violation,
@@ -86,15 +96,20 @@ class TaskOperationWriter:
         clock_us: Callable[[], int],
         deadline_actor_id: str,
         platform_public_key: str,
+        *,
+        current_task_board_caller_kid: str,
     ) -> None:
         if not isinstance(deadline_actor_id, str) or not deadline_actor_id:
             raise ValueError("deadline_actor_id must be a nonempty string")
         if not isinstance(platform_public_key, str) or not platform_public_key:
             raise ValueError("platform_public_key must be a nonempty string")
+        if not isinstance(current_task_board_caller_kid, str) or not current_task_board_caller_kid:
+            raise ValueError("current_task_board_caller_kid must be a nonempty string")
         self._db = connection
         self._clock_us = clock_us
         self._deadline_actor_id = deadline_actor_id
         self._platform_public_key = platform_public_key
+        self._current_task_board_caller_kid = current_task_board_caller_kid
 
     def claim_operation(
         self,
@@ -103,6 +118,13 @@ class TaskOperationWriter:
     ) -> dict[str, Any]:
         """Resolve replay or atomically claim/complete one validated command."""
         caller_kid = self._caller_kid(verified_caller_kid)
+        if caller_kid != self._current_task_board_caller_kid:
+            raise _service_error(
+                "operation_caller_mismatch",
+                "Only the current Task Board caller may own task operations",
+                403,
+                {},
+            )
         cursor = self._db.cursor()
         try:
             cursor.execute("BEGIN IMMEDIATE")
@@ -130,41 +152,59 @@ class TaskOperationWriter:
             self._validate_version_and_status(request, task, contract)
             self._validate_actor(cursor, request, task)
 
-            if request.command == "submit_bid":
-                envelope = self._submit_bid(
-                    cursor, request, caller_kid, claimed_at_us, task, contract
-                )
-            elif request.command == "accept_bid":
-                envelope = self._accept_bid(
-                    cursor, request, caller_kid, claimed_at_us, task, contract
-                )
-            elif request.command == "submit_deliverable":
-                envelope = self._submit_deliverable(
-                    cursor, request, caller_kid, claimed_at_us, task, contract
-                )
-            elif request.command == "dispute_task":
-                envelope = self._claim_court_effect(
-                    cursor, request, caller_kid, claimed_at_us, task, contract
-                )
-            elif request.command in _BANK_COMMANDS:
-                envelope = self._claim_bank_effect(
-                    cursor, request, caller_kid, claimed_at_us, task, contract
-                )
-            else:
-                raise _service_error(
-                    "unsupported_operation",
-                    "Task operation command is not supported by this writer",
-                    501,
-                    {"command": request.command},
-                )
+            envelope = self._dispatch_claim(
+                cursor, request, caller_kid, claimed_at_us, task, contract
+            )
             self._db.commit()
             return envelope
         except ServiceError:
             self._db.rollback()
             raise
+        except sqlite3.IntegrityError as exc:
+            self._db.rollback()
+            raise _service_error(
+                "task_operation_persistence_failed",
+                "Task operation could not be persisted atomically",
+                500,
+                {},
+            ) from exc
+        except sqlite3.DatabaseError as exc:
+            self._db.rollback()
+            raise _service_error(
+                "task_operation_persistence_failed",
+                "Task operation could not be persisted atomically",
+                500,
+                {},
+            ) from exc
         except Exception:
             self._db.rollback()
             raise
+
+    def _dispatch_claim(
+        self,
+        cursor: sqlite3.Cursor,
+        request: TaskOperationRequest,
+        caller_kid: str,
+        now_us: int,
+        task: dict[str, Any],
+        contract: dict[str, Any],
+    ) -> dict[str, Any]:
+        if request.command == "submit_bid":
+            return self._submit_bid(cursor, request, caller_kid, now_us, task, contract)
+        if request.command == "accept_bid":
+            return self._accept_bid(cursor, request, caller_kid, now_us, task, contract)
+        if request.command == "submit_deliverable":
+            return self._submit_deliverable(cursor, request, caller_kid, now_us, task, contract)
+        if request.command == "dispute_task":
+            return self._claim_court_effect(cursor, request, caller_kid, now_us, task, contract)
+        if request.command in _BANK_COMMANDS:
+            return self._claim_bank_effect(cursor, request, caller_kid, now_us, task, contract)
+        raise _service_error(
+            "unsupported_operation",
+            "Task operation command is not supported by this writer",
+            501,
+            {"command": request.command},
+        )
 
     def finalize_operation(
         self,
@@ -209,25 +249,10 @@ class TaskOperationWriter:
             completed_at_us = self._sample_clock()
             task = self._task(cursor, str(operation[2]))
             contract = self._task_contract(cursor, str(operation[2]))
-            self._validate_claim_ownership(operation, task, contract)
             if effect_kind == "court_claim":
-                court_evidence = self._court_evidence(cursor, operation, task, contract)
-                if court_evidence is None:
-                    envelope = self._envelope(operation)
-                    self._db.rollback()
-                    return envelope
-                if court_evidence is False:
-                    self._block_evidence_conflict(cursor, operation, None)
-                assert isinstance(court_evidence, CourtClaimEvidence)
-                result = self._complete_court_effect(
-                    cursor,
-                    operation,
-                    task,
-                    court_evidence,
-                    completed_at_us,
+                return self._finalize_court_operation(
+                    cursor, operation, task, contract, completed_at_us
                 )
-                self._db.commit()
-                return result
 
             evidence, winning_operation_id = self._financial_evidence(
                 cursor, operation, task, contract
@@ -238,6 +263,10 @@ class TaskOperationWriter:
                 return envelope
             if evidence is False:
                 self._block_evidence_conflict(cursor, operation, winning_operation_id)
+            try:
+                self._validate_claim_ownership(operation, task, contract)
+            except ServiceError:
+                self._block_evidence_conflict(cursor, operation, winning_operation_id)
 
             result = self._complete_bank_effect(
                 cursor,
@@ -246,6 +275,7 @@ class TaskOperationWriter:
                 contract,
                 completed_at_us,
             )
+            self._complete_native_delivery(cursor, operation, completed_at_us)
             self._db.commit()
             return result
         except ServiceError:
@@ -254,6 +284,66 @@ class TaskOperationWriter:
         except Exception:
             self._db.rollback()
             raise
+
+    def _finalize_court_operation(
+        self,
+        cursor: sqlite3.Cursor,
+        operation: tuple[Any, ...],
+        task: dict[str, Any],
+        contract: dict[str, Any],
+        completed_at_us: int,
+    ) -> dict[str, Any]:
+        self._validate_claim_ownership(operation, task, contract)
+        evidence = self._court_evidence(cursor, operation, task, contract)
+        if evidence is None:
+            envelope = self._envelope(operation)
+            self._db.rollback()
+            return envelope
+        if evidence is False:
+            self._block_evidence_conflict(cursor, operation, None)
+        assert isinstance(evidence, CourtClaimEvidence)
+        result = self._complete_court_effect(
+            cursor,
+            operation,
+            task,
+            evidence,
+            completed_at_us,
+        )
+        self._db.commit()
+        return result
+
+    @staticmethod
+    def _complete_native_delivery(
+        cursor: sqlite3.Cursor,
+        operation: tuple[Any, ...],
+        completed_at_us: int,
+    ) -> None:
+        operation_id = str(operation[0])
+        receipt = cursor.execute(
+            "SELECT event_id FROM bank_operation_receipts WHERE operation_id=?",
+            (operation_id,),
+        ).fetchone()
+        if receipt is None or type(receipt[0]) is not int:
+            raise _service_error(
+                "effect_evidence_conflict",
+                "Authoritative receipt event is missing",
+                409,
+                {"operation_id": operation_id},
+            )
+        cursor.execute(
+            "UPDATE board_task_effect_deliveries SET delivery_state='completed',"
+            "next_attempt_at_us=NULL,lease_owner_id=NULL,lease_acquired_at_us=NULL,"
+            "lease_expires_at_us=NULL,next_evidence_check_at_us=NULL,completed_at_us=?,"
+            "completion_event_id=? WHERE native_operation_id=?",
+            (completed_at_us, int(receipt[0]), operation_id),
+        )
+        if cursor.rowcount != 1:
+            raise _service_error(
+                "effect_delivery_missing",
+                "Native financial operation has no delivery sidecar",
+                500,
+                {"operation_id": operation_id},
+            )
 
     @staticmethod
     def _caller_kid(value: object) -> str:
@@ -549,6 +639,62 @@ class TaskOperationWriter:
             raise _service_error("payload_mismatch", "Selected bid facts do not match", 409, {})
         execution_cutoff_us = add_seconds_to_epoch_us(now_us, task["deadline_seconds"])
         accepted_at = epoch_us_to_utc_text(now_us)
+        binding = inspect_acceptance_binding(
+            cursor,
+            task_id=request.task_id,
+            poster_id=str(task["poster_id"]),
+            worker_id=worker_id,
+            bid_id=bid_id,
+            bid_amount=bid_amount,
+            accepted_at_us=now_us,
+            execution_cutoff_us=execution_cutoff_us,
+            target_lifecycle_version=request.expected_lifecycle_version + 1,
+        )
+        try:
+            return self._commit_acceptance(
+                cursor,
+                request,
+                caller_kid,
+                now_us,
+                task,
+                binding,
+                worker_id,
+                bid_id,
+                bid_amount,
+                execution_cutoff_us,
+                accepted_at,
+            )
+        except ServiceError as exc:
+            if exc.error != "event_insert_failed":
+                raise
+            raise _service_error(
+                "task_operation_persistence_failed",
+                "Task operation could not be persisted atomically",
+                500,
+                {},
+            ) from exc
+        except RuntimeError as exc:
+            raise _service_error(
+                "task_operation_persistence_failed",
+                "Task operation could not be persisted atomically",
+                500,
+                {},
+            ) from exc
+
+    def _commit_acceptance(
+        self,
+        cursor: sqlite3.Cursor,
+        request: TaskOperationRequest,
+        caller_kid: str,
+        now_us: int,
+        task: dict[str, Any],
+        binding: AcceptedArtifactBinding | None,
+        worker_id: str,
+        bid_id: str,
+        bid_amount: int,
+        execution_cutoff_us: int,
+        accepted_at: str,
+    ) -> dict[str, Any]:
         cursor.execute(
             "UPDATE board_tasks SET status='accepted', worker_id=?, accepted_bid_id=?, "
             "accepted_at=?, execution_deadline=? WHERE task_id=? AND status='open'",
@@ -574,6 +720,10 @@ class TaskOperationWriter:
                 request.expected_lifecycle_version,
             ),
         )
+        if cursor.rowcount != 1:
+            raise _service_error("task_version_conflict", "Task changed during acceptance", 409, {})
+        if binding is not None:
+            commit_acceptance_binding(cursor, binding=binding)
         result: dict[str, object] = {
             "task_id": request.task_id,
             "command": request.command,
@@ -584,6 +734,9 @@ class TaskOperationWriter:
             "reward": int(task["reward"]),
             "bid_amount": bid_amount,
         }
+        if binding is not None:
+            result["accepted_binding_kind"] = binding.kind
+            result["accepted_binding_sha256"] = binding.sha256
         return self._persist_pure(cursor, request, caller_kid, now_us, result)
 
     def _submit_deliverable(
@@ -602,16 +755,49 @@ class TaskOperationWriter:
         worker_id = task["worker_id"]
         if worker_id != request.argument("worker_id"):
             raise _service_error("payload_mismatch", "Worker facts do not match", 409, {})
-        asset = cursor.execute(
-            "SELECT 1 FROM board_assets WHERE task_id = ? AND uploader_id = ? LIMIT 1",
-            (request.task_id, worker_id),
-        ).fetchone()
-        if asset is None:
-            raise _service_error(
-                "no_assets", "At least one worker asset is required before submission", 400, {}
-            )
+        frozen_manifest = None
+        if request.protocol_version == 2:
+            frozen_manifest = freeze_submission_manifest(cursor, request, now_us)
+        else:
+            reject_governed_protocol_v1_submission(cursor, request.task_id)
+            asset = cursor.execute(
+                "SELECT 1 FROM board_assets WHERE task_id = ? AND uploader_id = ? LIMIT 1",
+                (request.task_id, worker_id),
+            ).fetchone()
+            if asset is None:
+                raise _service_error(
+                    "no_assets", "At least one worker asset is required before submission", 400, {}
+                )
         review_cutoff_us = add_seconds_to_epoch_us(now_us, task["review_deadline_seconds"])
         submitted_at = epoch_us_to_utc_text(now_us)
+        if frozen_manifest is not None:
+            try:
+                return self._commit_governed_submission(
+                    cursor,
+                    request,
+                    caller_kid,
+                    now_us,
+                    worker_id=str(worker_id),
+                    review_cutoff_us=review_cutoff_us,
+                    submitted_at=submitted_at,
+                    frozen_manifest=frozen_manifest,
+                )
+            except ServiceError as exc:
+                if exc.error != "event_insert_failed":
+                    raise
+                raise _service_error(
+                    "task_operation_persistence_failed",
+                    "Task operation could not be persisted atomically",
+                    500,
+                    {},
+                ) from exc
+            except RuntimeError as exc:
+                raise _service_error(
+                    "task_operation_persistence_failed",
+                    "Task operation could not be persisted atomically",
+                    500,
+                    {},
+                ) from exc
         cursor.execute(
             "UPDATE board_tasks SET status='submitted', submitted_at=?, review_deadline=? "
             "WHERE task_id=? AND status='accepted'",
@@ -633,6 +819,48 @@ class TaskOperationWriter:
             "status": "submitted",
             "lifecycle_version": request.expected_lifecycle_version + 1,
             "worker_id": str(worker_id),
+        }
+        return self._persist_pure(cursor, request, caller_kid, now_us, result)
+
+    def _commit_governed_submission(
+        self,
+        cursor: sqlite3.Cursor,
+        request: TaskOperationRequest,
+        caller_kid: str,
+        now_us: int,
+        *,
+        worker_id: str,
+        review_cutoff_us: int,
+        submitted_at: str,
+        frozen_manifest: FrozenSubmissionManifest,
+    ) -> dict[str, Any]:
+        cursor.execute(
+            "UPDATE board_tasks SET status='submitted', submitted_at=?, review_deadline=? "
+            "WHERE task_id=? AND status='accepted'",
+            (submitted_at, epoch_us_to_utc_text(review_cutoff_us), request.task_id),
+        )
+        if cursor.rowcount != 1:
+            raise _service_error("task_version_conflict", "Task changed during submission", 409, {})
+        cursor.execute(
+            "UPDATE board_task_contracts SET lifecycle_version=?, review_cutoff_us=? "
+            "WHERE task_id=? AND lifecycle_version=?",
+            (
+                request.expected_lifecycle_version + 1,
+                review_cutoff_us,
+                request.task_id,
+                request.expected_lifecycle_version,
+            ),
+        )
+        if cursor.rowcount != 1:
+            raise _service_error("task_version_conflict", "Task changed during submission", 409, {})
+        result: dict[str, object] = {
+            "task_id": request.task_id,
+            "command": request.command,
+            "status": "submitted",
+            "lifecycle_version": request.expected_lifecycle_version + 1,
+            "worker_id": worker_id,
+            "manifest_id": frozen_manifest.manifest_id,
+            "manifest_sha256": frozen_manifest.manifest_sha256,
         }
         return self._persist_pure(cursor, request, caller_kid, now_us, result)
 
@@ -665,8 +893,35 @@ class TaskOperationWriter:
             event_id=None,
             result=None,
         )
+        cursor.execute(
+            "INSERT INTO board_task_effect_deliveries "
+            "(effect_operation_id,recovery_contract_version,task_id,source_kind,"
+            "native_operation_id,legacy_observation_id,owner_caller_kid,effect_kind,"
+            "delivery_state,enqueued_at_us,total_attempt_count,cycle_attempt_count,"
+            "lease_generation,next_attempt_at_us,lease_owner_id,lease_acquired_at_us,"
+            "lease_expires_at_us,last_failure_code,last_failure_at_us,operator_retry_count,"
+            "last_operator_retry_at_us,last_operator_retry_caller_kid,"
+            "next_evidence_check_at_us,completed_at_us,completion_event_id,cutover_singleton) "
+            "VALUES (?,1,?,'native_task_operation',?,NULL,?,?,"
+            "'pending',?,0,0,0,?,NULL,NULL,NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,NULL,NULL)",
+            (
+                request.operation_id,
+                request.task_id,
+                request.operation_id,
+                caller_kid,
+                effect_kind,
+                now_us,
+                now_us,
+            ),
+        )
         row = self._operation_row(cursor, request.operation_id)
-        assert row is not None
+        if row is None:
+            raise _service_error(
+                "task_operation_persistence_failed",
+                "Task operation disappeared after persistence",
+                500,
+                {},
+            )
         return self._envelope(row)
 
     def _claim_court_effect(
@@ -701,7 +956,13 @@ class TaskOperationWriter:
             result=None,
         )
         row = self._operation_row(cursor, request.operation_id)
-        assert row is not None
+        if row is None:
+            raise _service_error(
+                "task_operation_persistence_failed",
+                "Task operation disappeared after persistence",
+                500,
+                {},
+            )
         return self._envelope(row)
 
     def _build_financial_effect(
@@ -916,28 +1177,61 @@ class TaskOperationWriter:
             result=result,
         )
         row = self._operation_row(cursor, request.operation_id)
-        assert row is not None
+        if row is None:
+            raise _service_error(
+                "task_operation_persistence_failed",
+                "Task operation disappeared after persistence",
+                500,
+                {},
+            )
         return self._envelope(row)
 
     @staticmethod
     def _insert_event(cursor: sqlite3.Cursor, request: TaskOperationRequest, now_us: int) -> int:
         event_type = _EVENT_TYPES[request.command]
+        timestamp = epoch_us_to_utc_text(now_us)
+        agent_id = request.actor_id if request.actor_kind == "agent" else None
+        summary = f"Task operation completed: {request.command}"
+        payload = _json_object({"operation_id": request.operation_id, "command": request.command})
         cursor.execute(
             "INSERT INTO events "
             "(event_source, event_type, timestamp, task_id, agent_id, summary, payload) "
             "VALUES ('board', ?, ?, ?, ?, ?, ?)",
             (
                 event_type,
-                epoch_us_to_utc_text(now_us),
+                timestamp,
                 request.task_id,
-                request.actor_id if request.actor_kind == "agent" else None,
-                f"Task operation completed: {request.command}",
-                _json_object({"operation_id": request.operation_id, "command": request.command}),
+                agent_id,
+                summary,
+                payload,
             ),
         )
-        if cursor.lastrowid is None:
+        if cursor.rowcount != 1:
+            raise _service_error(
+                "task_operation_persistence_failed",
+                "Task event was not persisted",
+                500,
+                {},
+            )
+        if type(cursor.lastrowid) is not int or cursor.lastrowid <= 0:
             raise _service_error("event_insert_failed", "Task event was not persisted", 500, {})
-        return int(cursor.lastrowid)
+        event_id = cursor.lastrowid
+        linked = cursor.execute(
+            "SELECT event_source,event_type,timestamp,task_id,agent_id,summary,payload "
+            "FROM events WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+        if linked is None or tuple(linked) != (
+            "board",
+            event_type,
+            timestamp,
+            request.task_id,
+            agent_id,
+            summary,
+            payload,
+        ):
+            raise _service_error("event_insert_failed", "Task event was not persisted", 500, {})
+        return event_id
 
     @staticmethod
     def _insert_operation(
@@ -990,6 +1284,13 @@ class TaskOperationWriter:
                 None if result is None else _json_object(result),
             ),
         )
+        if cursor.rowcount != 1:
+            raise _service_error(
+                "task_operation_persistence_failed",
+                "Task operation was not persisted",
+                500,
+                {},
+            )
 
     def _financial_evidence(
         self,
@@ -1374,6 +1675,23 @@ class TaskOperationWriter:
             raise _service_error(
                 "operation_state_conflict", "Task operation changed during finalization", 409, {}
             )
+        if str(operation[15]) in {"bank_release", "bank_split"}:
+            failed_at_us = self._sample_clock()
+            cursor.execute(
+                "UPDATE board_task_effect_deliveries SET delivery_state='integrity_blocked',"
+                "next_attempt_at_us=NULL,lease_owner_id=NULL,lease_acquired_at_us=NULL,"
+                "lease_expires_at_us=NULL,last_failure_code='effect_evidence_conflict',"
+                "last_failure_at_us=?,next_evidence_check_at_us=NULL,completed_at_us=NULL,"
+                "completion_event_id=NULL WHERE native_operation_id=?",
+                (failed_at_us, str(operation[0])),
+            )
+            if cursor.rowcount != 1:
+                raise _service_error(
+                    "effect_delivery_missing",
+                    "Native financial operation has no delivery sidecar",
+                    500,
+                    {"operation_id": str(operation[0])},
+                )
         self._db.commit()
         raise _service_error(
             str(error["error"]),
@@ -1498,8 +1816,21 @@ class TaskOperationWriter:
     def _envelope(operation: tuple[Any, ...]) -> dict[str, Any]:
         effect_intent = None if operation[19] is None else json.loads(str(operation[19]))
         result = None if operation[22] is None else json.loads(str(operation[22]))
+        stored_request: object = json.loads(str(operation[4]))
+        if (
+            not isinstance(stored_request, dict)
+            or type(stored_request.get("protocol_version")) is not int
+        ):
+            raise _service_error(
+                "operation_state_corrupt", "Stored protocol version is invalid", 500, {}
+            )
+        protocol_version = int(stored_request["protocol_version"])
+        if protocol_version not in {1, 2}:
+            raise _service_error(
+                "operation_state_corrupt", "Stored protocol version is invalid", 500, {}
+            )
         return {
-            "protocol_version": 1,
+            "protocol_version": protocol_version,
             "operation_id": str(operation[0]),
             "task_id": str(operation[2]),
             "command": str(operation[3]),

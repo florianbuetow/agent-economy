@@ -62,6 +62,13 @@ central_bank:
 platform:
   agent_id: "a-platform-test-id"
   agent_config_path: "agents.yaml"
+asset_upload:
+  stream_chunk_bytes: 262144
+  max_multipart_overhead_bytes: 1048576
+  max_header_count: 8
+  max_header_size: 4224
+  max_boundary_bytes: 70
+  max_display_filename_utf8_bytes: 255
 request:
   max_body_size: 1048576
 recovery:
@@ -70,6 +77,9 @@ posting_recovery:
   interval_seconds: 2
   batch_size: 100
   diagnostic_limit: 100
+financial_effect_recovery:
+  interval_seconds: 2.0
+  max_delivery_attempts_per_cycle: 10
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10

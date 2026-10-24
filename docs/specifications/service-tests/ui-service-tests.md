@@ -43,9 +43,10 @@ Required status/error mappings:
 | 404 | `task_not_found` | Referenced `task_id` does not exist |
 | 404 | `no_data` | No economy data exists for the requested quarter |
 | 405 | `method_not_allowed` | Unsupported HTTP method on a defined route |
-| 413 | `payload_too_large` | Any mutating request body exceeds `request.max_body_size`, including bodyless actions |
+| 413 | `payload_too_large` | Any mutating request body exceeds `request.max_body_size` |
 | 415 | `unsupported_media_type` | `Content-Type` is not `application/json` on a JSON-bodied proxy route |
-| 502 | `task_creation_failed` / `bid_acceptance_failed` / `task_approval_failed` / `dispute_filing_failed` | The operator's downstream Task Board call fails |
+| 422 | `invalid_task_posting_record` | Saved posting identity, scope or terms do not match the current operator and intent |
+| 502 | `task_posting_failed` / `bid_acceptance_failed` / `task_approval_failed` / `dispute_filing_failed` | Operator transport fails or a downstream response is malformed |
 | 503 | `database_unavailable` | The read-only DB connection was never established |
 | 503 | `user_agent_unavailable` | The operator `UserAgent` failed to initialize at startup |
 | 503 | `user_agent_not_registered` | `GET /api/proxy/identity` called before the UserAgent has an `agent_id` |
@@ -271,6 +272,37 @@ fields (`ruling.worker_pct`, `ruling.summary`, `ruling.ruled_at`, etc.).
 **Action:** `GET /api/tasks/-/uncontested?min_age_minutes=10`.
 **Expected:** Only the 20-minute-old task is returned.
 
+### TASK-07 Task list uses one authoritative ordered snapshot
+**Setup:** Task Board returns three summaries in newest-first order while SQLite contains stale
+core task fields.
+**Action:** `GET /api/tasks?status=open&limit=1&offset=1`.
+**Expected:** Exactly one Task Board list call with `status=open`; `total_count == 3`; the middle
+upstream record is returned with its exact strict `financial_effect`. A non-list response,
+duplicate task ID, unknown status, status-filter mismatch, nonpositive reward or negative bid
+count returns `502 task_board_unavailable`.
+
+### TASK-08 Task detail never falls back to stale core SQL
+**Setup:** SQLite contains the task. Task Board returns 404, a transport/server error, or a 200
+body with a malformed `financial_effect`.
+**Action:** `GET /api/tasks/{task_id}`.
+**Expected:** Respectively `404 task_not_found`, `502 task_board_unavailable`, or
+`502 task_board_unavailable`; no core task response is reconstructed from SQLite. A malformed
+404 envelope, unknown status, nonpositive reward, negative bid count or ruling percentage
+outside 0–100 also returns the typed 502.
+
+### TASK-09 Upstream status and ruling govern enrichment
+**Setup:** SQLite has stale accepted/ruled state and a stale Court ruling while Task Board reports
+the task open or reports a different complete ruling projection.
+**Action:** `GET /api/tasks/{task_id}`.
+**Expected:** Open bids remain sealed. When a ruling is present, its ID, percentage, summary and
+timestamp are the Task Board values; SQLite supplies only claim/rebuttal narrative.
+
+### TASK-10 Reader lifecycle is independent of mutation registration
+**Setup:** UserAgent construction succeeds and Identity registration fails.
+**Action:** Enter and leave UI lifespan.
+**Expected:** `task_board_reader` is available during lifespan, `user_agent` mutations remain
+disabled, and the one shared UserAgent/client closes exactly once.
+
 ---
 
 ## Category 8: Events
@@ -326,22 +358,25 @@ idle; at most `sse.batch_size` (config: 50) events are sent per poll cycle.
 **Action:** `GET /api/proxy/identity`.
 **Expected:** `503 user_agent_unavailable`.
 
-### PROXY-03 Create task via proxy
-**Action:** `POST /api/proxy/tasks` with a valid body (`title`, `spec`, `reward>0`, three
-deadline-seconds fields `>0`).
-**Expected:** `200`/`201` passthrough of the Task Board response; the created task's `poster_id`
-equals the operator's `agent_id`; escrow is locked for the full `reward` (per the two-token
-create contract) drawn from the **operator's** account balance.
+### PROXY-03 Prepare and submit task via proxy
+**Action:** `POST /api/proxy/task-postings/prepare` with the seven valid posting terms, retain
+the returned complete record, then send that unchanged record to
+`POST /api/proxy/task-postings/{operation_id}/submit`.
+**Expected:** Prepare returns `200` without transport or economic effect. Submit preserves the
+native `201` published response; its task `poster_id` equals the operator's `agent_id`, its
+acceptance window equals the selected value, and escrow is locked once for the full `reward`
+drawn from the **operator's** account balance.
 
 ### PROXY-04 Create task validation — field bounds
-**Action:** `POST /api/proxy/tasks` with `title` of 201 characters (over the 200-char limit), or
+**Action:** `POST /api/proxy/task-postings/prepare` with `title` of 201 characters (over the
+200-char limit), or
 `reward=0`, or a `spec` of 10,001 characters.
 **Expected:** `422` (Pydantic validation) for each malformed field; no task is created.
 
 ### PROXY-05 Create task downstream failure surfaces as 502
-**Setup:** Task Board returns an error for the create call.
-**Action:** `POST /api/proxy/tasks` with an otherwise-valid body.
-**Expected:** `502 task_creation_failed`.
+**Setup:** Prepare an otherwise-valid posting record; Task Board then fails the native submit.
+**Action:** `POST /api/proxy/task-postings/{operation_id}/submit` with the unchanged record.
+**Expected:** `502 task_posting_failed`.
 
 ### PROXY-06 Accept bid via proxy
 **Setup:** An open task posted by the operator with at least one bid.
@@ -364,19 +399,47 @@ worker.
 **Expected:** `422` for both; no dispute filed.
 
 ### PROXY-10 Extra fields rejected on proxy request bodies
-**Action:** `POST /api/proxy/tasks` with an extra unexpected top-level field.
-**Expected:** `422` (`extra="forbid"` on `CreateTaskRequest`).
+**Action:** `POST /api/proxy/task-postings/prepare` with an extra unexpected top-level field.
+**Expected:** `422` (`extra="forbid"` on `TaskPostingPrepareRequest`).
 
 ---
 
 ## Category 11: Request Validation Middleware
 
-### VAL-01 Non-JSON content type rejected on `POST /api/proxy/tasks`
-**Action:** `POST /api/proxy/tasks` with `Content-Type: text/plain`.
+### MP05-01 Durable browser intent and strict acknowledgments
+**Action:** Prepare and persist a posting, interrupt or lose its acknowledgment, then reload
+and retry. Exercise malformed state, escrow, timestamp, result and deadline fields and a bare
+409 publication response without the SDK error wrapper.
+**Expected:** Exact original identity survives; invalid acknowledgments cannot create a
+completion marker. A well-formed blocked 409 remains blocked, while a malformed backend
+acknowledgment becomes 502. Valid Unicode titles/specifications use code-point bounds and
+unpaired surrogates are rejected.
+
+### MP05-02 Recovery preserves user choice and damaged records
+**Action:** Reload with one uncertain posting, multiple uncertain postings, a delayed status
+response, and malformed JSON or structurally invalid saved records.
+**Expected:** The generic form creates no new identity during recovery. One uncertain intent
+can be retried exactly; several require choosing the operation-specific retry. Every saved
+operation remains visible. Damaged records remain byte-preserved with visible diagnostics and
+cannot be transported or silently replaced. Completion provides an explicit separate-posting
+action.
+
+### MP05-03 Real-browser publication conservation
+**Action:** Use a fresh isolated funded stack, lose real committed submit responses, reload
+and retry from two browser tabs, then recover through status.
+**Expected:** Three exact submit attempts use the same saved operation/terms. The entire
+isolated database contains one task, publication, escrow and lock transaction with one creation
+event and one lock event. The operator balance falls by exactly the reward, and balance plus
+locked reward equals its initial balance. Both tabs retain bound completion markers. Database
+assertions are read-only and all disposable processes are reaped.
+
+### VAL-01 Non-JSON content type rejected on posting prepare
+**Action:** `POST /api/proxy/task-postings/prepare` with `Content-Type: text/plain`.
 **Expected:** `415 unsupported_media_type` — rejected before the route handler runs.
 
-### VAL-02 Oversized body rejected on `POST /api/proxy/tasks`
-**Action:** `POST /api/proxy/tasks` with a body exceeding `request.max_body_size` (1,572,864
+### VAL-02 Oversized body rejected on posting prepare
+**Action:** `POST /api/proxy/task-postings/prepare` with a body exceeding
+`request.max_body_size` (1,572,864
 bytes).
 **Expected:** `413 payload_too_large`.
 
@@ -384,10 +447,12 @@ bytes).
 **Action:** Same as VAL-02, on the dispute route.
 **Expected:** `413 payload_too_large`.
 
-### VAL-04 Body-less proxy routes are not subject to JSON validation
-**Action:** `POST /api/proxy/tasks/{task_id}/approve` with no body and no `Content-Type` header.
-**Expected:** Not rejected by the middleware (no 415/413) — only routed through normal FastAPI
-handling.
+### VAL-04 Native mutations require JSON and caller-owned operation identity
+**Action:** POST to native accept, approve or dispute without a JSON content type, then repeat
+with `Content-Type: application/json` but an empty body or missing operation/version fields.
+**Expected:** Non-JSON requests return `415 unsupported_media_type`; missing native request
+fields return 422. Both reject before the operator client is called. A valid request retains
+its explicit operation ID and expected lifecycle version through downstream transport.
 
 ---
 
@@ -419,7 +484,7 @@ flags it anywhere else it might appear.
 **Expected:** Holds; a change to `"0.0.0.0"` or any non-loopback address fails this guard.
 
 ### SEC-02 Local writes require browser authority
-**Action:** Issue a valid create or bodyless accept/approve request with one allowed Host,
+**Action:** Issue a valid native posting or accept/approve request with its required JSON body and one allowed Host,
 one exact matching Origin and one configured marker from a loopback client.
 **Expected:** The existing operator behavior executes. No secret, session or mint authority is
 introduced. Omitted, duplicate, malformed or mismatched admission values receive the exact
@@ -440,10 +505,11 @@ segments; quarterly no-data labels remain literal. No active-content previews or
 are introduced. The shared proxy helper rejects forbidden targets before any fetch and preserves
 the method, body, content type and configured marker for a valid same-origin write.
 
-### SEC-05 Bodyless actions still enforce byte limits
+### SEC-05 Native mutation actions enforce byte limits
 **Action:** Send more than the configured body limit to accept/approve with valid browser headers.
 **Expected:** `413 payload_too_large`, zero operator calls. An exactly bounded body reaches the
-handler unchanged. JSON content type remains unnecessary on empty bodyless actions.
+handler unchanged for schema validation. JSON content type and the native operation/version
+fields remain required on accept/approve.
 
 ### SEC-06 Frontend fallback and asset mounts remain contained
 **Setup:** Use a temporary frontend root, ordinary page/index files and a marker file outside it.

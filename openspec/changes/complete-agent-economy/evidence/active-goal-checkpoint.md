@@ -1,5 +1,987 @@
 # Active implementation checkpoint
 
+> **Owner scope update — 2026-10-23:** Follow `MASTERPLAN-TO-COMPLETE-THE-PROJECT.md` and `FEATURE-COMPLETENESS.md` for feature-first execution. Existing data is disposable test data: old-schema/data migration, historical asset conversion and backward compatibility are out of scope. Initialize fresh databases directly. Reuse existing tests and add only missing basic feature checks; no exhaustive fault matrices or repeated planning/review gates. Older migration/testing obligations below are historical where they conflict with this update. Completed work stays complete; no feature is closed by this scope change.
+
+The earlier checkpoints below are historical. New execution uses the feature inventory; migration experiments added on resumption were archived and removed from active source/tests. No full-project completion is claimed.
+
+
+> **LATEST VERIFIED — LEGACY CONTINUATION COMPONENT COMPLETE:** Gateway14672
+> exited 0 through all static/security/audit/unit/architecture/Pyright gates.
+> All 332 inputs/path set remained unchanged; the freeze is released. Parent848
+> and independent source review also passed. Evidence:
+> `legacy-continuation-component-verification/`. Do not poll/restart14672 or
+> terminal parent88681. This is interim new-upload-only continuation, not MP-09
+> closure. The next historical migration plan exists at
+> `docs/plans/2026-10-23-mp09-legacy-asset-migration.md` as an unapproved draft.
+> Critic review found H1 schema/canonicalization blockers and later migration
+> identity/time/audit/policy issues; the read-only architect is preparing exact
+> revisions for the root to apply. No H1 tests or implementation authorized yet.
+> Goal ACTIVE, OpenSpec70/135, T-126/T-127 OPEN; no commit/push.
+
+> **LIVE L2 FULL GATE:** Independent review approved the integrity repair
+> after parent18217 reproduced 34 failures and three controls. Final legacy
+> module `78a3c932…` and ArtifactWriter `6f97dda2…` pass all 37 new regressions,
+> 81 L2 cases and 373 controls. Parent88681 then passed all 848 MP-09 cases
+> with 332 inputs/path set unchanged. Full Gateway CI is session14672, owned
+> TMPDIR `mp09-legacy-continuation-ci.3zdc2v1h`; static/security/audit stages
+> passed and tests are running. Evidence: `legacy-continuation-parent-final/`
+> and `legacy-continuation-component-verification/`. All source/tests remain
+> frozen. Historical asset planning is docs-only; no next-slice tests or code
+> before this gate passes/releases the freeze. Goal ACTIVE; no ticket closure.
+
+> **CURRENT — L2 SOURCE REVIEW REQUIRES INTEGRITY REPAIRS:** The first L2
+> implementation passes the author 81-case suite, 373 controls and all 811
+> MP-09 tests; statics pass. Independent review nevertheless found incomplete
+> V0 contract-shape validation and missing independent accepted/locked status
+> requirements under coherent evidence rewrites. It also confirmed unknown
+> copied status must be invalid500, while null/incomplete stays unavailable409.
+> All five source files remain frozen at `5d6e7ad7…`, `a15a9cd0…`,
+> `dc2edd81…`, `8b22dbeb…`, `1c6c6989…` (legacy module, acceptance, writer,
+> submission, task-operation writer respectively). The author811 session49297
+> is terminal; do not poll/restart it. New tests are assigned to
+> `mp09_l2_oracle_completion` in `test_mp09_legacy_continuation_integrity.py`
+> with an optional new integrity fixture. Existing 81 tests stay frozen.
+> Source repair waits for reviewed and parent-reproduced reds. Evidence:
+> `legacy-continuation-source/` and `legacy-continuation-integrity-baseline/`.
+
+> **CURRENT — L2 IMPLEMENTATION AUTHORIZED:** Independent review approved
+> fixture `e150f38c…` and final test `229a7a4d…`. Parent46377 reproduced all
+> 67 behavior failures and 14 controls with 331 inputs unchanged, including
+> every prior Gateway40145 input. Evidence:
+> `legacy-continuation-baseline/parent-final/`. The final oracle repair archive
+> and exact finding-to-assertion map are under `oracle-completion/`.
+> `mp09_l2_continuation_impl` now owns only legacy_artifact_continuation,
+> artifact_acceptance, artifact_writer, artifact_submission and
+> task_operation_writer. All tests remain frozen. Next gates: targeted greens,
+> independent source review, parent full MP-09 regression and Gateway CI.
+> No schema/runtime/route/byte/migration changes are authorized in this slice.
+> Historical scanner/mixed manifests and the full Core/Vision goal remain open.
+
+> **LATEST STORAGE:** Completed CI40145's owned temporary directory was
+> reclaimed after exact image/mount, owner/inode/device and empty open-file
+> checks. Saved commands/logs/exits stayed byte-identical. Evidence:
+> `mp09-artifacts/completed-legacy-acceptance-ci-temp-cleanup/`. Shared caches
+> remain; approximately 3.05 GiB is free for the next component gate.
+
+> **LATEST L2 BASELINE — FOUR ORACLE REPAIRS REMAIN:** Parent78568 reproduced
+> the revised 73-case suite: 59 behavior failures and 14 controls, with all 331
+> inputs unchanged. Candidate fixture `e150f38c…` and test `27d123e3…` remain
+> archived/frozen pending a focused repair by `mp09_l2_oracle_completion`.
+> Remaining proof gaps are complete immutable task terms, mutation-free exact
+> terminal replay, exact HTTP status assertions and complete upload/attempt
+> projections. Other revised areas and the five-write failure matrix are
+> approved. The previous author must not edit concurrently. Evidence:
+> `legacy-continuation-baseline/parent-repaired/`; new repair evidence belongs
+> under `oracle-completion/`. No L2 production changes are authorized yet.
+
+> **CURRENT — L2 TEST REVIEW:** Parent60729 reproduced the first L2 candidate:
+> 31 behavior failures and six passing controls, with all 331 selected inputs
+> unchanged and the previous Gateway40145 inputs still byte-identical. Evidence:
+> `legacy-continuation-baseline/parent/`. Review requires stronger replay/read
+> ordering, authoritative-fact and submission validation, exact orphan clocks,
+> independent manifest/result expectations and complete upload projections.
+> The real L1 setup, five-write failure matrix and historical V1 replay control
+> are approved. The test author is repairing only the two new L2 files;
+> production and frozen L1 tests remain unchanged. No L2 implementation is
+> authorized until the final tests are reviewed and parent-reproduced.
+
+> **LATEST VERIFIED — LEGACY ACCEPTANCE COMPONENT COMPLETE:** Gateway40145
+> exited 0, including every static/security/audit/unit/architecture/Pyright gate.
+> All 329 inputs/path set remained unchanged; its freeze is released. Parent730
+> and independent source review also passed. Evidence:
+> `legacy-acceptance-component-verification/`. Do not poll/restart40145.
+> L2 test authoring is now authorized under approved plan `f99afa9a…` in new
+> `mp09_legacy_submission_fixture.py` and `test_mp09_legacy_submission.py` only.
+> No L2 implementation before reviewed, parent-reproduced reds. Existing L1
+> source/tests stay intact; source preparation is read-only. Historical scanner,
+> mixed manifests, byte transport/routes, runtime migration, archive and root CI
+> remain required. OpenSpec70/135, T-126/T-127 OPEN; goal ACTIVE. No commit/push.
+
+> **LIVE FULL GATE — LEGACY ACCEPTANCE:** Parent24143 exited 0: all 730
+> MP-09 cases passed with 329 inputs/path set unchanged. Full Gateway
+> `just ci-quiet` is now session40145, using owned TMPDIR
+> `mp09-legacy-acceptance-ci.1r8gyhid`. Static/security/dependency/audit stages
+> have passed; the test stage remains running. Evidence:
+> `legacy-acceptance-component-verification/`. All 329 source/test inputs remain
+> frozen. L2 readiness work is docs-only. Do not restart terminal parent24143,
+> and do not mistake a polling timeout for termination of40145. Goal ACTIVE;
+> no current full-CI success or ticket closure is claimed yet.
+
+> **NEXT L2 PLAN READY:** Independent critical review approved the finalized
+> continuation plan (`f99afa9a…`): actual L1-produced happy fixtures, the shared
+> canonical return type, current publication-provenance revalidation, legacy-only
+> finalize checks with one clock sample and durable orphan/replay behavior, and
+> exact five-write submission rollback/error proofs. No L2 source/tests have
+> been added. Begin their separate failing-test gate only after CI40145 passes
+> and its source/test freeze is released. Historical scanner/mixed manifests
+> remain mandatory later work.
+
+> **LATEST — L1 SOURCE APPROVED / PARENT REGRESSION LIVE:** Independent review
+> approved artifact_acceptance `c71eb76b…`, task_operation_writer `d688153b…`
+> and pure parser `355374d2…`. Author integration61 and pure247 pass; statics
+> pass. The native downgrade expectation is narrowly reconciled as `faebaaab…`
+> with parent75581 red proof and all seven related cases green. The preserved-V1
+> timestamp expectation is narrowly reconciled as `e2142fd8…`, preserving
+> `.000000Z` source bytes; original bytes/failure and approval are retained.
+> Parent session24143 is running all 27 MP-09 unit files with 329 inputs/path
+> set frozen. Evidence: `legacy-acceptance-parent-final/`. Full Gateway CI
+> follows only if that run passes unchanged. No L2/schema/runtime/route changes
+> during the freeze. T-126/T-127 remain open; goal ACTIVE.
+
+> **CURRENT — L1 ACCEPTANCE IMPLEMENTATION AUTHORIZED:** Final integration
+> fixture `6649adbf…` and test `854c75de…` are independently approved. Parent
+> session 69389 completed: 42 genuine behavior failures and 19 passing controls;
+> all 247 pure tests and Ruff/format/mypy/Pyright pass. All 329 selected inputs
+> stayed unchanged, including the prior 324 component inputs. Evidence:
+> `legacy-acceptance-baseline/integration-parent-approved/`. The process handle
+> is now absent; saved terminal results are authoritative. Do not restart it.
+> Pure source `355374d2…` has independent final approval after the eight
+> contradiction reds were reproduced and repaired. L1 transaction implementation
+> is assigned to `mp09_legacy_acceptance_impl`, owning artifact_acceptance and
+> task_operation_writer only. Tests/pure parser stay frozen. The one old native
+> downgrade expectation needs separately archived/reviewed reconciliation after
+> implementation. L2, migration, bytes/routes, archive and root CI remain open.
+> Goal ACTIVE; no commit/push and no current full-CI claim.
+
+> **LATEST STORAGE:** The completed native-acceptance CI42413 temporary
+> directory was removed after exact image/mount, UID/inode/device and empty
+> open-file verification. Its saved evidence remains byte-identical. Proof:
+> `mp09-artifacts/completed-native-acceptance-ci-temp-cleanup/`. Shared caches
+> remain; 3.56 GiB is free for the next full component run.
+
+> **PURE REVIEW REPAIR REQUIRED:** Independent source review found that the
+> shared parser rejects well-typed contradictory historical facts even for
+> `incomplete_corrupt`. The governing asset contract requires preserving those
+> facts as nonauthorizing evidence. A critic approved the bounded plan
+> clarification (`92ee48ca…`): relationship coherence applies to verified
+> observations; exact types/invariants/UTC/nullability apply to both. A separate
+> regression file is being authored before source repair. Frozen 231 cases and
+> stored-time non-backdating remain unchanged. This supersedes any implication
+> that the pure parser is fully reviewed merely because its first matrix passed.
+
+> **LATEST — PURE LEGACY PARSER IMPLEMENTED; ACCEPTANCE STILL GATED:** The
+> approved cutoff-positive fixture repair is frozen as `3b0ce0b9…`; parent
+> 33873 reproduced all 231 missing-module failures before implementation.
+> The new `services/legacy_artifact_continuation.py` implements only the pure
+> canonical parser/live builder/stored-time API. Parent 92313 passed all 231
+> cases plus Ruff/format/mypy/Pyright, with 328 selected inputs unchanged and
+> the prior 324 component inputs byte-identical. Evidence:
+> `legacy-acceptance-baseline/{pure-parent-cutoff-repaired,integration-parent-final}/`.
+> Independent source review is pending. The integration baseline reproduced
+> 41 behavior failures and 19 controls, but review requires four oracle repairs
+> before acceptance implementation: independent complete result values, actual
+> V6 publication DDL with retained V1 history, owner mismatch, and a replay-read
+> allowlist. No acceptance source change or current full-CI claim. Goal ACTIVE.
+
+> **CURRENT — LEGACY ACCEPTANCE TEST REVIEW:** The initial L1 parent baseline
+> (session 6963, terminal) reproduced 139 failures and nine controls with all
+> 327 inputs unchanged. The failures comprise 116 missing-module capability
+> cases and 23 behavior cases; they do not yet authorize source implementation.
+> Review requires stricter incomplete-observation coverage and a real retained
+> V1 publication fixture. The provenance amendment is under independent review:
+> absent history requires null provenance, retained published V1 history must
+> match, and native V2 history cannot be relabeled as legacy. New tests are being
+> repaired; the prior 324-file component source remains unchanged. Next: review
+> final tests, reproduce their exact reds, then implement L1. Goal ACTIVE;
+> pricing remains assigned to MP-24, with the initial rule applying to all
+> pricing introduced now and future changes preserving each job's rule.
+
+> **OWNED STORAGE CLEANUP:** After Gateway42413 passed, the completed
+> Gateway30203 per-run directory `mp09-receipt-ci.91bxcdc5` was removed only
+> after exact image/mount, UID/inode/device and empty open-file checks were
+> revalidated. Saved commands/logs/exits stayed byte-identical. Evidence:
+> `mp09-artifacts/completed-receipt-ci-temp-cleanup/`. Latest42413 and shared
+> caches remain; approximately 2.2 GiB is free. The goal remains ACTIVE and the
+> next action is the approved L1 legacy-acceptance failing-test baseline.
+
+> **LATEST VERIFIED — NATIVE ACCEPTANCE COMPONENT COMPLETE:** Gateway retry
+> session 42413 exited 0 with every static, security, audit, unit, architecture
+> and Pyright gate passing. All 324 inputs/path set stayed unchanged; freeze
+> released. Do not poll or restart 42413 or failed predecessor 20202. Parent423
+> (74021), parent62 after the byte-equivalent SQL repair (17761), and independent
+> source review passed. Evidence:
+> `mp09-artifacts/acceptance-binding-component-verification-r2/`.
+> Next: author L1 legacy-acceptance tests under the approved legacy plan. No
+> legacy implementation before reviewed, parent-reproduced reds; L2 consumers
+> and mandatory historical scanner/mixed-manifest gates remain. Goal ACTIVE,
+> OpenSpec70/135 and T-126/T-127 still open. No commit/push.
+
+> **NEXT LEGACY PLAN APPROVED, TESTS STILL GATED:** The docs-only legacy plan
+> passed independent critical review after specifying all 32 canonical fields,
+> exact incomplete nullability, chronology, terminal-orphan retries and the
+> mandatory later historical scanner/mixed-manifest closure gate. Live producers
+> write observation time equal to acceptance; stored validators allow a later
+> genuine observation time so migration never backdates history. L1 acceptance
+> tests wait for CI42413 to pass/release the freeze; L2 consumers retain a
+> subsequent red/review gate. No legacy source/tests have been added.
+
+> **LIVE ACCEPTANCE CI RETRY:** Session 20202 terminated exit 1 solely on
+> Bandit B608 for dynamic construction of a fixed seven-placeholder SQL query;
+> all 324 inputs stayed unchanged. Parent replaced it with byte-equivalent
+> literal parameterized SQL, preserving all bound names and adding no
+> suppression. Independent review approved; parent62, full code-security and
+> Ruff/format passed with unchanged files (17761). Source hash for
+> artifact_acceptance is now `5451398ba0780181f45b1aedd11c7f85e2ea195b81edfd7c10ec6d952866cb51`.
+> New full Gateway gate is session 42413, owned TMPDIR
+> `mp09-acceptance-ci-r2._rxy9fom`. All 324 inputs/path set are frozen.
+> Evidence: `acceptance-binding-component-verification-r2/`; the failed first
+> gate and exact repair evidence are retained. Do not poll/restart 20202.
+
+> **LIVE NATIVE ACCEPTANCE COMPONENT GATE:** Parent session 74021 passed all
+> 423 MP-09 cases with all 324 files/path set unchanged. Independent final
+> source review approved the bounded error-scope repair and every native
+> acceptance invariant. Full Gateway `just ci-quiet` is now session 20202,
+> using owned TMPDIR `mp09-acceptance-ci.srhbxt11`. All 324 inputs remain frozen.
+> Evidence: `mp09-artifacts/acceptance-binding-component-verification/`.
+> Do not restart/poll a different process or modify source/tests during this
+> gate. Legacy continuation planning is docs-only; no test authoring yet.
+
+> **FINAL ACCEPTANCE SOURCE APPROVED / PARENT423 LIVE:** The bounded prewrite
+> scope regression was independently approved and parent-reproduced (53087:
+> one genuine red, 324 inputs unchanged) before repair. Final review approves
+> TaskOperationWriter `86254acc…` and artifact_acceptance `93ad4713…`; all
+> validation now precedes the five-write error-translation block. Review15 and
+> Ruff/format/mypy/Pyright pass. Parent session 74021 is running all 24 MP-09
+> files (423 cases) against 324 frozen inputs/path set. Evidence:
+> `mp09-artifacts/acceptance-binding-parent-final/`. Full Gateway CI follows
+> only if that run passes unchanged. Legacy continuation design is docs-only;
+> no further test/source mutations are authorized during verification.
+
+> **PARENT422 PASS / ONE ERROR-SCOPE REPAIR OPEN:** Parent session 60263
+> passed all 422 cases with 323 inputs/path set unchanged. Final review confirms
+> strict event identity/linkage, explicit missing-operation failure, native/legacy
+> classification and restored dispatcher SQLite handlers. It still rejects the
+> RuntimeError wrapper around all acceptance validation: translation must cover
+> only the five-write persistence block. A single new prewrite-read regression
+> is being authored in `test_mp09_acceptance_error_scope.py`; source remains
+> frozen until that red is reviewed and parent-reproduced. Full CI is held.
+
+> **NEXT-SLICE READ-ONLY FACTS:** Legacy continuation remains unimplemented:
+> `freeze_native_submission_manifest` rejects every version-0 contract before
+> consulting whether its observation is verified. Native acceptance deliberately
+> rejects version 0 as well. The legacy acceptance observation is one canonical
+> row per task in `board_legacy_artifact_observations`; the contract stores its
+> hash/status projection. Future legacy work must supply actual acceptance and
+> submission producers, preserving historical V1 bytes and distinguishing new
+> current submission manifests from forbidden fabricated historical manifests.
+> This mapping does not authorize implementation or change the current native
+> acceptance repair/verification gate.
+
+> **ACCEPTANCE REVIEW REPAIRS AUTHORIZED:** The final additive 14-case suite
+> is independently approved. Parent session 89657 reproduced 12 genuine
+> failures and two controls with all 323 inputs/path set unchanged. Test hash:
+> `8b62d47a7f0c285e18f6a9451499fc395fa8609aab88db6ca29d20aa768518b5`;
+> proxy fixture: `8fcc518f4c72521abbf9504e1dd3a247863c145d4b7a89d33db92c5f75395fb0`.
+> Evidence: `acceptance-review-baseline/parent-final/`. The source owner is
+> repairing bounded runtime-write translation, strict/linked event identity,
+> explicit missing-operation handling and version/provenance classification.
+> Tests remain frozen. Next verification: review14, acceptance61, shared33,
+> combined422, independent source review/parent reproduction and Gateway CI.
+
+> **ACCEPTANCE SOURCE REVIEW REQUIRES REPAIR:** Implementation passes the 47
+> acceptance cases and 33 existing operation regressions. The bridge's wrong
+> parser namespace was reconciled in the new test only; two type suppressions
+> were replaced with real annotations. Independent review approved that exact
+> limited diff; originals/evidence remain under `before-fixture-reconciliation/`.
+> Current fixture/test hashes are `162db0afe93454a47e73c3771a4cb4239f35b2cb856ac51a8cfb19a8d8adce11`
+> and `56dda309322520d142e524494c238aaf75da46817d06028e7c259d69419948ce`.
+> Three source findings remain: bounded runtime-write error translation, strict
+> positive/correct event identity plus explicit missing-operation failure, and
+> native corruption versus version-0 legacy classification. New additive
+> acceptance review regressions are being authored against frozen source. No
+> source repair or full-CI authorization until reviewed/reproduced new reds.
+
+> **NATIVE ACCEPTANCE IMPLEMENTATION AUTHORIZED:** The corrected 47-case
+> baseline is independently approved. Parent session 91357 reproduced 38
+> genuine failures and nine controls with all 320 inputs/path set unchanged;
+> the prior Gateway318 inputs also still match. Final test hash:
+> `904b58088a244863204f697e24b9fed10815d1a1fb32fb0feaac06f5606c1e57`;
+> fixture hash: `082aa4cefc0e33b20fd08b9a4c477a79f8b6bb6dca663fd0c8bb4ad59a7a5a4c`.
+> Evidence: `acceptance-binding-baseline/parent-final/`; original 34-case
+> candidate is preserved under `before-oracle-repair/`. Source owner is
+> implementing the approved native helper and TaskOperationWriter integration.
+> All tests remain frozen. Required verification includes new47, shared MP-07/
+> MP-08 operation paths, combined408, independent review/parent reproduction,
+> and fresh Gateway CI. No runtime/schema/route/pricing/legacy changes authorized.
+
+> **ACCEPTANCE BASELINE / STORAGE:** New acceptance tests are frozen at 34
+> cases; author reports 25 genuine failures and nine controls, with no setup
+> errors. Independent review and parent session 3129 are in progress. Source
+> implementation is still gated. The older successful Gateway21493 temporary
+> directory `mp09-input-upload-ci.0CK8xi` was removed after revalidating exact
+> image/mount, UID/inode/device, successful saved evidence and empty open-file
+> checks. Saved commands/logs/exits are byte-identical. Free space is about
+> 2.9 GiB; the newer Gateway30203 directory and shared caches remain. Evidence:
+> `mp09-artifacts/completed-input-ci-temp-cleanup/`. Use a fresh TMPDIR rather
+> than the intentionally removed older command environment.
+
+> **ACCEPTANCE TEST AUTHORING:** Previous turn classified as progress: receipt
+> adoption passed parent361, independent source review and Gateway30203.
+> Fresh preflight confirms every one of its 318 input files is still unchanged.
+> New acceptance fixture/test files are now being authored under the approved
+> plan; the fixture smoke uses real receipt publication and a real bid.
+> Independent fixture review is underway. Production implementation remains
+> gated on reviewed, parent-reproduced new failures. Existing files stay frozen.
+> Evidence: `mp09-artifacts/acceptance-binding-baseline/source-preflight.json`.
+
+> **LATEST VERIFIED — RECEIPT COMPONENT COMPLETE:** Gateway session 30203
+> exited 0 with every static, security, audit, unit, architecture and Pyright
+> gate passing. All 318 inputs and the path set stayed unchanged; freeze
+> released. Do not poll or restart 30203. Parent361 (87348) and independent
+> final source review also passed. Evidence:
+> `mp09-artifacts/receipt-adoption-component-verification/`.
+> Next: author the approved native acceptance-binding tests using the prepared
+> real receipt/bid/accept fixture outline. No acceptance source implementation
+> is authorized before its reviewed, parent-reproduced red baseline. Goal API
+> remains ACTIVE; OpenSpec remains 70/135, with T-126/T-127 open. No commit/push.
+
+> **LIVE RECEIPT COMPONENT GATE:** Parent session 87348 passed all 361 MP-09
+> cases with all 318 files/path set unchanged. Independent final source review
+> approved every repair. Full Gateway `just ci-quiet` is now session 30203,
+> using owned TMPDIR `mp09-receipt-ci.91bxcdc5` on the verified APFS volume.
+> All 318 inputs remain frozen; do not edit source/tests or begin acceptance
+> tests during this gate. Evidence:
+> `mp09-artifacts/receipt-adoption-component-verification/`. No component or
+> MP-09 closure claim until the terminal result is inspected. The approved next
+> acceptance-binding plan still waits for this freeze to be released.
+
+> **RECEIPT REVIEW REPAIRS AUTHORIZED:** The additive review suite has 21
+> independently approved genuine behavioral reds. Parent session 94882
+> reproduced all 21 failures with 318 inputs/path set unchanged. Its exact
+> hash is `83782e9bd5c1e16324b0078f43ec54bc7f6a5c59b4a45ead9d2e271e0872ec59`.
+> Evidence: `mp09-artifacts/receipt-review-baseline/parent/`. Source repair
+> covers the four earlier review gaps plus recomputation of the stored lock
+> request hash and consistent UTF-8 canonical event/result serialization.
+> All existing/new tests remain frozen. Next checks: review21, receipt104,
+> combined361, independent source review/parent reproduction, then Gateway CI.
+
+> **PARENT340 PASS / SOURCE REVIEW REQUIRES REPAIR:** Session 7772 exited 0,
+> all 340 cases passed and all 317 inputs/path set stayed unchanged. Independent
+> source review nevertheless identified four gaps: self-derived deadline
+> expectations, missing post-materialization validation, missing exact durable
+> block validation, and decoded-only rather than canonical-byte JSON checks.
+> Full CI is held. A new additive `test_mp09_receipt_adoption_review.py` suite
+> is being authored against the frozen source; existing tests stay unchanged.
+> Source repair waits for reviewed, parent-reproduced genuine failing proofs.
+> This supersedes the earlier expectation that the component gate was next.
+
+> **RECEIPT SOURCE FROZEN / PARENT RUNNING:** Author83 and combined340 pass;
+> Ruff, formatting, mypy and Pyright pass. Production changes are limited to
+> `prepublication_writer.py`, `prepublication_integrity.py` and new
+> `prepublication_receipt.py`. Independent final source review is underway.
+> Parent session 7772 runs all 20 MP-09 unit files (340 cases), with 317
+> source/config/test files and their path set frozen. Evidence:
+> `mp09-artifacts/receipt-adoption-parent/`. Do not edit these inputs or start
+> the next acceptance tests during this run. Full Gateway CI is still pending.
+
+> **RECEIPT AUTHOR GREEN:** All 83 new receipt cases pass in the author run.
+> Independent review approved the two narrow oracle repairs and the existing
+> temporary-guard reconciliation. Failure-test hash is now
+> `f8eb5994d0729be701047c300f3f9a27207e6b1fe86c93701d1b26cf10bb9824`;
+> guard-test hash is `6807ef30795ca123d91147f157f5b71f4538acfe0af699e77d536e901b67d446`.
+> The source owner is completing scoped static checks and the combined 340-case
+> MP-09 selection before freezing source. Parent reproduction, independent
+> source review and a fresh full Gateway component gate are still pending.
+> The next acceptance-binding plan exists but authorizes no new source/tests
+> during this verification: `docs/plans/2026-10-23-mp09-acceptance-binding.md`.
+
+> **RECEIPT ORACLE RECONCILIATION:** The first implementation run passed
+> core6/time14/replay3 and 52/60 failure cases. The remaining eight exposed four
+> schema-invalid timing mutations and four overstrong passive timestamp oracles.
+> Architect and critic approved paired window/cutoff corruption and a lock-event
+> chronology violation instead. Exact receipt/event timestamp equality is proved
+> at adoption and is required again by the later V2 startup audit; passive replay
+> checks the referenced event's identity and order without Bank-table reads.
+> Prior source/test evidence is retained and those eight are reclassified, not
+> represented as valid implementation reds. No schema weakening or extra Bank
+> reads were authorized. The source owner is continuing scoped validation.
+> Parent reconciled only the archived temporary 503 guard; all other top-level
+> definitions are AST-identical. Its 16 cases and Ruff checks pass (59632).
+
+> **RECEIPT IMPLEMENTATION AUTHORIZED:** Final test oracles are independently
+> approved and parent-reproduced. Core/time/replay session 76803 reproduced
+> 19 expected failures and four passing controls with 86 files unchanged.
+> Failure session 28291 reproduced 60 expected failures with 84 files unchanged.
+> There were no collection/setup/environment failures. Final evidence is under
+> `receipt-adoption-baseline/core-parent-final/` and `failures-parent-final/`.
+> All 83 new cases and their fixture are frozen. The source owner is implementing
+> the approved bounded V2 receipt/time/envelope/integrity contract. Parent alone
+> will reconcile the sole temporary 503 guard test after the capability exists;
+> its exact original is archived under `receipt-guard-reconciliation/`.
+> No V1/runtime migration, routes, byte staging or pricing changes are included.
+> Next verification is the new 83 cases, the combined 340-case MP-09 regression,
+> independent source review, and a fresh Gateway component gate.
+
+> **RECEIPT-ADOPTION PLAN APPROVED:** Independent critic re-review accepted
+> the exact chronology, UTC boundaries, persistence-failure semantics and
+> published-envelope contract. New test-only work is underway: primary author
+> owns the new receipt fixture/core/time/replay suites; a second author owns
+> receipt corruption and write-failure cases. Existing tests and production
+> sources remain frozen. Implementation waits for reviewed, parent-reproduced
+> failing baselines. Both T-126 and T-127 remain OPEN; strict OpenSpec validation
+> passed after their component-progress notes were updated.
+
+> **RECEIPT-ADOPTION DESIGN REVIEW:** The next bounded plan is
+> `docs/plans/2026-10-23-mp09-receipt-adoption.md`. Independent critical review
+> requested precise phase/Bank/publication chronology, maximum-UTC boundary
+> cases, retryable persistence errors and an exact V2 result envelope.
+> The architect is revising that plan; no new production edits or receipt-test
+> implementation are authorized until review passes. Existing component proof
+> remains Gateway21493 exit0 and parent257. Q-M2's initial-rule clarification
+> is recorded; future changes preserve each job's recorded pricing version.
+> The goal remains ACTIVE, with no commit, push or ticket closure.
+
+> **OWNED TEMPORARY STORAGE CLEANUP:** The completed 86068/retry3 and 19149
+> per-run temporary directories were removed after verifying successful saved
+> gate evidence, exact mounted-image identity, directory UID/inode/device and
+> empty `lsof +D` results. Saved commands/logs/exits remain byte-identical.
+> Evidence: `mp09-artifacts/completed-ci-temp-cleanup/`. The latest 21493 temp
+> directory, shared caches and mounted image remain. Free space increased to
+> about 3.8 GiB. Allocate a fresh owned TMPDIR when reusing earlier command
+> recipes; their old per-run paths are intentionally gone.
+
+> **LATEST VERIFIED — INPUT COMPONENT GATE COMPLETE:** Gateway session 21493
+> exited 0. All static/security/audit/unit/architecture/type gates passed.
+> All 311 files and the source path set are unchanged; freeze released. Do not
+> poll or restart 21493. Parent257 and independent final source review also
+> passed. Evidence: `mp09-artifacts/input-upload-component-verification/`.
+> The database-layer input/worker upload ledger and exact nonempty manifest
+> producer slice are verified at component scope. Actual byte staging,
+> authenticated routes, V2 Bank receipt adoption, acceptance binding, legacy
+> continuation, runtime V6 admission/migration and grants/archive remain open.
+> Next: bounded V2 receipt-adoption design from `mp09_v2_receipt_design`
+> (read-only, no implementation yet). Reuse `inspect_lock_facts` and the existing
+> test connection-owner adapter; preserve V1 historical identities. Goal ACTIVE,
+> OpenSpec70/135; no ticket closure, commit or push. Q-M2 is accepted; Q-M3's
+> one feedback-versus-Court source-choice question remains unanswered.
+
+> **LIVE INPUT COMPONENT GATE:** Parent session 77642 passed all 257 cases with
+> 100 selected files unchanged. Independent final source review approved the
+> bounded input/ledger implementation. Full Gateway `just ci-quiet` now runs
+> as session 21493 with 311 source/config/test files and path set frozen.
+> Do not edit them or restart the gate. Evidence:
+> `mp09-artifacts/input-upload-component-verification/`. The separate explorer
+> `mp09_publication_finance_map` is read-only, mapping the next receipt-adoption
+> producer/test interfaces. No downstream implementation is authorized yet.
+
+> **INPUT/LEDGER SOURCE FROZEN:** Author combined257 passes, and scoped Ruff,
+> format, mypy, Pyright, Bandit and Semgrep all exit 0. Seven production files
+> changed, including the new pure manifest/upload-integrity helper; all tests
+> remain frozen. Parent session 77642 is independently running all 16 MP-09
+> unit files (257 cases), with 100 selected files hashed. Final source review
+> is in progress. Evidence: `mp09-artifacts/input-upload-green-author/` and
+> `mp09-artifacts/input-upload-parent/`. Do not edit source/tests until that
+> result and review are assessed. A fresh full Gateway component gate remains
+> pending; no runtime or MP-09 closure claim is implied.
+
+> **INPUT/LEDGER AUTHOR CHECKPOINT:** Shared ledger/replay tests pass 55/55;
+> input parser/authority/lifecycle/manifest tests pass 40/40; worker producer
+> and exact submission selection passes 18/18. One source ordering defect was
+> corrected so exhausted declared input slots report `input_count_exceeded`
+> before generic file-count quota. No test assertion changed. Author static
+> checks and exact combined257 run are pending, then stable-source review,
+> parent reproduction and a new component gate. The 19149 component pass is
+> historical evidence, not verification of these newer source edits.
+
+> **INPUT/LEDGER IMPLEMENTATION AUTHORIZED — 2026-10-23:** All final baselines
+> are independently approved and parent-reproduced with unchanged source:
+> ledger47 (45 behavioral reds/two controls, session 29338), replay8 (eight reds,
+> 34791), corrected input32 (31 capability/one admission red, 83047), authority5
+> (five capability, 90524), input-manifest3 (three capability) and worker
+> submission-producer3 (two behavioral reds/one control, 26216).
+> `mp09_v6_writer_impl` now owns implementation under
+> `docs/plans/2026-10-23-mp09-input-upload-implementation.md`: shared upload
+> caller/canonical/projection/attempt/rowcount integrity, strict scoped input
+> parser, input eligibility/fences, positive-count admission and exact nonempty
+> freeze. Small shared format/integrity helpers may also be consumed by worker
+> submission without changing valid worker eligibility or canonical bytes.
+> All tests/fixtures remain frozen. Expected combined regression selection:
+> 257 cases. No routes, actual byte staging, Bank adoption, runtime admission,
+> migration or archive integration is authorized by this bounded source slice.
+> Stable-source review, parent verification and a new component gate remain
+> required; the prior 19149 pass applies to the earlier zero-input snapshot.
+
+> **NEXT SLICE — INPUT UPLOAD TESTS / SHARED LEDGER REDS:** No production changes
+> have followed the successful 303-file gate. Corrected input32 and authority5
+> tests are independently approved (scoped parser capability absent; positive
+> count admission still returns its explicit unsupported response). Parent
+> session 83047 reproduced input32 with unchanged files. The existing worker
+> ledger has four independently confirmed gaps: persisted caller ownership,
+> canonical/projection integrity, cross-upload attempt linkage and unchecked
+> row counts. Parent 29338 reproduced 45 behavioral reds plus two controls in
+> ledger47; parent 34791 reproduced eight terminal-replay/caller-precedence
+> reds. Those oracles are independently approved. Evidence directories:
+> `input-upload-baseline/reviewer-repair/`, `input-upload-authority-baseline/`,
+> `upload-ledger-integrity-baseline/`, `upload-replay-integrity-baseline/`.
+> Parent authority5 session 90524 is pending terminal inspection. A minimal NEW
+> `test_mp09_input_manifest_integrity.py` is being authored to require rejection
+> of corrupted ready-upload facts before freezing a manifest. Source owner
+> `mp09_v6_writer_impl` has a read-only plan and MUST await reviewed/reproduced
+> final baselines before editing. Existing worker V1 bytes stay unchanged.
+> The current expanded acceptance suite is intentionally red; the previous
+> component pass is historical evidence for the verified zero-input slice.
+
+> **LATEST VERIFIED — COMPONENT GATE COMPLETE:** Gateway session 19149 exited 0.
+> Every check passed, including full unit suite, architecture, static/security
+> checks, vulnerability audit and Pyright. All 303 frozen files and the complete
+> source path set are unchanged; the freeze is released. Do not poll or restart
+> 19149. Evidence: `mp09-artifacts/input-publication-component-verification/`.
+> Parent 159-case regression and independent final source review also passed.
+> The zero-input V2 publication kernel and its fixture reconciliation are now
+> verified at component scope. Next is a new failing-test-first input-upload
+> slice using the exact protocol-2 request boundary in the prepublication
+> amendment; current worker protocol-1 canonical bytes stay unchanged.
+> Actual input bytes, nonempty freeze, Bank receipt adoption, routes, migration,
+> grants/archive and full root CI remain open. Goal ACTIVE, 70/135 complete;
+> no MP-09 closure, commit or push. Q-M2 owner choices are resolved; the single
+> Q-M3 feedback-versus-Court source-choice question remains unanswered.
+
+> **LIVE COMPONENT GATE — 2026-10-23:** Independent final source review approved
+> all four integrity repairs. Parent session 64312 passed all 159 selected tests,
+> with 92 files unchanged. The full Gateway `just ci-quiet` is now running as
+> session 19149 with 303 source/config/test files frozen. Do not edit those
+> files or restart the gate. Evidence/log/command:
+> `mp09-artifacts/input-publication-component-verification/`. Audit uses owned
+> cache and the required read-only PyPI access. Semgrep's installed, documented
+> `SEMGREP_ENABLE_VERSION_CHECK=0` disables only its external update-banner
+> lookup; all rules/error gates remain enabled. No audit exclusion was added.
+> Documentation-only work may continue. No MP-09 ticket closes at this gate.
+
+> **INTEGRITY REPAIR AUTHORIZED — 2026-10-23:** Parent session 47856 reproduced
+> all 19 command-integrity behavioral reds with 82 frozen files unchanged.
+> Together with the prior 38-case suite this proves the four scoped source
+> defects. Independent review approved both the integrity oracles and corrected
+> fixture chronology. `mp09_v6_writer_impl` is repairing only persisted caller
+> ownership, exact canonical/hash/manifest/contract integrity, journal-update
+> row counts and canonical V2 SQL identifiers. All tests remain frozen.
+> Fixture now has SHA c97fd40e903caf60a96084f74d483ca1a5edbca93c2173f1e4fe9ae6c3c1c566;
+> its six suites pass 67 author tests. Expected combined regression selection
+> after source repair is 159 cases (67 existing + 35 initial + 38 integrity +
+> 19 command integrity). Parent reproduction, stable-source review and component
+> CI are still required. Q-M2 is accepted; the single Q-M3 source-choice question
+> remains unanswered. Goal ACTIVE, 70/135 complete; no commit/push.
+
+> **INTEGRITY REDS REPRODUCED — 2026-10-23:** Parent session 66340 reproduced
+> 37 genuine behavioral reds plus one valid control in
+> `test_mp09_prepublication_integrity.py`, with 81 frozen files unchanged.
+> Evidence: `mp09-artifacts/input-publication-integrity-baseline/parent/`.
+> Review approved the caller, manifest/contract, suppressed-update and SQL-ID
+> oracles, but requires a NEW command-integrity supplement isolating base-hash
+> equality and stored freeze/publish canonical bytes versus hashes. Source
+> remains frozen until those reds are reviewed. Separately the fixture lane
+> is correcting two documented chronology errors (creation-relative bidding
+> cutoff and legacy observation not later than first upload), preserving all
+> original behavior assertions and earlier evidence. Do not treat the earlier
+> 101-case checkpoint as final verification of these pending corrections.
+
+> **INPUT INTEGRITY REVIEW — 2026-10-23:** Author zero-input implementation
+> passes the reviewed 35 tests and scoped static checks; reconciled existing
+> reservation/submission suites pass 66 tests. These are preliminary results.
+> Source is frozen while a NEW `test_mp09_prepublication_integrity.py` retains
+> behavioral reds for four review findings: persisted caller ownership,
+> canonical/hash/manifest/derived-contract integrity, required journal UPDATE
+> row counts, and canonical V2 SQL identifiers. No repair precedes those reds.
+> `mp09_v6_reservation_tests` owns the new tests; `mp09_v6_writer_impl` holds
+> source pending review authorization. Parent regression session 39051 is
+> terminal exit 0: 101 passed, with all 89 selected source/test files unchanged.
+> Evidence: `mp09-artifacts/input-publication-parent/pre-review-green/`. This
+> is explicitly before the four integrity repairs, not final approval.
+> Fixture lane's final fixture hash is
+> 693db19f360bd4acd2bf01f8ca9527784d91397520b2c284008cb97e14cd3d95.
+> No full component/root gate or MP-09 closure is claimed for these new changes.
+
+> **INPUT IMPLEMENTATION ACTIVE — 2026-10-23:** Independent reviewer approved
+> candidate19 plus corrected review16. Parent session 50519 reproduced the
+> combined 35 tests: 34 missing-capability reds and one passing control, with
+> all 79 frozen files unchanged. Evidence: `mp09-artifacts/input-publication-baseline/parent-reviewed35/`.
+> `mp09_v6_writer_impl` owns the bounded zero-input V2 writer/request/schema
+> implementation; `mp09_input_fixture_update` owns documented reconciliation of
+> the existing artifact fixture and six callers. New publication tests are frozen.
+> Awaiting-lock reconciliation remains explicitly unavailable until real Bank
+> receipt adoption is implemented. No input-byte support, migration, runtime
+> activation or ticket closure is implied. The Q-M2 owner choices are now
+> resolved in the accepted pricing decision; future quality-score choices are
+> being asked one at a time. No commit/push.
+
+> **INPUT PUBLICATION BASELINE — 2026-10-23:** Parent session 97575 reproduced
+> candidate19: one canonical/V1 control passed and 18 missing-capability tests
+> failed (one missing publication resource, 17 missing V2 request/writer
+> capability). No setup, collection or environment failure; all 78 frozen
+> source/test files unchanged. Evidence: `mp09-artifacts/input-publication-baseline/parent-candidate19/`.
+> Independent test review precedes implementation. This bounded slice covers
+> zero-input admission/freeze/publish authorization, not input bytes or Bank
+> receipt adoption. Original nine artifact fixture/test/source files are saved
+> under `mp09-artifacts/input-fixture-reconciliation/before/`; reconciliation
+> follows the independently approved plan in `docs/plans/`.
+
+> **OWNER ANSWER — 2026-10-23:** Q-M2 price formation is decided: an accepted
+> 60-credit bid against a 100-credit budget pays 60 on approval. The accepted
+> bid sets the future contract price. The owner also selected returning unused
+> budget at final settlement when the job ends; no refund at acceptance.
+> Court percentages apply to the accepted price; worker payment rounds down,
+> with all remaining escrow returned to the poster. Final owner clarification:
+> no pricing policies exist today; use this initial rule for all pricing
+> introduced now, then retain each job's rule on future changes. Q-M2 owner
+> choices are resolved in the accepted 2026-10-23 pricing decision; implementation
+> and verification remain open. Q-M3 remains unaccepted. This supersedes
+> historical unanswered-Q-M2 notes below. Source: the owner's explicit answer,
+> recorded in `policy-options/owner-decisions-2026-10-22.md`. No pricing code or
+> existing contract has been changed. Poster-input tests continue independently.
+
+> **LATEST VERIFIED — GATE COMPLETE:** Gateway component retry 86068 exited 0.
+> All checks passed: initialization, prerequisites, lint/format, mypy, Bandit,
+> dependency hygiene, spelling, Semgrep, audit, full unit suite, architecture
+> and Pyright. All 294 frozen files are unchanged. Evidence:
+> `gateway-component-verification/retry3/`. Freeze is released; do not poll or
+> restart 86068. Current ArtifactWriter SHA after removing its unused default
+> argument is 5df0fe8a5c55eee0dffbfc46b04a27f70ee473c28491b8de10c8f0502c373db5.
+> Native V6 submission, reservation kernel and governance guards are independently
+> approved. This is a component checkpoint, not root CI or MP-09 closure.
+> Next: poster-input tests under the approved prepublication-ownership amendment.
+> Goal ACTIVE, OpenSpec 70/135; no commit or push.
+
+> **LIVE GATE — CURRENT:** Gateway component retry 86068 is running with 294
+> frozen files. Evidence is `gateway-component-verification/retry3/` under
+> MP-09. All static checks and the required PyPI audit passed; unit tests are
+> running. Retry 38130 is terminal: sandbox DNS prevented its audit, not a
+> dependency finding. A read-only network-enabled audit with an owned cache
+> passed. The Gateway justfile now requires TMPDIR and explicitly places audit
+> cache there; Semgrep CA/log/settings/version-cache also use explicit owned
+> paths. No audit exclusion was added. Keep source/tests frozen until 86068 ends.
+> The prepublication ownership amendment is independently APPROVED at
+> `docs/plans/2026-10-23-mp09-prepublication-ownership.md`; its four-state flow
+> includes a separately signed publish-authorization gate. Documentation only
+> may proceed during CI. No poster-input implementation has started.
+
+> **LIVE GATE — 2026-10-23:** Gateway component CI retry 38130 is running;
+> 294 source/config/test files are frozen. Poll, do not restart or edit them.
+> Log/command/exit evidence: `mp09-artifacts/gateway-component-verification/retry2/`.
+> First component attempt 10270 stopped at Semgrep's empty trust store.
+> Dedicated certifi CA plus owned Semgrep log/settings/version-cache paths
+> resolved tooling failures without touching ordinary user state. Semgrep then
+> found one unused default parameter in ArtifactWriter's error helper. Parent
+> removed it after AST proved every call supplies three arguments; 42 tests
+> passed and Semgrep now exits 0 with no findings. Source freeze began afterward.
+> Native V6 submission and its fail-closed V1 governance guards are independently
+> APPROVED; parent earlier selected run passed 200 tests. Full component result
+> remains pending. Poster-input ownership amendment is documentation-only and
+> under revision/review; no input-source implementation is authorized yet.
+
+> **SUBMISSION IMPLEMENTATION ACTIVE — 2026-10-23:** Candidate15 submission
+> behavior is independently approved. The frozen test now has SHA
+> 1fb3457a59533bb720a00e9fdafdf3545a8048527f2a2578693b32598289f51a
+> after a documented helper repair: changed-replay arguments must be compared
+> with the supplied payload, not a fixed original manifest ID. Original source
+> is retained in `submission-manifest-fixture-reconciliation/`. No conflict,
+> membership, downgrade or rollback assertion was removed. `mp09_v6_writer_impl`
+> owns task_operation_requests.py, task_operation_writer.py and a new focused
+> artifact_submission helper only. Initial implementation passed 14/15; the
+> last case was this fixture contradiction. Final author verification and parent
+> verification/review remain pending. Do not treat this as package closure.
+
+> **LATEST VERIFIED — 2026-10-23:** The disconnected V6 reservation kernel is
+> independently APPROVED. Parent session 29178 is terminal exit 0: 117 selected
+> tests passed, Gateway source/SQL and selected tests unchanged. This includes
+> count/byte races, replay, takeover revalidation, legacy eligibility, exact
+> deadline equality and 75 older schema regressions. Writer SHA
+> 84b99841f3528ed8f70b6da55e6f7fb7c042b19b0941b7dc2e7043f753ad631b.
+> Board parser/cutoff selection remains independently verified at 101 passed.
+> Next: native V6 submission manifests inside the EXISTING claim transaction
+> and receipt kernel. Candidate12 tests are under review; no submission source
+> change is authorized yet. Runtime V6 activation, migration, HTTP integration,
+> durable byte publication, Court grants and archive work remain open.
+> Goal ACTIVE; 70/135 complete; no MP-09 ticket closure or full-CI claim.
+
+> **LATEST VERIFIED — 2026-10-23:** Parent Board session 77106 is terminal exit 0:
+> 101 selected tests passed with all Board source and selected tests unchanged.
+> Independent review approves the corrected isolated streaming parser and
+> preparatory public terminal guard. Parser SHA acecdb2f91bfef4edf86c1063497be3cf8d68457418f854062a70409da9add1f;
+> AssetManager SHA e101ac58139f18e6a7d1ea22922e51788b5d05fab29d636b7310ed00ea755c67.
+> Public bytes now stop on approved/ruled/cancelled/expired reads; metadata/files
+> remain. Atomic grants and live streaming-route integration are still open.
+> Gateway parent session 8498 also passed 101 selected tests, but review found
+> five missing reservation/schema cases. `mp09_v6_reservation_tests` owns new
+> review regressions; Gateway source stays frozen until their red is retained.
+> No MP-09 ticket is closed; full Core + Vision goal remains ACTIVE (70/135).
+
+> **IMPLEMENTATION ACTIVE — 2026-10-23:** The isolated multipart parser and
+> V6 reservation kernel are now authorized bounded lanes. Parser test snapshot
+> ef0ffeb1fd64d0cf461d33291e0ce7a33552d42ebecd6f623d05eed2af156aca has
+> 24 missing-module reds; parent verified the final import/stream-progress
+> repairs. Reservation candidate26 has one passing fixture guard and 25
+> missing-capability reds; parent verified the final 3600-second task timeline
+> correction after independent review. Test hash e7d6de360d42d3e9d47e69aa4791b7959a283d91ce40318989c3075683a6a9a8.
+> `mp09_path_impl` owns only the new Board parser module;
+> `mp09_v6_writer_impl` owns new Gateway request/writer/SQL modules. Existing
+> routes, runtime schema admission and migration are outside these lanes.
+> Tests are frozen; failures must be classified before any fixture change.
+> The live route's multipart and quota/state races remain open. No MP-09 closure.
+
+> **LATEST — 2026-10-23:** Download-integrity guard independently APPROVED.
+> Parent 61715 is terminal exit 0: 66 tests passed, selected tests and all Board
+> source unchanged. Three retained tamper reds now pass; source hash is
+> ccddd1d34e9ce0c1773a4ad4955ae5e31276d70f67563f0cd12ab01990428021.
+> Multipart route baseline has seven behavioral reds; reviewer requested
+> stronger tests before implementation. Typed parser component tests and V6
+> reservation writer tests are being authored separately. No runtime V6 flip
+> before backup-bound migration/cutover; no MP-09 closure or full-CI claim.
+
+> **CURRENT — 2026-10-23:** MP-09 path/key/resource slice independently approved;
+> parent session 19393 is terminal exit 0 with 62 tests passed. The private asset
+> root regression passed separately. Type checks, format, security and scoped
+> lint checks passed; an initial cross-scope lint diagnostic remains retained.
+> Both real quota/submission race oracles are approved but remain red. New
+> multipart tests and a V6 reservation implementation map are in progress.
+> No MP-09 ticket closes here. Progress remains 70/135; full goal ACTIVE.
+> The technical storage and legacy-continuation contracts are both approved.
+> Older CURRENT/LIVE blocks below are historical, not instructions to restart
+> finished sessions. Use the owned APFS caches and unique test TMPDIRs.
+
+> **CURRENT MP09:** T126 has a retained partial red baseline: parent session48308
+> reproduced nine genuine path/key assertion failures plus one missing-close
+> capability against all1261 unchanged MP08 source hashes. Two additional quota/
+> lifecycle race reds are retained and their strengthened oracles await final
+> rereview. `mp09_path_impl` is authorized to implement only generated storage
+> keys, pinned-root/no-follow/no-clobber I/O, singular key projection and resource
+> closure. No Gateway/schema/quota implementation is in that lane. Existing
+> filename-based physical-path assertions will be reconciled explicitly without
+> weakening public metadata/content checks. MP09/T126/T127 remain open.
+> Use APFS caches for future work because internal disk is low:
+> `volume/caches/{uv,ruff,pycache}` under the owned mount; retain explicit unique
+> TMPDIR and UV_FROZEN=1. No cache or ordinary data was deleted.
+
+> **MP08 VERIFIED CLOSED / SOURCE FREEZE RELEASED:** Root R4/session37265
+> exited0;1261 files unchanged. Independent final review PASS;353 cross/runtime,
+>319 browser,113 live-agent cases; no owned process remnants. T124/T125/T191/T192
+> and tasks9.1–9.4/2.25–2.26 are synchronized CLOSED. Progress70/135,65 remaining.
+> The full Core + Vision goal remains ACTIVE. Continue MP09/T126 failing tests,
+> using docs/plans/2026-10-22-mp09-{asset-contract,acceptance-plan}.md. Independent
+> storage design is approved; the bounded legacy-continuation amendment needs
+> its last known-sidecar-value correction/review. Policy-dependent T162 remains
+> open; Q-M2 pricing question remains unanswered, Q-M3 unaccepted. Ask one plain
+> question at a time. No commit/push. Keep owned APFS image for isolated tests;
+> its exact detach/removal obligation remains recorded below.
+
+> **ROOT R4 / 37265 TERMINAL EXIT 0:** every root phase passed, including
+> 353 cross/runtime, 319 browser and 113 live-agent tests. All 1,261 source
+> hashes are unchanged with no added/removed files. Do not poll or restart it.
+> Parent cleanup: 100 ownership proof files, 699 records, 553 unique groups,
+> none remaining and no cleanup errors. Exact tested source and command/log/
+> exit/hash/cleanup evidence are archived in the MP08 resume-verification index
+> (151 verified artifacts). Final independent closure/cleanup review is active;
+> source remains frozen until that review and ticket synchronization finish.
+> MP09 technical contract and acceptance plan now exist under docs/plans;
+> only documentation has changed during the gate. A bounded legacy-continuation
+> amendment is being captured/reviewed before later migration implementation.
+> No ticket closed yet, no commit or push; full goal remains ACTIVE.
+
+> **LIVE ROOT R4 / 37265:** source/config/tests are FROZEN (1,261 files).
+> Poll 37265; do not restart or edit frozen files. Root runner is
+> `/tmp/agent-economy-mp08-root-r4.py`; logs, command/exit/hash evidence use
+> `/private/tmp/agent-economy-ci-mount.O5fXjN/volume/root-r4*`.
+> The last Phase6 preflight found 20 shared-config errors, two older migration
+> setup failures, and one crash-proof lease-window mismatch. The narrow repairs
+> passed 20 + 2 targeted checks and the full 14-case process matrix; independent
+> review approved the crash controls with unchanged financial assertions.
+> Browser319, live-agent113, tools329 and agents889+3existing skips pass.
+> MP09 design Markdown only may proceed; no MP09 source/test edits.
+> No MP08 or dependency ticket is closed until this gate and final audit pass.
+
+> **CURRENT PREFLIGHT:** root R3 is terminal; no source freeze. Its Identity
+> and Central Bank setup failures were reconciled test-only (1 + 8 tests passed).
+> Parent agents CI passed 889 tests with three existing provider skips; tools CI
+> passed 329. Live-agent preflight session 93993 and Phase6 preflight are running.
+> The UI agent owns self-contained browser fixture reconciliation. A fresh frozen
+> root R4 and final cleanup/review are still required; no MP-08 ticket is closed.
+> Logs use the owned APFS volume below; completed parent logs are copied to
+> `mp08-recovery/resume-verification-2026-10-22/` with verified hashes.
+
+> **ROOT R3 / 86111 TERMINAL EXIT 1:** all libraries and seven component gates
+> passed. Phase 3 found one Identity scratch-Gateway configuration error and
+> eight Central Bank historical fixtures missing the explicit V5 migration.
+> Task Board integration passed 111 cases and UI integration passed 297.
+> All 1,254 frozen hashes are unchanged, with no added or removed source files.
+> Freeze released for those two test-only fixture corrections; root R3 is no
+> longer running. Its artifacts remain on the owned APFS volume below.
+
+> **LIVE FULL ROOT GATE 86111:** attempt R3 runs on the owned APFS image with
+> **1,254 source/config/test files frozen**. No source edits until it terminates.
+> Files are under `/private/tmp/agent-economy-ci-mount.O5fXjN/volume/`:
+> `root-r3.log`, `root-r3.exit`, `root-r3.tmp-root`, `root-r3-command.json`, and
+> `root-r3-source-freeze.json`. Poll session 86111; do not launch another root gate.
+> Task Board and UI component gates passed. Gateway's full unit suite passed;
+> its router/config architecture correction then passed 83 architecture/endpoint
+> checks plus style/mypy/Pyright. All independent MP-08 blocking findings are
+> resolved. Root exit 0, unchanged-source comparison and cleanup audit are still
+> required before ticket closure. The storage image remains owned and must be
+> safely detached after verification, using its recorded identity below.
+
+> **CURRENT STORAGE / GATE:** internal-volume ENOSPC invalidated Gateway
+> component session 65486, including its report write. Do not treat it as a
+> product result. A new owned 8 GiB APFS sparse image is mounted at
+> `/private/tmp/agent-economy-ci-mount.O5fXjN/volume`, backed by
+> `/Volumes/X9 Pro/.agent-economy-ci.sDUdpO/verification.sparseimage`.
+> Permissions, locks, atomic replacement and SQLite WAL were verified. Exact
+> ownership/cleanup metadata is `mp08-recovery/temporary-verification-storage-2026-10-22.json`.
+> Gateway component gate **24135** is running with log/exit/temp-root files
+> `volume/gateway-ci.{log,exit,tmp-root}`. Keep the mount until its owned work
+> finishes; revalidate the image/mount association before detaching and removing
+> only the newly created image and mount directories. Other projects' temporary
+> databases were inspected read-only and left unchanged.
+>
+> The pure-kernel receipt-first ceiling correction is now independently APPROVED
+> (23 focused cases). Retrospective T-124 provenance equivalence is independently
+> accepted with its explicit original-command/builder limitation. No root gate
+> is running and no ticket is closed. Q-M2's one-question 60-versus-100-credit
+> pricing choice was asked asynchronously and remains unanswered.
+
+> **CURRENT, no root gate running:** Task Board component gate **47274** passed
+> with exit 0 after CLI loader/format fixes. Product API/test specifications now
+> contain the MP-08 amendments. The pure transition kernel exists (16 new tests,
+> 261-case author Gateway selection green), but architect review found a valid
+> timestamp-ceiling receipt-first edge; its author is correcting that before
+> final review and Gateway/UI component gates. Retrospective baseline evidence
+> now reproduces the original three failures against unchanged archived HEAD
+> source and is under independent provenance review. See
+> `mp08-recovery/retrospective-baseline-2026-10-22/README.md`. No ticket is closed;
+> the full Core/Vision goal is active, OpenSpec 64/135 with 71 remaining.
+
+> **ROOT 42448 TERMINAL EXIT 1:** Task Board dependency hygiene rejected the
+> new CLI's direct transitive `yaml` import. All 1,251 frozen hashes are unchanged.
+> Freeze released; parent is replacing that import with the existing shared
+> configuration loader, then running affected component gates before root retry.
+> Earlier live-gate notices below are historical. Do not restart 42448.
+
+> **LIVE ROOT RETRY 42448:** all seven component style preflights pass after
+> the two formatting corrections. The full isolated root gate is running again
+> with 1,251 source/config/test hashes frozen in
+> `/tmp/agent-economy-mp08-root-source-freeze-retry-20261022.json`. Log:
+> `/tmp/agent-economy-mp08-root-ci-retry-20261022.log`; owned temporary root is in
+> its adjacent `.tmp-root` file. No source edits until the terminal result.
+> `mp08_closure_evidence_audit` is read-only. Do not restart this gate.
+
+> **ROOT 86655 TERMINAL EXIT 1:** libraries, Identity and Central Bank passed;
+> Task Board stopped on a formatter check in `services/task_db_client.py`.
+> All 1,251 frozen source hashes are unchanged. The freeze is released for
+> formatting correction and a complete component-style preflight before retry.
+> The live-gate paragraph below is historical; do not poll or restart 86655.
+
+> **LIVE ROOT GATE, 2026-10-22:** exec session **86655** runs the full isolated
+> root `just ci-quiet`. Do not restart it or edit source/config/test files while
+> it runs. Parent froze 1,251 Git-visible source/config/test files in
+> `/tmp/agent-economy-mp08-root-source-freeze-20261022.json`. Log:
+> `/tmp/agent-economy-mp08-root-ci-20261022.log`; owned temporary root is recorded
+> in the adjacent `.tmp-root` file. Poll the session and wait for its terminal
+> exit before judging the result. All seven Gateway correctness review findings
+> and the historical-read performance finding are resolved and independently
+> approved; the final Court 0%/100% projection correction is also approved.
+> Dependency audits/Semgrep pass all seven services. T-124/T-125/T-191/T-192
+> remain open until the full gate and final evidence audit succeed.
+
+> **RESUMED:** the owner set the existing goal to ACTIVE after the handover.
+> The pause notice below records the earlier stop, not a current prohibition.
+> Continue the full Core/Vision goal from MP-08; OpenSpec is now 64/135 complete
+> after adding the red-proven OpenTelemetry prerequisite pair T-191/T-192.
+> The handover's technical state and remaining checklist remain the resume base.
+
+> **Current resumed MP-08 work:** parent verified 47 migration/audit/history
+> checks, 153 Board recovery/client/config/CLI checks and 19 public projection
+> checks. All 14 process-cut scenarios passed across targeted runs after documented
+> fixture corrections; three older migration/refund runtime controls also pass
+> after explicit V5 setup. The new migration CLI passes four V4/V5 controls.
+> Independent Gateway review found seven blockers; their test-first corrections
+> are in progress. UI authoritative Board reads are implemented, with real
+> Gateway-to-UI proof being completed and adapter review fixes under verification.
+> Broad fixture reconciliation continues. No final source freeze or root CI gate
+> has started; no MP-08 ticket closed. Raw parent evidence is in
+> `mp08-recovery/resume-verification-2026-10-22/index.json`.
+
+> **PAUSED at the owner's request on 2026-10-22.** The goal API confirms paused.
+> The existing repository-root `HANDOFF-2026-10-19.md` has been replaced with
+> the current handover: purpose, full goal, completed work, partial MP-08 work,
+> verification limits, resume order, owner decisions and all 69 unchecked tasks.
+> Read that document first. Do not resume implementation until the owner asks.
+> All older ACTIVE/running-agent/verification-pending summaries below are
+> historical; no commit or push occurred during this continuation.
+
+> **Latest MP-08 evidence:** three corrected no-reader recovery failures are
+> independently APPROVED and parent-reproduced (handle32913, exit1 at the three
+> intended final assertions). Four authentic migrated-history controls pass;
+> ten test-only HTTP proxy controls pass, including zero downstream bytes and
+> owned-process teardown. Gateway/Board matrix reviews requested corrections;
+> their authors remain test-only. `mp08_behavior_red` now owns the runtime
+> process-cut matrix and is replacing a graceful-stop first case with the
+> required abrupt cuts. No MP-08 production implementation or ticket closure.
+> See `evidence/mp08-recovery/checkpoint.md` for evidence classifications and
+> exact active lanes. Full goal ACTIVE, OpenSpec64/133, no commit or push.
+
+> **Active work:** MP-08 contract is independently APPROVED for T-124 tests.
+> Test-only authors are running: `mp08_behavior_red` owns the current V4
+> no-reader recovery failures; `mp08_gateway_tests` owns Gateway contract
+> tests; `mp08_board_tests` owns worker/loop/config/CLI/API tests. Production
+> implementation has not started. Root37981 is the passing pre-MP-08 baseline;
+> new tests require fresh targeted evidence and later root verification.
+> Parent still owns the process-cut test slice and final integration. Preserve
+> the exact approved contract and distinguish missing-capability failures from
+> behavioral red assertions. No commit/push during office hours.
+
+> **Current:** MP-05 (T-118/T-119, tasks8.1–8.4) and baseline pairsT-183–T-190
+> are CLOSED after independent item review and root37981 exit0. All1180 frozen
+> source/config hashes match;365 recorded process groups across the correlated
+> runtimes are absent. Evidence index249 entries verifies cleanly. The source
+> freeze is released. OpenSpec is64/133 complete; the full goal remains ACTIVE.
+> Next: finish MP-08 contract approval and execute its genuine failing acceptance
+> proofs before implementation. Q-M2/Q-M3 remain open. No commit/push occurred.
+> Every older running/pending-gate statement below is historical.
+
+> **Latest verified result:** root retry37981 is terminal **exit0**. Every CI
+> phase passed, including306 cross/runtime,319 browser and113 live-agent tests.
+> All1180 source/config hashes are unchanged. The nine outer runtime records
+> are drained/error-free and their PIDs/groups independently absent. Final
+> independent verification and nested-process audit are pending; no new ticket
+> has closed yet. Terminal artifacts are archived in the resume index (248
+> verified entries). Older running-gate paragraphs below are historical.
+
+> **Current:** root CI retry handle **37981** is live; source/config freeze of
+> **1180 files** is active. The prior cleanup defect is repaired and independently
+> approved, with 16 parent checks and 300 stress repetitions passing. Poll this
+> handle rather than restarting it. Office-hours commit/push hooks are active;
+> no commit or push has occurred. MP-05 and the full Core/Vision goal remain open.
+
+> **Latest:** root handle54816 is terminal exit1 (293cross/runtime passes, one
+> legacy-refund sentinel cleanup failure). All1179 source/config hashes remained
+> unchanged; the freeze is released. Targeted diagnosis is active. Earlier
+> running-gate wording below is historical; MP-05 and the full goal remain open.
+
+> **Current gate:** full isolated root CI handle 54816 is live; the source/config
+> freeze of 1179 files is active. Poll the same handle; do not restart it or edit code.
+> Current demo production and fault-test reviews approve; supplied quick/full/
+> scale scenarios and immutable replay pass in a disposable mock-Court stack.
+> MP-05 item audit and the root gate are pending, and all later Core/Vision work
+> remains required. See the resume checkpoint for logs and evidence limitations.
+
+> **Latest verified continuation, 2026-10-22:** the full goal API reports ACTIVE.
+> Root handle65958 finished with exit1 (four runtime failures after all component
+> gates passed), with1135 unchanged source/config hashes. The launch/migration
+> repairs now have independent approval and17 passing parent runtime tests.
+> Gateway and Task Board diagnostic component CI both finished exit0.
+> Demo-store and new crash-proof final reviews approve; parent tools CI passes
+> 288tests and the final publication crash checks pass2tests. The legacy refund
+> process proof exposed missing task linkage in Bank settlement events; repair
+> is approved and Gateway CI passes. Process-test setup cleanup repairs, engine
+> rollout and fresh root CI remain outstanding. Office-hours Git hooks are now
+> installed, tested and independently approved; no commit/push occurred. See the
+> current `mp05-posting/resume-2026-10-22/checkpoint.md`; older running/blocked
+> statements below are historical. No new tickets have closed.
+
+> **Resumed 2026-10-22:** the owner reactivated the full goal after answering
+> Q-M1 questions. Current baseline is `6a60682`, with local continuation edits.
+> See `mp05-posting/resume-2026-10-22/checkpoint.md` for bounded verification,
+> E2E cleanup, the new dependency-audit failure and remaining work. See
+> `policy-options/owner-decisions-2026-10-22.md` for accepted policy choices.
+> The stop notice and historical progress below are superseded by that resume;
+> the full goal remains incomplete.
+
 > **Session handover:** The user requested that implementation stop and a handover
 > be written. See repository-root `HANDOFF-2026-10-19.md` for the exact goal,
 > final focused verification, known failures and resume order. It supersedes

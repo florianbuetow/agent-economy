@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
     from task_board_service.services.asset_manager import AssetManager
     from task_board_service.services.escrow_coordinator import EscrowCoordinator
+    from task_board_service.services.financial_effect_recovery import FinancialEffectRecovery
     from task_board_service.services.posting_recovery import PostingRecovery
     from task_board_service.services.protocol import TaskStorageInterface
     from task_board_service.services.task_manager import TaskManager
@@ -38,6 +39,8 @@ class AppState:
     deadline_sweep_task: asyncio.Task[None] | None = None
     posting_recovery: PostingRecovery | None = None
     posting_recovery_task: asyncio.Task[None] | None = None
+    financial_effect_recovery: FinancialEffectRecovery | None = None
+    financial_effect_recovery_task: asyncio.Task[None] | None = None
 
     @property
     def uptime_seconds(self) -> float:

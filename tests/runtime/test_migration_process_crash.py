@@ -17,13 +17,15 @@ from scripts.isolated_test_runtime import IsolatedRuntime
 from service_commons.maintenance_lock import MaintenanceLockMode, hold_existing_maintenance_lock
 from service_commons.recovery_contract import RecoveryInventoryV1
 from tests.runtime.test_migration_live_workload import (
+    _assert_upgrade_backups_unchanged,
     _assert_v1_database,
     _file_hashes,
     _install_legacy_fixture,
     _logical_rows,
     _resume_signed_workload,
     _upgrade_v1_to_v2,
-    _upgrade_v2_to_v3,
+    _upgrade_v2_to_v4_preserving_v2,
+    _upgrade_v4_to_v5,
 )
 from tests.runtime.test_recovery_live_restore import _public_workload
 
@@ -237,7 +239,18 @@ def test_process_death_preserves_legacy_and_signed_workflow_can_resume(tmp_path,
         assert classify_schema(connection).state is SchemaState.CURRENT_V2
         assert _logical_rows(connection) == original_rows
         assert audit_money(connection).financially_clean
-    v3_backup, v3_backup_hashes = _upgrade_v2_to_v3(
+    v3_backup, v3_backup_hashes, v4_backup, v4_backup_hashes = _upgrade_v2_to_v4_preserving_v2(
+        runtime,
+        inventory,
+        prepared.inventory_path,
+        database,
+        original_rows,
+        backup_root,
+        work_root,
+        v2_backup,
+        v2_backup_hashes,
+    )
+    v5_backup, v5_backup_hashes = _upgrade_v4_to_v5(
         runtime,
         inventory,
         prepared.inventory_path,
@@ -252,7 +265,14 @@ def test_process_death_preserves_legacy_and_signed_workflow_can_resume(tmp_path,
     finally:
         runtime.stop()
     assert _file_hashes(original.location) == original_hashes
-    assert _file_hashes(v2_backup.location) == v2_backup_hashes
-    assert _file_hashes(v3_backup.location) == v3_backup_hashes
+    _assert_upgrade_backups_unchanged(
+        v2_backup,
+        v2_backup_hashes,
+        v3_backup,
+        v3_backup_hashes,
+        v4_backup,
+        v4_backup_hashes,
+    )
+    assert _file_hashes(v5_backup.location) == v5_backup_hashes
     assert _file_hashes(runtime.run_dir / "keys") == original_keys
     assert _file_hashes(runtime.run_dir / "assets") == original_assets

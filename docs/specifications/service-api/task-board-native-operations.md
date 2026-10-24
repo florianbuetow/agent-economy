@@ -1,5 +1,35 @@
 # Task Board native operation contract (MP-07)
 
+## MP-08 durable financial-effect recovery amendment
+
+The [MP-08 financial recovery contract](../../plans/2026-10-22-mp08-financial-recovery-contract.md)
+completes the release/split recovery obligation described by this native-operation
+contract. Every native `bank_release` or `bank_split` claim creates its recovery
+sidecar atomically with the immutable operation. Task Board then runs one bounded
+startup cycle and configured periodic cycles through the protected Gateway queue,
+without depending on a public task GET. Direct exact command retries remain
+unleased producers and may overlap recovery safely because both paths use the
+same immutable Bank operation identity and receipt validation.
+
+Task Board configuration requires `financial_effect_recovery.interval_seconds`
+and `max_delivery_attempts_per_cycle`; production uses an explicit cycle bound
+of 10. Each process creates a fresh `recovery-<UUID4>` fence. A cycle calls the
+Gateway lease route at least once so one due dead-letter evidence check can run,
+then processes at most the configured number of leases. Item failure is contained
+and later items continue. Receipt lookup precedes Bank dispatch; after dispatch,
+Task Board finalizes even when the Bank response is missing, malformed, timed out,
+or otherwise ambiguous. Only exact timeout/transport/dependency failures are
+reported through the fenced failure route. Evidence conflict blocks without a
+second Bank call.
+
+The installed operator CLI uses explicit configuration and the configured
+Gateway signer. `effects list` requires explicit state, cursor and limit;
+`effects show` and `effects retry` require a canonical operation ID. It prints
+one strict validated JSON result to stdout on success. Invalid arguments,
+configuration, transport, foreign ownership, malformed results, non-dead-letter
+retry, or changed immutable retry identity produce a generic stderr diagnostic
+and exit 1, without leaking response bodies or credentials.
+
 This amendment defines the native v3 lifecycle implemented in the `refactor` workspace. It takes
 precedence over legacy lifecycle, timing, generic-write and rebuttal-projection descriptions in
 the Task Board and Gateway API specifications. Caller rollout and full release verification remain
@@ -34,11 +64,15 @@ The status is the actual HTTP observation: bid201, pure acceptance/submission200
 commands200 or202. The SDK rejects malformed success transport/state combinations with
 `TaskBoardCommandContractError`, retains non-success responses in `httpx.HTTPStatusError`, and does
 not retry automatically. Callers must still validate immutable identity, hash, result and effects
-against their frozen intent. Reads, task creation and asset methods retain their existing return
+against their frozen intent. Reads and asset methods retain their existing return
 shapes. Runtime persistence and recovery are separate from this transport contract.
 
-Task creation requires an explicit positive integer `acceptance_window_seconds` chosen by the
-poster. Creation is not yet the recoverable posting protocol planned in MP-05. Asset uploads,
+Task creation uses the separate [MP-05 publication contract](task-board-service-specs.md#mp-05-native-publication-amendment),
+including an explicit positive integer `acceptance_window_seconds` chosen by the poster.
+The SDK prepares a `TaskPostingIntent` before transport and returns a strict
+`TaskPostingResponse` from submit/status. Exact publication replay returns the frozen creation
+result; the lifecycle command envelope described here does not replace that protocol.
+Durable caller rollout and complete MP-05 verification remain open. Asset uploads,
 rebuttal forwarding and read routes do not acquire this lifecycle-command identity contract.
 
 ## Timing and immutable terms
@@ -121,8 +155,9 @@ result. Pure commands reject this endpoint with `409 operation_not_finalizable`.
 Task Board attempts delivery using the stored intent and checks Gateway evidence before and after
 delivery, including after a missing or malformed acknowledgment. It uses the same Bank operation ID
 on every retry. A successful response body alone cannot finalize a task. The periodic deadline
-sweep already retries deterministic automatic commands without reads. General recovery of pending
-interactive commands, fenced retries and recovery diagnostics remain the separate MP-08 obligation.
+sweep still retries deterministic automatic commands without reads; MP-08's separate startup and
+periodic financial-effect worker now supplies fenced recovery and protected diagnostics for all
+eligible pending release/split commands.
 
 Relevant typed conflicts include `operation_id_conflict`, `operation_caller_mismatch`,
 `transition_pending` (with winning operation ID), `task_version_conflict`, `invalid_status`,
@@ -136,6 +171,9 @@ Detail and summary projections require `lifecycle_version`, `timing_contract_ver
 `acceptance_window_seconds`, `bidding_cutoff_us`, `acceptance_cutoff_us`, nullable
 `execution_cutoff_us`, nullable `review_cutoff_us`, nullable `accepted_reward`, nullable
 `accepted_bid_amount`, `pending_transition`, and `legacy_reconciliations`.
+MP-08 also requires the exact eight-field `financial_effect` object on detail,
+summary and current mutation projections. It derives settlement from authoritative
+receipt and audited historical evidence independently of task status.
 
 `pending_transition` is null or contains only operation ID, command, target status/version,
 operation state and effect state. `legacy_reconciliations` separately lists observation ID/kind,

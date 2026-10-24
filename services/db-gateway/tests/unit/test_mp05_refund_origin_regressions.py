@@ -14,7 +14,7 @@ from service_auth.financial_identity import operation_id_for
 from service_commons.exceptions import ServiceError
 
 from db_gateway_service.financial_requests import canonical_request
-from db_gateway_service.migration import migrate_v3_to_v4
+from db_gateway_service.migration import migrate_v3_to_v4, migrate_v4_to_v5
 from db_gateway_service.publication_audit import audit_publications
 from db_gateway_service.services.db_writer import DbWriter
 from db_gateway_service.task_time import parse_utc_text_to_epoch_us
@@ -114,7 +114,9 @@ def finalized_template(
 ) -> _FinalizedTemplate:
     root = tmp_path_factory.mktemp("mp05-refund-origin-finalized")
     database = _copy_database(native_template.database, root / "finalized.db")
-    writer = DbWriter(str(database), 5000, "wal", None)
+    writer = DbWriter(
+        str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+    )
     try:
         for observation_id in native_template.pending_observation_ids:
             _persist_exact_refund(writer, observation_id)
@@ -239,6 +241,17 @@ def _migrate(source: V3Source, *, backup_id: str) -> None:
         busy_timeout_ms=5000,
     )
     assert result.observation == "committed_v4_verified"
+    v5_backup_id = f"{backup_id}-v5"
+    publish_verified_backup(source, backup_id=v5_backup_id)
+    v5 = migrate_v4_to_v5(
+        source.inventory,
+        backup_root=source.backup_root,
+        backup_id=v5_backup_id,
+        work_root=source.work_root,
+        busy_timeout_ms=5000,
+        current_task_board_caller_kid=source.caller_kid,
+    )
+    assert v5.observation == "committed_v5_verified"
 
 
 def _persist_exact_refund(writer: DbWriter, observation_id: str) -> None:
@@ -425,7 +438,9 @@ def _assert_audit_and_startup_reject(database: Path) -> None:
     writer: DbWriter | None = None
     startup_error: ServiceError | None = None
     try:
-        writer = DbWriter(str(database), 5000, "wal", None)
+        writer = DbWriter(
+            str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+        )
     except ServiceError as exc:
         startup_error = exc
     finally:
@@ -443,7 +458,9 @@ def _assert_audit_and_startup_accept(database: Path) -> None:
         assert result.publications_clean, result.findings
     finally:
         connection.close()
-    writer = DbWriter(str(database), 5000, "wal", None)
+    writer = DbWriter(
+        str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+    )
     writer.close()
 
 

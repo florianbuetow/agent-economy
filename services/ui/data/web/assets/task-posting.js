@@ -9,8 +9,14 @@
   var OPERATION_PATTERN = /^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
   var TASK_PATTERN = /^t-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
   var SHA256_PATTERN = /^[0-9a-f]{64}$/;
+  var TIMESTAMP_PATTERN = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})\.([0-9]{6})Z$/;
+  var BLOCK_REASONS = ['receipt_invalid', 'escrow_invalid', 'settlement_conflict',
+    'publication_conflict', 'clock_out_of_range'];
   var browserConfig = null;
   var activeRecord = null;
+  var recoveryInProgress = false;
+  var recoveredChoiceRequired = false;
+  var corruptRecordKeys = [];
   var browserConfigPromise = fetch('/api/proxy/browser-config').then(function(response) {
     if (!response.ok) throw new Error('Browser security configuration unavailable.');
     return response.json();
@@ -43,6 +49,20 @@
     return Number.isSafeInteger(value) && value > 0 && value <= maximum;
   }
 
+  function validText(value, maximum) {
+    if (typeof value !== 'string' || value.length === 0) return false;
+    for (var index = 0; index < value.length; index += 1) {
+      var code = value.charCodeAt(index);
+      if (code >= 0xD800 && code <= 0xDBFF) {
+        if (index + 1 >= value.length) return false;
+        var next = value.charCodeAt(index + 1);
+        if (next < 0xDC00 || next > 0xDFFF) return false;
+        index += 1;
+      } else if (code >= 0xDC00 && code <= 0xDFFF) return false;
+    }
+    return maximum === null || Array.from(value).length <= maximum;
+  }
+
   function validRecord(record) {
     if (!exactKeys(record, ['record_version', 'scope', 'intent', 'request_sha256']) ||
         record.record_version !== 1 || !SHA256_PATTERN.test(record.request_sha256)) return false;
@@ -65,8 +85,7 @@
       OPERATION_PATTERN.test(intent.operation_id) && OPERATION_PATTERN.test(intent.lock_operation_id) &&
       typeof intent.task_id === 'string' && TASK_PATTERN.test(intent.task_id) &&
       intent.actor_kind === 'agent' && intent.actor_id === scope.operator_agent_id &&
-      typeof intent.title === 'string' && intent.title.length > 0 && intent.title.length <= 200 &&
-      typeof intent.spec === 'string' && intent.spec.length > 0 && intent.spec.length <= 10000 &&
+      validText(intent.title, 200) && validText(intent.spec, 10000) &&
       validPositiveInteger(intent.reward, SAFE_INTEGER_MAX) &&
       validPositiveInteger(intent.bidding_deadline_seconds, DURATION_MAX) &&
       validPositiveInteger(intent.acceptance_window_seconds, DURATION_MAX) &&
@@ -78,6 +97,7 @@
     var raw = document.getElementById(id).value.trim();
     if (!/^[0-9]+$/.test(raw)) throw new Error(label + ' must be a positive decimal whole number.');
     var value = Number(raw);
+    if (value <= 0) throw new Error(label + ' must be positive.');
     if (!validPositiveInteger(value, maximum)) {
       throw new Error(label + ' is outside the supported range.');
     }
@@ -151,6 +171,76 @@
     }).join('');
   }
 
+  function exactTimestamp(value) {
+    if (typeof value !== 'string') return null;
+    var match = TIMESTAMP_PATTERN.exec(value);
+    if (match === null) return null;
+    var year = Number(match[1]);
+    var month = Number(match[2]);
+    var day = Number(match[3]);
+    var hour = Number(match[4]);
+    var minute = Number(match[5]);
+    var second = Number(match[6]);
+    var microsecond = Number(match[7]);
+    if (year < 1 || month < 1 || month > 12 || day < 1 || hour > 23 ||
+        minute > 59 || second > 59) return null;
+    var parsed = new Date(0);
+    parsed.setUTCFullYear(year, month - 1, day);
+    parsed.setUTCHours(hour, minute, second, Math.floor(microsecond / 1000));
+    if (!Number.isFinite(parsed.getTime()) || parsed.getUTCFullYear() !== year ||
+        parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day ||
+        parsed.getUTCHours() !== hour || parsed.getUTCMinutes() !== minute ||
+        parsed.getUTCSeconds() !== second ||
+        parsed.getUTCMilliseconds() !== Math.floor(microsecond / 1000)) return null;
+    var microseconds = BigInt(parsed.getTime()) * 1000n + BigInt(microsecond % 1000);
+    if (microseconds < 0n || microseconds > 9223372036854775807n) return null;
+    return {text: value, microseconds: microseconds};
+  }
+
+  function validBlockedError(value) {
+    return exactKeys(value, ['error', 'message', 'details']) &&
+      value.error === 'publication_integrity_blocked' &&
+      value.message === 'Publication evidence requires reconciliation' &&
+      exactKeys(value.details, ['reason']) &&
+      BLOCK_REASONS.indexOf(value.details.reason) !== -1;
+  }
+
+  function validPublicationResult(result, publication, record, published) {
+    var resultKeys = ['task_id', 'poster_id', 'title', 'spec', 'reward',
+      'bidding_deadline_seconds', 'acceptance_window_seconds',
+      'execution_deadline_seconds', 'review_deadline_seconds', 'status', 'escrow_id',
+      'created_at', 'bidding_deadline', 'acceptance_deadline', 'bidding_cutoff_us',
+      'acceptance_cutoff_us', 'lifecycle_version', 'timing_contract_version', 'event_id'];
+    if (!exactKeys(result, resultKeys) || result.task_id !== record.intent.task_id ||
+        result.poster_id !== record.intent.actor_id || !validText(result.poster_id, null) ||
+        result.title !== record.intent.title || !validText(result.title, 200) ||
+        result.spec !== record.intent.spec || !validText(result.spec, 10000) ||
+        result.reward !== record.intent.reward ||
+        result.bidding_deadline_seconds !== record.intent.bidding_deadline_seconds ||
+        result.acceptance_window_seconds !== record.intent.acceptance_window_seconds ||
+        result.execution_deadline_seconds !== record.intent.execution_deadline_seconds ||
+        result.review_deadline_seconds !== record.intent.review_deadline_seconds ||
+        result.status !== 'open' || result.escrow_id !== publication.escrow_id ||
+        !validText(result.escrow_id, null) || result.created_at !== publication.published_at ||
+        result.lifecycle_version !== 0 || result.timing_contract_version !== 2 ||
+        !validPositiveInteger(result.event_id, SAFE_INTEGER_MAX)) return false;
+    var created = exactTimestamp(result.created_at);
+    var bidding = exactTimestamp(result.bidding_deadline);
+    var acceptance = exactTimestamp(result.acceptance_deadline);
+    if (created === null || bidding === null || acceptance === null ||
+        created.microseconds !== published.microseconds ||
+        !validPositiveInteger(result.bidding_cutoff_us, SAFE_INTEGER_MAX) ||
+        !validPositiveInteger(result.acceptance_cutoff_us, SAFE_INTEGER_MAX)) return false;
+    var expectedBidding = published.microseconds +
+      BigInt(record.intent.bidding_deadline_seconds) * 1000000n;
+    var expectedAcceptance = expectedBidding +
+      BigInt(record.intent.acceptance_window_seconds) * 1000000n;
+    return bidding.microseconds === expectedBidding &&
+      acceptance.microseconds === expectedAcceptance &&
+      BigInt(result.bidding_cutoff_us) === bidding.microseconds &&
+      BigInt(result.acceptance_cutoff_us) === acceptance.microseconds;
+  }
+
   function validPublication(publication, record, state) {
     var keys = ['protocol_version', 'operation_id', 'task_id', 'request_sha256', 'publication_state',
       'lock_operation_id', 'escrow_id', 'admitted_at', 'published_at', 'result', 'error'];
@@ -159,21 +249,26 @@
         publication.task_id !== record.intent.task_id ||
         publication.request_sha256 !== record.request_sha256 ||
         publication.lock_operation_id !== record.intent.lock_operation_id ||
-        publication.publication_state !== state) return false;
-    if (state !== 'published') return publication.result === null;
-    var result = publication.result;
-    var resultKeys = ['task_id', 'poster_id', 'title', 'spec', 'reward',
-      'bidding_deadline_seconds', 'acceptance_window_seconds',
-      'execution_deadline_seconds', 'review_deadline_seconds', 'status', 'escrow_id',
-      'created_at', 'bidding_deadline', 'acceptance_deadline', 'bidding_cutoff_us',
-      'acceptance_cutoff_us', 'lifecycle_version', 'timing_contract_version', 'event_id'];
-    return exactKeys(result, resultKeys) && result.task_id === record.intent.task_id &&
-      result.poster_id === record.intent.actor_id && result.title === record.intent.title &&
-      result.spec === record.intent.spec && result.reward === record.intent.reward &&
-      result.bidding_deadline_seconds === record.intent.bidding_deadline_seconds &&
-      result.acceptance_window_seconds === record.intent.acceptance_window_seconds &&
-      result.execution_deadline_seconds === record.intent.execution_deadline_seconds &&
-      result.review_deadline_seconds === record.intent.review_deadline_seconds;
+        publication.publication_state !== state ||
+        !OPERATION_PATTERN.test(publication.operation_id) ||
+        !TASK_PATTERN.test(publication.task_id) ||
+        !OPERATION_PATTERN.test(publication.lock_operation_id) ||
+        publication.operation_id === publication.lock_operation_id ||
+        !SHA256_PATTERN.test(publication.request_sha256)) return false;
+    var admitted = exactTimestamp(publication.admitted_at);
+    if (admitted === null) return false;
+    if (state === 'awaiting_lock') {
+      return publication.escrow_id === null && publication.published_at === null &&
+        publication.result === null && publication.error === null;
+    }
+    if (state === 'blocked_integrity') {
+      return publication.escrow_id === null && publication.published_at === null &&
+        publication.result === null && validBlockedError(publication.error);
+    }
+    if (!validText(publication.escrow_id, null) || publication.error !== null) return false;
+    var published = exactTimestamp(publication.published_at);
+    return published !== null && admitted.microseconds <= published.microseconds &&
+      validPublicationResult(publication.result, publication, record, published);
   }
 
   function validateObservation(value, responseStatus, record, kind) {
@@ -197,15 +292,67 @@
     return document.getElementById('post-error');
   }
 
+  function operationElement(record) {
+    var parent = errorElement();
+    if (!parent) return null;
+    var operationId = record.intent.operation_id;
+    var selector = '[data-task-posting-operation="' + operationId + '"]';
+    var element = parent.querySelector(selector);
+    if (element) return element;
+    element = document.createElement('span');
+    element.dataset.taskPostingOperation = operationId;
+    element.style.display = 'block';
+    parent.appendChild(element);
+    return element;
+  }
+
+  function generalErrorElement() {
+    var parent = errorElement();
+    if (!parent) return null;
+    var element = parent.querySelector('[data-task-posting-general]');
+    if (element) return element;
+    element = document.createElement('span');
+    element.dataset.taskPostingGeneral = '';
+    element.style.display = 'block';
+    parent.insertBefore(element, parent.firstChild);
+    return element;
+  }
+
+  function renderCorruptRecord(key) {
+    var parent = errorElement();
+    if (!parent) return;
+    var entries = parent.querySelectorAll('[data-task-posting-corrupt]');
+    for (var index = 0; index < entries.length; index += 1) {
+      if (entries[index].dataset.taskPostingCorrupt === key) return;
+    }
+    var element = document.createElement('span');
+    element.dataset.taskPostingCorrupt = key;
+    element.style.display = 'block';
+    element.textContent = 'Saved posting record ' + key.slice(RECORD_PREFIX.length) +
+      ' is invalid. It was preserved and was not sent.';
+    parent.appendChild(element);
+  }
+
+  function appendSeparateAction(element) {
+    var separate = document.createElement('button');
+    separate.type = 'button';
+    separate.className = 'btn btn-cyan';
+    separate.textContent = 'Create separate posting';
+    separate.addEventListener('click', function() { createPosting(true); });
+    element.appendChild(separate);
+  }
+
   function renderCompleted(record) {
-    var element = errorElement();
-    if (element) element.innerHTML = '<span>Posting completed.</span>';
+    var element = operationElement(record);
+    if (!element) return;
+    element.textContent = record.intent.title + ' — Posting completed. ';
+    appendSeparateAction(element);
   }
 
   function renderRecovery(record, message) {
-    var element = errorElement();
+    var element = operationElement(record);
     if (!element) return;
-    element.textContent = message + ' ';
+    element.textContent = record.intent.title + ' — ' + message + ' ';
     var check = document.createElement('button');
     check.type = 'button';
     check.className = 'btn btn-cyan';
@@ -216,14 +363,9 @@
     retry.className = 'btn btn-cyan';
     retry.textContent = 'Retry exact intent';
     retry.addEventListener('click', function() { submit(record); });
-    var separate = document.createElement('button');
-    separate.type = 'button';
-    separate.className = 'btn btn-cyan';
-    separate.textContent = 'Create separate posting';
-    separate.addEventListener('click', function() { createPosting(true); });
     element.appendChild(check);
     element.appendChild(retry);
-    element.appendChild(separate);
+    appendSeparateAction(element);
   }
 
   function existingCompletion(record) {
@@ -305,10 +447,28 @@
 
   async function createPosting(forceSeparate) {
     var button = document.getElementById('btn-post-task');
-    var element = errorElement();
+    var element = generalErrorElement();
     try {
       if (activeRecord !== null && forceSeparate !== true) {
         await submit(activeRecord);
+        return;
+      }
+      if (forceSeparate !== true && recoveryInProgress) {
+        if (element) {
+          element.textContent = 'Checking saved posting status before another posting can begin.';
+        }
+        return;
+      }
+      if (forceSeparate !== true && corruptRecordKeys.length > 0) {
+        if (element) {
+          element.textContent = 'Resolve the invalid saved posting record before creating a new posting.';
+        }
+        return;
+      }
+      if (forceSeparate !== true && recoveredChoiceRequired) {
+        if (element) {
+          element.textContent = 'Choose the saved posting you want to retry using its exact-intent action.';
+        }
         return;
       }
       var terms = termsFromForm();
@@ -326,6 +486,7 @@
       }
       persistRecord(record);
       activeRecord = record;
+      recoveredChoiceRequired = false;
       await submit(record);
     } catch (error) {
       if (element) element.textContent = error.message || 'Posting could not be prepared.';
@@ -341,22 +502,42 @@
 
   async function recoverExisting() {
     var records = [];
-    for (var index = 0; index < localStorage.length; index += 1) {
-      var key = localStorage.key(index);
-      if (!key || key.indexOf(RECORD_PREFIX) !== 0) continue;
-      try {
-        var record = JSON.parse(localStorage.getItem(key));
-        if (validRecord(record) && key === recordKey(record)) records.push(record);
-      } catch (_error) { /* Invalid browser-owned entries never reach transport. */ }
-    }
-    records.sort(function(left, right) {
-      return left.intent.operation_id.localeCompare(right.intent.operation_id);
-    });
-    if (records.length > 0) activeRecord = records[records.length - 1];
-    for (var recordIndex = 0; recordIndex < records.length; recordIndex += 1) {
-      var record = records[recordIndex];
-      if (existingCompletion(record) !== null) renderCompleted(record);
-      else await checkStatus(record);
+    recoveryInProgress = true;
+    try {
+      corruptRecordKeys = [];
+      recoveredChoiceRequired = false;
+      for (var index = 0; index < localStorage.length; index += 1) {
+        var key = localStorage.key(index);
+        if (!key || key.indexOf(RECORD_PREFIX) !== 0) continue;
+        try {
+          var record = JSON.parse(localStorage.getItem(key));
+          if (validRecord(record) && key === recordKey(record)) records.push(record);
+          else {
+            corruptRecordKeys.push(key);
+            renderCorruptRecord(key);
+          }
+        } catch (_error) {
+          corruptRecordKeys.push(key);
+          renderCorruptRecord(key);
+        }
+      }
+      for (var recordIndex = 0; recordIndex < records.length; recordIndex += 1) {
+        var record = records[recordIndex];
+        if (existingCompletion(record) !== null) renderCompleted(record);
+        else await checkStatus(record);
+      }
+      var unresolved = records.filter(function(record) {
+        return existingCompletion(record) === null;
+      });
+      if (corruptRecordKeys.length > 0) activeRecord = null;
+      else if (unresolved.length === 1) activeRecord = unresolved[0];
+      else if (unresolved.length > 1) {
+        activeRecord = null;
+        recoveredChoiceRequired = true;
+      } else if (records.length > 0) activeRecord = records[records.length - 1];
+      else activeRecord = null;
+    } finally {
+      recoveryInProgress = false;
     }
   }
 

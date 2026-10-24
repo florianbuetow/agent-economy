@@ -131,6 +131,18 @@ class AssetsConfig(BaseModel):
     max_files_per_task: int
 
 
+class AssetUploadConfig(BaseModel):
+    """Explicit multipart streaming and display-metadata limits."""
+
+    model_config = ConfigDict(extra="forbid")
+    stream_chunk_bytes: int = Field(strict=True, gt=0)
+    max_multipart_overhead_bytes: int = Field(strict=True, gt=0)
+    max_header_count: int = Field(strict=True, gt=0)
+    max_header_size: int = Field(strict=True, gt=0)
+    max_boundary_bytes: int = Field(strict=True, gt=0)
+    max_display_filename_utf8_bytes: int = Field(strict=True, gt=0)
+
+
 class RequestConfig(BaseModel):
     """Request handling configuration."""
 
@@ -199,6 +211,14 @@ class PostingRecoveryConfig(BaseModel):
     diagnostic_limit: int = Field(strict=True, ge=1, le=1000)
 
 
+class FinancialEffectRecoveryConfig(BaseModel):
+    """Explicit Task Board bounds for the MP-08 recovery worker."""
+
+    model_config = ConfigDict(extra="forbid")
+    interval_seconds: float = Field(strict=True, gt=0, allow_inf_nan=False)
+    max_delivery_attempts_per_cycle: int = Field(strict=True, ge=10, le=10)
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -217,11 +237,13 @@ class Settings(BaseModel):
     platform: PlatformConfig
     request: RequestConfig
     db_gateway: DbGatewayConfig
+    asset_upload: AssetUploadConfig
     assets: AssetsConfig | None = None
     limits: LimitsConfig | None = None
     deadline_evaluation: DeadlineEvaluationConfig | None = None
     recovery: RecoveryConfig
     posting_recovery: PostingRecoveryConfig
+    financial_effect_recovery: FinancialEffectRecoveryConfig
 
 
 def get_config_path() -> Path:

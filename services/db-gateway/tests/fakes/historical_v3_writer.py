@@ -104,6 +104,11 @@ class HistoricalV3Writer(DbWriter):
         classification = classify_schema(self.connection)
         self._admit_existing_schema(classification)
 
+    def _admit_effect_recovery(self) -> None:
+        """V3 predates recovery deliveries; bypass only for the frozen exact catalog."""
+        classification = classify_schema(self.connection)
+        self._admit_existing_schema(classification)
+
     def create_task(self, data: dict[str, Any]) -> dict[str, Any]:
         """Run the frozen timing-v2 task creation transaction on exact v3."""
         self._admit_existing_schema(classify_schema(self.connection))
@@ -168,6 +173,7 @@ def open_historical_v3_writer(
     *,
     busy_timeout_ms: int,
     journal_mode: str,
+    current_task_board_caller_kid: str,
 ) -> HistoricalV3Writer:
     """Open one owned exact-v3 fixture without production fallback admission."""
     return HistoricalV3Writer(
@@ -175,6 +181,7 @@ def open_historical_v3_writer(
         busy_timeout_ms=busy_timeout_ms,
         journal_mode=journal_mode,
         schema_sql=None,
+        current_task_board_caller_kid=current_task_board_caller_kid,
     )
 
 

@@ -8,9 +8,9 @@ Every value must be explicitly specified or startup fails.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from service_auth.gateway import GatewayTrustConfig
 from service_commons.config import (
     REDACTION_MARKER,
@@ -20,6 +20,11 @@ from service_commons.config import (
 from service_commons.config import (
     get_config_path as resolve_config_path,
 )
+
+from db_gateway_service.schema import SQLITE_MAX_INTEGER
+
+# Protocol representability bound: the last complete second before year 10000.
+_RecoverySeconds = Annotated[int, Field(strict=True, ge=1, le=253402300799)]
 
 
 class ServiceConfig(BaseModel):
@@ -110,6 +115,39 @@ class BoardAuthorityConfig(BaseModel):
         return value
 
 
+class BoardEffectRecoveryConfig(BaseModel):
+    """Gateway-owned delivery limits; every value is explicitly configured."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+    current_task_board_caller_kid: str
+    max_attempts_per_delivery: Annotated[int, Field(strict=True, ge=1, le=SQLITE_MAX_INTEGER)]
+    initial_backoff_seconds: _RecoverySeconds
+    max_backoff_seconds: _RecoverySeconds
+    lease_duration_seconds: _RecoverySeconds
+    evidence_interval_seconds: _RecoverySeconds
+    gateway_timeout_seconds: _RecoverySeconds
+    bank_timeout_seconds: _RecoverySeconds
+
+    @field_validator("current_task_board_caller_kid")
+    @classmethod
+    def validate_current_caller(cls, value: str) -> str:
+        """Require the exact configured principal rather than whitespace normalization."""
+        if not value or value != value.strip():
+            raise ValueError("current_task_board_caller_kid must be a nonblank canonical string")
+        return value
+
+    @model_validator(mode="after")
+    def validate_scheduling_bounds(self) -> BoardEffectRecoveryConfig:
+        """Reject retry ordering and lease budgets that cannot cover dependency calls."""
+        if self.max_backoff_seconds < self.initial_backoff_seconds:
+            raise ValueError("max_backoff_seconds must cover initial_backoff_seconds")
+        if self.lease_duration_seconds <= 2 * (
+            self.gateway_timeout_seconds + self.bank_timeout_seconds
+        ):
+            raise ValueError("lease_duration_seconds must exceed twice the dependency timeout sum")
+        return self
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -127,6 +165,19 @@ class Settings(BaseModel):
     auth: GatewayTrustConfig
     recovery: RecoveryConfig
     board_authority: BoardAuthorityConfig
+    board_effect_recovery: BoardEffectRecoveryConfig
+
+    @model_validator(mode="after")
+    def validate_recovery_principal(self) -> Settings:
+        """Reject unreachable recovery ownership before any service state is opened."""
+        caller = self.auth.trusted_callers.get(
+            self.board_effect_recovery.current_task_board_caller_kid
+        )
+        if caller is None or "gateway.board.write" not in caller.capabilities:
+            raise ValueError(
+                "current_task_board_caller_kid must have gateway.board.write capability"
+            )
+        return self
 
 
 Settings.model_rebuild(_types_namespace={"GatewayTrustConfig": GatewayTrustConfig})

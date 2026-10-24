@@ -138,11 +138,49 @@ def _submit_bid(client: TestClient, task_id: str, bidder_id: str) -> str:
     return bid_id
 
 
+def _accept_task(
+    client: TestClient,
+    *,
+    task_id: str,
+    poster_id: str,
+    escrow_id: str,
+    worker_id: str,
+    bid_id: str,
+) -> None:
+    response = client.post(
+        "/board/task-operations",
+        json={
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid4()}",
+            "task_id": task_id,
+            "command": "accept_bid",
+            "expected_status": "open",
+            "expected_lifecycle_version": 0,
+            "actor_kind": "agent",
+            "actor_id": poster_id,
+            "arguments": {
+                "bid_id": bid_id,
+                "worker_id": worker_id,
+                "escrow_id": escrow_id,
+                "reward": 100,
+                "bid_amount": 50,
+            },
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["operation_state"] == "completed"
+
+
 def _record_asset(client: TestClient, task_id: str, uploader_id: str) -> str:
     asset_id = f"asset-{uuid4()}"
     client.post(
         "/board/assets",
         json={
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": asset_id,
             "task_id": task_id,
             "uploader_id": uploader_id,
@@ -273,8 +311,17 @@ class TestReadAssetsCount:
 
     def test_assets_count_reflects_recorded_assets(self, app_with_writer: TestClient) -> None:
         poster_id = _setup_funded_account(app_with_writer)
-        tid, _pid, _eid = _create_task(app_with_writer, poster_id=poster_id)
+        tid, _pid, escrow_id = _create_task(app_with_writer, poster_id=poster_id)
         uploader = _register_agent(app_with_writer, name="Uploader")
+        bid_id = _submit_bid(app_with_writer, tid, uploader)
+        _accept_task(
+            app_with_writer,
+            task_id=tid,
+            poster_id=poster_id,
+            escrow_id=escrow_id,
+            worker_id=uploader,
+            bid_id=bid_id,
+        )
         _record_asset(app_with_writer, tid, uploader)
         _record_asset(app_with_writer, tid, uploader)
         _wire_db_reader()
@@ -332,8 +379,17 @@ class TestReadAssetRequiresTaskId:
 
     def test_get_asset_with_correct_task_id_succeeds(self, app_with_writer: TestClient) -> None:
         poster_id = _setup_funded_account(app_with_writer)
-        tid, _pid, _eid = _create_task(app_with_writer, poster_id=poster_id)
+        tid, _pid, escrow_id = _create_task(app_with_writer, poster_id=poster_id)
         uploader = _register_agent(app_with_writer, name="Uploader")
+        bid_id = _submit_bid(app_with_writer, tid, uploader)
+        _accept_task(
+            app_with_writer,
+            task_id=tid,
+            poster_id=poster_id,
+            escrow_id=escrow_id,
+            worker_id=uploader,
+            bid_id=bid_id,
+        )
         asset_id = _record_asset(app_with_writer, tid, uploader)
         _wire_db_reader()
 
@@ -346,8 +402,17 @@ class TestReadAssetRequiresTaskId:
 
     def test_get_asset_without_task_id_query_param_404s(self, app_with_writer: TestClient) -> None:
         poster_id = _setup_funded_account(app_with_writer)
-        tid, _pid, _eid = _create_task(app_with_writer, poster_id=poster_id)
+        tid, _pid, escrow_id = _create_task(app_with_writer, poster_id=poster_id)
         uploader = _register_agent(app_with_writer, name="Uploader")
+        bid_id = _submit_bid(app_with_writer, tid, uploader)
+        _accept_task(
+            app_with_writer,
+            task_id=tid,
+            poster_id=poster_id,
+            escrow_id=escrow_id,
+            worker_id=uploader,
+            bid_id=bid_id,
+        )
         asset_id = _record_asset(app_with_writer, tid, uploader)
         _wire_db_reader()
 

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import httpx
 import pytest
 
 from base_agent.agent import BaseAgent
+from tests.fakes.mp05_posting_fixtures import posting_response
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -43,20 +44,16 @@ def _completed_response(
 
 @pytest.mark.unit
 class TestPostTask:
-    """Tests for post_task."""
+    """Tests for separately prepared and submitted task postings."""
 
-    @patch("base_agent.mixins.task_board.uuid.uuid4", return_value="fake-uuid")
-    async def test_post_task_sends_both_tokens(
-        self, _mock_uuid: Mock, sample_config: AgentConfig
-    ) -> None:
+    async def test_post_task_sends_both_tokens(self, sample_config: AgentConfig) -> None:
         agent = BaseAgent(config=sample_config)
         agent.agent_id = "a-poster"
-        task_response = {"task_id": "t-fake-uuid", "status": "open"}
         agent._sign_jws = Mock(side_effect=["task-jws", "escrow-jws"])
-        agent._request = AsyncMock(return_value=task_response)
+        agent._request_raw = AsyncMock()
 
         try:
-            result = await agent.post_task(
+            intent = agent.prepare_task_posting(
                 title="Build login",
                 spec="Create a login page",
                 reward=5000,
@@ -65,21 +62,29 @@ class TestPostTask:
                 review_deadline_seconds=172800,
                 acceptance_window_seconds=43200,
             )
+            agent._request_raw.assert_not_awaited()
+            agent._sign_jws.assert_not_called()
+            task_response = posting_response(intent, "published")
+            agent._request_raw.return_value = _http_response(201, task_response.body)
+            result = await agent.submit_task_posting(intent)
 
             assert result == task_response
             assert agent._sign_jws.call_count == 2
             task_call = agent._sign_jws.call_args_list[0]
             assert task_call[0][0]["action"] == "create_task"
-            assert task_call[0][0]["task_id"] == "t-fake-uuid"
+            assert task_call[0][0]["task_id"] == intent.task_id
+            assert task_call[0][0]["operation_id"] == intent.operation_id
+            assert task_call[0][0]["lock_operation_id"] == intent.lock_operation_id
             assert task_call[0][0]["poster_id"] == "a-poster"
             assert task_call[0][0]["title"] == "Build login"
             assert task_call[0][0]["reward"] == 5000
             assert task_call[0][0]["acceptance_window_seconds"] == 43200
             escrow_call = agent._sign_jws.call_args_list[1]
             assert escrow_call[0][0]["action"] == "escrow_lock"
-            assert escrow_call[0][0]["task_id"] == "t-fake-uuid"
+            assert escrow_call[0][0]["task_id"] == intent.task_id
+            assert escrow_call[0][0]["operation_id"] == intent.lock_operation_id
             assert escrow_call[0][0]["amount"] == 5000
-            agent._request.assert_awaited_once_with(
+            agent._request_raw.assert_awaited_once_with(
                 "POST",
                 f"{sample_config.task_board_url}/tasks",
                 json={"task_token": "task-jws", "escrow_token": "escrow-jws"},

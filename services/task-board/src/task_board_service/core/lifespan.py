@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from service_auth.factory import AgentFactory
 from service_auth.gateway import GatewayRequestSigner
@@ -20,6 +20,11 @@ from task_board_service.logging import get_logger, setup_logging
 from task_board_service.services.asset_manager import AssetManager
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
+from task_board_service.services.financial_effect_recovery import (
+    FinancialEffectRecovery,
+    RecoveryBank,
+    RecoveryStore,
+)
 from task_board_service.services.posting_recovery import PostingRecovery
 from task_board_service.services.task_db_client import TaskDbClient
 from task_board_service.services.task_manager import TaskManager
@@ -51,9 +56,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         identity_client = None
         central_bank_client = None
         store: TaskStorageInterface | None = None
+        recovery_store: TaskDbClient | None = None
         task_manager = None
+        asset_manager: AssetManager | None = None
         deadline_sweep_task: asyncio.Task[None] | None = None
         posting_recovery_task: asyncio.Task[None] | None = None
+        financial_effect_recovery_task: asyncio.Task[None] | None = None
         try:
             # db_gateway configuration is required by Settings and has no fallback.
             gateway_signer = GatewayRequestSigner(
@@ -74,8 +82,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             else:
                 msg = "Either 'assets' or legacy 'limits' config section must be present"
                 raise RuntimeError(msg)
-            Path(asset_storage_path).mkdir(parents=True, exist_ok=True)
-
             config_path = Path(settings.platform.agent_config_path)
             if not config_path.is_absolute():
                 config_path = Path(get_config_path()).parent / config_path
@@ -172,6 +178,26 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 )
             )
             state.posting_recovery_task = posting_recovery_task
+            recovery_store = TaskDbClient(
+                base_url=settings.db_gateway.url,
+                timeout_seconds=settings.db_gateway.timeout_seconds,
+                signer=gateway_signer,
+            )
+            financial_effect_recovery = FinancialEffectRecovery(
+                store=cast("RecoveryStore", recovery_store),
+                bank=cast("RecoveryBank", central_bank_client),
+                worker_id=None,
+                max_delivery_attempts_per_cycle=(
+                    settings.financial_effect_recovery.max_delivery_attempts_per_cycle
+                ),
+            )
+            state.financial_effect_recovery = financial_effect_recovery
+            financial_effect_recovery_task = asyncio.create_task(
+                financial_effect_recovery.run_periodic(
+                    interval_seconds=settings.financial_effect_recovery.interval_seconds
+                )
+            )
+            state.financial_effect_recovery_task = financial_effect_recovery_task
 
             logger.info(
                 "Service starting",
@@ -189,6 +215,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             yield
         finally:
             logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
+            if financial_effect_recovery_task is not None:
+                financial_effect_recovery_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await financial_effect_recovery_task
+            if recovery_store is not None:
+                recovery_store.close()
             if posting_recovery_task is not None:
                 posting_recovery_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -197,6 +229,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 deadline_sweep_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await deadline_sweep_task
+            if asset_manager is not None:
+                asset_manager.close()
             if task_manager is not None:
                 task_manager.close()
             elif store is not None:

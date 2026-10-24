@@ -64,7 +64,7 @@ async def _public_workload(config_path: Path) -> dict[str, object]:
         assert poster.agent_id is not None
         assert worker.agent_id is not None
         await worker.create_account()
-        task = await poster.post_task(
+        posting = poster.prepare_task_posting(
             title="Recover submitted work",
             spec="Upload result.txt containing the answer.",
             reward=100,
@@ -73,6 +73,14 @@ async def _public_workload(config_path: Path) -> dict[str, object]:
             review_deadline_seconds=3600,
             acceptance_window_seconds=ACCEPTANCE_WINDOW_SECONDS,
         )
+        publication = await poster.submit_task_posting(posting)
+        assert publication.status_code == 201
+        assert publication.body["publication_state"] == "published"
+        assert publication.body["operation_id"] == posting.operation_id
+        assert publication.body["request_sha256"] == posting.request_sha256
+        task = publication.body["result"]
+        assert isinstance(task, dict)
+        assert task["task_id"] == posting.task_id
         task_id = task["task_id"]
         assert isinstance(task_id, str)
         open_version = _task_version(task, expected_status="open")

@@ -1,0 +1,33 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/tests
+configfile: pytest.ini
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 35 items / 33 deselected / 2 selected
+
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-identity] FAILED [ 50%]
+../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-identity] FAILED [100%]
+
+=================================== FAILURES ===================================
+___ test_ci_rejects_formatting_defects_without_rewriting_source[ci-identity] ___
+../../tests/runtime/test_ci_readonly.py:109: in test_ci_rejects_formatting_defects_without_rewriting_source
+    assert result.returncode != 0, result.stdout + result.stderr
+E   AssertionError: 
+E   assert 0 != 0
+E    +  where 0 = CompletedProcess(args=('/Users/flo/.local/share/mise/shims/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-4315/test_ci_rejects_formatting_def0/identity/justfile', 'ci'), returncode=0, stdout='', stderr='').returncode
+_ test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-identity] _
+../../tests/runtime/test_ci_readonly.py:109: in test_ci_rejects_formatting_defects_without_rewriting_source
+    assert result.returncode != 0, result.stdout + result.stderr
+E   AssertionError: 
+E   assert 0 != 0
+E    +  where 0 = CompletedProcess(args=('/Users/flo/.local/share/mise/shims/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-4315/test_ci_rejects_formatting_def1/identity/justfile', 'ci-quiet'), returncode=0, stdout='', stderr='').returncode
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-identity] - AssertionError: 
+assert 0 != 0
+ +  where 0 = CompletedProcess(args=('/Users/flo/.local/share/mise/shims/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-4315/test_ci_rejects_formatting_def0/identity/justfile', 'ci'), returncode=0, stdout='', stderr='').returncode
+FAILED ../../tests/runtime/test_ci_readonly.py::test_ci_rejects_formatting_defects_without_rewriting_source[ci-quiet-identity] - AssertionError: 
+assert 0 != 0
+ +  where 0 = CompletedProcess(args=('/Users/flo/.local/share/mise/shims/just', '--justfile', '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-4315/test_ci_rejects_formatting_def1/identity/justfile', 'ci-quiet'), returncode=0, stdout='', stderr='').returncode
+======================= 2 failed, 33 deselected in 0.45s =======================

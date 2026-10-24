@@ -48,7 +48,8 @@ def writer(tmp_path: Path) -> Iterator[DbWriter]:
         db_path=str(tmp_path / "native-write-boundary.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        current_task_board_caller_kid=_BOARD_KID,
     )
     yield value
     value.close()
@@ -332,6 +333,7 @@ def test_native_bid_command_still_completes_and_replays(writer: DbWriter) -> Non
         clock_us=lambda: _NOW_US,
         deadline_actor_id="system-task-board-deadline",
         platform_public_key="ed25519:test-platform-authority",
+        current_task_board_caller_kid=_BOARD_KID,
     )
 
     completed = native.claim_operation(request, _BOARD_KID)

@@ -89,8 +89,8 @@ help:
     @printf "  \033[0;37mjust generate-tasks    \033[0;34m Generate math tasks to data/math_tasks.jsonl\033[0m\n"
     @echo ""
     @printf "\033[1;33mDemo\033[0m\n"
-    @printf "  \033[0;37mjust demo             \033[0;34m Run quick demo (3 agents, ~25s)\033[0m\n"
-    @printf "  \033[0;37mjust demo-scale       \033[0;34m Run scaled demo (10 agents, ~60s)\033[0m\n"
+    @printf "  \033[0;37mjust demo <run-id>    \033[0;34m Run quick demo (3 agents, ~25s)\033[0m\n"
+    @printf "  \033[0;37mjust demo-scale <run-id>\033[0;34m Run scaled demo (10 agents, ~60s)\033[0m\n"
     @echo ""
     @printf "\033[1;33mCI & Code Quality\033[0m\n"
     @printf "  \033[0;37mjust test-all         \033[0;34m Run tests for all services\033[0m\n"
@@ -100,6 +100,7 @@ help:
     @printf "  \033[0;37mjust ci               \033[0;34m Run ALL CI checks (services, agents, tools, integration, e2e)\033[0m\n"
     @printf "  \033[0;37mjust ci-quiet         \033[0;34m Run ALL CI checks quietly\033[0m\n"
     @printf "  \033[0;37mjust ci-service <svc> \033[0;34m Run CI checks for a specific service\033[0m\n"
+    @printf "  \033[0;37mjust code-semgrep-path-policy\033[0;34m Enforce inherited PATH in first-party code\033[0m\n"
     @printf "  \033[0;37mjust ci-quiet-hook    \033[0;34m CI hook for Claude Code (blocks git commit if CI fails)\033[0m\n"
     @printf "  \033[0;37mjust format-all       \033[0;34m Auto-format all services\033[0m\n"
     @printf "  \033[0;37mjust test-integration \033[0;34m Run cross-service integration tests\033[0m\n"
@@ -550,123 +551,13 @@ generate-tasks:
 
 # --- Demo ---
 
-# Run quick demo (3 agents, 1 task lifecycle + 1 dispute, ~25s)
-demo:
-    #!/usr/bin/env bash
-    root="$(pwd)"
-    printf "\n"
-    printf "\033[0;34m=== Quick Demo ===\033[0m\n"
-    printf "\n"
+# Run or resume the quick scenario against the existing stack
+demo run_id:
+    cd tools && uv run python -m demo_replay scenarios/quick.yaml --run-id {{quote(run_id)}}
 
-    # Check if any services are already running and stop them
-    ports=({{port_identity}} {{port_central_bank}} {{port_task_board}} {{port_reputation}} {{port_court}} {{port_db_gateway}} {{port_ui}})
-    running=0
-    for port in "${ports[@]}"; do
-        if lsof -ti :"$port" -sTCP:LISTEN >/dev/null 2>&1; then
-            running=1
-            break
-        fi
-    done
-    if [ "$running" -eq 1 ]; then
-        printf "Stopping running services...\n"
-        just stop-all
-    fi
-
-    printf "Wiping databases...\n"
-    rm -f data/economy.db data/economy.db-wal data/economy.db-shm
-    for svc in services/*/; do
-        rm -f "$svc"data/*.db "$svc"data/*.db-wal "$svc"data/*.db-shm
-    done
-
-    printf "Starting services...\n"
-    just start-all
-
-    # Open UI in browser so user can watch the replay live
-    printf "Opening UI in browser...\n"
-    if command -v open >/dev/null 2>&1; then
-        open "http://localhost:{{port_ui}}"
-    elif command -v xdg-open >/dev/null 2>&1; then
-        xdg-open "http://localhost:{{port_ui}}"
-    fi
-    sleep 1
-
-    printf "\n"
-    printf "\033[0;34m--- Running quick scenario ---\033[0m\n"
-    printf "\n"
-    cd tools && uv run python -m demo_replay scenarios/quick.yaml
-    exit_code=$?
-    cd "$root"
-
-    printf "\n"
-    if [ $exit_code -eq 0 ]; then
-        printf "\033[0;32m✓ Demo complete — UI at http://localhost:{{port_ui}}\033[0m\n"
-    else
-        printf "\033[0;31m✗ Demo failed (exit code: %d)\033[0m\n" "$exit_code"
-    fi
-    printf "\n"
-    printf "\033[0;33mPress Enter to stop all services...\033[0m"
-    read -r
-    just stop-all
-    printf "\n"
-
-# Run scaled demo (10 agents, multiple task waves, ~60s)
-demo-scale:
-    #!/usr/bin/env bash
-    root="$(pwd)"
-    printf "\n"
-    printf "\033[0;34m=== Scaled Economy Demo ===\033[0m\n"
-    printf "\n"
-
-    # Check if any services are already running and stop them
-    ports=({{port_identity}} {{port_central_bank}} {{port_task_board}} {{port_reputation}} {{port_court}} {{port_db_gateway}} {{port_ui}})
-    running=0
-    for port in "${ports[@]}"; do
-        if lsof -ti :"$port" -sTCP:LISTEN >/dev/null 2>&1; then
-            running=1
-            break
-        fi
-    done
-    if [ "$running" -eq 1 ]; then
-        printf "Stopping running services...\n"
-        just stop-all
-    fi
-
-    printf "Wiping databases...\n"
-    rm -f data/economy.db data/economy.db-wal data/economy.db-shm
-    for svc in services/*/; do
-        rm -f "$svc"data/*.db "$svc"data/*.db-wal "$svc"data/*.db-shm
-    done
-
-    printf "Starting services...\n"
-    just start-all
-
-    # Open UI in browser so user can watch the replay live
-    printf "Opening UI in browser...\n"
-    if command -v open >/dev/null 2>&1; then
-        open "http://localhost:{{port_ui}}"
-    elif command -v xdg-open >/dev/null 2>&1; then
-        xdg-open "http://localhost:{{port_ui}}"
-    fi
-    sleep 1
-
-    printf "\n"
-    printf "\033[0;34m--- Running scale scenario ---\033[0m\n"
-    printf "\n"
-    cd tools && uv run python -m demo_replay scenarios/scale.yaml
-    exit_code=$?
-    cd "$root"
-
-    printf "\n"
-    if [ $exit_code -eq 0 ]; then
-        printf "\033[0;32m✓ Demo complete — UI at http://localhost:{{port_ui}}\033[0m\n"
-    else
-        printf "\033[0;31m✗ Demo failed (exit code: %d)\033[0m\n" "$exit_code"
-    fi
-    printf "\n"
-    printf "\033[0;33mPress Enter to stop all services...\033[0m"
-    read -r
-    just stop-all
-    printf "\n"
+# Run or resume the scale scenario against the existing stack
+demo-scale run_id:
+    cd tools && uv run python -m demo_replay scenarios/scale.yaml --run-id {{quote(run_id)}}
 
 # --- CI & Code Quality ---
 
@@ -762,6 +653,60 @@ ci-service service:
     cd services/{{service}} && just ci
     @echo ""
 
+# Test and enforce the repository-wide inherited-PATH policy
+code-semgrep-path-policy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    root="$(pwd)"
+    verification_root="${TMPDIR:?TMPDIR must name writable verification storage}/agent-economy-semgrep"
+    mkdir -p "$verification_root/config" "$verification_root/cache" "$verification_root/uv-cache"
+    if [ -r /etc/ssl/cert.pem ]; then
+        ca_bundle=/etc/ssl/cert.pem
+    elif [ -r /etc/ssl/certs/ca-certificates.crt ]; then
+        ca_bundle=/etc/ssl/certs/ca-certificates.crt
+    else
+        printf 'Semgrep requires a readable system CA bundle.\n' >&2
+        exit 1
+    fi
+    semgrep=(
+        uv run --project "$root/services/db-gateway" --all-extras --frozen
+        semgrep --metrics off
+    )
+    semgrep_environment=(
+        "TMPDIR=$TMPDIR"
+        "UV_CACHE_DIR=$verification_root/uv-cache"
+        "XDG_CONFIG_HOME=$verification_root/config"
+        "XDG_CACHE_HOME=$verification_root/cache"
+        "SEMGREP_SETTINGS_FILE=$verification_root/settings.yml"
+        "SEMGREP_LOG_FILE=$verification_root/semgrep.log"
+        "SEMGREP_SEND_METRICS=off"
+        "SEMGREP_ENABLE_VERSION_CHECK=0"
+        "SSL_CERT_FILE=$ca_bundle"
+    )
+
+    for fixture in \
+        "$root/config/semgrep/tests/no-path-overrides/python.py" \
+        "$root/config/semgrep/tests/no-path-overrides/shell.sh"; do
+        env "${semgrep_environment[@]}" "${semgrep[@]}" --test \
+            --config "$root/config/semgrep/no-path-overrides.yml" "$fixture"
+    done
+
+    targets=(
+        "$root/agents"
+        "$root/libs"
+        "$root/services"
+        "$root/tools"
+        "$root/tests"
+        "$root/scripts"
+        "$root/.githooks"
+    )
+    env "${semgrep_environment[@]}" "${semgrep[@]}" \
+        --config "$root/config/semgrep/no-path-overrides.yml" --error --no-git-ignore \
+        --exclude '**/.venv/**' --exclude '**/node_modules/**' \
+        --exclude '**/build/**' --exclude '**/dist/**' \
+        --exclude '**/__pycache__/**' "${targets[@]}"
+    printf '\033[0;32m✓ Repository PATH policy passed\033[0m\n'
+
 # Run ALL CI checks: services, agents, tools, cross-service integration tests, e2e tests
 ci:
     #!/usr/bin/env bash
@@ -774,6 +719,9 @@ ci:
     # Phase 0: Project structure checks
     printf "\033[0;34m--- Phase 0: Project structure ---\033[0m\n"
     cd "$root" && just test-project-structure
+
+    printf "\033[0;34m--- Phase 0b: Repository PATH policy ---\033[0m\n"
+    cd "$root" && just code-semgrep-path-policy
 
     # Phase 1: Libs CI (format, lint, types, security, spell, unit tests)
     printf "\033[0;34m--- Phase 1: Libs CI ---\033[0m\n"
@@ -833,6 +781,9 @@ ci-quiet:
     # Phase 0: Project structure checks
     printf "\033[0;34m--- Phase 0: Project structure ---\033[0m\n"
     cd "$root" && just test-project-structure
+
+    printf "\033[0;34m--- Phase 0b: Repository PATH policy ---\033[0m\n"
+    cd "$root" && just code-semgrep-path-policy
 
     # Phase 1: Libs CI
     printf "\033[0;34m--- Phase 1: Libs CI ---\033[0m\n"

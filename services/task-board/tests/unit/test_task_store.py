@@ -51,7 +51,7 @@ def store(tmp_path: Path) -> Iterator[GatewayTaskStore]:
         db_path=tmp_path / "task-board.db",
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
         caller_kid="gateway-task-board",
         authority=BoardAuthority(
             platform_public_key=platform_public_key,
@@ -203,7 +203,7 @@ def test_task_crud_and_counts(store: GatewayTaskStore) -> None:
     assert task["status"] == "open"
 
     _accept_task(store, _TASK_1, "bid-task-1")
-    store.insert_asset(_asset_data(_TASK_1))
+    store.insert_asset(_asset_data(_TASK_1), expected_lifecycle_version=1, max_files_per_task=10)
     changed = store.claim_task_operation(
         _command(
             task_id=_TASK_1,
@@ -269,7 +269,7 @@ def test_asset_operations(store: GatewayTaskStore) -> None:
     """Asset insert/get/list/count works for the accepted worker's task."""
     _create_task(store, _TASK_1)
     _accept_task(store, _TASK_1, "bid-1")
-    store.insert_asset(_asset_data(_TASK_1))
+    store.insert_asset(_asset_data(_TASK_1), expected_lifecycle_version=1, max_files_per_task=10)
 
     asset = store.get_asset("asset-1", _TASK_1)
     assert asset is not None

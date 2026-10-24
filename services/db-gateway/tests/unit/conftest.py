@@ -36,6 +36,7 @@ def db_writer(initialized_db: str) -> Iterator[DbWriter]:
         busy_timeout_ms=5000,
         journal_mode="wal",
         schema_sql=None,
+        current_task_board_caller_kid="gateway-task-board",  # type: ignore[call-arg]
     )
     yield writer
     writer.close()
@@ -155,6 +156,16 @@ recovery:
 board_authority:
   platform_public_key_path: "platform.pub"
   deadline_actor_id: "system-task-board-deadline"
+
+board_effect_recovery:
+  current_task_board_caller_kid: "gateway-task-board"
+  max_attempts_per_delivery: 8
+  initial_backoff_seconds: 2
+  max_backoff_seconds: 60
+  lease_duration_seconds: 45
+  evidence_interval_seconds: 60
+  gateway_timeout_seconds: 10
+  bank_timeout_seconds: 10
 
 auth:
   audience: "db-gateway"

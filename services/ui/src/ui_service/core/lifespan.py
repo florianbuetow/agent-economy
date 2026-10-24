@@ -42,6 +42,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 config_path = Path.cwd() / config_path
             factory = AgentFactory(config_path=config_path.resolve())
             user_agent = factory.user_agent(settings.user_agent.handle)
+            state.task_board_reader = user_agent
 
             db_uri = f"file:{settings.database.path}?mode=ro"
             try:

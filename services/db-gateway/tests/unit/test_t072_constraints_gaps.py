@@ -189,6 +189,11 @@ class TestCas09AssetCrossTableConstraint:
         response = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": f"asset-{uuid4()}",
                 "task_id": graph.task_id,
                 "uploader_id": uploader_id,
@@ -371,6 +376,11 @@ class TestCas11InvalidConstraintsType:
         response = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": f"asset-{uuid4()}",
                 "task_id": graph.task_id,
                 "uploader_id": uploader_id,

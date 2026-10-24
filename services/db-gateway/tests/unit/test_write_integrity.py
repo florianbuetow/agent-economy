@@ -480,6 +480,7 @@ def _open_writer(db_path: str, schema_sql: str | None) -> Iterator[DbWriter]:
         busy_timeout_ms=BUSY_TIMEOUT_MS,
         journal_mode=JOURNAL_MODE,
         schema_sql=schema_sql,
+        current_task_board_caller_kid="gateway-task-board",
     )
     yield writer
     writer.close()

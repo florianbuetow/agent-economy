@@ -141,7 +141,9 @@ async def test_acceptance_replay_retains_original_operation_after_submission(
             "storage_path": f"assets/{setup.task_id}/accepted-work.txt",
             "content_hash": "a" * 64,
             "uploaded_at": "2026-10-17T09:00:05Z",
-        }
+        },
+        expected_lifecycle_version=1,
+        max_files_per_task=10,
     )
     submit_operation = store.claim_task_operation(
         {

@@ -131,6 +131,39 @@ def _submit_bid(
     return bid
 
 
+def _accept_task(
+    client: TestClient,
+    *,
+    task_id: str,
+    poster_id: str,
+    escrow_id: str,
+    worker_id: str,
+    bid_id: str,
+) -> None:
+    response = client.post(
+        "/board/task-operations",
+        json={
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid4()}",
+            "task_id": task_id,
+            "command": "accept_bid",
+            "expected_status": "open",
+            "expected_lifecycle_version": 0,
+            "actor_kind": "agent",
+            "actor_id": poster_id,
+            "arguments": {
+                "bid_id": bid_id,
+                "worker_id": worker_id,
+                "escrow_id": escrow_id,
+                "reward": 100,
+                "bid_amount": 50,
+            },
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["operation_state"] == "completed"
+
+
 def _record_asset(
     client: TestClient,
     task_id: str,
@@ -142,6 +175,11 @@ def _record_asset(
     client.post(
         "/board/assets",
         json={
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": aid,
             "task_id": task_id,
             "uploader_id": uploader_id,
@@ -250,9 +288,19 @@ class TestBoardReads:
 
     def test_get_assets_for_task(self, app_with_writer: TestClient) -> None:
         """GET /board/tasks/{id}/assets returns assets."""
-        tid, pid, _eid = _create_task(app_with_writer)
-        _record_asset(app_with_writer, tid, pid, filename="file1.zip")
-        _record_asset(app_with_writer, tid, pid, filename="file2.zip")
+        tid, pid, eid = _create_task(app_with_writer)
+        worker_id = _register_agent(app_with_writer, name="Worker")
+        bid_id = _submit_bid(app_with_writer, tid, worker_id)
+        _accept_task(
+            app_with_writer,
+            task_id=tid,
+            poster_id=pid,
+            escrow_id=eid,
+            worker_id=worker_id,
+            bid_id=bid_id,
+        )
+        _record_asset(app_with_writer, tid, worker_id, filename="file1.zip")
+        _record_asset(app_with_writer, tid, worker_id, filename="file2.zip")
         _wire_db_reader()
 
         response = app_with_writer.get(f"/board/tasks/{tid}/assets")

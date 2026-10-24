@@ -26,7 +26,7 @@ JOURNAL_MODE = "wal"
 def _create_current_database(path: Path) -> None:
     connection = sqlite3.connect(path)
     try:
-        connection.executescript(load_schema_sql(SchemaState.CURRENT_V4))
+        connection.executescript(load_schema_sql(SchemaState.CURRENT_V5))
         connection.commit()
     finally:
         connection.close()
@@ -117,6 +117,7 @@ def test_existing_current_schema_rejects_corrupt_data_before_journal_change(
             busy_timeout_ms=BUSY_TIMEOUT_MS,
             journal_mode=JOURNAL_MODE,
             schema_sql=None,
+            current_task_board_caller_kid="gateway-task-board",
         )
 
     assert raised.value.error == "database_integrity_failed"
@@ -184,6 +185,7 @@ def test_health_check_database_error_is_safe_and_non_mutating(
             busy_timeout_ms=BUSY_TIMEOUT_MS,
             journal_mode=JOURNAL_MODE,
             schema_sql=None,
+            current_task_board_caller_kid="gateway-task-board",
         )
 
     assert raised.value.error == "database_integrity_failed"
@@ -205,7 +207,7 @@ def test_health_check_database_error_is_safe_and_non_mutating(
     try:
         assert check.execute("PRAGMA journal_mode").fetchone() == ("delete",)
         assert check.execute("SELECT * FROM schema_metadata").fetchall() == [
-            (1, 4, None, None, None)
+            (1, 5, None, None, None)
         ]
         assert check.execute("SELECT * FROM identity_agents").fetchall() == []
         assert check.execute("SELECT * FROM bank_accounts").fetchall() == []
@@ -222,6 +224,7 @@ def test_existing_healthy_current_schema_starts(tmp_path: Path) -> None:
         busy_timeout_ms=BUSY_TIMEOUT_MS,
         journal_mode=JOURNAL_MODE,
         schema_sql=None,
+        current_task_board_caller_kid="gateway-task-board",
     )
     writer.close()
 
@@ -231,7 +234,8 @@ def test_empty_database_bootstraps_and_passes_health_admission(tmp_path: Path) -
         db_path=str(tmp_path / "healthy-bootstrap.db"),
         busy_timeout_ms=BUSY_TIMEOUT_MS,
         journal_mode=JOURNAL_MODE,
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        current_task_board_caller_kid="gateway-task-board",
     )
     try:
         integrity_row = writer.connection.execute("PRAGMA integrity_check").fetchone()

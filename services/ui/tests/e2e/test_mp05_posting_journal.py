@@ -7,7 +7,6 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
-from service_auth.task_postings import TaskPostingIntent
 from mp05_posting_browser_fixtures import (
     COMPLETION_KEY,
     OPERATION_ID,
@@ -24,6 +23,7 @@ from mp05_posting_browser_fixtures import (
     observation,
     stored,
 )
+from service_auth.task_postings import TaskPostingIntent
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page, Route
@@ -62,9 +62,7 @@ def _route_protocol(
 
 def _click_post(page: Page) -> None:
     page.locator("#btn-post-task").click()
-    page.wait_for_function(
-        "() => document.getElementById('btn-post-task').disabled === false"
-    )
+    page.wait_for_function("() => document.getElementById('btn-post-task').disabled === false")
 
 
 def test_local_storage_round_trip_control(e2e_page: Page, e2e_server: str) -> None:
@@ -282,9 +280,7 @@ def test_form_edits_do_not_change_exact_retry_and_separate_action_allocates_new_
     assert e2e_page.get_by_text("Create separate posting", exact=False).count() == 1
     e2e_page.get_by_text("Retry exact intent", exact=False).click()
     e2e_page.get_by_text("Create separate posting", exact=False).click()
-    e2e_page.wait_for_function(
-        "() => document.getElementById('btn-post-task').disabled === false"
-    )
+    e2e_page.wait_for_function("() => document.getElementById('btn-post-task').disabled === false")
 
     trace = events(e2e_page)
     submit_bodies = [

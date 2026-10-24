@@ -62,7 +62,8 @@ def v3_writer(tmp_path: Path) -> Iterator[DbWriter]:
         db_path=str(tmp_path / "operation-regressions.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V4),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        current_task_board_caller_kid=_BOARD_KID,
     )
     yield writer
     writer.close()
@@ -74,6 +75,7 @@ def _native(writer: DbWriter) -> TaskOperationWriter:
         clock_us=lambda: _NOW_US,
         deadline_actor_id=_DEADLINE_ACTOR,
         platform_public_key="ed25519:test-platform",
+        current_task_board_caller_kid=_BOARD_KID,
     )
 
 
@@ -226,6 +228,11 @@ def _advance_to_submitted(writer: DbWriter, graph: _Graph) -> None:
     assert accept["operation_state"] == "completed"
     writer.record_asset(
         {
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": f"asset-{uuid4()}",
             "task_id": graph.task_id,
             "uploader_id": graph.worker_id,

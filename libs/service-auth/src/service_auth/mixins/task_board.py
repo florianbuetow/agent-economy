@@ -23,16 +23,6 @@ if TYPE_CHECKING:
 
     from service_auth.config import AgentConfig
 
-_MAX_DURATION_SECONDS = SQLITE_MAX_INTEGER // 1_000_000
-
-
-def _acceptance_window(value: int) -> int:
-    if type(value) is not int or not 1 <= value <= _MAX_DURATION_SECONDS:
-        raise ValueError(
-            "acceptance_window_seconds must be a positive SQLite-safe integer duration"
-        )
-    return value
-
 
 def _operation_identity(operation_id: str, expected_lifecycle_version: int) -> tuple[str, int]:
     validated_id = validate_operation_id(operation_id)
@@ -181,57 +171,6 @@ class TaskBoardMixin:
             ),
         )
         return parse_task_posting_status_response(response, validated_operation_id)
-
-    async def post_task(
-        self: _TaskBoardClient,
-        title: str,
-        spec: str,
-        reward: int,
-        bidding_deadline_seconds: int,
-        execution_deadline_seconds: int,
-        review_deadline_seconds: int,
-        *,
-        acceptance_window_seconds: int,
-    ) -> dict[str, Any]:
-        """Post a new task to the Task Board."""
-        window_seconds = _acceptance_window(acceptance_window_seconds)
-        poster_id = self.agent_id
-        if poster_id is None:
-            raise RuntimeError("Agent must be registered before signing")
-        url = f"{self.config.task_board_url}/tasks"
-        task_id = f"t-{uuid.uuid4()}"
-        task_token = self._sign_jws(
-            {
-                "action": "create_task",
-                "task_id": task_id,
-                "poster_id": poster_id,
-                "title": title,
-                "spec": spec,
-                "reward": reward,
-                "bidding_deadline_seconds": bidding_deadline_seconds,
-                "acceptance_window_seconds": window_seconds,
-                "execution_deadline_seconds": execution_deadline_seconds,
-                "review_deadline_seconds": review_deadline_seconds,
-            },
-            audience="task-board",
-            resource="POST /tasks",
-        )
-        escrow_token = self._sign_jws(
-            {
-                "action": "escrow_lock",
-                "operation_id": operation_id_for("task-lock", (task_id, poster_id)),
-                "task_id": task_id,
-                "amount": reward,
-                "agent_id": poster_id,
-            },
-            audience="central-bank",
-            resource="POST /escrow/lock",
-        )
-        return await self._request(
-            "POST",
-            url,
-            json={"task_token": task_token, "escrow_token": escrow_token},
-        )
 
     async def list_tasks(
         self: _TaskBoardClient,

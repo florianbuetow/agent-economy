@@ -47,6 +47,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 busy_timeout_ms=settings.database.busy_timeout_ms,
                 journal_mode=settings.database.journal_mode,
                 schema_sql=schema_sql,
+                current_task_board_caller_kid=(
+                    settings.board_effect_recovery.current_task_board_caller_kid
+                ),
             )
             state.db_writer = db_writer
             state.db_reader = DbReader(db=db_writer.connection)

@@ -45,7 +45,9 @@ def blocked_template(tmp_path_factory: pytest.TempPathFactory) -> _BlockedTempla
     root = tmp_path_factory.mktemp("mp05-legacy-block-diagnostic")
     source, history = _migrated_pending_source(root)
     observation_id = _observation_id(source.database, history.pending_orphans[0].escrow_id)
-    writer = DbWriter(str(source.database), 5000, "wal", None)
+    writer = DbWriter(
+        str(source.database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+    )
     try:
         _persist_conflicting_refund(writer, observation_id, "foreign_party")
         assert audit_money(writer.connection).financially_clean
@@ -166,7 +168,9 @@ def _assert_audit_and_startup_reject(database: Path) -> None:
     writer: DbWriter | None = None
     startup_error: ServiceError | None = None
     try:
-        writer = DbWriter(str(database), 5000, "wal", None)
+        writer = DbWriter(
+            str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+        )
     except ServiceError as exc:
         startup_error = exc
     finally:
@@ -184,7 +188,9 @@ def _assert_audit_and_startup_accept(database: Path) -> None:
         assert result.publications_clean, result.findings
     finally:
         connection.close()
-    writer = DbWriter(str(database), 5000, "wal", None)
+    writer = DbWriter(
+        str(database), 5000, "wal", None, current_task_board_caller_kid="gateway-task-board"
+    )
     writer.close()
 
 

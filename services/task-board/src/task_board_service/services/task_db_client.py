@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 from pydantic import ValidationError
@@ -16,6 +16,12 @@ from service_auth.task_postings import (
 )
 from service_commons.exceptions import ServiceError
 
+from task_board_service.effect_recovery_contract import (
+    DiagnosticEnvelope,
+    EffectDeliveryDiagnostic,
+    parse_lease_envelope,
+    validate_recovery_worker_id,
+)
 from task_board_service.posting_recovery_contract import (
     validate_legacy_blocked_wrapper,
     validate_legacy_observation_id,
@@ -23,7 +29,8 @@ from task_board_service.posting_recovery_contract import (
     validate_recovery_page,
     validate_recovery_request,
 )
-from task_board_service.services.errors import DuplicateBidError
+from task_board_service.services.errors import AssetInsertRejectedError, DuplicateBidError
+from task_board_service.services.protocol import RecoveryFinalizeResponse
 from task_board_service.task_contract_projection import (
     GatewayBid,
     TaskContractProjection,
@@ -40,11 +47,16 @@ from task_board_service.task_operation_contract import (
 if TYPE_CHECKING:
     from service_auth.gateway import GatewayRequestSigner
 
+    from task_board_service.services.financial_effect_recovery import RecoveryFinalizeResult
+
 # Re-exported so callers outside the HTTP-client boundary (e.g. the deadline
 # evaluator's platform-signed ruling trigger, GAP-A1) can catch transport errors
 # from other services without importing httpx directly; only *DbClient modules
 # are permitted to do that (tests/architecture/test_db_client_isolation.py).
 PlatformHttpError = httpx.HTTPError
+PlatformHttpTimeoutError = httpx.TimeoutException
+
+_DEFINITE_ASSET_INSERT_REJECTION_STATUSES = frozenset({400, 401, 403, 404, 409, 410, 413, 415, 422})
 
 _LIFECYCLE_EVENTS_BY_STATUS: dict[str, str] = {
     "accepted": "task.accepted",
@@ -55,6 +67,19 @@ _LIFECYCLE_EVENTS_BY_STATUS: dict[str, str] = {
     "cancelled": "task.cancelled",
     "expired": "task.expired",
 }
+
+_DELIVERY_STATES = frozenset(
+    {"all", "pending", "leased", "dead_letter", "completed", "integrity_blocked"}
+)
+_WORKER_FAILURE_CODES = frozenset(
+    {
+        "central_bank_unavailable",
+        "gateway_unavailable",
+        "invalid_gateway_response",
+        "request_timeout",
+        "unexpected_recovery_error",
+    }
+)
 
 
 class TaskDbClient:
@@ -117,6 +142,8 @@ class TaskDbClient:
         private_publication_read = method == "GET" and (
             path.startswith("/board/task-publications/")
             or path.startswith("/board/posting-recovery")
+            or path.startswith("/board/legacy-posting-observations/")
+            or path.startswith("/board/task-effect-deliveries")
         )
         action = (
             "gateway.board.write"
@@ -303,6 +330,22 @@ class TaskDbClient:
             limit=validated_limit,
         )
 
+    def get_legacy_posting_observation(self, observation_id: str) -> dict[str, Any]:
+        """Read persisted legacy refund diagnostics without reconciliation."""
+        validated_id = validate_legacy_observation_id(observation_id)
+        response = self._request(
+            "GET",
+            f"/board/legacy-posting-observations/{validated_id}",
+            json=None,
+            params=None,
+        )
+        if response.status_code != 200:
+            self._raise_gateway_error(response)
+        return validate_legacy_posting_envelope(
+            self._strict_json(response),
+            expected_observation_id=validated_id,
+        )
+
     def reconcile_legacy_posting_observation(self, observation_id: str) -> dict[str, Any]:
         """Reconcile one stored legacy refund intent without accepting fresh terms."""
         validated_id = validate_legacy_observation_id(observation_id)
@@ -359,6 +402,229 @@ class TaskDbClient:
             status_code=response.status_code,
             operation_id=validated_id,
             command=None,
+        )
+
+    @staticmethod
+    def _validate_effect_diagnostic(
+        value: object,
+        *,
+        effect_operation_id: str,
+        expected_states: frozenset[str],
+    ) -> dict[str, Any]:
+        try:
+            envelope = DiagnosticEnvelope.model_validate(value)
+        except (ValidationError, ValueError, TypeError, UnicodeError) as exc:
+            raise invalid_gateway_response() from exc
+        diagnostic = envelope.delivery
+        if (
+            diagnostic.effect_operation_id != effect_operation_id
+            or diagnostic.delivery_state not in expected_states
+        ):
+            raise invalid_gateway_response()
+        return envelope.model_dump()
+
+    def lease_task_effect_delivery(self, worker_id: str) -> dict[str, Any]:
+        """Lease at most one due delivery for the exact recovery process identity."""
+        try:
+            validated_worker_id = validate_recovery_worker_id(worker_id)
+        except ValueError as exc:
+            raise ServiceError("invalid_payload", str(exc), 400, {}) from exc
+        response = self._request(
+            "POST",
+            "/board/task-effect-deliveries/lease",
+            json={"protocol_version": 1, "worker_id": validated_worker_id},
+            params=None,
+        )
+        if response.status_code != 200:
+            self._raise_gateway_error(response)
+        body = self._strict_json(response)
+        envelope = parse_lease_envelope(body)
+        if envelope.delivery is not None and envelope.delivery.worker_id != validated_worker_id:
+            raise invalid_gateway_response()
+        return body
+
+    def finalize_task_effect_delivery(self, effect_operation_id: str) -> dict[str, Any]:
+        """Adopt exact native receipt evidence through one atomic diagnostic route."""
+        validated_id = validate_operation_id(effect_operation_id)
+        response = self._request(
+            "POST",
+            f"/board/task-effect-deliveries/{validated_id}/finalize",
+            json={},
+            params=None,
+        )
+        if response.status_code not in {200, 202}:
+            self._raise_gateway_error(response)
+        expected_states = (
+            frozenset({"completed"})
+            if response.status_code == 200
+            else frozenset({"pending", "leased", "dead_letter"})
+        )
+        return self._validate_effect_diagnostic(
+            self._strict_json(response),
+            effect_operation_id=validated_id,
+            expected_states=expected_states,
+        )
+
+    def finalize_legacy_effect_observation(
+        self,
+        observation_id: str,
+    ) -> RecoveryFinalizeResult:
+        """Adopt one supported legacy settlement receipt without a native command."""
+        validated_observation_id = validate_legacy_observation_id(observation_id)
+        response = self._request(
+            "POST",
+            f"/board/legacy-effect-observations/{validated_observation_id}/finalize",
+            json={},
+            params=None,
+        )
+        if response.status_code not in {200, 202}:
+            self._raise_gateway_error(response)
+        try:
+            envelope = DiagnosticEnvelope.model_validate(self._strict_json(response))
+        except (ValidationError, ValueError, TypeError, UnicodeError) as exc:
+            raise invalid_gateway_response() from exc
+        expected_states = (
+            frozenset({"completed"})
+            if response.status_code == 200
+            else frozenset({"pending", "leased", "dead_letter"})
+        )
+        if (
+            envelope.delivery.source_kind != "legacy_settlement_observation"
+            or envelope.delivery.source_id != validated_observation_id
+            or envelope.delivery.delivery_state not in expected_states
+        ):
+            raise invalid_gateway_response()
+        return cast(
+            "RecoveryFinalizeResult",
+            RecoveryFinalizeResponse(
+                status_code=response.status_code,
+                body=envelope.model_dump(),
+            ),
+        )
+
+    def fail_task_effect_delivery(
+        self,
+        effect_operation_id: str,
+        lease_generation: int,
+        worker_id: str,
+        error_code: str,
+    ) -> dict[str, Any]:
+        """Report one fenced worker failure using the finite public code set."""
+        validated_id = validate_operation_id(effect_operation_id)
+        if type(lease_generation) is not int or lease_generation <= 0:
+            raise ServiceError(
+                "invalid_payload", "lease_generation must be a positive integer", 400, {}
+            )
+        try:
+            validated_worker_id = validate_recovery_worker_id(worker_id)
+        except ValueError as exc:
+            raise ServiceError("invalid_payload", str(exc), 400, {}) from exc
+        if error_code not in _WORKER_FAILURE_CODES:
+            raise ServiceError("invalid_payload", "error_code is not worker-reportable", 400, {})
+        response = self._request(
+            "POST",
+            f"/board/task-effect-deliveries/{validated_id}/attempts/{lease_generation}/fail",
+            json={
+                "protocol_version": 1,
+                "worker_id": validated_worker_id,
+                "error_code": error_code,
+            },
+            params=None,
+        )
+        if response.status_code != 200:
+            self._raise_gateway_error(response)
+        return self._validate_effect_diagnostic(
+            self._strict_json(response),
+            effect_operation_id=validated_id,
+            expected_states=frozenset({"pending", "dead_letter", "completed"}),
+        )
+
+    def get_task_effect_delivery(self, effect_operation_id: str) -> dict[str, Any]:
+        """Read one strict protected scheduling diagnostic."""
+        validated_id = validate_operation_id(effect_operation_id)
+        response = self._request(
+            "GET",
+            f"/board/task-effect-deliveries/{validated_id}",
+            json=None,
+            params=None,
+        )
+        if response.status_code != 200:
+            self._raise_gateway_error(response)
+        return self._validate_effect_diagnostic(
+            self._strict_json(response),
+            effect_operation_id=validated_id,
+            expected_states=frozenset(_DELIVERY_STATES - {"all"}),
+        )
+
+    def list_task_effect_deliveries(
+        self,
+        state: str,
+        after: str,
+        limit: int,
+    ) -> dict[str, Any]:
+        """Read one strict, bounded page of protected scheduling diagnostics."""
+        if state not in _DELIVERY_STATES:
+            raise ServiceError("invalid_payload", "state is invalid", 400, {})
+        if after:
+            validate_operation_id(after)
+        if type(limit) is not int or not 1 <= limit <= 1000:
+            raise ServiceError("invalid_payload", "limit must be an integer in 1..1000", 400, {})
+        response = self._request(
+            "GET",
+            "/board/task-effect-deliveries",
+            json=None,
+            params={"state": state, "after": after, "limit": limit},
+        )
+        if response.status_code != 200:
+            self._raise_gateway_error(response)
+        body = self._strict_json(response)
+        if set(body) != {"protocol_version", "items", "next_after"}:
+            raise invalid_gateway_response()
+        protocol_version = body.get("protocol_version")
+        if (
+            type(protocol_version) is not int
+            or protocol_version != 1
+            or not isinstance(body.get("items"), list)
+        ):
+            raise invalid_gateway_response()
+        items: list[dict[str, Any]] = []
+        try:
+            for item in body["items"]:
+                diagnostic = EffectDeliveryDiagnostic.model_validate(item)
+                if state not in {"all", diagnostic.delivery_state}:
+                    raise ValueError("Gateway page contains a delivery outside its state filter")
+                items.append(diagnostic.model_dump())
+            operation_ids = [str(item["effect_operation_id"]) for item in items]
+            if operation_ids != sorted(set(operation_ids)):
+                raise ValueError("Gateway page is not strictly ordered")
+            if after and any(operation_id <= after for operation_id in operation_ids):
+                raise ValueError("Gateway page did not honor its exclusive cursor")
+            next_after = body["next_after"]
+            if next_after is not None:
+                next_after = validate_operation_id(next_after)
+                if len(items) != limit or next_after != items[-1]["effect_operation_id"]:
+                    raise ValueError("Page cursor does not match the final item")
+            if len(items) > limit:
+                raise ValueError("Gateway page exceeds the requested limit")
+        except (ValidationError, ServiceError, ValueError, TypeError, UnicodeError) as exc:
+            raise invalid_gateway_response() from exc
+        return {"protocol_version": 1, "items": items, "next_after": next_after}
+
+    def retry_task_effect_delivery(self, effect_operation_id: str) -> dict[str, Any]:
+        """Requeue one dead letter without changing its immutable financial identity."""
+        validated_id = validate_operation_id(effect_operation_id)
+        response = self._request(
+            "POST",
+            f"/board/task-effect-deliveries/{validated_id}/retry",
+            json={},
+            params=None,
+        )
+        if response.status_code != 200:
+            self._raise_gateway_error(response)
+        return self._validate_effect_diagnostic(
+            self._strict_json(response),
+            effect_operation_id=validated_id,
+            expected_states=frozenset({"pending"}),
         )
 
     def _event_type_for_updates(self, updates: dict[str, Any]) -> str:
@@ -525,11 +791,21 @@ class TaskDbClient:
             bids.append(bid.model_dump(exclude={"proposal"}))
         return bids
 
-    def insert_asset(self, asset_data: dict[str, Any]) -> None:
+    def insert_asset(
+        self,
+        asset_data: dict[str, Any],
+        *,
+        expected_lifecycle_version: int,
+        max_files_per_task: int,
+    ) -> None:
         task_id = str(asset_data["task_id"])
         asset_id = str(asset_data["asset_id"])
         filename = str(asset_data["filename"])
-        storage_path = str(asset_data.get("storage_path", f"{task_id}/{asset_id}/{filename}"))
+        storage_path_value = asset_data.get("storage_path")
+        if not isinstance(storage_path_value, str) or not storage_path_value.strip():
+            msg = "storage_path must be a non-blank string"
+            raise ValueError(msg)
+        storage_path = storage_path_value
         payload: dict[str, Any] = {
             "asset_id": asset_id,
             "task_id": task_id,
@@ -540,6 +816,11 @@ class TaskDbClient:
             "storage_path": storage_path,
             "content_hash": asset_data.get("content_hash"),
             "uploaded_at": asset_data["uploaded_at"],
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": expected_lifecycle_version,
+                "max_files_per_task": max_files_per_task,
+            },
             "event": self._build_event(
                 event_type="asset.uploaded",
                 summary=f"Asset uploaded for task {task_id}: {filename}",
@@ -550,9 +831,23 @@ class TaskDbClient:
         }
 
         response = self._request("POST", "/board/assets", json=payload, params=None)
-        if response.status_code == 409:
-            msg = "Asset with this asset_id already exists"
-            raise RuntimeError(msg)
+        if response.status_code in _DEFINITE_ASSET_INSERT_REJECTION_STATUSES:
+            try:
+                error = GatewayError.model_validate(self._strict_json(response))
+            except (ServiceError, ValidationError):
+                raise AssetInsertRejectedError(
+                    response.status_code,
+                    None,
+                    f"Gateway definitively rejected asset metadata with HTTP "
+                    f"{response.status_code}",
+                    {},
+                ) from None
+            raise AssetInsertRejectedError(
+                response.status_code,
+                error.error,
+                error.message,
+                error.details,
+            )
         if response.status_code not in (200, 201):
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -575,6 +870,7 @@ class TaskDbClient:
             "filename": str(data["filename"]),
             "content_type": str(data["content_type"]),
             "size_bytes": int(data["size_bytes"]),
+            "storage_path": str(data["storage_path"]),
             "content_hash": (
                 str(data["content_hash"]) if data.get("content_hash") is not None else ""
             ),
@@ -620,4 +916,9 @@ class TaskDbClient:
         self._client.close()
 
 
-__all__ = ["TaskDbClient"]
+__all__ = [
+    "PlatformHttpError",
+    "PlatformHttpTimeoutError",
+    "RecoveryFinalizeResponse",
+    "TaskDbClient",
+]

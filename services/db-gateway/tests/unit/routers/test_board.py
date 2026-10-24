@@ -107,6 +107,17 @@ def _create_task(
     return actual_tid, pid, eid
 
 
+def _create_accepted_asset_task(client: TestClient) -> tuple[str, str]:
+    task_id, poster_id, escrow_id = _create_task(client)
+    worker_id = _register_agent(client, name="Worker")
+    graph = TaskGraph(task_id=task_id, poster_id=poster_id, escrow_id=escrow_id)
+    bid_id, bid = submit_bid(client, graph, worker_id, amount=50)
+    assert bid.status_code == 200, bid.text
+    accepted = accept_bid(client, graph, worker_id, bid_id, bid_amount=50)
+    assert accepted.status_code == 200, accepted.text
+    return task_id, worker_id
+
+
 def _cancel_command(graph: TaskGraph) -> dict[str, object]:
     """Build one valid native cancellation for structural-negative tests."""
     return operation_body(
@@ -1110,13 +1121,17 @@ class TestAssetRecording:
 
     def test_record_valid_asset(self, app_with_writer: TestClient) -> None:
         """ASSET-01: Record a valid asset returns 201 with asset_id and event_id."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        uploader = _register_agent(app_with_writer, name="Worker")
+        tid, uploader = _create_accepted_asset_task(app_with_writer)
         asset_id = f"asset-{uuid4()}"
 
         resp = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": asset_id,
                 "task_id": tid,
                 "uploader_id": uploader,
@@ -1136,13 +1151,17 @@ class TestAssetRecording:
 
     def test_duplicate_asset_id_rejected(self, app_with_writer: TestClient) -> None:
         """ASSET-02: Duplicate asset_id is rejected with 409 asset_exists."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        uploader = _register_agent(app_with_writer, name="Worker")
+        tid, uploader = _create_accepted_asset_task(app_with_writer)
         asset_id = f"asset-{uuid4()}"
 
         app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": asset_id,
                 "task_id": tid,
                 "uploader_id": uploader,
@@ -1158,6 +1177,11 @@ class TestAssetRecording:
         resp = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": asset_id,
                 "task_id": tid,
                 "uploader_id": uploader,
@@ -1172,14 +1196,19 @@ class TestAssetRecording:
         assert resp.status_code == 409
         assert resp.json()["error"] == "asset_exists"
 
-    def test_fk_violation_task_id(self, app_with_writer: TestClient) -> None:
-        """ASSET-03: Foreign key violation on task_id returns 409."""
+    def test_missing_task_rejected(self, app_with_writer: TestClient) -> None:
+        """ASSET-03: Missing task is rejected by asset admission."""
         uploader = _register_agent(app_with_writer)
         fake_task = f"t-{uuid4()}"
 
         resp = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": f"asset-{uuid4()}",
                 "task_id": fake_task,
                 "uploader_id": uploader,
@@ -1191,17 +1220,22 @@ class TestAssetRecording:
                 "event": make_event(source="board", event_type="asset.uploaded", task_id=fake_task),
             },
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"] == "foreign_key_violation"
+        assert resp.status_code == 404
+        assert resp.json()["error"] == "task_not_found"
 
-    def test_fk_violation_uploader_id(self, app_with_writer: TestClient) -> None:
-        """ASSET-04: Foreign key violation on uploader_id returns 409."""
-        tid, _pid, _eid = _create_task(app_with_writer)
+    def test_wrong_uploader_rejected(self, app_with_writer: TestClient) -> None:
+        """ASSET-04: A non-assigned uploader is forbidden."""
+        tid, _assigned_worker = _create_accepted_asset_task(app_with_writer)
         fake_uploader = f"a-{uuid4()}"
 
         resp = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": f"asset-{uuid4()}",
                 "task_id": tid,
                 "uploader_id": fake_uploader,
@@ -1213,8 +1247,8 @@ class TestAssetRecording:
                 "event": make_event(source="board", event_type="asset.uploaded", task_id=tid),
             },
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"] == "foreign_key_violation"
+        assert resp.status_code == 403
+        assert resp.json()["error"] == "forbidden"
 
     def test_missing_filename(self, app_with_writer: TestClient) -> None:
         """ASSET-05: Missing filename returns 400 missing_field."""
@@ -1224,6 +1258,11 @@ class TestAssetRecording:
         resp = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": f"asset-{uuid4()}",
                 "task_id": tid,
                 "uploader_id": uploader,
@@ -1246,6 +1285,11 @@ class TestAssetRecording:
         resp = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": f"asset-{uuid4()}",
                 "task_id": tid,
                 "uploader_id": uploader,
@@ -1262,12 +1306,16 @@ class TestAssetRecording:
 
     def test_multiple_assets_same_task(self, app_with_writer: TestClient) -> None:
         """ASSET-07: Multiple assets for the same task succeed."""
-        tid, _pid, _eid = _create_task(app_with_writer)
-        uploader = _register_agent(app_with_writer, name="Worker")
+        tid, uploader = _create_accepted_asset_task(app_with_writer)
 
         resp1 = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": f"asset-{uuid4()}",
                 "task_id": tid,
                 "uploader_id": uploader,
@@ -1282,6 +1330,11 @@ class TestAssetRecording:
         resp2 = app_with_writer.post(
             "/board/assets",
             json={
+                "admission": {
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": 1,
+                    "max_files_per_task": 10,
+                },
                 "asset_id": f"asset-{uuid4()}",
                 "task_id": tid,
                 "uploader_id": uploader,

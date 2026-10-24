@@ -13,7 +13,12 @@ from service_commons.exceptions import ServiceError
 
 from db_gateway_service import recovery
 from db_gateway_service.financial_requests import canonical_request
-from db_gateway_service.migration import migrate_v1_to_v2, migrate_v2_to_v3, migrate_v3_to_v4
+from db_gateway_service.migration import (
+    migrate_v1_to_v2,
+    migrate_v2_to_v3,
+    migrate_v3_to_v4,
+    migrate_v4_to_v5,
+)
 from db_gateway_service.schema import SchemaState, classify_schema
 from db_gateway_service.services.db_writer import DbWriter
 from tests.conftest import make_event
@@ -115,9 +120,26 @@ def _prepare_migrated_writer(
         busy_timeout_ms=5000,
     )
     assert publication_migration.observation == "committed_v4_verified"
-    writer = DbWriter(str(database), 5000, "wal", None)
+    effect_backup_id = f"effect-history-{uuid4()}"
+    publish_verified_backup(source, backup_id=effect_backup_id)
+    effect_migration = migrate_v4_to_v5(
+        source.inventory,
+        backup_root=backup_root,
+        backup_id=effect_backup_id,
+        work_root=work_root,
+        busy_timeout_ms=5000,
+        current_task_board_caller_kid=source.caller_kid,
+    )
+    assert effect_migration.observation == "committed_v5_verified"
+    writer = DbWriter(
+        str(database),
+        5000,
+        "wal",
+        None,
+        current_task_board_caller_kid="gateway-task-board",
+    )
     try:
-        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V4
+        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V5
         assert _financial_snapshot(writer.connection) == financial_cutover
         assert (
             writer.connection.execute("SELECT COUNT(*) FROM board_task_operations").fetchone()[0]

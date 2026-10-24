@@ -168,7 +168,14 @@ def response(
             "blocked_integrity": 409,
         }[state]
     )
-    return TaskPostingResponse(status_code=status, body=publication(posting_intent, state))
+    body = publication(posting_intent, state)
+    if observation == "submit" and state == "blocked_integrity":
+        body = {
+            "error": "publication_integrity_blocked",
+            "message": "Publication evidence requires reconciliation",
+            "details": {"publication": body},
+        }
+    return TaskPostingResponse(status_code=status, body=body)
 
 
 @dataclass(slots=True)
@@ -196,10 +203,6 @@ class PostingAgent:
         if isinstance(self.status_response, Exception):
             raise self.status_response
         return self.status_response or response(intent(), "published", observation="status")
-
-    async def post_task(self, **terms: object) -> dict[str, object]:
-        self.submit_calls.append(intent(**terms))
-        return {"task_id": TASK_ID, "status": "open"}
 
 
 def mutated_record(record: dict[str, object], case: str) -> dict[str, object]:

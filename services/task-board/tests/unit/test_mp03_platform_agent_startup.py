@@ -91,12 +91,24 @@ def _write_service_config(
                     "timeout_seconds": 1,
                 },
                 "platform": platform,
+                "asset_upload": {
+                    "stream_chunk_bytes": 262_144,
+                    "max_multipart_overhead_bytes": 1_048_576,
+                    "max_header_count": 8,
+                    "max_header_size": 4_224,
+                    "max_boundary_bytes": 70,
+                    "max_display_filename_utf8_bytes": 255,
+                },
                 "request": {"max_body_size": 1048576},
                 "recovery": {"maintenance_lock_path": str(tmp_path / "maintenance.lock")},
                 "posting_recovery": {
                     "interval_seconds": 2,
                     "batch_size": 100,
                     "diagnostic_limit": 100,
+                },
+                "financial_effect_recovery": {
+                    "interval_seconds": 2.0,
+                    "max_delivery_attempts_per_cycle": 10,
                 },
                 "db_gateway": {
                     "url": "http://db-gateway.test",

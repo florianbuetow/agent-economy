@@ -541,7 +541,13 @@ def test_concurrent_credits_at_maximum_have_one_atomic_winner(db_writer, initial
     _account(db_writer, "a-bounded", SQLITE_MAX_INTEGER - 1)
     before = _state(db_writer)
     barrier = Barrier(2)
-    other = DbWriter(initialized_db, 5000, "wal", None)
+    other = DbWriter(
+        initialized_db,
+        5000,
+        "wal",
+        None,
+        current_task_board_caller_kid="gateway-task-board",
+    )
 
     def credit(writer, reference):
         barrier.wait(timeout=10)

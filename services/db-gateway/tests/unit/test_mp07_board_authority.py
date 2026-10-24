@@ -24,6 +24,7 @@ pytestmark = pytest.mark.unit
 
 def _settings_payload(tmp_path: Path) -> dict[str, object]:
     generate_keypair("gateway-identity", tmp_path)
+    generate_keypair("gateway-task-board", tmp_path)
     generate_keypair("platform", tmp_path)
     return {
         "service": {"name": "db-gateway-test", "version": "0.1.0"},
@@ -57,12 +58,26 @@ def _settings_payload(tmp_path: Path) -> dict[str, object]:
                         "gateway.identity.read",
                         "gateway.identity.write",
                     ],
-                }
+                },
+                "gateway-task-board": {
+                    "public_key_path": "gateway-task-board.pub",
+                    "capabilities": ["gateway.board.write"],
+                },
             },
         },
         "board_authority": {
             "platform_public_key_path": "platform.pub",
             "deadline_actor_id": "system-task-board-deadline",
+        },
+        "board_effect_recovery": {
+            "current_task_board_caller_kid": "gateway-task-board",
+            "max_attempts_per_delivery": 8,
+            "initial_backoff_seconds": 2,
+            "max_backoff_seconds": 60,
+            "lease_duration_seconds": 45,
+            "evidence_interval_seconds": 60,
+            "gateway_timeout_seconds": 10,
+            "bank_timeout_seconds": 10,
         },
     }
 

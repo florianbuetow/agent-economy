@@ -14,6 +14,15 @@ dependencies = [
     "service-commons",
 ]
 
+[tool.uv]
+constraint-dependencies = [
+    "anyio>=4.14.2",
+    "certifi>=2026.10.19",
+    "cryptography>=50.0.0",
+    "idna>=3.15",
+    "pytest>=9.0.3",
+]
+
 [tool.uv.sources]
 service-auth = { path = "../libs/service-auth", editable = true }
 service-commons = { path = "../libs/service-commons", editable = true }

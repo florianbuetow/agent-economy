@@ -10,17 +10,15 @@ parsed JSON response.
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 import httpx
-from service_auth.financial_identity import operation_id_for
 from service_auth.financial_responses import (
     parse_account_projection,
     parse_financial_envelope,
 )
 
-from demo_replay.task_operations import operation_identity, posting_duration
+from demo_replay.task_operations import operation_identity
 from demo_replay.wallet import DemoAgent
 
 
@@ -63,6 +61,22 @@ async def register_agent(
     raise RuntimeError(msg)
 
 
+async def get_agent(
+    client: httpx.AsyncClient,
+    agent_id: str,
+    identity_url: str,
+) -> dict[str, Any]:
+    """Read one exact Identity registration."""
+    if not agent_id:
+        raise ValueError("agent_id must be a nonempty string")
+    response = await client.get(f"{identity_url}/agents/{agent_id}")
+    response.raise_for_status()
+    value: dict[str, Any] = response.json()
+    if value.get("agent_id") != agent_id:
+        raise RuntimeError("Identity registration lookup returned a different agent")
+    return value
+
+
 async def create_account(
     client: httpx.AsyncClient,
     platform: DemoAgent,
@@ -81,6 +95,28 @@ async def create_account(
         return {"status": "already_exists"}
     resp.raise_for_status()
     return parse_account_projection(resp.json(), agent_id)
+
+
+async def get_account(
+    client: httpx.AsyncClient,
+    owner: DemoAgent,
+    bank_url: str,
+) -> dict[str, object]:
+    """Read and strictly bind the registered owner's bank account."""
+    if owner.agent_id is None:
+        raise ValueError("Account owner must be registered")
+    account_id = owner.agent_id
+    resource = f"GET /accounts/{account_id}"
+    response = await client.get(
+        f"{bank_url}/accounts/{account_id}",
+        headers=owner.auth_header(
+            {"action": "get_balance", "account_id": account_id},
+            audience="central-bank",
+            resource=resource,
+        ),
+    )
+    response.raise_for_status()
+    return parse_account_projection(response.json(), account_id)
 
 
 async def credit_account(
@@ -114,66 +150,6 @@ async def credit_account(
         "credit",
         {"account_id": account_id, "amount": amount, "reference": reference},
     )
-
-
-async def post_task(
-    client: httpx.AsyncClient,
-    poster: DemoAgent,
-    title: str,
-    spec: str,
-    reward: int,
-    task_board_url: str,
-    bidding_deadline_seconds: int,
-    execution_deadline_seconds: int,
-    review_deadline_seconds: int,
-    *,
-    acceptance_window_seconds: int,
-) -> dict[str, Any]:
-    """Post a new task to the Task Board. Returns response including task_id."""
-    for name, value in (
-        ("bidding_deadline_seconds", bidding_deadline_seconds),
-        ("execution_deadline_seconds", execution_deadline_seconds),
-        ("review_deadline_seconds", review_deadline_seconds),
-        ("acceptance_window_seconds", acceptance_window_seconds),
-    ):
-        posting_duration(value, name)
-    poster_id = poster.agent_id
-    if poster_id is None:
-        msg = f"Agent '{poster.handle}' must be registered before posting a task"
-        raise RuntimeError(msg)
-    url = f"{task_board_url}/tasks"
-    task_id = f"t-{uuid.uuid4()}"
-    escrow_operation_id = operation_id_for("task-lock", (task_id, poster_id))
-    task_token = poster.sign_jws(
-        {
-            "action": "create_task",
-            "task_id": task_id,
-            "poster_id": poster_id,
-            "title": title,
-            "spec": spec,
-            "reward": reward,
-            "bidding_deadline_seconds": bidding_deadline_seconds,
-            "acceptance_window_seconds": acceptance_window_seconds,
-            "execution_deadline_seconds": execution_deadline_seconds,
-            "review_deadline_seconds": review_deadline_seconds,
-        },
-        audience="task-board",
-        resource="POST /tasks",
-    )
-    escrow_token = poster.sign_jws(
-        {
-            "action": "escrow_lock",
-            "operation_id": escrow_operation_id,
-            "task_id": task_id,
-            "amount": reward,
-            "agent_id": poster_id,
-        },
-        audience="central-bank",
-        resource="POST /escrow/lock",
-    )
-    resp = await client.post(url, json={"task_token": task_token, "escrow_token": escrow_token})
-    resp.raise_for_status()
-    return resp.json()  # type: ignore[no-any-return]
 
 
 async def submit_bid(
@@ -402,6 +378,22 @@ async def list_disputes(
     data: dict[str, Any] = resp.json()
     disputes: list[dict[str, Any]] = data["disputes"]
     return disputes
+
+
+async def get_dispute(
+    client: httpx.AsyncClient,
+    court_url: str,
+    dispute_id: str,
+) -> dict[str, Any]:
+    """Fetch one authoritative Court dispute."""
+    if not dispute_id:
+        raise ValueError("dispute_id must be a nonempty string")
+    response = await client.get(f"{court_url}/disputes/{dispute_id}")
+    response.raise_for_status()
+    value: dict[str, Any] = response.json()
+    if value.get("dispute_id") != dispute_id:
+        raise RuntimeError("Court returned a different dispute")
+    return value
 
 
 async def file_claim(

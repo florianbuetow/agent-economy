@@ -74,6 +74,16 @@ board_authority:
   platform_public_key_path: "{Path(db_path).parent / "platform.pub"}"
   deadline_actor_id: "system-task-board-deadline"
 
+board_effect_recovery:
+  current_task_board_caller_kid: "gateway-task-board"
+  max_attempts_per_delivery: 8
+  initial_backoff_seconds: 2
+  max_backoff_seconds: 60
+  lease_duration_seconds: 45
+  evidence_interval_seconds: 60
+  gateway_timeout_seconds: 10
+  bank_timeout_seconds: 10
+
 request:
   max_body_size: 1048576
 auth:
@@ -86,6 +96,10 @@ auth:
       capabilities:
         - "gateway.identity.read"
         - "gateway.identity.write"
+    gateway-task-board:
+      public_key_path: "{Path(db_path).parent / "gateway-task-board.pub"}"
+      capabilities:
+        - "gateway.board.write"
 """
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(content)
@@ -96,6 +110,7 @@ async def _build_gateway_app(db_path: str) -> tuple[FastAPI, DbWriter]:
     """Build a real, in-process DB Gateway ASGI app against a fresh SQLite file."""
     key_dir = Path(db_path).parent
     generate_keypair("gateway-identity", key_dir)
+    generate_keypair("gateway-task-board", key_dir)
     generate_keypair("platform", key_dir)
     config_path = _write_gateway_config(db_path)
     reset_gateway_state()
@@ -105,6 +120,7 @@ async def _build_gateway_app(db_path: str) -> tuple[FastAPI, DbWriter]:
         busy_timeout_ms=5000,
         journal_mode="wal",
         schema_sql=_SCHEMA_PATH.read_text(),
+        current_task_board_caller_kid="gateway-task-board",
     )
     state.db_writer = writer
     state.db_reader = DbReader(db=writer.connection)

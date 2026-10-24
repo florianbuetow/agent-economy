@@ -7,6 +7,12 @@ from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service.financial_effect_projection import financial_effect_for_task
+from db_gateway_service.historical_financial_evidence import (
+    build_historical_audit_context,
+    possible_historical_worker_payment,
+)
+
 if TYPE_CHECKING:
     import sqlite3
 
@@ -252,7 +258,13 @@ class DbReader:
         row = cursor.fetchone()
         if row is None:
             return None
-        return self._task_row_to_dict(row)
+        projected = self._task_row_without_financial(row)
+        projected["financial_effect"] = financial_effect_for_task(
+            self._db,
+            projected,
+            None,
+        )
+        return projected
 
     def list_tasks(
         self,
@@ -285,10 +297,22 @@ class DbReader:
             query += " OFFSET ?"
             params.append(offset)
         rows = self._db.execute(query, params).fetchall()
-        return [self._task_row_to_dict(row) for row in rows]
+        projected = [self._task_row_without_financial(row) for row in rows]
+        historical_context = (
+            build_historical_audit_context(self._db)
+            if any(possible_historical_worker_payment(self._db, task) for task in projected)
+            else None
+        )
+        for task in projected:
+            task["financial_effect"] = financial_effect_for_task(
+                self._db,
+                task,
+                historical_context,
+            )
+        return projected
 
     @staticmethod
-    def _task_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+    def _task_row_without_financial(row: sqlite3.Row) -> dict[str, Any]:
         """Decode one single-statement task/contract/recovery projection."""
         projected = dict(row)
         task_id = str(projected["task_id"])

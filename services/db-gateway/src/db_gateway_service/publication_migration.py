@@ -158,7 +158,7 @@ def _posting_authority(inventory: RecoveryInventoryV1) -> str:
     configs = {config.logical_id: config for config in inventory.configs}
     try:
         board = _read_config(configs["task-board"].captured_path)
-        gateway = _read_config(configs["gateway"].captured_path)
+        gateway = _read_config(configs["db-gateway"].captured_path)
         kid = board["db_gateway"]["signing"]["kid"]
         trusted = gateway["auth"]["trusted_callers"][kid]
         capabilities = trusted["capabilities"]
@@ -184,7 +184,7 @@ def _posting_authority(inventory: RecoveryInventoryV1) -> str:
         _authority_invalid(kid)
     public_binding = _binding(
         inventory,
-        config_id="gateway",
+        config_id="db-gateway",
         field_path=("auth", "trusted_callers", kid, "public_key_path"),
     )
     private_binding = _binding(

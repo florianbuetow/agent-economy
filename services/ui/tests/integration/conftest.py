@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
 import aiosqlite
+import httpx
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -15,7 +17,7 @@ from ui_service.app import create_app
 from ui_service.config import clear_settings_cache
 from ui_service.core import lifespan as lifespan_module
 from ui_service.core.lifespan import lifespan
-from ui_service.core.state import reset_app_state
+from ui_service.core.state import get_app_state, reset_app_state
 from ui_service.services import quarterly as quarterly_service
 
 SCHEMA_PATH = Path(__file__).resolve().parents[4] / "docs" / "specifications" / "schema.sql"
@@ -47,6 +49,80 @@ class _StubAgentFactory:
     def user_agent(self, handle: str) -> _StubUserAgent:
         assert handle == "ui-operator-integration-test"
         return _StubUserAgent()
+
+
+def _fixture_financial_effect(status: str) -> dict[str, object]:
+    settlement_state = "attention_required" if status in {"approved", "ruled"} else "locked"
+    return {
+        "schema_version": 1,
+        "settlement_state": settlement_state,
+        "receipt_state": "absent",
+        "outcome": None,
+        "operation_id": None,
+        "receipt_reference": None,
+        "business_projection_pending": False,
+        "pending_target_status": None,
+    }
+
+
+class _FixtureTaskBoardReader:
+    """Network-free Task Board projection built from explicit test fixture state."""
+
+    def __init__(self, database: Path) -> None:
+        sidecar = database.with_suffix(".board-projections.json")
+        self._sidecar = json.loads(sidecar.read_text()) if sidecar.exists() else None
+        self._database = database
+
+    def _records(self) -> list[dict[str, object]]:
+        if self._sidecar is not None:
+            return [dict(item) for item in self._sidecar]
+        connection = sqlite3.connect(str(self._database))
+        connection.row_factory = sqlite3.Row
+        try:
+            rows = connection.execute(
+                "SELECT bt.*, btc.lifecycle_version, "
+                "(SELECT COUNT(*) FROM board_bids bb WHERE bb.task_id = bt.task_id) "
+                "AS _authoritative_bid_count "
+                "FROM board_tasks bt LEFT JOIN board_task_contracts btc "
+                "ON btc.task_id=bt.task_id ORDER BY bt.created_at DESC"
+            ).fetchall()
+        finally:
+            connection.close()
+        records: list[dict[str, object]] = []
+        for row in rows:
+            value = dict(row)
+            value["bid_count"] = value.pop("_authoritative_bid_count")
+            value["financial_effect"] = _fixture_financial_effect(str(value["status"]))
+            value["acceptance_deadline"] = value.get("bidding_deadline")
+            records.append(value)
+        return records
+
+    async def list_tasks(
+        self,
+        status: str | None = None,
+        poster_id: str | None = None,
+        worker_id: str | None = None,
+    ) -> list[dict[str, object]]:
+        values = self._records()
+        return [
+            value
+            for value in values
+            if (status is None or value["status"] == status)
+            and (poster_id is None or value["poster_id"] == poster_id)
+            and (worker_id is None or value.get("worker_id") == worker_id)
+        ]
+
+    async def get_task(self, task_id: str) -> dict[str, object]:
+        for value in self._records():
+            if value["task_id"] == task_id:
+                return value
+        request = httpx.Request("GET", f"http://task-board/tasks/{task_id}")
+        response = httpx.Response(
+            404,
+            request=request,
+            json={"error": "task_not_found", "message": "Task not found", "details": {}},
+        )
+        raise httpx.HTTPStatusError("task not found", request=request, response=response)
 
 
 @pytest.fixture
@@ -114,6 +190,7 @@ user_agent:
     try:
         test_app = create_app()
         async with lifespan(test_app):
+            get_app_state().task_board_reader = _FixtureTaskBoardReader(db_path)
             yield test_app
     finally:
         reset_app_state()

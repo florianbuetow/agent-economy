@@ -72,6 +72,20 @@ def _financial_request(
     return operation_id, request
 
 
+def _settlement_event(event: dict[str, Any], escrow_task_id: str) -> dict[str, Any]:
+    supplied_task_id = event.get("task_id")
+    if supplied_task_id is not None and supplied_task_id != escrow_task_id:
+        raise ServiceError(
+            "payload_mismatch",
+            "Settlement event task_id does not match the escrow task",
+            400,
+            {},
+        )
+    bound_event = dict(event)
+    bound_event["task_id"] = escrow_task_id
+    return bound_event
+
+
 class BankWriter:
     """Serialize money effects, immutable receipts, and legs in one transaction."""
 
@@ -428,8 +442,9 @@ class BankWriter:
                 return replay
             self._legacy.admit_settlement(cursor, data["escrow_id"])
             escrow = self._load_escrow_for_settlement(cursor, data["escrow_id"])
+            event = _settlement_event(data["event"], escrow["task_id"])
             self._credit_balance(cursor, data["recipient_account_id"], escrow["amount"])
-            event_id = insert_event(cursor, data["event"])
+            event_id = insert_event(cursor, event)
             cursor.execute(
                 "INSERT INTO bank_transactions "
                 "(tx_id, account_id, type, amount, balance_after, reference, timestamp, event_id) "
@@ -504,11 +519,12 @@ class BankWriter:
                 return replay
             self._legacy.admit_settlement(cursor, data["escrow_id"])
             escrow = self._load_escrow_for_settlement(cursor, data["escrow_id"])
+            event = _settlement_event(data["event"], escrow["task_id"])
             if data["poster_account_id"] != escrow["payer_account_id"]:
                 raise ServiceError("payload_mismatch", "Poster is not the escrow payer", 400, {})
             worker_amount = escrow["amount"] * worker_pct // 100
             poster_amount = escrow["amount"] - worker_amount
-            event_id = insert_event(cursor, data["event"])
+            event_id = insert_event(cursor, event)
             worker_balance = self._credit_split_leg(
                 cursor,
                 data["worker_account_id"],
@@ -599,7 +615,7 @@ class BankWriter:
         escrow_id: str,
     ) -> dict[str, Any]:
         row = cursor.execute(
-            "SELECT escrow_id, amount, status, payer_account_id FROM bank_escrow "
+            "SELECT escrow_id, amount, status, payer_account_id, task_id FROM bank_escrow "
             "WHERE escrow_id = ?",
             (escrow_id,),
         ).fetchone()
@@ -615,6 +631,7 @@ class BankWriter:
             "amount": int(row[1]),
             "status": str(row[2]),
             "payer_account_id": str(row[3]),
+            "task_id": str(row[4]),
         }
 
     def _credit_balance(self, cursor: sqlite3.Cursor, account_id: str, amount: int) -> None:
