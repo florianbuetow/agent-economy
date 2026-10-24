@@ -1,0 +1,158 @@
+{
+  "archived_at_utc": "2026-10-17T19:28:16.941556+00:00",
+  "note": "Historical terminal evidence copied byte-for-byte; no tests were rerun to create this archive. Categories do not override the explicit evidence limitations in the completion audit.",
+  "files": [
+    {
+      "file": "agent-economy-mp04-legacy-observations-red-final3.log",
+      "source": "/private/tmp/agent-economy-mp04-legacy-observations-red-final3.log",
+      "category": "gateway_history_red",
+      "bytes": 14132,
+      "sha256": "1129742de53ac10ec6a635dce1737b6f8470aea204b999dec2ff5d339882248e",
+      "source_modified_utc": "2026-10-17T16:03:13.524283+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-history-review-high-red.log",
+      "source": "/private/tmp/agent-economy-mp04-history-review-high-red.log",
+      "category": "gateway_integrity_red",
+      "bytes": 4000,
+      "sha256": "9ee11a25527124f6591e93da7e2477afd3b7c61b25a77076c8edf36a8dc8aa26",
+      "source_modified_utc": "2026-10-17T17:14:03.717294+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-legacy-sdk-red-corrected.log",
+      "source": "/private/tmp/agent-economy-mp04-legacy-sdk-red-corrected.log",
+      "category": "corrected_sdk_history_red",
+      "bytes": 10107,
+      "sha256": "7f2bd84bb5c27a2a4999d4d09324488d94928424f9e2465d9a0e2be54c990f42",
+      "source_modified_utc": "2026-10-17T16:03:15.843093+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-legacy-split-one-red.log",
+      "source": "/private/tmp/agent-economy-mp04-legacy-split-one-red.log",
+      "category": "sdk_history_cardinality_red",
+      "bytes": 1994,
+      "sha256": "b1fcf09f25cb62b21ad470b229c72af1d7b849dd987ab4f65a2ecbcd208f01c0",
+      "source_modified_utc": "2026-10-17T16:21:32.354487+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-legacy-nullable-time-red.log",
+      "source": "/private/tmp/agent-economy-mp04-legacy-nullable-time-red.log",
+      "category": "sdk_history_time_red",
+      "bytes": 9801,
+      "sha256": "de0abcc612a4e8c5496e4b27d73f7ecd4328dde58d9bf8e1cb2fa25187dbd10f",
+      "source_modified_utc": "2026-10-17T17:01:14.111071+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-sdk-receipt-validation-red-final.log",
+      "source": "/private/tmp/agent-economy-mp04-sdk-receipt-validation-red-final.log",
+      "category": "native_sdk_validation_red",
+      "bytes": 27690,
+      "sha256": "66886bbbeedc4fa2bbaa27ea605ec324b1a99b1fd22d85a9a04a3b946e960633",
+      "source_modified_utc": "2026-10-17T15:25:47.814456+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-sdk-text-validation-red.log",
+      "source": "/private/tmp/agent-economy-mp04-sdk-text-validation-red.log",
+      "category": "native_sdk_text_red",
+      "bytes": 6154,
+      "sha256": "a66bdd46d57a92095056e5164ad8d0db01e50d1518a9c3723e0011f3a8a3a32b",
+      "source_modified_utc": "2026-10-17T15:31:54.473109+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-native-on-history-http-red.log",
+      "source": "/private/tmp/agent-economy-mp04-native-on-history-http-red.log",
+      "category": "public_native_on_history_red",
+      "bytes": 11138,
+      "sha256": "d75aba8895eb3305d9d6d8daa754843c4b72c32e37b0ea14342ed74eed74d8b2",
+      "source_modified_utc": "2026-10-17T17:09:31.479004+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-native-on-history-committed-proof.json",
+      "source": "/private/tmp/agent-economy-mp04-native-on-history-committed-proof.json",
+      "category": "durable_commit_observation",
+      "bytes": 652,
+      "sha256": "e44596559b0cd79b2c70ec7bd2df04bc3557262cf9ae6e4f0e68a87b8aca190b",
+      "source_modified_utc": "2026-10-17T17:10:25.225044+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-public-race-parent-final.log",
+      "source": "/private/tmp/agent-economy-mp04-public-race-parent-final.log",
+      "category": "public_bank_green",
+      "bytes": 752,
+      "sha256": "c83547a0ce9e1e3271b72f32112e198e7ce86d7ce585ea5b779f87192e97a20d",
+      "source_modified_utc": "2026-10-17T18:16:12.159903+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-economy-final.log",
+      "source": "/private/tmp/agent-economy-mp04-economy-final.log",
+      "category": "live_agent_green",
+      "bytes": 14057,
+      "sha256": "8ded8a0912312c04abad66984f972e90efc52d072f679c857b5277c67e7937fc",
+      "source_modified_utc": "2026-10-17T17:52:37.296265+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-economy-final-cleanup.json",
+      "source": "/private/tmp/agent-economy-mp04-economy-final-cleanup.json",
+      "category": "owned_process_cleanup",
+      "bytes": 2702,
+      "sha256": "6d2829166ca1817f487ac611107987eed512f93f46ac3a278f4e4248331edea1",
+      "source_modified_utc": "2026-10-17T18:03:25.104053+00:00"
+    },
+    {
+      "file": "agent-economy-mp04-runtime-migration-reconciled.log",
+      "source": "/private/tmp/agent-economy-mp04-runtime-migration-reconciled.log",
+      "category": "runtime_fixture_green",
+      "bytes": 39701,
+      "sha256": "6a9f4a9def7e2a89c10b4d165d287986e67b04dbb92e92fb967ff82649558432",
+      "source_modified_utc": "2026-10-17T19:13:59.851856+00:00"
+    },
+    {
+      "file": "agent-economy-quarter-navigation-parent-red.log",
+      "source": "/private/tmp/agent-economy-quarter-navigation-parent-red.log",
+      "category": "quarterly_navigation_red",
+      "bytes": 1909,
+      "sha256": "baaf2db6a8a9bf3a900ece803d0412e60164b8b11d5c39fef3b18aebb29578cb",
+      "source_modified_utc": "2026-10-17T18:08:09.331307+00:00"
+    },
+    {
+      "file": "agent-economy-quarter-navigation-parent-green.log",
+      "source": "/private/tmp/agent-economy-quarter-navigation-parent-green.log",
+      "category": "quarterly_navigation_green",
+      "bytes": 695,
+      "sha256": "acbf53e462ba047fa73d78d94f6d589e736ee3ba8b39876b4693c2095df5cae8",
+      "source_modified_utc": "2026-10-17T18:08:47.912782+00:00"
+    },
+    {
+      "file": "agent-economy-quarter-navigation-full-ui.log",
+      "source": "/private/tmp/agent-economy-quarter-navigation-full-ui.log",
+      "category": "full_ui_with_separate_setup_errors",
+      "bytes": 39852,
+      "sha256": "02250c8ff69235b3c2453141eaa2f3fd5daabbd644d481f527b8c87fef399159",
+      "source_modified_utc": "2026-10-17T19:08:54.857812+00:00"
+    },
+    {
+      "file": "agent-economy-ui-readiness-parent-red-final3.log",
+      "source": "/private/tmp/agent-economy-ui-readiness-parent-red-final3.log",
+      "category": "ui_readiness_red",
+      "bytes": 2110,
+      "sha256": "c54afbe96c365c8197b1ec9d9bc141c753a2fe44e924b24d427edf6f5994feee",
+      "source_modified_utc": "2026-10-17T19:14:41.503161+00:00"
+    },
+    {
+      "file": "agent-economy-ui-readiness-parent-green-final.log",
+      "source": "/private/tmp/agent-economy-ui-readiness-parent-green-final.log",
+      "category": "ui_readiness_unit_green",
+      "bytes": 615,
+      "sha256": "ab461e093e4f5cdc1839c2ad91c3dbf65b8724f9392bebe9b06ce0b20077f012",
+      "source_modified_utc": "2026-10-17T19:15:42.803591+00:00"
+    },
+    {
+      "file": "agent-economy-ui-readiness-browser-green.log",
+      "source": "/private/tmp/agent-economy-ui-readiness-browser-green.log",
+      "category": "ui_readiness_browser_green",
+      "bytes": 776,
+      "sha256": "b106be495107430391637803ddce0761611d41b7c445efa0a5e6beb3a02a4feb",
+      "source_modified_utc": "2026-10-17T19:15:38.378450+00:00"
+    }
+  ]
+}

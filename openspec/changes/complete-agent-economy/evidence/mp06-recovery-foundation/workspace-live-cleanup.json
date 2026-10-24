@@ -1,0 +1,29 @@
+{
+  "checked_at_utc": "2026-10-16T04:19:56.162149+00:00",
+  "source_manifests": [
+    "/private/tmp/agent-economy-workspace-live.uoW5M5/test_full_runtime_artifact_res0/runtime-3a5ff454520a4128a28e1545a781a5b4-w379f7gl/runtime.json",
+    "/private/tmp/agent-economy-workspace-live.uoW5M5/test_live_full_runtime_invento0/runtime-48406cc4a4ec43c3909b637dd6a22043-b6invedj/runtime.json"
+  ],
+  "owned_groups": [
+    79550,
+    79552,
+    79554,
+    79556,
+    79558,
+    79560,
+    79562,
+    79564,
+    79566,
+    79574,
+    79576,
+    79578,
+    79580,
+    79582,
+    79584,
+    79586,
+    79588,
+    79590
+  ],
+  "recorded_drained": true,
+  "remaining_members": []
+}

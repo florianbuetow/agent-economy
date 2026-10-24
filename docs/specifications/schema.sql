@@ -1,12 +1,37 @@
--- Agent Task Economy — Unified SQLite Schema
+-- Agent Task Economy — Unified SQLite Schema v5
 -- Single file: data/economy.db
 -- Table prefix per service domain
 -- All timestamps are ISO 8601 UTC
 -- All IDs are TEXT with format prefixes (a-, t-, bid-, esc-, etc.)
 
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
-PRAGMA busy_timeout = 5000;
+-- Connection PRAGMAs are applied by DbWriter only after schema admission.
+
+CREATE TABLE schema_metadata (
+    singleton                        INTEGER PRIMARY KEY CHECK (singleton = 1),
+    version                          INTEGER NOT NULL CHECK (version = 5),
+    migrated_from_version            INTEGER,
+    migration_backup_id              TEXT,
+    migration_backup_manifest_sha256 TEXT,
+
+    CHECK (
+        (migrated_from_version IS NULL
+         AND migration_backup_id IS NULL
+         AND migration_backup_manifest_sha256 IS NULL)
+        OR
+        (migrated_from_version IS NOT NULL
+         AND migrated_from_version = 4
+         AND migration_backup_id IS NOT NULL
+         AND migration_backup_manifest_sha256 IS NOT NULL)
+    )
+) WITHOUT ROWID;
+
+INSERT INTO schema_metadata (
+    singleton,
+    version,
+    migrated_from_version,
+    migration_backup_id,
+    migration_backup_manifest_sha256
+) VALUES (1, 5, NULL, NULL, NULL);
 
 -- ============================================================================
 -- IDENTITY
@@ -21,7 +46,6 @@ CREATE TABLE identity_agents (
     registered_at  TEXT NOT NULL                -- ISO 8601
 );
 
-
 -- ============================================================================
 -- CENTRAL BANK
 -- Owner: Central Bank Service (8002)
@@ -30,7 +54,8 @@ CREATE TABLE identity_agents (
 
 CREATE TABLE bank_accounts (
     account_id     TEXT PRIMARY KEY,            -- same as agent_id
-    balance        INTEGER NOT NULL DEFAULT 0,
+    balance        INTEGER NOT NULL DEFAULT 0
+                   CHECK (typeof(balance) = 'integer' AND balance BETWEEN 0 AND 9223372036854775807),
     created_at     TEXT NOT NULL,
 
     FOREIGN KEY (account_id) REFERENCES identity_agents (agent_id)
@@ -40,10 +65,13 @@ CREATE TABLE bank_transactions (
     tx_id          TEXT PRIMARY KEY,            -- "tx-<uuid4>"
     account_id     TEXT NOT NULL,
     type           TEXT NOT NULL,               -- "credit" | "escrow_lock" | "escrow_release"
-    amount         INTEGER NOT NULL,            -- always positive
-    balance_after  INTEGER NOT NULL,
+    amount         INTEGER NOT NULL             -- always positive
+                   CHECK (typeof(amount) = 'integer' AND amount BETWEEN 1 AND 9223372036854775807),
+    balance_after  INTEGER NOT NULL
+                   CHECK (typeof(balance_after) = 'integer' AND balance_after BETWEEN 0 AND 9223372036854775807),
     reference      TEXT NOT NULL,               -- idempotency key (e.g. "salary_round_3", task_id)
     timestamp      TEXT NOT NULL,
+    event_id       INTEGER,                     -- event row emitted with this write; NULL for rows written before the column existed
 
     FOREIGN KEY (account_id) REFERENCES bank_accounts (account_id)
 );
@@ -58,18 +86,19 @@ CREATE INDEX idx_bank_tx_history
 CREATE TABLE bank_escrow (
     escrow_id        TEXT PRIMARY KEY,          -- "esc-<uuid4>"
     payer_account_id TEXT NOT NULL,
-    amount           INTEGER NOT NULL,
+    amount           INTEGER NOT NULL
+                     CHECK (typeof(amount) = 'integer' AND amount BETWEEN 1 AND 9223372036854775807),
     task_id          TEXT NOT NULL,
     status           TEXT NOT NULL DEFAULT 'locked',  -- "locked" | "released" | "split"
     created_at       TEXT NOT NULL,
     resolved_at      TEXT,                      -- null while locked
+    event_id         INTEGER,                   -- event row emitted with this write; NULL for rows written before the column existed
 
     FOREIGN KEY (payer_account_id) REFERENCES bank_accounts (account_id)
 );
 
-CREATE UNIQUE INDEX idx_bank_escrow_active
-    ON bank_escrow (payer_account_id, task_id)
-    WHERE status = 'locked';
+CREATE UNIQUE INDEX idx_bank_escrow_lifetime
+    ON bank_escrow (payer_account_id, task_id);
 
 
 -- ============================================================================
@@ -83,7 +112,8 @@ CREATE TABLE board_tasks (
     poster_id                TEXT NOT NULL,
     title                    TEXT NOT NULL,
     spec                     TEXT NOT NULL,
-    reward                   INTEGER NOT NULL,
+    reward                   INTEGER NOT NULL
+                             CHECK (typeof(reward) = 'integer' AND reward BETWEEN 1 AND 9223372036854775807),
     status                   TEXT NOT NULL DEFAULT 'open',
                                                -- open | accepted | submitted
                                                -- approved | cancelled | expired
@@ -110,6 +140,9 @@ CREATE TABLE board_tasks (
 
     -- dispute / ruling
     dispute_reason           TEXT,
+    dispute_id               TEXT,             -- court claim id, "disp-<uuid4>"
+    rebuttal_deadline        TEXT,             -- court rebuttal window close (from file_claim)
+    rebuttal_submitted_at    TEXT,             -- set when the worker rebuttal is forwarded
     ruling_id                TEXT,
     worker_pct               INTEGER,          -- 0-100, court-determined
     ruling_summary           TEXT,
@@ -139,7 +172,8 @@ CREATE TABLE board_bids (
     task_id        TEXT NOT NULL,
     bidder_id      TEXT NOT NULL,
     proposal       TEXT NOT NULL,
-    amount         INTEGER NOT NULL DEFAULT 0,
+    amount         INTEGER NOT NULL DEFAULT 0
+                   CHECK (typeof(amount) = 'integer' AND amount BETWEEN 0 AND 9223372036854775807),
     submitted_at   TEXT NOT NULL,
 
     FOREIGN KEY (task_id)   REFERENCES board_tasks (task_id),
@@ -260,7 +294,7 @@ CREATE TABLE court_rulings (
 
 CREATE TABLE events (
     event_id       INTEGER PRIMARY KEY AUTOINCREMENT,  -- monotonic cursor for SSE polling
-    event_source   TEXT NOT NULL,               -- "identity" | "bank" | "board" | "reputation" | "court"
+    event_source   TEXT NOT NULL,               -- "identity" | "central-bank" | "board" | "reputation" | "court"
     event_type     TEXT NOT NULL,               -- e.g. "task.created", "escrow.locked", "agent.registered"
     timestamp      TEXT NOT NULL,               -- ISO 8601
     task_id        TEXT,                        -- null for non-task events (agent.registered, salary.paid)
@@ -286,7 +320,7 @@ CREATE INDEX idx_events_agent      ON events (agent_id);
 -- event_source: "identity"
 --   agent.registered        { "agent_name": "Alice" }
 --
--- event_source: "bank"
+-- event_source: "central-bank"
 --   account.created         { "agent_name": "Alice" }
 --   salary.paid             { "amount": 500 }
 --   escrow.locked           { "escrow_id": "esc-...", "amount": 100, "title": "..." }
@@ -314,3 +348,1206 @@ CREATE INDEX idx_events_agent      ON events (agent_id);
 --   rebuttal.submitted      { "claim_id": "clm-...", "title": "...", "respondent_name": "Bob" }
 --   ruling.delivered        { "ruling_id": "rul-...", "claim_id": "clm-...", "worker_pct": 70, "summary": "..." }
 --
+
+-- MP-04 schema-v2 receipt ownership sidecar.
+-- Applied only to an already admitted v1 schema by the explicit v1-to-v2 migration.
+
+CREATE TABLE bank_receipt_cutover (
+    singleton INTEGER PRIMARY KEY NOT NULL
+              CHECK (typeof(singleton) = 'integer' AND singleton = 1),
+    attestation_version INTEGER NOT NULL
+              CHECK (typeof(attestation_version) = 'integer' AND attestation_version = 1),
+    cutover_kind TEXT NOT NULL
+              CHECK (typeof(cutover_kind) = 'text'
+                     AND cutover_kind IN ('fresh_v2', 'v1_to_v2')),
+    source_schema_version INTEGER,
+    source_migrated_from_version INTEGER,
+    source_migration_backup_id TEXT,
+    source_migration_backup_manifest_sha256 TEXT,
+    migration_backup_id TEXT,
+    migration_backup_manifest_sha256 TEXT,
+    migration_plan_sha256 TEXT,
+    source_snapshot_sha256 TEXT,
+    legacy_transaction_count INTEGER NOT NULL
+              CHECK (typeof(legacy_transaction_count) = 'integer'
+                     AND legacy_transaction_count >= 0),
+    legacy_escrow_count INTEGER NOT NULL
+              CHECK (typeof(legacy_escrow_count) = 'integer'
+                     AND legacy_escrow_count >= 0),
+    legacy_transaction_set_sha256 TEXT NOT NULL
+              CHECK (typeof(legacy_transaction_set_sha256) = 'text'
+                     AND length(legacy_transaction_set_sha256) = 64
+                     AND legacy_transaction_set_sha256 NOT GLOB '*[^0-9a-f]*'),
+    legacy_escrow_set_sha256 TEXT NOT NULL
+              CHECK (typeof(legacy_escrow_set_sha256) = 'text'
+                     AND length(legacy_escrow_set_sha256) = 64
+                     AND legacy_escrow_set_sha256 NOT GLOB '*[^0-9a-f]*'),
+    marker_set_sha256 TEXT NOT NULL
+              CHECK (typeof(marker_set_sha256) = 'text'
+                     AND length(marker_set_sha256) = 64
+                     AND marker_set_sha256 NOT GLOB '*[^0-9a-f]*'),
+    CHECK (
+        (cutover_kind = 'fresh_v2'
+         AND source_schema_version IS NULL
+         AND source_migrated_from_version IS NULL
+         AND source_migration_backup_id IS NULL
+         AND source_migration_backup_manifest_sha256 IS NULL
+         AND migration_backup_id IS NULL
+         AND migration_backup_manifest_sha256 IS NULL
+         AND migration_plan_sha256 IS NULL
+         AND source_snapshot_sha256 IS NULL
+         AND legacy_transaction_count = 0
+         AND legacy_escrow_count = 0
+         AND legacy_transaction_set_sha256 =
+             '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'
+         AND legacy_escrow_set_sha256 =
+             '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'
+         AND marker_set_sha256 =
+             'a81b1a47e8cd319a73362c83a992f181986e799b1e82753bf139e60b35d0a4f6')
+        OR
+        (cutover_kind = 'v1_to_v2'
+         AND typeof(source_schema_version) = 'integer'
+         AND source_schema_version = 1
+         AND (source_migrated_from_version IS NULL
+              OR (typeof(source_migrated_from_version) = 'integer'
+                  AND source_migrated_from_version = 0))
+         AND ((source_migrated_from_version IS NULL
+               AND source_migration_backup_id IS NULL
+               AND source_migration_backup_manifest_sha256 IS NULL)
+              OR
+              (source_migrated_from_version = 0
+               AND source_migration_backup_id IS NOT NULL
+               AND typeof(source_migration_backup_id) = 'text'
+               AND length(CAST(source_migration_backup_id AS BLOB)) > 0
+               AND source_migration_backup_manifest_sha256 IS NOT NULL
+               AND typeof(source_migration_backup_manifest_sha256) = 'text'
+               AND length(source_migration_backup_manifest_sha256) = 64
+               AND source_migration_backup_manifest_sha256
+                   NOT GLOB '*[^0-9a-f]*'))
+         AND migration_backup_id IS NOT NULL
+         AND typeof(migration_backup_id) = 'text'
+         AND length(CAST(migration_backup_id AS BLOB)) > 0
+         AND migration_backup_manifest_sha256 IS NOT NULL
+         AND typeof(migration_backup_manifest_sha256) = 'text'
+         AND length(migration_backup_manifest_sha256) = 64
+         AND migration_backup_manifest_sha256 NOT GLOB '*[^0-9a-f]*'
+         AND migration_plan_sha256 IS NOT NULL
+         AND typeof(migration_plan_sha256) = 'text'
+         AND length(migration_plan_sha256) = 64
+         AND migration_plan_sha256 NOT GLOB '*[^0-9a-f]*'
+         AND source_snapshot_sha256 IS NOT NULL
+         AND typeof(source_snapshot_sha256) = 'text'
+         AND length(source_snapshot_sha256) = 64
+         AND source_snapshot_sha256 NOT GLOB '*[^0-9a-f]*')
+    )
+) WITHOUT ROWID;
+
+CREATE TABLE bank_operation_receipts (
+    operation_id TEXT PRIMARY KEY NOT NULL
+              CHECK (typeof(operation_id) = 'text'
+                     AND length(operation_id) = 39
+                     AND substr(operation_id, 1, 3) = 'op-'
+                     AND substr(operation_id, 12, 1) = '-'
+                     AND substr(operation_id, 17, 1) = '-'
+                     AND substr(operation_id, 22, 1) = '-'
+                     AND substr(operation_id, 27, 1) = '-'
+                     AND length(replace(substr(operation_id, 4), '-', '')) = 32
+                     AND replace(substr(operation_id, 4), '-', '')
+                         NOT GLOB '*[^0-9a-f]*'),
+    receipt_version INTEGER NOT NULL
+              CHECK (typeof(receipt_version) = 'integer' AND receipt_version = 1),
+    operation_kind TEXT NOT NULL
+              CHECK (typeof(operation_kind) = 'text'
+                     AND operation_kind IN (
+                  'account_issuance', 'credit', 'escrow_lock',
+                  'escrow_release', 'escrow_split'
+              )),
+    canonical_request_json TEXT NOT NULL
+              CHECK (typeof(canonical_request_json) = 'text'
+                     AND json_valid(canonical_request_json) = 1
+                     AND json_type(canonical_request_json) = 'object'),
+    request_sha256 TEXT NOT NULL
+              CHECK (typeof(request_sha256) = 'text'
+                     AND length(request_sha256) = 64
+                     AND request_sha256 NOT GLOB '*[^0-9a-f]*'),
+    source_reference TEXT NOT NULL
+              CHECK (typeof(source_reference) = 'text'
+                     AND length(CAST(source_reference AS BLOB)) > 0),
+    committed_at TEXT NOT NULL
+              CHECK (typeof(committed_at) = 'text'
+                     AND length(CAST(committed_at AS BLOB)) > 0),
+    event_id INTEGER NOT NULL UNIQUE CHECK (typeof(event_id) = 'integer'),
+    escrow_id TEXT,
+    result_json TEXT NOT NULL
+              CHECK (typeof(result_json) = 'text'
+                     AND json_valid(result_json) = 1
+                     AND json_type(result_json) = 'object'),
+    CHECK (
+        (operation_kind IN ('account_issuance', 'credit') AND escrow_id IS NULL)
+        OR
+        (operation_kind IN ('escrow_lock', 'escrow_release', 'escrow_split')
+         AND escrow_id IS NOT NULL
+         AND typeof(escrow_id) = 'text'
+         AND length(CAST(escrow_id AS BLOB)) > 0)
+    ),
+    FOREIGN KEY (event_id) REFERENCES events (event_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (escrow_id) REFERENCES bank_escrow (escrow_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE UNIQUE INDEX idx_bank_receipt_one_native_lock
+    ON bank_operation_receipts (escrow_id)
+    WHERE operation_kind = 'escrow_lock';
+
+CREATE UNIQUE INDEX idx_bank_receipt_one_native_settlement
+    ON bank_operation_receipts (escrow_id)
+    WHERE operation_kind IN ('escrow_release', 'escrow_split');
+
+CREATE TABLE bank_operation_legs (
+    operation_id TEXT NOT NULL,
+    leg_index INTEGER NOT NULL
+              CHECK (typeof(leg_index) = 'integer' AND leg_index BETWEEN 0 AND 1),
+    role TEXT NOT NULL
+              CHECK (typeof(role) = 'text'
+                     AND role IN ('account', 'payer', 'recipient', 'worker', 'poster')),
+    account_id TEXT NOT NULL
+              CHECK (typeof(account_id) = 'text'
+                     AND length(CAST(account_id AS BLOB)) > 0),
+    direction TEXT NOT NULL
+              CHECK (typeof(direction) = 'text' AND direction IN ('debit', 'credit')),
+    amount INTEGER NOT NULL
+              CHECK (typeof(amount) = 'integer'
+                     AND amount BETWEEN 0 AND 9223372036854775807),
+    transaction_id TEXT UNIQUE,
+    balance_after INTEGER,
+    PRIMARY KEY (operation_id, leg_index),
+    UNIQUE (operation_id, role),
+    CHECK (
+        (amount = 0 AND transaction_id IS NULL AND balance_after IS NULL)
+        OR
+        (amount > 0
+         AND transaction_id IS NOT NULL
+         AND typeof(transaction_id) = 'text'
+         AND length(CAST(transaction_id AS BLOB)) > 0
+         AND balance_after IS NOT NULL
+         AND typeof(balance_after) = 'integer'
+         AND balance_after BETWEEN 0 AND 9223372036854775807)
+    ),
+    FOREIGN KEY (operation_id) REFERENCES bank_operation_receipts (operation_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (transaction_id) REFERENCES bank_transactions (tx_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+CREATE TABLE bank_legacy_transaction_observations (
+    tx_id TEXT PRIMARY KEY NOT NULL
+              CHECK (typeof(tx_id) = 'text' AND length(CAST(tx_id AS BLOB)) > 0),
+    cutover_singleton INTEGER NOT NULL
+              CHECK (typeof(cutover_singleton) = 'integer' AND cutover_singleton = 1),
+    observed_kind TEXT NOT NULL
+              CHECK (typeof(observed_kind) = 'text'
+                     AND observed_kind IN (
+                  'observed_credit', 'observed_escrow_lock', 'observed_escrow_release'
+              )),
+    observed_fact_sha256 TEXT NOT NULL
+              CHECK (typeof(observed_fact_sha256) = 'text'
+                     AND length(observed_fact_sha256) = 64
+                     AND observed_fact_sha256 NOT GLOB '*[^0-9a-f]*'),
+    FOREIGN KEY (tx_id) REFERENCES bank_transactions (tx_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (cutover_singleton) REFERENCES bank_receipt_cutover (singleton)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+CREATE TABLE bank_legacy_escrow_observations (
+    escrow_id TEXT PRIMARY KEY NOT NULL
+              CHECK (typeof(escrow_id) = 'text'
+                     AND length(CAST(escrow_id AS BLOB)) > 0),
+    cutover_singleton INTEGER NOT NULL
+              CHECK (typeof(cutover_singleton) = 'integer' AND cutover_singleton = 1),
+    observed_status TEXT NOT NULL
+              CHECK (typeof(observed_status) = 'text'
+                     AND observed_status IN ('locked', 'released', 'split')),
+    lock_fact_sha256 TEXT NOT NULL
+              CHECK (typeof(lock_fact_sha256) = 'text'
+                     AND length(lock_fact_sha256) = 64
+                     AND lock_fact_sha256 NOT GLOB '*[^0-9a-f]*'),
+    resolution_fact_sha256 TEXT,
+    CHECK (
+        (observed_status = 'locked' AND resolution_fact_sha256 IS NULL)
+        OR
+        (observed_status IN ('released', 'split')
+         AND resolution_fact_sha256 IS NOT NULL
+         AND typeof(resolution_fact_sha256) = 'text'
+         AND length(resolution_fact_sha256) = 64
+         AND resolution_fact_sha256 NOT GLOB '*[^0-9a-f]*')
+    ),
+    FOREIGN KEY (escrow_id) REFERENCES bank_escrow (escrow_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (cutover_singleton) REFERENCES bank_receipt_cutover (singleton)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+-- Fresh v2 has no historical money effects and no invented migration provenance.
+INSERT INTO bank_receipt_cutover (
+    singleton, attestation_version, cutover_kind,
+    source_schema_version, source_migrated_from_version,
+    source_migration_backup_id, source_migration_backup_manifest_sha256,
+    migration_backup_id, migration_backup_manifest_sha256,
+    migration_plan_sha256, source_snapshot_sha256,
+    legacy_transaction_count, legacy_escrow_count,
+    legacy_transaction_set_sha256, legacy_escrow_set_sha256, marker_set_sha256
+) VALUES (
+    1, 1, 'fresh_v2', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0,
+    '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+    '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+    'a81b1a47e8cd319a73362c83a992f181986e799b1e82753bf139e60b35d0a4f6'
+);
+
+-- MP-07 schema-v3 task-transition sidecars.
+-- Applied only to an admitted v2 schema by the explicit v2-to-v3 migration.
+
+CREATE TABLE board_task_contracts (
+    task_id TEXT PRIMARY KEY NOT NULL
+            CHECK (typeof(task_id) = 'text' AND length(CAST(task_id AS BLOB)) > 0),
+    lifecycle_version INTEGER NOT NULL
+            CHECK (typeof(lifecycle_version) = 'integer'
+                   AND lifecycle_version BETWEEN 0 AND 9223372036854775807),
+    timing_contract_version INTEGER NOT NULL
+            CHECK (typeof(timing_contract_version) = 'integer'
+                   AND timing_contract_version IN (1, 2)),
+    acceptance_window_seconds INTEGER,
+    bidding_cutoff_us INTEGER NOT NULL
+            CHECK (typeof(bidding_cutoff_us) = 'integer'
+                   AND bidding_cutoff_us BETWEEN 0 AND 9223372036854775807),
+    acceptance_cutoff_us INTEGER NOT NULL
+            CHECK (typeof(acceptance_cutoff_us) = 'integer'
+                   AND acceptance_cutoff_us BETWEEN 0 AND 9223372036854775807),
+    execution_cutoff_us INTEGER
+            CHECK (execution_cutoff_us IS NULL
+                   OR (typeof(execution_cutoff_us) = 'integer'
+                       AND execution_cutoff_us BETWEEN 0 AND 9223372036854775807)),
+    review_cutoff_us INTEGER
+            CHECK (review_cutoff_us IS NULL
+                   OR (typeof(review_cutoff_us) = 'integer'
+                       AND review_cutoff_us BETWEEN 0 AND 9223372036854775807)),
+    accepted_reward INTEGER
+            CHECK (accepted_reward IS NULL
+                   OR (typeof(accepted_reward) = 'integer'
+                       AND accepted_reward BETWEEN 1 AND 9223372036854775807)),
+    accepted_bid_amount INTEGER
+            CHECK (accepted_bid_amount IS NULL
+                   OR (typeof(accepted_bid_amount) = 'integer'
+                       AND accepted_bid_amount BETWEEN 0 AND 9223372036854775807)),
+    CHECK (acceptance_cutoff_us >= bidding_cutoff_us),
+    CHECK (
+        (timing_contract_version = 1
+         AND acceptance_window_seconds IS NULL
+         AND acceptance_cutoff_us = bidding_cutoff_us)
+        OR
+        (timing_contract_version = 2
+         AND typeof(acceptance_window_seconds) = 'integer'
+         AND acceptance_window_seconds BETWEEN 1 AND 9223372036854
+         AND bidding_cutoff_us <= 9223372036854775807 - acceptance_window_seconds * 1000000
+         AND acceptance_cutoff_us = bidding_cutoff_us + acceptance_window_seconds * 1000000)
+    ),
+    CHECK (
+        (accepted_reward IS NULL AND accepted_bid_amount IS NULL)
+        OR
+        (accepted_reward IS NOT NULL AND accepted_bid_amount IS NOT NULL)
+    ),
+    FOREIGN KEY (task_id) REFERENCES board_tasks (task_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+CREATE TABLE board_task_operations (
+    operation_id TEXT PRIMARY KEY NOT NULL
+            CHECK (typeof(operation_id) = 'text'
+                   AND length(operation_id) = 39
+                   AND substr(operation_id, 1, 3) = 'op-'
+                   AND substr(operation_id, 12, 1) = '-'
+                   AND substr(operation_id, 17, 1) = '-'
+                   AND substr(operation_id, 22, 1) = '-'
+                   AND substr(operation_id, 27, 1) = '-'
+                   AND length(replace(substr(operation_id, 4), '-', '')) = 32
+                   AND replace(substr(operation_id, 4), '-', '') NOT GLOB '*[^0-9a-f]*'),
+    operation_contract_version INTEGER NOT NULL
+            CHECK (typeof(operation_contract_version) = 'integer'
+                   AND operation_contract_version = 1),
+    task_id TEXT NOT NULL
+            CHECK (typeof(task_id) = 'text' AND length(CAST(task_id AS BLOB)) > 0),
+    command TEXT NOT NULL
+            CHECK (typeof(command) = 'text' AND command IN (
+                'submit_bid', 'accept_bid', 'cancel_task', 'expire_bidding',
+                'expire_acceptance', 'submit_deliverable', 'expire_execution',
+                'approve_task', 'auto_approve', 'dispute_task', 'record_ruling'
+            )),
+    canonical_request_json TEXT NOT NULL
+            CHECK (typeof(canonical_request_json) = 'text'
+                   AND json_valid(canonical_request_json) = 1
+                   AND json_type(canonical_request_json) = 'object'),
+    request_sha256 TEXT NOT NULL
+            CHECK (typeof(request_sha256) = 'text'
+                   AND length(request_sha256) = 64
+                   AND request_sha256 NOT GLOB '*[^0-9a-f]*'),
+    caller_kid TEXT NOT NULL
+            CHECK (typeof(caller_kid) = 'text' AND length(CAST(caller_kid AS BLOB)) > 0),
+    actor_kind TEXT NOT NULL
+            CHECK (typeof(actor_kind) = 'text'
+                   AND actor_kind IN ('agent', 'platform', 'system')),
+    actor_id TEXT NOT NULL
+            CHECK (typeof(actor_id) = 'text' AND length(CAST(actor_id AS BLOB)) > 0),
+    source_status TEXT NOT NULL
+            CHECK (typeof(source_status) = 'text' AND length(CAST(source_status AS BLOB)) > 0),
+    source_lifecycle_version INTEGER NOT NULL
+            CHECK (typeof(source_lifecycle_version) = 'integer'
+                   AND source_lifecycle_version BETWEEN 0 AND 9223372036854775807),
+    target_status TEXT NOT NULL
+            CHECK (typeof(target_status) = 'text' AND length(CAST(target_status AS BLOB)) > 0),
+    target_lifecycle_version INTEGER NOT NULL
+            CHECK (typeof(target_lifecycle_version) = 'integer'
+                   AND target_lifecycle_version BETWEEN 0 AND 9223372036854775807),
+    operation_state TEXT NOT NULL
+            CHECK (typeof(operation_state) = 'text'
+                   AND operation_state IN ('claimed', 'blocked', 'completed')),
+    effect_kind TEXT NOT NULL
+            CHECK (typeof(effect_kind) = 'text'
+                   AND effect_kind IN ('none', 'bank_release', 'bank_split', 'court_claim')),
+    effect_state TEXT NOT NULL
+            CHECK (typeof(effect_state) = 'text'
+                   AND effect_state IN ('none', 'pending', 'succeeded', 'conflict')),
+    effect_operation_id TEXT,
+    effect_result_reference TEXT,
+    effect_intent_json TEXT
+            CHECK (effect_intent_json IS NULL
+                   OR (typeof(effect_intent_json) = 'text'
+                       AND json_valid(effect_intent_json) = 1
+                       AND json_type(effect_intent_json) = 'object')),
+    claimed_at_us INTEGER NOT NULL
+            CHECK (typeof(claimed_at_us) = 'integer'
+                   AND claimed_at_us BETWEEN 0 AND 9223372036854775807),
+    completed_at_us INTEGER
+            CHECK (completed_at_us IS NULL
+                   OR (typeof(completed_at_us) = 'integer'
+                       AND completed_at_us BETWEEN claimed_at_us AND 9223372036854775807)),
+    event_id INTEGER,
+    result_json TEXT
+            CHECK (result_json IS NULL
+                   OR (typeof(result_json) = 'text'
+                       AND json_valid(result_json) = 1
+                       AND json_type(result_json) = 'object')),
+    error_json TEXT
+            CHECK (error_json IS NULL
+                   OR (typeof(error_json) = 'text'
+                       AND json_valid(error_json) = 1
+                       AND json_type(error_json) = 'object')),
+    CHECK (
+        (command = 'submit_bid'
+         AND target_lifecycle_version = source_lifecycle_version)
+        OR
+        (command != 'submit_bid'
+         AND target_lifecycle_version = source_lifecycle_version + 1)
+    ),
+    CHECK (effect_operation_id IS NULL
+           OR (typeof(effect_operation_id) = 'text'
+               AND length(CAST(effect_operation_id AS BLOB)) > 0)),
+    CHECK (effect_result_reference IS NULL
+           OR (typeof(effect_result_reference) = 'text'
+               AND length(CAST(effect_result_reference AS BLOB)) > 0)),
+    CHECK (
+        (effect_kind = 'none'
+         AND effect_state = 'none'
+         AND effect_operation_id IS NULL
+         AND effect_result_reference IS NULL
+         AND effect_intent_json IS NULL)
+        OR
+        (effect_kind IN ('bank_release', 'bank_split')
+         AND effect_state IN ('pending', 'succeeded', 'conflict')
+         AND effect_operation_id = operation_id
+         AND effect_intent_json IS NOT NULL)
+        OR
+        (effect_kind = 'court_claim'
+         AND effect_state IN ('pending', 'succeeded', 'conflict')
+         AND effect_operation_id IS NULL
+         AND effect_intent_json IS NOT NULL)
+    ),
+    CHECK (
+        (operation_state = 'claimed'
+         AND effect_kind != 'none'
+         AND effect_state = 'pending'
+         AND completed_at_us IS NULL
+         AND event_id IS NULL
+         AND result_json IS NULL
+         AND error_json IS NULL)
+        OR
+        (operation_state = 'blocked'
+         AND effect_kind != 'none'
+         AND effect_state = 'conflict'
+         AND completed_at_us IS NULL
+         AND event_id IS NULL
+         AND result_json IS NULL
+         AND error_json IS NOT NULL)
+        OR
+        (operation_state = 'completed'
+         AND effect_state IN ('none', 'succeeded')
+         AND completed_at_us IS NOT NULL
+         AND event_id IS NOT NULL
+         AND result_json IS NOT NULL
+         AND error_json IS NULL)
+    ),
+    CHECK ((operation_state = 'completed' AND effect_kind = 'none')
+           OR effect_result_reference IS NOT NULL
+           OR operation_state = 'claimed'
+           OR operation_state = 'blocked'),
+    FOREIGN KEY (task_id) REFERENCES board_tasks (task_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (event_id) REFERENCES events (event_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE UNIQUE INDEX idx_board_task_operations_active
+    ON board_task_operations (task_id)
+    WHERE operation_state IN ('claimed', 'blocked');
+
+CREATE INDEX idx_board_task_operations_task
+    ON board_task_operations (task_id, operation_id);
+
+CREATE INDEX idx_board_task_operations_state_effect
+    ON board_task_operations (operation_state, effect_state, operation_id);
+
+CREATE TABLE board_legacy_effect_observations (
+    observation_id TEXT PRIMARY KEY NOT NULL
+            CHECK (typeof(observation_id) = 'text'
+                   AND length(observation_id) = 40
+                   AND substr(observation_id, 1, 4) = 'obs-'
+                   AND substr(observation_id, 13, 1) = '-'
+                   AND substr(observation_id, 18, 1) = '-'
+                   AND substr(observation_id, 23, 1) = '-'
+                   AND substr(observation_id, 28, 1) = '-'
+                   AND length(replace(substr(observation_id, 5), '-', '')) = 32
+                   AND replace(substr(observation_id, 5), '-', '') NOT GLOB '*[^0-9a-f]*'),
+    task_id TEXT NOT NULL
+            CHECK (typeof(task_id) = 'text' AND length(CAST(task_id AS BLOB)) > 0),
+    observation_kind TEXT NOT NULL
+            CHECK (typeof(observation_kind) = 'text' AND observation_kind IN (
+                'worker_settlement_succeeded',
+                'worker_settlement_pending',
+                'court_claim_succeeded'
+            )),
+    observed_fact_json TEXT NOT NULL
+            CHECK (typeof(observed_fact_json) = 'text'
+                   AND json_valid(observed_fact_json) = 1
+                   AND json_type(observed_fact_json) = 'object'),
+    observed_fact_sha256 TEXT NOT NULL
+            CHECK (typeof(observed_fact_sha256) = 'text'
+                   AND length(observed_fact_sha256) = 64
+                   AND observed_fact_sha256 NOT GLOB '*[^0-9a-f]*'),
+    external_reference TEXT NOT NULL
+            CHECK (typeof(external_reference) = 'text'
+                   AND length(CAST(external_reference AS BLOB)) > 0),
+    effect_state TEXT NOT NULL
+            CHECK (typeof(effect_state) = 'text' AND effect_state IN ('pending', 'succeeded')),
+    target_outcome_hint TEXT NOT NULL
+            CHECK (typeof(target_outcome_hint) = 'text'
+                   AND target_outcome_hint IN ('approved', 'disputed')),
+    unresolved INTEGER NOT NULL
+            CHECK (typeof(unresolved) = 'integer' AND unresolved IN (0, 1)),
+    CHECK (
+        (observation_kind = 'worker_settlement_succeeded'
+         AND effect_state = 'succeeded' AND target_outcome_hint = 'approved')
+        OR
+        (observation_kind = 'worker_settlement_pending'
+         AND effect_state = 'pending' AND target_outcome_hint = 'approved')
+        OR
+        (observation_kind = 'court_claim_succeeded'
+         AND effect_state = 'succeeded' AND target_outcome_hint = 'disputed')
+    ),
+    FOREIGN KEY (task_id) REFERENCES board_tasks (task_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+CREATE INDEX idx_board_legacy_effect_task
+    ON board_legacy_effect_observations (task_id, unresolved, observation_id);
+-- MP-05 schema-v4 durable task-publication sidecars.
+-- Applied only to an admitted v3 schema by the explicit v3-to-v4 migration.
+
+CREATE TABLE board_task_publications (
+    operation_id TEXT PRIMARY KEY NOT NULL
+            CHECK (typeof(operation_id) = 'text'
+                   AND length(operation_id) = 39
+                   AND substr(operation_id, 1, 3) = 'op-'
+                   AND substr(operation_id, 12, 1) = '-'
+                   AND substr(operation_id, 17, 1) = '-'
+                   AND substr(operation_id, 22, 1) = '-'
+                   AND substr(operation_id, 27, 1) = '-'
+                   AND length(replace(substr(operation_id, 4), '-', '')) = 32
+                   AND replace(substr(operation_id, 4), '-', '') NOT GLOB '*[^0-9a-f]*'),
+    publication_contract_version INTEGER NOT NULL
+            CHECK (typeof(publication_contract_version) = 'integer'
+                   AND publication_contract_version = 1),
+    task_id TEXT NOT NULL UNIQUE
+            CHECK (typeof(task_id) = 'text'
+                   AND length(task_id) = 38
+                   AND substr(task_id, 1, 2) = 't-'
+                   AND substr(task_id, 11, 1) = '-'
+                   AND substr(task_id, 16, 1) = '-'
+                   AND substr(task_id, 21, 1) = '-'
+                   AND substr(task_id, 26, 1) = '-'
+                   AND length(replace(substr(task_id, 3), '-', '')) = 32
+                   AND lower(replace(substr(task_id, 3), '-', '')) NOT GLOB '*[^0-9a-f]*'),
+    canonical_request_json TEXT NOT NULL
+            CHECK (typeof(canonical_request_json) = 'text'
+                   AND json_valid(canonical_request_json) = 1
+                   AND json_type(canonical_request_json) = 'object'),
+    request_sha256 TEXT NOT NULL
+            CHECK (typeof(request_sha256) = 'text'
+                   AND length(request_sha256) = 64
+                   AND request_sha256 NOT GLOB '*[^0-9a-f]*'),
+    caller_kid TEXT NOT NULL
+            CHECK (typeof(caller_kid) = 'text' AND length(CAST(caller_kid AS BLOB)) > 0),
+    actor_id TEXT NOT NULL
+            CHECK (typeof(actor_id) = 'text' AND length(CAST(actor_id AS BLOB)) > 0),
+    lock_operation_id TEXT NOT NULL UNIQUE
+            CHECK (typeof(lock_operation_id) = 'text'
+                   AND length(lock_operation_id) = 39
+                   AND substr(lock_operation_id, 1, 3) = 'op-'
+                   AND substr(lock_operation_id, 12, 1) = '-'
+                   AND substr(lock_operation_id, 17, 1) = '-'
+                   AND substr(lock_operation_id, 22, 1) = '-'
+                   AND substr(lock_operation_id, 27, 1) = '-'
+                   AND length(replace(substr(lock_operation_id, 4), '-', '')) = 32
+                   AND replace(substr(lock_operation_id, 4), '-', '') NOT GLOB '*[^0-9a-f]*'),
+    state TEXT NOT NULL
+            CHECK (typeof(state) = 'text'
+                   AND state IN ('awaiting_lock', 'published', 'blocked_integrity')),
+    admitted_at_us INTEGER NOT NULL
+            CHECK (typeof(admitted_at_us) = 'integer'
+                   AND admitted_at_us BETWEEN 0 AND 9223372036854775807),
+    escrow_id TEXT,
+    lock_request_sha256 TEXT,
+    lock_receipt_event_id INTEGER,
+    published_at_us INTEGER,
+    creation_event_id INTEGER UNIQUE,
+    result_json TEXT
+            CHECK (result_json IS NULL
+                   OR (typeof(result_json) = 'text'
+                       AND json_valid(result_json) = 1
+                       AND json_type(result_json) = 'object')),
+    error_json TEXT
+            CHECK (error_json IS NULL
+                   OR (typeof(error_json) = 'text'
+                       AND json_valid(error_json) = 1
+                       AND json_type(error_json) = 'object')),
+    CHECK (operation_id != lock_operation_id),
+    CHECK (escrow_id IS NULL
+           OR (typeof(escrow_id) = 'text' AND length(CAST(escrow_id AS BLOB)) > 0)),
+    CHECK (lock_request_sha256 IS NULL
+           OR (typeof(lock_request_sha256) = 'text'
+               AND length(lock_request_sha256) = 64
+               AND lock_request_sha256 NOT GLOB '*[^0-9a-f]*')),
+    CHECK (lock_receipt_event_id IS NULL
+           OR (typeof(lock_receipt_event_id) = 'integer'
+               AND lock_receipt_event_id BETWEEN 1 AND 9223372036854775807)),
+    CHECK (published_at_us IS NULL
+           OR (typeof(published_at_us) = 'integer'
+               AND published_at_us BETWEEN admitted_at_us AND 9223372036854775807)),
+    CHECK (creation_event_id IS NULL
+           OR (typeof(creation_event_id) = 'integer'
+               AND creation_event_id BETWEEN 1 AND 9223372036854775807)),
+    CHECK (
+        (state = 'awaiting_lock'
+         AND escrow_id IS NULL
+         AND lock_request_sha256 IS NULL
+         AND lock_receipt_event_id IS NULL
+         AND published_at_us IS NULL
+         AND creation_event_id IS NULL
+         AND result_json IS NULL
+         AND error_json IS NULL)
+        OR
+        (state = 'published'
+         AND escrow_id IS NOT NULL
+         AND lock_request_sha256 IS NOT NULL
+         AND lock_receipt_event_id IS NOT NULL
+         AND published_at_us IS NOT NULL
+         AND creation_event_id IS NOT NULL
+         AND result_json IS NOT NULL
+         AND error_json IS NULL)
+        OR
+        (state = 'blocked_integrity'
+         AND escrow_id IS NULL
+         AND lock_request_sha256 IS NULL
+         AND lock_receipt_event_id IS NULL
+         AND published_at_us IS NULL
+         AND creation_event_id IS NULL
+         AND result_json IS NULL
+         AND error_json IS NOT NULL)
+    ),
+    FOREIGN KEY (escrow_id) REFERENCES bank_escrow (escrow_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (lock_receipt_event_id) REFERENCES events (event_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (creation_event_id) REFERENCES events (event_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE INDEX idx_board_task_publications_recovery
+    ON board_task_publications (caller_kid, state, operation_id);
+
+CREATE TABLE board_publication_cutover (
+    singleton INTEGER PRIMARY KEY NOT NULL
+            CHECK (typeof(singleton) = 'integer' AND singleton = 1),
+    cutover_version INTEGER NOT NULL
+            CHECK (typeof(cutover_version) = 'integer' AND cutover_version = 1),
+    cutover_kind TEXT NOT NULL
+            CHECK (typeof(cutover_kind) = 'text' AND cutover_kind IN ('fresh', 'migrated')),
+    source_schema_version INTEGER,
+    source_snapshot_sha256 TEXT,
+    migration_plan_sha256 TEXT,
+    backup_id TEXT,
+    backup_manifest_sha256 TEXT,
+    caller_kid TEXT,
+    legacy_task_ids_sha256 TEXT NOT NULL
+            CHECK (typeof(legacy_task_ids_sha256) = 'text'
+                   AND length(legacy_task_ids_sha256) = 64
+                   AND legacy_task_ids_sha256 NOT GLOB '*[^0-9a-f]*'),
+    legacy_task_count INTEGER NOT NULL
+            CHECK (typeof(legacy_task_count) = 'integer'
+                   AND legacy_task_count BETWEEN 0 AND 9223372036854775807),
+    legacy_observations_sha256 TEXT NOT NULL
+            CHECK (typeof(legacy_observations_sha256) = 'text'
+                   AND length(legacy_observations_sha256) = 64
+                   AND legacy_observations_sha256 NOT GLOB '*[^0-9a-f]*'),
+    legacy_observation_count INTEGER NOT NULL
+            CHECK (typeof(legacy_observation_count) = 'integer'
+                   AND legacy_observation_count BETWEEN 0 AND 9223372036854775807),
+    CHECK (
+        (cutover_kind = 'fresh'
+         AND source_schema_version IS NULL
+         AND source_snapshot_sha256 IS NULL
+         AND migration_plan_sha256 IS NULL
+         AND backup_id IS NULL
+         AND backup_manifest_sha256 IS NULL
+         AND caller_kid IS NULL)
+        OR
+        (cutover_kind = 'migrated'
+         AND typeof(source_schema_version) = 'integer'
+         AND source_schema_version = 3
+         AND typeof(source_snapshot_sha256) = 'text'
+         AND length(source_snapshot_sha256) = 64
+         AND source_snapshot_sha256 NOT GLOB '*[^0-9a-f]*'
+         AND typeof(migration_plan_sha256) = 'text'
+         AND length(migration_plan_sha256) = 64
+         AND migration_plan_sha256 NOT GLOB '*[^0-9a-f]*'
+         AND typeof(backup_id) = 'text'
+         AND length(CAST(backup_id AS BLOB)) > 0
+         AND typeof(backup_manifest_sha256) = 'text'
+         AND length(backup_manifest_sha256) = 64
+         AND backup_manifest_sha256 NOT GLOB '*[^0-9a-f]*'
+         AND typeof(caller_kid) = 'text'
+         AND length(CAST(caller_kid AS BLOB)) > 0)
+    )
+) WITHOUT ROWID;
+
+CREATE TABLE board_legacy_posting_observations (
+    observation_id TEXT PRIMARY KEY NOT NULL
+            CHECK (typeof(observation_id) = 'text'
+                   AND length(observation_id) = 40
+                   AND substr(observation_id, 1, 4) = 'obs-'
+                   AND substr(observation_id, 13, 1) = '-'
+                   AND substr(observation_id, 18, 1) = '-'
+                   AND substr(observation_id, 23, 1) = '-'
+                   AND substr(observation_id, 28, 1) = '-'
+                   AND length(replace(substr(observation_id, 5), '-', '')) = 32
+                   AND replace(substr(observation_id, 5), '-', '') NOT GLOB '*[^0-9a-f]*'),
+    observation_contract_version INTEGER NOT NULL
+            CHECK (typeof(observation_contract_version) = 'integer'
+                   AND observation_contract_version = 1),
+    escrow_id TEXT NOT NULL UNIQUE
+            CHECK (typeof(escrow_id) = 'text' AND length(CAST(escrow_id AS BLOB)) > 0),
+    task_id TEXT NOT NULL
+            CHECK (typeof(task_id) = 'text' AND length(CAST(task_id AS BLOB)) > 0),
+    poster_id TEXT NOT NULL
+            CHECK (typeof(poster_id) = 'text' AND length(CAST(poster_id AS BLOB)) > 0),
+    amount INTEGER NOT NULL
+            CHECK (typeof(amount) = 'integer' AND amount BETWEEN 1 AND 9223372036854775807),
+    observed_fact_json TEXT NOT NULL
+            CHECK (typeof(observed_fact_json) = 'text'
+                   AND json_valid(observed_fact_json) = 1
+                   AND json_type(observed_fact_json) = 'object'),
+    observed_fact_sha256 TEXT NOT NULL
+            CHECK (typeof(observed_fact_sha256) = 'text'
+                   AND length(observed_fact_sha256) = 64
+                   AND observed_fact_sha256 NOT GLOB '*[^0-9a-f]*'),
+    caller_kid TEXT NOT NULL
+            CHECK (typeof(caller_kid) = 'text' AND length(CAST(caller_kid AS BLOB)) > 0),
+    state TEXT NOT NULL
+            CHECK (typeof(state) = 'text'
+                   AND state IN ('refund_pending', 'refunded', 'blocked_integrity')),
+    refund_operation_id TEXT,
+    refund_request_json TEXT
+            CHECK (refund_request_json IS NULL
+                   OR (typeof(refund_request_json) = 'text'
+                       AND json_valid(refund_request_json) = 1
+                       AND json_type(refund_request_json) = 'object')),
+    refund_request_sha256 TEXT,
+    refund_receipt_event_id INTEGER,
+    refunded_at_us INTEGER,
+    result_json TEXT
+            CHECK (result_json IS NULL
+                   OR (typeof(result_json) = 'text'
+                       AND json_valid(result_json) = 1
+                       AND json_type(result_json) = 'object')),
+    error_json TEXT
+            CHECK (error_json IS NULL
+                   OR (typeof(error_json) = 'text'
+                       AND json_valid(error_json) = 1
+                       AND json_type(error_json) = 'object')),
+    CHECK (refund_operation_id IS NULL
+           OR (typeof(refund_operation_id) = 'text'
+               AND length(refund_operation_id) = 39
+               AND substr(refund_operation_id, 1, 3) = 'op-'
+               AND substr(refund_operation_id, 12, 1) = '-'
+               AND substr(refund_operation_id, 17, 1) = '-'
+               AND substr(refund_operation_id, 22, 1) = '-'
+               AND substr(refund_operation_id, 27, 1) = '-'
+               AND length(replace(substr(refund_operation_id, 4), '-', '')) = 32
+               AND replace(substr(refund_operation_id, 4), '-', '') NOT GLOB '*[^0-9a-f]*')),
+    CHECK (refund_request_sha256 IS NULL
+           OR (typeof(refund_request_sha256) = 'text'
+               AND length(refund_request_sha256) = 64
+               AND refund_request_sha256 NOT GLOB '*[^0-9a-f]*')),
+    CHECK (refund_receipt_event_id IS NULL
+           OR (typeof(refund_receipt_event_id) = 'integer'
+               AND refund_receipt_event_id BETWEEN 1 AND 9223372036854775807)),
+    CHECK (refunded_at_us IS NULL
+           OR (typeof(refunded_at_us) = 'integer'
+               AND refunded_at_us BETWEEN 0 AND 9223372036854775807)),
+    CHECK (
+        (state = 'refund_pending'
+         AND refund_operation_id IS NOT NULL
+         AND refund_request_json IS NOT NULL
+         AND refund_request_sha256 IS NOT NULL
+         AND refund_receipt_event_id IS NULL
+         AND refunded_at_us IS NULL
+         AND result_json IS NULL
+         AND error_json IS NULL)
+        OR
+        (state = 'refunded'
+         AND refunded_at_us IS NOT NULL
+         AND result_json IS NOT NULL
+         AND error_json IS NULL
+         AND ((refund_operation_id IS NULL
+               AND refund_request_json IS NULL
+               AND refund_request_sha256 IS NULL
+               AND refund_receipt_event_id IS NULL)
+              OR
+              (refund_operation_id IS NOT NULL
+               AND refund_request_json IS NOT NULL
+               AND refund_request_sha256 IS NOT NULL
+               AND refund_receipt_event_id IS NOT NULL)))
+        OR
+        (state = 'blocked_integrity'
+         AND refund_receipt_event_id IS NULL
+         AND refunded_at_us IS NULL
+         AND result_json IS NULL
+         AND error_json IS NOT NULL
+         AND ((refund_operation_id IS NULL
+               AND refund_request_json IS NULL
+               AND refund_request_sha256 IS NULL)
+              OR
+              (refund_operation_id IS NOT NULL
+               AND refund_request_json IS NOT NULL
+               AND refund_request_sha256 IS NOT NULL)))
+    ),
+    FOREIGN KEY (escrow_id) REFERENCES bank_escrow (escrow_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (refund_receipt_event_id) REFERENCES events (event_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+CREATE INDEX idx_board_legacy_posting_recovery
+    ON board_legacy_posting_observations (caller_kid, state, observation_id);
+
+INSERT INTO board_publication_cutover (
+    singleton,
+    cutover_version,
+    cutover_kind,
+    source_schema_version,
+    source_snapshot_sha256,
+    migration_plan_sha256,
+    backup_id,
+    backup_manifest_sha256,
+    caller_kid,
+    legacy_task_ids_sha256,
+    legacy_task_count,
+    legacy_observations_sha256,
+    legacy_observation_count
+) VALUES (
+    1,
+    1,
+    'fresh',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+    0,
+    '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+    0
+);
+-- MP-08 schema-v5 durable financial-effect recovery sidecars.
+-- Applied only to an admitted v4 schema by the explicit v4-to-v5 migration.
+
+CREATE TABLE board_task_effect_delivery_cutover (
+    singleton INTEGER PRIMARY KEY NOT NULL
+        CHECK (typeof(singleton) = 'integer' AND singleton = 1),
+    cutover_version INTEGER NOT NULL
+        CHECK (typeof(cutover_version) = 'integer' AND cutover_version = 1),
+    cutover_kind TEXT NOT NULL
+        CHECK (typeof(cutover_kind) = 'text'
+               AND cutover_kind IN ('fresh', 'migrated')),
+    source_schema_version INTEGER,
+    source_snapshot_sha256 TEXT,
+    migration_plan_sha256 TEXT,
+    backup_id TEXT,
+    backup_manifest_sha256 TEXT,
+    caller_kid TEXT,
+    native_member_count INTEGER NOT NULL
+        CHECK (typeof(native_member_count) = 'integer'
+               AND native_member_count BETWEEN 0 AND 9223372036854775807),
+    native_members_sha256 TEXT NOT NULL
+        CHECK (typeof(native_members_sha256) = 'text'
+               AND length(native_members_sha256) = 64
+               AND native_members_sha256 NOT GLOB '*[^0-9a-f]*'),
+    legacy_member_count INTEGER NOT NULL
+        CHECK (typeof(legacy_member_count) = 'integer'
+               AND legacy_member_count BETWEEN 0 AND 9223372036854775807),
+    legacy_members_sha256 TEXT NOT NULL
+        CHECK (typeof(legacy_members_sha256) = 'text'
+               AND length(legacy_members_sha256) = 64
+               AND legacy_members_sha256 NOT GLOB '*[^0-9a-f]*'),
+    combined_member_count INTEGER NOT NULL
+        CHECK (typeof(combined_member_count) = 'integer'
+               AND combined_member_count BETWEEN 0 AND 9223372036854775807),
+    combined_members_sha256 TEXT NOT NULL
+        CHECK (typeof(combined_members_sha256) = 'text'
+               AND length(combined_members_sha256) = 64
+               AND combined_members_sha256 NOT GLOB '*[^0-9a-f]*'),
+    CHECK (combined_member_count = native_member_count + legacy_member_count),
+    CHECK (
+        (cutover_kind = 'fresh'
+         AND source_schema_version IS NULL
+         AND source_snapshot_sha256 IS NULL
+         AND migration_plan_sha256 IS NULL
+         AND backup_id IS NULL
+         AND backup_manifest_sha256 IS NULL
+         AND caller_kid IS NULL
+         AND native_member_count = 0
+         AND legacy_member_count = 0
+         AND combined_member_count = 0
+         AND native_members_sha256 =
+             '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'
+         AND legacy_members_sha256 =
+             '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'
+         AND combined_members_sha256 =
+             '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945')
+        OR
+        (cutover_kind = 'migrated'
+         AND typeof(source_schema_version) = 'integer'
+         AND source_schema_version = 4
+         AND typeof(source_snapshot_sha256) = 'text'
+         AND length(source_snapshot_sha256) = 64
+         AND source_snapshot_sha256 NOT GLOB '*[^0-9a-f]*'
+         AND typeof(migration_plan_sha256) = 'text'
+         AND length(migration_plan_sha256) = 64
+         AND migration_plan_sha256 NOT GLOB '*[^0-9a-f]*'
+         AND typeof(backup_id) = 'text'
+         AND length(CAST(backup_id AS BLOB)) > 0
+         AND typeof(backup_manifest_sha256) = 'text'
+         AND length(backup_manifest_sha256) = 64
+         AND backup_manifest_sha256 NOT GLOB '*[^0-9a-f]*'
+         AND typeof(caller_kid) = 'text'
+         AND length(CAST(caller_kid AS BLOB)) > 0)
+    )
+) WITHOUT ROWID;
+
+CREATE TABLE board_task_effect_deliveries (
+    effect_operation_id TEXT PRIMARY KEY NOT NULL
+        CHECK (typeof(effect_operation_id) = 'text'
+               AND length(effect_operation_id) = 39
+               AND substr(effect_operation_id, 1, 3) = 'op-'
+               AND substr(effect_operation_id, 12, 1) = '-'
+               AND substr(effect_operation_id, 17, 1) = '-'
+               AND substr(effect_operation_id, 22, 1) = '-'
+               AND substr(effect_operation_id, 27, 1) = '-'
+               AND length(replace(substr(effect_operation_id, 4), '-', '')) = 32
+               AND replace(substr(effect_operation_id, 4), '-', '')
+                   NOT GLOB '*[^0-9a-f]*'),
+    recovery_contract_version INTEGER NOT NULL
+        CHECK (typeof(recovery_contract_version) = 'integer'
+               AND recovery_contract_version = 1),
+    task_id TEXT NOT NULL
+        CHECK (typeof(task_id) = 'text'
+               AND length(CAST(task_id AS BLOB)) > 0),
+    source_kind TEXT NOT NULL
+        CHECK (typeof(source_kind) = 'text'
+               AND source_kind IN
+                   ('native_task_operation', 'legacy_settlement_observation')),
+    native_operation_id TEXT UNIQUE
+        CHECK (native_operation_id IS NULL
+               OR (typeof(native_operation_id) = 'text'
+                   AND length(native_operation_id) = 39
+                   AND substr(native_operation_id, 1, 3) = 'op-'
+                   AND substr(native_operation_id, 12, 1) = '-'
+                   AND substr(native_operation_id, 17, 1) = '-'
+                   AND substr(native_operation_id, 22, 1) = '-'
+                   AND substr(native_operation_id, 27, 1) = '-'
+                   AND length(replace(substr(native_operation_id, 4), '-', '')) = 32
+                   AND replace(substr(native_operation_id, 4), '-', '')
+                       NOT GLOB '*[^0-9a-f]*')),
+    legacy_observation_id TEXT UNIQUE
+        CHECK (legacy_observation_id IS NULL
+               OR (typeof(legacy_observation_id) = 'text'
+                   AND length(legacy_observation_id) = 40
+                   AND substr(legacy_observation_id, 1, 4) = 'obs-'
+                   AND substr(legacy_observation_id, 13, 1) = '-'
+                   AND substr(legacy_observation_id, 18, 1) = '-'
+                   AND substr(legacy_observation_id, 23, 1) = '-'
+                   AND substr(legacy_observation_id, 28, 1) = '-'
+                   AND length(replace(substr(legacy_observation_id, 5), '-', '')) = 32
+                   AND replace(substr(legacy_observation_id, 5), '-', '')
+                       NOT GLOB '*[^0-9a-f]*')),
+    owner_caller_kid TEXT NOT NULL
+        CHECK (typeof(owner_caller_kid) = 'text'
+               AND length(CAST(owner_caller_kid AS BLOB)) > 0),
+    effect_kind TEXT NOT NULL
+        CHECK (typeof(effect_kind) = 'text'
+               AND effect_kind IN ('bank_release', 'bank_split')),
+    delivery_state TEXT NOT NULL
+        CHECK (typeof(delivery_state) = 'text'
+               AND delivery_state IN
+                   ('pending', 'leased', 'dead_letter', 'completed',
+                    'integrity_blocked')),
+    enqueued_at_us INTEGER NOT NULL
+        CHECK (typeof(enqueued_at_us) = 'integer'
+               AND enqueued_at_us BETWEEN 0 AND 253402300799999999),
+    total_attempt_count INTEGER NOT NULL
+        CHECK (typeof(total_attempt_count) = 'integer'
+               AND total_attempt_count BETWEEN 0 AND 9223372036854775807),
+    cycle_attempt_count INTEGER NOT NULL
+        CHECK (typeof(cycle_attempt_count) = 'integer'
+               AND cycle_attempt_count BETWEEN 0 AND total_attempt_count),
+    lease_generation INTEGER NOT NULL
+        CHECK (typeof(lease_generation) = 'integer'
+               AND lease_generation BETWEEN 0 AND 9223372036854775807),
+    next_attempt_at_us INTEGER
+        CHECK (next_attempt_at_us IS NULL
+               OR (typeof(next_attempt_at_us) = 'integer'
+                   AND next_attempt_at_us BETWEEN 0 AND 253402300799999999)),
+    lease_owner_id TEXT
+        CHECK (lease_owner_id IS NULL
+               OR (typeof(lease_owner_id) = 'text'
+                   AND length(lease_owner_id) = 45
+                   AND substr(lease_owner_id, 1, 9) = 'recovery-')),
+    lease_acquired_at_us INTEGER
+        CHECK (lease_acquired_at_us IS NULL
+               OR (typeof(lease_acquired_at_us) = 'integer'
+                   AND lease_acquired_at_us
+                       BETWEEN enqueued_at_us AND 253402300799999999)),
+    lease_expires_at_us INTEGER
+        CHECK (lease_expires_at_us IS NULL
+               OR (typeof(lease_expires_at_us) = 'integer'
+                   AND lease_expires_at_us
+                       BETWEEN enqueued_at_us AND 253402300799999999)),
+    last_failure_code TEXT
+        CHECK (last_failure_code IS NULL
+               OR (typeof(last_failure_code) = 'text'
+                   AND last_failure_code IN
+                       ('central_bank_unavailable',
+                        'gateway_unavailable',
+                        'invalid_gateway_response',
+                        'request_timeout',
+                        'unexpected_recovery_error',
+                        'lease_expired',
+                        'attempt_counter_exhausted',
+                        'lease_generation_exhausted',
+                        'effect_evidence_conflict'))),
+    last_failure_at_us INTEGER
+        CHECK (last_failure_at_us IS NULL
+               OR (typeof(last_failure_at_us) = 'integer'
+                   AND last_failure_at_us
+                       BETWEEN enqueued_at_us AND 253402300799999999)),
+    operator_retry_count INTEGER NOT NULL
+        CHECK (typeof(operator_retry_count) = 'integer'
+               AND operator_retry_count BETWEEN 0 AND 9223372036854775807),
+    last_operator_retry_at_us INTEGER
+        CHECK (last_operator_retry_at_us IS NULL
+               OR (typeof(last_operator_retry_at_us) = 'integer'
+                   AND last_operator_retry_at_us
+                       BETWEEN enqueued_at_us AND 253402300799999999)),
+    last_operator_retry_caller_kid TEXT
+        CHECK (last_operator_retry_caller_kid IS NULL
+               OR (typeof(last_operator_retry_caller_kid) = 'text'
+                   AND length(CAST(last_operator_retry_caller_kid AS BLOB)) > 0)),
+    next_evidence_check_at_us INTEGER
+        CHECK (next_evidence_check_at_us IS NULL
+               OR (typeof(next_evidence_check_at_us) = 'integer'
+                   AND next_evidence_check_at_us
+                       BETWEEN enqueued_at_us AND 253402300799999999)),
+    completed_at_us INTEGER
+        CHECK (completed_at_us IS NULL
+               OR (typeof(completed_at_us) = 'integer'
+                   AND completed_at_us BETWEEN enqueued_at_us
+                                           AND 253402300799999999)),
+    completion_event_id INTEGER
+        CHECK (completion_event_id IS NULL
+               OR (typeof(completion_event_id) = 'integer'
+                   AND completion_event_id BETWEEN 1 AND 9223372036854775807)),
+    cutover_singleton INTEGER
+        CHECK (cutover_singleton IS NULL
+               OR (typeof(cutover_singleton) = 'integer'
+                   AND cutover_singleton = 1)),
+    CHECK (
+        (source_kind = 'native_task_operation'
+         AND native_operation_id IS NOT NULL
+         AND native_operation_id = effect_operation_id
+         AND legacy_observation_id IS NULL)
+        OR
+        (source_kind = 'legacy_settlement_observation'
+         AND native_operation_id IS NULL
+         AND legacy_observation_id IS NOT NULL
+         AND effect_kind = 'bank_release'
+         AND cutover_singleton IS NOT NULL
+         AND cutover_singleton = 1)
+    ),
+    CHECK ((last_failure_code IS NULL AND last_failure_at_us IS NULL)
+           OR (last_failure_code IS NOT NULL AND last_failure_at_us IS NOT NULL)),
+    CHECK (
+        (operator_retry_count = 0
+         AND last_operator_retry_at_us IS NULL
+         AND last_operator_retry_caller_kid IS NULL)
+        OR
+        (operator_retry_count > 0
+         AND last_operator_retry_at_us IS NOT NULL
+         AND last_operator_retry_caller_kid IS NOT NULL)
+    ),
+    CHECK (
+        (delivery_state = 'pending'
+         AND next_attempt_at_us IS NOT NULL
+         AND lease_owner_id IS NULL
+         AND lease_acquired_at_us IS NULL
+         AND lease_expires_at_us IS NULL
+         AND next_evidence_check_at_us IS NULL
+         AND completed_at_us IS NULL
+         AND completion_event_id IS NULL)
+        OR
+        (delivery_state = 'leased'
+         AND next_attempt_at_us IS NULL
+         AND lease_owner_id IS NOT NULL
+         AND lease_acquired_at_us IS NOT NULL
+         AND lease_expires_at_us IS NOT NULL
+         AND lease_expires_at_us > lease_acquired_at_us
+         AND next_evidence_check_at_us IS NULL
+         AND completed_at_us IS NULL
+         AND completion_event_id IS NULL)
+        OR
+        (delivery_state = 'dead_letter'
+         AND next_attempt_at_us IS NULL
+         AND lease_owner_id IS NULL
+         AND lease_acquired_at_us IS NULL
+         AND lease_expires_at_us IS NULL
+         AND next_evidence_check_at_us IS NOT NULL
+         AND last_failure_code IS NOT NULL
+         AND last_failure_at_us IS NOT NULL
+         AND completed_at_us IS NULL
+         AND completion_event_id IS NULL)
+        OR
+        (delivery_state = 'integrity_blocked'
+         AND next_attempt_at_us IS NULL
+         AND lease_owner_id IS NULL
+         AND lease_acquired_at_us IS NULL
+         AND lease_expires_at_us IS NULL
+         AND next_evidence_check_at_us IS NULL
+         AND last_failure_code = 'effect_evidence_conflict'
+         AND last_failure_at_us IS NOT NULL
+         AND completed_at_us IS NULL
+         AND completion_event_id IS NULL)
+        OR
+        (delivery_state = 'completed'
+         AND next_attempt_at_us IS NULL
+         AND lease_owner_id IS NULL
+         AND lease_acquired_at_us IS NULL
+         AND lease_expires_at_us IS NULL
+         AND next_evidence_check_at_us IS NULL
+         AND completed_at_us IS NOT NULL
+         AND completion_event_id IS NOT NULL)
+    ),
+    UNIQUE (task_id),
+    FOREIGN KEY (task_id) REFERENCES board_tasks (task_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (native_operation_id)
+        REFERENCES board_task_operations (operation_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (legacy_observation_id)
+        REFERENCES board_legacy_effect_observations (observation_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (completion_event_id) REFERENCES events (event_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (cutover_singleton)
+        REFERENCES board_task_effect_delivery_cutover (singleton)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+CREATE INDEX idx_board_effect_delivery_pending
+    ON board_task_effect_deliveries (next_attempt_at_us, effect_operation_id)
+    WHERE delivery_state = 'pending';
+
+CREATE INDEX idx_board_effect_delivery_leased
+    ON board_task_effect_deliveries (lease_expires_at_us, effect_operation_id)
+    WHERE delivery_state = 'leased';
+
+CREATE INDEX idx_board_effect_delivery_dead_letter_evidence
+    ON board_task_effect_deliveries
+       (next_evidence_check_at_us, effect_operation_id)
+    WHERE delivery_state = 'dead_letter';
+
+CREATE INDEX idx_board_effect_delivery_diagnostic
+    ON board_task_effect_deliveries (delivery_state, effect_operation_id);
+
+-- Fresh v5 has no migrated financial effects and no invented migration provenance.
+INSERT INTO board_task_effect_delivery_cutover (
+    singleton,
+    cutover_version,
+    cutover_kind,
+    source_schema_version,
+    source_snapshot_sha256,
+    migration_plan_sha256,
+    backup_id,
+    backup_manifest_sha256,
+    caller_kid,
+    native_member_count,
+    native_members_sha256,
+    legacy_member_count,
+    legacy_members_sha256,
+    combined_member_count,
+    combined_members_sha256
+) VALUES (
+    1,
+    1,
+    'fresh',
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    0,
+    '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+    0,
+    '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+    0,
+    '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'
+);

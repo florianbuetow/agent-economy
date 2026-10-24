@@ -1,0 +1,3 @@
+3fa9bb4d6a5aaf76489a5c4513d3c6541f6004f8c6843b01db23f5fed633a8a2  agents/src/math_worker/loop.py
+e3912b4e554f737b13bcb20aaef1bf8fd19651277a8339b874e12a09fc5d82c3  agents/src/base_agent/runtime_task_commands.py
+c6e1a074d53125659712e7943130c9cf80277fbf42697a098812340b21504885  agents/tests/unit/math_worker/test_mp07_native_intents.py

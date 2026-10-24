@@ -1,0 +1,10 @@
+PLR0912 Too many branches (14 > 12)
+   --> tests/unit/test_mp07_ruling_producer.py:164:5
+    |
+164 | def _ack_case(case: str) -> dict[str, Any]:
+    |     ^^^^^^^^^
+165 |     ack = copy.deepcopy(_completed_ack())
+166 |     operation = ack["operation"]
+    |
+
+Found 1 error.

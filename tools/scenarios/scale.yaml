@@ -74,51 +74,61 @@ steps:
   - action: fund
     agent: acme_corp
     amount: 10000
+    reference: "demo:scale:fund:acme-corp"
     delay: 0.3
 
   - action: fund
     agent: buildbot
     amount: 8000
+    reference: "demo:scale:fund:buildbot"
     delay: 0.3
 
   - action: fund
     agent: nova
     amount: 6000
+    reference: "demo:scale:fund:nova"
     delay: 0.3
 
   - action: fund
     agent: atlas
     amount: 500
+    reference: "demo:scale:fund:atlas"
     delay: 0.3
 
   - action: fund
     agent: beacon
     amount: 500
+    reference: "demo:scale:fund:beacon"
     delay: 0.3
 
   - action: fund
     agent: cipher
     amount: 500
+    reference: "demo:scale:fund:cipher"
     delay: 0.3
 
   - action: fund
     agent: delta
     amount: 500
+    reference: "demo:scale:fund:delta"
     delay: 0.3
 
   - action: fund
     agent: echo_dev
     amount: 500
+    reference: "demo:scale:fund:echo-dev"
     delay: 0.3
 
   - action: fund
     agent: flux
     amount: 500
+    reference: "demo:scale:fund:flux"
     delay: 0.3
 
   - action: fund
     agent: genesis
     amount: 500
+    reference: "demo:scale:fund:genesis"
     delay: 1.0
 
   # ── Phase 3: Wave 1 — ACME posts two tasks ───────────
@@ -128,6 +138,10 @@ steps:
     title: "Build authentication system"
     spec: "Implement JWT-based auth with login, register, and password reset. Include rate limiting and brute-force protection."
     reward: 500
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 2.0
 
   - action: post_task
@@ -136,6 +150,10 @@ steps:
     title: "Design admin dashboard"
     spec: "Create a responsive admin dashboard with user management table, activity charts, and system health indicators."
     reward: 300
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 2.0
 
   # Competitive bidding on auth_system
@@ -190,6 +208,10 @@ steps:
     title: "Set up CI/CD pipeline"
     spec: "Configure GitHub Actions with build, test, lint, and deploy stages. Include Docker image building and staging deployment."
     reward: 400
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 1.5
 
   - action: post_task
@@ -198,6 +220,10 @@ steps:
     title: "Implement API gateway"
     spec: "Build a lightweight API gateway with rate limiting, request routing, API key validation, and request/response logging."
     reward: 600
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 1.5
 
   - action: bid
@@ -310,6 +336,17 @@ steps:
     reason: "Deliverable is missing two required features: API key validation and request/response logging. The spec explicitly required both."
     delay: 2.0
 
+  - action: submit_rebuttal
+    worker: atlas
+    task_ref: api_gateway
+    rebuttal: "Rate limiting and proxying were the core ask; API key validation and logging were stretch items, not blocking requirements."
+    delay: 2.0
+
+  - action: trigger_ruling
+    agent: nova
+    task_ref: api_gateway
+    delay: 2.0
+
   # ── Phase 6: Wave 3 — More tasks ─────────────────────
   - action: post_task
     poster: buildbot
@@ -317,6 +354,10 @@ steps:
     title: "Set up monitoring and alerting"
     spec: "Configure Prometheus metrics, Grafana dashboards, and PagerDuty alerting for all production services."
     reward: 350
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 1.5
 
   - action: bid

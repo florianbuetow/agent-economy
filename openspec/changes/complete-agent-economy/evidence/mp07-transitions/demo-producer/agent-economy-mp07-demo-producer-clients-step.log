@@ -1,0 +1,259 @@
+................FFFFFFFFFF.FFFFFFFFFFFFFFFFFFFFFFFFFF                    [100%]
+=================================== FAILURES ===================================
+_______ test_scenario_rejects_missing_or_invalid_acceptance_window[None] _______
+tests/unit/demo_replay/test_mp07_task_operations.py:394: in test_scenario_rejects_missing_or_invalid_acceptance_window
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'ValueError'>
+________ test_scenario_rejects_missing_or_invalid_acceptance_window[0] _________
+tests/unit/demo_replay/test_mp07_task_operations.py:394: in test_scenario_rejects_missing_or_invalid_acceptance_window
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'ValueError'>
+_______ test_scenario_rejects_missing_or_invalid_acceptance_window[True] _______
+tests/unit/demo_replay/test_mp07_task_operations.py:394: in test_scenario_rejects_missing_or_invalid_acceptance_window
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'ValueError'>
+________ test_scenario_rejects_missing_or_invalid_acceptance_window[45] ________
+tests/unit/demo_replay/test_mp07_task_operations.py:394: in test_scenario_rejects_missing_or_invalid_acceptance_window
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'ValueError'>
+_______________ test_engine_forwards_all_explicit_posting_terms ________________
+tests/unit/demo_replay/test_mp07_task_operations.py:415: in test_engine_forwards_all_explicit_posting_terms
+    assert post.call_args.kwargs["acceptance_window_seconds"] == 45
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'acceptance_window_seconds'
+----------------------------- Captured stdout call -----------------------------
+  Task posted: "Task" for 100 coins -> t-00000000-0000-4000-8000-000000000001
+_________ test_new_engine_intent_observes_version_before_mutation[bid] _________
+tests/unit/demo_replay/test_mp07_task_operations.py:445: in test_new_engine_intent_observes_version_before_mutation
+    assert order == ["read", "mutate"]
+E   AssertionError: assert ['mutate'] == ['read', 'mutate']
+E     
+E     At index 0 diff: 'mutate' != 'read'
+E     Right contains one more item: 'mutate'
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+  Bob bid 90 coins on task -> bid_id=bid-00000000-0000-4000-8000-000000000002
+_____ test_new_engine_intent_observes_version_before_mutation[accept_bid] ______
+tests/unit/demo_replay/test_mp07_task_operations.py:445: in test_new_engine_intent_observes_version_before_mutation
+    assert order == ["read", "mutate"]
+E   AssertionError: assert ['mutate'] == ['read', 'mutate']
+E     
+E     At index 0 diff: 'mutate' != 'read'
+E     Right contains one more item: 'mutate'
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+  Alice accepted Bob's bid -> contract formed
+_ test_new_engine_intent_observes_version_before_mutation[submit_deliverable] __
+tests/unit/demo_replay/test_mp07_task_operations.py:445: in test_new_engine_intent_observes_version_before_mutation
+    assert order == ["read", "mutate"]
+E   AssertionError: assert ['mutate'] == ['read', 'mutate']
+E     
+E     At index 0 diff: 'mutate' != 'read'
+E     Right contains one more item: 'mutate'
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+  Bob submitted deliverables for review
+_______ test_new_engine_intent_observes_version_before_mutation[approve] _______
+tests/unit/demo_replay/test_mp07_task_operations.py:445: in test_new_engine_intent_observes_version_before_mutation
+    assert order == ["read", "mutate"]
+E   AssertionError: assert ['mutate'] == ['read', 'mutate']
+E     
+E     At index 0 diff: 'mutate' != 'read'
+E     Right contains one more item: 'mutate'
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+  Alice approved task -> payout released!
+_______ test_new_engine_intent_observes_version_before_mutation[dispute] _______
+tests/unit/demo_replay/test_mp07_task_operations.py:445: in test_new_engine_intent_observes_version_before_mutation
+    assert order == ["read", "mutate"]
+E   AssertionError: assert ['mutate'] == ['read', 'mutate']
+E     
+E     At index 0 diff: 'mutate' != 'read'
+E     Right contains one more item: 'mutate'
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+  Alice disputed task: "The delivered answer is incomplete"
+____________ test_bad_observed_version_stops_before_mutation[None] _____________
+tests/unit/demo_replay/test_mp07_task_operations.py:471: in test_bad_observed_version_stops_before_mutation
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+----------------------------- Captured stdout call -----------------------------
+  Alice approved task -> payout released!
+____________ test_bad_observed_version_stops_before_mutation[True] _____________
+tests/unit/demo_replay/test_mp07_task_operations.py:471: in test_bad_observed_version_stops_before_mutation
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+----------------------------- Captured stdout call -----------------------------
+  Alice approved task -> payout released!
+_____________ test_bad_observed_version_stops_before_mutation[-1] ______________
+tests/unit/demo_replay/test_mp07_task_operations.py:471: in test_bad_observed_version_stops_before_mutation
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+----------------------------- Captured stdout call -----------------------------
+  Alice approved task -> payout released!
+______________ test_bad_observed_version_stops_before_mutation[2] ______________
+tests/unit/demo_replay/test_mp07_task_operations.py:471: in test_bad_observed_version_stops_before_mutation
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+----------------------------- Captured stdout call -----------------------------
+  Alice approved task -> payout released!
+___ test_incomplete_or_malformed_mutation_cannot_advance[claimed-accept_bid] ___
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[claimed-submit_deliverable] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+____ test_incomplete_or_malformed_mutation_cannot_advance[claimed-approve] _____
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+____ test_incomplete_or_malformed_mutation_cannot_advance[claimed-dispute] _____
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[missing_operation-accept_bid] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[missing_operation-submit_deliverable] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[missing_operation-approve] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[missing_operation-dispute] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[unknown_state-accept_bid] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[unknown_state-submit_deliverable] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[unknown_state-approve] __
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[unknown_state-dispute] __
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[wrong_identity-accept_bid] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[wrong_identity-submit_deliverable] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[wrong_identity-approve] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[wrong_identity-dispute] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[missing_result-accept_bid] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[missing_result-submit_deliverable] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[missing_result-approve] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+_ test_incomplete_or_malformed_mutation_cannot_advance[missing_result-dispute] _
+tests/unit/demo_replay/test_mp07_task_operations.py:510: in test_incomplete_or_malformed_mutation_cannot_advance
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+________ test_response_loss_retry_retains_original_identity_and_version ________
+tests/unit/demo_replay/test_mp07_task_operations.py:543: in test_response_loss_retry_retains_original_identity_and_version
+    assert read.await_count == 1
+E   AssertionError: assert 0 == 1
+E    +  where 0 = <AsyncMock id='4466572800'>.await_count
+----------------------------- Captured stdout call -----------------------------
+  Alice approved task -> payout released!
+_________ test_changed_terms_under_same_step_are_rejected_before_retry _________
+tests/unit/demo_replay/test_mp07_task_operations.py:568: in test_changed_terms_under_same_step_are_rejected_before_retry
+    with pytest.raises((ValueError, RuntimeError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'ValueError'>, <class 'RuntimeError'>)
+----------------------------- Captured stdout call -----------------------------
+  Alice disputed task: "Changed terms for the same scenario step"
+=========================== short test summary info ============================
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_scenario_rejects_missing_or_invalid_acceptance_window[None]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_scenario_rejects_missing_or_invalid_acceptance_window[0]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_scenario_rejects_missing_or_invalid_acceptance_window[True]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_scenario_rejects_missing_or_invalid_acceptance_window[45]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_engine_forwards_all_explicit_posting_terms
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_new_engine_intent_observes_version_before_mutation[bid]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_new_engine_intent_observes_version_before_mutation[accept_bid]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_new_engine_intent_observes_version_before_mutation[submit_deliverable]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_new_engine_intent_observes_version_before_mutation[approve]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_new_engine_intent_observes_version_before_mutation[dispute]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_bad_observed_version_stops_before_mutation[None]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_bad_observed_version_stops_before_mutation[True]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_bad_observed_version_stops_before_mutation[-1]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_bad_observed_version_stops_before_mutation[2]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[claimed-accept_bid]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[claimed-submit_deliverable]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[claimed-approve]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[claimed-dispute]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[missing_operation-accept_bid]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[missing_operation-submit_deliverable]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[missing_operation-approve]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[missing_operation-dispute]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[unknown_state-accept_bid]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[unknown_state-submit_deliverable]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[unknown_state-approve]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[unknown_state-dispute]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[wrong_identity-accept_bid]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[wrong_identity-submit_deliverable]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[wrong_identity-approve]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[wrong_identity-dispute]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[missing_result-accept_bid]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[missing_result-submit_deliverable]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[missing_result-approve]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_incomplete_or_malformed_mutation_cannot_advance[missing_result-dispute]
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_response_loss_retry_retains_original_identity_and_version
+FAILED tests/unit/demo_replay/test_mp07_task_operations.py::test_changed_terms_under_same_step_are_rejected_before_retry
+36 failed, 17 passed in 2.53s

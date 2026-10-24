@@ -1,0 +1,363 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 126 items
+
+tests/unit/test_ruling_orchestrator.py F.....                            [  4%]
+tests/unit/routers/test_disputes.py ....................F......FFFFFFFFF [ 33%]
+FF.FFFFF.F.FF.....FF.................FFF.FF..F.......................... [ 90%]
+.........                                                                [ 97%]
+tests/unit/routers/test_wp06_retry_clean.py FFF                          [100%]
+
+=================================== FAILURES ===================================
+_____________________ test_execute_ruling_with_mock_judges _____________________
+tests/unit/test_ruling_orchestrator.py:54: in test_execute_ruling_with_mock_judges
+    ruled = await orchestrator.execute_ruling(
+src/court_service/services/ruling_orchestrator.py:504: in execute_ruling
+    return await self.finish_ruling(dispute_id, dispute, judges, task_data, platform_agent)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/court_service/services/ruling_orchestrator.py:473: in finish_ruling
+    raise exc
+src/court_service/services/ruling_orchestrator.py:440: in finish_ruling
+    expected_lifecycle_version = self._task_snapshot_version(task_data)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/court_service/services/ruling_orchestrator.py:124: in _task_snapshot_version
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task Board returned an invalid lifecycle version
+_____________ TestSubmitRebuttal.test_reb_04_rebuttal_after_ruling _____________
+tests/unit/routers/test_disputes.py:292: in test_reb_04_rebuttal_after_ruling
+    ruling = await file_rebut_and_rule(client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:08", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-a4a2a60a-39b1-4f92-b8fd-9c546b61db5c/rule"}}
+_________________ TestTriggerRuling.test_rule_01_valid_ruling __________________
+tests/unit/routers/test_disputes.py:387: in test_rule_01_valid_ruling
+    ruling = await file_rebut_and_rule(client, worker_pct=70)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:09", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-d7848a0d-e06a-4dcd-9dfb-917c38e6b2e2/rule"}}
+______________ TestTriggerRuling.test_rule_02_median_single_judge ______________
+tests/unit/routers/test_disputes.py:394: in test_rule_02_median_single_judge
+    ruling = await file_rebut_and_rule(client, worker_pct=65)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:09", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-e1c6fffa-fa19-4a80-9227-40c2c48f16ea/rule"}}
+______________ TestTriggerRuling.test_rule_03_status_after_ruling ______________
+tests/unit/routers/test_disputes.py:399: in test_rule_03_status_after_ruling
+    ruling = await file_rebut_and_rule(client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:09", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-aea89b71-f96e-4130-926d-b47ea2a219b0/rule"}}
+______________ TestTriggerRuling.test_rule_04_ruled_at_timestamp _______________
+tests/unit/routers/test_disputes.py:407: in test_rule_04_ruled_at_timestamp
+    ruling = await file_rebut_and_rule(client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:10", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-8dbc0483-bf47-4659-bbb0-bc74ba8b1807/rule"}}
+________________ TestTriggerRuling.test_rule_05_vote_structure _________________
+tests/unit/routers/test_disputes.py:418: in test_rule_05_vote_structure
+    ruling = await file_rebut_and_rule(client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:10", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-abae3b80-e35d-4de1-b295-26351163144d/rule"}}
+______________ TestTriggerRuling.test_rule_06_central_bank_called ______________
+tests/unit/routers/test_disputes.py:433: in test_rule_06_central_bank_called
+    await file_rebut_and_rule(client, file_payload=payload, worker_pct=70)
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:10", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-5b350af7-407d-470e-9483-e31335543e0c/rule"}}
+_______________ TestTriggerRuling.test_rule_07_reputation_called _______________
+tests/unit/routers/test_disputes.py:441: in test_rule_07_reputation_called
+    await file_rebut_and_rule(client)
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:10", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-43348c87-e0ca-4aba-8ba7-b02811710699/rule"}}
+________________ TestTriggerRuling.test_rule_08_worker_pct_zero ________________
+tests/unit/routers/test_disputes.py:447: in test_rule_08_worker_pct_zero
+    ruling = await file_rebut_and_rule(client, worker_pct=0)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:11", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-680e15c5-1b7b-48ef-8940-565999b6f177/rule"}}
+______________ TestTriggerRuling.test_rule_09_worker_pct_hundred _______________
+tests/unit/routers/test_disputes.py:455: in test_rule_09_worker_pct_hundred
+    ruling = await file_rebut_and_rule(client, worker_pct=100)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:11", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-5e063f8c-2477-4073-a7ce-4ccebb7ff3cb/rule"}}
+_______________ TestTriggerRuling.test_rule_10_worker_pct_fifty ________________
+tests/unit/routers/test_disputes.py:463: in test_rule_10_worker_pct_fifty
+    ruling = await file_rebut_and_rule(client, worker_pct=50)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:11", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-e27b14fa-b695-4d72-bb6e-a5e61f548209/rule"}}
+_____________ TestTriggerRuling.test_rule_11_worker_pct_arbitrary ______________
+tests/unit/routers/test_disputes.py:471: in test_rule_11_worker_pct_arbitrary
+    ruling = await file_rebut_and_rule(client, worker_pct=73)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:11", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-3108f99b-ca25-4602-9884-d16e0245332d/rule"}}
+_________ TestTriggerRuling.test_rule_13_already_ruled_after_rebuttal __________
+tests/unit/routers/test_disputes.py:491: in test_rule_13_already_ruled_after_rebuttal
+    ruling = await file_rebut_and_rule(client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:12", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-32cc7ea9-9c74-4db7-bb1e-2d92e14b4a35/rule"}}
+________ TestTriggerRuling.test_rule_14_already_ruled_without_rebuttal _________
+tests/unit/routers/test_disputes.py:517: in test_rule_14_already_ruled_without_rebuttal
+    assert response.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:12", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-855304cb-a911-4ae6-843a-1276d7f4e732/rule"}}
+_______________ TestTriggerRuling.test_rule_15_judge_unavailable _______________
+tests/unit/routers/test_disputes.py:540: in test_rule_15_judge_unavailable
+    assert response.json()["error"] == "judge_unavailable"
+E   AssertionError: assert 'invalid_task_snapshot' == 'judge_unavailable'
+E     
+E     - judge_unavailable
+E     + invalid_task_snapshot
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:12", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-70f0ee39-45b9-4149-ab23-f8987dc82009/rule"}}
+___________ TestTriggerRuling.test_rule_16_central_bank_unavailable ____________
+tests/unit/routers/test_disputes.py:558: in test_rule_16_central_bank_unavailable
+    assert response.json()["error"] == "task_board_unavailable"
+E   AssertionError: assert 'invalid_task_snapshot' == 'task_board_unavailable'
+E     
+E     - task_board_unavailable
+E     + invalid_task_snapshot
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:12", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-d591235b-5539-4765-b7e0-48b33aa4bb9b/rule"}}
+____________ TestTriggerRuling.test_rule_17_reputation_unavailable _____________
+tests/unit/routers/test_disputes.py:576: in test_rule_17_reputation_unavailable
+    assert response.json()["error"] == "reputation_service_unavailable"
+E   AssertionError: assert 'invalid_task_snapshot' == 'reputation_s...e_unavailable'
+E     
+E     - reputation_service_unavailable
+E     + invalid_task_snapshot
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:12", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-cd86ccae-cfb8-47aa-83df-9ea19b7fce9a/rule"}}
+____________ TestTriggerRuling.test_rule_19_ruling_without_rebuttal ____________
+tests/unit/routers/test_disputes.py:609: in test_rule_19_ruling_without_rebuttal
+    assert response.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:13", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-115d3801-324e-4dc3-b53b-310da78a8bef/rule"}}
+___________________ TestGetDispute.test_get_02_ruled_dispute ___________________
+tests/unit/routers/test_disputes.py:637: in test_get_02_ruled_dispute
+    ruling = await file_rebut_and_rule(client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:13", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-2ca9dd39-b546-45a9-bdec-785df0fb0754/rule"}}
+__________________ TestGetDispute.test_get_03_vote_structure ___________________
+tests/unit/routers/test_disputes.py:651: in test_get_03_vote_structure
+    ruling = await file_rebut_and_rule(client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:13", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-f59d2066-cbdc-40e3-a826-ed74132c1343/rule"}}
+________________ TestListDisputes.test_list_04_filter_by_status ________________
+tests/unit/routers/test_disputes.py:725: in test_list_04_filter_by_status
+    await file_rebut_and_rule(client, file_payload=ruled_payload_data)
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:14", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-efb642f6-fb8b-486a-a7e4-a3eac959e427/rule"}}
+__________ TestListDisputes.test_list_05_filter_by_task_id_and_status __________
+tests/unit/routers/test_disputes.py:738: in test_list_05_filter_by_task_id_and_status
+    await file_rebut_and_rule(client, file_payload=file_dispute_payload(task_id=task_id_b))
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:14", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-e92b0e78-a056-48c8-92d3-efbb843dd1ae/rule"}}
+_______________ TestCrossCuttingSecurity.test_sec_03_id_formats ________________
+tests/unit/routers/test_disputes.py:847: in test_sec_03_id_formats
+    ruling = await file_rebut_and_rule(
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:17", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-d484ae7b-861f-4049-9a95-893d3cabd093/rule"}}
+_______________ TestDisputeLifecycle.test_life_01_full_lifecycle _______________
+tests/unit/routers/test_disputes.py:891: in test_life_01_full_lifecycle
+    assert rule_resp.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:17", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-5b438015-e2c6-4b56-b0e2-d5df9b540527/rule"}}
+_______________ TestDisputeLifecycle.test_life_02_skip_rebuttal ________________
+tests/unit/routers/test_disputes.py:926: in test_life_02_skip_rebuttal
+    assert response.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:17", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-3ef89ccb-e212-47bc-a34f-bfa5fafbcf66/rule"}}
+_______ TestDisputeLifecycle.test_life_04_rebuttal_after_ruling_rejected _______
+tests/unit/routers/test_disputes.py:965: in test_life_04_rebuttal_after_ruling_rejected
+    assert response.status_code == 409
+E   assert 200 == 409
+E    +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:17", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-30731d1d-ba59-4eca-8ae9-cdfe5a54b1fb/rule"}}
+___________ TestDisputeLifecycle.test_life_05_double_ruling_rejected ___________
+tests/unit/routers/test_disputes.py:970: in test_life_05_double_ruling_rejected
+    ruling = await file_rebut_and_rule(client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:17", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-bb445d60-477f-4496-b1a1-eb7c118f96de/rule"}}
+_________________ TestPlatformJWS.test_auth_03_valid_jws_rule __________________
+tests/unit/routers/test_disputes.py:1031: in test_auth_03_valid_jws_rule
+    ruling = await file_rebut_and_rule(client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/routers/conftest.py:379: in file_rebut_and_rule
+    assert response.status_code == 200, f"Failed to trigger ruling: {response.text}"
+E   AssertionError: Failed to trigger ruling: {"error":"invalid_task_snapshot","message":"Task Board returned an invalid lifecycle version","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:18", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-96c45d15-a69e-4e46-9266-8dd919fb33bf/rule"}}
+___________________ test_feedback_exists_treated_as_success ____________________
+tests/unit/routers/test_wp06_retry_clean.py:54: in test_feedback_exists_treated_as_success
+    assert response.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:23", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-7cd01032-d683-400d-a629-6aa509d6f3ab/rule"}}
+______ test_kill_between_tb_record_and_dispute_persist_converges_on_retry ______
+tests/unit/routers/test_wp06_retry_clean.py:129: in test_kill_between_tb_record_and_dispute_persist_converges_on_retry
+    assert second_response.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:23", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-bafa9c51-14d4-41b9-90e3-8b256a9434c3/rule"}}
+{"timestamp": "2026-10-18 03:18:23", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-bafa9c51-14d4-41b9-90e3-8b256a9434c3/rule"}}
+____________ test_reentrant_rule_call_during_task_fetch_fails_fast _____________
+tests/unit/routers/test_wp06_retry_clean.py:178: in test_reentrant_rule_call_during_task_fetch_fails_fast
+    assert response.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:18:23", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "dispute_not_ready", "status_code": 409, "path": "/disputes/disp-1fe8cf4c-59ff-404c-833c-05a2073bfaa7/rule"}}
+{"timestamp": "2026-10-18 03:18:23", "level": "WARNING", "logger": "court.court_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_task_snapshot", "status_code": 502, "path": "/disputes/disp-1fe8cf4c-59ff-404c-833c-05a2073bfaa7/rule"}}
+=========================== short test summary info ============================
+FAILED tests/unit/test_ruling_orchestrator.py::test_execute_ruling_with_mock_judges
+FAILED tests/unit/routers/test_disputes.py::TestSubmitRebuttal::test_reb_04_rebuttal_after_ruling
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_01_valid_ruling
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_02_median_single_judge
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_03_status_after_ruling
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_04_ruled_at_timestamp
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_05_vote_structure
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_06_central_bank_called
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_07_reputation_called
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_08_worker_pct_zero
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_09_worker_pct_hundred
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_10_worker_pct_fifty
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_11_worker_pct_arbitrary
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_13_already_ruled_after_rebuttal
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_14_already_ruled_without_rebuttal
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_15_judge_unavailable
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_16_central_bank_unavailable
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_17_reputation_unavailable
+FAILED tests/unit/routers/test_disputes.py::TestTriggerRuling::test_rule_19_ruling_without_rebuttal
+FAILED tests/unit/routers/test_disputes.py::TestGetDispute::test_get_02_ruled_dispute
+FAILED tests/unit/routers/test_disputes.py::TestGetDispute::test_get_03_vote_structure
+FAILED tests/unit/routers/test_disputes.py::TestListDisputes::test_list_04_filter_by_status
+FAILED tests/unit/routers/test_disputes.py::TestListDisputes::test_list_05_filter_by_task_id_and_status
+FAILED tests/unit/routers/test_disputes.py::TestCrossCuttingSecurity::test_sec_03_id_formats
+FAILED tests/unit/routers/test_disputes.py::TestDisputeLifecycle::test_life_01_full_lifecycle
+FAILED tests/unit/routers/test_disputes.py::TestDisputeLifecycle::test_life_02_skip_rebuttal
+FAILED tests/unit/routers/test_disputes.py::TestDisputeLifecycle::test_life_04_rebuttal_after_ruling_rejected
+FAILED tests/unit/routers/test_disputes.py::TestDisputeLifecycle::test_life_05_double_ruling_rejected
+FAILED tests/unit/routers/test_disputes.py::TestPlatformJWS::test_auth_03_valid_jws_rule
+FAILED tests/unit/routers/test_wp06_retry_clean.py::test_feedback_exists_treated_as_success
+FAILED tests/unit/routers/test_wp06_retry_clean.py::test_kill_between_tb_record_and_dispute_persist_converges_on_retry
+FAILED tests/unit/routers/test_wp06_retry_clean.py::test_reentrant_rule_call_during_task_fetch_fails_fast
+======================== 32 failed, 94 passed in 19.35s ========================

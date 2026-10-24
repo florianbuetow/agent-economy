@@ -1,0 +1,151 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 22 items
+
+tests/unit/test_migration_evidence.py FFFFFFFFFFFFFFFFFFFFFF             [100%]
+
+=================================== FAILURES ===================================
+_________________ test_bound_source_exposes_write_evidence_api _________________
+tests/unit/test_migration_evidence.py:45: in test_bound_source_exposes_write_evidence_api
+    assert callable(recovery.BackupBoundSource.write_evidence)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: type object 'BackupBoundSource' has no attribute 'write_evidence'
+________________ test_write_evidence_requires_live_write_phase _________________
+tests/unit/test_migration_evidence.py:63: in test_write_evidence_requires_live_write_phase
+    source.write_evidence("migration-result.json", b"{}")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+________ test_write_evidence_is_private_exact_and_retained_after_close _________
+tests/unit/test_migration_evidence.py:78: in test_write_evidence_is_private_exact_and_retained_after_close
+    evidence_path = source.write_evidence("migration-result.json", b'{"result":"verified"}\n')
+                    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+________ test_write_evidence_path_remains_readable_after_context_close _________
+tests/unit/test_migration_evidence.py:100: in test_write_evidence_path_remains_readable_after_context_close
+    evidence_path = source.write_evidence("migration-result.json", b"retained")
+                    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+____________ test_write_evidence_is_exclusive_and_never_overwrites _____________
+tests/unit/test_migration_evidence.py:112: in test_write_evidence_is_exclusive_and_never_overwrites
+    evidence_path = source.write_evidence("migration-result.json", b"first")
+                    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+___________ test_write_evidence_rejects_unsafe_and_reserved_names[] ____________
+tests/unit/test_migration_evidence.py:131: in test_write_evidence_rejects_unsafe_and_reserved_names
+    source.write_evidence(name, b"payload")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+___________ test_write_evidence_rejects_unsafe_and_reserved_names[.] ___________
+tests/unit/test_migration_evidence.py:131: in test_write_evidence_rejects_unsafe_and_reserved_names
+    source.write_evidence(name, b"payload")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+__________ test_write_evidence_rejects_unsafe_and_reserved_names[..] ___________
+tests/unit/test_migration_evidence.py:131: in test_write_evidence_rejects_unsafe_and_reserved_names
+    source.write_evidence(name, b"payload")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+__ test_write_evidence_rejects_unsafe_and_reserved_names[nested/result.json] ___
+tests/unit/test_migration_evidence.py:131: in test_write_evidence_rejects_unsafe_and_reserved_names
+    source.write_evidence(name, b"payload")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+__ test_write_evidence_rejects_unsafe_and_reserved_names[nested\\result.json] __
+tests/unit/test_migration_evidence.py:131: in test_write_evidence_rejects_unsafe_and_reserved_names
+    source.write_evidence(name, b"payload")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+______ test_write_evidence_rejects_unsafe_and_reserved_names[.owner.json] ______
+tests/unit/test_migration_evidence.py:131: in test_write_evidence_rejects_unsafe_and_reserved_names
+    source.write_evidence(name, b"payload")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+______ test_write_evidence_rejects_unsafe_and_reserved_names[economy.db] _______
+tests/unit/test_migration_evidence.py:131: in test_write_evidence_rejects_unsafe_and_reserved_names
+    source.write_evidence(name, b"payload")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+____ test_write_evidence_rejects_unsafe_and_reserved_names[economy.db-wal] _____
+tests/unit/test_migration_evidence.py:131: in test_write_evidence_rejects_unsafe_and_reserved_names
+    source.write_evidence(name, b"payload")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+____________ test_write_evidence_requires_immutable_bytes[payload0] ____________
+tests/unit/test_migration_evidence.py:144: in test_write_evidence_requires_immutable_bytes
+    source.write_evidence("migration-result.json", payload)  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+______________ test_write_evidence_requires_immutable_bytes[text] ______________
+tests/unit/test_migration_evidence.py:144: in test_write_evidence_requires_immutable_bytes
+    source.write_evidence("migration-result.json", payload)  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+____________ test_write_evidence_requires_immutable_bytes[payload2] ____________
+tests/unit/test_migration_evidence.py:144: in test_write_evidence_requires_immutable_bytes
+    source.write_evidence("migration-result.json", payload)  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+_________ test_write_evidence_rechecks_source_identity_before_creation _________
+tests/unit/test_migration_evidence.py:157: in test_write_evidence_rechecks_source_identity_before_creation
+    source.write_evidence("migration-result.json", b"blocked")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+____________ test_write_evidence_rechecks_artifact_before_creation _____________
+tests/unit/test_migration_evidence.py:175: in test_write_evidence_rechecks_artifact_before_creation
+    source.write_evidence("migration-result.json", b"blocked")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+_________ test_write_evidence_rechecks_workspace_lease_before_creation _________
+tests/unit/test_migration_evidence.py:191: in test_write_evidence_rechecks_workspace_lease_before_creation
+    source.write_evidence("migration-result.json", b"blocked")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+__________ test_write_evidence_rechecks_scratch_owner_before_creation __________
+tests/unit/test_migration_evidence.py:209: in test_write_evidence_rechecks_scratch_owner_before_creation
+    source.write_evidence("migration-result.json", b"blocked")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+_ test_write_evidence_rechecks_source_after_creation_and_retains_failure_evidence _
+tests/unit/test_migration_evidence.py:241: in test_write_evidence_rechecks_source_after_creation_and_retains_failure_evidence
+    source.write_evidence("migration-result.json", b"retained-on-race")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+_____ test_write_evidence_fsync_failure_is_normalized_and_file_is_retained _____
+tests/unit/test_migration_evidence.py:267: in test_write_evidence_fsync_failure_is_normalized_and_file_is_retained
+    source.write_evidence("migration-result.json", b"retained-on-fsync-failure")
+    ^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'BackupBoundSource' object has no attribute 'write_evidence'
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_migration_evidence.py::test_bound_source_exposes_write_evidence_api
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_requires_live_write_phase
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_is_private_exact_and_retained_after_close
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_path_remains_readable_after_context_close
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_is_exclusive_and_never_overwrites
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rejects_unsafe_and_reserved_names[]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rejects_unsafe_and_reserved_names[.]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rejects_unsafe_and_reserved_names[..]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rejects_unsafe_and_reserved_names[nested/result.json]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rejects_unsafe_and_reserved_names[nested\\result.json]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rejects_unsafe_and_reserved_names[.owner.json]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rejects_unsafe_and_reserved_names[economy.db]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rejects_unsafe_and_reserved_names[economy.db-wal]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_requires_immutable_bytes[payload0]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_requires_immutable_bytes[text]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_requires_immutable_bytes[payload2]
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rechecks_source_identity_before_creation
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rechecks_artifact_before_creation
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rechecks_workspace_lease_before_creation
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rechecks_scratch_owner_before_creation
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_rechecks_source_after_creation_and_retains_failure_evidence
+FAILED tests/unit/test_migration_evidence.py::test_write_evidence_fsync_failure_is_normalized_and_file_is_retained
+======================== 22 failed, 1 warning in 1.14s =========================

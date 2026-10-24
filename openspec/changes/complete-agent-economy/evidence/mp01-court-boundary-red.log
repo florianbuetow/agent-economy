@@ -1,0 +1,41 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______ test_generated_mock_court_import_uses_no_external_model_metadata _______
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-167/test_generated_mock_court_impo0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109834770>
+
+    def test_generated_mock_court_import_uses_no_external_model_metadata(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("LITELLM_LOCAL_MODEL_COST_MAP", "ambient-value")
+        runtime = IsolatedRuntime.create(
+            repo_root=REPO_ROOT,
+            artifacts_root=tmp_path,
+            services=("identity", "court"),
+        )
+        marker_path = tmp_path / "external-model-metadata-url"
+        instrumentation_dir = tmp_path / "instrumentation"
+        instrumentation_dir.mkdir()
+        (instrumentation_dir / "sitecustomize.py").write_text(
+            "import pathlib\n"
+            "import httpx\n"
+            f"marker = pathlib.Path({str(marker_path)!r})\n"
+            "original_get = httpx.get\n"
+            "def guarded_get(url, *args, **kwargs):\n"
+            "    if str(url).startswith(('http://', 'https://')):\n"
+            "        marker.write_text(str(url))\n"
+            "        raise httpx.ConnectError('external metadata blocked by test')\n"
+            "    return original_get(url, *args, **kwargs)\n"
+            "httpx.get = guarded_get\n"
+        )
+>       assert "LITELLM_LOCAL_MODEL_COST_MAP" not in set(runtime.environment())
+E       AssertionError: assert 'LITELLM_LOCAL_MODEL_COST_MAP' not in {'AGENT_CONFIG_PATH', 'BLOG_DIR', 'BUN_INSTALL', 'CAML_LD_LIBRARY_PATH', 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS', 'CODEX_APPLY_PATCH_PRESERVE_LINE_ENDINGS', ...}
+E        +  where {'AGENT_CONFIG_PATH', 'BLOG_DIR', 'BUN_INSTALL', 'CAML_LD_LIBRARY_PATH', 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS', 'CODEX_APPLY_PATCH_PRESERVE_LINE_ENDINGS', ...} = set({'AGENT_CONFIG_PATH': '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-167/test_generate...lambda/lib/stublibs:/Users/flo/.opam/4.14.0+flambda/lib/ocaml/stublibs:/Users/flo/.opam/4.14.0+flambda/lib/ocaml', ...})
+E        +    where {'AGENT_CONFIG_PATH': '/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-167/test_generate...lambda/lib/stublibs:/Users/flo/.opam/4.14.0+flambda/lib/ocaml/stublibs:/Users/flo/.opam/4.14.0+flambda/lib/ocaml', ...} = environment()
+E        +      where environment = IsolatedRuntime(repo_root=PosixPath('/Users/flo/Developer/github/agent-economy'), run_id='35e2ec16788d409a914a6f9ebcdb...ourt': _ReservedPort(port=59175, socket=<socket.socket fd=12, family=2, type=1, proto=0, laddr=('127.0.0.1', 59175)>)}).environment
+
+../../tests/runtime/test_isolated_test_runtime.py:334: AssertionError
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_isolated_test_runtime.py::test_generated_mock_court_import_uses_no_external_model_metadata
+1 failed in 0.09s

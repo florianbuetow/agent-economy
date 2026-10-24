@@ -8,18 +8,21 @@ dependencies = [
     "uvicorn>=0.34.0",
     "pydantic>=2.10.0",
     "service-commons",
-    "base-agent",
-    "cryptography>=44.0.0",
+    "service-clients",
+    "service-auth",
+    "cryptography>=48.0.1",
     "httpx>=0.28.0",
-    "joserfc>=1.6.3",
     "aiofiles>=24.0.0",
-    "python-multipart>=0.0.20",
-    "starlette>=0.45.0",
+    "python-multipart>=0.0.31",
+    "starlette>=1.0.1",
 ]
+
+[project.scripts]
+task-board-recovery = "task_board_service.recovery_cli:cli"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
+    "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
     "pytest-asyncio>=0.24.0",
     "pytestarch[visualization]>=2.0.0",
@@ -35,18 +38,55 @@ dev = [
     "pygount>=1.8.0",
     "types-PyYAML>=6.0.0",
     "types-aiofiles>=24.0.0",
-    "joserfc>=1.6.3",
-    "cryptography>=44.0.0",
+    "joserfc>=1.6.7",
+    "cryptography>=48.0.1",
     "freezegun>=1.5.0",
+    # Test-only: builds an in-process DB Gateway for the TaskDbClient side of
+    # the integration suite (T-071). Not a runtime dependency — never imported
+    # from src/.
+    "db-gateway-service",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv]
+constraint-dependencies = [
+    "anyio>=4.14.2",
+    "certifi>=2026.10.19",
+    "cryptography>=50.0.0",
+    "filelock>=4.2.1,<5",
+    "gitpython>=3.1.60",
+    "idna>=3.15",
+    "msgpack>=1.2.1",
+    "pillow>=13.0.0",
+    "pip>=26.2",
+    "pydantic-settings>=2.14.2",
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.31",
+    "pyjwt>=2.15.0",
+    "urllib3>=2.8.0",
+]
+
+# Semgrep 1.181.0 pins vulnerable MCP and OpenTelemetry releases. Keep its
+# development-only dependency family coherent until upstream relaxes its pins.
+override-dependencies = [
+    { package = { name = "semgrep", version = "1.181.0" }, dependencies = [
+        "mcp==1.30.0",
+        "opentelemetry-api==1.45.1",
+        "opentelemetry-sdk==1.45.1",
+        "opentelemetry-exporter-otlp-proto-http==1.45.1",
+        "opentelemetry-instrumentation-requests==0.66b1",
+        "opentelemetry-instrumentation-threading==0.66b1",
+    ] },
+]
+
 [tool.uv.sources]
 service-commons = { path = "../../libs/service-commons", editable = true }
-base-agent = { path = "../../agents", editable = true }
+service-clients = { path = "../../libs/service-clients", editable = true }
+service-auth = { path = "../../libs/service-auth", editable = true }
+db-gateway-service = { path = "../db-gateway", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/task_board_service"]
@@ -111,10 +151,6 @@ files = ["src"]
 module = "tests.*"
 disallow_untyped_defs = false
 
-[[tool.mypy.overrides]]
-module = ["base_agent", "base_agent.*"]
-ignore_missing_imports = true
-
 # === Bandit ===
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
@@ -161,7 +197,6 @@ DEP002 = [
     "uvicorn",
     "pydantic",
     "service-commons",
-    "base-agent",
     "cryptography",
     "pytest",
     "pytest-cov",
@@ -184,4 +219,5 @@ DEP002 = [
     "types-PyYAML",
     "types-aiofiles",
     "freezegun",
+    "db-gateway-service",
 ]

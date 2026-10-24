@@ -1,0 +1,219 @@
+{
+  "run_id": "127f2fde34c64db1bf9466a0f99caf4f",
+  "run_dir": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t",
+  "ports": {
+    "db-gateway": 51427,
+    "identity": 51428,
+    "central-bank": 51429,
+    "task-board": 51430,
+    "reputation": 51431,
+    "court": 51432,
+    "ui": 51433
+  },
+  "config_paths": {
+    "db-gateway": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/db-gateway.yaml",
+    "identity": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/identity.yaml",
+    "central-bank": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/central-bank.yaml",
+    "task-board": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/task-board.yaml",
+    "reputation": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/reputation.yaml",
+    "court": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/court.yaml",
+    "ui": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/ui.yaml"
+  },
+  "agent_config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/agents.yaml",
+  "gateway_config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/db-gateway.yaml",
+  "log_paths": {
+    "db-gateway": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/logs/db-gateway.log",
+    "identity": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/logs/identity.log",
+    "central-bank": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/logs/central-bank.log",
+    "task-board": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/logs/task-board.log",
+    "reputation": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/logs/reputation.log",
+    "court": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/logs/court.log",
+    "ui": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/logs/ui.log"
+  },
+  "processes": {
+    "db-gateway": {
+      "pid": 89373,
+      "pgid": 89373,
+      "sid": 89373,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "identity": {
+      "pid": 89375,
+      "pgid": 89375,
+      "sid": 89375,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "central-bank": {
+      "pid": 89377,
+      "pgid": 89377,
+      "sid": 89377,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "task-board": {
+      "pid": 89384,
+      "pgid": 89384,
+      "sid": 89384,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "reputation": {
+      "pid": 89387,
+      "pgid": 89387,
+      "sid": 89387,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "court": {
+      "pid": 89399,
+      "pgid": 89399,
+      "sid": 89399,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "ui": {
+      "pid": 89413,
+      "pgid": 89413,
+      "sid": 89413,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "treasury_provision_cli"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/agents",
+      "pid": 89415,
+      "pgid": 89415,
+      "sid": 89415,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--directory",
+        "/Users/flo/Developer/github/agent-economy/agents",
+        "pytest",
+        "tests/e2e/test_mp12_proxy_bids.py",
+        "-q"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy",
+      "pid": 89420,
+      "pgid": 89420,
+      "sid": 89420,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "bootstrap_commands": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "python",
+        "-m",
+        "key_provision_cli",
+        "provision",
+        "--config",
+        "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/agents.yaml",
+        "--gateway-config",
+        "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/db-gateway.yaml"
+      ],
+      "cwd": "/Users/flo/Developer/github/agent-economy/agents",
+      "pid": 89371,
+      "pgid": 89371,
+      "sid": 89371,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "startup_inputs": {
+    "db-gateway": {
+      "config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/db-gateway.yaml",
+      "config_sha256": "5c009415bf7e7934732c0b981a38751579cfe4b7bba2cde7594c74b1a1f3d335",
+      "agent_config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/agents.yaml",
+      "agent_config_sha256": "78f32a2921c78ed51b5b58b65359582f309f986faca8f47dc6a18ccf20b7a381",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/db-gateway"
+    },
+    "identity": {
+      "config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/identity.yaml",
+      "config_sha256": "349ec0e866dd152f95009ea3cc5d18f26bab9936255e329523671bdd0c40b357",
+      "agent_config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/agents.yaml",
+      "agent_config_sha256": "78f32a2921c78ed51b5b58b65359582f309f986faca8f47dc6a18ccf20b7a381",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/identity"
+    },
+    "central-bank": {
+      "config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/central-bank.yaml",
+      "config_sha256": "3035ffffd192b795fe3a7c85df760ffd1b6624866e0a4230c6776cd9838e5ec0",
+      "agent_config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/agents.yaml",
+      "agent_config_sha256": "78f32a2921c78ed51b5b58b65359582f309f986faca8f47dc6a18ccf20b7a381",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/central-bank"
+    },
+    "task-board": {
+      "config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/task-board.yaml",
+      "config_sha256": "128273201983b26a5f2cf250103abd48014009ff07349dfa30206336f47b0884",
+      "agent_config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/agents.yaml",
+      "agent_config_sha256": "78f32a2921c78ed51b5b58b65359582f309f986faca8f47dc6a18ccf20b7a381",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/task-board"
+    },
+    "reputation": {
+      "config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/reputation.yaml",
+      "config_sha256": "58c218f116982f55641cfe296a5482427303b6bd6a66df79a010bc858e1cf6f8",
+      "agent_config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/agents.yaml",
+      "agent_config_sha256": "78f32a2921c78ed51b5b58b65359582f309f986faca8f47dc6a18ccf20b7a381",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/reputation"
+    },
+    "court": {
+      "config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/court.yaml",
+      "config_sha256": "f12fd59d7cc362725debd587c2e291e50e59f85c12372efff3e00dbf67f4342c",
+      "agent_config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/agents.yaml",
+      "agent_config_sha256": "78f32a2921c78ed51b5b58b65359582f309f986faca8f47dc6a18ccf20b7a381",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/court"
+    },
+    "ui": {
+      "config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/ui.yaml",
+      "config_sha256": "1b9518974ee8dd5ec40a277acb9ceb63e8bc0d14baabc8ccc2fd791c44afd7dd",
+      "agent_config_path": "/private/tmp/agent-economy-mp12-live.qocEcx/runtime-127f2fde34c64db1bf9466a0f99caf4f-jrnqce_t/configs/agents.yaml",
+      "agent_config_sha256": "78f32a2921c78ed51b5b58b65359582f309f986faca8f47dc6a18ccf20b7a381",
+      "process_cwd": "/Users/flo/Developer/github/agent-economy/services/ui"
+    }
+  },
+  "maintenance_identity": {
+    "device": 16777234,
+    "inode": 326805174
+  },
+  "recovery": {
+    "state": "not_prepared"
+  }
+}

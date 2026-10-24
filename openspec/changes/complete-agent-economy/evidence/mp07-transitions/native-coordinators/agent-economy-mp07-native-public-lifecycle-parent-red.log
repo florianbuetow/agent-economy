@@ -1,0 +1,64 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 5 items
+
+tests/integration/test_mp07_native_public_lifecycle.py FFFFF             [100%]
+
+=================================== FAILURES ===================================
+__ test_public_submission_replays_original_native_result_after_response_loss ___
+tests/integration/test_mp07_native_public_lifecycle.py:302: in test_public_submission_replays_original_native_result_after_response_loss
+    assert replay.status_code == 200, replay.text
+E   AssertionError: {"error":"invalid_status","message":"Cannot submit deliverable for task in 'submitted' status, must be 'accepted'","details":{}}
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:13:31", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-46c30b71-df20-46a7-8bcd-186e99c83d5f"}}
+{"timestamp": "2026-10-17 23:13:31", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-46c30b71-df20-46a7-8bcd-186e99c83d5f/submit"}}
+_ test_public_approval_claims_before_bank_and_replays_one_fixed_reward_receipt _
+tests/integration/test_mp07_native_public_lifecycle.py:364: in test_public_approval_claims_before_bank_and_replays_one_fixed_reward_receipt
+    retained = await _post_with_discarded_success(
+tests/integration/test_mp07_public_command_replay.py:256: in _post_with_discarded_success
+    with pytest.raises(httpx.ReadError, match="injected response loss"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'httpx.ReadError'>
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:13:31", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-1b0ab00d-1506-491c-ab0d-a4ae1b22314b"}}
+{"timestamp": "2026-10-17 23:13:31", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "central_bank_unavailable", "status_code": 502, "path": "/tasks/t-1b0ab00d-1506-491c-ab0d-a4ae1b22314b/approve"}}
+_ test_public_approval_conflicts_before_bank_delivery[changed_replay-operation_id_conflict] _
+tests/integration/test_mp07_native_public_lifecycle.py:472: in test_public_approval_conflicts_before_bank_delivery
+    assert response.status_code == 409, response.text
+E   AssertionError: {"lifecycle_version":2,"timing_contract_version":2,"acceptance_window_seconds":86400,"bidding_cutoff_us":1792365212312687,"acceptance_cutoff_us":1792451612312687,"execution_cutoff_us":1792365212322070,"review_cutoff_us":1792365212325058,"accepted_reward":100,"accepted_bid_amount":90,"pending_transition":{"operation_id":"op-edbc3991-ce66-43a6-ac67-a10077d0b9d0","command":"approve_task","target_status":"approved","target_lifecycle_version":3,"operation_state":"claimed","effect_state":"pending"},"legacy_reconciliations":[],"task_id":"t-5e83eb7b-52b8-4490-ba1f-949b9b44066a","poster_id":"a-mp07-replay-poster-26365a47-0219-4087-864e-e078d8bf419c","title":"MP-07 public command replay","spec":"Persist exact command identity and replay immutable results.","reward":100,"bidding_deadline_seconds":86400,"deadline_seconds":86400,"review_deadline_seconds":86400,"status":"submitted","escrow_id":"esc-5bed4429-2f27-491e-a941-bc4ad55f62e3","bid_count":1,"worker_id":"a-mp07-replay-worker-1af081de-9195-4ff3-9222-27ad104ad25d","accepted_bid_id":"bid-5a176b5b-504f-4e32-bd11-a5afee1c4eef","created_at":"2026-10-17T23:13:32.312687Z","accepted_at":"2026-10-17T23:13:32.322070Z","submitted_at":"2026-10-17T23:13:32.325058Z","approved_at":null,"cancelled_at":null,"disputed_at":null,"dispute_reason":null,"dispute_id":null,"ruling_id":null,"ruled_at":null,"worker_pct":null,"ruling_summary":null,"expired_at":null,"escrow_pending":false,"bidding_deadline":"2026-10-18T23:13:32.312687Z","acceptance_deadline":"2026-10-19T23:13:32.312687Z","execution_deadline":"2026-10-18T23:13:32.322070Z","review_deadline":"2026-10-18T23:13:32.325058Z"}
+E   assert 200 == 409
+E    +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:13:32", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-5e83eb7b-52b8-4490-ba1f-949b9b44066a"}}
+{"timestamp": "2026-10-17 23:13:32", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "transition_pending", "status_code": 409, "path": "/board/tasks/t-5e83eb7b-52b8-4490-ba1f-949b9b44066a/status"}}
+_ test_public_approval_conflicts_before_bank_delivery[stale_version-task_version_conflict] _
+tests/integration/test_mp07_native_public_lifecycle.py:472: in test_public_approval_conflicts_before_bank_delivery
+    assert response.status_code == 409, response.text
+E   AssertionError: {"lifecycle_version":2,"timing_contract_version":2,"acceptance_window_seconds":86400,"bidding_cutoff_us":1792365212706205,"acceptance_cutoff_us":1792451612706205,"execution_cutoff_us":1792365212714413,"review_cutoff_us":1792365212717240,"accepted_reward":100,"accepted_bid_amount":90,"pending_transition":null,"legacy_reconciliations":[],"task_id":"t-fc9e28c5-e4fb-42cb-a0a6-bc1605b022fb","poster_id":"a-mp07-replay-poster-98d402f3-bc23-47fe-96a2-8fd2ca46500b","title":"MP-07 public command replay","spec":"Persist exact command identity and replay immutable results.","reward":100,"bidding_deadline_seconds":86400,"deadline_seconds":86400,"review_deadline_seconds":86400,"status":"approved","escrow_id":"esc-205c1c77-fa97-43d1-9d9d-db5bd534d203","bid_count":1,"worker_id":"a-mp07-replay-worker-43876092-d084-423d-817e-14ab8a8701d8","accepted_bid_id":"bid-77a8f53e-1628-45d4-80b0-2445cc059b1e","created_at":"2026-10-17T23:13:32.706205Z","accepted_at":"2026-10-17T23:13:32.714413Z","submitted_at":"2026-10-17T23:13:32.717240Z","approved_at":"2026-10-17T23:13:32.719193Z","cancelled_at":null,"disputed_at":null,"dispute_reason":null,"dispute_id":null,"ruling_id":null,"ruled_at":null,"worker_pct":null,"ruling_summary":null,"expired_at":null,"escrow_pending":false,"bidding_deadline":"2026-10-18T23:13:32.706205Z","acceptance_deadline":"2026-10-19T23:13:32.706205Z","execution_deadline":"2026-10-18T23:13:32.714413Z","review_deadline":"2026-10-18T23:13:32.717240Z"}
+E   assert 200 == 409
+E    +  where 200 = <Response [200 OK]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:13:32", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-fc9e28c5-e4fb-42cb-a0a6-bc1605b022fb"}}
+____ test_public_cancellation_claims_before_refund_and_replays_one_receipt _____
+tests/integration/test_mp07_native_public_lifecycle.py:510: in test_public_cancellation_claims_before_refund_and_replays_one_receipt
+    retained = await _post_with_discarded_success(
+tests/integration/test_mp07_public_command_replay.py:256: in _post_with_discarded_success
+    with pytest.raises(httpx.ReadError, match="injected response loss"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'httpx.ReadError'>
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:13:33", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-81ade126-5c7a-4b11-acb4-41e9d08e635a"}}
+{"timestamp": "2026-10-17 23:13:33", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "central_bank_unavailable", "status_code": 502, "path": "/tasks/t-81ade126-5c7a-4b11-acb4-41e9d08e635a/cancel"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_native_public_lifecycle.py::test_public_submission_replays_original_native_result_after_response_loss
+FAILED tests/integration/test_mp07_native_public_lifecycle.py::test_public_approval_claims_before_bank_and_replays_one_fixed_reward_receipt
+FAILED tests/integration/test_mp07_native_public_lifecycle.py::test_public_approval_conflicts_before_bank_delivery[changed_replay-operation_id_conflict]
+FAILED tests/integration/test_mp07_native_public_lifecycle.py::test_public_approval_conflicts_before_bank_delivery[stale_version-task_version_conflict]
+FAILED tests/integration/test_mp07_native_public_lifecycle.py::test_public_cancellation_claims_before_refund_and_replays_one_receipt
+============================== 5 failed in 2.00s ===============================

@@ -2,41 +2,219 @@
 
 ## Overview
 
-Services validate incoming requests using public key infrastructure (PKI). An agent signs a request with its private key, producing a certificate. The receiving service verifies the certificate using the agent's public key. If the decrypted certificate matches the original request payload, the request is authentic.
+Every authenticated agent or platform operation uses an Ed25519 compact JWS.
+The signature authenticates the exact protected-header and payload bytes sent by
+the signer. It does not encrypt either object.
 
-## How It Works
+The system has two verification paths:
 
-1. **Agent signs a request** — The agent uses its private key to sign the request payload, producing a certificate.
-2. **Service receives request + certificate** — The request body and the certificate are sent together.
-3. **Service verifies the certificate** — The service calls `validate_certificate` on the `BaseAgent` class, which decrypts the certificate using the agent's public key.
-4. **Match check** — If the decrypted certificate equals the request payload, the request was signed by that agent's private key. The request is valid.
+- **Agent-signed operations** call Identity's `POST /agents/verify-jws` through
+  the shared `IdentityClient` because the receiving service does not hold the
+  agent's public key.
+- **Platform-signed operations** verify locally with the provisioned platform
+  public key. They do not make an Identity HTTP request. Local admission also
+  requires the authenticated header `kid` to equal the registered platform
+  agent id.
 
-## Implementation
+Central Bank's `POST /accounts` remains an Identity-verified exception for both
+self-service and platform-funded creation because that route also checks agent
+existence through Identity.
 
-### Platform Agent Instantiation
+## Strict Compact-JWS Profile
 
-Each service that needs to verify requests instantiates a `PlatformAgent`. When instantiated correctly, the platform agent is loaded with its public and private key. This is the only setup required — once the platform agent is available, the service can verify any request signed by agents.
+A token has three base64url segments:
 
-### `validate_certificate` Method
+```text
+base64url(protected-header).base64url(payload).base64url(signature)
+```
 
-The `BaseAgent` class exposes a `validate_certificate` method (to be implemented if not already present). This method:
+Verification checks the Ed25519 signature over the original
+`protected-header.payload` bytes. A verifier must not reserialize either JSON
+object before checking the signature.
 
-1. Takes the request payload and the certificate as input.
-2. Decrypts the certificate using the agent's public key.
-3. Compares the decrypted result to the original request payload.
-4. Returns whether they match.
+### Protected header
 
-### Key Points
+The protected header is an exact object with these seven fields and no others:
 
-- **Agent ID does not matter** — Validation depends entirely on whether the certificate was signed with the agent's private key. Identity is proven cryptographically, not by ID lookup.
-- **Any service can verify** — As long as the service has the platform agent instantiated with the correct keys, it can verify incoming signed requests.
-- **Simple PKI** — This is standard public/private key verification. Sign with private key, verify with public key, compare payloads.
+```json
+{
+  "alg": "EdDSA",
+  "typ": "JWT",
+  "kid": "a-550e8400-e29b-41d4-a716-446655440000",
+  "iat": 1792051200,
+  "exp": 1792051500,
+  "aud": "central-bank",
+  "resource": "POST /escrow/lock"
+}
+```
 
-## Example: Bank Deposit
+| Field | Required type and rule |
+| --- | --- |
+| `alg` | Exact string `EdDSA` |
+| `typ` | Exact string `JWT` |
+| `kid` | Non-blank string naming a registered identity |
+| `iat` | JSON integer, with booleans explicitly rejected |
+| `exp` | JSON integer, with booleans explicitly rejected; must be greater than `iat` |
+| `aud` | Exact non-blank service name expected by the receiver |
+| `resource` | Exact uppercase HTTP method, one space, and concrete origin-free request path |
 
-1. An agent creates a deposit request.
-2. The agent signs the request with its private key, producing a certificate.
-3. The agent sends the request + certificate to the Central Bank.
-4. The Central Bank has a `PlatformAgent` instantiated with the platform keys.
-5. The bank calls `validate_certificate(request, certificate)` using the agent's public key.
-6. If the decrypted certificate matches the request, the deposit is processed.
+The initial configured service names are `central-bank`, `task-board`,
+`reputation`, and `court`. `resource` contains no host or query string. The
+receiver constructs the expected audience and concrete `METHOD /path` from its
+own route and route parameters; it never trusts the token to choose the target.
+
+Missing, extra, null, wrongly typed, or wrongly valued protected-header fields
+make the profile malformed. There is no production compatibility mode for
+headers without expiry claims.
+
+### Payload
+
+The payload remains the existing JSON object containing `action` and the
+operation's domain fields:
+
+```json
+{
+  "action": "escrow_lock",
+  "agent_id": "a-550e8400-e29b-41d4-a716-446655440000",
+  "amount": 250,
+  "task_id": "t-4ccac437-c944-44ff-8af2-1d00597679cf"
+}
+```
+
+`aud` and `resource` belong only in the protected header. Every receiver requires
+payload `action` to be a string and checks it against the action allowed by that
+endpoint. A missing or wrongly typed action is `400 invalid_payload`.
+
+An action-only payload is valid when the protected resource binds the subject,
+including Central Bank balance and transaction-history reads. There is no
+minimum-two-field rule and no invented domain field. Payload fields named `aud`,
+`resource`, or like other authentication metadata never authorize a target;
+only the verified protected header supplies audience and resource. Party,
+amount, state, and other domain authorization checks remain separate.
+
+## Lifetime Policy
+
+The shared `TokenPolicy` requires:
+
+- `max_lifetime_seconds > 0`
+- `clock_skew_seconds >= 0`
+- `exp > iat`
+- `exp - iat <= max_lifetime_seconds`
+
+At integer time `now`:
+
+- `iat > now + clock_skew_seconds` is `401 token_not_yet_valid`.
+- `iat == now + clock_skew_seconds` is accepted.
+- `now >= exp + clock_skew_seconds` is `401 token_expired`.
+- `now == exp + clock_skew_seconds - 1` is accepted.
+
+The initial deployment configuration is explicit YAML: signer TTL 300 seconds,
+admission maximum 300 seconds, and clock skew 30 seconds. These values are not
+code defaults. Signer TTL and admission maximum must be positive; clock skew
+must be nonnegative. A signer cannot create a token without a TTL, and every
+verifier enforces the configured maximum lifetime.
+
+## Verified Result
+
+Shared verification returns one typed value:
+
+```text
+VerifiedJws(header=JwsProtectedHeader(...), payload={...})
+```
+
+Both `header` and `payload` are authenticated. There is no payload-only wrapper,
+legacy `None` TTL, or no-expiry result. Domain-only tests may mock a complete,
+typed `VerifiedJws`, but such mocks do not prove authentication behavior.
+
+Identity's successful response is:
+
+```json
+{
+  "valid": true,
+  "agent_id": "a-550e8400-e29b-41d4-a716-446655440000",
+  "protected_header": {
+    "alg": "EdDSA",
+    "typ": "JWT",
+    "kid": "a-550e8400-e29b-41d4-a716-446655440000",
+    "iat": 1792051200,
+    "exp": 1792051500,
+    "aud": "central-bank",
+    "resource": "POST /escrow/lock"
+  },
+  "payload": {"action": "escrow_lock", "amount": 250}
+}
+```
+
+`agent_id` must equal `protected_header.kid`. Response binding compares JSON
+values without Python-style coercion: `true`, `1`, and `1.0` are distinct.
+After `valid:true`, the shared client also parses the originally requested token
+and type-strictly binds its authenticated header and payload to the response. If
+that requested token is invalid or the values differ, the response is a malformed
+upstream success mapped to `502 identity_service_unavailable`.
+
+Signature mismatch retains
+Identity's existing `200 {"valid": false, "reason": "signature mismatch"}`
+wire result. The shared Identity client validates every field in a successful
+response and returns `VerifiedJws`; a malformed success response is an invalid
+upstream response mapped through the existing `502 identity_service_unavailable`
+path. It must never fabricate an authenticated header or payload.
+
+## Receiver Admission Order
+
+Before any domain effect, the receiver:
+
+1. verifies the compact profile, signature, and lifetime policy;
+2. for local platform routes, checks `header.kid` against the registered
+   platform agent id;
+3. compares `header.aud` with its configured `service.name`;
+4. compares `header.resource` with the concrete uppercase `METHOD /path` it is
+   currently handling;
+5. requires string `payload.action` and checks it against the action allowed by
+   the endpoint; and
+6. applies the route's existing domain validation and authorization.
+
+The public error mapping is uniform:
+
+| Failure | Result |
+| --- | --- |
+| Non-object request body or signed payload, malformed compact/header representation, decoded signature length other than 64 bytes, exact header field/type/constant failure, or lifetime bound failure | `400 invalid_jws` |
+| Authentic token issued beyond allowed future skew | `401 token_not_yet_valid` |
+| Authentic token at or after `exp + skew` | `401 token_expired` |
+| Valid-length signature mismatch or local platform `kid` mismatch | `403 forbidden` at the receiving service; Identity retains `valid: false` for signature mismatch |
+| Missing/wrong-type action or authenticated wrong audience, resource, or action | `400 invalid_payload` |
+| Identity transport failure or malformed Identity success response | `502 identity_service_unavailable` |
+
+Every rejection occurs before a write, payout, state transition, or other domain
+effect.
+
+## Token Transport
+
+- Mutating routes carry the compact token in the documented JSON-body field.
+- GET routes without a request body carry it as
+  `Authorization: Bearer <compact-jws>`.
+- Asset upload uses its documented authorization-header transport.
+
+Transport does not change the strict profile or verification rules.
+
+## Examples
+
+For Task Board to release escrow, it signs a payload containing
+`action: "escrow_release"` and domain fields. The protected header contains
+`aud: "central-bank"` and the concrete resource
+`POST /escrow/<escrow_id>/release`. Central Bank verifies the token locally,
+checks the platform `kid`, audience, resource, and action, then performs its
+existing escrow authorization. Identity is not contacted.
+
+For a worker to submit a bid, the worker signs the existing bid payload. The
+protected header contains `aud: "task-board"` and
+`resource: "POST /tasks/<task_id>/bids"`. Task Board sends the token to Identity,
+validates the complete returned `VerifiedJws`, checks audience, resource, action,
+and bidder authorization, and only then records the bid.
+
+## MP-03 Rollout Status
+
+This document is the reconciled MP-03 contract. Implementation and verification
+are pending until the shared verifier, Identity wire/client path, official
+signers, and every real local adapter pass the acceptance scenarios in the
+matching service-test specifications. Existing implementation behavior must not
+be cited as proof of this contract until that rollout is complete.

@@ -25,6 +25,55 @@
     return Math.floor(seconds / 3600) + 'h ago';
   }
 
+  function escapeHTML(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function bindStaticActions() {
+    document.querySelectorAll('[data-nav]').forEach(function(element) {
+      element.addEventListener('click', function() {
+        window.location = element.getAttribute('data-nav');
+      });
+    });
+    document.querySelectorAll('[data-scroll-target]').forEach(function(element) {
+      element.addEventListener('click', function() {
+        var target = document.getElementById(element.getAttribute('data-scroll-target'));
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', bindStaticActions);
+
+  var browserConfigPromise = null;
+
+  async function proxyFetch(url, options) {
+    var target = new URL(url, window.location.origin);
+    var requestOptions = Object.assign({}, options || {});
+    var method = String(requestOptions.method || '').toUpperCase();
+    if (target.origin !== window.location.origin || target.username || target.password ||
+        target.hash || !target.pathname.startsWith('/api/proxy/') ||
+        ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(method) === -1) {
+      throw new Error('Browser writes require a same-origin proxy target');
+    }
+    if (!browserConfigPromise) {
+      browserConfigPromise = fetch('/api/proxy/browser-config').then(function(response) {
+        if (!response.ok) throw new Error('Browser security configuration unavailable');
+        return response.json();
+      });
+    }
+    var browserConfig = await browserConfigPromise;
+    requestOptions.method = method;
+    requestOptions.headers = new Headers(requestOptions.headers || {});
+    requestOptions.headers.set(browserConfig.csrf_header_name, browserConfig.csrf_header_value);
+    return fetch(target.href, requestOptions);
+  }
+
   function renderSparkSVG(data, w, h, fill) {
     if (!data || data.length < 2) {
       return '<svg class="sparkline" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"></svg>';
@@ -137,6 +186,19 @@
   }
 
   /**
+   * Canonical task-creation-trend -> visual mapping. The trend vocabulary
+   * ('increasing'/'decreasing'/'stable', matching the API's economy_phase.
+   * task_creation_trend) is defined ONLY here; every consumer (landing.js,
+   * observatory.js) reads its arrow/up/color from this.
+   * Returns { arrow, up, color }.
+   */
+  function trendVisual(trend) {
+    if (trend === 'increasing') return { arrow: '↑', up: true, color: 'var(--green)' };
+    if (trend === 'decreasing') return { arrow: '↓', up: false, color: 'var(--red)' };
+    return { arrow: '→', up: null, color: 'var(--amber)' };
+  }
+
+  /**
    * Generate a deterministic color from an agent ID string.
    */
   function agentColor(agentId) {
@@ -182,8 +244,7 @@
             es: a.stats.spec_quality.extremely_satisfied,
             s: a.stats.spec_quality.satisfied,
             d: a.stats.spec_quality.dissatisfied
-          },
-          streak: a.stats.current_streak || 0
+          }
         });
       });
 
@@ -280,50 +341,77 @@
     return source;
   }
 
+  // ── Event / badge / status taxonomies (single source of truth) ──
+  // These vocabularies are declared exactly once here and consumed by every
+  // page script (observatory.js, task.js) via the ATE namespace. The frontend
+  // badge taxonomy is intentionally finer than the backend one; do not unify.
+
+  // Canonical event_type -> feed type.
+  var EVENT_TYPE_TO_FEED_TYPE = {
+    'task.created': 'TASK',
+    'bid.submitted': 'BID',
+    'task.accepted': 'CONTRACT',
+    'asset.uploaded': 'SUBMIT',
+    'task.submitted': 'SUBMIT',
+    'task.approved': 'PAYOUT',
+    'task.auto_approved': 'PAYOUT',
+    'task.disputed': 'DISPUTE',
+    'task.ruled': 'RULING',
+    'task.cancelled': 'CANCEL',
+    'task.expired': 'CANCEL',
+    'escrow.locked': 'ESCROW',
+    'escrow.released': 'PAYOUT',
+    'escrow.split': 'PAYOUT',
+    'feedback.revealed': 'REP',
+    'salary.paid': 'SALARY',
+    'agent.registered': 'AGENT'
+  };
+
+  // Canonical feed type -> badge CSS class. The key order defines the
+  // observatory filter order; SALARY is not user-filterable so it is listed
+  // last and excluded from EVENT_FILTER_TYPES below.
+  var FEED_TYPE_TO_BADGE_CLASS = {
+    'TASK': 'badge-task',
+    'BID': 'badge-bid',
+    'PAYOUT': 'badge-payout',
+    'CONTRACT': 'badge-contract',
+    'ESCROW': 'badge-escrow',
+    'SUBMIT': 'badge-submit',
+    'REP': 'badge-rep',
+    'DISPUTE': 'badge-dispute',
+    'RULING': 'badge-ruling',
+    'CANCEL': 'badge-cancel',
+    'AGENT': 'badge-agent',
+    'SALARY': 'badge-salary'
+  };
+
+  // Observatory feed filters: 'ALL' plus every filterable feed type (all badge
+  // types except SALARY). Derived so adding a feed type updates the filters too.
+  var EVENT_FILTER_TYPES = ['ALL'].concat(
+    Object.keys(FEED_TYPE_TO_BADGE_CLASS).filter(function(t) { return t !== 'SALARY'; })
+  );
+
+  // Canonical task status -> { text, cls } badge mapping (frontend).
+  var TASK_STATUS_BADGE = {
+    'open': { text: 'OPEN', cls: 'status-open' },
+    'accepted': { text: 'ACTIVE', cls: 'status-active' },
+    'submitted': { text: 'SUBMITTED', cls: 'status-submitted' },
+    'disputed': { text: 'DISPUTED', cls: 'status-disputed' },
+    'ruled': { text: 'RULED', cls: 'status-ruled' },
+    'approved': { text: 'APPROVED', cls: 'status-approved' },
+    'cancelled': { text: 'CANCELLED', cls: 'status-open' },
+    'expired': { text: 'EXPIRED', cls: 'status-open' }
+  };
+
   /**
    * Map an API event object to a feed display object.
    * Returns { type, badge, text, time }.
    */
   function mapEventToFeed(event) {
-    var typeMap = {
-      'task.created': 'TASK',
-      'bid.submitted': 'BID',
-      'task.accepted': 'CONTRACT',
-      'asset.uploaded': 'SUBMIT',
-      'task.submitted': 'SUBMIT',
-      'task.approved': 'PAYOUT',
-      'task.auto_approved': 'PAYOUT',
-      'task.disputed': 'DISPUTE',
-      'task.ruled': 'RULING',
-      'task.cancelled': 'CANCEL',
-      'task.expired': 'CANCEL',
-      'escrow.locked': 'ESCROW',
-      'escrow.released': 'PAYOUT',
-      'escrow.split': 'PAYOUT',
-      'feedback.revealed': 'REP',
-      'salary.paid': 'SALARY',
-      'agent.registered': 'AGENT'
-    };
-
-    var badgeMap = {
-      'TASK': 'badge-task',
-      'BID': 'badge-bid',
-      'CONTRACT': 'badge-contract',
-      'SUBMIT': 'badge-submit',
-      'PAYOUT': 'badge-payout',
-      'DISPUTE': 'badge-dispute',
-      'RULING': 'badge-ruling',
-      'CANCEL': 'badge-cancel',
-      'ESCROW': 'badge-escrow',
-      'REP': 'badge-rep',
-      'SALARY': 'badge-salary',
-      'AGENT': 'badge-agent'
-    };
-
-    var feedType = typeMap[event.event_type] || 'TASK';
+    var feedType = EVENT_TYPE_TO_FEED_TYPE[event.event_type] || 'TASK';
     return {
       type: feedType,
-      badge: badgeMap[feedType] || 'badge-task',
+      badge: FEED_TYPE_TO_BADGE_CLASS[feedType] || 'badge-task',
       text: event.summary || event.event_type,
       time: new Date(event.timestamp).getTime(),
       eventId: event.event_id
@@ -391,10 +479,10 @@
     ];
 
     if (topEarner) {
-      items.push({ sym: 'TOP/EARNER', val: topEarner.name, chg: topEarner.earned + ' \u00a9 earned', up: true });
+      items.push({ sym: 'TOP/EARNER', val: escapeHTML(topEarner.name), chg: topEarner.earned + ' \u00a9 earned', up: true });
     }
     if (topPoster) {
-      items.push({ sym: 'TOP/POSTER', val: topPoster.name, chg: topPoster.spent + ' \u00a9 spent', up: null });
+      items.push({ sym: 'TOP/POSTER', val: escapeHTML(topPoster.name), chg: topPoster.spent + ' \u00a9 spent', up: null });
     }
 
     items.push({ sym: 'AGENTS/REG', val: String(S.agents.total), chg: S.agents.active + ' active', up: null });
@@ -414,11 +502,19 @@
   window.ATE = {
     AGENTS: AGENTS,
     S: S,
+    // Taxonomies (single source of truth)
+    EVENT_TYPE_TO_FEED_TYPE: EVENT_TYPE_TO_FEED_TYPE,
+    FEED_TYPE_TO_BADGE_CLASS: FEED_TYPE_TO_BADGE_CLASS,
+    EVENT_FILTER_TYPES: EVENT_FILTER_TYPES,
+    TASK_STATUS_BADGE: TASK_STATUS_BADGE,
     // Utilities
     timeAgo: timeAgo,
     renderSparkSVG: renderSparkSVG,
     animateCounter: animateCounter,
     agentColor: agentColor,
+    trendVisual: trendVisual,
+    escapeHTML: escapeHTML,
+    proxyFetch: proxyFetch,
     // API client
     fetchMetrics: fetchMetrics,
     fetchAgents: fetchAgents,

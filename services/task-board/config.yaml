@@ -19,7 +19,9 @@ database:
 
 identity:
   base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
   verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 
 central_bank:
   base_url: "http://localhost:8002"
@@ -38,9 +40,43 @@ assets:
   max_file_size: 10485760
   max_files_per_task: 10
 
+asset_upload:
+  stream_chunk_bytes: 262144
+  max_multipart_overhead_bytes: 1048576
+  max_header_count: 8
+  max_header_size: 4224
+  max_boundary_bytes: 70
+  max_display_filename_utf8_bytes: 255
+
 request:
   max_body_size: 10485760
+
+recovery:
+  maintenance_lock_path: "../../data/maintenance.lock"
 
 db_gateway:
   url: "http://127.0.0.1:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-task-board"
+    private_key_path: "../../data/keys/gateway-task-board.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
+
+# Q-5 (GAP-A3): periodic background sweep that pushes open/accepted/submitted/disputed
+# tasks through deadline evaluation without waiting for an API read to trigger it.
+deadline_evaluation:
+  actor_id: "system-task-board-deadline"
+  evaluation_interval_seconds: 10
+
+# Explicit bounds for durable task publication and legacy refund reconciliation.
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100
+
+# MP-08 status-independent financial-effect recovery. Gateway owns retry,
+# backoff, lease, evidence and dependency-timeout policy.
+financial_effect_recovery:
+  interval_seconds: 2.0
+  max_delivery_attempts_per_cycle: 10

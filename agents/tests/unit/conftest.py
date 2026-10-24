@@ -2,6 +2,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from base_agent.config import AgentConfig
+from base_agent.signing import TokenPolicy
 
 
 @pytest.fixture()
@@ -17,4 +18,6 @@ def sample_config() -> AgentConfig:
         task_board_url="http://localhost:8003",
         reputation_url="http://localhost:8004",
         court_url="http://localhost:8005",
+        token_ttl_seconds=300,
+        token_policy=TokenPolicy(max_lifetime_seconds=300, clock_skew_seconds=30),
     )

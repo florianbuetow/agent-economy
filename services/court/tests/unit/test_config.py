@@ -29,18 +29,22 @@ server:
 logging:
   level: "WARNING"
   directory: "data/logs"
-database:
-  path: "{tmp_path / "test.db"}"
 platform:
   agent_id: "a-platform"
+  agent_config_path: "agents.yaml"
 request:
   max_body_size: 1048576
 disputes:
   rebuttal_deadline_seconds: 86400
   max_claim_length: 10000
   max_rebuttal_length: 10000
+  feedback_extremely_satisfied_cutoff: 80
+  feedback_satisfied_cutoff: 40
+  feedback_comment_max_length: 256
 judges:
   panel_size: {panel_size}
+  mock_worker_pct: 50
+  max_deliverable_bytes: 65536
   judges:{judges_yaml}
 """
     config_path = tmp_path / "config.yaml"

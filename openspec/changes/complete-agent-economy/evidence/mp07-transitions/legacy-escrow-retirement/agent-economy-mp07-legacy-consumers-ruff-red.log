@@ -1,0 +1,49 @@
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/unit/test_escrow_coordinator.py:16:5
+   |
+15 |   if TYPE_CHECKING:
+16 | /     from collections.abc import Iterator
+17 | |     from pathlib import Path
+18 | |     from service_clients.bank import BankClient
+19 | |     from tests.fakes.native_task_fixture import NativeTaskFixture
+   | |_________________________________________________________________^
+20 |
+21 |   _APPROVAL_OPERATION_ID = "op-00000000-0000-4000-8000-000000000001"
+   |
+help: Organize imports
+
+E501 Line too long (103 > 100)
+   --> tests/unit/test_escrow_coordinator.py:335:101
+    |
+333 |     assert (
+334 |         native_tasks.store.writer.connection.execute(
+335 |             "SELECT COUNT(*) FROM board_task_operations WHERE task_id='t-1' AND command='approve_task'"
+    |                                                                                                     ^^^
+336 |         ).fetchone()[0]
+337 |         == 1
+    |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/unit/test_mp04_financial_intents.py:27:5
+   |
+26 |   if TYPE_CHECKING:
+27 | /     from collections.abc import Iterator
+28 | |     from pathlib import Path
+29 | |     from tests.fakes.native_task_fixture import NativeTaskFixture
+   | |_________________________________________________________________^
+   |
+help: Organize imports
+
+E501 Line too long (101 > 100)
+   --> tests/unit/test_mp04_financial_intents.py:342:101
+    |
+340 |     assert native_tasks.task("t-ruling")["status"] == "ruled"
+341 |     paid = native_tasks.store.writer.connection.execute(
+342 |         "SELECT account_id,amount FROM bank_operation_legs WHERE operation_id=? ORDER BY account_id",
+    |                                                                                                     ^
+343 |         (operation_id,),
+344 |     ).fetchall()
+    |
+
+Found 4 errors.
+[*] 2 fixable with the `--fix` option.

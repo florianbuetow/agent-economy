@@ -60,16 +60,24 @@ All JWS tokens follow the compact serialization format: `header.payload.signatur
 ```json
 {
   "alg": "EdDSA",
-  "kid": "<agent_id>"
+  "typ": "JWT",
+  "kid": "<agent_id>",
+  "iat": 1792051200,
+  "exp": 1792051500,
+  "aud": "task-board",
+  "resource": "POST /tasks/<concrete-task-id>/bids"
 }
 ```
 
-- `alg` must be `"EdDSA"` (Ed25519)
-- `kid` is the signer's agent ID (e.g., `"a-alice-uuid"` or the platform agent ID)
+- The header has exactly `alg`, `typ`, `kid`, `iat`, `exp`, `aud`, and `resource`; missing or extra fields are `400 invalid_jws`.
+- `alg="EdDSA"`, `typ="JWT"`; `kid`, `aud`, and `resource` are non-blank strings.
+- `iat`/`exp` are JSON integers excluding booleans, `exp > iat`, and lifetime does not exceed the required positive configured maximum.
+- `aud` equals Task Board's configured `service.name`. `resource` equals the concrete uppercase `METHOD /path` handled, with no host or query.
+- Local platform routes additionally require authenticated `kid == platform_agent.agent_id`. Tokens without expiry claims are rejected.
 
 ### JWS Payload
 
-Every JWS payload must include an `action` field that identifies the operation. This prevents cross-operation token replay — a token signed for `"submit_bid"` cannot be used for `"approve_task"`.
+Every JWS payload remains the existing domain object and includes string `action`. `aud` and `resource` stay in the protected header; similarly named domain fields grant no authority. Missing/wrong-type action or a context mismatch is `400 invalid_payload` before any task effect.
 
 ### Action Values
 
@@ -136,7 +144,7 @@ Authorization: Bearer <JWS compact token>
 ### Standard Flow (Most Endpoints)
 
 ```
-Agent                      Task Board (with PlatformAgent)
+Agent                      Task Board
   |                             |
   |  1. Construct JWS payload   |
   |     { action, ... }         |
@@ -149,11 +157,12 @@ Agent                      Task Board (with PlatformAgent)
   |     { "token": "eyJ..." }   |
   |  =========================> |
   |                             |
-  |                             |  4. Decode JWS header (extract kid)
-  |                             |  5. validate_certificate(request, certificate)
-  |                             |     → decrypt certificate with agent's public key
-  |                             |     → compare decrypted payload to request payload
-  |                             |  6. Validate action field
+  |                             |  4. Agent token: Identity client
+  |                             |     validates complete success;
+  |                             |     platform token: strict local
+  |                             |     verification, no HTTP
+  |                             |  5. Receive typed VerifiedJws
+  |                             |  6. Check aud/resource/action
   |                             |  7. Check authorization
   |                             |     (signer == expected agent)
   |                             |  8. Validate payload fields
@@ -166,15 +175,15 @@ Agent                      Task Board (with PlatformAgent)
 ### Two-Token Flow (Task Creation)
 
 ```
-Poster                     Task Board (with PlatformAgent)      Central Bank
+Poster                     Task Board                           Central Bank
   |                             |                                     |
   |  POST /tasks                |                                     |
   |  { task_token,              |                                     |
   |    escrow_token }           |                                     |
   |  =========================> |                                     |
   |                             |                                     |
-  |                             |  Verify task_token locally          |
-  |                             |  validate_certificate(request, cert)|
+  |                             |  Verify task_token through Identity |
+  |                             |  and validate complete VerifiedJws  |
   |                             |                                     |
   |                             |  Validate task_token                |
   |                             |  (action, poster_id,                |
@@ -189,9 +198,9 @@ Poster                     Task Board (with PlatformAgent)      Central Bank
   |                             |  { "token": escrow_token }          |
   |                             |  =================================> |
   |                             |                                     |
-  |                             |  (Central Bank verifies             |
-  |                             |   escrow_token locally              |
-  |                             |   via its own PlatformAgent)        |
+  |                             |  (Central Bank is the admitting     |
+  |                             |   receiver and verifies the poster  |
+  |                             |   token through Identity)           |
   |                             |                                     |
   |                             |  { escrow_id, status }              |
   |                             |  <================================= |
@@ -202,9 +211,9 @@ Poster                     Task Board (with PlatformAgent)      Central Bank
   |  <========================= |                                     |
 ```
 
-**Key point:** The Task Board does NOT verify `escrow_token` itself. It only inspects the `escrow_token`'s payload (by decoding the base64url payload section without verifying the signature) to cross-validate `task_id` and `amount` against the `task_token`. The Central Bank handles full cryptographic verification of the `escrow_token` locally via its own PlatformAgent.
+**Key point:** The Task Board does not admit `escrow_token` as an authenticated token. It may inspect its signed-looking payload only to cross-check `task_id` and `amount`; this is not a `VerifiedJws` and grants no authority. The protected header targets `aud="central-bank"` and `resource="POST /escrow/lock"`. Central Bank is the admitting receiver and performs full agent verification through Identity before locking funds.
 
-**Escrow token decode errors:** If the `escrow_token` is not valid three-part JWS compact format, it fails at step 4 (`INVALID_JWS`). If the `escrow_token` has valid three-part format but the payload section is not valid base64url or does not decode to valid JSON, it also fails as `INVALID_JWS` — the token is structurally malformed. If the payload decodes to valid JSON but is missing `task_id` or `amount`, the cross-validation cannot proceed and the error is `TOKEN_MISMATCH`.
+**Escrow token decode errors:** If the `escrow_token` is not valid three-part JWS compact format, it fails at step 4 (`invalid_jws`). If the `escrow_token` has valid three-part format but the payload section is not valid base64url or does not decode to valid JSON, it also fails as `invalid_jws` — the token is structurally malformed. If the payload decodes to valid JSON but is missing `task_id` or `amount`, the cross-validation cannot proceed and the error is `token_mismatch`.
 
 ### Platform-Signed Outgoing Calls
 
@@ -219,18 +228,17 @@ Task Board                                Central Bank (with PlatformAgent)
   |       recipient_account_id: "a-xxx" }       |
   |                                             |
   |  2. Sign with platform private key          |
-  |     Header: { alg: "EdDSA",                 |
-  |               kid: "<platform_agent_id>" }  |
+  |     Exact header: aud="central-bank",       |
+  |     concrete release resource, platform kid |
   |                                             |
   |  3. POST /escrow/{id}/release               |
   |     { "token": "eyJ..." }                   |
   |  ===========================================>|
   |                                             |
-  |                                             |  Verify locally via
-  |                                             |  validate_certificate()
-  |                                             |
-  |                                             |  Check: signer
-  |                                             |  == platform_id
+  |                                             |  Strict local verification
+  |                                             |  -> VerifiedJws; check
+  |                                             |  platform kid and exact
+  |                                             |  aud/resource/action
   |                                             |
   |  4. { escrow_id, status: released }         |
   |  <===========================================|
@@ -240,11 +248,11 @@ Task Board                                Central Bank (with PlatformAgent)
 
 ## Authorization Rules
 
-After `validate_certificate()` confirms the JWS certificate is valid:
+After the appropriate Identity-backed or strict local path returns `VerifiedJws` and the receiver checks audience, concrete resource, and action:
 
 ### Agent Operations
 
-1. **Signer must match the expected agent ID.** The `kid` (agent ID) extracted from the JWS header must match the relevant field in the JWS payload:
+1. **Signer must match the expected agent ID.** The authenticated `header.kid` must match the relevant field in the JWS payload:
    - For poster operations: `kid` must match `poster_id`
    - For worker operations: `kid` must match `worker_id` or `bidder_id`
 
@@ -267,39 +275,47 @@ After `validate_certificate()` confirms the JWS certificate is valid:
 
 | Status | Code | When |
 |--------|------|------|
-| 400 | `INVALID_JWS` | Token is malformed, missing, empty, not a string, or not valid JWS compact format |
-| 400 | `INVALID_PAYLOAD` | JWS payload is missing `action`, `action` does not match the expected value for this endpoint, or required payload fields are missing |
-| 400 | `TOKEN_MISMATCH` | `task_id` or `amount`/`reward` mismatch between `task_token` and `escrow_token` (task creation only) |
-| 403 | `FORBIDDEN` | JWS certificate is invalid (`validate_certificate()` fails), or signer does not match the required agent, or signer is not the platform agent for platform operations |
-| 502 | `CENTRAL_BANK_UNAVAILABLE` | Cannot connect to Central Bank, timeout, or escrow operation failed |
+| 400 | `invalid_jws` | Non-object request body or signed payload, token transport/compact/header form, decoded signature length other than 64 bytes, exact header fields/types/constants, or lifetime bound is invalid |
+| 400 | `invalid_payload` | Action is missing/non-string, authenticated audience/resource/action mismatches, or required domain fields are missing |
+| 400 | `token_mismatch` | `task_id` or `amount`/`reward` mismatch between `task_token` and `escrow_token` (task creation only) |
+| 401 | `token_expired` | Authentic token satisfies `now >= exp + clock_skew_seconds` |
+| 401 | `token_not_yet_valid` | Authentic token satisfies `iat > now + clock_skew_seconds` |
+| 403 | `forbidden` | Signature verification fails, authenticated signer does not match the required agent, or authenticated local `kid` is not the platform identity |
+| 502 | `identity_service_unavailable` | Agent-token verification cannot reach Identity or Identity returns a malformed successful response |
+| 502 | `central_bank_unavailable` | Cannot connect to Central Bank, timeout, or escrow operation failed |
 
 ### Error Precedence
 
 Errors are checked in this order (first match wins):
 
-1. `415 UNSUPPORTED_MEDIA_TYPE` — wrong Content-Type (expected `application/json` for most endpoints, `multipart/form-data` for asset upload)
-2. `413 PAYLOAD_TOO_LARGE` — body exceeds `request.max_body_size` or file exceeds `assets.max_file_size`
-3. `400 INVALID_JSON` — malformed JSON body
-4. `400 INVALID_JWS` — missing or malformed token field(s)
-5. `403 FORBIDDEN` — certificate verification fails (`validate_certificate()` returns false)
-6. `400 INVALID_PAYLOAD` — wrong `action`, missing required payload fields, or `task_id`/`bid_id` in payload does not match the URL path
-7. `400 TOKEN_MISMATCH` — cross-token validation failure (task creation)
-8. `403 FORBIDDEN` — signer does not match expected agent (poster/worker/platform). See note below on role-dependent checks.
-9. `404 TASK_NOT_FOUND` — task does not exist
-10. `409 INVALID_STATUS` — task is in wrong status for this operation
-11. Domain-specific validation errors (`SELF_BID`, `BID_ALREADY_EXISTS`, `NO_ASSETS`, etc.)
-12. `502 CENTRAL_BANK_UNAVAILABLE` — escrow operation failed
+1. `415 unsupported_media_type` — wrong Content-Type (expected `application/json` for most endpoints, `multipart/form-data` for asset upload)
+2. `413 payload_too_large` — body exceeds `request.max_body_size` or file exceeds `assets.max_file_size`
+3. `400 invalid_json` — malformed JSON body
+4. `400 invalid_jws` — missing or malformed token field(s)
+5. Strict verification result: `400 invalid_jws`, `401 token_expired`, `401 token_not_yet_valid`, `403 forbidden`, or agent-tier `502 identity_service_unavailable`
+6. `400 invalid_payload` — audience/resource/action mismatch, missing required payload fields, or `task_id`/`bid_id` in payload does not match the URL path
+7. `400 token_mismatch` — cross-token validation failure (task creation)
+8. `403 forbidden` — signer does not match expected agent (poster/worker/platform). See note below on role-dependent checks.
+9. `404 task_not_found` — task does not exist
+10. `409 invalid_status` — task is in wrong status for this operation
+11. Domain-specific validation errors (`self_bid`, `bid_already_exists`, `no_assets`, etc.)
+12. `502 central_bank_unavailable` — escrow operation failed
 
 ### Notes on Error Mapping
 
-- **Invalid signature** returns `403 FORBIDDEN`, not `401`. There is no `401` in this system because there is no challenge-response mechanism (no `WWW-Authenticate` header). Invalid credentials = forbidden.
-- **Signer mismatch** also returns `403 FORBIDDEN` with a different message. The certificate is cryptographically valid, but the signer lacks authorization.
-- **Role-dependent signer checks and status ordering.** For operations that require a role only assigned in a specific status (e.g., `worker_id` is only set in ACCEPTED status), the status check (step 10) takes priority over the signer-role check (step 8). Example: uploading an asset to an OPEN task (which has no worker) returns `409 INVALID_STATUS`, not `403 FORBIDDEN`. The signer's identity is verified at step 5 (certificate validity) regardless — this note only applies to the role-authorization check at step 8.
-- **Central Bank errors** are returned as `502 CENTRAL_BANK_UNAVAILABLE`. Specific Central Bank error codes (e.g., `INSUFFICIENT_FUNDS`) are propagated in the `details` field when available.
+- **Invalid signature** returns `403 forbidden`. Authentic expiry and future issue time use their distinct `401` errors.
+- **Signer mismatch** also returns `403 forbidden` with a different message. The certificate is cryptographically valid, but the signer lacks authorization.
+- **Role-dependent signer checks and status ordering.** For operations that require a role only assigned in a specific status (e.g., `worker_id` is only set in ACCEPTED status), the status check (step 10) takes priority over the signer-role check (step 8). Example: uploading an asset to an OPEN task (which has no worker) returns `409 invalid_status`, not `403 forbidden`. The signer's identity is verified at step 5 (certificate validity) regardless — this note only applies to the role-authorization check at step 8.
+- **Central Bank errors** are returned as `502 central_bank_unavailable`. Specific Central Bank error codes (e.g., `insufficient_funds`) are propagated in the `details` field when available.
+- **Identity transport or malformed success** is `502 identity_service_unavailable` on agent routes. The shared client requires complete, consistent `agent_id`, `protected_header`, and object `payload`; it never fabricates a `VerifiedJws`.
 
 ---
 
 ## Configuration
+
+### Identity Integration
+
+Agent-signed routes require explicit Identity base URL, verify-JWS path, and timeout configuration. Missing or invalid values fail startup. There is no local platform fallback for ordinary agent tokens.
 
 ### Central Bank Integration
 
@@ -326,16 +342,21 @@ platform:
 
 All fields are required. Missing fields cause startup failure.
 
+Token policy is also required and explicit. Initial YAML values are a 300-second signer TTL, a 300-second admission maximum, and 30 seconds of clock skew. TTL and maximum lifetime must be positive; skew must be nonnegative. Invalid or missing values fail configuration construction, and no no-expiry mode exists.
+
 ---
 
 ## Infrastructure
+
+### IdentityClient
+
+Agent-signed routes call Identity and type-strictly bind the complete `valid:true` response to the originally requested token. JSON `true`, `1`, and `1.0` are distinct. An invalid requested token, inconsistent `agent_id`/`protected_header.kid`, substituted type/value, missing field, or non-object payload is `502 identity_service_unavailable`; the client never constructs a payload-only success. A valid response returns `VerifiedJws(header, payload)`.
 
 ### PlatformAgent
 
 Initialized during startup by loading the Ed25519 public and private keys from `platform.public_key_path` and `platform.private_key_path`. Stored in `AppState`.
 
-Provides:
-- `validate_certificate(request: dict, certificate: str) -> bool` — decrypts the certificate using the agent's public key and compares it to the request payload. Returns `True` if they match (request is authentic), `False` otherwise.
+Provides strict local verification returning `VerifiedJws(header, payload)` under an explicit `TokenPolicy`. It verifies the original compact bytes and makes no Identity HTTP request.
 
 ### CentralBankClient
 
@@ -349,8 +370,7 @@ Provides:
 
 Initialized during startup by loading the Ed25519 private key from `platform.private_key_path`. Used for outgoing platform-signed calls (e.g., escrow release).
 
-Provides:
-- `sign(payload: dict) -> str` — creates a JWS compact token with `{"alg": "EdDSA", "kid": "<platform_agent_id>"}` header and the provided payload, signed with the platform's Ed25519 private key.
+Provides target-explicit signing: the caller supplies audience and concrete resource, the signer requires a positive TTL and registered non-blank `kid`, and the payload supplies the existing action/domain fields. There is no no-expiry or payload-only compatibility form.
 
 ### Dependencies
 
@@ -367,7 +387,7 @@ The `action` field in every JWS payload prevents cross-operation replay. A token
 
 However, same-operation replay is possible. For example, the same `"submit_bid"` token could theoretically be sent twice. This is mitigated by:
 
-- **Bid uniqueness constraint:** `(task_id, bidder_id)` is unique, so a replayed bid token gets `409 BID_ALREADY_EXISTS`.
+- **Bid uniqueness constraint:** `(task_id, bidder_id)` is unique, so a replayed bid token gets `409 bid_already_exists`.
 - **Status checks:** Most operations require a specific task status. Once a status transition occurs, the same token cannot trigger it again (e.g., a replayed `"approve_task"` token fails because the task is already APPROVED).
 - **Escrow idempotency:** The Central Bank enforces `(payer_account_id, task_id)` uniqueness for locked escrow, so a replayed `"escrow_lock"` token gets `409`.
 
@@ -388,13 +408,13 @@ Mallory                    Task Board (with PlatformAgent)
   |  { "token": "eyJ..." }     |
   |  =========================> |
   |                             |
-  |                             |  validate_certificate() → valid
+  |                             |  Identity returns VerifiedJws
   |                             |  (mallory signed it, sig is correct)
   |                             |
   |                             |  kid: "a-mallory" != poster_id: "a-alice"
   |                             |  mallory != alice → 403
   |                             |
-  |  403 { error: FORBIDDEN }  |
+  |  403 { error: forbidden }  |
   |  <========================= |
 ```
 
@@ -419,7 +439,7 @@ Mallory                    Task Board                Central Bank
   |                             |  task_id mismatch or     |
   |                             |  amount mismatch         |
   |                             |                          |
-  |  400 TOKEN_MISMATCH         |                          |
+  |  400 token_mismatch         |                          |
   |  <========================= |                          |
 ```
 

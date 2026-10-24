@@ -5,6 +5,9 @@ agents:
   platform:
     name: "Platform"
     type: "platform"
+  operator:
+    name: "UI Operator"
+    type: "operator"
   alice:
     name: "Alice"
     type: "worker"

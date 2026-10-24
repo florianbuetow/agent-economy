@@ -8,6 +8,10 @@
     taskId: null,
     task: null,            // Full drilldown from GET /api/tasks/{task_id}
     myAgentId: null,
+    bidLoadStatus: 'idle', // 'idle' | 'loading' | 'ready' | 'error'
+    bidLoadError: '',
+    pendingIntent: null,
+    intentMessage: '',
     currentPhase: 0,
     maxPhase: 0,
     sseSource: null
@@ -19,7 +23,7 @@
   function taskStatusToPhase(task) {
     if (!task) return 0;
     var s = task.status;
-    var bidCount = task.bids ? task.bids.length : 0;
+    var bidCount = Number.isInteger(task.bid_count) ? task.bid_count : (task.bids ? task.bids.length : 0);
     var assetCount = task.assets ? task.assets.length : 0;
 
     if (s === 'open' && bidCount === 0) return 0;
@@ -35,39 +39,70 @@
 
   function statusBadge(task) {
     if (!task) return { text: 'DRAFT', cls: 'status-open' };
-    var map = {
-      'open': { text: 'OPEN', cls: 'status-open' },
-      'accepted': { text: 'ACTIVE', cls: 'status-active' },
-      'submitted': { text: 'SUBMITTED', cls: 'status-submitted' },
-      'disputed': { text: 'DISPUTED', cls: 'status-disputed' },
-      'ruled': { text: 'RULED', cls: 'status-ruled' },
-      'approved': { text: 'APPROVED', cls: 'status-approved' },
-      'cancelled': { text: 'CANCELLED', cls: 'status-open' },
-      'expired': { text: 'EXPIRED', cls: 'status-open' }
-    };
-    return map[task.status] || { text: task.status.toUpperCase(), cls: 'status-open' };
+    return ATE.TASK_STATUS_BADGE[task.status] || { text: task.status.toUpperCase(), cls: 'status-open' };
   }
 
   // ── Escrow bar ─────────────────────────────────────────────
-  function escrowBar(task, settled) {
-    if (!task) return '';
-    if (settled) {
-      return '<div class="escrow-bar" style="background:var(--green-dim)">' +
-        '<span class="escrow-icon">&#10003;</span>' +
-        '<span class="escrow-label">Escrow</span>' +
-        '<span class="escrow-amount" style="color:var(--green)">' + task.reward + ' &copy; RELEASED</span>' +
-        '<span class="escrow-status">SETTLED</span>' +
-        '</div>';
+  function financialEffect(task) {
+    var effect = task.financial_effect;
+    var fields = ['schema_version', 'settlement_state', 'receipt_state', 'outcome',
+      'operation_id', 'receipt_reference', 'business_projection_pending', 'pending_target_status'];
+    var operationId = /^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    if (!effect || typeof effect !== 'object' || Array.isArray(effect) ||
+        Object.keys(effect).length !== fields.length ||
+        !fields.every(function(key) { return Object.prototype.hasOwnProperty.call(effect, key); }) ||
+        effect.schema_version !== 1 || typeof effect.business_projection_pending !== 'boolean' ||
+        ['locked', 'pending', 'attention_required', 'conflict', 'complete', 'historical'].indexOf(effect.settlement_state) < 0 ||
+        (effect.operation_id !== null && (typeof effect.operation_id !== 'string' || !operationId.test(effect.operation_id))) ||
+        (effect.business_projection_pending
+          ? ['approved', 'cancelled', 'expired', 'ruled'].indexOf(effect.pending_target_status) < 0
+          : effect.pending_target_status !== null)) return null;
+
+    if (effect.receipt_state === 'confirmed') {
+      if (effect.operation_id === null || effect.receipt_reference !== effect.operation_id ||
+          ['worker_paid', 'poster_refunded', 'split'].indexOf(effect.outcome) < 0 ||
+          ['pending', 'complete', 'conflict'].indexOf(effect.settlement_state) < 0) return null;
+    } else if (effect.receipt_state === 'historical') {
+      if (effect.settlement_state !== 'historical' || effect.outcome !== 'worker_paid' ||
+          effect.operation_id !== null || effect.receipt_reference !== null ||
+          effect.business_projection_pending) return null;
+    } else if (effect.receipt_state === 'absent') {
+      if (effect.outcome !== null || effect.receipt_reference !== null ||
+          ['locked', 'pending', 'attention_required', 'conflict'].indexOf(effect.settlement_state) < 0 ||
+          (effect.settlement_state === 'locked' &&
+            (effect.operation_id !== null || effect.business_projection_pending))) return null;
+    } else {
+      return null;
     }
-    var frozen = task.status === 'disputed';
-    var icon = frozen ? '&#9878;&#65039;' : '&#128274;';
-    var statusText = frozen ? 'FROZEN &middot; DISPUTE ACTIVE' : 'LOCKED';
-    var statusStyle = frozen ? ' style="color:var(--red)"' : '';
-    return '<div class="escrow-bar">' +
-      '<span class="escrow-icon">' + icon + '</span>' +
+    return effect;
+  }
+
+  function escrowBar(task) {
+    if (!task) return '';
+    var effect = financialEffect(task);
+    var statusText = 'SETTLEMENT UNCONFIRMED';
+    var confirmed = effect && effect.receipt_state === 'confirmed';
+    var historical = effect && effect.receipt_state === 'historical';
+    if (confirmed) {
+      statusText = {worker_paid: 'PAID', poster_refunded: 'REFUNDED', split: 'SPLIT'}[effect.outcome];
+      if (effect.business_projection_pending) statusText += ' · TASK UPDATE PENDING';
+      else if (effect.settlement_state === 'conflict') statusText += ' · TASK CONFLICT';
+    } else if (historical) {
+      statusText = 'PAID · HISTORICAL';
+    } else if (effect) {
+      statusText = {locked: 'LOCKED', pending: 'SETTLEMENT PENDING',
+        attention_required: 'SETTLEMENT NEEDS ATTENTION', conflict: 'SETTLEMENT CONFLICT'}[effect.settlement_state];
+      if (effect.settlement_state === 'locked' && task.status === 'disputed') {
+        statusText = 'FROZEN · DISPUTE ACTIVE';
+      }
+    }
+    var amount = Number.isSafeInteger(task.reward) && task.reward > 0 ? String(task.reward) + ' &copy;' : 'Amount unavailable';
+    var success = confirmed || historical;
+    return '<div class="escrow-bar"' + (success ? ' style="background:var(--green-dim)"' : '') + '>' +
+      '<span class="escrow-icon">' + (success ? '&#10003;' : '&#128274;') + '</span>' +
       '<span class="escrow-label">Escrow</span>' +
-      '<span class="escrow-amount">' + task.reward + ' &copy;</span>' +
-      '<span class="escrow-status"' + statusStyle + '>' + statusText + '</span>' +
+      '<span class="escrow-amount">' + amount + '</span>' +
+      '<span class="escrow-status">' + statusText + '</span>' +
       '</div>';
   }
 
@@ -104,6 +139,10 @@
           '<input class="form-input" id="f-rev-dl" type="number" min="1" placeholder="120">' +
         '</div>' +
       '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">Bid Acceptance Window (s)</label>' +
+        '<input class="form-input" id="f-accept-window" type="number" min="1" placeholder="Required">' +
+      '</div>' +
       '<div style="margin-top:14px">' +
         '<button class="btn btn-cyan solid" id="btn-post-task">Post Task</button>' +
         '<span id="post-error" style="color:var(--red);font-size:11px;margin-left:12px"></span>' +
@@ -115,8 +154,8 @@
     return escrowBar(task) +
       '<div class="card">' +
       '<div class="card-header">' +
-        '<span class="card-label">Task ' + task.task_id.slice(0, 12) + '</span>' +
-        '<span style="font-size:9px;color:var(--text-dim)">Posted by ' + task.poster.name + '</span>' +
+        '<span class="card-label">Task ' + esc(task.task_id.slice(0, 12)) + '</span>' +
+        '<span style="font-size:9px;color:var(--text-dim)">Posted by ' + esc(task.poster.name) + '</span>' +
       '</div>' +
       '<div class="card-body">' +
         '<div class="task-detail-row"><span class="task-detail-key">Title</span><span class="task-detail-val">' + esc(task.title) + '</span></div>' +
@@ -129,26 +168,36 @@
 
   function renderBidPhase(task) {
     var bids = task.bids || [];
+    var bidCount = Number.isInteger(task.bid_count) ? task.bid_count : bids.length;
     var isMyTask = task.poster.agent_id === state.myAgentId;
     var html = escrowBar(task) +
       '<div class="card"><div class="card-header">' +
-      '<span class="card-label">Bids on ' + task.task_id.slice(0, 12) + '</span>' +
-      '<span style="font-size:9px;color:var(--text-dim)">' + bids.length + ' bid' + (bids.length !== 1 ? 's' : '') + ' received</span>' +
+      '<span class="card-label">Bids on ' + esc(task.task_id.slice(0, 12)) + '</span>' +
+      '<span style="font-size:9px;color:var(--text-dim)">' + bidCount + ' bid' + (bidCount !== 1 ? 's' : '') + ' received</span>' +
       '</div><div class="card-body no-pad">';
+    if (bids.length === 0 && isMyTask && state.bidLoadStatus === 'loading') {
+      html += '<div class="bid-load-status" style="padding:14px;text-align:center;color:var(--text-dim)">Loading authorized bid details...</div>';
+    } else if (bids.length === 0 && isMyTask && state.bidLoadStatus === 'error') {
+      html += '<div class="bid-load-error" style="padding:14px;text-align:center;color:var(--red)">Bid details are unavailable. Retry by refreshing this task.</div>';
+    } else if (bids.length === 0 && bidCount > 0) {
+      html += '<div class="bid-sealed" style="padding:14px;text-align:center;color:var(--text-dim)">Bid details are sealed to the poster.</div>';
+    }
     bids.forEach(function(b) {
-      var color = ATE.agentColor(b.bidder.agent_id);
-      var initials = b.bidder.name.slice(0, 2).toUpperCase();
-      var dq = b.bidder.delivery_quality;
-      var total = (dq.extremely_satisfied || 0) + (dq.satisfied || 0) + (dq.dissatisfied || 0);
+      var bidder = b.bidder || { agent_id: b.bidder_id, name: b.bidder_id };
+      var color = ATE.agentColor(bidder.agent_id);
+      var initials = bidder.name.slice(0, 2).toUpperCase();
+      var dq = bidder.delivery_quality;
+      var total = dq ? (dq.extremely_satisfied || 0) + (dq.satisfied || 0) + (dq.dissatisfied || 0) : 0;
       var qualPct = total > 0 ? Math.round(((dq.extremely_satisfied || 0) + (dq.satisfied || 0)) / total * 100) : 0;
+      var bidMeta = dq ? 'Quality: ' + qualPct + '%' : 'Poster-authorized sealed offer';
       html += '<div class="bid-row" style="animation:slide-in .3s ease-out">' +
-        '<div class="bid-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + initials + '</div>' +
-        '<div class="bid-info"><div class="bid-name">' + esc(b.bidder.name) + '</div>' +
-        '<div class="bid-meta">Quality: ' + qualPct + '% &middot; ' + esc(b.proposal.slice(0, 60)) + '</div></div>' +
-        '<div class="bid-amount" style="color:var(--green)">' + task.reward + ' &copy;</div>' +
+        '<div class="bid-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + esc(initials) + '</div>' +
+        '<div class="bid-info"><div class="bid-name">' + esc(bidder.name) + '</div>' +
+        '<div class="bid-meta">' + esc(bidMeta) + '</div></div>' +
+        '<div class="bid-amount" style="color:var(--green)">' + b.amount + ' &copy;</div>' +
         '<div class="bid-actions">';
       if (isMyTask && !b.accepted && task.status === 'open') {
-        html += '<button class="btn btn-green btn-accept-bid" data-bid-id="' + b.bid_id + '">Accept</button>';
+        html += '<button class="btn btn-green btn-accept-bid" data-bid-id="' + ATE.escapeHTML(b.bid_id) + '">Accept</button>';
       }
       html += '</div></div>';
     });
@@ -165,7 +214,7 @@
         '<span class="card-label" style="color:var(--green)">&#129309; Contract Signed</span>' +
         '<span style="font-size:9px;color:var(--green)">Platform co-signed</span>' +
       '</div><div class="card-body">' +
-        '<div class="task-detail-row"><span class="task-detail-key">Task</span><span class="task-detail-val">' + task.task_id.slice(0, 12) + ' &mdash; ' + esc(task.title) + '</span></div>' +
+        '<div class="task-detail-row"><span class="task-detail-key">Task</span><span class="task-detail-val">' + esc(task.task_id.slice(0, 12)) + ' &mdash; ' + esc(task.title) + '</span></div>' +
         '<div class="task-detail-row"><span class="task-detail-key">Poster</span><span class="task-detail-val" style="color:var(--cyan)">' + esc(task.poster.name) + '</span></div>' +
         '<div class="task-detail-row"><span class="task-detail-key">Worker</span><span class="task-detail-val" style="color:' + workerColor + '">' + esc(worker.name) + '</span></div>' +
         '<div class="task-detail-row"><span class="task-detail-key">Reward</span><span class="task-detail-val" style="color:var(--green)">' + task.reward + ' &copy;</span></div>' +
@@ -248,7 +297,7 @@
       '<div class="ruling-card" style="animation:scale-in .5s ease-out">' +
       '<div class="ruling-header">' +
         '<span class="gavel">&#9878;&#65039;</span>' +
-        '<span class="ruling-title">Court Ruling &mdash; ' + task.task_id.slice(0, 12) + '</span>' +
+        '<span class="ruling-title">Court Ruling &mdash; ' + esc(task.task_id.slice(0, 12)) + '</span>' +
       '</div><div class="ruling-body">' +
         '<div class="ruling-scores">' +
           '<div class="ruling-score"><div class="ruling-score-label">Worker Payout</div>' +
@@ -262,12 +311,17 @@
   }
 
   function renderSettlePhase(task) {
-    var html = escrowBar(task, true);
+    var html = escrowBar(task);
+    var effect = financialEffect(task);
 
-    // If there was a ruling, show payout breakdown
-    if (task.dispute && task.dispute.ruling) {
+    // A ruling alone is not proof that either payout happened.
+    if (effect && effect.receipt_state === 'confirmed' && effect.outcome === 'split' &&
+        task.dispute && task.dispute.ruling && Number.isSafeInteger(task.reward) && task.reward > 0 &&
+        Number.isInteger(task.dispute.ruling.worker_pct) &&
+        task.dispute.ruling.worker_pct >= 0 && task.dispute.ruling.worker_pct <= 100) {
       var ruling = task.dispute.ruling;
-      var workerPayout = Math.round(task.reward * ruling.worker_pct / 100);
+      // Match the Bank's integer floor and give the exact remainder to the poster.
+      var workerPayout = Number(BigInt(task.reward) * BigInt(ruling.worker_pct) / 100n);
       var posterPayout = task.reward - workerPayout;
       html += '<div class="ruling-card"><div class="ruling-header">' +
         '<span class="gavel">&#9878;&#65039;</span><span class="ruling-title">Settlement</span>' +
@@ -300,10 +354,232 @@
 
   // ── Utility ────────────────────────────────────────────────
   function esc(str) {
-    if (!str) return '';
-    var div = document.createElement('div');
-    div.appendChild(document.createTextNode(String(str)));
-    return div.innerHTML;
+    return str ? ATE.escapeHTML(str) : '';
+  }
+
+  var OPERATION_FIELDS = [
+    'protocol_version', 'operation_id', 'task_id', 'command', 'request_sha256',
+    'operation_state', 'source_status', 'source_lifecycle_version', 'target_status',
+    'target_lifecycle_version', 'effect_kind', 'effect_state', 'effect_operation_id',
+    'effect_result_reference', 'effect_intent', 'event_id', 'result'
+  ];
+
+  function intentStorageKey(taskId) {
+    return 'ate.task-operation:' + taskId;
+  }
+
+  function canonicalOperationId() {
+    if (!window.crypto) {
+      throw new Error('Secure operation identity generation is unavailable');
+    }
+    if (typeof window.crypto.randomUUID === 'function') {
+      return 'op-' + window.crypto.randomUUID();
+    }
+    if (typeof window.crypto.getRandomValues !== 'function') {
+      throw new Error('Secure operation identity generation is unavailable');
+    }
+    var bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    var hex = Array.from(bytes, function(value) { return value.toString(16).padStart(2, '0'); }).join('');
+    return 'op-' + hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' +
+      hex.slice(16, 20) + '-' + hex.slice(20);
+  }
+
+  function readIntent(taskId) {
+    var raw = sessionStorage.getItem(intentStorageKey(taskId));
+    if (!raw) return null;
+    try {
+      var intent = JSON.parse(raw);
+      if (!intent || intent.task_id !== taskId || typeof intent.operation_id !== 'string' ||
+          typeof intent.operator_agent_id !== 'string' || typeof intent.action !== 'string' ||
+          !Number.isSafeInteger(intent.expected_lifecycle_version) ||
+          typeof intent.path !== 'string' || !intent.body || typeof intent.body !== 'object') {
+        state.intentMessage = 'Saved operation intent is malformed and cannot be retried.';
+        return null;
+      }
+      if (intent.intent_state === 'claimed') {
+        state.intentMessage = 'Operation pending on the platform. Retry the saved operation explicitly.';
+      } else if (intent.intent_state === 'conflict') {
+        state.intentMessage = 'Saved operation has a platform conflict. Retry only for authoritative confirmation.';
+      } else if (intent.intent_state === 'error') {
+        state.intentMessage = 'Saved operation received an invalid response. Retry explicitly.';
+      } else {
+        state.intentMessage = 'Operation response is uncertain. Retry the saved operation explicitly.';
+      }
+      return intent;
+    } catch (_error) {
+      state.intentMessage = 'Saved operation intent is malformed and cannot be retried.';
+      return null;
+    }
+  }
+
+  function saveIntent(intent) {
+    sessionStorage.setItem(intentStorageKey(intent.task_id), JSON.stringify(intent));
+    state.pendingIntent = intent;
+  }
+
+  function clearIntent(intent) {
+    sessionStorage.removeItem(intentStorageKey(intent.task_id));
+    state.pendingIntent = null;
+    state.intentMessage = '';
+  }
+
+  function freezeIntent(action, terms) {
+    if (!state.task || !Number.isSafeInteger(state.task.lifecycle_version)) {
+      throw new Error('Authoritative task lifecycle version is unavailable');
+    }
+    if (!state.myAgentId) throw new Error('Operator identity is unavailable');
+    if (state.pendingIntent) return state.pendingIntent;
+    var operationId = canonicalOperationId();
+    var path;
+    var body = {
+      operation_id: operationId,
+      expected_lifecycle_version: state.task.lifecycle_version
+    };
+    var intent = {
+      intent_version: 1,
+      task_id: state.task.task_id,
+      operator_agent_id: state.myAgentId,
+      action: action,
+      operation_id: operationId,
+      expected_lifecycle_version: state.task.lifecycle_version,
+      intent_state: 'uncertain'
+    };
+    if (action === 'accept_bid') {
+      path = '/api/proxy/tasks/' + encodeURIComponent(state.task.task_id) + '/bids/' + encodeURIComponent(terms.bid_id) + '/accept';
+      intent.bid_id = terms.bid_id;
+    } else if (action === 'approve_task') {
+      path = '/api/proxy/tasks/' + encodeURIComponent(state.task.task_id) + '/approve';
+    } else if (action === 'dispute_task') {
+      path = '/api/proxy/tasks/' + encodeURIComponent(state.task.task_id) + '/dispute';
+      body.reason = terms.reason;
+      intent.reason = terms.reason;
+    } else {
+      throw new Error('Unknown task operation');
+    }
+    intent.path = path;
+    intent.body = body;
+    saveIntent(intent);
+    return intent;
+  }
+
+  function validErrorEnvelope(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) &&
+      Object.keys(value).sort().join(',') === 'details,error,message' &&
+      typeof value.error === 'string' && value.error.length > 0 &&
+      typeof value.message === 'string' && value.message.length > 0 &&
+      value.details && typeof value.details === 'object' && !Array.isArray(value.details);
+  }
+
+  function validOperationAcknowledgment(value, intent, requiredState) {
+    if (!value || typeof value !== 'object' || Array.isArray(value) || value.task_id !== intent.task_id ||
+        typeof value.status !== 'string' || !Number.isSafeInteger(value.lifecycle_version)) return false;
+    var operation = value.operation;
+    if (!operation || typeof operation !== 'object' || Array.isArray(operation) ||
+        Object.keys(operation).sort().join(',') !== OPERATION_FIELDS.slice().sort().join(',')) return false;
+    if (operation.protocol_version !== 1 || operation.operation_id !== intent.operation_id ||
+        operation.task_id !== intent.task_id || operation.command !== intent.action ||
+        !/^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(operation.operation_id) ||
+        !/^[0-9a-f]{64}$/.test(operation.request_sha256) ||
+        !Number.isSafeInteger(operation.source_lifecycle_version) ||
+        !Number.isSafeInteger(operation.target_lifecycle_version) ||
+        operation.source_lifecycle_version !== intent.expected_lifecycle_version ||
+        operation.target_lifecycle_version < operation.source_lifecycle_version ||
+        operation.operation_state !== requiredState || typeof operation.source_status !== 'string' ||
+        typeof operation.target_status !== 'string') return false;
+    if (requiredState === 'claimed') {
+      return operation.effect_kind !== 'none' && operation.effect_state === 'pending' &&
+        operation.event_id === null && operation.result === null &&
+        value.lifecycle_version === operation.source_lifecycle_version;
+    }
+    return operation.event_id !== null && Number.isSafeInteger(operation.event_id) &&
+      operation.result && typeof operation.result === 'object' &&
+      ((operation.effect_kind === 'none' && operation.effect_state === 'none') ||
+       (operation.effect_kind !== 'none' && operation.effect_state === 'succeeded')) &&
+      value.lifecycle_version >= operation.target_lifecycle_version;
+  }
+
+  function updateIntent(intent, intentState, message) {
+    intent.intent_state = intentState;
+    state.intentMessage = message;
+    saveIntent(intent);
+    updateView();
+  }
+
+  async function submitFrozenIntent(intent) {
+    if (intent.operator_agent_id !== state.myAgentId) {
+      state.intentMessage = 'Saved operation belongs to a different operator identity.';
+      updateView();
+      return;
+    }
+    var response;
+    try {
+      response = await ATE.proxyFetch(intent.path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(intent.body)
+      });
+    } catch (_error) {
+      updateIntent(intent, 'uncertain', 'Operation response is uncertain. Retry the saved operation explicitly.');
+      return;
+    }
+    var data;
+    try {
+      data = await response.json();
+    } catch (_error) {
+      updateIntent(intent, 'error', 'Invalid Task Board acknowledgment response.');
+      return;
+    }
+    if (!response.ok) {
+      var message = validErrorEnvelope(data) ? data.message : 'Task Board returned an invalid error response.';
+      if (response.status === 409 && validErrorEnvelope(data) && data.error === 'task_version_conflict' &&
+          Number.isSafeInteger(data.details.expected_lifecycle_version) &&
+          data.details.expected_lifecycle_version === intent.expected_lifecycle_version &&
+          Number.isSafeInteger(data.details.actual_lifecycle_version) &&
+          typeof data.details.current_status === 'string' && data.details.current_status.length > 0) {
+        intent.definitive_rejection = {
+          error: data.error,
+          actual_lifecycle_version: data.details.actual_lifecycle_version,
+          current_status: data.details.current_status
+        };
+      } else {
+        delete intent.definitive_rejection;
+      }
+      updateIntent(intent, response.status === 409 ? 'conflict' : 'error', message + ' Retry the saved operation explicitly.');
+      return;
+    }
+    if (response.status === 202 && validOperationAcknowledgment(data, intent, 'claimed')) {
+      updateIntent(intent, 'claimed', 'Operation pending on the platform. Retry the saved operation explicitly.');
+      return;
+    }
+    if (response.status === 200 && validOperationAcknowledgment(data, intent, 'completed')) {
+      clearIntent(intent);
+      await refreshTaskData(intent.task_id);
+      return;
+    }
+    updateIntent(intent, 'error', 'Invalid Task Board acknowledgment response. Retry the saved operation explicitly.');
+  }
+
+  function renderIntentRecovery() {
+    if (!state.pendingIntent || !state.task || state.pendingIntent.task_id !== state.task.task_id) return;
+    document.querySelectorAll('.btn-accept-bid, #btn-approve, #btn-dispute-show, #btn-submit-dispute').forEach(function(element) {
+      element.remove();
+    });
+    var matchesOperator = state.pendingIntent.operator_agent_id === state.myAgentId;
+    var message = matchesOperator ? (state.intentMessage || 'Saved operation awaiting explicit confirmation retry.') :
+      'Saved operation belongs to a different operator identity.';
+    var panel = document.createElement('div');
+    panel.className = 'card operation-recovery';
+    panel.innerHTML = '<div class="card-header"><span class="card-label">Saved Task Operation</span></div>' +
+      '<div class="card-body"><div class="operation-recovery-message">' + esc(message) + '</div>' +
+      '<button class="btn btn-cyan solid" data-operation-recovery' + (matchesOperator ? '' : ' disabled') +
+      '>Retry Saved Operation</button>' +
+      (state.pendingIntent.definitive_rejection ?
+        '<button class="btn" data-operation-rejection-reset' + (matchesOperator ? '' : ' disabled') +
+        '>Refresh and Dismiss Rejected Operation</button>' : '') + '</div>';
+    document.getElementById('phase-content').appendChild(panel);
   }
 
   // ── Phase strip rendering ──────────────────────────────────
@@ -363,6 +639,7 @@
     }
 
     renderPhaseStrip();
+    renderIntentRecovery();
     bindActionButtons();
   }
 
@@ -383,58 +660,7 @@
 
   // ── Form bindings ──────────────────────────────────────────
   function bindCreateForm() {
-    var btn = document.getElementById('btn-post-task');
-    if (!btn) return;
-    btn.addEventListener('click', async function() {
-      var title = document.getElementById('f-title').value.trim();
-      var spec = document.getElementById('f-spec').value.trim();
-      var reward = parseInt(document.getElementById('f-reward').value, 10);
-      var bidDl = parseInt(document.getElementById('f-bid-dl').value, 10);
-      var execDl = parseInt(document.getElementById('f-exec-dl').value, 10);
-      var revDl = parseInt(document.getElementById('f-rev-dl').value, 10);
-      var errEl = document.getElementById('post-error');
-
-      if (!title || !spec || !reward || !bidDl || !execDl || !revDl) {
-        errEl.textContent = 'All fields are required.';
-        return;
-      }
-
-      btn.disabled = true;
-      errEl.textContent = '';
-
-      try {
-        var resp = await fetch('/api/proxy/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: title,
-            spec: spec,
-            reward: reward,
-            bidding_deadline_seconds: bidDl,
-            execution_deadline_seconds: execDl,
-            review_deadline_seconds: revDl
-          })
-        });
-        if (!resp.ok) {
-          var err = await resp.json().catch(function() { return {}; });
-          throw new Error(err.message || 'Failed to create task (HTTP ' + resp.status + ')');
-        }
-        var data = await resp.json();
-        state.taskId = data.task_id;
-        state.mode = 'view';
-
-        // Update URL without reload
-        var url = new URL(window.location);
-        url.searchParams.set('task_id', state.taskId);
-        window.history.pushState({}, '', url);
-
-        await refreshTaskData(state.taskId);
-        connectTaskSSE(state.taskId);
-      } catch (e) {
-        errEl.textContent = e.message;
-        btn.disabled = false;
-      }
-    });
+    ATE.TaskPosting.bindCreateForm();
   }
 
   // ── Action button bindings ─────────────────────────────────
@@ -445,8 +671,8 @@
         var bidId = this.getAttribute('data-bid-id');
         this.disabled = true;
         try {
-          await fetch('/api/proxy/tasks/' + state.taskId + '/bids/' + bidId + '/accept', { method: 'POST' });
-          await refreshTaskData(state.taskId);
+          var intent = freezeIntent('accept_bid', { bid_id: bidId });
+          await submitFrozenIntent(intent);
         } catch (e) {
           console.error('Accept bid failed:', e);
           this.disabled = false;
@@ -460,8 +686,8 @@
       approveBtn.addEventListener('click', async function() {
         this.disabled = true;
         try {
-          await fetch('/api/proxy/tasks/' + state.taskId + '/approve', { method: 'POST' });
-          await refreshTaskData(state.taskId);
+          var intent = freezeIntent('approve_task', {});
+          await submitFrozenIntent(intent);
         } catch (e) {
           console.error('Approve failed:', e);
           this.disabled = false;
@@ -488,37 +714,85 @@
         this.disabled = true;
         errEl.textContent = '';
         try {
-          var resp = await fetch('/api/proxy/tasks/' + state.taskId + '/dispute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reason: reason })
-          });
-          if (!resp.ok) {
-            var err = await resp.json().catch(function() { return {}; });
-            throw new Error(err.message || 'Failed to file dispute');
-          }
-          await refreshTaskData(state.taskId);
+          var intent = freezeIntent('dispute_task', { reason: reason });
+          await submitFrozenIntent(intent);
         } catch (e) {
           errEl.textContent = e.message;
           this.disabled = false;
         }
       });
     }
+
+    var recoveryBtn = document.querySelector('[data-operation-recovery]');
+    if (recoveryBtn) {
+      recoveryBtn.addEventListener('click', async function() {
+        if (!state.pendingIntent || this.disabled) return;
+        this.disabled = true;
+        await submitFrozenIntent(state.pendingIntent);
+      });
+    }
+
+    var rejectionResetBtn = document.querySelector('[data-operation-rejection-reset]');
+    if (rejectionResetBtn) {
+      rejectionResetBtn.addEventListener('click', async function() {
+        var intent = state.pendingIntent;
+        if (!intent || !intent.definitive_rejection || this.disabled ||
+            intent.operator_agent_id !== state.myAgentId) return;
+        this.disabled = true;
+        var refreshed = await refreshTaskData(intent.task_id);
+        if (!refreshed || !state.task ||
+            state.task.lifecycle_version !== intent.definitive_rejection.actual_lifecycle_version ||
+            state.task.status !== intent.definitive_rejection.current_status) {
+          updateIntent(intent, 'conflict', 'Authoritative task state did not confirm the rejection. Retry the refresh explicitly.');
+          return;
+        }
+        clearIntent(intent);
+        updateView();
+      });
+    }
   }
 
   // ── Data fetching ──────────────────────────────────────────
+  async function loadAuthorizedOpenBids(task) {
+    if (task.status !== 'open' || task.poster.agent_id !== state.myAgentId) return;
+    try {
+      var response = await fetch('/api/proxy/tasks/' + encodeURIComponent(task.task_id) + '/bids');
+      if (!response.ok) throw new Error('Authorized bid request failed');
+      var data = await response.json();
+      if (data.task_id !== task.task_id || !Array.isArray(data.bids)) {
+        throw new Error('Authorized bid response is malformed');
+      }
+      task.bids = data.bids;
+      state.bidLoadStatus = 'ready';
+      state.bidLoadError = '';
+    } catch (error) {
+      task.bids = [];
+      state.bidLoadStatus = 'error';
+      state.bidLoadError = error instanceof Error ? error.message : 'Authorized bid request failed';
+    }
+  }
+
   async function refreshTaskData(taskId) {
     try {
-      var resp = await fetch('/api/tasks/' + taskId);
+      var resp = await fetch('/api/tasks/' + encodeURIComponent(taskId));
       if (resp.ok) {
         state.task = await resp.json();
         var newPhase = taskStatusToPhase(state.task);
         state.currentPhase = newPhase;
+        state.bidLoadStatus = 'idle';
+        state.bidLoadError = '';
+        if (state.task.status === 'open' && state.task.poster.agent_id === state.myAgentId) {
+          state.bidLoadStatus = 'loading';
+          updateView();
+          await loadAuthorizedOpenBids(state.task);
+        }
         updateView();
+        return true;
       }
     } catch (e) {
       console.warn('[task] refreshTaskData error:', e.message);
     }
+    return false;
   }
 
   // ── SSE ────────────────────────────────────────────────────
@@ -543,7 +817,7 @@
     var div = document.createElement('div');
     div.className = 'feed-item';
     div.innerHTML = '<span class="feed-badge ' + feed.badge + '">' + feed.type + '</span>' +
-      '<span class="feed-text">' + feed.text + '</span>' +
+      '<span class="feed-text">' + esc(feed.text) + '</span>' +
       '<span class="feed-time">' + timeStr + '</span>';
     scroll.insertBefore(div, scroll.firstChild);
   }
@@ -590,12 +864,15 @@
     if (taskId) {
       state.taskId = taskId;
       state.mode = 'view';
+      state.pendingIntent = readIntent(taskId);
       await refreshTaskData(taskId);
       await loadHistoricalEvents(taskId);
       connectTaskSSE(taskId);
     } else {
       state.mode = 'create';
+      await ATE.TaskPosting.ready();
       updateView();
+      await ATE.TaskPosting.recoverExisting();
     }
 
     // Start metrics polling for ticker updates

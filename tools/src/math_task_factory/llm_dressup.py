@@ -139,9 +139,7 @@ def _extract_numbers(text: str) -> list[str]:
     return [n for n in re.findall(r"\d+(?:\.\d+)?", text) if len(n) >= 2]
 
 
-def _check_numbers_preserved(
-    original_numbers: list[str], new_text: str
-) -> list[str]:
+def _check_numbers_preserved(original_numbers: list[str], new_text: str) -> list[str]:
     """Return list of original numbers not found in new_text."""
     return [n for n in original_numbers if n not in new_text]
 

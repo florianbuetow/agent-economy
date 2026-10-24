@@ -171,7 +171,7 @@ def wait_for_sse_update(page: Page, timeout: float = 5000) -> None:
     current_count = page.locator(".feed-item").count()
     with suppress(Exception):
         page.wait_for_function(
-            f"document.querySelectorAll('.feed-item').length > {current_count}",
+            f"() => document.querySelectorAll('.feed-item').length > {current_count}",
             timeout=timeout,
         )
 

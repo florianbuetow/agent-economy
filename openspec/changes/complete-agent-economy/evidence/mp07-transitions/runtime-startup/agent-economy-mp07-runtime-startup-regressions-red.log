@@ -1,0 +1,101 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 8 items
+
+tests/unit/test_mp07_runtime_startup_regressions.py FFFFFFFF             [100%]
+
+=================================== FAILURES ===================================
+_____ test_worker_runtime_admission_precedes_bank_account_and_loop[owner] ______
+tests/unit/test_mp07_runtime_startup_regressions.py:214: in test_worker_runtime_admission_precedes_bank_account_and_loop
+    assert "account" not in events
+E   AssertionError: assert 'account' not in ['register', 'account', 'llm-close', 'agent-close']
+____ test_worker_runtime_admission_precedes_bank_account_and_loop[journal] _____
+tests/unit/test_mp07_runtime_startup_regressions.py:214: in test_worker_runtime_admission_precedes_bank_account_and_loop
+    assert "account" not in events
+E   AssertionError: assert 'account' not in ['register', 'account', 'llm-close', 'agent-close']
+______ test_worker_runtime_admission_precedes_bank_account_and_loop[busy] ______
+tests/unit/test_mp07_runtime_startup_regressions.py:214: in test_worker_runtime_admission_precedes_bank_account_and_loop
+    assert "account" not in events
+E   AssertionError: assert 'account' not in ['register', 'account', 'llm-close', 'agent-close']
+_____ test_feeder_runtime_admission_precedes_bank_account_and_loops[owner] _____
+tests/unit/test_mp07_runtime_startup_regressions.py:305: in test_feeder_runtime_admission_precedes_bank_account_and_loops
+    assert "account" not in events
+E   AssertionError: assert 'account' not in ['register', 'account', 'agent-close']
+____ test_feeder_runtime_admission_precedes_bank_account_and_loops[journal] ____
+tests/unit/test_mp07_runtime_startup_regressions.py:305: in test_feeder_runtime_admission_precedes_bank_account_and_loops
+    assert "account" not in events
+E   AssertionError: assert 'account' not in ['register', 'account', 'agent-close']
+_____ test_feeder_runtime_admission_precedes_bank_account_and_loops[busy] ______
+tests/unit/test_mp07_runtime_startup_regressions.py:305: in test_feeder_runtime_admission_precedes_bank_account_and_loops
+    assert "account" not in events
+E   AssertionError: assert 'account' not in ['register', 'account', 'agent-close']
+___ test_worker_logs_bounded_replay_state_and_operation_summary_before_loop ____
+tests/unit/test_mp07_runtime_startup_regressions.py:392: in test_worker_logs_bounded_replay_state_and_operation_summary_before_loop
+    assert "runtime replay" in messages.lower()
+E   AssertionError: assert 'runtime replay' in 'starting math worker agent via factory (profile=actual-profile, handle=worker-handle)\nregistered as agent_id=a-worker-alice\nbank account created for agent_id=a-worker-alice\nmath worker agent clients closed'
+E    +  where 'starting math worker agent via factory (profile=actual-profile, handle=worker-handle)\nregistered as agent_id=a-worker-alice\nbank account created for agent_id=a-worker-alice\nmath worker agent clients closed' = <built-in method lower of str object at 0x10d900230>()
+E    +    where <built-in method lower of str object at 0x10d900230> = 'Starting Math Worker Agent via factory (profile=actual-profile, handle=worker-handle)\nRegistered as agent_id=a-worker-alice\nBank account created for agent_id=a-worker-alice\nMath Worker Agent clients closed'.lower
+------------------------------ Captured log call -------------------------------
+INFO     math_worker:__main__.py:91 Starting Math Worker Agent via factory (profile=actual-profile, handle=worker-handle)
+INFO     math_worker:__main__.py:46 Registered as agent_id=a-worker-alice
+INFO     math_worker:__main__.py:49 Bank account created for agent_id=a-worker-alice
+WARNING  base_agent.runtime_task_commands:runtime_task_commands.py:181 Task command acknowledgment unavailable: task=t-00000000-0000-4000-8000-000000000501 slot=bid operation=op-00000000-0000-4000-8000-000000000501
+WARNING  base_agent.runtime_task_commands:runtime_task_commands.py:181 Task command acknowledgment unavailable: task=t-00000000-0000-4000-8000-000000000502 slot=bid operation=op-00000000-0000-4000-8000-000000000502
+INFO     math_worker:__main__.py:129 Math Worker Agent clients closed
+___ test_feeder_sibling_failure_drains_under_lease_before_close_and_release ____
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/flo/Developer/github/agent-economy/agents/tests/unit/test_mp07_runtime_startup_regressions.py", line 491, in test_feeder_sibling_failure_drains_under_lease_before_close_and_release
+  |     await task_feeder_main._main()
+  |   File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/__main__.py", line 124, in _main
+  |     await _run_loops(agent, feeder_config, acceptance_config, commands, logger)
+  |   File "/Users/flo/Developer/github/agent-economy/agents/src/task_feeder/__main__.py", line 85, in _run_loops
+  |     async with asyncio.TaskGroup() as tasks:
+  |                ~~~~~~~~~~~~~~~~~^^
+  |   File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/taskgroups.py", line 71, in __aexit__
+  |     return await self._aexit(et, exc)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/taskgroups.py", line 173, in _aexit
+  |     raise BaseExceptionGroup(
+  |     ...<2 lines>...
+  |     ) from None
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/Users/flo/Developer/github/agent-economy/agents/tests/unit/test_mp07_runtime_startup_regressions.py", line 433, in run
+    |     raise RuntimeError("injected feeder failure")
+    | RuntimeError: injected feeder failure
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/agents/tests/unit/test_mp07_runtime_startup_regressions.py", line 490, in test_feeder_sibling_failure_drains_under_lease_before_close_and_release
+    with pytest.raises(ExceptionGroup, match="injected feeder failure"):
+         ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/.venv/lib/python3.13/site-packages/_pytest/raises.py", line 719, in __exit__
+    raise AssertionError(self._fail_reason)
+AssertionError: Regex pattern did not match the `ExceptionGroup()`.
+  Expected regex: 'injected feeder failure'
+  Actual message: 'unhandled errors in a TaskGroup'
+
+During handling of the above exception, another exception occurred:
+tests/unit/test_mp07_runtime_startup_regressions.py:490: in test_feeder_sibling_failure_drains_under_lease_before_close_and_release
+    with pytest.raises(ExceptionGroup, match="injected feeder failure"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match the `ExceptionGroup()`.
+E     Expected regex: 'injected feeder failure'
+E     Actual message: 'unhandled errors in a TaskGroup'
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_runtime_startup_regressions.py::test_worker_runtime_admission_precedes_bank_account_and_loop[owner]
+FAILED tests/unit/test_mp07_runtime_startup_regressions.py::test_worker_runtime_admission_precedes_bank_account_and_loop[journal]
+FAILED tests/unit/test_mp07_runtime_startup_regressions.py::test_worker_runtime_admission_precedes_bank_account_and_loop[busy]
+FAILED tests/unit/test_mp07_runtime_startup_regressions.py::test_feeder_runtime_admission_precedes_bank_account_and_loops[owner]
+FAILED tests/unit/test_mp07_runtime_startup_regressions.py::test_feeder_runtime_admission_precedes_bank_account_and_loops[journal]
+FAILED tests/unit/test_mp07_runtime_startup_regressions.py::test_feeder_runtime_admission_precedes_bank_account_and_loops[busy]
+FAILED tests/unit/test_mp07_runtime_startup_regressions.py::test_worker_logs_bounded_replay_state_and_operation_summary_before_loop
+FAILED tests/unit/test_mp07_runtime_startup_regressions.py::test_feeder_sibling_failure_drains_under_lease_before_close_and_release
+============================== 8 failed in 0.22s ===============================

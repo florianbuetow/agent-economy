@@ -1,0 +1,25 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________ test_caller_command_mutation_cannot_rewrite_execution_evidence ________
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1018/test_caller_command_mutation_c0')
+
+    def test_caller_command_mutation_cannot_rewrite_execution_evidence(tmp_path: Path) -> None:
+        runtime = IsolatedRuntime.create(
+            repo_root=REPO_ROOT, artifacts_root=tmp_path, services=("db-gateway",),
+        )
+        command = ["/usr/bin/true"]
+        try:
+            assert runtime.run_command(command, cwd=runtime.run_dir) == 0
+            command[0] = "/usr/bin/false"
+            runtime._write_manifest()
+>           assert runtime.command_records[0]["command"] == ["/usr/bin/true"]
+E           AssertionError: assert ['/usr/bin/false'] == ['/usr/bin/true']
+E             
+E             At index 0 diff: '/usr/bin/false' != '/usr/bin/true'
+E             Use -v to get more diff
+
+../../tests/runtime/test_runtime_startup_evidence.py:128: AssertionError
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_runtime_startup_evidence.py::test_caller_command_mutation_cannot_rewrite_execution_evidence
+1 failed, 4 deselected in 0.13s

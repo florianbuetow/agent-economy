@@ -1,0 +1,84 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 15 items
+
+tests/unit/task_feeder/test_config.py F.                                 [ 13%]
+tests/unit/task_feeder/test_loop.py FFF                                  [ 33%]
+tests/unit/task_feeder/test_loop_statuses.py F.                          [ 46%]
+tests/unit/task_feeder/test_acceptance_config.py .......F                [100%]
+
+=================================== FAILURES ===================================
+___________________ TestTaskFeederConfig.test_creates_config ___________________
+tests/unit/task_feeder/test_config.py:12: in test_creates_config
+    config = TaskFeederConfig(
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for TaskFeederConfig
+E   acceptance_window_seconds
+E     Field required [type=missing, input_value={'handle': 'feeder', 'tas...l': 10, 'shuffle': True}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+__________________ TestRewardComputation.test_level_1_reward ___________________
+tests/unit/task_feeder/test_loop.py:29: in test_level_1_reward
+    config = _make_config(base_reward=10, reward_per_level=10)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/task_feeder/test_loop.py:23: in _make_config
+    return TaskFeederConfig(**defaults)  # type: ignore[arg-type]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for TaskFeederConfig
+E   acceptance_window_seconds
+E     Field required [type=missing, input_value={'handle': 'feeder', 'tas...l': 10, 'shuffle': True}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+__________________ TestRewardComputation.test_level_9_reward ___________________
+tests/unit/task_feeder/test_loop.py:37: in test_level_9_reward
+    config = _make_config(base_reward=10, reward_per_level=10)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/task_feeder/test_loop.py:23: in _make_config
+    return TaskFeederConfig(**defaults)  # type: ignore[arg-type]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for TaskFeederConfig
+E   acceptance_window_seconds
+E     Field required [type=missing, input_value={'handle': 'feeder', 'tas...l': 10, 'shuffle': True}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+________________ TestRewardComputation.test_custom_reward_scale ________________
+tests/unit/task_feeder/test_loop.py:43: in test_custom_reward_scale
+    config = _make_config(base_reward=50, reward_per_level=25)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/task_feeder/test_loop.py:23: in _make_config
+    return TaskFeederConfig(**defaults)  # type: ignore[arg-type]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for TaskFeederConfig
+E   acceptance_window_seconds
+E     Field required [type=missing, input_value={'handle': 'feeder', 'tas...l': 25, 'shuffle': True}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+___ TestTaskFeederStatusVocabulary.test_count_open_tasks_queries_open_status ___
+tests/unit/task_feeder/test_loop_statuses.py:40: in test_count_open_tasks_queries_open_status
+    loop._config = _make_config()
+                   ^^^^^^^^^^^^^^
+tests/unit/task_feeder/test_loop_statuses.py:27: in _make_config
+    return TaskFeederConfig(**defaults)  # type: ignore[arg-type]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for TaskFeederConfig
+E   acceptance_window_seconds
+E     Field required [type=missing, input_value={'handle': 'feeder', 'tas...l': 10, 'shuffle': True}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+___ TestLoadAcceptanceSettings.test_feeder_loader_tolerates_acceptance_keys ____
+tests/unit/task_feeder/test_acceptance_config.py:124: in test_feeder_loader_tolerates_acceptance_keys
+    feeder = load_task_feeder_settings(path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_feeder/config.py:114: in load_task_feeder_settings
+    settings = _FileSettings(**raw)
+               ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for _FileSettings
+E   task_feeder.acceptance_window_seconds
+E     Field required [type=missing, input_value={'handle': 'feeder', 'tas...l': 10, 'shuffle': True}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+=========================== short test summary info ============================
+FAILED tests/unit/task_feeder/test_config.py::TestTaskFeederConfig::test_creates_config
+FAILED tests/unit/task_feeder/test_loop.py::TestRewardComputation::test_level_1_reward
+FAILED tests/unit/task_feeder/test_loop.py::TestRewardComputation::test_level_9_reward
+FAILED tests/unit/task_feeder/test_loop.py::TestRewardComputation::test_custom_reward_scale
+FAILED tests/unit/task_feeder/test_loop_statuses.py::TestTaskFeederStatusVocabulary::test_count_open_tasks_queries_open_status
+FAILED tests/unit/task_feeder/test_acceptance_config.py::TestLoadAcceptanceSettings::test_feeder_loader_tolerates_acceptance_keys
+========================= 6 failed, 9 passed in 0.07s ==========================

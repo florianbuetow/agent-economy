@@ -1,0 +1,101 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 79 items
+
+tests/unit/routers/test_t072_bids_gaps.py .FF..                          [  6%]
+tests/unit/routers/test_t072_submission_gaps.py ......                   [ 13%]
+tests/unit/routers/test_t072_tasks_gaps.py ....F..F.FF.                  [ 29%]
+tests/unit/routers/test_security.py ....................FFF......F.....  [ 73%]
+tests/unit/routers/test_validation.py ................                   [ 93%]
+tests/unit/routers/test_rebuttal_middleware.py ...                       [ 97%]
+tests/unit/routers/test_mp04_legacy_posting_guard.py ..                  [100%]
+
+=================================== FAILURES ===================================
+_________ TestBidListingGaps.test_bl05_bids_public_for_cancelled_task __________
+tests/unit/routers/test_t072_bids_gaps.py:82: in test_bl05_bids_public_for_cancelled_task
+    assert cancel_resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:33:39", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-083998b2-e55b-473e-92a8-d80d9fa49bab/cancel"}}
+__________ TestBidListingGaps.test_bl06_bids_public_for_expired_task ___________
+tests/unit/routers/test_t072_bids_gaps.py:116: in test_bl06_bids_public_for_expired_task
+    assert resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_jws", "status_code": 400, "path": "/tasks/t-0ea32f78-e495-4479-abd5-182f096ac81b/bids"}}
+_______ TestTaskCreationGaps.test_tc28_escrow_rollback_on_db_insert_race _______
+tests/unit/routers/test_t072_tasks_gaps.py:136: in test_tc28_escrow_rollback_on_db_insert_race
+    state.store.insert_task(
+src/task_board_service/services/task_db_client.py:223: in insert_task
+    "acceptance_window_seconds": task_data["acceptance_window_seconds"],
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'acceptance_window_seconds'
+____________ TestTaskQueryGaps.test_tq10_combined_filters_and_logic ____________
+tests/unit/routers/test_t072_tasks_gaps.py:234: in test_tq10_combined_filters_and_logic
+    assert cancel_resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:33:56", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-7d9addd9-2913-408c-8704-974634b36c7f/cancel"}}
+_ TestTaskCancellationGaps.test_can03_impersonation_signer_not_payload_poster __
+tests/unit/routers/test_t072_tasks_gaps.py:287: in test_can03_impersonation_signer_not_payload_poster
+    assert resp.status_code == 403
+E   assert 400 == 403
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:33:58", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-2c7a87ad-e962-4c46-bdbb-4521b89b1f4d/cancel"}}
+_ TestTaskCancellationGaps.test_can07_central_bank_unavailable_on_cancel_release _
+tests/unit/routers/test_t072_tasks_gaps.py:313: in test_can07_central_bank_unavailable_on_cancel_release
+    assert resp.status_code == 502
+E   assert 400 == 502
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:33:59", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-3ec583b1-9b80-4033-a1fd-c38c8017d022/cancel"}}
+________ TestErrorPrecedence.test_task_existence_before_signer_matching ________
+tests/unit/routers/test_security.py:222: in test_task_existence_before_signer_matching
+    assert resp.status_code == 404
+E   assert 400 == 404
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:34:17", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-00000000-0000-0000-0000-999999999999/cancel"}}
+_____ TestErrorPrecedence.test_status_validation_before_domain_validation ______
+tests/unit/routers/test_security.py:251: in test_status_validation_before_domain_validation
+    assert approve_resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:34:18", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-6bc84455-a21f-4b58-8fe0-05881a6e6662/approve"}}
+______ TestErrorPrecedence.test_token_mismatch_before_central_bank_errors ______
+tests/unit/routers/test_security.py:311: in test_token_mismatch_before_central_bank_errors
+    assert resp.json()["error"] == "token_mismatch"
+E   AssertionError: assert 'invalid_payload' == 'token_mismatch'
+E     
+E     - token_mismatch
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:34:19", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+_______ TestCrossCuttingSecurity.test_cross_action_token_replay_rejected _______
+tests/unit/routers/test_security.py:566: in test_cross_action_token_replay_rejected
+    assert bid_resp.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:34:24", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-6d6c9cb0-faa5-4b36-ad65-15478f3643ca/bids"}}
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_t072_bids_gaps.py::TestBidListingGaps::test_bl05_bids_public_for_cancelled_task
+FAILED tests/unit/routers/test_t072_bids_gaps.py::TestBidListingGaps::test_bl06_bids_public_for_expired_task
+FAILED tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc28_escrow_rollback_on_db_insert_race
+FAILED tests/unit/routers/test_t072_tasks_gaps.py::TestTaskQueryGaps::test_tq10_combined_filters_and_logic
+FAILED tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCancellationGaps::test_can03_impersonation_signer_not_payload_poster
+FAILED tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCancellationGaps::test_can07_central_bank_unavailable_on_cancel_release
+FAILED tests/unit/routers/test_security.py::TestErrorPrecedence::test_task_existence_before_signer_matching
+FAILED tests/unit/routers/test_security.py::TestErrorPrecedence::test_status_validation_before_domain_validation
+FAILED tests/unit/routers/test_security.py::TestErrorPrecedence::test_token_mismatch_before_central_bank_errors
+FAILED tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_cross_action_token_replay_rejected
+======================== 10 failed, 69 passed in 54.58s ========================

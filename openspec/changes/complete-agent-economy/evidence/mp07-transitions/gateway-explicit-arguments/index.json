@@ -1,0 +1,32 @@
+{
+  "red": {
+    "parent": 84625,
+    "exit_code": 1,
+    "finding_count": 4,
+    "gate": "Semgrep no-default-parameter-values, before units"
+  },
+  "controls": {
+    "parent": 65921,
+    "exit_code": 0,
+    "passed": 74,
+    "warnings": 1
+  },
+  "mypy": "47sourcefiles pass",
+  "semgrep": "0findings,5rules,151targets",
+  "review": "APPROVE by /root/mp07_board_rollout_review: all callsites/values matchremoveddefaults; publicerrorpayload/snapshots/frozenrewards/provenance unchanged.",
+  "sources": {
+    "services/db-gateway/src/db_gateway_service/services/task_operation_writer.py": "01ec494a0aabab624e47246a528bdd30d9431553c6b297501dbf3de081d2eb6b",
+    "services/db-gateway/src/db_gateway_service/task_operation_requests.py": "57d9e30a29d54305dc670190343d0252e32991027e2e3c36a29a6b148b9e7852",
+    "services/db-gateway/src/db_gateway_service/task_migration.py": "f94be0109b9a4691e32943b57d4f3226b6b4ff54e7f6adcad7ae76dfbb3a560e",
+    "docs/plans/2026-10-18-mp07-gateway-explicit-arguments.md": "61f92aa9a239c879beed2847147337b724f2bfbe5a27ab8a4de5df88f0dd1279"
+  },
+  "artifacts": {
+    "agent-economy-mp07-explicit-arguments-controls.log": "a557093ea7a848dbf7ec340520a11b18e18fe06554659f93e2225cf6aa50a486",
+    "agent-economy-mp07-explicit-arguments-mypy.log": "d65cae0083d77ec23a4483dfe03fa5cbfde2ebbad3bc4205bfa20ae5ff3edceb",
+    "agent-economy-mp07-explicit-arguments-semgrep.log": "b1a38902a0f2a112a3629dcbc8e20304074a4f2d7d5a33b3f49197173d694421",
+    "agent-economy-mp07-gateway-parent-ci-final.log": "9146a93e7c7f3edfac401fd2bb1ba1328eb996dd73f52dd7a2d72cdacff80191",
+    "baseline/services/task_operation_writer.py": "e879323a2f6c6bd17f859c871c4d8fc86f7c22c9e29f748e87409251db2865c7",
+    "baseline/task_migration.py": "20cfdd56d230b1fd0d962f1c16939e9a3b5677760e480ed231cf9071f144b449",
+    "baseline/task_operation_requests.py": "f3e5c6de115ed55e07a61da78cae512a3f3b8ccc02c221959ca2b1ccabfb99a3"
+  }
+}

@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
+
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
 
@@ -22,11 +24,13 @@ async def test_post_task_with_escrow(make_funded_agent) -> None:
         poster = await make_funded_agent(name="Poster DJB", balance=5000)
         agents_to_close.append(poster)
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Test task",
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
@@ -54,16 +58,27 @@ async def test_submit_bid_on_task(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker OQK", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Bid test task",
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
 
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+
+        assert bid_response.status_code == 201
+
+        bid = bid_response.body
 
         assert isinstance(bid.get("bid_id"), str)
         assert bid["bid_id"] != ""
@@ -86,18 +101,40 @@ async def test_accept_bid_and_assign_worker(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker DEG", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Accept bid task",
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
 
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
 
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        assert bid_response.status_code == 201
+
+        bid = bid_response.body
+
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+
+        assert accept_response.status_code == 200
+
+        accepted_task = accept_response.body
+
+        assert accepted_task["status"] == "accepted"
 
         accepted_task = await poster.get_task(task["task_id"])
         assert accepted_task["status"] == "accepted"
@@ -115,11 +152,13 @@ async def test_post_and_cancel_task(make_funded_agent) -> None:
         poster = await make_funded_agent(name="Poster M6I", balance=5000)
         agents_to_close.append(poster)
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Cancel task",
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
@@ -127,7 +166,17 @@ async def test_post_and_cancel_task(make_funded_agent) -> None:
         balance_before_cancel = await poster.get_balance()
         assert balance_before_cancel["balance"] == 4500
 
-        await poster.cancel_task(task_id=task["task_id"])
+        cancel_response = await poster.cancel_task(
+            task_id=task["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+
+        assert cancel_response.status_code == 200
+
+        cancelled_command_task = cancel_response.body
+
+        assert cancelled_command_task["status"] == "cancelled"
 
         cancelled_task = await poster.get_task(task["task_id"])
         assert cancelled_task["status"] == "cancelled"
@@ -147,25 +196,61 @@ async def test_happy_path_submit_and_approve(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker QIC", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Happy path task",
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
 
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+
+        assert bid_response.status_code == 201
+
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
 
         await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
-        await worker.submit_deliverable(task["task_id"])
+        submit_response = await worker.submit_deliverable(
+            task["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(accepted_task),
+        )
+        assert submit_response.status_code == 200
+        submitted_task = submit_response.body
+        assert submitted_task["status"] == "submitted"
 
         submitted_task = await poster.get_task(task["task_id"])
         assert submitted_task["status"] == "submitted"
 
-        await poster.approve_task(task["task_id"])
+        approve_response = await poster.approve_task(
+            task["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(submitted_task),
+        )
+
+        assert approve_response.status_code == 200
+
+        approved_command_task = approve_response.body
+
+        assert approved_command_task["status"] == "approved"
 
         approved_task = await poster.get_task(task["task_id"])
         assert approved_task["status"] == "approved"
@@ -190,23 +275,59 @@ async def test_competing_bidders(make_funded_agent) -> None:
         worker3 = await make_funded_agent(name="Worker BOT 3", balance=0)
         agents_to_close.extend([poster, worker1, worker2, worker3])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Competing bidders task",
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
 
-        bid1 = await worker1.submit_bid(task_id=task["task_id"], amount=300)
-        bid2 = await worker2.submit_bid(task_id=task["task_id"], amount=400)
-        bid3 = await worker3.submit_bid(task_id=task["task_id"], amount=350)
+        bid1_response = await worker1.submit_bid(
+            task_id=task["task_id"],
+            amount=300,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+
+        assert bid1_response.status_code == 201
+
+        bid1 = bid1_response.body
+        bid2_response = await worker2.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid2_response.status_code == 201
+        bid2 = bid2_response.body
+        bid3_response = await worker3.submit_bid(
+            task_id=task["task_id"],
+            amount=350,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid3_response.status_code == 201
+        bid3 = bid3_response.body
 
         bids_before_accept = await poster.list_bids(task_id=task["task_id"])
         assert len(bids_before_accept) == 3
 
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid2["bid_id"])
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid2["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+
+        assert accept_response.status_code == 200
+
+        accepted_task = accept_response.body
+
+        assert accepted_task["status"] == "accepted"
 
         accepted_task = await poster.get_task(task["task_id"])
         assert accepted_task["worker_id"] == worker2.agent_id
@@ -231,22 +352,33 @@ async def test_sealed_bid_visibility(make_funded_agent) -> None:
         observer = await make_funded_agent(name="Observer CIO", balance=0)
         agents_to_close.extend([poster, worker, observer])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Sealed bid task",
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
 
         observer_headers = observer._auth_header(
             {
                 "action": "list_bids",
                 "task_id": task["task_id"],
                 "poster_id": observer.agent_id,
-            }
+            },
+            audience="task-board",
+            resource=f"GET /tasks/{task['task_id']}/bids",
         )
         observer_response = await observer._request_raw(
             "GET",
@@ -271,20 +403,55 @@ async def test_file_dispute(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker 8BX", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Dispute task",
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
         await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
-        await worker.submit_deliverable(task["task_id"])
+        submit_response = await worker.submit_deliverable(
+            task["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(accepted_task),
+        )
+        assert submit_response.status_code == 200
+        submitted_task = submit_response.body
+        assert submitted_task["status"] == "submitted"
 
-        await poster.dispute_task(task_id=task["task_id"], reason="Deliverable does not meet spec")
+        dispute_response = await poster.dispute_task(
+            task_id=task["task_id"],
+            reason="Deliverable does not meet spec",
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(submitted_task),
+        )
+
+        assert dispute_response.status_code == 200
+
+        disputed_command_task = dispute_response.body
+
+        assert disputed_command_task["status"] == "disputed"
 
         disputed_task = await poster.get_task(task["task_id"])
         assert disputed_task["status"] == "disputed"
@@ -302,16 +469,33 @@ async def test_execution_deadline_expiry(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker NB6", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Execution deadline task",
             spec="Do something quickly",
             reward=500,
             bidding_deadline_seconds=5,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=2,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
 
         await asyncio.sleep(5)
 
@@ -333,18 +517,42 @@ async def test_auto_approve_on_review_timeout(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker ZYY", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Review timeout task",
             spec="Do something quickly",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=2,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
         await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
-        await worker.submit_deliverable(task["task_id"])
+        submit_response = await worker.submit_deliverable(
+            task["task_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(accepted_task),
+        )
+        assert submit_response.status_code == 200
+        submitted_task = submit_response.body
+        assert submitted_task["status"] == "submitted"
 
         await asyncio.sleep(5)
 

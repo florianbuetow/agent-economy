@@ -1,0 +1,17 @@
+# Tools configuration (demo_replay engine).
+# Service URLs match agents/config.yaml's platform: section.
+
+platform:
+  identity_url: "http://localhost:8001"
+  bank_url: "http://localhost:8002"
+  task_board_url: "http://localhost:8003"
+  reputation_url: "http://localhost:8004"
+  court_url: "http://localhost:8005"
+  platform_key_path: "../data/keys/platform.key"
+  token_ttl_seconds: 300
+
+demo_replay:
+  environment_id: "local-development"
+  state_directory: "../data/demo-replay"
+  max_record_bytes: 1048576
+  diagnostic_limit: 16

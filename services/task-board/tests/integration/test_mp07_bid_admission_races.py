@@ -1,0 +1,993 @@
+"""T-122 proofs for atomic bid admission against task transitions and cutoff.
+
+The Task Board and DB Gateway paths are real. The financial expiry winner
+persists and validates its Bank receipt, ledger transaction, restored balance, and escrow outcome.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import importlib
+import sqlite3
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta, tzinfo
+from pathlib import Path
+from threading import Barrier, BrokenBarrierError, Event, Lock
+from typing import TYPE_CHECKING, Any, Protocol, cast
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from service_auth.financial_identity import operation_id_for
+from service_auth.gateway import GatewayRequestSigner, GatewaySignerConfig
+from service_commons.exceptions import ServiceError
+
+from task_board_service.core.state import get_app_state
+from task_board_service.services.asset_manager import AssetManager
+from task_board_service.services.deadline_evaluator import DeadlineEvaluator
+from task_board_service.services.escrow_coordinator import EscrowCoordinator
+from task_board_service.services.task_db_client import TaskDbClient
+from task_board_service.services.task_manager import TaskManager
+from task_board_service.services.token_validator import TokenValidator
+from tests.helpers import make_jws_token as make_scoped_jws_token
+from tests.helpers import verify_compact_jws
+from tests.integration.conftest import make_jws_token, register_identity_agent
+from tests.integration.mp05_posting_setup import (
+    native_escrow_payload,
+    native_task_payload,
+    persist_lock_after_admission,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
+    import httpx
+
+pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
+
+_START = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)
+_BIDDING_SECONDS = 10
+_WAIT_SECONDS = 10
+_FUTURE_SECONDS = 15
+
+_atomic_helpers = importlib.import_module("tests.integration.test_mp07_atomic_task_transitions")
+_gateway_write_client = cast(
+    "Callable[..., Any]",
+    _atomic_helpers.__dict__["_gateway_write_client"],
+)
+_window_helpers = importlib.import_module("tests.integration.test_mp07_acceptance_window")
+_assert_refund_completion = cast(
+    "Callable[..., None]",
+    _window_helpers.__dict__["_assert_refund_completion"],
+)
+
+
+class _GatewayEndpoint(Protocol):
+    base_url: str
+
+
+class _PauseGate(Protocol):
+    def pause(self) -> None: ...
+
+
+class _MutableDomainClock:
+    """One synchronized domain clock shared by every transition actor."""
+
+    def __init__(self, initial: datetime) -> None:
+        self._value = initial
+        self._lock = Lock()
+
+    def now(self, timezone: tzinfo | None) -> datetime:
+        with self._lock:
+            value = self._value
+        if timezone is None:
+            return value.replace(tzinfo=None)
+        return value.astimezone(timezone)
+
+    def set(self, value: datetime) -> None:
+        with self._lock:
+            if value < self._value:
+                raise AssertionError("MP-07 domain clock cannot move backwards")
+            self._value = value
+
+    def epoch_us(self) -> int:
+        with self._lock:
+            value = self._value
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
+        delta = value - epoch
+        return delta.days * 86_400_000_000 + delta.seconds * 1_000_000 + delta.microseconds
+
+
+class _ClockDateTime:
+    """datetime seam retaining real parsing with injected current time."""
+
+    clock: _MutableDomainClock
+
+    @classmethod
+    def now(cls, timezone: tzinfo | None = None) -> datetime:
+        return cls.clock.now(timezone)
+
+    @classmethod
+    def fromisoformat(cls, value: str) -> datetime:
+        return datetime.fromisoformat(value)
+
+    @classmethod
+    def fromtimestamp(cls, timestamp: float, timezone: tzinfo | None = None) -> datetime:
+        return datetime.fromtimestamp(timestamp, timezone)
+
+
+class _ReleaseGate:
+    """READY/RELEASE gate for one contender."""
+
+    def __init__(self) -> None:
+        self._ready = Event()
+        self._release = Event()
+
+    def pause(self) -> None:
+        self._ready.set()
+        if not self._release.wait(timeout=_WAIT_SECONDS):
+            raise AssertionError("MP-07 bid mutation RELEASE gate timed out")
+
+    def wait_until_ready(self) -> None:
+        if not self._ready.wait(timeout=_WAIT_SECONDS):
+            raise AssertionError("MP-07 bid mutation READY gate timed out")
+
+    def release(self) -> None:
+        self._release.set()
+
+
+class _BarrierGate:
+    """Two-party gate after each independent bid finishes Board validation."""
+
+    def __init__(self) -> None:
+        self._barrier = Barrier(2)
+
+    def pause(self) -> None:
+        try:
+            self._barrier.wait(timeout=_WAIT_SECONDS)
+        except BrokenBarrierError as exc:
+            raise AssertionError("MP-07 independent-bid barrier broke or timed out") from exc
+
+
+class _BeforeBidClaimStore(TaskDbClient):
+    """Pause immediately before the real native Gateway bid claim."""
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        timeout_seconds: int,
+        signer: GatewayRequestSigner,
+        gate: _PauseGate,
+    ) -> None:
+        super().__init__(base_url=base_url, timeout_seconds=timeout_seconds, signer=signer)
+        self._gate = gate
+
+    def claim_task_operation(self, command: dict[str, Any]) -> dict[str, Any]:
+        if command.get("command") == "submit_bid":
+            self._gate.pause()
+        return super().claim_task_operation(command)
+
+
+class _OpenReadGateStore(TaskDbClient):
+    """Pause after a real Gateway read obtains the open expiry source state."""
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        timeout_seconds: int,
+        signer: GatewayRequestSigner,
+        task_id: str,
+        gate: _ReleaseGate,
+    ) -> None:
+        super().__init__(base_url=base_url, timeout_seconds=timeout_seconds, signer=signer)
+        self._task_id = task_id
+        self._gate = gate
+        self._armed = True
+
+    def get_task(self, task_id: str) -> dict[str, Any] | None:
+        task = super().get_task(task_id)
+        if self._armed and task_id == self._task_id:
+            self._armed = False
+            if task is None or task.get("status") != "open":
+                raise AssertionError(
+                    f"MP-07 expiry read gate expected open source state, got {task!r}"
+                )
+            self._gate.pause()
+        return task
+
+
+@dataclass(frozen=True)
+class _RecordedBoundaries:
+    bank: AsyncMock
+    court: MagicMock
+
+
+@dataclass(frozen=True)
+class _BoardRuntime:
+    manager: TaskManager
+    boundaries: _RecordedBoundaries
+
+
+@dataclass(frozen=True)
+class _Outcome:
+    operation: str
+    result: dict[str, Any] | None
+    error: ServiceError | None
+
+
+def _install_domain_clock(monkeypatch: pytest.MonkeyPatch) -> _MutableDomainClock:
+    clock = _MutableDomainClock(_START)
+    _ClockDateTime.clock = clock
+    for module_name in (
+        "task_board_service.services.asset_manager",
+        "task_board_service.services.deadline_evaluator",
+        "task_board_service.services.task_db_client",
+        "task_board_service.services.task_helpers",
+    ):
+        monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+    monkeypatch.setattr("db_gateway_service.task_time.utc_now_us", clock.epoch_us)
+    return clock
+
+
+def _read_rows(
+    db_path: str,
+    query: str,
+    params: tuple[object, ...] = (),
+) -> list[dict[str, object]]:
+    connection = sqlite3.connect(db_path)
+    connection.row_factory = sqlite3.Row
+    try:
+        return [dict(row) for row in connection.execute(query, params).fetchall()]
+    finally:
+        connection.close()
+
+
+def _epoch_us(value: datetime) -> int:
+    epoch = datetime(1970, 1, 1, tzinfo=UTC)
+    delta = value - epoch
+    return delta.days * 86_400_000_000 + delta.seconds * 1_000_000 + delta.microseconds
+
+
+def _deadline_id(task_id: str, command: str, version: int, cutoff_us: int) -> str:
+    return operation_id_for("task-deadline", (task_id, command, str(version), str(cutoff_us)))
+
+
+def _install_clocked_release(
+    runtime: _BoardRuntime,
+    gateway_client: Any,
+    *,
+    task_id: str,
+    operation_id: str,
+    escrow_id: str,
+    recipient_id: str,
+) -> None:
+    async def _release(*args: object, **kwargs: object) -> dict[str, Any]:
+        assert args == ()
+        assert kwargs["operation_id"] == operation_id
+        resolved_at = (
+            _ClockDateTime.clock.now(UTC).isoformat(timespec="auto").replace("+00:00", "Z")
+        )
+        response = gateway_client.post(
+            "/bank/escrow/release",
+            json={
+                "operation_id": operation_id,
+                "escrow_id": escrow_id,
+                "recipient_account_id": recipient_id,
+                "source_reference": kwargs["source_reference"],
+                "tx_id": f"tx-{uuid.uuid4()}",
+                "resolved_at": resolved_at,
+                "event": {
+                    "event_source": "central-bank",
+                    "event_type": "escrow.released",
+                    "timestamp": resolved_at,
+                    "task_id": task_id,
+                    "agent_id": recipient_id,
+                    "summary": f"Released escrow for {task_id}",
+                    "payload": "{}",
+                },
+            },
+        )
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["outcome"] == "native_receipt"
+        return cast("dict[str, Any]", result)
+
+    runtime.boundaries.bank.escrow_release = AsyncMock(side_effect=_release)
+
+
+async def _seed_funded_account(
+    gateway_client: httpx.AsyncClient,
+    *,
+    payer_id: str,
+) -> None:
+    await register_identity_agent(gateway_client, payer_id)
+    account_response = await gateway_client.post(
+        "/bank/accounts",
+        json={
+            "operation_id": f"op-{uuid.uuid4()}",
+            "account_id": payer_id,
+            "created_at": "2026-10-17T11:59:58Z",
+            "balance": 100,
+            "event": {
+                "event_source": "central-bank",
+                "event_type": "account.created",
+                "timestamp": "2026-10-17T11:59:58Z",
+                "agent_id": payer_id,
+                "summary": f"Created account for {payer_id}",
+                "payload": "{}",
+            },
+            "initial_credit": {
+                "tx_id": f"tx-{uuid.uuid4()}",
+                "amount": 100,
+                "reference": "initial_balance",
+                "timestamp": "2026-10-17T11:59:58Z",
+            },
+        },
+    )
+    assert account_response.status_code == 201, account_response.text
+
+
+async def _create_open_task(
+    client: httpx.AsyncClient,
+    gateway_client: httpx.AsyncClient,
+    poster_key: Ed25519PrivateKey,
+) -> tuple[str, str]:
+    poster_id = f"a-mp07-bid-poster-{uuid.uuid4()}"
+    task_id = f"t-{uuid.uuid4()}"
+    escrow_id = f"esc-{uuid.uuid4()}"
+    await _seed_funded_account(
+        gateway_client,
+        payer_id=poster_id,
+    )
+    state = get_app_state()
+    assert state.central_bank_client is not None
+    task_payload = native_task_payload(
+        task_id=task_id,
+        poster_id=poster_id,
+        title="MP-07 bid admission race",
+        spec="Keep bid admission atomic with task state and cutoff predicates.",
+        reward=100,
+        bidding_deadline_seconds=_BIDDING_SECONDS,
+        acceptance_window_seconds=20,
+        execution_deadline_seconds=86400,
+        review_deadline_seconds=86400,
+    )
+
+    async def _persist_lock(_escrow_token: str) -> dict[str, Any]:
+        return await persist_lock_after_admission(
+            gateway_client,
+            task_payload=task_payload,
+            escrow_id=escrow_id,
+            clock_us=_ClockDateTime.clock.epoch_us,
+        )
+
+    state.central_bank_client.escrow_lock = AsyncMock(side_effect=_persist_lock)
+    task_token = make_jws_token(poster_key, poster_id, task_payload)
+    escrow_token = make_scoped_jws_token(
+        poster_key,
+        poster_id,
+        native_escrow_payload(task_payload),
+        audience="central-bank",
+        resource="POST /escrow/lock",
+    )
+    response = await client.post(
+        "/tasks",
+        json={"task_token": task_token, "escrow_token": escrow_token},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["result"]["status"] == "open"
+    return task_id, poster_id
+
+
+async def _submit_setup_bid(
+    client: httpx.AsyncClient,
+    gateway_client: httpx.AsyncClient,
+    *,
+    task_id: str,
+    worker_id: str,
+    worker_key: Ed25519PrivateKey,
+) -> str:
+    await register_identity_agent(gateway_client, worker_id)
+    token = make_jws_token(
+        worker_key,
+        worker_id,
+        {
+            "action": "submit_bid",
+            "operation_id": f"op-{uuid.uuid4()}",
+            "expected_lifecycle_version": 0,
+            "task_id": task_id,
+            "bidder_id": worker_id,
+            "amount": 90,
+        },
+    )
+    response = await client.post(f"/tasks/{task_id}/bids", json={"token": token})
+    assert response.status_code == 201, response.text
+    return str(response.json()["bid_id"])
+
+
+def _gateway_signer(gateway_db_path: str) -> GatewayRequestSigner:
+    key_dir = Path(gateway_db_path).parent
+    return GatewayRequestSigner(
+        GatewaySignerConfig(
+            kid="gateway-task-board",
+            private_key_path=key_dir / "gateway-task-board.key",
+            audience="db-gateway",
+            token_ttl_seconds=300,
+        ),
+        config_dir=key_dir,
+    )
+
+
+def _make_runtime(
+    *,
+    gateway: _GatewayEndpoint,
+    gateway_db_path: str,
+    asset_path: Path,
+    cleanup: ExitStack,
+    store: TaskDbClient | None,
+) -> _BoardRuntime:
+    if store is None:
+        store = TaskDbClient(
+            base_url=gateway.base_url,
+            timeout_seconds=10,
+            signer=_gateway_signer(gateway_db_path),
+        )
+    cleanup.callback(store.close)
+
+    platform = MagicMock()
+    platform.agent_id = "a-platform-test-id"
+    platform.validate_certificate = MagicMock(side_effect=verify_compact_jws)
+    platform.file_claim = AsyncMock(
+        return_value={"dispute_id": f"disp-{uuid.uuid4()}", "status": "rebuttal_pending"}
+    )
+    identity = AsyncMock()
+    identity.verify_jws = AsyncMock(side_effect=verify_compact_jws)
+    validator = TokenValidator(platform_agent=platform, identity_client=identity)
+    bank = AsyncMock()
+    bank.escrow_release = AsyncMock(return_value={"status": "recorded-boundary-only"})
+    bank.escrow_split = AsyncMock(return_value={"status": "recorded-boundary-only"})
+    escrow = EscrowCoordinator(central_bank_client=bank)
+    deadline = DeadlineEvaluator(
+        store,
+        escrow,
+        platform_agent=platform,
+        deadline_actor_id="system-task-board-deadline",
+    )
+    assets = AssetManager(
+        store=store,
+        token_validator=validator,
+        deadline_evaluator=deadline,
+        asset_storage_path=str(asset_path),
+        max_file_size=10_485_760,
+        max_files_per_task=20,
+    )
+    manager = TaskManager(
+        store=store,
+        central_bank_client=bank,
+        escrow_coordinator=escrow,
+        token_validator=validator,
+        deadline_evaluator=deadline,
+        asset_manager=assets,
+        platform_signer=platform,
+        platform_agent_id="a-platform-test-id",
+    )
+    return _BoardRuntime(manager, _RecordedBoundaries(bank, platform))
+
+
+def _gated_bid_runtime(
+    *,
+    gateway: _GatewayEndpoint,
+    gateway_db_path: str,
+    asset_path: Path,
+    cleanup: ExitStack,
+    gate: _PauseGate,
+) -> _BoardRuntime:
+    store = _BeforeBidClaimStore(
+        base_url=gateway.base_url,
+        timeout_seconds=10,
+        signer=_gateway_signer(gateway_db_path),
+        gate=gate,
+    )
+    return _make_runtime(
+        gateway=gateway,
+        gateway_db_path=gateway_db_path,
+        asset_path=asset_path,
+        cleanup=cleanup,
+        store=store,
+    )
+
+
+def _invoke(
+    operation: str,
+    call: Callable[[], Coroutine[Any, Any, dict[str, Any]]],
+) -> _Outcome:
+    try:
+        return _Outcome(operation, asyncio.run(call()), None)
+    except ServiceError as exc:
+        return _Outcome(operation, None, exc)
+
+
+def _evaluate_deadline(runtime: _BoardRuntime, task_id: str) -> dict[str, Any]:
+    task = runtime.manager.store.get_task(task_id)
+    if task is None:
+        raise AssertionError(f"MP-07 harness could not reload task {task_id}")
+    return asyncio.run(runtime.manager.deadline_evaluator.evaluate_deadline(task))
+
+
+def _bid_token(
+    private_key: Ed25519PrivateKey,
+    *,
+    task_id: str,
+    bidder_id: str,
+    amount: int,
+    operation_id: str,
+) -> str:
+    return make_jws_token(
+        private_key,
+        bidder_id,
+        {
+            "action": "submit_bid",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": 0,
+            "task_id": task_id,
+            "bidder_id": bidder_id,
+            "amount": amount,
+        },
+    )
+
+
+async def test_bid_validated_before_acceptance_cannot_mutate_accepted_task(
+    client: httpx.AsyncClient,
+    gateway_client: httpx.AsyncClient,
+    poster_keypair: tuple[Ed25519PrivateKey, str],
+    worker_keypair: tuple[Ed25519PrivateKey, str],
+    gateway_db_path: str,
+    _gateway: _GatewayEndpoint,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_domain_clock(monkeypatch)
+    task_id, poster_id = await _create_open_task(client, gateway_client, poster_keypair[0])
+    winner_id = f"a-mp07-bid-winner-{uuid.uuid4()}"
+    winner_bid_id = await _submit_setup_bid(
+        client,
+        gateway_client,
+        task_id=task_id,
+        worker_id=winner_id,
+        worker_key=worker_keypair[0],
+    )
+    stale_id = f"a-mp07-stale-bidder-{uuid.uuid4()}"
+    stale_key = Ed25519PrivateKey.generate()
+    await register_identity_agent(gateway_client, stale_id)
+    stale_operation_id = f"op-{uuid.uuid4()}"
+    accept_operation_id = f"op-{uuid.uuid4()}"
+
+    gate = _ReleaseGate()
+    with ExitStack() as cleanup:
+        stale = _gated_bid_runtime(
+            gateway=_gateway,
+            gateway_db_path=gateway_db_path,
+            asset_path=tmp_path / "stale-bid-assets",
+            cleanup=cleanup,
+            gate=gate,
+        )
+        accepter = _make_runtime(
+            gateway=_gateway,
+            gateway_db_path=gateway_db_path,
+            asset_path=tmp_path / "accept-assets",
+            cleanup=cleanup,
+            store=None,
+        )
+        executor = cleanup.enter_context(ThreadPoolExecutor(max_workers=2))
+        cleanup.callback(gate.release)
+        stale_token = _bid_token(
+            stale_key,
+            task_id=task_id,
+            bidder_id=stale_id,
+            amount=80,
+            operation_id=stale_operation_id,
+        )
+        accept_token = make_jws_token(
+            poster_keypair[0],
+            poster_id,
+            {
+                "action": "accept_bid",
+                "operation_id": accept_operation_id,
+                "expected_lifecycle_version": 0,
+                "task_id": task_id,
+                "bid_id": winner_bid_id,
+                "poster_id": poster_id,
+            },
+        )
+        stale_future = executor.submit(
+            _invoke,
+            "stale-bid",
+            lambda: stale.manager.submit_bid(task_id, stale_token),
+        )
+        try:
+            await asyncio.to_thread(gate.wait_until_ready)
+            accept_future = executor.submit(
+                _invoke,
+                "accept",
+                lambda: accepter.manager.accept_bid(task_id, winner_bid_id, accept_token),
+            )
+            accept_outcome = accept_future.result(timeout=_FUTURE_SECONDS)
+            if accept_outcome.error is not None or accept_outcome.result is None:
+                raise AssertionError(
+                    f"MP-07 acceptance actor did not commit the required winner: {accept_outcome!r}"
+                )
+        finally:
+            gate.release()
+        stale_outcome = stale_future.result(timeout=_FUTURE_SECONDS)
+
+        task_rows = _read_rows(
+            gateway_db_path,
+            "SELECT status, bid_count, worker_id, accepted_bid_id FROM board_tasks "
+            "WHERE task_id = ?",
+            (task_id,),
+        )
+        bid_rows = _read_rows(
+            gateway_db_path,
+            "SELECT bid_id, bidder_id FROM board_bids WHERE task_id = ? ORDER BY bid_id",
+            (task_id,),
+        )
+        events = [
+            str(row["event_type"])
+            for row in _read_rows(
+                gateway_db_path,
+                "SELECT event_type FROM events WHERE task_id = ? "
+                "AND event_type IN ('bid.submitted', 'task.accepted') ORDER BY event_id",
+                (task_id,),
+            )
+        ]
+        operation_rows = _read_rows(
+            gateway_db_path,
+            "SELECT operation_id,command,operation_state,effect_state FROM "
+            "board_task_operations WHERE operation_id IN (?,?)",
+            (stale_operation_id, accept_operation_id),
+        )
+        diagnostics = {
+            "stale_outcome": stale_outcome,
+            "task_rows": task_rows,
+            "bid_rows": bid_rows,
+            "events": events,
+            "operation_rows": operation_rows,
+        }
+        if stale_outcome.error is not None and stale_outcome.error.status_code != 409:
+            raise AssertionError({"message": "Unexpected stale-bid error", **diagnostics})
+        assert stale_outcome.error is not None, diagnostics
+        assert stale_outcome.error.status_code == 409, diagnostics
+        assert stale_outcome.error.error == "task_version_conflict", diagnostics
+        assert task_rows == [
+            {
+                "status": "accepted",
+                "bid_count": 1,
+                "worker_id": winner_id,
+                "accepted_bid_id": winner_bid_id,
+            }
+        ], diagnostics
+        assert bid_rows == [{"bid_id": winner_bid_id, "bidder_id": winner_id}], diagnostics
+        assert events == ["bid.submitted", "task.accepted"], diagnostics
+        assert stale.boundaries.bank.escrow_release.await_count == 0, diagnostics
+        assert stale.boundaries.court.file_claim.await_count == 0, diagnostics
+        assert accepter.boundaries.bank.escrow_release.await_count == 0, diagnostics
+        assert accepter.boundaries.court.file_claim.await_count == 0, diagnostics
+        assert operation_rows == [
+            {
+                "operation_id": accept_operation_id,
+                "command": "accept_bid",
+                "operation_state": "completed",
+                "effect_state": "none",
+            }
+        ], diagnostics
+
+
+async def test_bid_validated_before_cutoff_cannot_commit_at_equality(
+    client: httpx.AsyncClient,
+    gateway_client: httpx.AsyncClient,
+    poster_keypair: tuple[Ed25519PrivateKey, str],
+    gateway_db_path: str,
+    _gateway: _GatewayEndpoint,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clock = _install_domain_clock(monkeypatch)
+    task_id, poster_id = await _create_open_task(client, gateway_client, poster_keypair[0])
+    bidder_id = f"a-mp07-cutoff-bidder-{uuid.uuid4()}"
+    bidder_key = Ed25519PrivateKey.generate()
+    await register_identity_agent(gateway_client, bidder_id)
+    bid_operation_id = f"op-{uuid.uuid4()}"
+    clock.set(_START + timedelta(seconds=_BIDDING_SECONDS, microseconds=-1))
+    cutoff_us = _epoch_us(_START + timedelta(seconds=_BIDDING_SECONDS))
+    expiry_operation_id = _deadline_id(task_id, "expire_bidding", 0, cutoff_us)
+    task_setup = _read_rows(
+        gateway_db_path,
+        "SELECT escrow_id FROM board_tasks WHERE task_id=?",
+        (task_id,),
+    )
+    assert len(task_setup) == 1
+    escrow_id = str(task_setup[0]["escrow_id"])
+
+    bid_gate = _ReleaseGate()
+    expiry_gate = _ReleaseGate()
+    with ExitStack() as cleanup:
+        bidder = _gated_bid_runtime(
+            gateway=_gateway,
+            gateway_db_path=gateway_db_path,
+            asset_path=tmp_path / "cutoff-bid-assets",
+            cleanup=cleanup,
+            gate=bid_gate,
+        )
+        expiry_store = _OpenReadGateStore(
+            base_url=_gateway.base_url,
+            timeout_seconds=10,
+            signer=_gateway_signer(gateway_db_path),
+            task_id=task_id,
+            gate=expiry_gate,
+        )
+        expiry = _make_runtime(
+            gateway=_gateway,
+            gateway_db_path=gateway_db_path,
+            asset_path=tmp_path / "bidding-expiry-assets",
+            cleanup=cleanup,
+            store=expiry_store,
+        )
+        bank_gateway = _gateway_write_client(
+            _gateway,
+            gateway_db_path,
+            kid="gateway-central-bank",
+            action="gateway.bank.write",
+            cleanup=cleanup,
+        )
+        _install_clocked_release(
+            expiry,
+            bank_gateway,
+            task_id=task_id,
+            operation_id=expiry_operation_id,
+            escrow_id=escrow_id,
+            recipient_id=poster_id,
+        )
+        executor = cleanup.enter_context(ThreadPoolExecutor(max_workers=2))
+        cleanup.callback(expiry_gate.release)
+        cleanup.callback(bid_gate.release)
+        token = _bid_token(
+            bidder_key,
+            task_id=task_id,
+            bidder_id=bidder_id,
+            amount=90,
+            operation_id=bid_operation_id,
+        )
+        bid_future = executor.submit(
+            _invoke,
+            "cutoff-bid",
+            lambda: bidder.manager.submit_bid(task_id, token),
+        )
+        await asyncio.to_thread(bid_gate.wait_until_ready)
+        clock.set(_START + timedelta(seconds=_BIDDING_SECONDS))
+        expiry_future = executor.submit(_evaluate_deadline, expiry, task_id)
+        try:
+            await asyncio.to_thread(expiry_gate.wait_until_ready)
+            bid_gate.release()
+            bid_outcome = bid_future.result(timeout=_FUTURE_SECONDS)
+        finally:
+            expiry_gate.release()
+        expiry_result = expiry_future.result(timeout=_FUTURE_SECONDS)
+        if expiry_result.get("status") != "expired":
+            raise AssertionError(
+                f"MP-07 expiry actor did not commit the required winner: {expiry_result!r}"
+            )
+
+        task_rows = _read_rows(
+            gateway_db_path,
+            "SELECT status, bid_count, worker_id, accepted_bid_id, expired_at "
+            "FROM board_tasks WHERE task_id = ?",
+            (task_id,),
+        )
+        bid_rows = _read_rows(
+            gateway_db_path,
+            "SELECT bid_id, bidder_id FROM board_bids WHERE task_id = ?",
+            (task_id,),
+        )
+        events = [
+            str(row["event_type"])
+            for row in _read_rows(
+                gateway_db_path,
+                "SELECT event_type FROM events WHERE task_id = ? "
+                "AND event_type IN ('bid.submitted', 'task.expired') ORDER BY event_id",
+                (task_id,),
+            )
+        ]
+        operation_rows = _read_rows(
+            gateway_db_path,
+            "SELECT operation_id,command,operation_state,effect_state FROM "
+            "board_task_operations WHERE operation_id IN (?,?)",
+            (bid_operation_id, expiry_operation_id),
+        )
+        diagnostics = {
+            "bid_outcome": bid_outcome,
+            "task_rows": task_rows,
+            "bid_rows": bid_rows,
+            "events": events,
+            "operation_rows": operation_rows,
+            "expiry_bank_calls": expiry.boundaries.bank.escrow_release.await_count,
+        }
+        if bid_outcome.error is not None and bid_outcome.error.status_code != 409:
+            raise AssertionError({"message": "Unexpected cutoff-bid error", **diagnostics})
+        assert bid_outcome.error is not None, diagnostics
+        assert bid_outcome.error.status_code == 409, diagnostics
+        assert bid_outcome.error.error == "cutoff_reached", diagnostics
+        assert task_rows == [
+            {
+                "status": "expired",
+                "bid_count": 0,
+                "worker_id": None,
+                "accepted_bid_id": None,
+                "expired_at": "2026-10-17T12:00:10Z",
+            }
+        ], diagnostics
+        assert bid_rows == [], diagnostics
+        assert events == ["task.expired"], diagnostics
+        assert expiry.boundaries.bank.escrow_release.await_count == 1, diagnostics
+        assert bidder.boundaries.bank.escrow_release.await_count == 0, diagnostics
+        assert bidder.boundaries.court.file_claim.await_count == 0, diagnostics
+        assert operation_rows == [
+            {
+                "operation_id": expiry_operation_id,
+                "command": "expire_bidding",
+                "operation_state": "completed",
+                "effect_state": "succeeded",
+            }
+        ], diagnostics
+        _assert_refund_completion(
+            gateway_db_path,
+            task_id=task_id,
+            poster_id=poster_id,
+            escrow_id=escrow_id,
+            operation_id=expiry_operation_id,
+            command="expire_bidding",
+            cutoff=_START + timedelta(seconds=_BIDDING_SECONDS),
+        )
+
+
+async def test_two_independent_bids_both_succeed(
+    client: httpx.AsyncClient,
+    gateway_client: httpx.AsyncClient,
+    poster_keypair: tuple[Ed25519PrivateKey, str],
+    gateway_db_path: str,
+    _gateway: _GatewayEndpoint,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clock = _install_domain_clock(monkeypatch)
+    task_id, _poster_id = await _create_open_task(client, gateway_client, poster_keypair[0])
+    clock.set(_START + timedelta(seconds=_BIDDING_SECONDS, microseconds=-1))
+    bidder_ids = (
+        f"a-mp07-independent-bidder-{uuid.uuid4()}",
+        f"a-mp07-independent-bidder-{uuid.uuid4()}",
+    )
+    bidder_keys = (Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate())
+    operation_ids = (f"op-{uuid.uuid4()}", f"op-{uuid.uuid4()}")
+    for bidder_id in bidder_ids:
+        await register_identity_agent(gateway_client, bidder_id)
+
+    gate = _BarrierGate()
+    with ExitStack() as cleanup:
+        runtimes = (
+            _gated_bid_runtime(
+                gateway=_gateway,
+                gateway_db_path=gateway_db_path,
+                asset_path=tmp_path / "first-independent-bid-assets",
+                cleanup=cleanup,
+                gate=gate,
+            ),
+            _gated_bid_runtime(
+                gateway=_gateway,
+                gateway_db_path=gateway_db_path,
+                asset_path=tmp_path / "second-independent-bid-assets",
+                cleanup=cleanup,
+                gate=gate,
+            ),
+        )
+        tokens = (
+            _bid_token(
+                bidder_keys[0],
+                task_id=task_id,
+                bidder_id=bidder_ids[0],
+                amount=90,
+                operation_id=operation_ids[0],
+            ),
+            _bid_token(
+                bidder_keys[1],
+                task_id=task_id,
+                bidder_id=bidder_ids[1],
+                amount=80,
+                operation_id=operation_ids[1],
+            ),
+        )
+        executor = cleanup.enter_context(ThreadPoolExecutor(max_workers=2))
+        futures = [
+            executor.submit(
+                _invoke,
+                f"bid-{index}",
+                lambda index=index: runtimes[index].manager.submit_bid(task_id, tokens[index]),
+            )
+            for index in range(2)
+        ]
+        try:
+            outcomes = [future.result(timeout=_FUTURE_SECONDS) for future in futures]
+        except Exception as exc:
+            raise AssertionError("MP-07 independent bid contender failed or timed out") from exc
+
+        task_rows = _read_rows(
+            gateway_db_path,
+            "SELECT status, bid_count, worker_id, accepted_bid_id FROM board_tasks "
+            "WHERE task_id = ?",
+            (task_id,),
+        )
+        bid_rows = _read_rows(
+            gateway_db_path,
+            "SELECT bidder_id, amount FROM board_bids WHERE task_id = ? ORDER BY bidder_id",
+            (task_id,),
+        )
+        events = [
+            str(row["event_type"])
+            for row in _read_rows(
+                gateway_db_path,
+                "SELECT event_type FROM events WHERE task_id = ? "
+                "AND event_type = 'bid.submitted' ORDER BY event_id",
+                (task_id,),
+            )
+        ]
+        operation_rows = _read_rows(
+            gateway_db_path,
+            "SELECT operation_id,command,operation_state,effect_state,"
+            "source_lifecycle_version,target_lifecycle_version FROM board_task_operations "
+            "WHERE operation_id IN (?,?) ORDER BY operation_id",
+            operation_ids,
+        )
+        diagnostics = {
+            "outcomes": outcomes,
+            "task_rows": task_rows,
+            "bid_rows": bid_rows,
+            "events": events,
+            "operation_rows": operation_rows,
+        }
+        assert all(outcome.error is None for outcome in outcomes), diagnostics
+        assert all(outcome.result is not None for outcome in outcomes), diagnostics
+        assert task_rows == [
+            {
+                "status": "open",
+                "bid_count": 2,
+                "worker_id": None,
+                "accepted_bid_id": None,
+            }
+        ], diagnostics
+        assert bid_rows == sorted(
+            [
+                {"bidder_id": bidder_ids[0], "amount": 90},
+                {"bidder_id": bidder_ids[1], "amount": 80},
+            ],
+            key=lambda row: str(row["bidder_id"]),
+        ), diagnostics
+        assert events == ["bid.submitted", "bid.submitted"], diagnostics
+        assert operation_rows == sorted(
+            [
+                {
+                    "operation_id": operation_ids[index],
+                    "command": "submit_bid",
+                    "operation_state": "completed",
+                    "effect_state": "none",
+                    "source_lifecycle_version": 0,
+                    "target_lifecycle_version": 0,
+                }
+                for index in range(2)
+            ],
+            key=lambda row: str(row["operation_id"]),
+        ), diagnostics
+        assert all(runtime.boundaries.bank.escrow_release.await_count == 0 for runtime in runtimes)
+        assert all(runtime.boundaries.court.file_claim.await_count == 0 for runtime in runtimes)

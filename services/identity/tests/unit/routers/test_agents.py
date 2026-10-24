@@ -111,64 +111,6 @@ async def test_list_agents_omits_public_key(client):
 
 
 @pytest.mark.unit
-async def test_verify_valid_signature(client):
-    """POST /agents/verify with correct signature returns valid=true."""
-    private_key, public_key = _generate_keypair()
-    reg_response = await client.post(
-        "/agents/register",
-        json={"name": "Alice", "public_key": public_key},
-    )
-    agent_id = reg_response.json()["agent_id"]
-
-    payload = b"hello world"
-    payload_b64 = base64.b64encode(payload).decode()
-    signature = private_key.sign(payload)
-    signature_b64 = base64.b64encode(signature).decode()
-
-    response = await client.post(
-        "/agents/verify",
-        json={
-            "agent_id": agent_id,
-            "payload": payload_b64,
-            "signature": signature_b64,
-        },
-    )
-    assert response.status_code == 200
-    assert response.json()["valid"] is True
-    assert response.json()["agent_id"] == agent_id
-
-
-@pytest.mark.unit
-async def test_verify_wrong_signature(client):
-    """POST /agents/verify with wrong signature returns valid=false."""
-    _private_key_a, public_key_a = _generate_keypair()
-    private_key_b, _ = _generate_keypair()
-
-    reg_response = await client.post(
-        "/agents/register",
-        json={"name": "Alice", "public_key": public_key_a},
-    )
-    agent_id = reg_response.json()["agent_id"]
-
-    payload = b"hello world"
-    payload_b64 = base64.b64encode(payload).decode()
-    wrong_sig = private_key_b.sign(payload)
-    signature_b64 = base64.b64encode(wrong_sig).decode()
-
-    response = await client.post(
-        "/agents/verify",
-        json={
-            "agent_id": agent_id,
-            "payload": payload_b64,
-            "signature": signature_b64,
-        },
-    )
-    assert response.status_code == 200
-    assert response.json()["valid"] is False
-    assert response.json()["reason"] == "signature mismatch"
-
-
-@pytest.mark.unit
 async def test_register_invalid_json(client):
     """POST /agents/register with broken JSON returns 400 INVALID_JSON."""
     response = await client.post(

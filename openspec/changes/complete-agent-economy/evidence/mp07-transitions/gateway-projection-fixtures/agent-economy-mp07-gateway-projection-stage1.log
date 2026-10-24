@@ -1,0 +1,83 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 16 items
+
+tests/unit/test_schema_additions.py FF....                               [ 37%]
+tests/unit/test_gap_e13_bid_count.py .FFF                                [ 62%]
+tests/unit/test_task_dispute_id_column.py ...FF.                         [100%]
+
+=================================== FAILURES ===================================
+_______________ TestSchemaAdditions.test_submit_bid_with_amount ________________
+tests/unit/test_schema_additions.py:134: in test_submit_bid_with_amount
+    assert response.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:25:54", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+_________ TestSchemaAdditions.test_submit_bid_without_amount_uses_zero _________
+tests/unit/test_schema_additions.py:164: in test_submit_bid_without_amount_uses_zero
+    assert response.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:25:54", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+______ TestBidCountReflectsReality.test_bid_count_increments_on_each_bid _______
+tests/unit/test_gap_e13_bid_count.py:159: in test_bid_count_increments_on_each_bid
+    _submit_bid(app_with_writer, task_id, bidder_a, amount=50)
+tests/unit/test_gap_e13_bid_count.py:135: in _submit_bid
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:25:54", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+_ TestBidCountReflectsReality.test_bid_count_matches_get_bids_for_task_length __
+tests/unit/test_gap_e13_bid_count.py:177: in test_bid_count_matches_get_bids_for_task_length
+    _submit_bid(app_with_writer, task_id, bidder, amount=10)
+tests/unit/test_gap_e13_bid_count.py:135: in _submit_bid
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:25:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+_ TestBidCountReflectsReality.test_duplicate_bid_rejection_does_not_double_increment _
+tests/unit/test_gap_e13_bid_count.py:196: in test_duplicate_bid_rejection_does_not_double_increment
+    _submit_bid(app_with_writer, task_id, bidder, amount=50)
+tests/unit/test_gap_e13_bid_count.py:135: in _submit_bid
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:25:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+____________ TestDisputeIdWrites.test_status_update_sets_dispute_id ____________
+tests/unit/test_task_dispute_id_column.py:214: in test_status_update_sets_dispute_id
+    assert response.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:25:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-4efcf188-5f24-4d93-a711-64e3c1a10905/status"}}
+____________ TestDisputeIdWrites.test_task_read_returns_dispute_id _____________
+tests/unit/test_task_dispute_id_column.py:236: in test_task_read_returns_dispute_id
+    assert update.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:25:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-6718a382-216c-48e2-9393-2305a9b0b6c4/status"}}
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_schema_additions.py::TestSchemaAdditions::test_submit_bid_with_amount
+FAILED tests/unit/test_schema_additions.py::TestSchemaAdditions::test_submit_bid_without_amount_uses_zero
+FAILED tests/unit/test_gap_e13_bid_count.py::TestBidCountReflectsReality::test_bid_count_increments_on_each_bid
+FAILED tests/unit/test_gap_e13_bid_count.py::TestBidCountReflectsReality::test_bid_count_matches_get_bids_for_task_length
+FAILED tests/unit/test_gap_e13_bid_count.py::TestBidCountReflectsReality::test_duplicate_bid_rejection_does_not_double_increment
+FAILED tests/unit/test_task_dispute_id_column.py::TestDisputeIdWrites::test_status_update_sets_dispute_id
+FAILED tests/unit/test_task_dispute_id_column.py::TestDisputeIdWrites::test_task_read_returns_dispute_id
+==================== 7 failed, 9 passed, 1 warning in 2.13s ====================

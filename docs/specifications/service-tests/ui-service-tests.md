@@ -1,0 +1,642 @@
+# UI Service — Production Release Test Specification
+
+## Purpose
+
+This document is the release-gate test specification for `services/ui` (port 8008), which
+replaced the design-only "Observatory" service (see `observatory-service-tests.md`, superseded).
+It is intentionally strict and unambiguous:
+
+- Every negative case has one required status code and one required error code.
+- Every failing response must use the standard 3-field error envelope.
+- Any behavior not listed here is out of scope for release sign-off.
+
+Frontend behavior (vanilla JS under `data/web/assets/`) is covered only where it consumes a
+backend contract directly (e.g. trend-string handling); full UI interaction is covered by the
+Playwright e2e suite under `services/ui/tests/e2e/`, out of scope for this document's assertions.
+
+---
+
+## Required API Error Contract (Normative for Release)
+
+All failing responses must be JSON in this format:
+
+```json
+{
+  "error": "snake_case_code",
+  "message": "Human-readable description",
+  "details": {}
+}
+```
+
+Required status/error mappings:
+
+| Status | Error Code | Required When |
+|--------|------------|----------------|
+| 400 | `invalid_parameter` | A query parameter has an invalid type or value (limit, before/after, window, resolution, sort_by, quarter format) |
+| 400 | `invalid_status` | `status` query filter on `/api/tasks` is not a canonical lowercase status |
+| 400 | `invalid_quarter` | `quarter` does not match `YYYY-QN`, N in 1–4 |
+| 400 | `invalid_host` | Host is absent, duplicated, malformed or not explicitly allowed |
+| 403 | `non_loopback_client` | A non-loopback client attempts proxy access |
+| 403 | `forbidden_origin` | Origin is duplicated, disallowed, missing on a mutation or mismatched with the request authority |
+| 403 | `csrf_failed` | The custom browser marker is absent, wrong or duplicated on a mutation |
+| 403 / 404 | `agent_not_found` | Referenced `agent_id` does not exist (404) |
+| 404 | `task_not_found` | Referenced `task_id` does not exist |
+| 404 | `no_data` | No economy data exists for the requested quarter |
+| 405 | `method_not_allowed` | Unsupported HTTP method on a defined route |
+| 413 | `payload_too_large` | Any mutating request body exceeds `request.max_body_size` |
+| 415 | `unsupported_media_type` | `Content-Type` is not `application/json` on a JSON-bodied proxy route |
+| 422 | `invalid_task_posting_record` | Saved posting identity, scope or terms do not match the current operator and intent |
+| 502 | `task_posting_failed` / `bid_acceptance_failed` / `task_approval_failed` / `dispute_filing_failed` | Operator transport fails or a downstream response is malformed |
+| 503 | `database_unavailable` | The read-only DB connection was never established |
+| 503 | `user_agent_unavailable` | The operator `UserAgent` failed to initialize at startup |
+| 503 | `user_agent_not_registered` | `GET /api/proxy/identity` called before the UserAgent has an `agent_id` |
+| 500 | `internal_error` | Unhandled exception |
+
+---
+
+## Test Data Conventions
+
+- All test data is inserted directly into a writable handle onto the same SQLite file the
+  service's read-only connection observes (`tests/integration/conftest.py` `write_db` fixture) —
+  the service itself never writes.
+- Agent IDs follow `a-<uuid4>`; task IDs follow `t-<uuid4>`.
+- Timestamps are ISO 8601 UTC with a `Z` suffix.
+- The injectable clock seam (`ui_service/services/database.py: _clock`) is used to freeze "now"
+  for any test asserting a specific trend/window boundary.
+- MP-02 valid fixtures supply explicit local browser policy, local Host and matching Origin
+  plus marker for writes. Negative authority cases remove or corrupt those inputs explicitly.
+  The existing economy proxy E2E fixture obtains the marker from the live configuration route;
+  its operator identity, lifecycle and payout assertions are unchanged. This recorded setup
+  reconciliation replaces the former bind-only SEC-02 contract without adding public login.
+- MP-02 browser polling uses explicit function predicates under the required no-eval CSP.
+  Root attempt 9 proved that Playwright's string-expression polling uses eval (168 failures).
+  Wrapping each existing expression in `() =>` preserves its exact condition and every
+  original assertion; function predicates already in use remain unchanged. Browser contexts
+  must not bypass CSP, and the policy must not allow unsafe-eval to accommodate the test harness.
+
+---
+
+## Category 1: Health (`GET /health`)
+
+### HEALTH-01 Healthy service reports readable database
+**Setup:** Service started against a reachable `economy.db`.
+**Action:** `GET /health`.
+**Expected:** `200`; `status == "ok"`; `database_readable == true`; `latest_event_id` equals
+`MAX(events.event_id)` in the database (or `0` if the events table is empty).
+
+### HEALTH-02 Database unreachable does not fail the health check
+**Setup:** `database.path` points at a nonexistent file.
+**Action:** `GET /health`.
+**Expected:** `200` (service still starts and reports); `database_readable == false`;
+`latest_event_id == 0`.
+
+---
+
+## Category 2: Metrics (`GET /api/metrics`)
+
+### MET-01 Metrics response shape
+**Action:** `GET /api/metrics` against a seeded economy.
+**Expected:** `200`; body contains exactly `gdp`, `agents`, `tasks`, `escrow`, `spec_quality`,
+`labor_market`, `economy_phase`, `computed_at` (`extra="forbid"` — no additional fields).
+
+### MET-02 Reward bucket boundary includes 100
+**Setup:** Seed a task with `reward = 100`.
+**Action:** `GET /api/metrics` before and after inserting the task.
+**Expected:** `labor_market.reward_distribution.51_to_100` increments by 1; `over_100` is
+unchanged.
+
+### MET-03 Reward bucket boundary excludes 101 from 51_to_100
+**Setup:** Seed a task with `reward = 101`.
+**Action:** `GET /api/metrics` before and after.
+**Expected:** `over_100` increments by 1; `51_to_100` is unchanged.
+
+### MET-04 GDP total combines approved and ruled contributions
+**Setup:** One `approved` task (`reward=100`), one `ruled` task (`reward=100`,
+`worker_pct=60`).
+**Action:** `GET /api/metrics`.
+**Expected:** `gdp.total` includes `100 + floor(100 * 60 / 100)` from these two tasks (in
+addition to any other seeded GDP).
+
+### MET-05 Delta fields are null with no prior-period data
+**Setup:** Clean economy, single fresh task in the current window only.
+**Action:** `GET /api/metrics`.
+**Expected:** `gdp.delta_1h`, `gdp.delta_24h`, `agents.delta_active`, `tasks.delta_open`,
+`tasks.delta_completed_24h`, `escrow.delta_locked`, `labor_market.delta_avg_bids`,
+`labor_market.delta_avg_reward` are `null` when their respective previous-period denominator is
+zero (not `0` or `NaN`).
+
+### MET-06 `list_agents` avoids N+1 queries
+**Setup:** Seed N agents with tasks/feedback.
+**Action:** `GET /api/agents` (see also AGT-01), instrumented query count.
+**Expected:** Aggregated stats are computed with a bounded, single-digit query count independent
+of N (not ~10 queries per agent).
+
+---
+
+## Category 3: Economy Phase
+
+### PHASE-01 Zero-activity economy is `stalled`
+**Setup:** No tasks created in the last 60 minutes (economy otherwise may have historical data).
+**Action:** `GET /api/metrics`.
+**Expected:** `economy_phase.phase == "stalled"`, regardless of `task_creation_trend` or
+`dispute_rate` — `stalled` takes priority over every other rule.
+
+### PHASE-02 Increasing trend, low dispute rate is `growing`
+**Setup:** Recent activity present; task creation in the last 3.5 days > 1.05× the previous 3.5
+days; dispute rate < 10%.
+**Expected:** `phase == "growing"`, `task_creation_trend == "increasing"`.
+
+### PHASE-03 Decreasing trend is `contracting` regardless of dispute rate
+**Setup:** Recent activity present; task creation ratio < 0.95; dispute rate 0%.
+**Expected:** `phase == "contracting"`.
+
+### PHASE-04 High dispute rate is `contracting` regardless of trend
+**Setup:** Recent activity present; flat task creation trend; dispute rate > 20%.
+**Expected:** `phase == "contracting"`.
+
+### PHASE-05 Residual combinations resolve to `stable` (explicit rule)
+**Setup:** Recent activity present. Two sub-cases:
+  (a) `task_creation_trend == "increasing"` with dispute rate exactly 12% (matches neither
+      `growing`'s `< 10%` nor `contracting`'s `> 20%`);
+  (b) `task_creation_trend == "stable"` with dispute rate in the 15–20% band.
+**Expected:** Both sub-cases return `phase == "stable"`. This is a normative pass/fail assertion,
+not an "undefined behavior" case — any phase other than `stable` for these inputs is a release
+blocker.
+
+### PHASE-06 `"increasing"` is a valid trend string end-to-end
+**Setup:** Seed data producing `task_creation_trend == "increasing"`.
+**Action:** `GET /api/metrics`, and separately exercise `data/web/assets/shared.js`'s
+`trendVisual("increasing")`.
+**Expected:** API returns `"increasing"` unmodified; the frontend helper returns the
+up/green treatment (not the "unrecognized → flat" fallback).
+
+---
+
+## Category 4: GDP History (`GET /api/metrics/gdp/history`)
+
+### GDP-01 Default window and resolution
+**Action:** `GET /api/metrics/gdp/history` (no query params).
+**Expected:** `200`; `window == "1h"`; `resolution == "1m"`; `data_points` is cumulative and
+non-decreasing.
+
+### GDP-02 Invalid window rejected
+**Action:** `GET /api/metrics/gdp/history?window=3h`.
+**Expected:** `400 invalid_parameter`.
+
+### GDP-03 Invalid resolution rejected
+**Action:** `GET /api/metrics/gdp/history?resolution=10s`.
+**Expected:** `400 invalid_parameter`.
+
+### GDP-04 Bucketed computation matches per-point semantics
+**Setup:** Tasks approved/ruled at known timestamps spanning several buckets.
+**Action:** `GET /api/metrics/gdp/history?window=7d&resolution=1h`.
+**Expected:** Each bucket's cumulative GDP equals the sum of all approved/ruled contributions
+with `approved_at`/`ruled_at` at or before that bucket's timestamp — verified against a
+naive per-point reference computation, not just query-count.
+
+---
+
+## Category 5: Sparklines (`GET /api/metrics/sparklines`)
+
+### SPARK-01 Only `24h` window is valid
+**Action:** `GET /api/metrics/sparklines?window=1h`.
+**Expected:** `400 invalid_parameter`.
+
+### SPARK-02 Sparkline response shape
+**Action:** `GET /api/metrics/sparklines?window=24h`.
+**Expected:** `200`; `metrics` contains exactly the 10 named series; each series length equals
+`len(buckets)`.
+
+### SPARK-03 Unemployment rate sparkline is clamped to [0, 1]
+**Setup:** Seed events producing edge-case working/registered counts (e.g. more work-stop events
+than work-start events in a bucket).
+**Action:** `GET /api/metrics/sparklines?window=24h`.
+**Expected:** Every value in `metrics.unemployment_rate` is within `[0.0, 1.0]`.
+
+---
+
+## Category 6: Agents
+
+### AGT-01 List agents, default sort
+**Action:** `GET /api/agents`.
+**Expected:** `200`; `agents` sorted by `total_earned` descending (default); pagination fields
+present.
+
+### AGT-02 Invalid `sort_by` rejected
+**Action:** `GET /api/agents?sort_by=made_up_field`.
+**Expected:** `400 invalid_parameter`.
+
+### AGT-03 Agent profile not found
+**Action:** `GET /api/agents/a-does-not-exist`.
+**Expected:** `404 agent_not_found`.
+
+### AGT-04 Agent feed pagination
+**Setup:** Seed > `limit` feed-eligible events for one agent.
+**Action:** `GET /api/agents/{agent_id}/feed?limit=5`.
+**Expected:** `200`; exactly 5 events returned; `has_more == true`; a follow-up request with
+`before=<oldest event_id>` returns the next page.
+
+### AGT-05 Feed `limit` is clamped to [1, 200]
+**Action:** `GET /api/agents/{agent_id}/feed?limit=10000`.
+**Expected:** `200`; at most 200 events returned (no error — clamped, not rejected).
+
+---
+
+## Category 7: Tasks
+
+### TASK-01 Task list filtered by valid status
+**Action:** `GET /api/tasks?status=open`.
+**Expected:** `200`; every returned task has `status == "open"`.
+
+### TASK-02 Task list rejects invalid status
+**Action:** `GET /api/tasks?status=not_a_status`.
+**Expected:** `400 invalid_status`.
+
+### TASK-03 Task drilldown not found
+**Action:** `GET /api/tasks/t-does-not-exist`.
+**Expected:** `404 task_not_found`.
+
+### TASK-04 Task drilldown includes dispute detail when present
+**Setup:** A `ruled` task with a filed claim, a rebuttal, and a ruling.
+**Action:** `GET /api/tasks/{task_id}`.
+**Expected:** `dispute.rebuttal` and `dispute.ruling` are both populated with their respective
+fields (`ruling.worker_pct`, `ruling.summary`, `ruling.ruled_at`, etc.).
+
+### TASK-05 Competitive tasks ranked by bid count
+**Setup:** Multiple open tasks with differing bid counts.
+**Action:** `GET /api/tasks/-/competitive`.
+**Expected:** `200`; tasks ordered by `bid_count` descending.
+
+### TASK-06 Uncontested tasks respect `min_age_minutes`
+**Setup:** One zero-bid open task 5 minutes old, one zero-bid open task 20 minutes old.
+**Action:** `GET /api/tasks/-/uncontested?min_age_minutes=10`.
+**Expected:** Only the 20-minute-old task is returned.
+
+### TASK-07 Task list uses one authoritative ordered snapshot
+**Setup:** Task Board returns three summaries in newest-first order while SQLite contains stale
+core task fields.
+**Action:** `GET /api/tasks?status=open&limit=1&offset=1`.
+**Expected:** Exactly one Task Board list call with `status=open`; `total_count == 3`; the middle
+upstream record is returned with its exact strict `financial_effect`. A non-list response,
+duplicate task ID, unknown status, status-filter mismatch, nonpositive reward or negative bid
+count returns `502 task_board_unavailable`.
+
+### TASK-08 Task detail never falls back to stale core SQL
+**Setup:** SQLite contains the task. Task Board returns 404, a transport/server error, or a 200
+body with a malformed `financial_effect`.
+**Action:** `GET /api/tasks/{task_id}`.
+**Expected:** Respectively `404 task_not_found`, `502 task_board_unavailable`, or
+`502 task_board_unavailable`; no core task response is reconstructed from SQLite. A malformed
+404 envelope, unknown status, nonpositive reward, negative bid count or ruling percentage
+outside 0–100 also returns the typed 502.
+
+### TASK-09 Upstream status and ruling govern enrichment
+**Setup:** SQLite has stale accepted/ruled state and a stale Court ruling while Task Board reports
+the task open or reports a different complete ruling projection.
+**Action:** `GET /api/tasks/{task_id}`.
+**Expected:** Open bids remain sealed. When a ruling is present, its ID, percentage, summary and
+timestamp are the Task Board values; SQLite supplies only claim/rebuttal narrative.
+
+### TASK-10 Reader lifecycle is independent of mutation registration
+**Setup:** UserAgent construction succeeds and Identity registration fails.
+**Action:** Enter and leave UI lifespan.
+**Expected:** `task_board_reader` is available during lifespan, `user_agent` mutations remain
+disabled, and the one shared UserAgent/client closes exactly once.
+
+---
+
+## Category 8: Events
+
+### EVT-01 Event list default pagination
+**Action:** `GET /api/events`.
+**Expected:** `200`; `limit` defaults to 50, reverse chronological order.
+
+### EVT-02 `limit` clamped, not rejected, above 200
+**Action:** `GET /api/events?limit=5000`.
+**Expected:** `200`; at most 200 events returned.
+
+### EVT-03 Non-integer cursor params rejected
+**Action:** `GET /api/events?before=not-a-number`.
+**Expected:** `400 invalid_parameter`.
+
+### EVT-04 SSE stream delivers new events and resumes from `last_event_id`
+**Setup:** Open `GET /api/events/stream?last_event_id=<N>`; insert a new event with
+`event_id > N`.
+**Expected:** The new event is delivered within `sse.poll_interval_seconds` (config: 1s) of
+insertion; keep-alive comments are sent at `sse.keepalive_interval_seconds` (config: 15s) when
+idle; at most `sse.batch_size` (config: 50) events are sent per poll cycle.
+
+---
+
+## Category 9: Quarterly Report
+
+### QTR-01 Default quarter is the current quarter
+**Action:** `GET /api/quarterly-report` (no `quarter` param).
+**Expected:** `200` if data exists for the current quarter; `quarter` in the response matches
+`current_quarter_label()`.
+
+### QTR-02 Malformed quarter string rejected
+**Action:** `GET /api/quarterly-report?quarter=2026-Q9` and `?quarter=not-a-quarter`.
+**Expected:** `400 invalid_quarter` for both.
+
+### QTR-03 No data for a valid-but-empty quarter
+**Action:** `GET /api/quarterly-report?quarter=2020-Q1` (a real quarter, no economy data).
+**Expected:** `404 no_data`.
+
+---
+
+## Category 10: Proxy — Operator Write Path
+
+### PROXY-01 Identity returns the operator's agent_id
+**Setup:** UserAgent initialized and registered at startup.
+**Action:** `GET /api/proxy/identity`.
+**Expected:** `200`; `agent_id` matches the registered `operator` roster handle's Identity
+`agent_id` (not the `platform` agent's id).
+
+### PROXY-02 Identity unavailable when UserAgent failed to initialize
+**Setup:** Simulate UserAgent init failure (e.g. Identity unreachable at startup).
+**Action:** `GET /api/proxy/identity`.
+**Expected:** `503 user_agent_unavailable`.
+
+### PROXY-03 Prepare and submit task via proxy
+**Action:** `POST /api/proxy/task-postings/prepare` with the seven valid posting terms, retain
+the returned complete record, then send that unchanged record to
+`POST /api/proxy/task-postings/{operation_id}/submit`.
+**Expected:** Prepare returns `200` without transport or economic effect. Submit preserves the
+native `201` published response; its task `poster_id` equals the operator's `agent_id`, its
+acceptance window equals the selected value, and escrow is locked once for the full `reward`
+drawn from the **operator's** account balance.
+
+### PROXY-04 Create task validation — field bounds
+**Action:** `POST /api/proxy/task-postings/prepare` with `title` of 201 characters (over the
+200-char limit), or
+`reward=0`, or a `spec` of 10,001 characters.
+**Expected:** `422` (Pydantic validation) for each malformed field; no task is created.
+
+### PROXY-05 Create task downstream failure surfaces as 502
+**Setup:** Prepare an otherwise-valid posting record; Task Board then fails the native submit.
+**Action:** `POST /api/proxy/task-postings/{operation_id}/submit` with the unchanged record.
+**Expected:** `502 task_posting_failed`.
+
+### PROXY-06 Accept bid via proxy
+**Setup:** An open task posted by the operator with at least one bid.
+**Action:** `POST /api/proxy/tasks/{task_id}/bids/{bid_id}/accept`.
+**Expected:** `200` passthrough; task transitions to `accepted`.
+
+### PROXY-07 Approve task via proxy
+**Setup:** A `submitted` task posted by the operator.
+**Action:** `POST /api/proxy/tasks/{task_id}/approve`.
+**Expected:** `200` passthrough; task transitions to `approved`; full reward released to the
+worker.
+
+### PROXY-08 File dispute via proxy
+**Setup:** A `submitted` task posted by the operator.
+**Action:** `POST /api/proxy/tasks/{task_id}/dispute` with `{"reason": "..."}` (1–5000 chars).
+**Expected:** `200` passthrough; task transitions to `disputed`.
+
+### PROXY-09 Dispute reason validation
+**Action:** `POST /api/proxy/tasks/{task_id}/dispute` with `reason=""` or a 5001-char reason.
+**Expected:** `422` for both; no dispute filed.
+
+### PROXY-10 Extra fields rejected on proxy request bodies
+**Action:** `POST /api/proxy/task-postings/prepare` with an extra unexpected top-level field.
+**Expected:** `422` (`extra="forbid"` on `TaskPostingPrepareRequest`).
+
+---
+
+## Category 11: Request Validation Middleware
+
+### MP05-01 Durable browser intent and strict acknowledgments
+**Action:** Prepare and persist a posting, interrupt or lose its acknowledgment, then reload
+and retry. Exercise malformed state, escrow, timestamp, result and deadline fields and a bare
+409 publication response without the SDK error wrapper.
+**Expected:** Exact original identity survives; invalid acknowledgments cannot create a
+completion marker. A well-formed blocked 409 remains blocked, while a malformed backend
+acknowledgment becomes 502. Valid Unicode titles/specifications use code-point bounds and
+unpaired surrogates are rejected.
+
+### MP05-02 Recovery preserves user choice and damaged records
+**Action:** Reload with one uncertain posting, multiple uncertain postings, a delayed status
+response, and malformed JSON or structurally invalid saved records.
+**Expected:** The generic form creates no new identity during recovery. One uncertain intent
+can be retried exactly; several require choosing the operation-specific retry. Every saved
+operation remains visible. Damaged records remain byte-preserved with visible diagnostics and
+cannot be transported or silently replaced. Completion provides an explicit separate-posting
+action.
+
+### MP05-03 Real-browser publication conservation
+**Action:** Use a fresh isolated funded stack, lose real committed submit responses, reload
+and retry from two browser tabs, then recover through status.
+**Expected:** Three exact submit attempts use the same saved operation/terms. The entire
+isolated database contains one task, publication, escrow and lock transaction with one creation
+event and one lock event. The operator balance falls by exactly the reward, and balance plus
+locked reward equals its initial balance. Both tabs retain bound completion markers. Database
+assertions are read-only and all disposable processes are reaped.
+
+### VAL-01 Non-JSON content type rejected on posting prepare
+**Action:** `POST /api/proxy/task-postings/prepare` with `Content-Type: text/plain`.
+**Expected:** `415 unsupported_media_type` — rejected before the route handler runs.
+
+### VAL-02 Oversized body rejected on posting prepare
+**Action:** `POST /api/proxy/task-postings/prepare` with a body exceeding
+`request.max_body_size` (1,572,864
+bytes).
+**Expected:** `413 payload_too_large`.
+
+### VAL-03 Oversized body rejected on `POST /api/proxy/tasks/{id}/dispute`
+**Action:** Same as VAL-02, on the dispute route.
+**Expected:** `413 payload_too_large`.
+
+### VAL-04 Native mutations require JSON and caller-owned operation identity
+**Action:** POST to native accept, approve or dispute without a JSON content type, then repeat
+with `Content-Type: application/json` but an empty body or missing operation/version fields.
+**Expected:** Non-JSON requests return `415 unsupported_media_type`; missing native request
+fields return 422. Both reject before the operator client is called. A valid request retains
+its explicit operation ID and expected lifecycle version through downstream transport.
+
+---
+
+## Category 12: Read Path — Sanctioned Exception (Architecture)
+
+### READ-01 Database connection is opened read-only
+**Assertion (static/architecture):** `ui_service/core/lifespan.py`'s `db_uri` literal contains
+`?mode=ro`, and `aiosqlite.connect(...)` is called with `uri=True`.
+**Expected:** Both hold; a code change dropping either fails this test, not just at runtime.
+
+### READ-02 No write statements exist in the UI service
+**Assertion:** No `INSERT`/`UPDATE`/`DELETE` SQL literal appears anywhere under
+`src/ui_service/`.
+**Expected:** Holds for the full source tree.
+
+### READ-03 `aiosqlite` import is confined to `src/ui_service/`
+**Assertion:** The repo-wide `no-aiosqlite-import` / `no-aiosqlite-from-import` semgrep rules
+(`config/semgrep/no-direct-sql.yml`) carve out `src/ui_service/` by path as the sole sanctioned
+exception; no other service directory imports `aiosqlite`.
+**Expected:** `just code-semgrep` (repo-wide) passes with the UI's `aiosqlite` import present and
+flags it anywhere else it might appear.
+
+---
+
+## Category 13: Exposure Posture (Q-3)
+
+### SEC-01 Real config binds to loopback only
+**Assertion:** The live `services/ui/config.yaml` has `server.host == "127.0.0.1"`.
+**Expected:** Holds; a change to `"0.0.0.0"` or any non-loopback address fails this guard.
+
+### SEC-02 Local writes require browser authority
+**Action:** Issue a valid native posting or accept/approve request with its required JSON body and one allowed Host,
+one exact matching Origin and one configured marker from a loopback client.
+**Expected:** The existing operator behavior executes. No secret, session or mint authority is
+introduced. Omitted, duplicate, malformed or mismatched admission values receive the exact
+error above before any operator call; include forged local headers from non-loopback clients.
+
+### SEC-03 Browser configuration is explicit and constrained
+**Expected:** Missing browser_security, non-loopback bind/host/origin, wildcard authorities,
+invalid ports, userinfo/path/query/fragment components and invalid header values fail startup.
+`GET /api/proxy/browser-config` exposes only the non-secret marker fields under proxy admission.
+Valid local reads and writes receive the configured CSP and nosniff response headers.
+
+### SEC-04 Stored content stays literal in real Chromium
+**Setup:** Seed harmless markup markers into stored names, titles, comments and event summaries
+in an isolated database. Exercise landing, task, agent, quarterly and observatory views.
+**Expected:** Literal strings are visible, no marker elements exist, and no marker event handler
+executes. Task/bid identifiers remain single text/attribute values and single encoded request
+segments; quarterly no-data labels remain literal. No active-content previews or inline handlers
+are introduced. The shared proxy helper rejects forbidden targets before any fetch and preserves
+the method, body, content type and configured marker for a valid same-origin write.
+
+### SEC-05 Native mutation actions enforce byte limits
+**Action:** Send more than the configured body limit to accept/approve with valid browser headers.
+**Expected:** `413 payload_too_large`, zero operator calls. An exactly bounded body reaches the
+handler unchanged for schema validation. JSON content type and the native operation/version
+fields remain required on accept/approve.
+
+### SEC-06 Frontend fallback and asset mounts remain contained
+**Setup:** Use a temporary frontend root, ordinary page/index files and a marker file outside it.
+**Action:** Request encoded traversal and absolute paths, a symlinked page, a symlinked index
+through an unknown route, and an asset directory symlink to the outside marker's directory.
+**Expected:** Every escape returns 404 without the marker. A regular page and ordinary unknown
+route index fallback still return 200 with the expected local content. No ordinary file or key
+is read for the test.
+
+---
+
+## Category 14: Treasury Genesis (Q-9)
+
+### GEN-01 UI startup performs no mint
+**Setup:** Stub the agent factory so any bank-mutating call (`create_account`, `credit_account`)
+raises if invoked.
+**Action:** Run `lifespan()` startup.
+**Expected:** Startup completes; the UserAgent registers; no bank call is made; log output
+contains no "treasury"/"funding failed" text.
+
+### GEN-02 Zero-balance operator at startup is not an error
+**Setup:** Freshly registered operator with no bank account yet (genesis not yet provisioned).
+**Action:** Run `lifespan()` startup.
+**Expected:** Startup completes without any "UserAgent initialization failed" log line.
+
+### GEN-03 `just provision` funds the operator idempotently
+**Action:** Run the treasury-provision CLI (`agents/src/treasury_provision_cli`) twice in
+succession against a clean economy.
+**Expected:** After the first run, the operator's balance is `genesis_amount` (1,000,000). After
+the second run, the balance is unchanged (idempotent via the `(account_id, reference="treasury_
+genesis")` replay guard) — no double-credit.
+
+### GEN-04 Genesis targets the operator account, not the platform account
+**Action:** Inspect the provisioning CLI's `credit_account` call.
+**Expected:** `account_id` is the **operator's** agent id; the `platform` account itself is never
+credited by this flow (it mints on demand elsewhere and carries no seeded balance).
+
+---
+
+## Category 15: Configuration
+
+### MP-00 fixture-only reconciliation
+Tests that describe a UI configuration as valid must provide the required `user_agent`
+section explicitly, including an isolated `agent_config_path` and test-only `handle`. Startup
+tests must stub agent construction and registration so configuration, health, and logging
+assertions never register a real operator or depend on a live economy. Temporary `CONFIG_PATH`
+overrides, cached settings, and application state must be restored when setup or an assertion
+fails as well as when it succeeds.
+
+This reconciliation changes test inputs and dependency seams only. The production
+`Settings.user_agent` field remains required, a fully absent section still fails fast, and the
+documented partial-section backfill remains a separate compatibility contract.
+
+The same fixture-only rule applies to in-process integration tests. Their shared seeded-database
+configuration and any test-specific YAML must provide isolated operator settings and stub the
+startup registration boundary. A safe startup stub is only the initial app state: proxy tests
+remain free to replace `state.user_agent` with `None` or their own fake to exercise unavailable
+and write-path behavior. Integration fixtures must keep database, web, log, agent-config and
+environment resources temporary and restore settings and application state on every exit path.
+The integration fixture reconciliation applies to these exact sources:
+`tests/integration/conftest.py`, `tests/integration/test_health.py`,
+`tests/integration/test_economy_phase_stalled.py`, and
+`tests/integration/test_request_body_size_limit.py`.
+
+The Playwright observatory fixture is isolated in the same way. It provisions a disposable
+`e2e-operator` roster entry and keypair under its session temp directory, uses unreachable
+fixture-only service URLs, and patches registration only inside the spawned UI test process.
+The real `AgentFactory` and key loader still run, while no repository key or live Identity
+service is used. Startup retains child output, reports early child exit with that log, and
+always reaps the owned process on setup, yield, or teardown failure. This browser fixture is
+read-projection coverage; the separate full-service journey remains the real registration and
+write-path proof.
+
+### CFG-01 Missing required config field fails startup
+**Setup:** `config.yaml` with any one of `server`, `database`, `sse`, `frontend`, `request`,
+`user_agent` sections omitted.
+**Expected:** Settings loading raises (fail-fast); the service does not start.
+
+### CFG-02 Partial `user_agent` block backfills from the canonical agents config
+**Setup:** `config.yaml`'s `user_agent` block specifies only `agent_config_path`, omitting
+`handle`.
+**Expected:** `Settings.user_agent.handle` is backfilled from the agents package's own
+`config.yaml` `user_agent` section and is a non-empty string; there is no `treasury_balance`
+attribute anywhere on `Settings.user_agent`.
+
+### CFG-03 Extra fields fail for the intended cause
+**Setup:** An otherwise complete valid configuration, including both required `user_agent`
+fields, contains an unsupported `service.extra_field`.
+**Expected:** Settings loading fails with validation output identifying `extra_field` as an
+extra input; the test cannot pass because an unrelated required section is absent.
+
+## MP-12 sealed projection acceptance
+
+- Public open-task drilldown exposes only aggregate bid count, never bid entries or identifying
+  details. Post-open drilldown uses canonical integer amounts and preserves bidder names, visible
+  quality and timestamps. Actor-specific details come only from the signed poster proxy.
+- Poster proxy preserves authoritative rejection, returns `private, no-store`, and enriches rows only
+  after Task Board authorization. Unauthorized readers receive no bidder details.
+- Observers with a nonzero public bid count see the Bid phase and sealed-count copy. They never
+  request poster details. Authorized posters retain names, quality, offered amounts and acceptance
+  controls. Existing bid-rendering cases use a poster fixture for those details; observer controls
+  continue asserting no acceptance buttons and no bid records.
+- Authorization/server/network/malformed-response failures are visible, keep the aggregate count and
+  expose no acceptance control. An empty detail list must not masquerade as a successful response.
+- Seeded legacy events and actual newly produced events pass through history, initial/resumed SSE,
+  actor-filtered history and agent feeds. Open-bid participation is absent from actor-specific results
+  before pagination; after the task leaves open, even a losing bidder's attribution is recoverable.
+- Sealed feedback has no effect on public quality projections or sorting. Direct visibility fixtures
+  prove projection behavior only; real mutual/timeout reveal remains a separate MP-13 gate.
+
+The old `proposal` drilldown assertion is superseded by canonical integer `amount`. Existing names,
+quality, timestamps, bid rendering and acceptance assertions remain meaningful for an authorized
+poster and must not be removed simply to make sealed observer responses pass.
+
+### Quarterly navigation concurrency (T-175/T-176)
+
+Rapid Prev/Next clicks must each advance from the preceding navigation result even when the prior
+report request is pending. Deterministic browser cases must cover repeated and mixed directions,
+year boundaries and no-data responses using the shipped script. A failed report remains visible
+and does not prevent a later navigation from succeeding. Keep the existing quarterly-page tests,
+assertions and timeouts unchanged. Capture the lost-click failure before the production repair.
+
+### Controlled browser-server readiness (T-177/T-178)
+
+A listening socket does not by itself prove HTTP readiness. A transient health-read timeout must
+remain inside the fixture's existing readiness polling budget, just as a connection refusal does.
+Persistent timeouts still end in a diagnostic readiness failure, and child exit fails immediately
+with its server log. Add deterministic unit proof before changing the helper; do not increase the
+existing timeout values or alter any browser behavior/assertion. The three single-agent setup errors
+share one session-fixture failure and are distinct from the already-repaired quarterly race.

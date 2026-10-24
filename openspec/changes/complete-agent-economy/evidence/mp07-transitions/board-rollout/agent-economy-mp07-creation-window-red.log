@@ -1,0 +1,67 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 9 items
+
+tests/unit/test_mp07_creation_window.py FFFFFFFFF                        [100%]
+
+=================================== FAILURES ===================================
+______ test_invalid_acceptance_window_fails_before_bank_or_store[missing] ______
+tests/unit/test_mp07_creation_window.py:148: in test_invalid_acceptance_window_fails_before_bank_or_store
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_______ test_invalid_acceptance_window_fails_before_bank_or_store[null] ________
+tests/unit/test_mp07_creation_window.py:148: in test_invalid_acceptance_window_fails_before_bank_or_store
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_______ test_invalid_acceptance_window_fails_before_bank_or_store[zero] ________
+tests/unit/test_mp07_creation_window.py:148: in test_invalid_acceptance_window_fails_before_bank_or_store
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_____ test_invalid_acceptance_window_fails_before_bank_or_store[negative] ______
+tests/unit/test_mp07_creation_window.py:148: in test_invalid_acceptance_window_fails_before_bank_or_store
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_______ test_invalid_acceptance_window_fails_before_bank_or_store[bool] ________
+tests/unit/test_mp07_creation_window.py:148: in test_invalid_acceptance_window_fails_before_bank_or_store
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_______ test_invalid_acceptance_window_fails_before_bank_or_store[float] _______
+tests/unit/test_mp07_creation_window.py:148: in test_invalid_acceptance_window_fails_before_bank_or_store
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+______ test_invalid_acceptance_window_fails_before_bank_or_store[string] _______
+tests/unit/test_mp07_creation_window.py:148: in test_invalid_acceptance_window_fails_before_bank_or_store
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_____ test_invalid_acceptance_window_fails_before_bank_or_store[overflow] ______
+tests/unit/test_mp07_creation_window.py:148: in test_invalid_acceptance_window_fails_before_bank_or_store
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_________ test_explicit_acceptance_window_reaches_persisted_task_input _________
+tests/unit/test_mp07_creation_window.py:169: in test_explicit_acceptance_window_reaches_persisted_task_input
+    assert store.inserted[0]["acceptance_window_seconds"] == 45
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'acceptance_window_seconds'
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[missing]
+FAILED tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[null]
+FAILED tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[zero]
+FAILED tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[negative]
+FAILED tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[bool]
+FAILED tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[float]
+FAILED tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[string]
+FAILED tests/unit/test_mp07_creation_window.py::test_invalid_acceptance_window_fails_before_bank_or_store[overflow]
+FAILED tests/unit/test_mp07_creation_window.py::test_explicit_acceptance_window_reaches_persisted_task_input
+============================== 9 failed in 0.06s ===============================

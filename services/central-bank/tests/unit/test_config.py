@@ -23,15 +23,23 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
-database:
-  path: "data/central-bank.db"
 identity:
   base_url: "http://localhost:8001"
   get_agent_path: "/agents"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 platform:
-  agent_id: "a-platform"
+  agent_config_path: "agents.yaml"
 request:
   max_body_size: 1048576
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
+  signing:
+    kid: "gateway-central-bank"
+    private_key_path: "gateway-central-bank.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -43,9 +51,10 @@ request:
     assert isinstance(settings, Settings)
     assert settings.service.name == "central-bank"
     assert settings.server.port == 8002
-    assert settings.database.path == "data/central-bank.db"
     assert settings.identity.base_url == "http://localhost:8001"
-    assert settings.platform.agent_id == "a-platform"
+    assert settings.identity.verify_jws_path == "/agents/verify-jws"
+    assert settings.db_gateway.url == "http://localhost:8007"
+    assert settings.db_gateway.signing.kid == "gateway-central-bank"
     assert settings.request.max_body_size == 1048576
 
     os.environ.pop("CONFIG_PATH", None)
@@ -66,8 +75,6 @@ server:
 logging:
   level: "INFO"
   directory: "data/logs"
-database:
-  path: "data/central-bank.db"
 identity:
   base_url: "http://localhost:8001"
   get_agent_path: "/agents"

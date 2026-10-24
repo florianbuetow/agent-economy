@@ -50,7 +50,9 @@ class TestSubmitFeedback:
                 "category": "spec_quality",
                 "rating": "satisfied",
                 "comment": "Good spec",
-            }
+            },
+            audience="reputation",
+            resource="POST /feedback",
         )
         agent._request.assert_awaited_once_with(
             "POST",
@@ -82,7 +84,9 @@ class TestSubmitFeedback:
                 "task_id": "t-1",
                 "category": "delivery_quality",
                 "rating": "dissatisfied",
-            }
+            },
+            audience="reputation",
+            resource="POST /feedback",
         )
         await agent.close()
 

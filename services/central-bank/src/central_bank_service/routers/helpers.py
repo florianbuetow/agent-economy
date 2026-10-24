@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from cryptography.exceptions import InvalidSignature
+from service_auth.jws import JwsAdmissionError, VerifiedJws, require_context
 from service_commons.exceptions import ServiceError
 
 from central_bank_service.core.state import get_app_state
@@ -33,8 +35,18 @@ def parse_json_body(body: bytes) -> dict[str, Any]:
     return data
 
 
-async def verify_jws_token(token: str) -> dict[str, Any]:
-    """Verify a JWS token via the Identity service and return agent_id + payload."""
+def _admission_error(exc: JwsAdmissionError) -> ServiceError:
+    return ServiceError(exc.error_code, str(exc), exc.status_code, {})
+
+
+async def verify_jws_token(
+    token: str,
+    *,
+    audience: str,
+    resource: str,
+    allowed_action: str | tuple[str, ...],
+) -> VerifiedJws:
+    """Verify and bind an agent-signed token to receiver-owned route context."""
     state = get_app_state()
     if state.identity_client is None:
         raise ServiceError(
@@ -44,40 +56,75 @@ async def verify_jws_token(token: str) -> dict[str, Any]:
             details={},
         )
 
-    result = await state.identity_client.verify_jws(token)
+    try:
+        try:
+            verified = await state.identity_client.verify_jws(token)
+        except InvalidSignature as exc:
+            raise ServiceError(
+                "forbidden",
+                "JWS signature verification failed",
+                403,
+                {},
+            ) from exc
+        return require_context(
+            verified,
+            audience=audience,
+            resource=resource,
+            allowed_action=allowed_action,
+        )
+    except JwsAdmissionError as exc:
+        raise _admission_error(exc) from exc
 
-    if not result.get("valid"):
+
+def verify_platform_signature(
+    token: str,
+    *,
+    audience: str,
+    resource: str,
+    allowed_action: str | tuple[str, ...],
+) -> VerifiedJws:
+    """Locally verify and bind a platform-signed JWS.
+
+    Performs purely local cryptographic verification (no Identity round-trip), so
+    platform operations continue to work while the Identity service is unreachable.
+    Returns the verified payload.
+    """
+    state = get_app_state()
+    if state.platform_agent is None:
         raise ServiceError(
-            "forbidden",
-            "JWS signature verification failed",
-            403,
-            {},
+            error="service_not_ready",
+            message="Platform agent not initialized",
+            status_code=503,
+            details={},
         )
 
-    return {"agent_id": result["agent_id"], "payload": result["payload"]}
-
-
-def require_platform(agent_id: str, platform_agent_id: str) -> None:
-    """Check that the verified agent is the platform."""
-    if agent_id != platform_agent_id:
-        raise ServiceError(
-            "forbidden",
-            "Only the platform agent can perform this operation",
-            403,
-            {},
+    try:
+        verified = state.platform_agent.validate_certificate(token)
+        return require_context(
+            verified,
+            audience=audience,
+            resource=resource,
+            allowed_action=allowed_action,
         )
+    except InvalidSignature as exc:
+        raise ServiceError("forbidden", "JWS signature verification failed", 403, {}) from exc
+    except JwsAdmissionError as exc:
+        raise _admission_error(exc) from exc
 
 
 def get_platform_agent_id() -> str:
-    """Get platform agent_id, preferring live PlatformAgent over config."""
+    """Return the registered platform agent id.
+
+    The platform identity is resolved from the registered PlatformAgent only (there is
+    no configured fallback). If no platform agent has registered, this is an explicit
+    not-ready error rather than a silent placeholder.
+    """
     state = get_app_state()
     if state.platform_agent is not None and state.platform_agent.agent_id is not None:
         return str(state.platform_agent.agent_id)
-    if state.platform_agent_id != "":
-        return state.platform_agent_id
     raise ServiceError(
         "service_not_ready",
-        "Platform agent id not initialized",
+        "Platform agent not registered",
         503,
         {},
     )

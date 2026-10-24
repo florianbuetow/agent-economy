@@ -52,6 +52,40 @@ def _request_json(e2e_page: Page, e2e_server: str, path: str) -> dict[str, Any]:
     return resp.json()
 
 
+def _poster_bid_rendering_fixture(e2e_page: Page) -> list[dict[str, Any]]:
+    """Supply the authorized API contract for poster-only browser rendering checks.
+
+    Task Board authorization is exercised by separate API/economy tests; this
+    fixture keeps these four visual assertions scoped to the poster's view.
+    """
+    bids: list[dict[str, Any]] = [
+        {
+            "bid_id": "bid-poster-rendering",
+            "bidder": {
+                "agent_id": "a-bob",
+                "name": "Bob",
+                "delivery_quality": {
+                    "extremely_satisfied": 1,
+                    "satisfied": 1,
+                    "dissatisfied": 0,
+                },
+            },
+            "amount": 73,
+            "submitted_at": "2026-03-02T00:15:55Z",
+            "accepted": False,
+        }
+    ]
+    e2e_page.route(
+        "**/api/proxy/identity",
+        lambda route: route.fulfill(json={"agent_id": "a-alice"}),
+    )
+    e2e_page.route(
+        "**/api/proxy/tasks/t-task6/bids",
+        lambda route: route.fulfill(json={"task_id": "t-task6", "bids": bids}),
+    )
+    return bids
+
+
 def _now_iso() -> str:
     """Return UTC timestamp in project ISO format."""
     return datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -61,17 +95,29 @@ def _open_create_mode(task_page: TaskPage, e2e_page: Page) -> None:
     """Open task page in create mode and wait for form controls."""
     task_page.navigate()
     e2e_page.wait_for_function(
-        "document.querySelector('#f-title') && document.querySelector('#btn-post-task')",
+        "() => document.querySelector('#f-title') && document.querySelector('#btn-post-task')",
     )
 
 
 def _open_task_view(task_page: TaskPage, e2e_page: Page, task_id: str) -> None:
-    """Open task page for a task_id and wait for panel to render."""
+    """Open task page for a task_id and wait for panel + event feed to settle.
+
+    The initial ``#phase-content`` render (from ``refreshTaskData``) and the
+    right-side event feed panel (from the separate ``loadHistoricalEvents``
+    fetch, plus the SSE catch-up replay described on
+    ``TaskPage.click_phase``) populate asynchronously and independently.
+    Waiting only for ``#phase-content`` can return before the feed panel —
+    or the SSE catch-up — has settled, which previously caused both empty
+    event-feed reads (T63-T65) and phase-strip clicks made right after
+    ``_open_task_view`` to race a still-draining replay (see
+    ``TaskPage.click_phase`` for the mechanism).
+    """
     task_page.navigate(task_id=task_id)
     e2e_page.wait_for_function(
-        "document.querySelector('#phase-content') && "
+        "() => document.querySelector('#phase-content') && "
         "document.querySelector('#phase-content').textContent.trim().length > 0",
     )
+    task_page.wait_for_feed_to_settle()
 
 
 def _active_phase(e2e_page: Page) -> int:
@@ -389,7 +435,9 @@ def test_t13_t18_post_phase(
     elif ticket == "T14":
         _open_task_view(task_page, e2e_page, "t-task12")
         assert task_page.escrow_bar.is_visible()
-        assert "LOCKED" in (task_page.escrow_status.text_content() or "")
+        status = task_page.escrow_status.text_content() or ""
+        assert "SETTLEMENT NEEDS ATTENTION" in status
+        assert "PAID" not in status
     elif ticket == "T15":
         _open_task_view(task_page, e2e_page, "t-task12")
         content = task_page.get_lifecycle_panel_content()
@@ -437,10 +485,17 @@ def test_t19_t27_bid_phase(
     e2e_page: Page,
     e2e_server: str,
 ) -> None:
-    """Bid phase behavior on open tasks with bids."""
+    """Observer state and authorized poster details on open tasks with bids."""
+    authorized_bids = (
+        _poster_bid_rendering_fixture(e2e_page) if ticket in {"T21", "T22", "T23", "T25"} else []
+    )
     task_page = TaskPage(e2e_page, e2e_server)
     _open_task_view(task_page, e2e_page, "t-task6")
+    if authorized_bids:
+        e2e_page.locator(".bid-row").first.wait_for()
     api_task = _request_json(e2e_page, e2e_server, "/api/tasks/t-task6")
+    assert api_task["bids"] == []
+    assert api_task["bid_count"] == 1
 
     if ticket == "T19":
         assert _active_phase(e2e_page) == 1
@@ -449,16 +504,16 @@ def test_t19_t27_bid_phase(
         assert (task_page.task_status.text_content() or "").strip() == "OPEN"
     elif ticket == "T21":
         bids_ui = task_page.get_bids()
-        assert len(bids_ui) == len(api_task["bids"])
+        assert len(bids_ui) == len(authorized_bids)
         assert len(bids_ui) > 0
     elif ticket == "T22":
         bids_ui = task_page.get_bids()
-        bidder_names = [bid["bidder"]["name"] for bid in api_task["bids"]]
+        bidder_names = [bid["bidder"]["name"] for bid in authorized_bids]
         assert any(any(name in row["bidder"] for name in bidder_names) for row in bids_ui)
     elif ticket == "T23":
         bid_amount_texts = [row["amount"] for row in task_page.get_bids()]
         assert bid_amount_texts
-        assert all(f"{api_task['reward']}" in amount for amount in bid_amount_texts)
+        assert bid_amount_texts == [f"{bid['amount']} ©" for bid in authorized_bids]
     elif ticket == "T24":
         # In E2E infra, my identity is usually unavailable, so accept actions should not render.
         assert e2e_page.locator(".btn-accept-bid").count() == 0
@@ -556,7 +611,7 @@ def test_t34_t39_deliver_phase(
             "Worker is executing... no assets yet." not in task_page.get_lifecycle_panel_content()
         )
     elif ticket == "T39":
-        assert "LOCKED" in (task_page.escrow_status.text_content() or "")
+        assert "PAID" in (task_page.escrow_status.text_content() or "")
     else:
         raise AssertionError(f"Unhandled ticket: {ticket}")
 
@@ -611,7 +666,9 @@ def test_t40_t46_review_phase(
             assert rebuttal is not None
             assert rebuttal["content"] in content
         elif ticket == "T46":
-            assert "FROZEN" in (task_page.escrow_status.text_content() or "")
+            status = task_page.escrow_status.text_content() or ""
+            assert "SETTLEMENT NEEDS ATTENTION" in status
+            assert "PAID" not in status
     else:
         raise AssertionError(f"Unhandled ticket: {ticket}")
 
@@ -693,8 +750,8 @@ def test_t57_t62_settlement_phase(
             assert (task_page.panel_title.text_content() or "").strip() == "Settle"
             assert (task_page.task_status.text_content() or "").strip() == "APPROVED"
         elif ticket == "T58":
-            assert "RELEASED" in (task_page.escrow_amount.text_content() or "")
-            assert "SETTLED" in (task_page.escrow_status.text_content() or "")
+            assert f"{api_task['reward']} ©" in (task_page.escrow_amount.text_content() or "")
+            assert "PAID" in (task_page.escrow_status.text_content() or "")
         elif ticket == "T59":
             assert "TASK LIFECYCLE COMPLETE" in content
         elif ticket == "T61":
@@ -962,7 +1019,7 @@ def test_t94_t96_db_mutation_live_updates(
             conn.close()
         wait_for_sse_update(e2e_page, timeout=8_000)
         e2e_page.wait_for_function(
-            "document.querySelector('.phase-step.active') && "
+            "() => document.querySelector('.phase-step.active') && "
             "document.querySelector('.phase-step.active').getAttribute('data-phase') === '1'",
         )
         assert _active_phase(e2e_page) == 1
@@ -987,7 +1044,7 @@ def test_t94_t96_db_mutation_live_updates(
             conn.close()
         wait_for_sse_update(e2e_page, timeout=8_000)
         e2e_page.wait_for_function(
-            "document.querySelector('.phase-step.active') && "
+            "() => document.querySelector('.phase-step.active') && "
             "document.querySelector('.phase-step.active').getAttribute('data-phase') === '4'",
         )
         assert _active_phase(e2e_page) == 4
@@ -1025,7 +1082,7 @@ def test_t94_t96_db_mutation_live_updates(
             conn.close()
         wait_for_sse_update(e2e_page, timeout=8_000)
         e2e_page.wait_for_function(
-            "document.querySelectorAll('.feedback-row').length >= 3",
+            "() => document.querySelectorAll('.feedback-row').length >= 3",
             timeout=8_000,
         )
         after_count = len(task_page.get_feedback_rows())

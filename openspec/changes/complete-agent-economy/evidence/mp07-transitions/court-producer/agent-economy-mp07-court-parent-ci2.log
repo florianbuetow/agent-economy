@@ -1,0 +1,102 @@
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;31m✗ Code-audit failed[0m
+
+[0;34m=== Scanning Dependencies for Vulnerabilities ===[0m
+WARNING: The directory '/Users/flo/Library/Caches/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/urllib3/connection.py", line 239, in _new_conn
+    sock = connection.create_connection(
+        (self._dns_host, self.port),
+    ...<2 lines>...
+        socket_options=self.socket_options,
+    )
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/urllib3/util/connection.py", line 60, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+               ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/socket.py", line 977, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/urllib3/connectionpool.py", line 793, in urlopen
+    response = self._make_request(
+        conn,
+    ...<10 lines>...
+        **response_kw,
+    )
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/urllib3/connectionpool.py", line 494, in _make_request
+    raise new_e
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/urllib3/connectionpool.py", line 470, in _make_request
+    self._validate_conn(conn)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/urllib3/connectionpool.py", line 1125, in _validate_conn
+    conn.connect()
+    ~~~~~~~~~~~~^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/urllib3/connection.py", line 827, in connect
+    self.sock = sock = self._new_conn()
+                       ~~~~~~~~~~~~~~^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/urllib3/connection.py", line 246, in _new_conn
+    raise NameResolutionError(self.host, self, e) from e
+urllib3.exceptions.NameResolutionError: HTTPSConnection(host='pypi.org', port=443): Failed to resolve 'pypi.org' ([Errno 8] nodename nor servname provided, or not known)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/requests/adapters.py", line 645, in send
+    resp = conn.urlopen(
+        method=request.method,
+    ...<9 lines>...
+        chunked=chunked,
+    )
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/urllib3/connectionpool.py", line 847, in urlopen
+    retries = retries.increment(
+        method, url, error=new_e, _pool=self, _stacktrace=sys.exc_info()[2]
+    )
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/urllib3/util/retry.py", line 555, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='pypi.org', port=443): Max retries exceeded with url: /pypi/aiohappyeyeballs/2.6.1/json (Caused by NameResolutionError("HTTPSConnection(host='pypi.org', port=443): Failed to resolve 'pypi.org' ([Errno 8] nodename nor servname provided, or not known)"))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/bin/pip-audit", line 10, in <module>
+    sys.exit(audit())
+             ~~~~~^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/pip_audit/_cli.py", line 538, in audit
+    for spec, vulns in auditor.audit(source):
+                       ~~~~~~~~~~~~~^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/pip_audit/_audit.py", line 68, in audit
+    for dep, vulns in self._service.query_all(specs):
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/pip_audit/_service/interface.py", line 156, in query_all
+    yield self.query(spec)
+          ~~~~~~~~~~^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/pip_audit/_service/pypi.py", line 62, in query
+    response: requests.Response = self.session.get(url=url, timeout=self.timeout)
+                                  ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/requests/sessions.py", line 605, in get
+    return self.request("GET", url, **kwargs)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/requests/sessions.py", line 592, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/requests/sessions.py", line 706, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/cachecontrol/adapter.py", line 76, in send
+    resp = super().send(request, stream, timeout, verify, cert, proxies)
+  File "/Users/flo/Developer/github/agent-economy/services/court/.venv/lib/python3.13/site-packages/requests/adapters.py", line 678, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='pypi.org', port=443): Max retries exceeded with url: /pypi/aiohappyeyeballs/2.6.1/json (Caused by NameResolutionError("HTTPSConnection(host='pypi.org', port=443): Failed to resolve 'pypi.org' ([Errno 8] nodename nor servname provided, or not known)"))
+error: recipe `code-audit` failed on line 269 with exit code 1
+error: recipe `ci-quiet` failed with exit code 1

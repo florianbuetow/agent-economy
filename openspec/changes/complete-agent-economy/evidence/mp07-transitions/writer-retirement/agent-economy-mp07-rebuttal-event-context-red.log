@@ -1,0 +1,27 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/unit/test_mp07_rebuttal_projection.py F                            [100%]
+
+=================================== FAILURES ===================================
+_______________ test_rebuttal_event_uses_persisted_claim_context _______________
+tests/unit/test_mp07_rebuttal_projection.py:221: in test_rebuttal_event_uses_persisted_claim_context
+    assert tuple(recorded) == (
+E   AssertionError: assert ('bank', 'acc...01T00:00:00Z') == ('court', 're...01T00:00:07Z')
+E     
+E     At index 0 diff: 'bank' != 'court'
+E     Use -v to get more diff
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_rebuttal_projection.py::test_rebuttal_event_uses_persisted_claim_context
+========================= 1 failed, 1 warning in 2.95s =========================

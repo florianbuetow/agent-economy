@@ -13,7 +13,6 @@ rules:
       exclude:
         - tests/
         - src/db_gateway_service/
-        - src/ui_service/
 
   - id: no-direct-sql-from-import
     patterns:
@@ -29,7 +28,6 @@ rules:
       exclude:
         - tests/
         - src/db_gateway_service/
-        - src/ui_service/
 
   - id: no-aiosqlite-import
     patterns:
@@ -45,6 +43,13 @@ rules:
       exclude:
         - tests/
         - src/db_gateway_service/
+        # Sanctioned observatory-pattern exception (Q-4 decision, ratified
+        # 2026-07-10: docs/plans/2026-07-10-q4-ui-read-path-decision.md).
+        # The UI service reads a direct, read-only ("?mode=ro") aiosqlite
+        # connection to the shared economy.db for dashboard queries — the
+        # cheaper, already-working option versus a new gateway read API.
+        # Guarded by services/ui/tests/architecture/test_readonly_connection.py,
+        # which asserts the connection URI carries mode=ro.
         - src/ui_service/
 
   - id: no-aiosqlite-from-import
@@ -61,17 +66,7 @@ rules:
       exclude:
         - tests/
         - src/db_gateway_service/
+        # Sanctioned observatory-pattern exception (Q-4 decision, ratified
+        # 2026-07-10: docs/plans/2026-07-10-q4-ui-read-path-decision.md).
+        # See the no-aiosqlite-import rule above for the full rationale.
         - src/ui_service/
-
-  - id: no-direct-sql.no-nosemgrep
-    languages: [python]
-    severity: ERROR
-    message: |
-      Do not use '# nosemgrep' to suppress semgrep findings.
-      Fix the underlying issue instead.
-    pattern-regex: '(?m)#\s*nosemgrep(?::\s*.*)?'
-    paths:
-      include:
-        - src/
-      exclude:
-        - tests/

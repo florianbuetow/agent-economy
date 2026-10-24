@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-18T03:47:55.563902+02:00",
+  "artifact_sha256": {
+    "agent-economy-mp07-window-bid-diff-2.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agent-economy-mp07-window-bid-diff.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agent-economy-mp07-window-bid-final-repeat.log": "a1f6e402a2085e4f75ab9b1689db576b2eebfaba77c90bc4d082bbeec4c7811a",
+    "agent-economy-mp07-window-bid-final.log": "6a45f5134f049f0fc43a349831d27b2032e066b48bc07c8a633e678077954c70",
+    "agent-economy-mp07-window-bid-format-2.log": "eee76f865de5a9f2456950f710ae5d5f9b5bd0ea02aa54f614c5eed6642a0bfd",
+    "agent-economy-mp07-window-bid-format-apply.log": "878d50bf4ab752ab41ae942ac518b87e744d994b21bb15dca142ed7a470b3b3a",
+    "agent-economy-mp07-window-bid-format.log": "7f36b363179926b0a1302ce405f9304c47d666c1d609ea1e2dfd6883fec49e77",
+    "agent-economy-mp07-window-bid-intermediate-1.log": "d8c9146ef1e69a39c394c334286876d6d2fddd7fdbf422bd9177d9d80f9493d8",
+    "agent-economy-mp07-window-bid-intermediate-2.log": "40ce1e4f509185f1e26762e9ba987f066f6975155da17e321722ca5632d1f94e",
+    "agent-economy-mp07-window-bid-parent-final.log": "fdda49d8e704390b7ed264a1becc8e7b0b9fa6fb935dd85aca5006dc8cd9fed2",
+    "agent-economy-mp07-window-bid-parent-green.log": "efbcb7816ce25ccdceed2cda332195a4ff1643ee456deb0b0e7e78617c20344f",
+    "agent-economy-mp07-window-bid-reviewfix-diff.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agent-economy-mp07-window-bid-reviewfix-final.log": "d40e16570165f17b19ccaf88b3210d8ba8ce294607b5b45e621c17b1cecf34de",
+    "agent-economy-mp07-window-bid-reviewfix-format.log": "eee76f865de5a9f2456950f710ae5d5f9b5bd0ea02aa54f614c5eed6642a0bfd",
+    "agent-economy-mp07-window-bid-reviewfix-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-window-bid-reviewfix2-diff.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agent-economy-mp07-window-bid-reviewfix2-final.log": "c740ef18754ee8254567f07c50bbe23437eee5272f3c2c43bbeb1badb7f0ed71",
+    "agent-economy-mp07-window-bid-reviewfix2-format.log": "eee76f865de5a9f2456950f710ae5d5f9b5bd0ea02aa54f614c5eed6642a0bfd",
+    "agent-economy-mp07-window-bid-reviewfix2-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-window-bid-reviewfix2-source-sha256.log": "370815397d29f2c25ce0f7c69d07930d946c01c881a48eea5fbcea5dc499d4b2",
+    "agent-economy-mp07-window-bid-ruff-2.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-window-bid-ruff.log": "0ef511c6ccaf4d6742524b5560bf61d36295422b5c8267c331aa049c0480c221",
+    "agent-economy-mp07-window-bid-untouched.log": "449ae110fc43eb964b8d35153ee33fe60b1b0f588083fbc96448b1e3ed461c34"
+  },
+  "source_sha256": {
+    "services/task-board/tests/integration/test_mp07_acceptance_window.py": "688eb993c73cae1e1e69b1a8717b68d1a6670d77d16824d4cc00402d19d7f011",
+    "services/task-board/tests/integration/test_mp07_bid_admission_races.py": "4e0e71810d0fb99a1b9cd707b939810082efef5aeaf0fb72ee9e0f98dbda08b3",
+    "services/task-board/tests/integration/test_mp07_accept_expiry_race.py": "92fc919d802dbf718a2e705656d399b2708d8898c4fdd2228ab83980a69dcb9f",
+    "docs/plans/2026-10-18-mp07-window-bid-race-reconciliation.md": "81322492bbbc4ab2037e3fc58b35b0724cadac211bebb44ffd75c5f10bbcf66a"
+  },
+  "run_results": [
+    "Untouched17 failures occurred at the removed clock seam before target assertions; fixture drift, not new product-red evidence.",
+    "Intermediate12 passes/5 failures were fixture-contract mismatches. Initial and repeat17-pass runs preceded independent review.",
+    "Review requested explicit v2-only scope and stronger escrow/balance/transaction assertions. First follow-up had13 passes/4 query errors because ledger reference is escrow_id, while receipt source_reference carries Board intent; no production failure.",
+    "Corrected strengthened author17 passes and parent final17 passes; exact refund receipt/leg/transaction/escrow/balance/completed operation/event asserted. Smaller runs overlap."
+  ],
+  "independent_review": {
+    "agent": "/root/mp07_board_rollout_review",
+    "verdict": "APPROVE after closing both evidence gaps and stale module descriptions"
+  },
+  "limitations": [
+    "These17 cases execute native timing-v2 only; actual migration-v1 proof remains separate.",
+    "No root gate, MP07 closure or full-goal completion."
+  ]
+}

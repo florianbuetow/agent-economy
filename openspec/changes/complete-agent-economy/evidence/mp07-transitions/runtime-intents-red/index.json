@@ -1,0 +1,238 @@
+{
+  "status": "Implementation released after required95-case parent red; not implemented or green proof.",
+  "red_classification": "One absent module failure and94 required downstream setup errors. No downstream behavioral assertion executed. Historical skip-gated and incorrect-fixture drafts are superseded, preserved only as history.",
+  "artifacts": [
+    {
+      "path": "agent-economy-mp07-runtime-intents-codespell.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-codespell.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-format.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-pre-red.log",
+      "sha256": "d5c09a7714b77c91e6493660fab2e2f8bd5b2731ae168b0c99eda057c350f533"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-pre-sha.log",
+      "sha256": "801f1823fb444012baf385d6af70ac26230b359e2d63d77a212f13278085ef00"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-pre.py",
+      "sha256": "5a8a2d48c5b03669b3d4e0884066118b7ce6f6d1561fd774c381df8eba232a34"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-pyright.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-red.log",
+      "sha256": "f89beb2d0edb0c8b1494b193faad86499095f84661ebe1d9c08b57d0d8f835e0"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-ruff-attempt.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-ruff.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-sha.log",
+      "sha256": "abf6c25c51c8ecde5711bc3754bf5d5285260eeb69c0720de6a0ae7f6dd5d692"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-finalconsistency-suppressions.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-format-final.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-format.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-parent-red.log",
+      "sha256": "a0d1b6c7caac41d6cd7060a36f06198e055bd023481360ab889d375cf1fd7e7e"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-pyright.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-red-final.log",
+      "sha256": "cf798d59f15e551eebdc632e7dac612b7065e4348b319e100c032db264f47bdd"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-red.log",
+      "sha256": "a80f7378ef790285487b3f8aea4d8c8bd92f6bef1b1fd18aedca6851ce5adc6b"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-codespell-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-codespell.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-format-final.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-format.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-pyright-final.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-pyright.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-red-final.log",
+      "sha256": "d194ec92c85179cbb22e15ebc30cc130a161ebf5935abae5fafac983f9053402"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-red.log",
+      "sha256": "2f607ae4da7cdbd38a6ecf7fdb065d12d2e3cdec36a0700e790028e162dcb126"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-ruff-attempt.log",
+      "sha256": "7494a075db5172b1c9042b8c9bf540fb4ae6ab99f81f861c3a17c7c3fce57c12"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-ruff-final.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-ruff.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-ruff2.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-sha256-final.log",
+      "sha256": "668dd9832fa05a721a15a7a08552bbf04fccbaff540751bb74d44d8b2d0e8aee"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-suppressions-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-required-suppressions.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-codespell-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-codespell.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-format-final.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-format.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-pre-red.log",
+      "sha256": "d194ec92c85179cbb22e15ebc30cc130a161ebf5935abae5fafac983f9053402"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-pre-sha.log",
+      "sha256": "7571c9332b17484c7898175672217a4d341d2454510262000c047f29e034aa50"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-pre.py",
+      "sha256": "c234ccb3077a68b0b3988956b0d8d73f8bbcf1637f33183d7f0b1905367121cd"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-pyright-final.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-pyright.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-red-final.log",
+      "sha256": "d5c09a7714b77c91e6493660fab2e2f8bd5b2731ae168b0c99eda057c350f533"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-red.log",
+      "sha256": "277ad6d5adee64b2855f76044fdc419a9135887d611facaaf041e16d8027d3c8"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-ruff-attempt.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-ruff-final.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-ruff.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-sha-final.log",
+      "sha256": "1276f95deb77df17683061967cc42aa6d298fd6bc88caad1a9b3b71df80ddd38"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-sha.log",
+      "sha256": "537ac8aabfca8c4dd347d29839ddf5aa6650d210ee444c5bce24241553fe476b"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-suppressions-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-review2-suppressions.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ruff-final.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ruff.log",
+      "sha256": "5d8c243943e71967af6f5d5ce5c550bfcb513484d30094c68236a90bc05a85e0"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-sha256-final.log",
+      "sha256": "8994da6e2f7407d3da3066a32d5550a3f0e7f5c5170b1ef15a463f95f583ec63"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-suppressions-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-suppressions.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "final-test_runtime_intents.py",
+      "sha256": "e7a03a4c9ac8eee04c8726a3998c173be7988051408f718ff18ef0ba882c04b7"
+    },
+    {
+      "path": "final-2026-10-18-mp07-runtime-intent-tests.md",
+      "sha256": "709dc532d3cbf80a7d4f2c4f06cdd7a0b744c54f59fac33f5c4e57aec0d93fdb"
+    }
+  ]
+}

@@ -5,20 +5,58 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
 from court_service.services.errors import DuplicateDisputeError
 
+if TYPE_CHECKING:
+    from service_auth.gateway import GatewayRequestSigner
+
 
 class DisputeDbClient:
     """Dispute storage backed by the DB Gateway HTTP API."""
 
-    def __init__(self, base_url: str, timeout_seconds: int) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: int,
+        signer: GatewayRequestSigner,
+    ) -> None:
         self._client = httpx.Client(
             base_url=base_url,
             timeout=httpx.Timeout(timeout_seconds),
+        )
+        self._signer = signer
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        action: str,
+        json: dict[str, Any] | None,
+        params: dict[str, Any] | None,
+    ) -> httpx.Response:
+        request = self._client.build_request(method, path, json=json, params=params)
+        return self._client.send(self._signer.sign_request(request, action=action))
+
+    def _court_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, Any] | None,
+        params: dict[str, Any] | None,
+    ) -> httpx.Response:
+        access = "read" if method == "GET" else "write"
+        return self._request(
+            method,
+            path,
+            action=f"gateway.court.{access}",
+            json=json,
+            params=params,
         )
 
     def _now_iso(self) -> str:
@@ -40,7 +78,7 @@ class DisputeDbClient:
             return {}
 
     def _get_claim(self, dispute_id: str) -> dict[str, Any] | None:
-        response = self._client.get(f"/court/claims/{dispute_id}")
+        response = self._court_request("GET", f"/court/claims/{dispute_id}", json=None, params=None)
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -49,7 +87,9 @@ class DisputeDbClient:
         return self._json(response)
 
     def _get_rebuttal(self, dispute_id: str) -> dict[str, Any] | None:
-        response = self._client.get(f"/court/claims/{dispute_id}/rebuttal")
+        response = self._court_request(
+            "GET", f"/court/claims/{dispute_id}/rebuttal", json=None, params=None
+        )
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -58,7 +98,9 @@ class DisputeDbClient:
         return self._json(response)
 
     def _get_ruling(self, dispute_id: str) -> dict[str, Any] | None:
-        response = self._client.get(f"/court/rulings/{dispute_id}")
+        response = self._court_request(
+            "GET", f"/court/rulings/{dispute_id}", json=None, params=None
+        )
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -68,7 +110,13 @@ class DisputeDbClient:
 
     def _get_escrow_id(self, task_id: str) -> str:
         """Look up escrow_id from the board task record."""
-        response = self._client.get(f"/board/tasks/{task_id}")
+        response = self._request(
+            "GET",
+            f"/board/tasks/{task_id}",
+            action="gateway.board.task.read",
+            json=None,
+            params=None,
+        )
         if response.status_code != 200:
             return ""
         data = self._json(response)
@@ -174,7 +222,7 @@ class DisputeDbClient:
             },
         }
 
-        response = self._client.post("/court/claims", json=payload)
+        response = self._court_request("POST", "/court/claims", json=payload, params=None)
         if response.status_code == 409:
             raise DuplicateDisputeError(f"A dispute already exists for task_id={task_id}")
         if response.status_code not in (200, 201):
@@ -217,15 +265,27 @@ class DisputeDbClient:
             },
         }
 
-        response = self._client.post("/court/rebuttals", json=payload)
+        response = self._court_request("POST", "/court/rebuttals", json=payload, params=None)
         if response.status_code not in (200, 201):
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
 
     def set_status(self, dispute_id: str, status: str) -> None:
-        response = self._client.post(
+        changed_at = self._now_iso()
+        response = self._court_request(
+            "POST",
             f"/court/claims/{dispute_id}/status",
-            json={"status": status},
+            json={
+                "status": status,
+                "event": {
+                    "event_source": "court",
+                    "event_type": "claim.status_changed",
+                    "timestamp": changed_at,
+                    "summary": f"Claim {dispute_id} moved to {status}",
+                    "payload": json.dumps({"claim_id": dispute_id, "status": status}),
+                },
+            },
+            params=None,
         )
         if response.status_code == 404:
             return
@@ -239,7 +299,21 @@ class DisputeDbClient:
 
     def _delete_ruling(self, dispute_id: str) -> None:
         """Delete the ruling record for a dispute (removes votes too)."""
-        response = self._client.delete(f"/court/rulings/{dispute_id}")
+        deleted_at = self._now_iso()
+        response = self._court_request(
+            "DELETE",
+            f"/court/rulings/{dispute_id}",
+            json={
+                "event": {
+                    "event_source": "court",
+                    "event_type": "ruling.deleted",
+                    "timestamp": deleted_at,
+                    "summary": f"Ruling for claim {dispute_id} withdrawn",
+                    "payload": json.dumps({"claim_id": dispute_id}),
+                },
+            },
+            params=None,
+        )
         if response.status_code not in (200, 404):
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -275,7 +349,7 @@ class DisputeDbClient:
             },
         }
 
-        response = self._client.post("/court/rulings", json=payload)
+        response = self._court_request("POST", "/court/rulings", json=payload, params=None)
         if response.status_code not in (200, 201):
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -285,7 +359,7 @@ class DisputeDbClient:
         if status is not None:
             params["status"] = status
 
-        response = self._client.get("/court/claims", params=params)
+        response = self._court_request("GET", "/court/claims", json=None, params=params)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -317,14 +391,14 @@ class DisputeDbClient:
         return disputes
 
     def count_disputes(self) -> int:
-        response = self._client.get("/court/claims/count")
+        response = self._court_request("GET", "/court/claims/count", json=None, params=None)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
         return int(self._json(response)["count"])
 
     def count_active(self) -> int:
-        response = self._client.get("/court/claims/count-active")
+        response = self._court_request("GET", "/court/claims/count-active", json=None, params=None)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)

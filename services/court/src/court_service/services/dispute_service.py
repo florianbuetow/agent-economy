@@ -11,7 +11,7 @@ from court_service.services.errors import DuplicateDisputeError
 from court_service.services.ruling_orchestrator import RulingOrchestrator
 
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
+    from service_auth.platform import PlatformAgent
 
     from court_service.judges.base import Judge
     from court_service.services.protocol import DisputeStorageInterface
@@ -39,6 +39,12 @@ class DisputeService:
                 raise TypeError(msg)
             orchestrator_arg = kwargs.pop("orchestrator")
 
+        feedback_extremely_satisfied_cutoff = kwargs.pop(
+            "feedback_extremely_satisfied_cutoff", None
+        )
+        feedback_satisfied_cutoff = kwargs.pop("feedback_satisfied_cutoff", None)
+        feedback_comment_max_length = kwargs.pop("feedback_comment_max_length", None)
+
         if len(kwargs) > 0:
             unknown = ", ".join(sorted(kwargs))
             msg = f"Unexpected keyword argument(s): {unknown}"
@@ -46,7 +52,22 @@ class DisputeService:
 
         self._store = store
         if orchestrator_arg is None:
-            self._orchestrator = RulingOrchestrator(store)
+            if (
+                not isinstance(feedback_extremely_satisfied_cutoff, int)
+                or not isinstance(feedback_satisfied_cutoff, int)
+                or not isinstance(feedback_comment_max_length, int)
+            ):
+                msg = (
+                    "feedback_extremely_satisfied_cutoff, feedback_satisfied_cutoff, and "
+                    "feedback_comment_max_length are required when orchestrator is not provided"
+                )
+                raise TypeError(msg)
+            self._orchestrator = RulingOrchestrator(
+                store,
+                feedback_extremely_satisfied_cutoff=feedback_extremely_satisfied_cutoff,
+                feedback_satisfied_cutoff=feedback_satisfied_cutoff,
+                feedback_comment_max_length=feedback_comment_max_length,
+            )
         elif isinstance(orchestrator_arg, RulingOrchestrator):
             self._orchestrator = orchestrator_arg
         else:
@@ -125,6 +146,28 @@ class DisputeService:
         """Evaluate dispute via judges and commit ruled outcome with side-effects."""
         return await self._orchestrator.execute_ruling(
             dispute_id=dispute_id,
+            judges=judges,
+            task_data=task_data,
+            platform_agent=platform_agent,
+        )
+
+    def begin_ruling(self, dispute_id: str) -> dict[str, Any]:
+        """Validate preconditions and mark the dispute ``judging`` before any
+        Task Board call that could reenter this same dispute's ruling trigger."""
+        return self._orchestrator.begin_ruling(dispute_id)
+
+    async def finish_ruling(
+        self,
+        dispute_id: str,
+        dispute: dict[str, Any],
+        judges: list[Judge],
+        task_data: dict[str, Any],
+        platform_agent: PlatformAgent,
+    ) -> dict[str, Any]:
+        """Evaluate judges and commit the ruled outcome; ``dispute`` is already ``judging``."""
+        return await self._orchestrator.finish_ruling(
+            dispute_id=dispute_id,
+            dispute=dispute,
             judges=judges,
             task_data=task_data,
             platform_agent=platform_agent,

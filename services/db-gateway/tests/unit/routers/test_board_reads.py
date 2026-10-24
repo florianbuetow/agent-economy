@@ -7,12 +7,20 @@ from uuid import uuid4
 
 import pytest
 
+from db_gateway_service import task_time
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.services.db_reader import DbReader
 from tests.conftest import make_event
+from tests.fakes.native_board_history import publish_task
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
+
+
+@pytest.fixture(autouse=True)
+def _task_business_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    now_us = task_time.parse_utc_text_to_epoch_us("2026-02-28T15:00:00Z")
+    monkeypatch.setattr(task_time, "utc_now_us", lambda: now_us)
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +67,7 @@ def _setup_funded_account(
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance > 0:
+        data["operation_id"] = f"op-{uuid4()}"
         data["initial_credit"] = {
             "tx_id": f"tx-{uuid4()}",
             "amount": balance,
@@ -69,54 +78,30 @@ def _setup_funded_account(
     return aid
 
 
-def _lock_escrow(
-    client: TestClient,
-    payer_id: str,
-    amount: int = 100,
-    task_id: str | None = None,
-) -> tuple[str, str]:
-    tid = task_id or f"t-{uuid4()}"
-    eid = f"esc-{uuid4()}"
-    client.post(
-        "/bank/escrow/lock",
-        json={
-            "escrow_id": eid,
-            "payer_account_id": payer_id,
-            "amount": amount,
-            "task_id": tid,
-            "created_at": "2026-02-28T10:10:00Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=tid),
-        },
-    )
-    return eid, tid
-
-
 def _create_task(
     client: TestClient,
     poster_id: str | None = None,
 ) -> tuple[str, str, str]:
     """Create a full task with all prerequisites. Returns (task_id, poster_id, escrow_id)."""
     pid = poster_id or _setup_funded_account(client)
-    eid, tid = _lock_escrow(client, pid)
-    client.post(
-        "/board/tasks",
-        json={
-            "task_id": tid,
-            "poster_id": pid,
-            "title": "Test Task",
-            "spec": "Build a login page",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "deadline_seconds": 172800,
-            "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:00:00Z",
-            "escrow_id": eid,
-            "created_at": "2026-02-28T10:15:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=tid),
-        },
+    tid = f"t-{uuid4()}"
+    eid = f"esc-{uuid4()}"
+    lock_timestamp = task_time.epoch_us_to_utc_text(task_time.utc_now_us())
+    response = publish_task(
+        client,
+        task_id=tid,
+        poster_id=pid,
+        escrow_id=eid,
+        title="Test Task",
+        spec="Build a login page",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=172800,
+        review_deadline_seconds=43200,
+        lock_timestamp=lock_timestamp,
     )
+    assert response.status_code == 201, response.text
     return tid, pid, eid
 
 
@@ -127,18 +112,56 @@ def _submit_bid(
     bid_id: str | None = None,
 ) -> str:
     bid = bid_id or f"bid-{uuid4()}"
-    client.post(
-        "/board/bids",
+    response = client.post(
+        "/board/task-operations",
         json={
-            "bid_id": bid,
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid4()}",
             "task_id": task_id,
-            "bidder_id": bidder_id,
-            "proposal": "I will build it",
-            "submitted_at": "2026-02-28T11:00:00Z",
-            "event": make_event(source="board", event_type="bid.submitted", task_id=task_id),
+            "command": "submit_bid",
+            "expected_status": "open",
+            "expected_lifecycle_version": 0,
+            "actor_kind": "agent",
+            "actor_id": bidder_id,
+            "arguments": {"bid_id": bid, "bidder_id": bidder_id, "amount": 50},
         },
     )
+    assert response.status_code == 200, response.text
+    assert response.json()["operation_state"] == "completed"
     return bid
+
+
+def _accept_task(
+    client: TestClient,
+    *,
+    task_id: str,
+    poster_id: str,
+    escrow_id: str,
+    worker_id: str,
+    bid_id: str,
+) -> None:
+    response = client.post(
+        "/board/task-operations",
+        json={
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid4()}",
+            "task_id": task_id,
+            "command": "accept_bid",
+            "expected_status": "open",
+            "expected_lifecycle_version": 0,
+            "actor_kind": "agent",
+            "actor_id": poster_id,
+            "arguments": {
+                "bid_id": bid_id,
+                "worker_id": worker_id,
+                "escrow_id": escrow_id,
+                "reward": 100,
+                "bid_amount": 50,
+            },
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["operation_state"] == "completed"
 
 
 def _record_asset(
@@ -152,6 +175,11 @@ def _record_asset(
     client.post(
         "/board/assets",
         json={
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
             "asset_id": aid,
             "task_id": task_id,
             "uploader_id": uploader_id,
@@ -260,9 +288,19 @@ class TestBoardReads:
 
     def test_get_assets_for_task(self, app_with_writer: TestClient) -> None:
         """GET /board/tasks/{id}/assets returns assets."""
-        tid, pid, _eid = _create_task(app_with_writer)
-        _record_asset(app_with_writer, tid, pid, filename="file1.zip")
-        _record_asset(app_with_writer, tid, pid, filename="file2.zip")
+        tid, pid, eid = _create_task(app_with_writer)
+        worker_id = _register_agent(app_with_writer, name="Worker")
+        bid_id = _submit_bid(app_with_writer, tid, worker_id)
+        _accept_task(
+            app_with_writer,
+            task_id=tid,
+            poster_id=pid,
+            escrow_id=eid,
+            worker_id=worker_id,
+            bid_id=bid_id,
+        )
+        _record_asset(app_with_writer, tid, worker_id, filename="file1.zip")
+        _record_asset(app_with_writer, tid, worker_id, filename="file2.zip")
         _wire_db_reader()
 
         response = app_with_writer.get(f"/board/tasks/{tid}/assets")

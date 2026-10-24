@@ -1,0 +1,124 @@
+......................FF...F..                                           [100%]
+=================================== FAILURES ===================================
+_ test_court_narrow_grant_denies_non_singular_board_task_reads[/board/tasks/count-gateway.board.task.read] _
+
+path = '/board/tasks/count', action = 'gateway.board.task.read'
+app_with_writer = <tests.unit.conftest._GatewayTestClient object at 0x10cba18c0>
+gateway_test_signers = {'bank': <service_auth.gateway.GatewayRequestSigner object at 0x10cbb2e70>, 'board': <service_auth.gateway.GatewayRequ...questSigner object at 0x10cbb2d50>, 'identity': <service_auth.gateway.GatewayRequestSigner object at 0x10cbb37d0>, ...}
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        ("path", "action"),
+        [
+            ("/board/tasks/count", "gateway.board.task.read"),
+            ("/board/tasks/count-by-status", "gateway.board.task.read"),
+            ("/board/tasks", "gateway.board.read"),
+            ("/board/tasks/task-id/bids", "gateway.board.read"),
+            ("/board/tasks/task-id/assets", "gateway.board.read"),
+        ],
+    )
+    def test_court_narrow_grant_denies_non_singular_board_task_reads(
+        path: str,
+        action: str,
+        app_with_writer: TestClient,
+        gateway_test_signers: dict[str, GatewayRequestSigner],
+    ) -> None:
+        authorization = _signed_authorization(
+            gateway_test_signers["court"],
+            "GET",
+            path,
+            action=action,
+        )
+    
+        response = app_with_writer.get(path, headers={"Authorization": authorization}, auth=None)
+    
+>       assert response.status_code == 403
+E       assert 503 == 403
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:488: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-15 20:13:16", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "service_not_ready", "status_code": 503, "path": "/board/tasks/count"}}
+_ test_court_narrow_grant_denies_non_singular_board_task_reads[/board/tasks/count-by-status-gateway.board.task.read] _
+
+path = '/board/tasks/count-by-status', action = 'gateway.board.task.read'
+app_with_writer = <tests.unit.conftest._GatewayTestClient object at 0x10cba2e00>
+gateway_test_signers = {'bank': <service_auth.gateway.GatewayRequestSigner object at 0x10cbb32f0>, 'board': <service_auth.gateway.GatewayRequ...questSigner object at 0x10cc34c50>, 'identity': <service_auth.gateway.GatewayRequestSigner object at 0x10cbb36b0>, ...}
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        ("path", "action"),
+        [
+            ("/board/tasks/count", "gateway.board.task.read"),
+            ("/board/tasks/count-by-status", "gateway.board.task.read"),
+            ("/board/tasks", "gateway.board.read"),
+            ("/board/tasks/task-id/bids", "gateway.board.read"),
+            ("/board/tasks/task-id/assets", "gateway.board.read"),
+        ],
+    )
+    def test_court_narrow_grant_denies_non_singular_board_task_reads(
+        path: str,
+        action: str,
+        app_with_writer: TestClient,
+        gateway_test_signers: dict[str, GatewayRequestSigner],
+    ) -> None:
+        authorization = _signed_authorization(
+            gateway_test_signers["court"],
+            "GET",
+            path,
+            action=action,
+        )
+    
+        response = app_with_writer.get(path, headers={"Authorization": authorization}, auth=None)
+    
+>       assert response.status_code == 403
+E       assert 503 == 403
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:488: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-15 20:13:16", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "service_not_ready", "status_code": 503, "path": "/board/tasks/count-by-status"}}
+_____________ test_new_route_without_explicit_policy_fails_closed ______________
+
+app_with_writer = <tests.unit.conftest._GatewayTestClient object at 0x10cba0380>
+gateway_test_signers = {'bank': <service_auth.gateway.GatewayRequestSigner object at 0x10cbdd730>, 'board': <service_auth.gateway.GatewayRequ...questSigner object at 0x10cbdddf0>, 'identity': <service_auth.gateway.GatewayRequestSigner object at 0x10cbdda30>, ...}
+
+    @pytest.mark.unit
+    def test_new_route_without_explicit_policy_fails_closed(
+        app_with_writer: TestClient,
+        gateway_test_signers: dict[str, GatewayRequestSigner],
+    ) -> None:
+        app_with_writer.app.add_api_route(
+            "/new-domain/probe",
+            lambda: Response(status_code=204),
+            methods=["GET"],
+        )
+        authorization = _signed_authorization(
+            gateway_test_signers["identity"],
+            "GET",
+            "/new-domain/probe",
+            action="gateway.identity.read",
+        )
+    
+        response = app_with_writer.get(
+            "/new-domain/probe",
+            headers={"Authorization": authorization},
+            auth=None,
+        )
+    
+>       assert response.status_code == 403
+E       assert 204 == 403
+E        +  where 204 = <Response [204 No Content]>.status_code
+
+tests/unit/test_mp02_gateway_authority.py:515: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp02_gateway_authority.py::test_court_narrow_grant_denies_non_singular_board_task_reads[/board/tasks/count-gateway.board.task.read]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_court_narrow_grant_denies_non_singular_board_task_reads[/board/tasks/count-by-status-gateway.board.task.read]
+FAILED tests/unit/test_mp02_gateway_authority.py::test_new_route_without_explicit_policy_fails_closed
+3 failed, 27 passed, 1 warning in 0.76s

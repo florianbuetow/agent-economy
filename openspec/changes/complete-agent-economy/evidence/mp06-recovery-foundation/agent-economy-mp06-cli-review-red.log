@@ -1,0 +1,58 @@
+.FF.                                                                     [100%]
+=================================== FAILURES ===================================
+_ test_empty_normalized_command_is_usage_error_before_runtime_creation[arguments1] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x106cb5cd0>
+arguments = ['--']
+
+    @pytest.mark.parametrize("arguments", [[], ["--"]])
+    def test_empty_normalized_command_is_usage_error_before_runtime_creation(
+        monkeypatch: pytest.MonkeyPatch, arguments: list[str],
+    ) -> None:
+        monkeypatch.setattr("sys.argv", ["isolated_test_runtime.py", *arguments])
+        monkeypatch.setattr(
+            runtime_module.IsolatedRuntime, "create",
+            lambda **_kwargs: pytest.fail("created runtime for an empty command"),
+        )
+>       assert runtime_module.main() == 2
+               ^^^^^^^^^^^^^^^^^^^^^
+
+../../tests/runtime/test_recovery_preparation_cli.py:174: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../scripts/isolated_test_runtime.py:1172: in main
+    runtime = IsolatedRuntime.create(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_kwargs = {'artifacts_root': None, 'repo_root': PosixPath('/Users/flo/Developer/github/agent-economy'), 'services': ('db-gateway', 'identity', 'central-bank', 'task-board', 'reputation', 'court', ...)}
+
+>       lambda **_kwargs: pytest.fail("created runtime for an empty command"),
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+E   Failed: created runtime for an empty command
+
+../../tests/runtime/test_recovery_preparation_cli.py:172: Failed
+_______ test_repeated_completed_stop_keeps_published_manifest_unchanged ________
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-1103/test_repeated_completed_stop_k0')
+
+    def test_repeated_completed_stop_keeps_published_manifest_unchanged(tmp_path: Path) -> None:
+        runtime = IsolatedRuntime.create(
+            repo_root=REPO_ROOT, artifacts_root=tmp_path, services=("db-gateway",),
+        )
+        runtime.stop()
+        manifest = runtime.run_dir / "runtime.json"
+        before = manifest.stat()
+        contents = manifest.read_bytes()
+        runtime.stop()
+        after = manifest.stat()
+>       assert (after.st_dev, after.st_ino, after.st_mtime_ns) == (before.st_dev, before.st_ino, before.st_mtime_ns)
+E       assert (16777234, 32...1505640708251) == (16777234, 32...1505640160829)
+E         
+E         At index 1 diff: 325925795 != 325925794
+E         Use -v to get more diff
+
+../../tests/runtime/test_runtime_startup_evidence.py:167: AssertionError
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_recovery_preparation_cli.py::test_empty_normalized_command_is_usage_error_before_runtime_creation[arguments1]
+FAILED ../../tests/runtime/test_runtime_startup_evidence.py::test_repeated_completed_stop_keeps_published_manifest_unchanged
+2 failed, 2 passed, 18 deselected in 0.45s

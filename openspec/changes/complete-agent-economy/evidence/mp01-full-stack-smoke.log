@@ -1,0 +1,21 @@
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-6efeaa4baa244e708977c4b9cc0b1cb7-xobgnngp
+warning: `VIRTUAL_ENV=/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: POST http://127.0.0.1:65148/agents/register "HTTP/1.1 409 Conflict"
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65148/agents "HTTP/1.1 200 OK"
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65148/agents/a-8056c10e-ec6a-422d-a6ac-b359103e7190 "HTTP/1.1 200 OK"
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65148/agents/a-8056c10e-ec6a-422d-a6ac-b359103e7190 "HTTP/1.1 200 OK"
+2026-10-15T16:46:06 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-8056c10e-ec6a-422d-a6ac-b359103e7190
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: POST http://127.0.0.1:65148/agents/register "HTTP/1.1 409 Conflict"
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65148/agents "HTTP/1.1 200 OK"
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65148/agents/a-8056c10e-ec6a-422d-a6ac-b359103e7190 "HTTP/1.1 200 OK"
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65148/agents/a-ec95a2a8-08d4-428a-9a9a-80640c91a3a4 "HTTP/1.1 200 OK"
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65148/agents/a-ec95a2a8-08d4-428a-9a9a-80640c91a3a4 "HTTP/1.1 200 OK"
+2026-10-15T16:46:06 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-ec95a2a8-08d4-428a-9a9a-80640c91a3a4
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: POST http://127.0.0.1:65149/accounts "HTTP/1.1 201 Created"
+2026-10-15T16:46:06 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: POST http://127.0.0.1:65149/accounts/a-ec95a2a8-08d4-428a-9a9a-80640c91a3a4/credit "HTTP/1.1 200 OK"
+2026-10-15T16:46:06 [INFO] treasury_provision_cli: Treasury provisioned (tx_id=tx-ccc06f96-0e64-477b-b0b6-417ee267ff4e, balance_after=1000000)
+2026-10-15T16:46:06 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65149/accounts/a-ec95a2a8-08d4-428a-9a9a-80640c91a3a4 "HTTP/1.1 200 OK"
+agent_id=a-ec95a2a8-08d4-428a-9a9a-80640c91a3a4
+genesis_amount=1000000
+balance=1000000

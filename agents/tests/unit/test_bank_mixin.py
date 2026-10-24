@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock
 
@@ -11,6 +13,58 @@ from base_agent.agent import BaseAgent
 
 if TYPE_CHECKING:
     from base_agent.config import AgentConfig
+
+_LOCK_OPERATION_ID = "op-00000000-0000-4000-8000-000000000041"
+
+
+def _lock_response() -> dict[str, object]:
+    canonical_request = {
+        "request_version": 1,
+        "operation_kind": "escrow_lock",
+        "payer_account_id": "a-123",
+        "task_id": "T-123",
+        "amount": 10,
+    }
+    return {
+        "outcome": "native_receipt",
+        "receipt": {
+            "receipt_version": 1,
+            "operation_id": _LOCK_OPERATION_ID,
+            "operation_kind": "escrow_lock",
+            "request_sha256": hashlib.sha256(
+                json.dumps(
+                    canonical_request,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode()
+            ).hexdigest(),
+            "source_reference": "T-123",
+            "committed_at": "2026-10-17T14:00:00Z",
+            "event_id": 1,
+            "escrow_id": "esc-1",
+            "result": {"escrow_status_at_commit": "locked"},
+            "legs": [
+                {
+                    "role": "payer",
+                    "account_id": "a-123",
+                    "direction": "debit",
+                    "amount": 10,
+                    "transaction_id": "tx-lock",
+                    "balance_after": 90,
+                }
+            ],
+        },
+        "current_escrow": {
+            "escrow_id": "esc-1",
+            "payer_account_id": "a-123",
+            "task_id": "T-123",
+            "amount": 10,
+            "status": "locked",
+            "created_at": "2026-10-17T14:00:00Z",
+            "resolved_at": None,
+        },
+    }
 
 
 @pytest.mark.unit
@@ -32,7 +86,11 @@ class TestGetBalance:
         result = await agent.get_balance()
 
         assert result == balance_response
-        agent._auth_header.assert_called_once_with({"action": "get_balance", "account_id": "a-123"})
+        agent._auth_header.assert_called_once_with(
+            {"action": "get_balance", "account_id": "a-123"},
+            audience="central-bank",
+            resource="GET /accounts/a-123",
+        )
         agent._request.assert_awaited_once_with(
             "GET",
             f"{sample_config.bank_url}/accounts/a-123",
@@ -68,7 +126,9 @@ class TestGetTransactions:
 
         assert result == transactions_response["transactions"]
         agent._auth_header.assert_called_once_with(
-            {"action": "get_transactions", "account_id": "a-123"}
+            {"action": "get_transactions", "account_id": "a-123"},
+            audience="central-bank",
+            resource="GET /accounts/a-123/transactions",
         )
         agent._request.assert_awaited_once_with(
             "GET",
@@ -85,25 +145,27 @@ class TestLockEscrow:
     async def test_lock_escrow_success(self, sample_config: AgentConfig) -> None:
         agent = BaseAgent(config=sample_config)
         agent.agent_id = "a-123"
-        escrow_response = {
-            "escrow_id": "esc-1",
-            "amount": 10,
-            "task_id": "T-123",
-            "status": "locked",
-        }
+        escrow_response = _lock_response()
         agent._sign_jws = Mock(return_value="test-jws-token")
         agent._request = AsyncMock(return_value=escrow_response)
 
-        result = await agent.lock_escrow(amount=10, task_id="T-123")
+        result = await agent.lock_escrow(
+            amount=10,
+            task_id="T-123",
+            operation_id=_LOCK_OPERATION_ID,
+        )
 
         assert result == escrow_response
         agent._sign_jws.assert_called_once_with(
             {
                 "action": "escrow_lock",
+                "operation_id": _LOCK_OPERATION_ID,
                 "agent_id": "a-123",
                 "amount": 10,
                 "task_id": "T-123",
-            }
+            },
+            audience="central-bank",
+            resource="POST /escrow/lock",
         )
         agent._request.assert_awaited_once_with(
             "POST",

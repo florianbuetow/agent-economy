@@ -7,9 +7,12 @@ Every value must be explicitly specified or startup fails.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from service_auth.gateway import GatewaySignerConfig
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
@@ -18,9 +21,6 @@ from service_commons.config import (
 from service_commons.config import (
     get_config_path as resolve_config_path,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class ServiceConfig(BaseModel):
@@ -60,7 +60,46 @@ class IdentityConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     base_url: str
+    get_agent_path: str
     verify_jws_path: str
+    timeout_seconds: int = Field(strict=True, gt=0)
+
+    @field_validator("base_url")
+    @classmethod
+    def base_url_must_be_http_url(cls, value: str) -> str:
+        try:
+            parsed = urlsplit(value)
+            hostname = parsed.hostname
+        except ValueError as exc:
+            msg = "identity.base_url must be a non-blank HTTP(S) URL"
+            raise ValueError(msg) from exc
+        if (
+            value != value.strip()
+            or parsed.scheme not in {"http", "https"}
+            or hostname is None
+            or not hostname
+            or parsed.query
+            or parsed.fragment
+        ):
+            msg = "identity.base_url must be a non-blank HTTP(S) URL"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("get_agent_path", "verify_jws_path")
+    @classmethod
+    def endpoint_path_must_be_absolute(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        if (
+            value != value.strip()
+            or not value.startswith("/")
+            or value.startswith("//")
+            or parsed.path != value
+            or parsed.query
+            or parsed.fragment
+        ):
+            msg = "identity endpoint paths must start with one '/'"
+            raise ValueError(msg)
+        return value
 
 
 class CentralBankConfig(BaseModel):
@@ -80,7 +119,7 @@ class PlatformConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     agent_id: str
     private_key_path: str | None = None
-    agent_config_path: str | None = None
+    agent_config_path: str
 
 
 class AssetsConfig(BaseModel):
@@ -92,6 +131,18 @@ class AssetsConfig(BaseModel):
     max_files_per_task: int
 
 
+class AssetUploadConfig(BaseModel):
+    """Explicit multipart streaming and display-metadata limits."""
+
+    model_config = ConfigDict(extra="forbid")
+    stream_chunk_bytes: int = Field(strict=True, gt=0)
+    max_multipart_overhead_bytes: int = Field(strict=True, gt=0)
+    max_header_count: int = Field(strict=True, gt=0)
+    max_header_size: int = Field(strict=True, gt=0)
+    max_boundary_bytes: int = Field(strict=True, gt=0)
+    max_display_filename_utf8_bytes: int = Field(strict=True, gt=0)
+
+
 class RequestConfig(BaseModel):
     """Request handling configuration."""
 
@@ -99,24 +150,24 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
-class DeadlinesConfig(BaseModel):
-    """Optional legacy deadline defaults configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    default_bidding_seconds: int
-    default_execution_seconds: int
-    default_review_seconds: int
-
-
 class LimitsConfig(BaseModel):
-    """Optional legacy limits configuration."""
+    """Optional legacy limits configuration (asset-storage fallback only).
+
+    ``max_title_length``/``max_spec_length``/``max_reason_length`` were
+    removed (GAP-C8/exception #16, WP-11 round 2): title/spec/reason length
+    validation in task_creation.py and task_ruling.py uses hardcoded limits,
+    never these fields. ``max_file_size``/``max_assets_per_task`` are kept —
+    lifespan.py reads them as the legacy fallback when no ``assets:`` section
+    is present.
+    """
 
     model_config = ConfigDict(extra="forbid")
-    max_title_length: int
-    max_spec_length: int
-    max_reason_length: int
     max_file_size: int
     max_assets_per_task: int
+
+
+class GatewaySigningConfig(GatewaySignerConfig):
+    """Task Board's shared strict Gateway signer configuration."""
 
 
 class DbGatewayConfig(BaseModel):
@@ -125,6 +176,47 @@ class DbGatewayConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     url: str
     timeout_seconds: int
+    signing: GatewaySigningConfig
+
+
+class DeadlineEvaluationConfig(BaseModel):
+    """Periodic deadline-sweep configuration (Q-5, GAP-A3)."""
+
+    model_config = ConfigDict(extra="forbid")
+    evaluation_interval_seconds: int
+    actor_id: str = Field(strict=True)
+
+    @field_validator("actor_id")
+    @classmethod
+    def validate_actor_id(cls, value: str) -> str:
+        """Keep automatic transitions bound to the explicit configured identity."""
+        if not value.strip() or value != value.strip():
+            raise ValueError("actor_id must be a nonblank canonical string")
+        return value
+
+
+class RecoveryConfig(BaseModel):
+    """Explicit maintenance coordination configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+    maintenance_lock_path: Path
+
+
+class PostingRecoveryConfig(BaseModel):
+    """Explicit bounds for periodic publication and historical-refund recovery."""
+
+    model_config = ConfigDict(extra="forbid")
+    interval_seconds: float = Field(strict=True, gt=0, allow_inf_nan=False)
+    batch_size: int = Field(strict=True, ge=1, le=1000)
+    diagnostic_limit: int = Field(strict=True, ge=1, le=1000)
+
+
+class FinancialEffectRecoveryConfig(BaseModel):
+    """Explicit Task Board bounds for the MP-08 recovery worker."""
+
+    model_config = ConfigDict(extra="forbid")
+    interval_seconds: float = Field(strict=True, gt=0, allow_inf_nan=False)
+    max_delivery_attempts_per_cycle: int = Field(strict=True, ge=10, le=10)
 
 
 class Settings(BaseModel):
@@ -140,14 +232,18 @@ class Settings(BaseModel):
     server: ServerConfig
     logging: LoggingConfig
     database: DatabaseConfig
-    identity: IdentityConfig | None = None
+    identity: IdentityConfig
     central_bank: CentralBankConfig
     platform: PlatformConfig
     request: RequestConfig
-    db_gateway: DbGatewayConfig | None = None
+    db_gateway: DbGatewayConfig
+    asset_upload: AssetUploadConfig
     assets: AssetsConfig | None = None
-    deadlines: DeadlinesConfig | None = None
     limits: LimitsConfig | None = None
+    deadline_evaluation: DeadlineEvaluationConfig | None = None
+    recovery: RecoveryConfig
+    posting_recovery: PostingRecoveryConfig
+    financial_effect_recovery: FinancialEffectRecoveryConfig
 
 
 def get_config_path() -> Path:
@@ -159,6 +255,26 @@ def get_config_path() -> Path:
 
 
 get_settings, clear_settings_cache = create_settings_loader(Settings, get_config_path)  # nosemgrep
+
+
+def resolve_recovery_path(path: Path) -> Path:
+    """Resolve a recovery path lexically against the selected config parent."""
+    candidate = path if path.is_absolute() else get_config_path().parent / path
+    return _absolute_lexical_path(candidate)
+
+
+def _absolute_lexical_path(path: Path) -> Path:
+    candidate = path if path.is_absolute() else Path.cwd() / path
+    normalized_parts: list[str] = []
+    for part in candidate.parts:
+        if part in {candidate.anchor, "", "."}:
+            continue
+        if part == "..":
+            if normalized_parts:
+                normalized_parts.pop()
+            continue
+        normalized_parts.append(part)
+    return Path(candidate.anchor, *normalized_parts)
 
 
 def get_safe_config() -> dict[str, Any]:

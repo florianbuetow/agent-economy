@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -12,13 +11,44 @@ from httpx import ASGITransport, AsyncClient
 
 from ui_service.app import create_app
 from ui_service.config import clear_settings_cache
+from ui_service.core import lifespan as lifespan_module
 from ui_service.core.lifespan import lifespan
 from ui_service.core.state import reset_app_state
 
 pytestmark = pytest.mark.integration
 
 
-async def _create_client_with_db_path(db_path: str, web_root: str, cfg_path: str):
+class _StubUserAgent:
+    """Network-free operator for the standalone health app."""
+
+    agent_id = "a-test-ui"
+    name = "ui-user-agent"
+
+    async def register(self) -> None:
+        return None
+
+    async def close(self) -> None:
+        return None
+
+
+class _StubAgentFactory:
+    """Agent factory that cannot register against a live Identity service."""
+
+    def __init__(self, config_path: Path) -> None:
+        self._config_path = config_path
+
+    def user_agent(self, handle: str) -> _StubUserAgent:
+        assert handle == "ui-health-integration-test"
+        return _StubUserAgent()
+
+
+async def _create_client_with_db_path(
+    db_path: str,
+    web_root: str,
+    cfg_path: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    config_path = Path(cfg_path)
     config_content = f"""\
 service:
   name: "ui"
@@ -40,22 +70,35 @@ frontend:
   web_root: "{web_root}"
 request:
   max_body_size: 1572864
+recovery:
+  maintenance_lock_path: "{config_path.parent / "maintenance.lock"}"
+browser_security:
+  allowed_hosts: ["localhost"]
+  allowed_origins: ["http://localhost"]
+  csrf_header_name: "X-ATE-CSRF"
+  csrf_header_value: "local-operator"
+  content_security_policy: "default-src 'self'; script-src 'self'; object-src 'none'"
+user_agent:
+  agent_config_path: "{config_path.parent / "agent-config.yaml"}"
+  handle: "ui-health-integration-test"
 """
-    Path(cfg_path).write_text(config_content)
+    config_path.write_text(config_content)
 
-    os.environ["CONFIG_PATH"] = cfg_path
+    monkeypatch.setenv("CONFIG_PATH", str(config_path))
+    monkeypatch.setattr(lifespan_module, "AgentFactory", _StubAgentFactory)
     clear_settings_cache()
     reset_app_state()
-
-    app = create_app()
-    async with lifespan(app):
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as local_client:
-            yield local_client
-
-    reset_app_state()
-    clear_settings_cache()
-    os.environ.pop("CONFIG_PATH", None)
+    try:
+        app = create_app()
+        async with lifespan(app):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(
+                transport=transport, base_url="http://localhost"
+            ) as local_client:
+                yield local_client
+    finally:
+        reset_app_state()
+        clear_settings_cache()
 
 
 async def test_health_returns_200_with_status_ok(client):
@@ -120,7 +163,7 @@ async def test_health_types_correct(client):
     assert isinstance(data["database_readable"], bool)
 
 
-async def test_health_no_db_returns_readable_false(tmp_path):
+async def test_health_no_db_returns_readable_false(tmp_path, monkeypatch):
     web_dir = tmp_path / "web"
     web_dir.mkdir()
     (web_dir / "index.html").write_text("<html><body>Test</body></html>")
@@ -132,6 +175,7 @@ async def test_health_no_db_returns_readable_false(tmp_path):
         db_path=str(missing_db),
         web_root=str(web_dir),
         cfg_path=str(config_path),
+        monkeypatch=monkeypatch,
     ):
         response = await local_client.get("/health")
         assert response.status_code == 200

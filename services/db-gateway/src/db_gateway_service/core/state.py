@@ -6,7 +6,10 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from db_gateway_service.config import get_settings
+
 if TYPE_CHECKING:
+    from db_gateway_service.config import BoardEffectRecoveryConfig
     from db_gateway_service.services.db_reader import DbReader
     from db_gateway_service.services.db_writer import DbWriter
 
@@ -18,6 +21,11 @@ class AppState:
     start_time: datetime = field(default_factory=lambda: datetime.now(UTC))
     db_writer: DbWriter | None = None
     db_reader: DbReader | None = None
+
+    @property
+    def board_effect_recovery(self) -> BoardEffectRecoveryConfig:
+        """Expose the validated receiver policy through initialized runtime state."""
+        return get_settings().board_effect_recovery
 
     @property
     def uptime_seconds(self) -> float:

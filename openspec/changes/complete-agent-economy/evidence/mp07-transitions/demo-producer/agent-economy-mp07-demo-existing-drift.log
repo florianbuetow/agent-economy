@@ -1,0 +1,32 @@
+......................................F.........F.....F............      [100%]
+=================================== FAILURES ===================================
+_ TestDispatchUsesConfigResolvedUrls.test_do_post_task_uses_config_task_board_url _
+tests/unit/demo_replay/test_engine.py:123: in test_do_post_task_uses_config_task_board_url
+    await engine._do_post_task(MagicMock(), step)
+src/demo_replay/engine.py:308: in _do_post_task
+    terms = posting_terms(step)
+            ^^^^^^^^^^^^^^^^^^^
+src/demo_replay/task_operations.py:58: in posting_terms
+    name: posting_duration(step.get(name), name)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/demo_replay/task_operations.py:53: in posting_duration
+    return exact_integer(value, name, 1, SQLITE_MAX_INTEGER // 1_000_000)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/demo_replay/task_operations.py:42: in exact_integer
+    raise ValueError(f"{name} must be an integer between {minimum} and {maximum}")
+E   ValueError: bidding_deadline_seconds must be an integer between 1 and 9223372036854
+_______________ test_demo_bank_and_two_token_task_post_contexts ________________
+tests/unit/demo_replay/test_mp03_outbound_tokens.py:40: in test_demo_bank_and_two_token_task_post_contexts
+    await post_task(client, poster, "Title", "Spec", 10, "https://board")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: post_task() missing 3 required positional arguments: 'bidding_deadline_seconds', 'execution_deadline_seconds', and 'review_deadline_seconds'
+_______ test_post_task_derives_lock_identity_from_allocated_task_intent ________
+tests/unit/demo_replay/test_mp04_financial_intents.py:209: in test_post_task_derives_lock_identity_from_allocated_task_intent
+    await clients.post_task(http, poster, "Title", "Spec", 10, "https://board")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: post_task() missing 3 required positional arguments: 'bidding_deadline_seconds', 'execution_deadline_seconds', and 'review_deadline_seconds'
+=========================== short test summary info ============================
+FAILED tests/unit/demo_replay/test_engine.py::TestDispatchUsesConfigResolvedUrls::test_do_post_task_uses_config_task_board_url
+FAILED tests/unit/demo_replay/test_mp03_outbound_tokens.py::test_demo_bank_and_two_token_task_post_contexts
+FAILED tests/unit/demo_replay/test_mp04_financial_intents.py::test_post_task_derives_lock_identity_from_allocated_task_intent
+3 failed, 64 passed in 0.32s

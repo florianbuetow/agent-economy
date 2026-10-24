@@ -949,6 +949,38 @@ def insert_seed_data(conn: sqlite3.Connection) -> None:
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         BOARD_TASKS,
     )
+    lifecycle_versions = {
+        "open": 0,
+        "accepted": 1,
+        "submitted": 2,
+        "cancelled": 1,
+        "expired": 1,
+        "disputed": 3,
+        "approved": 3,
+        "ruled": 4,
+    }
+    legacy_contracts = [
+        (
+            task[0],
+            lifecycle_versions[task[5]],
+            1,
+            None,
+            1,
+            1,
+            None,
+            None,
+            task[4] if task[13] is not None else None,
+            0 if task[13] is not None else None,
+        )
+        for task in BOARD_TASKS
+    ]
+    conn.executemany(
+        "INSERT INTO board_task_contracts "
+        "(task_id, lifecycle_version, timing_contract_version, acceptance_window_seconds, "
+        "bidding_cutoff_us, acceptance_cutoff_us, execution_cutoff_us, review_cutoff_us, "
+        "accepted_reward, accepted_bid_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        legacy_contracts,
+    )
     conn.executemany(
         "INSERT INTO board_bids (bid_id, task_id, bidder_id, proposal, submitted_at) "
         "VALUES (?, ?, ?, ?, ?)",

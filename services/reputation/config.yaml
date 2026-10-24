@@ -19,13 +19,12 @@ platform:
 
 identity:
   base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
   verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 
 request:
   max_body_size: 1048576  # 1MB
-
-database:
-  path: "data/reputation.db"
 
 feedback:
   reveal_timeout_seconds: 86400  # 24 hours
@@ -34,3 +33,8 @@ feedback:
 db_gateway:
   url: "http://127.0.0.1:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-reputation"
+    private_key_path: "../../data/keys/gateway-reputation.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300

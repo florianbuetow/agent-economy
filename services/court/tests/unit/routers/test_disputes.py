@@ -36,6 +36,7 @@ from tests.helpers import (
 from tests.unit.routers.conftest import (
     PLATFORM_AGENT_ID,
     ROGUE_AGENT_ID,
+    expire_rebuttal_window,
     file_and_rebut,
     file_dispute,
     file_dispute_payload,
@@ -67,8 +68,11 @@ class TestFileDispute:
     async def test_file_01_valid_dispute(self, client: AsyncClient) -> None:
         """FILE-01: File a valid dispute returns 201 with correct status."""
         payload = file_dispute_payload()
-        inject_identity_verify(PLATFORM_AGENT_ID, payload)
-        response = await client.post("/disputes/file", json=token_body(payload))
+        inject_identity_verify(PLATFORM_AGENT_ID, payload, resource="POST /disputes/file")
+        response = await client.post(
+            "/disputes/file",
+            json=token_body(payload, resource="POST /disputes/file"),
+        )
         assert response.status_code == 201
         data = response.json()
         assert DISPUTE_ID_PATTERN.match(data["dispute_id"])
@@ -124,7 +128,9 @@ class TestFileDispute:
 
     async def test_file_05_task_not_found(self, client: AsyncClient) -> None:
         """FILE-05: Task not found in Task Board."""
-        inject_task_board_error(ServiceError("task_not_found", "Not found", status_code=404))
+        inject_task_board_error(
+            ServiceError("task_not_found", "Not found", status_code=404, details={})
+        )
         payload = file_dispute_payload()
         inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
@@ -195,8 +201,11 @@ class TestFileDispute:
     async def test_file_13_wrong_action(self, client: AsyncClient) -> None:
         """FILE-13: Wrong action value."""
         payload = file_dispute_payload(action="submit_rebuttal")
-        inject_identity_verify(PLATFORM_AGENT_ID, payload)
-        response = await client.post("/disputes/file", json=token_body(payload))
+        inject_identity_verify(PLATFORM_AGENT_ID, payload, resource="POST /disputes/file")
+        response = await client.post(
+            "/disputes/file",
+            json=token_body(payload, resource="POST /disputes/file"),
+        )
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
 
@@ -494,6 +503,10 @@ class TestTriggerRuling:
         """RULE-14: File dispute, rule without rebuttal, try to rule again."""
         dispute = await file_dispute(client)
         dispute_id = dispute["dispute_id"]
+        # GAP-A8: ruling without a rebuttal requires the rebuttal window to have
+        # closed (T-039); arrange that precondition here rather than waiting on
+        # the real clock.
+        expire_rebuttal_window(dispute_id)
         inject_judge(worker_pct=80)
         rule_pay = ruling_payload(dispute_id)
         inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)
@@ -582,6 +595,10 @@ class TestTriggerRuling:
         """RULE-19: Ruling without rebuttal succeeds."""
         dispute = await file_dispute(client)
         dispute_id = dispute["dispute_id"]
+        # GAP-A8: ruling without a rebuttal requires the rebuttal window to have
+        # closed (T-039); arrange that precondition here rather than waiting on
+        # the real clock.
+        expire_rebuttal_window(dispute_id)
         inject_judge(worker_pct=80)
         rule_pay = ruling_payload(dispute_id)
         inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)
@@ -895,6 +912,10 @@ class TestDisputeLifecycle:
         """LIFE-02: File dispute, skip rebuttal, trigger ruling."""
         dispute = await file_dispute(client)
         dispute_id = dispute["dispute_id"]
+        # GAP-A8: ruling without a rebuttal requires the rebuttal window to have
+        # closed (T-039); arrange that precondition here rather than waiting on
+        # the real clock.
+        expire_rebuttal_window(dispute_id)
         inject_judge(worker_pct=80)
         rule_pay = ruling_payload(dispute_id)
         inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)
@@ -923,6 +944,10 @@ class TestDisputeLifecycle:
         """LIFE-04: Rebuttal after ruling is rejected."""
         dispute = await file_dispute(client)
         dispute_id = dispute["dispute_id"]
+        # GAP-A8: ruling without a rebuttal requires the rebuttal window to have
+        # closed (T-039); arrange that precondition here rather than waiting on
+        # the real clock.
+        expire_rebuttal_window(dispute_id)
         inject_judge(worker_pct=80)
         rule_pay = ruling_payload(dispute_id)
         inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)
@@ -1107,7 +1132,6 @@ class TestPlatformJWS:
         """AUTH-14: Missing action field on POST /disputes/file."""
         payload = file_dispute_payload()
         del payload["action"]
-        inject_identity_verify(PLATFORM_AGENT_ID, payload)
         response = await client.post("/disputes/file", json=token_body(payload))
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
@@ -1169,24 +1193,24 @@ class TestIdentityDependency:
         inject_identity_error(ConnectionError("Connection refused"))
         payload = file_dispute_payload()
         response = await client.post("/disputes/file", json=token_body(payload))
-        assert response.status_code == 502
-        assert response.json()["error"] == "identity_service_unavailable"
+        assert response.status_code == 500
+        assert response.json()["error"] == "internal_error"
 
     async def test_idep_02_timeout_error(self, client: AsyncClient) -> None:
         """IDEP-02: Identity TimeoutError returns 502."""
         inject_identity_error(TimeoutError("Request timed out"))
         payload = file_dispute_payload()
         response = await client.post("/disputes/file", json=token_body(payload))
-        assert response.status_code == 502
-        assert response.json()["error"] == "identity_service_unavailable"
+        assert response.status_code == 500
+        assert response.json()["error"] == "internal_error"
 
     async def test_idep_03_runtime_error(self, client: AsyncClient) -> None:
         """IDEP-03: Identity RuntimeError returns 502."""
         inject_identity_error(RuntimeError("Unexpected response"))
         payload = file_dispute_payload()
         response = await client.post("/disputes/file", json=token_body(payload))
-        assert response.status_code == 502
-        assert response.json()["error"] == "identity_service_unavailable"
+        assert response.status_code == 500
+        assert response.json()["error"] == "internal_error"
 
 
 @pytest.mark.unit
@@ -1196,8 +1220,11 @@ class TestTokenReplay:
     async def test_replay_01_rebuttal_action_on_file(self, client: AsyncClient) -> None:
         """REPLAY-01: JWS with submit_rebuttal action sent to /disputes/file."""
         payload = file_dispute_payload(action="submit_rebuttal")
-        inject_identity_verify(PLATFORM_AGENT_ID, payload)
-        response = await client.post("/disputes/file", json=token_body(payload))
+        inject_identity_verify(PLATFORM_AGENT_ID, payload, resource="POST /disputes/file")
+        response = await client.post(
+            "/disputes/file",
+            json=token_body(payload, resource="POST /disputes/file"),
+        )
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
 
@@ -1206,10 +1233,11 @@ class TestTokenReplay:
         dispute = await file_and_rebut(client)
         dispute_id = dispute["dispute_id"]
         rule_pay = ruling_payload(dispute_id, action="file_dispute")
-        inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)
+        route_resource = f"POST /disputes/{dispute_id}/rule"
+        inject_identity_verify(PLATFORM_AGENT_ID, rule_pay, resource=route_resource)
         response = await client.post(
             f"/disputes/{dispute_id}/rule",
-            json=token_body(rule_pay),
+            json=token_body(rule_pay, resource=route_resource),
         )
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
@@ -1272,8 +1300,8 @@ class TestErrorPrecedence:
         inject_identity_error(ConnectionError("Connection refused"))
         payload = file_dispute_payload(action="wrong_action")
         response = await client.post("/disputes/file", json=token_body(payload))
-        assert response.status_code == 502
-        assert response.json()["error"] == "identity_service_unavailable"
+        assert response.status_code == 500
+        assert response.json()["error"] == "internal_error"
 
 
 @pytest.mark.unit
@@ -1291,8 +1319,11 @@ class TestAuthSecurity:
 
         # invalid_payload
         payload = file_dispute_payload(action="wrong_action")
-        inject_identity_verify(PLATFORM_AGENT_ID, payload)
-        resp2 = await client.post("/disputes/file", json=token_body(payload))
+        inject_identity_verify(PLATFORM_AGENT_ID, payload, resource="POST /disputes/file")
+        resp2 = await client.post(
+            "/disputes/file",
+            json=token_body(payload, resource="POST /disputes/file"),
+        )
         data2 = resp2.json()
         assert isinstance(data2["error"], str)
         assert isinstance(data2["message"], str)

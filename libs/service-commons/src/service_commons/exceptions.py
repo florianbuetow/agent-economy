@@ -142,7 +142,7 @@ def middleware_error_response(
     error: str,
     message: str,
     status_code: int,
-    details: dict[str, object] | None = None,
+    details: dict[str, object],
 ) -> JSONResponse:
     """Build a standard error JSONResponse for use in ASGI middleware.
 
@@ -155,6 +155,6 @@ def middleware_error_response(
         content={
             "error": error,
             "message": message,
-            "details": details if details is not None else {},
+            "details": details,
         },
     )

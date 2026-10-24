@@ -1,0 +1,49 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 8 items
+
+tests/unit/test_mp02_frontend_containment.py FFFFFF..                    [100%]
+
+=================================== FAILURES ===================================
+_____ test_page_requests_cannot_read_outside_frontend[/..%2foutside.html] ______
+tests/unit/test_mp02_frontend_containment.py:40: in test_page_requests_cannot_read_outside_frontend
+    assert response.status_code == 404
+E   assert 200 == 404
+E    +  where 200 = <Response [200 OK]>.status_code
+____ test_page_requests_cannot_read_outside_frontend[/%2e%2e/outside.html] _____
+tests/unit/test_mp02_frontend_containment.py:40: in test_page_requests_cannot_read_outside_frontend
+    assert response.status_code == 404
+E   assert 200 == 404
+E    +  where 200 = <Response [200 OK]>.status_code
+________ test_page_requests_cannot_read_outside_frontend[/linked.html] _________
+tests/unit/test_mp02_frontend_containment.py:40: in test_page_requests_cannot_read_outside_frontend
+    assert response.status_code == 404
+E   assert 200 == 404
+E    +  where 200 = <Response [200 OK]>.status_code
+_____________ test_absolute_page_path_cannot_replace_frontend_root _____________
+tests/unit/test_mp02_frontend_containment.py:50: in test_absolute_page_path_cannot_replace_frontend_root
+    assert response.status_code == 404
+E   assert 200 == 404
+E    +  where 200 = <Response [200 OK]>.status_code
+________________ test_symlinked_index_cannot_escape_on_fallback ________________
+tests/unit/test_mp02_frontend_containment.py:62: in test_symlinked_index_cannot_escape_on_fallback
+    assert response.status_code == 404
+E   assert 200 == 404
+E    +  where 200 = <Response [200 OK]>.status_code
+______________ test_symlinked_asset_mount_cannot_escape_frontend _______________
+tests/unit/test_mp02_frontend_containment.py:73: in test_symlinked_asset_mount_cannot_escape_frontend
+    assert response.status_code == 404
+E   assert 200 == 404
+E    +  where 200 = <Response [200 OK]>.status_code
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp02_frontend_containment.py::test_page_requests_cannot_read_outside_frontend[/..%2foutside.html]
+FAILED tests/unit/test_mp02_frontend_containment.py::test_page_requests_cannot_read_outside_frontend[/%2e%2e/outside.html]
+FAILED tests/unit/test_mp02_frontend_containment.py::test_page_requests_cannot_read_outside_frontend[/linked.html]
+FAILED tests/unit/test_mp02_frontend_containment.py::test_absolute_page_path_cannot_replace_frontend_root
+FAILED tests/unit/test_mp02_frontend_containment.py::test_symlinked_index_cannot_escape_on_fallback
+FAILED tests/unit/test_mp02_frontend_containment.py::test_symlinked_asset_mount_cannot_escape_frontend
+========================= 6 failed, 2 passed in 0.20s ==========================

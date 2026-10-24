@@ -2,30 +2,31 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
+from service_auth.financial_identity import operation_id_for
 from service_commons.exceptions import ServiceError
 
-from task_board_service.logging import get_logger
-
 if TYPE_CHECKING:
-    from task_board_service.clients.central_bank_client import CentralBankClient
-    from task_board_service.services.protocol import TaskStorageInterface
+    from service_clients.bank import BankClient
 
 
 class EscrowCoordinator:
-    """Coordinates escrow release/split and pending retry behavior."""
+    """Deliver caller-owned financial intents and explicit posting compensation."""
 
     def __init__(
         self,
-        central_bank_client: CentralBankClient,
-        store: TaskStorageInterface,
+        central_bank_client: BankClient,
     ) -> None:
         self._central_bank_client = central_bank_client
-        self._store = store
-        self._logger = get_logger(__name__)
 
-    async def release_escrow(self, escrow_id: str, recipient_id: str) -> None:
+    async def release_escrow(
+        self,
+        escrow_id: str,
+        recipient_id: str,
+        operation_id: str,
+        source_reference: str,
+    ) -> None:
         """
         Release escrow to the given recipient via the Central Bank.
 
@@ -35,6 +36,8 @@ class EscrowCoordinator:
             await self._central_bank_client.escrow_release(
                 escrow_id=escrow_id,
                 recipient_account_id=recipient_id,
+                operation_id=operation_id,
+                source_reference=source_reference,
             )
         except ServiceError:
             raise
@@ -52,6 +55,8 @@ class EscrowCoordinator:
         worker_id: str,
         poster_id: str,
         worker_pct: int,
+        operation_id: str,
+        source_reference: str,
     ) -> None:
         """
         Split escrow between worker and poster.
@@ -64,6 +69,8 @@ class EscrowCoordinator:
                 worker_account_id=worker_id,
                 poster_account_id=poster_id,
                 worker_pct=worker_pct,
+                operation_id=operation_id,
+                source_reference=source_reference,
             )
         except ServiceError:
             raise
@@ -75,55 +82,16 @@ class EscrowCoordinator:
                 {},
             ) from exc
 
-    async def try_release_escrow(self, task_id: str, escrow_id: str, recipient_id: str) -> None:
-        """
-        Attempt escrow release for deadline-triggered transitions.
-
-        On success: set escrow_pending = 0 in DB.
-        On failure: set escrow_pending = 1 in DB (retry on next read).
-        Does NOT raise — deadline transition still completes even if escrow fails.
-        """
-        try:
-            await self.release_escrow(escrow_id, recipient_id)
-            self._store.update_task(task_id, {"escrow_pending": 0}, expected_status=None)
-        except ServiceError:
-            self._logger.warning(
-                "Escrow release failed during deadline evaluation, marking pending",
-                extra={"task_id": task_id, "escrow_id": escrow_id},
-            )
-            self._store.update_task(task_id, {"escrow_pending": 1}, expected_status=None)
-
-    async def retry_pending_escrow(self, task: dict[str, Any]) -> dict[str, Any]:
-        """
-        If escrow_pending is True, retry the escrow release.
-
-        Determine recipient based on task status:
-        - expired: poster_id
-        - approved: worker_id
-        """
-        if not task["escrow_pending"]:
-            return task
-
-        status = task["status"]
-        if status == "expired":
-            recipient_id = task["poster_id"]
-        elif status == "approved":
-            recipient_id = task["worker_id"]
-        else:
-            return task
-
-        try:
-            await self.release_escrow(task["escrow_id"], recipient_id)
-            self._store.update_task(
-                str(task["task_id"]),
-                {"escrow_pending": 0},
-                expected_status=None,
-            )
-            task["escrow_pending"] = 0
-        except ServiceError:
-            self._logger.warning(
-                "Pending escrow release retry failed",
-                extra={"task_id": task["task_id"]},
-            )
-
-        return task
+    async def release_posting_compensation(
+        self,
+        task_id: str,
+        escrow_id: str,
+        poster_id: str,
+    ) -> None:
+        """Preserve the existing failed-publication refund identity until MP-05."""
+        await self.release_escrow(
+            escrow_id,
+            poster_id,
+            operation_id_for("task-settlement", (task_id, "posting_compensation")),
+            f"task:{task_id}:posting_compensation",
+        )

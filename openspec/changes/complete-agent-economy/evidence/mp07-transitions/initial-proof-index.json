@@ -1,0 +1,16 @@
+{
+  "baseline_commit": "a6af0bed5e0475f63b271329bb7f8ea683da9bc3",
+  "result": "1 intended failure: two conflicting successful actions",
+  "files": [
+    {
+      "file": "initial-approve-dispute-test.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_atomic_task_transitions.py",
+      "sha256": "ab2431ca034060e6c9130b9840774f54c43639a54a34979708775645b97069e6"
+    },
+    {
+      "file": "initial-approve-dispute-parent-red.log",
+      "source": "/private/tmp/agent-economy-mp07-approve-dispute-parent-red.log",
+      "sha256": "a65ecdc2aa50063c4b196c950e525ad0f21d41cb8ac1fb3ab4b67b309e5b0855"
+    }
+  ]
+}

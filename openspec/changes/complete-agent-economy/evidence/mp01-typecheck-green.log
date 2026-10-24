@@ -1,0 +1,19 @@
+Loading configuration file at /tmp/agent-economy-mp01-pyrightconfig.json
+Found 2 source files
+pyright 1.1.408
+0 errors, 0 warnings, 0 informations
+Completed in 0.445sec
+
+Analysis stats
+Total files parsed and bound: 170
+Total files checked: 2
+
+Timing stats
+Find Source Files:    0sec
+Read Source Files:    0.01sec
+Tokenize:             0.04sec
+Parse:                0.04sec
+Resolve Imports:      0.02sec
+Bind:                 0.08sec
+Check:                0.19sec
+Detect Cycles:        0sec

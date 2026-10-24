@@ -1,0 +1,70 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 11 items
+
+tests/unit/test_mp07_proxy_transport_status.py FFF...F.FFF               [100%]
+
+=================================== FAILURES ===================================
+_ test_service_validates_body_and_retains_actual_transport_status[accept_bid-200-completed] _
+tests/unit/test_mp07_proxy_transport_status.py:116: in test_service_validates_body_and_retains_actual_transport_status
+    result = await proxy_service.accept_bid(
+src/ui_service/services/proxy.py:363: in accept_bid
+    return _ensure_mutation_response(
+src/ui_service/services/proxy.py:195: in _ensure_mutation_response
+    _invalid_response(error_code)
+src/ui_service/services/proxy.py:63: in _invalid_response
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task Board returned a malformed success response
+_ test_service_validates_body_and_retains_actual_transport_status[approve_task-202-claimed] _
+tests/unit/test_mp07_proxy_transport_status.py:123: in test_service_validates_body_and_retains_actual_transport_status
+    result = await proxy_service.approve_task(
+src/ui_service/services/proxy.py:392: in approve_task
+    return _ensure_mutation_response(
+src/ui_service/services/proxy.py:195: in _ensure_mutation_response
+    _invalid_response(error_code)
+src/ui_service/services/proxy.py:63: in _invalid_response
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task Board returned a malformed success response
+_ test_service_validates_body_and_retains_actual_transport_status[dispute_task-200-completed] _
+tests/unit/test_mp07_proxy_transport_status.py:129: in test_service_validates_body_and_retains_actual_transport_status
+    result = await proxy_service.file_dispute(
+src/ui_service/services/proxy.py:423: in file_dispute
+    return _ensure_mutation_response(
+src/ui_service/services/proxy.py:195: in _ensure_mutation_response
+    _invalid_response(error_code)
+src/ui_service/services/proxy.py:63: in _invalid_response
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task Board returned a malformed success response
+________________ test_sdk_contract_error_is_sanitized_as_ui_502 ________________
+tests/unit/test_mp07_proxy_transport_status.py:185: in test_sdk_contract_error_is_sanitized_as_ui_502
+    assert exc_info.value.message == "Task Board returned a malformed success response"
+E   AssertionError: assert 'Task Board request failed' == 'Task Board r...cess response'
+E     
+E     - Task Board returned a malformed success response
+E     + Task Board request failed
+_ test_router_forwards_validated_body_with_exact_transport_status[accept_bid-200-completed] _
+tests/unit/test_mp07_proxy_transport_status.py:237: in test_router_forwards_validated_body_with_exact_transport_status
+    response = await proxy_router.accept_bid(
+E   TypeError: accept_bid() missing 1 required positional argument: 'response'
+_ test_router_forwards_validated_body_with_exact_transport_status[approve_task-202-claimed] _
+tests/unit/test_mp07_proxy_transport_status.py:244: in test_router_forwards_validated_body_with_exact_transport_status
+    response = await proxy_router.approve_task(task_id="t-ui-status", body=request)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: approve_task() missing 1 required positional argument: 'response'
+_ test_router_forwards_validated_body_with_exact_transport_status[dispute_task-200-completed] _
+tests/unit/test_mp07_proxy_transport_status.py:247: in test_router_forwards_validated_body_with_exact_transport_status
+    response = await proxy_router.file_dispute(
+E   TypeError: file_dispute() missing 1 required positional argument: 'response'
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_service_validates_body_and_retains_actual_transport_status[accept_bid-200-completed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_service_validates_body_and_retains_actual_transport_status[approve_task-202-claimed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_service_validates_body_and_retains_actual_transport_status[dispute_task-200-completed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_sdk_contract_error_is_sanitized_as_ui_502
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_router_forwards_validated_body_with_exact_transport_status[accept_bid-200-completed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_router_forwards_validated_body_with_exact_transport_status[approve_task-202-claimed]
+FAILED tests/unit/test_mp07_proxy_transport_status.py::test_router_forwards_validated_body_with_exact_transport_status[dispute_task-200-completed]
+========================= 7 failed, 4 passed in 0.18s ==========================

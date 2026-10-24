@@ -1,0 +1,60 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 516 items
+
+tests/unit/routers/test_bank.py ........................................ [  7%]
+....................                                                     [ 11%]
+tests/unit/routers/test_bank_reads.py ........                           [ 13%]
+tests/unit/routers/test_board.py .....................................   [ 20%]
+tests/unit/routers/test_board_reads.py .............                     [ 22%]
+tests/unit/routers/test_board_tasks_limit_offset_validation.py ...       [ 23%]
+tests/unit/routers/test_court.py ...........................             [ 28%]
+tests/unit/routers/test_court_reads.py ..........                        [ 30%]
+tests/unit/routers/test_court_status_update_integrity.py ..              [ 31%]
+tests/unit/routers/test_health.py ....                                   [ 31%]
+tests/unit/routers/test_identity.py .............                        [ 34%]
+tests/unit/routers/test_identity_reads.py ........                       [ 35%]
+tests/unit/routers/test_reader_not_ready_503.py ...                      [ 36%]
+tests/unit/routers/test_reputation.py ..........                         [ 38%]
+tests/unit/routers/test_reputation_reads.py ......                       [ 39%]
+tests/unit/routers/test_t072_bank_reads_gaps.py ......                   [ 40%]
+tests/unit/routers/test_t072_board_reads_gaps.py ..........              [ 42%]
+tests/unit/routers/test_t072_court_reads_gaps.py .....                   [ 43%]
+tests/unit/routers/test_t072_court_status_and_ruling_delete_gaps.py .... [ 44%]
+....                                                                     [ 45%]
+tests/unit/routers/test_t072_reputation_reads_gaps.py ..                 [ 45%]
+tests/unit/test_config.py ....                                           [ 46%]
+tests/unit/test_constraints.py .......                                   [ 47%]
+tests/unit/test_cross_cutting.py ......................                  [ 51%]
+tests/unit/test_db_reader.py ......                                      [ 53%]
+tests/unit/test_db_reader_transactions.py ..                             [ 53%]
+tests/unit/test_db_writer.py .......                                     [ 54%]
+tests/unit/test_feedback_reveal_atomicity.py .........                   [ 56%]
+tests/unit/test_gap_c7_error_mapping.py .....                            [ 57%]
+tests/unit/test_gap_c7_error_mapping_domains.py ..                       [ 57%]
+tests/unit/test_gap_e13_bid_count.py ....                                [ 58%]
+tests/unit/test_mp02_gateway_authority.py .............................. [ 64%]
+..                                                                       [ 64%]
+tests/unit/test_mp02_gateway_write_admission.py ........................ [ 69%]
+...............................                                          [ 75%]
+tests/unit/test_mp06_maintenance_lock.py .....                           [ 76%]
+tests/unit/test_mp06_recovery.py ....................................... [ 84%]
+..................................                                       [ 90%]
+tests/unit/test_recovery_cli.py ..........                               [ 92%]
+tests/unit/test_recovery_read_races.py ......                            [ 93%]
+tests/unit/test_schema_additions.py ......                               [ 94%]
+tests/unit/test_t072_constraints_gaps.py ......                          [ 96%]
+tests/unit/test_task_dispute_id_column.py ......                         [ 97%]
+tests/unit/test_write_integrity.py ..............                        [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 516 passed, 1 warning in 12.32s ========================

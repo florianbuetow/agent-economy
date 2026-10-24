@@ -1,0 +1,80 @@
+SIM117 Use a single `with` statement with multiple contexts instead of nested `with` statements
+   --> tests/unit/test_runtime_intents.py:247:5
+    |
+245 |       with _store(tmp_path):
+246 |           pass
+247 | /     with pytest.raises(_runtime.RuntimeIntentError) as raised:
+248 | |         with _store(tmp_path, owner=_owner(**{field: changed})):
+    | |________________________________________________________________^
+249 |               pass
+250 |       assert raised.value.reason == "owner_conflict"
+    |
+help: Combine `with` statements
+
+SIM117 [*] Use a single `with` statement with multiple contexts instead of nested `with` statements
+   --> tests/unit/test_runtime_intents.py:283:5
+    |
+281 |       link = tmp_path / "linked-root"
+282 |       link.symlink_to(target, target_is_directory=True)
+283 | /     with pytest.raises(_runtime.RuntimeIntentError) as symlink_error:
+284 | |         with _store(link):
+    | |__________________________^
+285 |               pass
+286 |       assert symlink_error.value.reason == "unsafe_path"
+    |
+help: Combine `with` statements
+
+SIM117 [*] Use a single `with` statement with multiple contexts instead of nested `with` statements
+   --> tests/unit/test_runtime_intents.py:297:5
+    |
+295 |       outside.write_text("{}")
+296 |       owner_path.symlink_to(outside)
+297 | /     with pytest.raises(_runtime.RuntimeIntentError) as symlink_error:
+298 | |         with _store(tmp_path):
+    | |______________________________^
+299 |               pass
+300 |       assert symlink_error.value.reason == "unsafe_path"
+    |
+help: Combine `with` statements
+
+SIM117 [*] Use a single `with` statement with multiple contexts instead of nested `with` statements
+   --> tests/unit/test_runtime_intents.py:304:5
+    |
+302 |       owner_path.unlink()
+303 |       owner_path.mkdir()
+304 | /     with pytest.raises(_runtime.RuntimeIntentError) as nonregular_error:
+305 | |         with _store(tmp_path):
+    | |______________________________^
+306 |               pass
+307 |       assert nonregular_error.value.reason == "unsafe_path"
+    |
+help: Combine `with` statements
+
+SIM117 [*] Use a single `with` statement with multiple contexts instead of nested `with` statements
+   --> tests/unit/test_runtime_intents.py:317:5
+    |
+315 |           path = store.owner_path if record == "owner" else store.intent_path(_TASK_ID, "bid")
+316 |       path.chmod(0o644)
+317 | /     with pytest.raises(_runtime.RuntimeIntentError) as raised:
+318 | |         with _store(tmp_path) as reopened:
+    | |__________________________________________^
+319 |               reopened.load(_TASK_ID, "bid")
+320 |       assert raised.value.reason == "unsafe_mode"
+    |
+help: Combine `with` statements
+
+SIM117 [*] Use a single `with` statement with multiple contexts instead of nested `with` statements
+   --> tests/unit/test_runtime_intents.py:336:5
+    |
+334 |           path.write_text(json.dumps(payload, sort_keys=True, separators=(",", ":")))
+335 |       path.chmod(0o600)
+336 | /     with pytest.raises(_runtime.RuntimeIntentError) as raised:
+337 | |         with _store(tmp_path) as reopened:
+    | |__________________________________________^
+338 |               reopened.load(_TASK_ID, "bid")
+339 |       assert raised.value.reason == "corrupt_record"
+    |
+help: Combine `with` statements
+
+Found 6 errors.
+[*] 5 fixable with the `--fix` option.

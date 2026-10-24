@@ -7,8 +7,10 @@ from unittest.mock import AsyncMock, call
 
 import httpx
 import pytest
+from cryptography.exceptions import InvalidSignature
 
 from base_agent.agent import BaseAgent
+from base_agent.signing import create_jws, parse_jws
 
 if TYPE_CHECKING:
     from base_agent.config import AgentConfig
@@ -163,16 +165,32 @@ class TestVerifyJws:
 
     async def test_verify_jws_valid(self, sample_config: AgentConfig) -> None:
         agent = BaseAgent(config=sample_config)
-        verify_response = {"valid": True, "agent_id": "a-123"}
+        payload = {"action": "test"}
+        token = create_jws(
+            payload,
+            sample_config.private_key,
+            kid="a-123",
+            audience="identity-test",
+            resource="POST /test",
+            token_ttl_seconds=300,
+        )
+        parsed = parse_jws(token)
+        verify_response = {
+            "valid": True,
+            "agent_id": "a-123",
+            "protected_header": vars(parsed.header),
+            "payload": payload,
+        }
         agent._request = AsyncMock(return_value=verify_response)
 
-        result = await agent.verify_jws("token-123")
+        result = await agent.verify_jws(token)
 
-        assert result == verify_response
+        assert result.header == parsed.header
+        assert result.payload == payload
         agent._request.assert_awaited_once_with(
             "POST",
             f"{sample_config.identity_url}/agents/verify-jws",
-            json={"token": "token-123"},
+            json={"token": token},
         )
         await agent.close()
 
@@ -181,9 +199,8 @@ class TestVerifyJws:
         verify_response = {"valid": False, "reason": "signature mismatch"}
         agent._request = AsyncMock(return_value=verify_response)
 
-        result = await agent.verify_jws("bad-token")
-
-        assert result == verify_response
+        with pytest.raises(InvalidSignature, match="signature mismatch"):
+            await agent.verify_jws("bad-token")
         agent._request.assert_awaited_once_with(
             "POST",
             f"{sample_config.identity_url}/agents/verify-jws",

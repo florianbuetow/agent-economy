@@ -1,0 +1,11 @@
+src/base_agent/runtime_task_commands.py:176: error: Argument 3 to "submit_bid" of "TaskBoardMixin" has incompatible type "**dict[str, object]"; expected "str"  [arg-type]
+src/base_agent/runtime_task_commands.py:176: error: Argument 3 to "submit_bid" of "TaskBoardMixin" has incompatible type "**dict[str, object]"; expected "int"  [arg-type]
+src/base_agent/runtime_task_commands.py:180: error: Argument 3 to "accept_bid" of "TaskBoardMixin" has incompatible type "**dict[str, object]"; expected "str"  [arg-type]
+src/base_agent/runtime_task_commands.py:180: error: Argument 3 to "accept_bid" of "TaskBoardMixin" has incompatible type "**dict[str, object]"; expected "int"  [arg-type]
+src/base_agent/runtime_task_commands.py:183: error: Argument 2 to "submit_deliverable" of "TaskBoardMixin" has incompatible type "**dict[str, object]"; expected "str"  [arg-type]
+src/base_agent/runtime_task_commands.py:183: error: Argument 2 to "submit_deliverable" of "TaskBoardMixin" has incompatible type "**dict[str, object]"; expected "int"  [arg-type]
+src/base_agent/runtime_task_commands.py:185: error: Argument 2 to "approve_task" of "TaskBoardMixin" has incompatible type "**dict[str, object]"; expected "str"  [arg-type]
+src/base_agent/runtime_task_commands.py:185: error: Argument 2 to "approve_task" of "TaskBoardMixin" has incompatible type "**dict[str, object]"; expected "int"  [arg-type]
+src/base_agent/runtime_task_commands.py:188: error: Argument 3 to "dispute_task" of "TaskBoardMixin" has incompatible type "**dict[str, object]"; expected "str"  [arg-type]
+src/base_agent/runtime_task_commands.py:188: error: Argument 3 to "dispute_task" of "TaskBoardMixin" has incompatible type "**dict[str, object]"; expected "int"  [arg-type]
+Found 10 errors in 1 file (checked 1 source file)

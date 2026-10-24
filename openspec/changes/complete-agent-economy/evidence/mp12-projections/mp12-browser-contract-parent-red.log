@@ -1,0 +1,37 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 9 items
+
+tests/e2e/test_task_lifecycle.py ..FFF.F..                               [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_t19_t27_bid_phase[T21] __________________________
+tests/e2e/test_task_lifecycle.py:465: in test_t19_t27_bid_phase
+    assert len(bids_ui) > 0
+E   assert 0 > 0
+E    +  where 0 = len([])
+_________________________ test_t19_t27_bid_phase[T22] __________________________
+tests/e2e/test_task_lifecycle.py:469: in test_t19_t27_bid_phase
+    assert any(any(name in row["bidder"] for name in bidder_names) for row in bids_ui)
+E   assert False
+E    +  where False = any(<generator object test_t19_t27_bid_phase.<locals>.<genexpr> at 0x10932fca0>)
+_________________________ test_t19_t27_bid_phase[T23] __________________________
+tests/e2e/test_task_lifecycle.py:472: in test_t19_t27_bid_phase
+    assert bid_amount_texts
+E   assert []
+_________________________ test_t19_t27_bid_phase[T25] __________________________
+tests/e2e/test_task_lifecycle.py:478: in test_t19_t27_bid_phase
+    assert "Quality:" in task_page.get_lifecycle_panel_content()
+E   AssertionError: assert 'Quality:' in '🔒Escrow150 ©LOCKEDBids on t-task61 bid receivedBid details are sealed to the poster.'
+E    +  where '🔒Escrow150 ©LOCKEDBids on t-task61 bid receivedBid details are sealed to the poster.' = get_lifecycle_panel_content()
+E    +    where get_lifecycle_panel_content = <e2e.pages.task.TaskPage object at 0x1080dde10>.get_lifecycle_panel_content
+=========================== short test summary info ============================
+FAILED tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T21] - assert...
+FAILED tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T22] - assert...
+FAILED tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T23] - assert []
+FAILED tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T25] - Assert...
+========================= 4 failed, 5 passed in 7.62s ==========================

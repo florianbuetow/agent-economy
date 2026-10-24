@@ -1,0 +1,146 @@
+.FFF                                                                     [100%]
+=================================== FAILURES ===================================
+__ test_bad_maintenance_preflight_reports_owned_log_and_releases_ports[None] ___
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-920/test_bad_maintenance_preflight0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107287820>
+recovery = None
+
+    @pytest.mark.parametrize("recovery", [None, "invalid", {"maintenance_lock_path": ""}])
+    def test_bad_maintenance_preflight_reports_owned_log_and_releases_ports(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, recovery: object,
+    ) -> None:
+        runtime = IsolatedRuntime.create(
+            repo_root=REPO_ROOT, artifacts_root=tmp_path, services=("db-gateway",),
+        )
+        config = yaml.safe_load(runtime.config_paths["db-gateway"].read_bytes())
+        config["recovery"] = recovery
+        config["secret"] = "DO-NOT-LOG-THIS"
+        runtime.config_paths["db-gateway"].write_text(yaml.safe_dump(config))
+        monkeypatch.setattr(
+            runtime, "_ensure_keys_provisioned", lambda: pytest.fail("provisioned before valid preflight"),
+        )
+        try:
+            with pytest.raises(RuntimeErrorWithLog) as exc_info:
+>               runtime.start()
+
+../../tests/runtime/test_runtime_recovery_preparation.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../scripts/isolated_test_runtime.py:205: in start
+    self._preflight()
+../../scripts/isolated_test_runtime.py:223: in _preflight
+    self._validate_maintenance_lock_paths()
+../../scripts/isolated_test_runtime.py:233: in _validate_maintenance_lock_paths
+    recovery = _mapping_section(config, "recovery")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+config = {'auth': {'audience': 'db-gateway', 'clock_skew_seconds': 30, 'max_lifetime_seconds': 300, 'trusted_callers': {'gatewa...ht0/runtime-ce08641862b547009d00c21539b84b03-9m_eis1u/logs', 'format': 'json', 'level': 'INFO'}, 'recovery': None, ...}
+name = 'recovery'
+
+    def _mapping_section(config: dict[str, object], name: str) -> dict[str, object]:
+        value = config.get(name)
+        if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
+>           raise ValueError(f"Expected YAML mapping section: {name}")
+E           ValueError: Expected YAML mapping section: recovery
+
+../../scripts/isolated_test_runtime.py:916: ValueError
+_ test_bad_maintenance_preflight_reports_owned_log_and_releases_ports[invalid] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-920/test_bad_maintenance_preflight1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1075b83e0>
+recovery = 'invalid'
+
+    @pytest.mark.parametrize("recovery", [None, "invalid", {"maintenance_lock_path": ""}])
+    def test_bad_maintenance_preflight_reports_owned_log_and_releases_ports(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, recovery: object,
+    ) -> None:
+        runtime = IsolatedRuntime.create(
+            repo_root=REPO_ROOT, artifacts_root=tmp_path, services=("db-gateway",),
+        )
+        config = yaml.safe_load(runtime.config_paths["db-gateway"].read_bytes())
+        config["recovery"] = recovery
+        config["secret"] = "DO-NOT-LOG-THIS"
+        runtime.config_paths["db-gateway"].write_text(yaml.safe_dump(config))
+        monkeypatch.setattr(
+            runtime, "_ensure_keys_provisioned", lambda: pytest.fail("provisioned before valid preflight"),
+        )
+        try:
+            with pytest.raises(RuntimeErrorWithLog) as exc_info:
+>               runtime.start()
+
+../../tests/runtime/test_runtime_recovery_preparation.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../scripts/isolated_test_runtime.py:205: in start
+    self._preflight()
+../../scripts/isolated_test_runtime.py:223: in _preflight
+    self._validate_maintenance_lock_paths()
+../../scripts/isolated_test_runtime.py:233: in _validate_maintenance_lock_paths
+    recovery = _mapping_section(config, "recovery")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+config = {'auth': {'audience': 'db-gateway', 'clock_skew_seconds': 30, 'max_lifetime_seconds': 300, 'trusted_callers': {'gatewa...untime-c6bcf32fe07f48949b6dd4cc97ac6032-twd3qx4t/logs', 'format': 'json', 'level': 'INFO'}, 'recovery': 'invalid', ...}
+name = 'recovery'
+
+    def _mapping_section(config: dict[str, object], name: str) -> dict[str, object]:
+        value = config.get(name)
+        if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
+>           raise ValueError(f"Expected YAML mapping section: {name}")
+E           ValueError: Expected YAML mapping section: recovery
+
+../../scripts/isolated_test_runtime.py:916: ValueError
+_ test_bad_maintenance_preflight_reports_owned_log_and_releases_ports[recovery2] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-920/test_bad_maintenance_preflight2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10735d7f0>
+recovery = {'maintenance_lock_path': ''}
+
+    @pytest.mark.parametrize("recovery", [None, "invalid", {"maintenance_lock_path": ""}])
+    def test_bad_maintenance_preflight_reports_owned_log_and_releases_ports(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, recovery: object,
+    ) -> None:
+        runtime = IsolatedRuntime.create(
+            repo_root=REPO_ROOT, artifacts_root=tmp_path, services=("db-gateway",),
+        )
+        config = yaml.safe_load(runtime.config_paths["db-gateway"].read_bytes())
+        config["recovery"] = recovery
+        config["secret"] = "DO-NOT-LOG-THIS"
+        runtime.config_paths["db-gateway"].write_text(yaml.safe_dump(config))
+        monkeypatch.setattr(
+            runtime, "_ensure_keys_provisioned", lambda: pytest.fail("provisioned before valid preflight"),
+        )
+        try:
+            with pytest.raises(RuntimeErrorWithLog) as exc_info:
+>               runtime.start()
+
+../../tests/runtime/test_runtime_recovery_preparation.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../scripts/isolated_test_runtime.py:205: in start
+    self._preflight()
+../../scripts/isolated_test_runtime.py:223: in _preflight
+    self._validate_maintenance_lock_paths()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = IsolatedRuntime(repo_root=PosixPath('/Users/flo/Developer/github/agent-economy'), run_id='6a533279537a4817977b858c427e...cord=None, active_command_owner=None, shutdown_signal=None, _keys_provisioned=False, _log_handles={}, _reservations={})
+
+    def _validate_maintenance_lock_paths(self) -> None:
+        """Require every protected service to use the same run-owned lock path."""
+        configured_paths: dict[str, Path] = {}
+        for service in ("db-gateway", "task-board", "ui"):
+            config_path = self.config_paths.get(service)
+            if config_path is None:
+                continue
+            config = _load_yaml(config_path)
+            recovery = _mapping_section(config, "recovery")
+            configured_value = recovery.get("maintenance_lock_path")
+            if not isinstance(configured_value, str) or not configured_value:
+>               raise ValueError(f"{service} recovery.maintenance_lock_path must be a string")
+E               ValueError: db-gateway recovery.maintenance_lock_path must be a string
+
+../../scripts/isolated_test_runtime.py:236: ValueError
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_runtime_recovery_preparation.py::test_bad_maintenance_preflight_reports_owned_log_and_releases_ports[None]
+FAILED ../../tests/runtime/test_runtime_recovery_preparation.py::test_bad_maintenance_preflight_reports_owned_log_and_releases_ports[invalid]
+FAILED ../../tests/runtime/test_runtime_recovery_preparation.py::test_bad_maintenance_preflight_reports_owned_log_and_releases_ports[recovery2]
+3 failed, 1 passed in 0.15s

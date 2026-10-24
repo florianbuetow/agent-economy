@@ -4,7 +4,7 @@
   var ATE = window.ATE;
   var S = ATE.S;
 
-  var EVENT_TYPES = ['ALL', 'TASK', 'BID', 'PAYOUT', 'CONTRACT', 'ESCROW', 'SUBMIT', 'REP', 'DISPUTE', 'RULING', 'CANCEL', 'AGENT'];
+  var EVENT_TYPES = ATE.EVENT_FILTER_TYPES;
 
   var activeFilter = 'ALL';
   var paused = false;
@@ -39,9 +39,9 @@
     var phaseBorder = S.phase === 'growing' ? 'var(--green)' : S.phase === 'contracting' ? 'var(--red)' : 'var(--text-dim)';
     var distTotal = Object.values(S.rewardDist).reduce(function(acc, val) { return acc + val; }, 0) || 1;
 
-    var trendArrow = S.taskCreationTrend === 'growing' ? '\u2191' : S.taskCreationTrend === 'declining' ? '\u2193' : '\u2192';
+    var trendArrow = ATE.trendVisual(S.taskCreationTrend).arrow;
     var trendLabel = S.taskCreationTrend;
-    var trendClr = S.taskCreationTrend === 'growing' ? 'var(--green)' : S.taskCreationTrend === 'declining' ? 'var(--red)' : 'var(--amber)';
+    var trendClr = ATE.trendVisual(S.taskCreationTrend).color;
     var disputeRate = (S.tasks.disputed / Math.max(S.tasks.completedAll, 1)) * 100;
     var disputeColor = disputeRate > 15 ? 'var(--red)' : disputeRate > 5 ? 'var(--amber)' : 'var(--green)';
 
@@ -63,8 +63,11 @@
     var el = document.getElementById('filter-btns');
     if (!el) return;
     el.innerHTML = EVENT_TYPES.map(function(type) {
-      return '<button class="feed-btn' + (type === activeFilter ? ' active' : '') + '" onclick="setFilter(\'' + type + '\')">' + type + '</button>';
+      return '<button class="feed-btn' + (type === activeFilter ? ' active' : '') + '" data-filter="' + type + '">' + type + '</button>';
     }).join('');
+    el.querySelectorAll('[data-filter]').forEach(function(button) {
+      button.addEventListener('click', function() { window.setFilter(button.getAttribute('data-filter')); });
+    });
   }
 
   function renderFeed() {
@@ -74,7 +77,7 @@
     el.innerHTML = filtered.slice(0, 80).map(function(event, index) {
       var flash = event.type === 'PAYOUT' ? ' flash-green' : event.type === 'DISPUTE' ? ' flash-red' : '';
       var highlight = index === 0 ? ' highlight' : '';
-      return '<div class="feed-item' + highlight + flash + '"><span class="feed-badge ' + event.badge + '">' + event.type + '</span><span class="feed-text">' + event.text + '</span><span class="feed-time">' + ATE.timeAgo(Date.now() - event.time) + '</span></div>';
+      return '<div class="feed-item' + highlight + flash + '"><span class="feed-badge ' + event.badge + '">' + event.type + '</span><span class="feed-text">' + ATE.escapeHTML(event.text) + '</span><span class="feed-time">' + ATE.timeAgo(Date.now() - event.time) + '</span></div>';
     }).join('');
   }
 
@@ -99,8 +102,7 @@
       var workers = AGENTS.filter(function(a) { return a.role === 'worker'; }).sort(function(a, b) { return b.tc - a.tc; });
       el.innerHTML = '<div class="lb-section-label">By Tasks Completed</div>' + workers.map(function(worker, index) {
         var initials = worker.name.replace(/[^A-Z0-9]/gi, '').slice(0, 2).toUpperCase();
-        var streak = worker.streak >= 3 ? '<span style="font-size:8px;color:var(--yellow);margin-left:3px">\ud83d\udd25' + worker.streak + '</span>' : '';
-        return '<div class="lb-row"><div class="lb-rank' + (index === 0 ? ' top' : '') + '">' + (index + 1) + '</div><div class="lb-avatar" style="background:' + worker.color + '18;color:' + worker.color + ';border:1px solid ' + worker.color + '33">' + initials + '</div><div class="lb-info"><div class="lb-name">' + worker.name + streak + '</div><div class="lb-meta">' + worker.tc + ' tasks completed</div><div class="lb-stars"><span class="s">\u2605\u2605\u2605</span>' + worker.dq.es + ' <span class="s">\u2605\u2605</span>' + worker.dq.s + ' <span class="s">\u2605</span>' + worker.dq.d + '</div></div><div class="lb-right"><div class="lb-amount" style="color:var(--green)">' + worker.earned.toLocaleString() + ' \u00a9</div><div class="lb-amount-label">earned</div></div></div>';
+        return '<div class="lb-row"><div class="lb-rank' + (index === 0 ? ' top' : '') + '">' + (index + 1) + '</div><div class="lb-avatar" style="background:' + worker.color + '18;color:' + worker.color + ';border:1px solid ' + worker.color + '33">' + initials + '</div><div class="lb-info"><div class="lb-name">' + ATE.escapeHTML(worker.name) + '</div><div class="lb-meta">' + worker.tc + ' tasks completed</div><div class="lb-stars"><span class="s">\u2605\u2605\u2605</span>' + worker.dq.es + ' <span class="s">\u2605\u2605</span>' + worker.dq.s + ' <span class="s">\u2605</span>' + worker.dq.d + '</div></div><div class="lb-right"><div class="lb-amount" style="color:var(--green)">' + worker.earned.toLocaleString() + ' \u00a9</div><div class="lb-amount-label">earned</div></div></div>';
       }).join('');
       return;
     }
@@ -108,7 +110,7 @@
     var posters = AGENTS.filter(function(a) { return a.role === 'poster'; }).sort(function(a, b) { return b.tp - a.tp; });
     el.innerHTML = '<div class="lb-section-label">By Tasks Posted</div>' + posters.map(function(poster, index) {
       var initials = poster.name.replace(/[^A-Z0-9]/gi, '').slice(0, 2).toUpperCase();
-      return '<div class="lb-row"><div class="lb-rank' + (index === 0 ? ' top' : '') + '">' + (index + 1) + '</div><div class="lb-avatar" style="background:' + poster.color + '18;color:' + poster.color + ';border:1px solid ' + poster.color + '33">' + initials + '</div><div class="lb-info"><div class="lb-name">' + poster.name + '</div><div class="lb-meta">' + poster.tp + ' tasks posted</div><div class="lb-stars">spec: <span class="s">\u2605\u2605\u2605</span>' + poster.sq.es + ' <span class="s">\u2605\u2605</span>' + poster.sq.s + ' <span class="s">\u2605</span>' + poster.sq.d + '</div></div><div class="lb-right"><div class="lb-amount" style="color:var(--amber)">' + poster.spent.toLocaleString() + ' \u00a9</div><div class="lb-amount-label">spent</div></div></div>';
+      return '<div class="lb-row"><div class="lb-rank' + (index === 0 ? ' top' : '') + '">' + (index + 1) + '</div><div class="lb-avatar" style="background:' + poster.color + '18;color:' + poster.color + ';border:1px solid ' + poster.color + '33">' + initials + '</div><div class="lb-info"><div class="lb-name">' + ATE.escapeHTML(poster.name) + '</div><div class="lb-meta">' + poster.tp + ' tasks posted</div><div class="lb-stars">spec: <span class="s">\u2605\u2605\u2605</span>' + poster.sq.es + ' <span class="s">\u2605\u2605</span>' + poster.sq.s + ' <span class="s">\u2605</span>' + poster.sq.d + '</div></div><div class="lb-right"><div class="lb-amount" style="color:var(--amber)">' + poster.spent.toLocaleString() + ' \u00a9</div><div class="lb-amount-label">spent</div></div></div>';
     }).join('') +
     '<div class="spec-section"><div class="lb-section-label" style="padding:0 0 6px;margin-bottom:8px">Economy Spec Quality</div>' +
     '<div class="spec-row"><div class="spec-header"><span class="spec-label"><span style="color:var(--yellow)">\u2605\u2605\u2605</span> Extremely satisfied</span><span class="spec-value">' + (S.specQ.esPct * 100).toFixed(0) + '%</span></div><div class="hatch-bar"><div class="hatch-fill" style="width:' + (S.specQ.esPct * 100).toFixed(0) + '%"></div></div></div>' +
@@ -165,6 +167,9 @@
 
   // ── Boot sequence ─────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async function() {
+    document.getElementById('pause-btn').addEventListener('click', window.togglePause);
+    document.getElementById('tab-workers').addEventListener('click', function() { window.switchTab('workers'); });
+    document.getElementById('tab-posters').addEventListener('click', function() { window.switchTab('posters'); });
     // Fetch real data first
     await Promise.all([ATE.fetchMetrics(), ATE.fetchAgents(), ATE.fetchGDPHistory()]);
 

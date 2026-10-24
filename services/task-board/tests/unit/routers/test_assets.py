@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from task_board_service.config import get_settings
 from tests.helpers import make_jws_token
 from tests.unit.routers.conftest import (
     create_task,
@@ -95,7 +96,7 @@ class TestAssetUpload:
         # Create a task but do NOT accept any bid — task stays in OPEN status
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         upload_resp = await upload_asset(
             client,
@@ -168,6 +169,7 @@ class TestAssetUpload:
     async def test_file_exceeds_max_size(
         self,
         client: AsyncClient,
+        monkeypatch: pytest.MonkeyPatch,
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
         bob_keypair: tuple[Ed25519PrivateKey, str],
@@ -178,8 +180,20 @@ class TestAssetUpload:
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
 
-        # max_file_size is configured to 10485760 (10 MB) in conftest
-        large_content = b"x" * (10 * 1024 * 1024 + 1)
+        settings = get_settings()
+        if settings.assets is not None:
+            selected_file_limit = settings.assets.max_file_size
+        else:
+            assert settings.limits is not None
+            selected_file_limit = settings.limits.max_file_size
+        monkeypatch.setattr(
+            settings.request,
+            "max_body_size",
+            selected_file_limit
+            + settings.asset_upload.max_multipart_overhead_bytes
+            + settings.asset_upload.stream_chunk_bytes,
+        )
+        large_content = b"x" * (selected_file_limit + 1)
         resp = await upload_asset(
             client,
             bob_keypair,

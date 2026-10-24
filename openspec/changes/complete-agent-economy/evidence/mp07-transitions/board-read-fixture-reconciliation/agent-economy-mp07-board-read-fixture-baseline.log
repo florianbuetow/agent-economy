@@ -1,0 +1,163 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 23 items
+
+tests/unit/routers/test_board_reads.py F..FFF.F..FF.                     [ 56%]
+tests/unit/routers/test_t072_board_reads_gaps.py FFFFF.F.F.              [100%]
+
+=================================== FAILURES ===================================
+______________________ TestBoardReads.test_get_task_by_id ______________________
+tests/unit/routers/test_board_reads.py:187: in test_get_task_by_id
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:33", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:33", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-b04e6088-4e1e-4668-b701-93d6f89db810"}}
+__________________ TestBoardReads.test_list_tasks_returns_all __________________
+tests/unit/routers/test_board_reads.py:222: in test_list_tasks_returns_all
+    assert len(tasks) == 2
+E   assert 0 == 2
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+__________________ TestBoardReads.test_list_tasks_with_limit ___________________
+tests/unit/routers/test_board_reads.py:234: in test_list_tasks_with_limit
+    assert len(tasks) == 1
+E   assert 0 == 1
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+____________________ TestBoardReads.test_get_bids_for_task _____________________
+tests/unit/routers/test_board_reads.py:249: in test_get_bids_for_task
+    assert len(bids) == 2
+E   assert 0 == 2
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-18 03:33:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+___________________ TestBoardReads.test_get_assets_for_task ____________________
+tests/unit/routers/test_board_reads.py:274: in test_get_assets_for_task
+    assert len(assets) == 2
+E   assert 0 == 2
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/board/assets"}}
+{"timestamp": "2026-10-18 03:33:34", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/board/assets"}}
+________________ TestBoardReads.test_count_tasks_after_creation ________________
+tests/unit/routers/test_board_reads.py:307: in test_count_tasks_after_creation
+    assert response.json() == {"count": 3}
+E   AssertionError: assert {'count': 0} == {'count': 3}
+E     
+E     Differing items:
+E     {'count': 0} != {'count': 3}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+__________________ TestBoardReads.test_count_tasks_by_status ___________________
+tests/unit/routers/test_board_reads.py:319: in test_count_tasks_by_status
+    assert data["open"] == 2
+           ^^^^^^^^^^^^
+E   KeyError: 'open'
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+________________ TestReadTaskListFilters.test_filter_by_status _________________
+tests/unit/routers/test_t072_board_reads_gaps.py:189: in test_filter_by_status
+    assert open_tid in task_ids
+E   AssertionError: assert 't-d24c2b56-05f3-47ab-98e7-c3a9661acc3e' in set()
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-8718ca6b-78b5-4779-b5ea-61bca98d0e16/status"}}
+_______________ TestReadTaskListFilters.test_filter_by_poster_id _______________
+tests/unit/routers/test_t072_board_reads_gaps.py:203: in test_filter_by_poster_id
+    assert len(tasks) == 1
+E   assert 0 == 1
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_ TestReadTaskListLimitOffset.test_limit_and_offset_together_skip_and_bound_results _
+tests/unit/routers/test_t072_board_reads_gaps.py:232: in test_limit_and_offset_together_skip_and_bound_results
+    assert len(tasks) == 2
+E   assert 0 == 2
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_ TestReadTaskIncludesBidCountAndEscrowPending.test_task_response_includes_computed_fields _
+tests/unit/routers/test_t072_board_reads_gaps.py:252: in test_task_response_includes_computed_fields
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-a69322e4-2c54-40bd-9fe5-687488735989"}}
+________ TestReadAssetsCount.test_assets_count_reflects_recorded_assets ________
+tests/unit/routers/test_t072_board_reads_gaps.py:273: in test_assets_count_reflects_recorded_assets
+    assert response.json() == {"count": 2}
+E   AssertionError: assert {'count': 0} == {'count': 2}
+E     
+E     Differing items:
+E     {'count': 0} != {'count': 2}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/board/assets"}}
+{"timestamp": "2026-10-18 03:33:35", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/board/assets"}}
+_____ TestReadBidRequiresTaskId.test_get_bid_with_correct_task_id_succeeds _____
+tests/unit/routers/test_t072_board_reads_gaps.py:299: in test_get_bid_with_correct_task_id_succeeds
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:36", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:36", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-18 03:33:36", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "bid_not_found", "status_code": 404, "path": "/board/bids/bid-bd643c38-7573-4ebb-9dba-4153d236d43a"}}
+___ TestReadAssetRequiresTaskId.test_get_asset_with_correct_task_id_succeeds ___
+tests/unit/routers/test_t072_board_reads_gaps.py:330: in test_get_asset_with_correct_task_id_succeeds
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:33:36", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:33:36", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/board/assets"}}
+{"timestamp": "2026-10-18 03:33:36", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "asset_not_found", "status_code": 404, "path": "/board/assets/asset-ee886367-fe28-4272-ab16-ae87455e1b8b"}}
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_board_reads.py::TestBoardReads::test_get_task_by_id
+FAILED tests/unit/routers/test_board_reads.py::TestBoardReads::test_list_tasks_returns_all
+FAILED tests/unit/routers/test_board_reads.py::TestBoardReads::test_list_tasks_with_limit
+FAILED tests/unit/routers/test_board_reads.py::TestBoardReads::test_get_bids_for_task
+FAILED tests/unit/routers/test_board_reads.py::TestBoardReads::test_get_assets_for_task
+FAILED tests/unit/routers/test_board_reads.py::TestBoardReads::test_count_tasks_after_creation
+FAILED tests/unit/routers/test_board_reads.py::TestBoardReads::test_count_tasks_by_status
+FAILED tests/unit/routers/test_t072_board_reads_gaps.py::TestReadTaskListFilters::test_filter_by_status
+FAILED tests/unit/routers/test_t072_board_reads_gaps.py::TestReadTaskListFilters::test_filter_by_poster_id
+FAILED tests/unit/routers/test_t072_board_reads_gaps.py::TestReadTaskListLimitOffset::test_limit_and_offset_together_skip_and_bound_results
+FAILED tests/unit/routers/test_t072_board_reads_gaps.py::TestReadTaskIncludesBidCountAndEscrowPending::test_task_response_includes_computed_fields
+FAILED tests/unit/routers/test_t072_board_reads_gaps.py::TestReadAssetsCount::test_assets_count_reflects_recorded_assets
+FAILED tests/unit/routers/test_t072_board_reads_gaps.py::TestReadBidRequiresTaskId::test_get_bid_with_correct_task_id_succeeds
+FAILED tests/unit/routers/test_t072_board_reads_gaps.py::TestReadAssetRequiresTaskId::test_get_asset_with_correct_task_id_succeeds
+=================== 14 failed, 9 passed, 1 warning in 2.92s ====================

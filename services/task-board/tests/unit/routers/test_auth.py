@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from task_board_service.core.state import get_app_state
-from tests.helpers import make_jws_token, tamper_jws
+from tests.helpers import make_jws_token, make_profile_jws_with_unchecked_payload, tamper_jws
 from tests.unit.routers.conftest import (
     create_task,
     make_task_id,
@@ -136,10 +136,11 @@ class TestBodyTokenEdgeCases:
         task_id = make_task_id()
         private_key = alice_keypair[0]
         # Payload has no "action" field
-        token = make_jws_token(
+        token = make_profile_jws_with_unchecked_payload(
             private_key,
             alice_agent_id,
             {"task_id": task_id, "poster_id": alice_agent_id},
+            resource=f"POST /tasks/{task_id}/cancel",
         )
 
         resp = await client.post(
@@ -161,10 +162,11 @@ class TestBodyTokenEdgeCases:
         task_id = make_task_id()
         private_key = platform_keypair[0]
         # Payload has no "action" field
-        token = make_jws_token(
+        token = make_profile_jws_with_unchecked_payload(
             private_key,
             platform_agent_id,
             {"task_id": task_id, "worker_pct": 50, "ruling_summary": "Test ruling"},
+            resource=f"POST /tasks/{task_id}/ruling",
         )
 
         resp = await client.post(
@@ -295,7 +297,7 @@ class TestBearerTokenValidation:
         """BEARER-01: Valid Bearer token on GET /tasks/{id}/bids in OPEN status returns 200."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         private_key = alice_keypair[0]
         token = make_jws_token(
@@ -343,7 +345,7 @@ class TestBearerTokenValidation:
         """BEARER-03: Missing Authorization header on sealed bids returns 400 invalid_jws."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         # GET without Authorization header
         resp = await client.get(f"/tasks/{task_id}/bids")
@@ -361,7 +363,7 @@ class TestBearerTokenValidation:
         """BEARER-04: Authorization without 'Bearer ' prefix returns 400 invalid_jws."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         private_key = alice_keypair[0]
         token = make_jws_token(
@@ -386,7 +388,7 @@ class TestBearerTokenValidation:
         """BEARER-05: Empty Bearer token returns 400 invalid_jws."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         headers = {"Authorization": "Bearer "}
 
@@ -405,7 +407,7 @@ class TestBearerTokenValidation:
         """BEARER-06: Malformed Bearer token (not three-part JWS) returns 400 invalid_jws."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         headers = {"Authorization": "Bearer not-a-jws"}
 
@@ -424,7 +426,7 @@ class TestBearerTokenValidation:
         """BEARER-07: Tampered Bearer token returns 403 forbidden."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         private_key = alice_keypair[0]
         token = make_jws_token(
@@ -450,7 +452,7 @@ class TestBearerTokenValidation:
         """BEARER-08: Wrong action in Bearer for sealed bids returns 400 invalid_payload."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         private_key = alice_keypair[0]
         token = make_jws_token(
@@ -505,7 +507,7 @@ class TestBearerTokenValidation:
         """BEARER-10: Payload task_id mismatch for sealed bids returns 400 invalid_payload."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         private_key = alice_keypair[0]
         token = make_jws_token(
@@ -562,7 +564,7 @@ class TestBearerTokenValidation:
         """BEARER-12: Non-poster accessing sealed bids returns 403 forbidden."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         # Bob (not the poster) tries to list sealed bids
         private_key = bob_keypair[0]
@@ -686,7 +688,7 @@ class TestIdentityDependency:
         # First create a task while identity mock is still working
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         # Now break the identity mock
         state = get_app_state()
@@ -732,7 +734,7 @@ class TestPublicEndpoints:
         """PUB-02: GET /tasks/{task_id} requires no authentication and returns 200."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         resp = await client.get(f"/tasks/{task_id}")
 
@@ -770,7 +772,7 @@ class TestPublicEndpoints:
         """PUB-04: GET /tasks/{task_id}/assets requires no authentication and returns 200."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
-        task_id = resp.json()["task_id"]
+        task_id = resp.json()["result"]["task_id"]
 
         resp = await client.get(f"/tasks/{task_id}/assets")
 
@@ -867,6 +869,7 @@ class TestTokenReplay:
                 "claim": "Test claim",
                 "escrow_id": "esc-xxx",
             },
+            resource=f"POST /tasks/{task_id}/ruling",
         )
 
         resp = await client.post(
@@ -899,6 +902,7 @@ class TestTokenReplay:
                 "category": "spec_quality",
                 "rating": "satisfied",
             },
+            resource=f"POST /tasks/{task_id}/approve",
         )
 
         resp = await client.post(
@@ -931,10 +935,11 @@ class TestAuthSecurity:
         )
 
         # Trigger invalid_payload (missing action)
-        token_no_action = make_jws_token(
+        token_no_action = make_profile_jws_with_unchecked_payload(
             private_key,
             alice_agent_id,
             {"task_id": task_id, "poster_id": alice_agent_id},
+            resource=f"POST /tasks/{task_id}/cancel",
         )
         resp_invalid_payload = await client.post(
             f"/tasks/{task_id}/cancel",
@@ -944,7 +949,7 @@ class TestAuthSecurity:
         # Trigger forbidden (tampered JWS) -- need a task first
         create_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert create_resp.status_code == 201
-        real_task_id = create_resp.json()["task_id"]
+        real_task_id = create_resp.json()["result"]["task_id"]
 
         valid_token = make_jws_token(
             private_key,
@@ -1006,7 +1011,7 @@ class TestAuthSecurity:
         # forbidden (tampered JWS on Bearer endpoint) -- need a task first
         create_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert create_resp.status_code == 201
-        real_task_id = create_resp.json()["task_id"]
+        real_task_id = create_resp.json()["result"]["task_id"]
 
         valid_token = make_jws_token(
             private_key,
@@ -1063,6 +1068,7 @@ class TestAuthSecurity:
             private_key,
             platform_agent_id,
             {"action": "create_account", "agent_id": platform_agent_id},
+            resource="POST /tasks",
         )
 
         resp = await client.post(

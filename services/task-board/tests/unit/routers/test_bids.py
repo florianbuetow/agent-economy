@@ -6,12 +6,14 @@ import asyncio
 from datetime import datetime
 
 import pytest
+from freezegun import freeze_time
 
 from tests.helpers import make_jws_token
 from tests.unit.routers.conftest import (
     accept_bid,
     create_task,
     make_task_id,
+    new_operation_fields,
     submit_bid,
 )
 
@@ -31,7 +33,7 @@ class TestBidding:
         """BID-01: Submit a valid bid returns 201 with bid details."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         response = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert response.status_code == 201
@@ -69,12 +71,13 @@ class TestBidding:
         """BID-03: Bid on a cancelled task returns 409 invalid_status."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         # Cancel the task
         private_key = alice_keypair[0]
         cancel_payload = {
             "action": "cancel_task",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "poster_id": alice_agent_id,
         }
@@ -100,7 +103,7 @@ class TestBidding:
         """BID-04: Bid on an accepted task returns 409 invalid_status."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
@@ -125,7 +128,7 @@ class TestBidding:
         """BID-05: Duplicate bid from same agent returns 409 bid_already_exists."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         first = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert first.status_code == 201
@@ -148,7 +151,7 @@ class TestBidding:
         """BID-06: Multiple different agents can bid on the same task."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bob_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bob_resp.status_code == 201
@@ -171,12 +174,13 @@ class TestBidding:
         """BID-07: Signer does not match bidder_id returns 403 forbidden."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         # Bob signs but claims to be Carol
         private_key = bob_keypair[0]
         payload = {
             "action": "submit_bid",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "bidder_id": carol_agent_id,
             "amount": 90,
@@ -198,7 +202,7 @@ class TestBidding:
         """BID-08: Wrong action in bid token returns 400 invalid_payload."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         private_key = bob_keypair[0]
         payload = {
@@ -224,12 +228,13 @@ class TestBidding:
         """BID-09: Missing required payload fields returns 400 invalid_payload."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         # Missing bidder_id and amount
         private_key = bob_keypair[0]
         payload = {
             "action": "submit_bid",
+            **new_operation_fields(task_id),
             "task_id": task_id,
         }
         token = make_jws_token(private_key, bob_agent_id, payload)
@@ -255,11 +260,12 @@ class TestBidding:
         """BID-10: Invalid bid amount returns 400 invalid_reward."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         private_key = bob_keypair[0]
         payload = {
             "action": "submit_bid",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "bidder_id": bob_agent_id,
             "amount": invalid_amount,
@@ -279,7 +285,7 @@ class TestBidding:
         """BID-11: Poster bidding on own task returns 400 self_bid."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         response = await submit_bid(client, alice_keypair, alice_agent_id, task_id)
         assert response.status_code == 400
@@ -294,7 +300,7 @@ class TestBidding:
         bob_keypair,
         bob_agent_id,
     ):
-        """BID-12: Bid after bidding deadline expired returns 409 invalid_status."""
+        """BID-12: Bid at the persisted bidding cutoff returns 409 cutoff_reached."""
         task_resp = await create_task(
             client,
             alice_keypair,
@@ -302,14 +308,12 @@ class TestBidding:
             bidding_deadline_seconds=1,
         )
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
-        # Wait for the bidding deadline to pass
-        await asyncio.sleep(1.5)
-
-        response = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
+        with freeze_time(task_resp.json()["result"]["bidding_deadline"]):
+            response = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert response.status_code == 409
-        assert response.json()["error"] == "invalid_status"
+        assert response.json()["error"] == "cutoff_reached"
 
     @pytest.mark.unit
     async def test_bid_13_concurrent_duplicate_bid_race(
@@ -323,7 +327,7 @@ class TestBidding:
         """BID-13: Concurrent duplicate bid race — one 201, one 409."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         results = await asyncio.gather(
             submit_bid(client, bob_keypair, bob_agent_id, task_id),
@@ -348,8 +352,11 @@ class TestBidding:
         """BID-14: Submitting a bid increments bid_count on the task."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
-        assert task_resp.json()["bid_count"] == 0
+        task_id = task_resp.json()["result"]["task_id"]
+
+        task_before_bid = await client.get(f"/tasks/{task_id}")
+        assert task_before_bid.status_code == 200
+        assert task_before_bid.json()["bid_count"] == 0
 
         await submit_bid(client, bob_keypair, bob_agent_id, task_id)
 
@@ -367,7 +374,7 @@ class TestBidding:
         """BID-15: Malformed bid token returns 400 invalid_jws."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         response = await client.post(f"/tasks/{task_id}/bids", json={"token": "not-a-valid-jws"})
         assert response.status_code == 400
@@ -389,7 +396,7 @@ class TestBidListing:
         """BL-01: List bids returns 200 with bids array when bids exist."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
@@ -420,7 +427,7 @@ class TestBidListing:
         """BL-02: List bids returns 200 with empty array when no bids."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         # Poster lists bids with auth
         private_key = alice_keypair[0]
@@ -457,7 +464,7 @@ class TestBidListing:
         """BL-04: During OPEN status, poster can see sealed bids via Bearer auth."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
@@ -490,7 +497,7 @@ class TestBidListing:
         """BL-05: After OPEN status (accepted), bids are public without auth."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
@@ -515,7 +522,7 @@ class TestBidListing:
         """BL-06: Bid list entries include expected fields."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         await submit_bid(client, bob_keypair, bob_agent_id, task_id)
 
@@ -549,7 +556,7 @@ class TestBidListing:
         """BL-07: Bids are ordered by submitted_at."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         await submit_bid(client, carol_keypair, carol_agent_id, task_id)
@@ -581,7 +588,7 @@ class TestBidListing:
         """BL-08: Non-poster gets 403 when trying to list sealed bids."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         await submit_bid(client, bob_keypair, bob_agent_id, task_id)
 
@@ -613,7 +620,7 @@ class TestBidAcceptance:
         """BA-01: Accept a valid bid returns 200 with accepted status and worker_id."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
@@ -637,7 +644,7 @@ class TestBidAcceptance:
         """BA-02: Accept a nonexistent bid returns 404 bid_not_found."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         fake_bid_id = "bid-00000000-0000-0000-0000-000000000000"
         response = await accept_bid(client, alice_keypair, alice_agent_id, task_id, fake_bid_id)
@@ -674,7 +681,7 @@ class TestBidAcceptance:
         """BA-04: Accept bid on non-OPEN task returns 409 invalid_status."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bob_bid = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bob_bid.status_code == 201
@@ -707,7 +714,7 @@ class TestBidAcceptance:
         """BA-05: Non-poster cannot accept a bid — returns 403 forbidden."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
@@ -730,7 +737,7 @@ class TestBidAcceptance:
         """BA-06: Wrong action in accept token returns 400 invalid_payload."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
@@ -739,6 +746,7 @@ class TestBidAcceptance:
         private_key = alice_keypair[0]
         payload = {
             "action": "cancel_task",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "bid_id": bid_id,
             "poster_id": alice_agent_id,
@@ -764,7 +772,7 @@ class TestBidAcceptance:
         """BA-07: Signer does not match poster_id returns 403 forbidden."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
@@ -774,6 +782,7 @@ class TestBidAcceptance:
         private_key = carol_keypair[0]
         payload = {
             "action": "accept_bid",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "bid_id": bid_id,
             "poster_id": alice_agent_id,
@@ -797,7 +806,7 @@ class TestBidAcceptance:
         """BA-08: Accepting a bid sets execution_deadline on the task."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
@@ -822,7 +831,7 @@ class TestBidAcceptance:
         """BA-09: Accepting a bid sets accepted_at timestamp."""
         task_resp = await create_task(client, alice_keypair, alice_agent_id)
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
@@ -836,7 +845,7 @@ class TestBidAcceptance:
         datetime.fromisoformat(data["accepted_at"])
 
     @pytest.mark.unit
-    async def test_ba_10_accept_after_bidding_deadline_if_open(
+    async def test_accept_at_acceptance_deadline_is_rejected(
         self,
         client,
         alice_keypair,
@@ -844,7 +853,11 @@ class TestBidAcceptance:
         bob_keypair,
         bob_agent_id,
     ):
-        """BA-10: Accepting a bid after bidding_deadline still works if task is open."""
+        """A bid-bearing native task rejects acceptance at its selected window cutoff.
+
+        MP-07 moves this expiry boundary from bidding close to the poster's explicit
+        acceptance cutoff. The rejected command cannot extend that frozen cutoff.
+        """
         task_resp = await create_task(
             client,
             alice_keypair,
@@ -852,17 +865,17 @@ class TestBidAcceptance:
             bidding_deadline_seconds=1,
         )
         assert task_resp.status_code == 201
-        task_id = task_resp.json()["task_id"]
+        task_id = task_resp.json()["result"]["task_id"]
 
         # Submit bid before deadline
         bid_resp = await submit_bid(client, bob_keypair, bob_agent_id, task_id)
         assert bid_resp.status_code == 201
         bid_id = bid_resp.json()["bid_id"]
 
-        # Wait for deadline to pass
-        await asyncio.sleep(1.5)
+        with freeze_time(task_resp.json()["result"]["acceptance_deadline"]):
+            response = await accept_bid(client, alice_keypair, alice_agent_id, task_id, bid_id)
+            assert response.status_code == 409
+            assert response.json()["error"] == "cutoff_reached"
 
-        # Accept should still work
-        response = await accept_bid(client, alice_keypair, alice_agent_id, task_id, bid_id)
-        assert response.status_code == 200
-        assert response.json()["status"] == "accepted"
+            task = await client.get(f"/tasks/{task_id}")
+            assert task.json()["status"] == "expired"

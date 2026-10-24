@@ -1,0 +1,91 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/central-bank
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/integration/test_mp04_historical_observations.py F                 [100%]
+
+=================================== FAILURES ===================================
+_ test_native_settlement_preserves_cutover_lock_observation_with_fresh_projection _
+../../libs/service-auth/src/service_auth/financial_responses.py:359: in parse_native_financial_envelope
+    envelope = NativeFinancialEnvelope.model_validate(value)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for NativeFinancialEnvelope
+E   current_escrow.created_at
+E     String should have at least 1 character [type=string_too_short, input_value='', input_type=str]
+E       For further information visit https://errors.pydantic.dev/2.12/v/string_too_short
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp04_historical_observations.py:597: in test_native_settlement_preserves_cutover_lock_observation_with_fresh_projection
+    settlement = await client.post(path, json={"token": token})
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1859: in post
+    return await self.request(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1540: in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1629: in send
+    response = await self._send_handling_auth(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1657: in _send_handling_auth
+    response = await self._send_handling_redirects(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1694: in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1730: in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_transports/asgi.py:170: in handle_async_request
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/applications.py:90: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+src/central_bank_service/core/middleware.py:129: in __call__
+    await self.app(scope, buffered_receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:660: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:680: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:276: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.13/site-packages/fastapi/routing.py:328: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/central_bank_service/routers/escrow.py:223: in escrow_release
+    result = await state.ledger.escrow_release(
+src/central_bank_service/services/ledger_db_client.py:366: in escrow_release
+    result = parse_native_financial_envelope(
+../../libs/service-auth/src/service_auth/financial_responses.py:361: in parse_native_financial_envelope
+    raise RuntimeError("Gateway returned an invalid native financial envelope") from exc
+E   RuntimeError: Gateway returned an invalid native financial envelope
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 17:09:30", "level": "ERROR", "logger": "central-bank.central_bank_service.core.exceptions", "message": "Unhandled exception", "exception": "Traceback (most recent call last):\n  File \"/Users/flo/Developer/github/agent-economy/libs/service-auth/src/service_auth/financial_responses.py\", line 359, in parse_native_financial_envelope\n    envelope = NativeFinancialEnvelope.model_validate(value)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/pydantic/main.py\", line 716, in model_validate\n    return cls.__pydantic_validator__.validate_python(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        obj,\n        ^^^^\n    ...<5 lines>...\n        by_name=by_name,\n        ^^^^^^^^^^^^^^^^\n    )\n    ^\npydantic_core._pydantic_core.ValidationError: 1 validation error for NativeFinancialEnvelope\ncurrent_escrow.created_at\n  String should have at least 1 character [type=string_too_short, input_value='', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/string_too_short\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/starlette/middleware/errors.py\", line 164, in __call__\n    await self.app(scope, receive, _send)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/src/central_bank_service/core/middleware.py\", line 129, in __call__\n    await self.app(scope, buffered_receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py\", line 63, in __call__\n    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 53, in wrapped_app\n    raise exc\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py\", line 18, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 660, in __call__\n    await self.middleware_stack(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 680, in app\n    await route.handle(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 276, in handle\n    await self.app(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 134, in app\n    await wrap_app_handling_exceptions(app, request)(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 53, in wrapped_app\n    raise exc\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 120, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 674, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 328, in run_endpoint_function\n    return await dependant.call(**values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/src/central_bank_service/routers/escrow.py\", line 223, in escrow_release\n    result = await state.ledger.escrow_release(\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<4 lines>...\n    )\n    ^\n  File \"/Users/flo/Developer/github/agent-economy/services/central-bank/src/central_bank_service/services/ledger_db_client.py\", line 366, in escrow_release\n    result = parse_native_financial_envelope(\n        data,\n    ...<6 lines>...\n        },\n    )\n  File \"/Users/flo/Developer/github/agent-economy/libs/service-auth/src/service_auth/financial_responses.py\", line 361, in parse_native_financial_envelope\n    raise RuntimeError(\"Gateway returned an invalid native financial envelope\") from exc\nRuntimeError: Gateway returned an invalid native financial envelope", "extra": {"path": "/escrow/esc-native/release"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp04_historical_observations.py::test_native_settlement_preserves_cutover_lock_observation_with_fresh_projection
+============================== 1 failed in 2.01s ===============================

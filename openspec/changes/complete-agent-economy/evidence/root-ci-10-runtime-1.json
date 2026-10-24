@@ -1,0 +1,137 @@
+{
+  "run_id": "2eee4312e6e94b95a550a0bd8cb8f162",
+  "run_dir": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg",
+  "ports": {
+    "db-gateway": 50241,
+    "identity": 50242,
+    "central-bank": 50243,
+    "task-board": 50244,
+    "reputation": 50245,
+    "court": 50246,
+    "ui": 50247
+  },
+  "config_paths": {
+    "db-gateway": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/db-gateway.yaml",
+    "identity": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/identity.yaml",
+    "central-bank": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/central-bank.yaml",
+    "task-board": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/task-board.yaml",
+    "reputation": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/reputation.yaml",
+    "court": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/court.yaml",
+    "ui": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/ui.yaml"
+  },
+  "agent_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/agents.yaml",
+  "gateway_config_path": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/db-gateway.yaml",
+  "log_paths": {
+    "db-gateway": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/logs/db-gateway.log",
+    "identity": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/logs/identity.log",
+    "central-bank": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/logs/central-bank.log",
+    "task-board": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/logs/task-board.log",
+    "reputation": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/logs/reputation.log",
+    "court": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/logs/court.log",
+    "ui": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/logs/ui.log"
+  },
+  "processes": {
+    "db-gateway": {
+      "pid": 47865,
+      "pgid": 47865,
+      "sid": 47865,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "identity": {
+      "pid": 47867,
+      "pgid": 47867,
+      "sid": 47867,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "central-bank": {
+      "pid": 47870,
+      "pgid": 47870,
+      "sid": 47870,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "task-board": {
+      "pid": 47872,
+      "pgid": 47872,
+      "sid": 47872,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "reputation": {
+      "pid": 47874,
+      "pgid": 47874,
+      "sid": 47874,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "court": {
+      "pid": 47951,
+      "pgid": 47951,
+      "sid": 47951,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    "ui": {
+      "pid": 47954,
+      "pgid": 47954,
+      "sid": 47954,
+      "running": false,
+      "leader_returncode": 143,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "just",
+        "_test-integration-suites"
+      ],
+      "pid": 47961,
+      "pgid": 47961,
+      "sid": 47961,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ],
+  "bootstrap_commands": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "--no-sync",
+        "python",
+        "-m",
+        "key_provision_cli",
+        "provision",
+        "--config",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/agents.yaml",
+        "--gateway-config",
+        "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2eee4312e6e94b95a550a0bd8cb8f162-woaltpzg/configs/db-gateway.yaml"
+      ],
+      "pid": 47863,
+      "pgid": 47863,
+      "sid": 47863,
+      "running": false,
+      "leader_returncode": 0,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ]
+}

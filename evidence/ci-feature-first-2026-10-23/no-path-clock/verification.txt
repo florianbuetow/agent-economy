@@ -1,0 +1,34 @@
+Clock fixture verification — 2026-10-24
+
+Scope:
+- tests/runtime/test_git_office_hours.py
+- no production hook edits
+- no Git hook configuration changes
+
+Commands (from repository root):
+
+UV_CACHE_DIR=/tmp/agent-economy-uv-cache TMPDIR=/tmp uv run --project services/db-gateway --frozen ruff check tests/runtime/test_git_office_hours.py
+Result: All checks passed!
+
+UV_CACHE_DIR=/tmp/agent-economy-uv-cache TMPDIR=/tmp uv run --project services/db-gateway --frozen ruff format --check tests/runtime/test_git_office_hours.py
+Result: 1 file already formatted
+
+UV_CACHE_DIR=/tmp/agent-economy-uv-cache TMPDIR=/tmp uv run --project services/db-gateway --frozen pytest tests/runtime/test_git_office_hours.py -v --tb=short
+Result: 30 passed in 15.99s
+
+Post-fix checks:
+- No `PATH: ...tmp_path`, `tmp_path...PATH`, or `"PATH":` assignment remains.
+- The fixture copies pre-commit, pre-push, and check-office-hours into tmp_path.
+- The copied check-office-hours requires exactly one production clock-command match.
+- Only that matched command is replaced, using shlex.quote around the absolute fake-clock path.
+- The test environment asserts that PATH is byte-for-byte the inherited os.environ PATH.
+- The fake clock validates TZ=Europe/Amsterdam and the +%u %H argument in success and failure cases.
+- Tests invoke copied pre-commit/pre-push scripts directly.
+- Each fixture setup asserts that all three real hook files remain byte-identical.
+- The real check-office-hours still contains:
+  stamp=$(TZ=Europe/Amsterdam date '+%u %H') || fail_clock
+
+Real-hook SHA-256 after verification:
+b80f9f6e292cfd528e63f114836c5e4afb4388c18f0aed0a41b5c679a1c3acd6  .githooks/pre-commit
+b80f9f6e292cfd528e63f114836c5e4afb4388c18f0aed0a41b5c679a1c3acd6  .githooks/pre-push
+dc075f1683a7f7e5489d76c332b8b477414b5979b36ab0a7e5c440a98b5711d6  .githooks/check-office-hours

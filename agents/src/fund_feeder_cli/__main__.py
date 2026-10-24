@@ -3,12 +3,13 @@
 Usage::
 
     cd agents/
-    uv run python -m fund_feeder_cli <amount>
+    uv run python -m fund_feeder_cli <amount> --operation-id <op-UUID> --reference <reference>
 
 Example::
 
     cd agents/
-    uv run python -m fund_feeder_cli 500
+    uv run python -m fund_feeder_cli 500 \\
+        --operation-id op-00000000-0000-4000-8000-000000000001 --reference manual-funding-1
 """
 
 from __future__ import annotations
@@ -17,9 +18,9 @@ import argparse
 import asyncio
 import logging
 import sys
-from uuid import uuid4
 
 import httpx
+from service_auth.financial_responses import LegacyFinancialEnvelope
 
 from base_agent.factory import AgentFactory
 
@@ -33,10 +34,20 @@ def _parse_args() -> argparse.Namespace:
         type=int,
         help="Amount of coins to credit to the feeder agent (positive integer).",
     )
+    parser.add_argument(
+        "--operation-id",
+        required=True,
+        help="Caller-owned canonical op-UUID; reuse it when retrying this funding intent.",
+    )
+    parser.add_argument(
+        "--reference",
+        required=True,
+        help="Stable funding reference; reuse it when retrying the same intent.",
+    )
     return parser.parse_args()
 
 
-async def _fund(amount: int) -> None:
+async def _fund(amount: int, operation_id: str, reference: str) -> None:
     logger = logging.getLogger("fund_feeder_cli")
 
     if amount <= 0:
@@ -62,7 +73,7 @@ async def _fund(amount: int) -> None:
 
         # Step 2: Ensure feeder has a bank account (idempotent)
         try:
-            await platform.create_account(agent_id=feeder_id, initial_balance=0)
+            await platform.create_account(agent_id=feeder_id, initial_balance=0, operation_id=None)
             logger.info("Bank account created for feeder")
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 409:
@@ -71,17 +82,33 @@ async def _fund(amount: int) -> None:
                 raise
 
         # Step 3: Credit funds via platform agent
-        reference = f"fund_feeder_{uuid4().hex[:8]}"
         result = await platform.credit_account(
             account_id=feeder_id,
             amount=amount,
             reference=reference,
+            operation_id=operation_id,
         )
+        if result["outcome"] == "legacy_observation":
+            legacy = LegacyFinancialEnvelope.model_validate(result)
+            raise RuntimeError(
+                "Feeder funding received a historical observation "
+                f"(tx_id={legacy.observation.transaction.tx_id}, "
+                f"observed_fact_sha256={legacy.observation.observed_fact_sha256}); "
+                "no native operation confirmation was created"
+            )
+        receipt = result["receipt"]
+        if (
+            result["outcome"] != "native_receipt"
+            or receipt["operation_id"] != operation_id
+            or receipt["operation_kind"] != "credit"
+        ):
+            raise RuntimeError("Feeder funding returned an unexpected receipt")
         logger.info(
-            "Credited %d coins (tx_id=%s, balance_after=%s)",
+            "Funding confirmed for %d coins (operation_id=%s, tx_id=%s, balance_after=%s)",
             amount,
-            result["tx_id"],
-            result["balance_after"],
+            receipt["operation_id"],
+            receipt["legs"][0]["transaction_id"],
+            receipt["result"]["balance_after"],
         )
 
         # Step 4: Verify balance
@@ -92,6 +119,7 @@ async def _fund(amount: int) -> None:
         print(f"agent_id={feeder_id}")
         print(f"funded_amount={amount}")
         print(f"balance={balance}")
+        print(f"operation_id={receipt['operation_id']}")
 
     finally:
         await feeder.close()
@@ -107,7 +135,7 @@ def main() -> None:
         stream=sys.stderr,
     )
     args = _parse_args()
-    asyncio.run(_fund(args.amount))
+    asyncio.run(_fund(args.amount, args.operation_id, args.reference))
 
 
 if __name__ == "__main__":

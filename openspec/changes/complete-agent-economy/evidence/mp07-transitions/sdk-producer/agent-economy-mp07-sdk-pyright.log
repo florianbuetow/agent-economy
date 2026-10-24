@@ -1,0 +1,46 @@
+Config file "/Users/flo/Developer/github/agent-economy/libs/service-auth" could not be read.
+/Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_gateway.py
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_gateway.py:175:33 - error: Argument of type "Literal['keys/gateway-identity.pub']" cannot be assigned to parameter "public_key_path" of type "Path" in function "__init__"
+    "Literal['keys/gateway-identity.pub']" is not assignable to "Path" (reportArgumentType)
+/Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_bootstrap.py
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_bootstrap.py:31:12 - error: Type "(...) -> object" is not assignable to return type "(str, Path) -> tuple[Ed25519PrivateKey, Ed25519PublicKey]"
+    Type "(...) -> object" is not assignable to type "(str, Path) -> tuple[Ed25519PrivateKey, Ed25519PublicKey]"
+      Function return type "object" is incompatible with type "tuple[Ed25519PrivateKey, Ed25519PublicKey]"
+        "object" is not assignable to "tuple[Ed25519PrivateKey, Ed25519PublicKey]" (reportReturnType)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_bootstrap.py:146:18 - error: Argument of type "object" cannot be assigned to parameter "iterable" of type "Iterable[_T_co@tuple]" in function "__new__"
+    "object" is incompatible with protocol "Iterable[_T_co@tuple]"
+      "__iter__" is not present (reportArgumentType)
+/Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py:45:12 - error: Type "(...) -> object" is not assignable to return type "(str, Path) -> tuple[Any, Any]"
+    Type "(...) -> object" is not assignable to type "(str, Path) -> tuple[Any, Any]"
+      Function return type "object" is incompatible with type "tuple[Any, Any]"
+        "object" is not assignable to "tuple[Any, Any]" (reportReturnType)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py:50:30 - error: "synchronize" is not a known attribute of module "multiprocessing" (reportAttributeAccessIssue)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py:51:30 - error: "queues" is not a known attribute of module "multiprocessing" (reportAttributeAccessIssue)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py:64:32 - error: "synchronize" is not a known attribute of module "multiprocessing" (reportAttributeAccessIssue)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py:65:36 - error: "synchronize" is not a known attribute of module "multiprocessing" (reportAttributeAccessIssue)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py:66:36 - error: "synchronize" is not a known attribute of module "multiprocessing" (reportAttributeAccessIssue)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py:67:30 - error: "queues" is not a known attribute of module "multiprocessing" (reportAttributeAccessIssue)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py:90:32 - error: "synchronize" is not a known attribute of module "multiprocessing" (reportAttributeAccessIssue)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py:91:36 - error: "synchronize" is not a known attribute of module "multiprocessing" (reportAttributeAccessIssue)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_key_provisioning.py:92:30 - error: "queues" is not a known attribute of module "multiprocessing" (reportAttributeAccessIssue)
+/Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_mp03_jws_core.py
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_mp03_jws_core.py:110:9 - error: Argument of type "dict[str, str]" cannot be assigned to parameter "payload" of type "dict[str, object]" in function "create_jws"
+    "dict[str, str]" is not assignable to "dict[str, object]"
+      Type parameter "_VT@dict" is invariant, but "str" is not the same as "object"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_mp03_jws_core.py:120:17 - error: Argument of type "dict[str, str]" cannot be assigned to parameter "payload" of type "dict[str, object]" in function "__init__"
+    "dict[str, str]" is not assignable to "dict[str, object]"
+      Type parameter "_VT@dict" is invariant, but "str" is not the same as "object"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_mp03_jws_core.py:224:9 - error: Argument of type "dict[str, str]" cannot be assigned to parameter "payload" of type "dict[str, object]" in function "create_jws"
+    "dict[str, str]" is not assignable to "dict[str, object]"
+      Type parameter "_VT@dict" is invariant, but "str" is not the same as "object"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_mp03_jws_core.py:435:9 - error: Argument of type "dict[str, str]" cannot be assigned to parameter "payload" of type "dict[str, object]" in function "sign"
+    "dict[str, str]" is not assignable to "dict[str, object]"
+      Type parameter "_VT@dict" is invariant, but "str" is not the same as "object"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+/Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_mp04_legacy_observations.py
+  /Users/flo/Developer/github/agent-economy/libs/service-auth/tests/unit/test_mp04_legacy_observations.py:1307:12 - error: "__getitem__" method not defined on type "object" (reportIndexIssue)
+18 errors, 0 warnings, 0 informations

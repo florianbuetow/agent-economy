@@ -1,0 +1,4 @@
+688eb993c73cae1e1e69b1a8717b68d1a6670d77d16824d4cc00402d19d7f011  services/task-board/tests/integration/test_mp07_acceptance_window.py
+4e0e71810d0fb99a1b9cd707b939810082efef5aeaf0fb72ee9e0f98dbda08b3  services/task-board/tests/integration/test_mp07_bid_admission_races.py
+92fc919d802dbf718a2e705656d399b2708d8898c4fdd2228ab83980a69dcb9f  services/task-board/tests/integration/test_mp07_accept_expiry_race.py
+81322492bbbc4ab2037e3fc58b35b0724cadac211bebb44ffd75c5f10bbcf66a  docs/plans/2026-10-18-mp07-window-bid-race-reconciliation.md

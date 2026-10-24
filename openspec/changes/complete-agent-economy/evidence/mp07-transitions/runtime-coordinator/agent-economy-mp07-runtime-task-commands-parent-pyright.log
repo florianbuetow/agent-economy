@@ -1,0 +1,33 @@
+/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:156:20 - error: Unnecessary isinstance call; "TaskBoardCommandResponse" is always an instance of "TaskBoardCommandResponse" (reportUnnecessaryIsInstance)
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:176:69 - error: Argument of type "str | int" cannot be assigned to parameter "operation_id" of type "str" in function "submit_bid"
+    Type "str | int" is not assignable to type "str"
+      "int" is not assignable to "str" (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:176:69 - error: Argument of type "str | int" cannot be assigned to parameter "expected_lifecycle_version" of type "int" in function "submit_bid"
+    Type "str | int" is not assignable to type "int"
+      "str" is not assignable to "int" (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:180:69 - error: Argument of type "str | int" cannot be assigned to parameter "operation_id" of type "str" in function "accept_bid"
+    Type "str | int" is not assignable to type "str"
+      "int" is not assignable to "str" (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:180:69 - error: Argument of type "str | int" cannot be assigned to parameter "expected_lifecycle_version" of type "int" in function "accept_bid"
+    Type "str | int" is not assignable to type "int"
+      "str" is not assignable to "int" (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:183:75 - error: Argument of type "str | int" cannot be assigned to parameter "operation_id" of type "str" in function "submit_deliverable"
+    Type "str | int" is not assignable to type "str"
+      "int" is not assignable to "str" (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:183:75 - error: Argument of type "str | int" cannot be assigned to parameter "expected_lifecycle_version" of type "int" in function "submit_deliverable"
+    Type "str | int" is not assignable to type "int"
+      "str" is not assignable to "int" (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:185:69 - error: Argument of type "str | int" cannot be assigned to parameter "operation_id" of type "str" in function "approve_task"
+    Type "str | int" is not assignable to type "str"
+      "int" is not assignable to "str" (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:185:69 - error: Argument of type "str | int" cannot be assigned to parameter "expected_lifecycle_version" of type "int" in function "approve_task"
+    Type "str | int" is not assignable to type "int"
+      "str" is not assignable to "int" (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:188:69 - error: Argument of type "str | int" cannot be assigned to parameter "operation_id" of type "str" in function "dispute_task"
+    Type "str | int" is not assignable to type "str"
+      "int" is not assignable to "str" (reportArgumentType)
+  /Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_task_commands.py:188:69 - error: Argument of type "str | int" cannot be assigned to parameter "expected_lifecycle_version" of type "int" in function "dispute_task"
+    Type "str | int" is not assignable to type "int"
+      "str" is not assignable to "int" (reportArgumentType)
+11 errors, 0 warnings, 0 informations

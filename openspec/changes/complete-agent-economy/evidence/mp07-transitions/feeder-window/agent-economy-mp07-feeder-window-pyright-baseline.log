@@ -1,0 +1,5 @@
+/private/tmp/agent-economy-mp07-feeder-config-before.py
+  /private/tmp/agent-economy-mp07-feeder-config-before.py:112:32 - error: Argument of type "Unknown | dict[Unknown, Unknown]" cannot be assigned to parameter "task_feeder" of type "TaskFeederConfig" in function "__init__"
+    Type "Unknown | dict[Unknown, Unknown]" is not assignable to type "TaskFeederConfig"
+      "dict[Unknown, Unknown]" is not assignable to "TaskFeederConfig" (reportArgumentType)
+1 error, 0 warnings, 0 informations

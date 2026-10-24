@@ -1,0 +1,4 @@
+{"timestamp": "2026-03-08 22:23", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-03-08 22:23", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": "All connection attempts failed"}}
+{"timestamp": "2026-03-08 22:23", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-03-08 22:23", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": "All connection attempts failed"}}

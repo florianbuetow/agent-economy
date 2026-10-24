@@ -1,0 +1,683 @@
+
+[0;34m=== Running Full CI (Quiet Mode) ===[0m
+[0;34m--- Phase 0: Project structure ---[0m
+
+[0;34m=== Checking Project Structure ===[0m
+
+[0;32m✓ services/central-bank/justfile[0m
+[0;32m✓ services/court/justfile[0m
+[0;32m✓ services/db-gateway/justfile[0m
+[0;32m✓ services/reputation/justfile[0m
+[0;32m✓ services/task-board/justfile[0m
+[0;32m✓ services/ui/justfile[0m
+
+[0;32m✓ All service justfiles are identical[0m
+
+[0;34m--- Phase 1: Libs CI ---[0m
+Checking service-commons...
+Checking service-commons...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-commons/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-commons
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 4 items
+
+tests/unit/test_smoke.py::test_package_importable PASSED                 [ 25%]
+tests/unit/test_smoke.py::test_exceptions_module_exports PASSED          [ 50%]
+tests/unit/test_smoke.py::test_logging_module_exports PASSED             [ 75%]
+tests/unit/test_smoke.py::test_config_module_exports PASSED              [100%]
+
+============================== 4 passed in 0.12s ===============================
+[0;32m✓ service-commons CI passed[0m
+Checking service-clients...
+Checking service-clients...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-clients/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-clients
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 59 items
+
+tests/unit/test_bank_client.py::TestConnectionFailureMapping::test_connect_error_maps_to_502_central_bank_unavailable PASSED [  1%]
+tests/unit/test_bank_client.py::TestConnectionFailureMapping::test_timeout_maps_to_502_central_bank_unavailable PASSED [  3%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_success PASSED      [  5%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_alias_matches_lock_escrow PASSED [  6%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_402_raises_insufficient_funds PASSED [  8%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_404_raises_account_not_found PASSED [ 10%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_403_raises_forbidden PASSED [ 11%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_409_raises_conflict_from_body PASSED [ 13%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_500_raises_502_central_bank_unavailable PASSED [ 15%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_success PASSED   [ 16%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_alias_matches_release_escrow PASSED [ 18%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_404_raises_not_found PASSED [ 20%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_403_raises_forbidden PASSED [ 22%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_409_raises_conflict PASSED [ 23%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_400_raises_bad_request PASSED [ 25%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_success PASSED     [ 27%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_alias_matches_split_escrow PASSED [ 28%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_404_raises_not_found PASSED [ 30%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_403_raises_forbidden PASSED [ 32%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_no_split_path_configured_raises_502 PASSED [ 33%]
+tests/unit/test_gateway_client.py::TestConnectionFailureMapping::test_connect_error_maps_to_502_db_gateway_unavailable PASSED [ 35%]
+tests/unit/test_gateway_client.py::TestConnectionFailureMapping::test_timeout_maps_to_502_db_gateway_unavailable PASSED [ 37%]
+tests/unit/test_gateway_client.py::TestIdentity::test_register_agent_success PASSED [ 38%]
+tests/unit/test_gateway_client.py::TestIdentity::test_register_agent_conflict PASSED [ 40%]
+tests/unit/test_gateway_client.py::TestIdentity::test_get_agent_not_found_returns_none PASSED [ 42%]
+tests/unit/test_gateway_client.py::TestIdentity::test_list_agents PASSED [ 44%]
+tests/unit/test_gateway_client.py::TestIdentity::test_count_agents PASSED [ 45%]
+tests/unit/test_gateway_client.py::TestBank::test_create_account_success PASSED [ 47%]
+tests/unit/test_gateway_client.py::TestBank::test_create_account_conflict PASSED [ 49%]
+tests/unit/test_gateway_client.py::TestBank::test_get_account_found PASSED [ 50%]
+tests/unit/test_gateway_client.py::TestBank::test_get_account_not_found_returns_none PASSED [ 52%]
+tests/unit/test_gateway_client.py::TestBank::test_get_transactions PASSED [ 54%]
+tests/unit/test_gateway_client.py::TestBank::test_count_accounts PASSED  [ 55%]
+tests/unit/test_gateway_client.py::TestBank::test_total_escrowed PASSED  [ 57%]
+tests/unit/test_gateway_client.py::TestBank::test_get_escrow_not_found_returns_none PASSED [ 59%]
+tests/unit/test_gateway_client.py::TestBank::test_credit_account PASSED  [ 61%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_lock_insufficient_funds PASSED [ 62%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_release_success PASSED [ 64%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_split_success PASSED [ 66%]
+tests/unit/test_gateway_client.py::TestReputation::test_submit_feedback_success PASSED [ 67%]
+tests/unit/test_gateway_client.py::TestReputation::test_submit_feedback_conflict PASSED [ 69%]
+tests/unit/test_gateway_client.py::TestReputation::test_get_feedback_not_found_returns_none PASSED [ 71%]
+tests/unit/test_gateway_client.py::TestReputation::test_list_feedback_by_task PASSED [ 72%]
+tests/unit/test_gateway_client.py::TestReputation::test_count_feedback PASSED [ 74%]
+tests/unit/test_gateway_client.py::TestCourt::test_file_claim_success PASSED [ 76%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_claim_not_found_returns_none PASSED [ 77%]
+tests/unit/test_gateway_client.py::TestCourt::test_list_claims_with_status_filter PASSED [ 79%]
+tests/unit/test_gateway_client.py::TestCourt::test_update_claim_status_not_found_returns_none PASSED [ 81%]
+tests/unit/test_gateway_client.py::TestCourt::test_update_claim_status_success PASSED [ 83%]
+tests/unit/test_gateway_client.py::TestCourt::test_submit_rebuttal_success PASSED [ 84%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_rebuttal_not_found_returns_none PASSED [ 86%]
+tests/unit/test_gateway_client.py::TestCourt::test_record_ruling_success PASSED [ 88%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_ruling_not_found_returns_none PASSED [ 89%]
+tests/unit/test_gateway_client.py::TestCourt::test_delete_ruling_success PASSED [ 91%]
+tests/unit/test_gateway_client.py::TestCourt::test_delete_ruling_not_found_returns_none PASSED [ 93%]
+tests/unit/test_gateway_client.py::TestCourt::test_count_claims PASSED   [ 94%]
+tests/unit/test_gateway_client.py::TestCourt::test_count_active_claims PASSED [ 96%]
+tests/unit/test_gateway_client.py::TestBoardRead::test_get_task_found PASSED [ 98%]
+tests/unit/test_gateway_client.py::TestBoardRead::test_get_task_not_found_returns_none PASSED [100%]
+
+============================== 59 passed in 0.86s ==============================
+[0;32m✓ service-clients CI passed[0m
+Checking service-auth...
+Checking service-auth...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-auth/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 15 items
+
+tests/unit/test_signing.py::TestKeygenRoundtrip::test_creates_and_loads_keys PASSED [  6%]
+tests/unit/test_signing.py::TestSignVerify::test_sign_and_verify_roundtrip PASSED [ 13%]
+tests/unit/test_signing.py::TestSignVerify::test_verify_rejects_wrong_key PASSED [ 20%]
+tests/unit/test_signing.py::TestSignVerify::test_malformed_token_raises_value_error PASSED [ 26%]
+tests/unit/test_signing.py::TestSignVerify::test_canonicalization_is_key_order_independent PASSED [ 33%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_payload PASSED [ 40%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_header PASSED [ 46%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_ttl_stamps_iat_exp_into_header_not_payload PASSED [ 53%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_legacy_token_without_exp_is_accepted PASSED [ 60%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_expired_token_is_rejected PASSED [ 66%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_unexpired_token_is_accepted PASSED [ 73%]
+tests/unit/test_signing.py::TestCrossCanonicalizationCompatibility::test_accepts_base_agent_old_canonicalization PASSED [ 80%]
+tests/unit/test_signing.py::TestCrossCanonicalizationCompatibility::test_accepts_platform_signer_canonicalization PASSED [ 86%]
+tests/unit/test_signing.py::TestPlatformSigner::test_signs_and_verifies PASSED [ 93%]
+tests/unit/test_signing.py::TestPlatformSigner::test_legacy_signer_omits_exp PASSED [100%]
+
+============================== 15 passed in 0.02s ==============================
+[0;32m✓ service-auth CI passed[0m
+[0;34m--- Phase 2: Service CI ---[0m
+Checking identity...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking central-bank...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking task-board...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;31m✗ Unit tests failed[0m
+
+[0;34m=== Running Unit Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/task-board/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 437 items
+
+tests/unit/routers/test_action_aliases.py::test_file_dispute_alias_is_rejected PASSED [  0%]
+tests/unit/routers/test_action_aliases.py::test_submit_ruling_alias_is_rejected PASSED [  0%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_worker_uploads_file PASSED [  0%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_upload_nonexistent_task PASSED [  0%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_upload_wrong_status_task PASSED [  1%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_non_worker_cannot_upload PASSED [  1%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_no_file_in_multipart PASSED [  1%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_file_exceeds_max_size PASSED [  1%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_multiple_uploads_succeed PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_too_many_assets PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_content_hash_is_sha256 PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_upload_uses_bearer_token PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetUpload::test_poster_cannot_upload PASSED [  2%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_list_assets PASSED [  3%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_list_assets_empty PASSED [  3%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_download_asset PASSED [  3%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_download_nonexistent_asset PASSED [  3%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_list_assets_nonexistent_task PASSED [  4%]
+tests/unit/routers/test_assets.py::TestAssetRetrieval::test_assets_are_public_no_auth PASSED [  4%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_null_tokens_on_task_creation PASSED [  4%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_null_token_on_single_token_endpoint PASSED [  4%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_integer_token_in_body PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_array_token_in_body PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_object_token_in_body PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_boolean_token_in_body PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_missing_action_field_in_jws_cancel PASSED [  5%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_missing_action_field_in_jws_ruling PASSED [  6%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_array_body_on_single_token_endpoint PASSED [  6%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_string_body_on_single_token_endpoint PASSED [  6%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_array_body_on_dual_token_endpoint PASSED [  6%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_null_task_token_with_valid_escrow_token PASSED [  7%]
+tests/unit/routers/test_auth.py::TestBodyTokenEdgeCases::test_valid_task_token_with_null_escrow_token PASSED [  7%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_valid_bearer_on_sealed_bids PASSED [  7%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_valid_bearer_on_asset_upload PASSED [  7%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_missing_authorization_header_sealed_bids PASSED [  8%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_authorization_without_bearer_prefix PASSED [  8%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_empty_bearer_token PASSED [  8%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_malformed_bearer_token PASSED [  8%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_tampered_bearer_token PASSED [  8%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_wrong_action_in_bearer_sealed_bids PASSED [  9%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_wrong_action_in_bearer_asset_upload PASSED [  9%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_task_id_mismatch_in_bearer_sealed_bids PASSED [  9%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_task_id_mismatch_in_bearer_asset_upload PASSED [  9%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_non_poster_accessing_sealed_bids PASSED [ 10%]
+tests/unit/routers/test_auth.py::TestBearerTokenValidation::test_non_worker_uploading_asset PASSED [ 10%]
+tests/unit/routers/test_auth.py::TestIdentityDependency::test_identity_timeout_returns_502 PASSED [ 10%]
+tests/unit/routers/test_auth.py::TestIdentityDependency::test_identity_unexpected_response_returns_502 PASSED [ 10%]
+tests/unit/routers/test_auth.py::TestIdentityDependency::test_identity_unexpected_response_on_bearer_endpoint PASSED [ 10%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_list_tasks_no_auth PASSED [ 11%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_get_task_no_auth PASSED [ 11%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_list_bids_no_auth_when_not_open PASSED [ 11%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_list_assets_no_auth PASSED [ 11%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_download_asset_no_auth PASSED [ 12%]
+tests/unit/routers/test_auth.py::TestPublicEndpoints::test_health_no_auth PASSED [ 12%]
+tests/unit/routers/test_auth.py::TestTokenReplay::test_central_bank_token_rejected PASSED [ 12%]
+tests/unit/routers/test_auth.py::TestTokenReplay::test_court_token_rejected PASSED [ 12%]
+tests/unit/routers/test_auth.py::TestTokenReplay::test_reputation_token_rejected PASSED [ 13%]
+tests/unit/routers/test_auth.py::TestAuthSecurity::test_error_envelope_consistency PASSED [ 13%]
+tests/unit/routers/test_auth.py::TestAuthSecurity::test_no_internal_error_leakage PASSED [ 13%]
+tests/unit/routers/test_auth.py::TestAuthSecurity::test_cross_service_token_reuse_rejected PASSED [ 13%]
+tests/unit/routers/test_bid_count_after_accept.py::test_ba_10_bid_count_reflects_total_bids_after_acceptance PASSED [ 13%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_01_submit_valid_bid PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_02_bid_on_nonexistent_task PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_03_bid_on_cancelled_task PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_04_bid_on_accepted_task PASSED [ 14%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_05_duplicate_bid_rejected PASSED [ 15%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_06_multiple_different_bidders PASSED [ 15%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_07_signer_mismatch PASSED [ 15%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_08_wrong_action PASSED [ 15%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_09_missing_payload_fields PASSED [ 16%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[zero] PASSED [ 16%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[negative] PASSED [ 16%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[float] PASSED [ 16%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_10_invalid_bid_amount[string] PASSED [ 16%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_11_self_bid_rejected PASSED [ 17%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_12_bid_after_bidding_deadline PASSED [ 17%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_13_concurrent_duplicate_bid_race PASSED [ 17%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_14_bid_increments_bid_count PASSED [ 17%]
+tests/unit/routers/test_bids.py::TestBidding::test_bid_15_malformed_bid_token PASSED [ 18%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_01_list_bids_with_bids PASSED [ 18%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_02_list_bids_empty PASSED [ 18%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_03_list_bids_nonexistent_task PASSED [ 18%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_04_sealed_bids_poster_sees_with_bearer PASSED [ 18%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_05_bids_public_after_acceptance PASSED [ 19%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_06_bid_list_includes_fields PASSED [ 19%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_07_ordered_by_submitted_at PASSED [ 19%]
+tests/unit/routers/test_bids.py::TestBidListing::test_bl_08_non_poster_forbidden_on_sealed_bids PASSED [ 19%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_01_accept_valid_bid PASSED [ 20%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_02_accept_nonexistent_bid PASSED [ 20%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_03_accept_on_nonexistent_task PASSED [ 20%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_04_accept_wrong_status PASSED [ 20%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_05_non_poster_forbidden PASSED [ 21%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_06_wrong_action PASSED [ 21%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_07_signer_mismatch PASSED [ 21%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_08_accept_sets_execution_deadline PASSED [ 21%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_ba_09_accept_sets_accepted_at PASSED [ 21%]
+tests/unit/routers/test_bids.py::TestBidAcceptance::test_accept_after_bidding_deadline_is_rejected PASSED [ 22%]
+tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[connect_error] PASSED [ 22%]
+tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[timeout] PASSED [ 22%]
+tests/unit/routers/test_court_resilience.py::TestDisputeFilingCourtResilience::test_dead_court_returns_502_and_leaves_task_submitted[http_status_error] PASSED [ 22%]
+tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[connect_error] PASSED [ 23%]
+tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[timeout] PASSED [ 23%]
+tests/unit/routers/test_court_resilience.py::TestRebuttalCourtResilience::test_dead_court_returns_502_and_leaves_dispute_unchanged[http_status_error] PASSED [ 23%]
+tests/unit/routers/test_dispute_court_handoff.py::test_dispute_auto_files_court_claim PASSED [ 23%]
+tests/unit/routers/test_disputes.py::TestDispute::test_poster_disputes_deliverable PASSED [ 24%]
+tests/unit/routers/test_disputes.py::TestDispute::test_non_poster_cannot_dispute PASSED [ 24%]
+tests/unit/routers/test_disputes.py::TestDispute::test_worker_cannot_dispute PASSED [ 24%]
+tests/unit/routers/test_disputes.py::TestDispute::test_cannot_dispute_non_submitted_task PASSED [ 24%]
+tests/unit/routers/test_disputes.py::TestDispute::test_empty_dispute_reason PASSED [ 24%]
+tests/unit/routers/test_disputes.py::TestDispute::test_dispute_reason_exceeding_max_length PASSED [ 25%]
+tests/unit/routers/test_disputes.py::TestDispute::test_dispute_reason_at_max_length PASSED [ 25%]
+tests/unit/routers/test_disputes.py::TestDispute::test_wrong_action_in_dispute_token PASSED [ 25%]
+tests/unit/routers/test_disputes.py::TestDispute::test_dispute_on_nonexistent_task PASSED [ 25%]
+tests/unit/routers/test_disputes.py::TestDispute::test_task_id_in_payload_must_match_url PASSED [ 26%]
+tests/unit/routers/test_disputes.py::TestRuling::test_platform_records_ruling PASSED [ 26%]
+tests/unit/routers/test_disputes.py::TestRuling::test_non_platform_agent_cannot_record_ruling PASSED [ 26%]
+tests/unit/routers/test_disputes.py::TestRuling::test_cannot_rule_on_non_disputed_task PASSED [ 26%]
+tests/unit/routers/test_disputes.py::TestRuling::test_worker_pct_zero_full_poster_win PASSED [ 27%]
+tests/unit/routers/test_disputes.py::TestRuling::test_worker_pct_100_full_worker_win PASSED [ 27%]
+tests/unit/routers/test_disputes.py::TestRuling::test_worker_pct_50_split PASSED [ 27%]
+tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[negative] PASSED [ 27%]
+tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[over_100] PASSED [ 27%]
+tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[float] PASSED [ 28%]
+tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[string] PASSED [ 28%]
+tests/unit/routers/test_disputes.py::TestRuling::test_invalid_worker_pct_values[null] PASSED [ 28%]
+tests/unit/routers/test_disputes.py::TestRuling::test_ruling_summary_stored_in_response PASSED [ 28%]
+tests/unit/routers/test_disputes.py::TestRuling::test_ruling_sets_ruled_at_worker_pct_summary PASSED [ 29%]
+tests/unit/routers/test_disputes.py::TestRuling::test_wrong_action_in_ruling_token PASSED [ 29%]
+tests/unit/routers/test_disputes.py::TestRuling::test_ruling_on_nonexistent_task PASSED [ 29%]
+tests/unit/routers/test_disputes.py::TestRuling::test_missing_payload_fields_in_ruling PASSED [ 29%]
+tests/unit/routers/test_disputes.py::TestRuling::test_central_bank_unavailable_during_ruling PASSED [ 29%]
+tests/unit/routers/test_expiry_with_bids.py::test_open_task_with_bids_expires_after_bidding_deadline PASSED [ 30%]
+tests/unit/routers/test_expiry_with_bids.py::test_expiry_with_bids_releases_escrow_to_poster_exactly_once FAILED [ 30%]
+tests/unit/routers/test_expiry_with_bids.py::test_expiry_with_bids_emits_task_expired_event PASSED [ 30%]
+tests/unit/routers/test_expiry_with_bids.py::test_zero_bid_expiry_still_works PASSED [ 30%]
+tests/unit/routers/test_expiry_with_bids.py::test_open_task_within_bidding_deadline_does_not_expire PASSED [ 31%]
+tests/unit/routers/test_health.py::test_health_returns_ok_with_correct_schema PASSED [ 31%]
+tests/unit/routers/test_health.py::test_health_uptime_increases_over_time PASSED [ 31%]
+tests/unit/routers/test_health.py::test_health_task_counts_reflect_actual_data PASSED [ 31%]
+tests/unit/routers/test_health.py::test_health_post_not_allowed PASSED   [ 32%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_full_happy_path PASSED [ 32%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_dispute_flow PASSED [ 32%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_bidding_deadline_expiry PASSED [ 32%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_execution_deadline_expiry PASSED [ 32%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_review_deadline_auto_approves PASSED [ 33%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_expired_tasks_in_listing PASSED [ 33%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_cannot_bid_on_expired_task PASSED [ 33%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_cannot_submit_on_expired_execution PASSED [ 33%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_terminal_status_blocks_all_mutations PASSED [ 34%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_deadline_does_not_affect_terminal_states PASSED [ 34%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_terminal_status_permanent_across_gets PASSED [ 34%]
+tests/unit/routers/test_lifecycle.py::TestLifecycle::test_review_period_race_first_wins PASSED [ 34%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_worker_cannot_inject_rebuttal_into_another_tasks_dispute PASSED [ 35%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_task_with_no_recorded_dispute_is_rejected PASSED [ 35%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_matching_dispute_id_is_forwarded_once PASSED [ 35%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_dispute_task_persists_court_dispute_id PASSED [ 35%]
+tests/unit/routers/test_rebuttal_dispute_binding.py::TestRebuttalDisputeBinding::test_court_without_dispute_id_leaves_task_undisputed PASSED [ 35%]
+tests/unit/routers/test_rebuttal_middleware.py::TestRebuttalMiddlewareCoverage::test_wrong_content_type_returns_415 PASSED [ 36%]
+tests/unit/routers/test_rebuttal_middleware.py::TestRebuttalMiddlewareCoverage::test_oversized_body_returns_413 PASSED [ 36%]
+tests/unit/routers/test_rebuttal_middleware.py::TestRebuttalMiddlewareCoverage::test_malformed_json_still_returns_clean_400 PASSED [ 36%]
+tests/unit/routers/test_rebuttals.py::TestWorkerRebuttal::test_worker_rebuttal_is_forwarded_by_platform PASSED [ 36%]
+tests/unit/routers/test_rebuttals.py::TestWorkerRebuttal::test_non_worker_rebuttal_is_rejected PASSED [ 37%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[DELETE-/tasks] PASSED [ 37%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[PATCH-/tasks] PASSED [ 37%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[DELETE-/tasks/t-fake-id] PASSED [ 37%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[PATCH-/tasks/t-fake-id] PASSED [ 37%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/cancel] PASSED [ 38%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[DELETE-/tasks/t-fake-id/bids] PASSED [ 38%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/bids/bid-fake/accept] PASSED [ 38%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[DELETE-/tasks/t-fake-id/assets] PASSED [ 38%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/submit] PASSED [ 39%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/approve] PASSED [ 39%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/dispute] PASSED [ 39%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[GET-/tasks/t-fake-id/ruling] PASSED [ 39%]
+tests/unit/routers/test_security.py::TestHTTPMethods::test_wrong_http_methods[POST-/health] PASSED [ 40%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_content_type_before_token PASSED [ 40%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_body_size_before_token PASSED [ 40%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_json_parsing_before_token PASSED [ 40%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_token_format_before_payload PASSED [ 40%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_identity_service_before_payload PASSED [ 41%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_signature_validity_before_payload_content PASSED [ 41%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_action_validation_before_signer_matching PASSED [ 41%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_task_existence_before_signer_matching PASSED [ 41%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_status_validation_before_domain_validation PASSED [ 42%]
+tests/unit/routers/test_security.py::TestErrorPrecedence::test_token_mismatch_before_central_bank_errors PASSED [ 42%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_error_envelope_consistency PASSED [ 42%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_no_internal_error_leakage PASSED [ 42%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_task_ids_match_format PASSED [ 43%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_bid_ids_match_format PASSED [ 43%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_asset_ids_match_format PASSED [ 43%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_escrow_ids_match_format PASSED [ 43%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_cross_action_token_replay_rejected PASSED [ 43%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_sql_injection_in_path_params[/tasks/' OR '1'='1] PASSED [ 44%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_sql_injection_in_path_params[/tasks/' OR '1'='1/bids] PASSED [ 44%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_sql_injection_in_path_params[/tasks/' OR '1'='1/assets] PASSED [ 44%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_path_traversal_in_asset_download[../../etc/passwd] PASSED [ 44%]
+tests/unit/routers/test_security.py::TestCrossCuttingSecurity::test_path_traversal_in_asset_download[../../../config.yaml] PASSED [ 45%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_01_worker_submits_deliverable PASSED [ 45%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_02_non_worker_cannot_submit PASSED [ 45%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_03_wrong_status_cannot_submit PASSED [ 45%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_04_no_assets_uploaded PASSED [ 45%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_05_sets_review_deadline PASSED [ 46%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_06_already_submitted_cannot_submit_again PASSED [ 46%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_07_wrong_action PASSED [ 46%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_08_after_execution_deadline_expired PASSED [ 46%]
+tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_09_missing_payload_fields PASSED [ 47%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_01_poster_approves_deliverable PASSED [ 47%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_02_non_poster_cannot_approve PASSED [ 47%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_03_wrong_status_cannot_approve PASSED [ 47%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_04_approve_releases_escrow_to_worker PASSED [ 48%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_05_sets_approved_at PASSED [ 48%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_06_wrong_action PASSED [ 48%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_07_signer_not_poster PASSED [ 48%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_08_review_deadline_auto_approval PASSED [ 48%]
+tests/unit/routers/test_submission.py::TestApproval::test_app_09_missing_payload_fields PASSED [ 49%]
+tests/unit/routers/test_t072_assets_gaps.py::TestAssetUploadGaps::test_au11_impersonation_signer_not_claimed_worker_id PASSED [ 49%]
+tests/unit/routers/test_t072_bids_gaps.py::TestBiddingGaps::test_bid13_task_id_payload_must_match_url PASSED [ 49%]
+tests/unit/routers/test_t072_bids_gaps.py::TestBidListingGaps::test_bl05_bids_public_for_cancelled_task PASSED [ 49%]
+tests/unit/routers/test_t072_bids_gaps.py::TestBidListingGaps::test_bl06_bids_public_for_expired_task PASSED [ 50%]
+tests/unit/routers/test_t072_bids_gaps.py::TestBidAcceptanceGaps::test_ba08_bid_id_payload_must_match_url PASSED [ 50%]
+tests/unit/routers/test_t072_bids_gaps.py::TestBidAcceptanceGaps::test_ba09_task_id_payload_must_match_url PASSED [ 50%]
+tests/unit/routers/test_t072_disputes_gaps.py::TestRulingGaps::test_rul08_empty_ruling_summary_rejected PASSED [ 50%]
+tests/unit/routers/test_t072_disputes_gaps.py::TestRulingGaps::test_rul09_empty_ruling_id_rejected PASSED [ 51%]
+tests/unit/routers/test_t072_disputes_gaps.py::TestRulingGaps::test_rul13_task_id_payload_must_match_url PASSED [ 51%]
+tests/unit/routers/test_t072_health_gaps.py::TestHealthStatusBreakdownGap::test_health04_tasks_by_status_reflects_actual_state PASSED [ 51%]
+tests/unit/routers/test_t072_submission_gaps.py::TestDeliverableSubmissionGaps::test_sub03_poster_cannot_submit PASSED [ 51%]
+tests/unit/routers/test_t072_submission_gaps.py::TestDeliverableSubmissionGaps::test_sub08_submit_on_nonexistent_task PASSED [ 51%]
+tests/unit/routers/test_t072_submission_gaps.py::TestDeliverableSubmissionGaps::test_sub09_task_id_payload_must_match_url PASSED [ 52%]
+tests/unit/routers/test_t072_submission_gaps.py::TestApprovalGaps::test_app07_central_bank_unavailable_on_approve_release PASSED [ 52%]
+tests/unit/routers/test_t072_submission_gaps.py::TestApprovalGaps::test_app08_approve_on_nonexistent_task PASSED [ 52%]
+tests/unit/routers/test_t072_submission_gaps.py::TestApprovalGaps::test_app09_task_id_payload_must_match_url PASSED [ 52%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc15_empty_title_rejected PASSED [ 53%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc17_empty_spec_rejected PASSED [ 53%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc17_spec_over_max_length_rejected PASSED [ 53%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc21_unregistered_agent_signer_forbidden PASSED [ 53%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCreationGaps::test_tc28_escrow_rollback_on_db_insert_race PASSED [ 54%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskQueryGaps::test_tq04_sql_injection_returns_task_not_found PASSED [ 54%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskQueryGaps::test_tq09_filter_by_worker_id PASSED [ 54%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskQueryGaps::test_tq10_combined_filters_and_logic PASSED [ 54%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskQueryGaps::test_tq11_unknown_filter_value_returns_empty_list PASSED [ 54%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCancellationGaps::test_can03_impersonation_signer_not_payload_poster PASSED [ 55%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCancellationGaps::test_can07_central_bank_unavailable_on_cancel_release PASSED [ 55%]
+tests/unit/routers/test_t072_tasks_gaps.py::TestTaskCancellationGaps::test_can09_task_id_payload_must_match_url PASSED [ 55%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc01_create_valid_task_with_escrow PASSED [ 55%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc02_duplicate_task_id_rejected PASSED [ 56%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc03_invalid_task_id_format[not-a-uuid] PASSED [ 56%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc03_invalid_task_id_format[t-notauuid] PASSED [ 56%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc03_invalid_task_id_format[digits] PASSED [ 56%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc03_invalid_task_id_format[empty] PASSED [ 56%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc04_missing_task_token PASSED [ 57%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc05_missing_escrow_token PASSED [ 57%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc06_both_tokens_missing PASSED [ 57%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc07_malformed_task_token[no-dots] PASSED [ 57%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc07_malformed_task_token[two-parts] PASSED [ 58%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc07_malformed_task_token[integer] PASSED [ 58%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc07_malformed_task_token[null] PASSED [ 58%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc07_malformed_task_token[empty] PASSED [ 58%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc08_wrong_action_in_task_token PASSED [ 59%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc09_missing_required_payload_fields[poster_id] PASSED [ 59%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc09_missing_required_payload_fields[title] PASSED [ 59%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc09_missing_required_payload_fields[spec] PASSED [ 59%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc09_missing_required_payload_fields[reward] PASSED [ 59%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc09_missing_required_payload_fields[task_id] PASSED [ 60%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc10_signer_does_not_match_poster_id PASSED [ 60%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc11_task_id_mismatch_between_tokens PASSED [ 60%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc12_reward_amount_mismatch_between_tokens PASSED [ 60%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[zero] PASSED [ 61%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[negative] PASSED [ 61%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[float] PASSED [ 61%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[string] PASSED [ 61%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[null] PASSED [ 62%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[zero] PASSED [ 62%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[negative] PASSED [ 62%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[float] PASSED [ 62%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[string] PASSED [ 62%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[zero] PASSED [ 63%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[negative] PASSED [ 63%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[float] PASSED [ 63%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[string] PASSED [ 63%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[zero] PASSED [ 64%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[negative] PASSED [ 64%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[float] PASSED [ 64%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[string] PASSED [ 64%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc15_escrow_insufficient_funds PASSED [ 64%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc16_central_bank_unavailable PASSED [ 65%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc17_title_at_max_length_accepted PASSED [ 65%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc18_title_exceeds_max_length PASSED [ 65%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc19_spec_at_max_length_accepted PASSED [ 65%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc20_tampered_task_token PASSED [ 66%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc21_escrow_signer_differs_from_task_signer PASSED [ 66%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc22_identity_service_unavailable PASSED [ 66%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc23_malformed_json_body PASSED [ 66%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc24_wrong_content_type PASSED [ 67%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc25_oversized_body PASSED [ 67%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc26_extra_fields_in_payload_ignored PASSED [ 67%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc27_concurrent_duplicate_task_id PASSED [ 67%]
+tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc28_empty_body PASSED [ 67%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq01_get_task_by_id PASSED [ 68%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq02_get_nonexistent_task PASSED [ 68%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq03_get_malformed_task_id PASSED [ 68%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq04_path_traversal PASSED [ 68%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq05_list_tasks_empty PASSED [ 69%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq06_list_tasks_with_data PASSED [ 69%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq07_filter_by_status PASSED [ 69%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq08_filter_by_poster_id PASSED [ 69%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq09_pagination_offset_limit PASSED [ 70%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq10_ordered_by_created_at_desc PASSED [ 70%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq11_no_internal_fields_exposed PASSED [ 70%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq12_idempotent_read PASSED [ 70%]
+tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq13_sql_injection_safety PASSED [ 70%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can01_poster_cancels_open_task PASSED [ 71%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can02_cancel_releases_escrow PASSED [ 71%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can03_non_poster_forbidden PASSED [ 71%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can04_cancel_nonexistent_task PASSED [ 71%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can05_cancel_already_cancelled PASSED [ 72%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can06_wrong_action_in_cancel_token PASSED [ 72%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can07_cancel_wrong_status_accepted PASSED [ 72%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can08_malformed_token_on_cancel PASSED [ 72%]
+tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can09_cancel_with_expired_bidding_deadline PASSED [ 72%]
+tests/unit/routers/test_two_tier_ruling.py::test_record_ruling_succeeds_when_identity_down PASSED [ 73%]
+tests/unit/routers/test_two_tier_ruling.py::test_agent_op_fails_cleanly_when_identity_down PASSED [ 73%]
+tests/unit/routers/test_validation.py::test_parse_json_body_valid_object PASSED [ 73%]
+tests/unit/routers/test_validation.py::test_parse_json_body_invalid_json PASSED [ 73%]
+tests/unit/routers/test_validation.py::test_parse_json_body_non_object PASSED [ 74%]
+tests/unit/routers/test_validation.py::test_parse_json_body_empty PASSED [ 74%]
+tests/unit/routers/test_validation.py::test_extract_token_valid PASSED   [ 74%]
+tests/unit/routers/test_validation.py::test_extract_token_missing_field PASSED [ 74%]
+tests/unit/routers/test_validation.py::test_extract_token_null_value PASSED [ 75%]
+tests/unit/routers/test_validation.py::test_extract_token_not_string PASSED [ 75%]
+tests/unit/routers/test_validation.py::test_extract_token_empty_string PASSED [ 75%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_required_valid PASSED [ 75%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_required_missing PASSED [ 75%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_required_wrong_scheme PASSED [ 76%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_required_empty_token PASSED [ 76%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_optional_valid PASSED [ 76%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_optional_missing PASSED [ 76%]
+tests/unit/routers/test_validation.py::test_extract_bearer_token_optional_wrong_scheme PASSED [ 77%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_identical_ruling_id_rerecord_is_idempotent PASSED [ 77%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py::test_different_ruling_id_on_ruled_task_conflicts PASSED [ 77%]
+tests/unit/test_asset_manager.py::test_upload_asset_success PASSED       [ 77%]
+tests/unit/test_asset_manager.py::test_upload_asset_file_too_large PASSED [ 78%]
+tests/unit/test_asset_manager.py::test_upload_asset_too_many_files PASSED [ 78%]
+tests/unit/test_asset_manager.py::test_upload_asset_task_not_found PASSED [ 78%]
+tests/unit/test_asset_manager.py::test_upload_asset_wrong_status PASSED  [ 78%]
+tests/unit/test_asset_manager.py::test_upload_asset_wrong_worker PASSED  [ 78%]
+tests/unit/test_asset_manager.py::test_list_assets_success PASSED        [ 79%]
+tests/unit/test_asset_manager.py::test_list_assets_task_not_found PASSED [ 79%]
+tests/unit/test_asset_manager.py::test_download_asset_success PASSED     [ 79%]
+tests/unit/test_asset_manager.py::test_download_asset_task_not_found PASSED [ 79%]
+tests/unit/test_asset_manager.py::test_download_asset_not_found PASSED   [ 80%]
+tests/unit/test_asset_manager.py::test_download_asset_path_traversal PASSED [ 80%]
+tests/unit/test_asset_manager.py::test_count_assets_delegates PASSED     [ 80%]
+tests/unit/test_config.py::test_config_loads_from_yaml PASSED            [ 80%]
+tests/unit/test_config.py::test_config_rejects_extra_fields PASSED       [ 81%]
+tests/unit/test_config.py::test_config_missing_required_section PASSED   [ 81%]
+tests/unit/test_config.py::test_config_platform_agent_id_present PASSED  [ 81%]
+tests/unit/test_deadline_evaluation_config.py::test_deadline_evaluation_section_loads PASSED [ 81%]
+tests/unit/test_deadline_evaluation_config.py::test_deadline_evaluation_missing_interval_field_rejected PASSED [ 81%]
+tests/unit/test_deadline_evaluation_config.py::test_lifespan_fails_fast_without_deadline_evaluation_section PASSED [ 82%]
+tests/unit/test_deadline_evaluator.py::test_compute_deadline_valid PASSED [ 82%]
+tests/unit/test_deadline_evaluator.py::test_compute_deadline_none_base PASSED [ 82%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_terminal_status_skipped PASSED [ 82%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_open_no_bids_expired PASSED [ 83%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_open_with_bids_expires PASSED [ 83%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_accepted_past_execution PASSED [ 83%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_submitted_past_review PASSED [ 83%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_not_past_deadline PASSED [ 83%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadline_retries_pending_escrow PASSED [ 84%]
+tests/unit/test_deadline_evaluator.py::test_evaluate_deadlines_batch_processes_all PASSED [ 84%]
+tests/unit/test_deadline_sweep.py::test_sweep_expires_open_task_without_any_api_read PASSED [ 84%]
+tests/unit/test_deadline_sweep.py::test_sweep_visits_accepted_submitted_and_disputed_statuses PASSED [ 84%]
+tests/unit/test_deadline_sweep.py::test_sweep_leaves_task_not_past_deadline_untouched PASSED [ 85%]
+tests/unit/test_deadline_sweep.py::test_sweep_is_idempotent_against_a_concurrent_lazy_evaluation PASSED [ 85%]
+tests/unit/test_deadline_sweep.py::test_sweep_survives_a_failing_task_and_continues_with_others PASSED [ 85%]
+tests/unit/test_escrow_coordinator.py::test_release_escrow_success PASSED [ 85%]
+tests/unit/test_escrow_coordinator.py::test_release_escrow_service_error_propagates PASSED [ 86%]
+tests/unit/test_escrow_coordinator.py::test_release_escrow_generic_error_wraps PASSED [ 86%]
+tests/unit/test_escrow_coordinator.py::test_split_escrow_success PASSED  [ 86%]
+tests/unit/test_escrow_coordinator.py::test_split_escrow_service_error_propagates PASSED [ 86%]
+tests/unit/test_escrow_coordinator.py::test_split_escrow_generic_error_wraps PASSED [ 86%]
+tests/unit/test_escrow_coordinator.py::test_try_release_escrow_success PASSED [ 87%]
+tests/unit/test_escrow_coordinator.py::test_try_release_escrow_failure PASSED [ 87%]
+tests/unit/test_escrow_coordinator.py::test_retry_pending_escrow_not_pending PASSED [ 87%]
+tests/unit/test_escrow_coordinator.py::test_retry_pending_escrow_expired_success PASSED [ 87%]
+tests/unit/test_escrow_coordinator.py::test_retry_pending_escrow_approved_success PASSED [ 88%]
+tests/unit/test_escrow_coordinator.py::test_retry_pending_escrow_failure_remains_pending PASSED [ 88%]
+tests/unit/test_escrow_coordinator.py::test_retry_pending_escrow_other_status PASSED [ 88%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates0-task.accepted] PASSED [ 88%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates1-task.submitted] PASSED [ 89%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates2-task.approved] PASSED [ 89%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates3-task.auto_approved] PASSED [ 89%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates4-task.disputed] PASSED [ 89%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates5-task.ruled] PASSED [ 89%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates6-task.cancelled] PASSED [ 90%]
+tests/unit/test_lifecycle_events.py::test_update_task_emits_specific_lifecycle_event[updates7-task.expired] PASSED [ 90%]
+tests/unit/test_lifecycle_events.py::test_update_task_keeps_generic_event_for_non_lifecycle_updates PASSED [ 90%]
+tests/unit/test_no_base_agent_imports.py::test_no_base_agent_imports PASSED [ 90%]
+tests/unit/test_placeholder.py::test_service_scaffolded PASSED           [ 91%]
+tests/unit/test_response_contracts.py::test_bid_response_uses_amount_not_the_stale_proposal_field PASSED [ 91%]
+tests/unit/test_response_contracts.py::test_asset_response_includes_content_hash PASSED [ 91%]
+tests/unit/test_response_contracts.py::test_task_endpoints_wire_response_model PASSED [ 91%]
+tests/unit/test_response_contracts.py::test_bid_endpoints_wire_response_model PASSED [ 91%]
+tests/unit/test_response_contracts.py::test_asset_endpoints_wire_response_model PASSED [ 92%]
+tests/unit/test_state.py::test_app_state_init PASSED                     [ 92%]
+tests/unit/test_state.py::test_app_state_uptime PASSED                   [ 92%]
+tests/unit/test_state.py::test_app_state_started_at PASSED               [ 92%]
+tests/unit/test_state.py::test_get_app_state_uninitialized PASSED        [ 93%]
+tests/unit/test_state.py::test_init_app_state PASSED                     [ 93%]
+tests/unit/test_state.py::test_reset_app_state PASSED                    [ 93%]
+tests/unit/test_task_db_client_normalization.py::TestTaskDbClientNormalization::test_whitelist_covers_every_persisted_schema_column PASSED [ 93%]
+tests/unit/test_task_db_client_normalization.py::TestTaskDbClientNormalization::test_recomputed_columns_are_not_read_back PASSED [ 94%]
+tests/unit/test_task_db_client_normalization.py::TestTaskDbClientNormalization::test_dispute_id_survives_normalization PASSED [ 94%]
+tests/unit/test_task_db_client_normalization.py::TestTaskDbClientNormalization::test_unknown_columns_are_dropped PASSED [ 94%]
+tests/unit/test_task_store.py::test_task_crud_and_counts PASSED          [ 94%]
+tests/unit/test_task_store.py::test_bid_operations PASSED                [ 94%]
+tests/unit/test_task_store.py::test_asset_operations PASSED              [ 95%]
+tests/unit/test_task_store.py::test_close_succeeds PASSED                [ 95%]
+tests/unit/test_token_validator.py::test_validate_jws_token_empty_token PASSED [ 95%]
+tests/unit/test_token_validator.py::test_validate_jws_token_wrong_format PASSED [ 95%]
+tests/unit/test_token_validator.py::test_validate_jws_token_identity_unavailable PASSED [ 96%]
+tests/unit/test_token_validator.py::test_validate_jws_token_identity_service_error PASSED [ 96%]
+tests/unit/test_token_validator.py::test_validate_jws_token_forbidden_tampered PASSED [ 96%]
+tests/unit/test_token_validator.py::test_validate_jws_token_missing_action PASSED [ 96%]
+tests/unit/test_token_validator.py::test_validate_jws_token_wrong_action PASSED [ 97%]
+tests/unit/test_token_validator.py::test_validate_jws_token_valid_single_action PASSED [ 97%]
+tests/unit/test_token_validator.py::test_validate_jws_token_valid_tuple_action PASSED [ 97%]
+tests/unit/test_token_validator.py::test_decode_escrow_token_payload_valid PASSED [ 97%]
+tests/unit/test_token_validator.py::test_decode_escrow_token_payload_wrong_format PASSED [ 97%]
+tests/unit/test_token_validator.py::test_decode_escrow_token_payload_invalid_base64 PASSED [ 98%]
+tests/unit/test_token_validator.py::test_decode_escrow_token_payload_invalid_json PASSED [ 98%]
+tests/unit/test_token_validator.py::test_decode_escrow_token_payload_not_object PASSED [ 98%]
+tests/unit/test_token_validator.py::test_validate_jws_token_invalid_signature PASSED [ 98%]
+tests/unit/test_wp06_ruling_trigger.py::test_trigger_fires_when_rebuttal_submitted PASSED [ 99%]
+tests/unit/test_wp06_ruling_trigger.py::test_trigger_fires_when_rebuttal_deadline_passed PASSED [ 99%]
+tests/unit/test_wp06_ruling_trigger.py::test_trigger_not_fired_inside_open_window PASSED [ 99%]
+tests/unit/test_wp06_ruling_trigger.py::test_failed_trigger_is_retryable PASSED [ 99%]
+tests/unit/test_wp06_ruling_trigger.py::test_no_trigger_without_platform_agent PASSED [100%]
+
+=================================== FAILURES ===================================
+_________ test_expiry_with_bids_releases_escrow_to_poster_exactly_once _________
+tests/unit/routers/test_expiry_with_bids.py:81: in test_expiry_with_bids_releases_escrow_to_poster_exactly_once
+    task_id = await _task_with_bid_past_bidding_deadline(
+tests/unit/routers/test_expiry_with_bids.py:44: in _task_with_bid_past_bidding_deadline
+    assert bid_resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-15 16:25:26", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_status", "status_code": 409, "path": "/tasks/t-6ae4cd11-b0f8-4c6f-9c0a-9670d6bad0b8/bids"}}
+=============================== warnings summary ===============================
+tests/unit/routers/test_action_aliases.py: 2 warnings
+tests/unit/routers/test_assets.py: 16 warnings
+tests/unit/routers/test_auth.py: 30 warnings
+tests/unit/routers/test_bid_count_after_accept.py: 1 warning
+tests/unit/routers/test_bids.py: 35 warnings
+tests/unit/routers/test_court_resilience.py: 6 warnings
+tests/unit/routers/test_dispute_court_handoff.py: 1 warning
+tests/unit/routers/test_disputes.py: 27 warnings
+tests/unit/routers/test_expiry_with_bids.py: 5 warnings
+tests/unit/routers/test_health.py: 1 warning
+tests/unit/routers/test_lifecycle.py: 12 warnings
+tests/unit/routers/test_rebuttal_dispute_binding.py: 5 warnings
+tests/unit/routers/test_rebuttal_middleware.py: 3 warnings
+tests/unit/routers/test_rebuttals.py: 2 warnings
+tests/unit/routers/test_security.py: 13 warnings
+tests/unit/routers/test_submission.py: 19 warnings
+tests/unit/routers/test_t072_assets_gaps.py: 1 warning
+tests/unit/routers/test_t072_bids_gaps.py: 5 warnings
+tests/unit/routers/test_t072_disputes_gaps.py: 3 warnings
+tests/unit/routers/test_t072_health_gaps.py: 1 warning
+tests/unit/routers/test_t072_submission_gaps.py: 6 warnings
+tests/unit/routers/test_t072_tasks_gaps.py: 10 warnings
+tests/unit/routers/test_tasks.py: 66 warnings
+tests/unit/routers/test_two_tier_ruling.py: 2 warnings
+tests/unit/routers/test_wp06_record_ruling_idempotent.py: 2 warnings
+tests/unit/test_token_validator.py: 9 warnings
+  /Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/joserfc/_rfc7515/registry.py:93: SecurityWarning: EdDSA is deprecated via RFC 9864
+    warnings.warn(alg.security_warning, SecurityWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_expiry_with_bids.py::test_expiry_with_bids_releases_escrow_to_poster_exactly_once - assert 409 == 201
+ +  where 409 = <Response [409 Conflict]>.status_code
+================= 1 failed, 436 passed, 283 warnings in 28.37s =================
+error: recipe `test-unit` failed on line 303 with exit code 1
+error: recipe `ci-quiet` failed with exit code 1
+error: recipe `ci-quiet` failed with exit code 1

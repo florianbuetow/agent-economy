@@ -1,0 +1,57 @@
+{"timestamp": "2026-06-12 12:20", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 12:20", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 12:20", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 12:20", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 12:22", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 12:22", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 12:22", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 12:22", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 12:30", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 12:30", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 12:30", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 12:30", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 12:58", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 12:58", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 12:58", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 12:58", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 12:58", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection opened", "extra": {"path": "../db-gateway/data/economy.db"}}
+{"timestamp": "2026-06-12 12:58", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": "\"Attempt to overwrite 'name' in LogRecord\""}}
+{"timestamp": "2026-06-12 12:58", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service starting", "extra": {"service": "ui", "version": "0.1.0", "port": 8008, "web_root": "data/web"}}
+{"timestamp": "2026-06-12 13:00", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent closed"}
+{"timestamp": "2026-06-12 13:00", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection closed"}
+{"timestamp": "2026-06-12 13:00", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service shutting down", "extra": {"uptime_seconds": 133.603464}}
+{"timestamp": "2026-06-12 13:02", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 13:02", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 13:02", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 13:02", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 13:03", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection opened", "extra": {"path": "../db-gateway/data/economy.db"}}
+{"timestamp": "2026-06-12 13:03", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": "\"Attempt to overwrite 'name' in LogRecord\""}}
+{"timestamp": "2026-06-12 13:03", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service starting", "extra": {"service": "ui", "version": "0.1.0", "port": 8008, "web_root": "data/web"}}
+{"timestamp": "2026-06-12 13:05", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent closed"}
+{"timestamp": "2026-06-12 13:05", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection closed"}
+{"timestamp": "2026-06-12 13:05", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service shutting down", "extra": {"uptime_seconds": 126.478254}}
+{"timestamp": "2026-06-12 13:09", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 13:09", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 13:09", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 13:09", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 13:09", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection opened", "extra": {"path": "../db-gateway/data/economy.db"}}
+{"timestamp": "2026-06-12 13:09", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": "\"Attempt to overwrite 'name' in LogRecord\""}}
+{"timestamp": "2026-06-12 13:09", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service starting", "extra": {"service": "ui", "version": "0.1.0", "port": 8008, "web_root": "data/web"}}
+{"timestamp": "2026-06-12 13:11", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent closed"}
+{"timestamp": "2026-06-12 13:11", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection closed"}
+{"timestamp": "2026-06-12 13:11", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service shutting down", "extra": {"uptime_seconds": 128.102007}}
+{"timestamp": "2026-06-12 21:31", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 21:31", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 21:31", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "Database not available at startup", "extra": {"path": "data/economy.db", "error": "unable to open database file"}}
+{"timestamp": "2026-06-12 21:32", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": ""}}
+{"timestamp": "2026-06-12 21:32", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection opened", "extra": {"path": "../db-gateway/data/economy.db"}}
+{"timestamp": "2026-06-12 21:32", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": "\"Attempt to overwrite 'name' in LogRecord\""}}
+{"timestamp": "2026-06-12 21:32", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service starting", "extra": {"service": "ui", "version": "0.1.0", "port": 8008, "web_root": "data/web"}}
+{"timestamp": "2026-06-12 21:36", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent closed"}
+{"timestamp": "2026-06-12 21:36", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection closed"}
+{"timestamp": "2026-06-12 21:36", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service shutting down", "extra": {"uptime_seconds": 270.217496}}
+{"timestamp": "2026-06-12 22:12", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection opened", "extra": {"path": "../db-gateway/data/economy.db"}}
+{"timestamp": "2026-06-12 22:12", "level": "ERROR", "logger": "ui.ui_service.core.lifespan", "message": "UserAgent initialization failed \u2014 proxy endpoints will be unavailable", "extra": {"error": "All connection attempts failed"}}
+{"timestamp": "2026-06-12 22:12", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service starting", "extra": {"service": "ui", "version": "0.1.0", "port": 8008, "web_root": "data/web"}}
+{"timestamp": "2026-06-12 22:15", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Database connection closed"}
+{"timestamp": "2026-06-12 22:15", "level": "INFO", "logger": "ui.ui_service.core.lifespan", "message": "Service shutting down", "extra": {"uptime_seconds": 184.140258}}

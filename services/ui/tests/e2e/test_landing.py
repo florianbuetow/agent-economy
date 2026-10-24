@@ -28,7 +28,6 @@ class LeaderboardAgent:
     name: str
     amount: int
     tasks_count: int
-    streak: int
 
 
 @dataclass(frozen=True)
@@ -101,16 +100,18 @@ def _load_landing(
     landing_page = LandingPage(e2e_page, e2e_server)
     landing_page.navigate()
     e2e_page.wait_for_function(
-        "document.querySelectorAll('#ticker-track .ticker-item').length >= 24"
+        "() => document.querySelectorAll('#ticker-track .ticker-item').length >= 24"
     )
-    e2e_page.wait_for_function("document.querySelectorAll('.kpi-cell').length >= 5")
-    e2e_page.wait_for_function("document.querySelectorAll('.board-cell').length >= 15")
-    e2e_page.wait_for_function("document.querySelectorAll('#news-track .bt-item').length >= 16")
+    e2e_page.wait_for_function("() => document.querySelectorAll('.kpi-cell').length >= 5")
+    e2e_page.wait_for_function("() => document.querySelectorAll('.board-cell').length >= 15")
+    e2e_page.wait_for_function(
+        "() => document.querySelectorAll('#news-track .bt-item').length >= 16"
+    )
     if accelerate_intervals:
         e2e_page.wait_for_timeout(3000)
     else:
         e2e_page.wait_for_function(
-            "Array.from(document.querySelectorAll('.kpi-value'))."
+            "() => Array.from(document.querySelectorAll('.kpi-value'))."
             "every((el) => !el.classList.contains('counting'))",
         )
     return landing_page
@@ -204,6 +205,13 @@ def _insert_open_task(conn: sqlite3.Connection, task_id: str, reward: int) -> No
             None,
             None,
         ),
+    )
+    conn.execute(
+        "INSERT INTO board_task_contracts "
+        "(task_id, lifecycle_version, timing_contract_version, acceptance_window_seconds, "
+        "bidding_cutoff_us, acceptance_cutoff_us, execution_cutoff_us, review_cutoff_us, "
+        "accepted_reward, accepted_bid_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (task_id, 0, 1, None, 1, 1, None, None, None, None),
     )
     conn.commit()
 
@@ -325,27 +333,12 @@ def _snapshot_from_db(db_path: Path) -> LandingSnapshot:
                 ).fetchone()[0],
             )
 
-            streak_rows = conn.execute(
-                "SELECT status FROM board_tasks "
-                "WHERE worker_id = ? "
-                "AND status IN ('approved', 'disputed', 'ruled', 'cancelled') "
-                "ORDER BY COALESCE(approved_at, submitted_at, created_at) DESC",
-                (agent_id,),
-            ).fetchall()
-            streak = 0
-            for row in streak_rows:
-                if row[0] == "approved":
-                    streak += 1
-                else:
-                    break
-
             if earned >= spent:
                 workers.append(
                     LeaderboardAgent(
                         name=name,
                         amount=earned,
                         tasks_count=tasks_completed,
-                        streak=streak,
                     ),
                 )
             else:
@@ -354,7 +347,6 @@ def _snapshot_from_db(db_path: Path) -> LandingSnapshot:
                         name=name,
                         amount=spent,
                         tasks_count=tasks_posted,
-                        streak=streak,
                     ),
                 )
 

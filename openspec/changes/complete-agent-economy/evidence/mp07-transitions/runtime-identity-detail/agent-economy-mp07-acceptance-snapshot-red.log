@@ -1,0 +1,71 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 6 items
+
+tests/unit/task_feeder/test_mp07_acceptance_snapshot.py FFFFFF           [100%]
+
+=================================== FAILURES ===================================
+___________ test_list_summary_uses_full_task_details_before_freezing ___________
+tests/unit/task_feeder/test_mp07_acceptance_snapshot.py:38: in test_list_summary_uses_full_task_details_before_freezing
+    assert await loop.accept_one(summary) == "pending"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:190: in accept_one
+    intent = await self._commands.execute(
+src/base_agent/runtime_task_commands.py:168: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/task_feeder/acceptance.py:182: in prepare
+    return acceptance_intent(
+src/base_agent/runtime_task_intent_factory.py:155: in acceptance_intent
+    escrow_id = _text(task, "escrow_id")
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_intent_factory.py:19: in _text
+    raise RuntimeIntentError("invalid_input", f"{key} must be a nonempty string")
+E   base_agent.runtime_intent_models.RuntimeIntentError: escrow_id must be a nonempty string
+____ test_full_task_that_left_open_does_not_publish_stale_intent[accepted] _____
+tests/unit/task_feeder/test_mp07_acceptance_snapshot.py:58: in test_full_task_that_left_open_does_not_publish_stale_intent
+    with pytest.raises((RuntimeIntentError, ValueError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'base_agent.runtime_intent_models.RuntimeIntentError'>, <class 'ValueError'>)
+------------------------------ Captured log call -------------------------------
+WARNING  base_agent.runtime_task_commands:runtime_task_commands.py:209 Task command acknowledgment unavailable: task=t-00000000-0000-4000-8000-000000000707 slot=acceptance operation=op-0a77a663-2efe-5e73-a2bb-8fa72a53d40c
+_____ test_full_task_that_left_open_does_not_publish_stale_intent[expired] _____
+tests/unit/task_feeder/test_mp07_acceptance_snapshot.py:58: in test_full_task_that_left_open_does_not_publish_stale_intent
+    with pytest.raises((RuntimeIntentError, ValueError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'base_agent.runtime_intent_models.RuntimeIntentError'>, <class 'ValueError'>)
+------------------------------ Captured log call -------------------------------
+WARNING  base_agent.runtime_task_commands:runtime_task_commands.py:209 Task command acknowledgment unavailable: task=t-00000000-0000-4000-8000-000000000707 slot=acceptance operation=op-0a77a663-2efe-5e73-a2bb-8fa72a53d40c
+____ test_full_task_that_left_open_does_not_publish_stale_intent[cancelled] ____
+tests/unit/task_feeder/test_mp07_acceptance_snapshot.py:58: in test_full_task_that_left_open_does_not_publish_stale_intent
+    with pytest.raises((RuntimeIntentError, ValueError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'base_agent.runtime_intent_models.RuntimeIntentError'>, <class 'ValueError'>)
+------------------------------ Captured log call -------------------------------
+WARNING  base_agent.runtime_task_commands:runtime_task_commands.py:209 Task command acknowledgment unavailable: task=t-00000000-0000-4000-8000-000000000707 slot=acceptance operation=op-0a77a663-2efe-5e73-a2bb-8fa72a53d40c
+____________ test_missing_detail_response_does_not_publish_or_send _____________
+tests/unit/task_feeder/test_mp07_acceptance_snapshot.py:71: in test_missing_detail_response_does_not_publish_or_send
+    with pytest.raises(httpx.ReadTimeout, match="Task detail unavailable"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'httpx.ReadTimeout'>
+------------------------------ Captured log call -------------------------------
+WARNING  base_agent.runtime_task_commands:runtime_task_commands.py:209 Task command acknowledgment unavailable: task=t-00000000-0000-4000-8000-000000000707 slot=acceptance operation=op-0a77a663-2efe-5e73-a2bb-8fa72a53d40c
+____________ test_detail_for_another_task_does_not_publish_or_send _____________
+tests/unit/task_feeder/test_mp07_acceptance_snapshot.py:86: in test_detail_for_another_task_does_not_publish_or_send
+    with pytest.raises((RuntimeIntentError, ValueError)):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE any of (<class 'base_agent.runtime_intent_models.RuntimeIntentError'>, <class 'ValueError'>)
+------------------------------ Captured log call -------------------------------
+WARNING  base_agent.runtime_task_commands:runtime_task_commands.py:209 Task command acknowledgment unavailable: task=t-00000000-0000-4000-8000-000000000707 slot=acceptance operation=op-0a77a663-2efe-5e73-a2bb-8fa72a53d40c
+=========================== short test summary info ============================
+FAILED tests/unit/task_feeder/test_mp07_acceptance_snapshot.py::test_list_summary_uses_full_task_details_before_freezing
+FAILED tests/unit/task_feeder/test_mp07_acceptance_snapshot.py::test_full_task_that_left_open_does_not_publish_stale_intent[accepted]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_snapshot.py::test_full_task_that_left_open_does_not_publish_stale_intent[expired]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_snapshot.py::test_full_task_that_left_open_does_not_publish_stale_intent[cancelled]
+FAILED tests/unit/task_feeder/test_mp07_acceptance_snapshot.py::test_missing_detail_response_does_not_publish_or_send
+FAILED tests/unit/task_feeder/test_mp07_acceptance_snapshot.py::test_detail_for_another_task_does_not_publish_or_send
+============================== 6 failed in 0.12s ===============================

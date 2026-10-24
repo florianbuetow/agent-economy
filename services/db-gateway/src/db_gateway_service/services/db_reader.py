@@ -2,10 +2,108 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
+
+from service_commons.exceptions import ServiceError
+
+from db_gateway_service.financial_effect_projection import financial_effect_for_task
+from db_gateway_service.historical_financial_evidence import (
+    build_historical_audit_context,
+    possible_historical_worker_payment,
+)
 
 if TYPE_CHECKING:
     import sqlite3
+
+_TASK_PROJECTION = """
+WITH active_task_operations AS (
+    SELECT task_id,
+           json_object(
+               'operation_id', operation_id,
+               'command', command,
+               'target_status', target_status,
+               'target_lifecycle_version', target_lifecycle_version,
+               'operation_state', operation_state,
+               'effect_state', effect_state
+           ) AS pending_transition_json
+    FROM board_task_operations
+    WHERE operation_state IN ('claimed', 'blocked')
+),
+legacy_reconciliation_rows AS (
+    SELECT task_id,
+           json_object(
+               'observation_id', observation_id,
+               'observation_kind', observation_kind,
+               'effect_state', effect_state,
+               'target_outcome_hint', target_outcome_hint
+           ) AS reconciliation_json
+    FROM board_legacy_effect_observations
+    WHERE unresolved = 1
+    ORDER BY task_id, observation_id
+),
+legacy_reconciliations AS (
+    SELECT task_id,
+           json_group_array(json(reconciliation_json)) AS reconciliations_json
+    FROM legacy_reconciliation_rows
+    GROUP BY task_id
+)
+SELECT t.*,
+       c.task_id AS _contract_task_id,
+       c.lifecycle_version,
+       c.timing_contract_version,
+       c.acceptance_window_seconds,
+       c.bidding_cutoff_us,
+       c.acceptance_cutoff_us,
+       c.execution_cutoff_us,
+       c.review_cutoff_us,
+       c.accepted_reward,
+       c.accepted_bid_amount,
+       active.pending_transition_json AS _pending_transition_json,
+       COALESCE(legacy.reconciliations_json, '[]') AS _legacy_reconciliations_json
+FROM board_tasks AS t
+LEFT JOIN board_task_contracts AS c ON c.task_id = t.task_id
+LEFT JOIN active_task_operations AS active ON active.task_id = t.task_id
+LEFT JOIN legacy_reconciliations AS legacy ON legacy.task_id = t.task_id
+"""
+
+
+def _projection_error(task_id: str) -> ServiceError:
+    return ServiceError(
+        "task_projection_invalid",
+        "Task recovery projection is invalid",
+        500,
+        {"task_id": task_id},
+    )
+
+
+def _decode_json_object(raw: object, task_id: str) -> dict[str, Any]:
+    if not isinstance(raw, str):
+        raise _projection_error(task_id)
+    try:
+        decoded: object = json.loads(raw)
+    except (TypeError, ValueError) as exc:
+        raise _projection_error(task_id) from exc
+    if not isinstance(decoded, dict) or any(not isinstance(key, str) for key in decoded):
+        raise _projection_error(task_id)
+    return {str(key): value for key, value in decoded.items()}
+
+
+def _decode_json_array(raw: object, task_id: str) -> list[dict[str, Any]]:
+    if not isinstance(raw, str):
+        raise _projection_error(task_id)
+    try:
+        decoded: object = json.loads(raw)
+    except (TypeError, ValueError) as exc:
+        raise _projection_error(task_id) from exc
+    if not isinstance(decoded, list):
+        raise _projection_error(task_id)
+    values: list[dict[str, Any]] = []
+    for item in decoded:
+        if not isinstance(item, dict) or any(not isinstance(key, str) for key in item):
+            raise _projection_error(task_id)
+        values.append({str(key): value for key, value in item.items()})
+    return values
 
 
 class DbReader:
@@ -94,7 +192,8 @@ class DbReader:
     def get_transactions(self, account_id: str) -> list[dict[str, Any]]:
         """Get transaction history for an account."""
         cursor = self._db.execute(
-            "SELECT tx_id, account_id, type, amount, balance_after, reference, timestamp "
+            "SELECT tx_id, account_id, type, amount, balance_after, reference, timestamp, "
+            "event_id "
             "FROM bank_transactions WHERE account_id = ? ORDER BY timestamp, tx_id",
             (account_id,),
         )
@@ -107,6 +206,7 @@ class DbReader:
                 "balance_after": row[4],
                 "reference": row[5],
                 "timestamp": row[6],
+                "event_id": row[7],
             }
             for row in cursor.fetchall()
         ]
@@ -118,12 +218,12 @@ class DbReader:
         return int(row[0]) if row else 0
 
     def total_escrowed(self) -> int:
-        """Sum of all locked escrow amounts."""
-        cursor = self._db.execute(
-            "SELECT COALESCE(SUM(amount), 0) FROM bank_escrow WHERE status = 'locked'"
-        )
-        row = cursor.fetchone()
-        return int(row[0]) if row else 0
+        """Sum locked integer amounts without limiting the aggregate to SQLite's range."""
+        cursor = self._db.execute("SELECT amount FROM bank_escrow WHERE status = 'locked'")
+        total = 0
+        for row in cursor:
+            total += row[0]
+        return total
 
     def get_escrow(self, escrow_id: str) -> dict[str, Any] | None:
         """Get an escrow record by ID."""
@@ -152,13 +252,19 @@ class DbReader:
     def get_task(self, task_id: str) -> dict[str, Any] | None:
         """Get a task by ID."""
         cursor = self._db.execute(
-            "SELECT * FROM board_tasks WHERE task_id = ?",
+            f"{_TASK_PROJECTION} WHERE t.task_id = ?",  # nosec B608
             (task_id,),
         )
         row = cursor.fetchone()
         if row is None:
             return None
-        return dict(row)
+        projected = self._task_row_without_financial(row)
+        projected["financial_effect"] = financial_effect_for_task(
+            self._db,
+            projected,
+            None,
+        )
+        return projected
 
     def list_tasks(
         self,
@@ -169,21 +275,21 @@ class DbReader:
         offset: int | None,
     ) -> list[dict[str, Any]]:
         """List tasks with optional filters."""
-        query = "SELECT * FROM board_tasks"
+        query = _TASK_PROJECTION
         clauses: list[str] = []
         params: list[object] = []
         if status is not None:
-            clauses.append("status = ?")
+            clauses.append("t.status = ?")
             params.append(status)
         if poster_id is not None:
-            clauses.append("poster_id = ?")
+            clauses.append("t.poster_id = ?")
             params.append(poster_id)
         if worker_id is not None:
-            clauses.append("worker_id = ?")
+            clauses.append("t.worker_id = ?")
             params.append(worker_id)
         if clauses:
             query += " WHERE " + " AND ".join(clauses)
-        query += " ORDER BY created_at DESC"
+        query += " ORDER BY t.created_at DESC"
         if limit is not None:
             query += " LIMIT ?"
             params.append(limit)
@@ -191,7 +297,40 @@ class DbReader:
             query += " OFFSET ?"
             params.append(offset)
         rows = self._db.execute(query, params).fetchall()
-        return [dict(row) for row in rows]
+        projected = [self._task_row_without_financial(row) for row in rows]
+        historical_context = (
+            build_historical_audit_context(self._db)
+            if any(possible_historical_worker_payment(self._db, task) for task in projected)
+            else None
+        )
+        for task in projected:
+            task["financial_effect"] = financial_effect_for_task(
+                self._db,
+                task,
+                historical_context,
+            )
+        return projected
+
+    @staticmethod
+    def _task_row_without_financial(row: sqlite3.Row) -> dict[str, Any]:
+        """Decode one single-statement task/contract/recovery projection."""
+        projected = dict(row)
+        task_id = str(projected["task_id"])
+        contract_task_id = projected.pop("_contract_task_id")
+        if contract_task_id is None:
+            raise ServiceError(
+                "task_contract_missing",
+                "Task contract sidecar is missing",
+                500,
+                {"task_id": task_id},
+            )
+        pending_raw = projected.pop("_pending_transition_json")
+        legacy_raw = projected.pop("_legacy_reconciliations_json")
+        pending = None if pending_raw is None else _decode_json_object(pending_raw, task_id)
+        legacy = _decode_json_array(legacy_raw, task_id)
+        projected["pending_transition"] = pending
+        projected["legacy_reconciliations"] = legacy
+        return projected
 
     def count_tasks(self) -> int:
         """Count total tasks."""

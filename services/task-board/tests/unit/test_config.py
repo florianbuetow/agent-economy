@@ -25,6 +25,11 @@ logging:
   directory: "data/logs"
 database:
   path: "data/task-board.db"
+identity:
+  base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -33,18 +38,39 @@ central_bank:
   timeout_seconds: 10
 platform:
   agent_id: "a-platform-id"
+  agent_config_path: "agents.yaml"
+asset_upload:
+  stream_chunk_bytes: 262144
+  max_multipart_overhead_bytes: 1048576
+  max_header_count: 8
+  max_header_size: 4224
+  max_boundary_bytes: 70
+  max_display_filename_utf8_bytes: 255
 request:
   max_body_size: 1048576
-deadlines:
-  default_bidding_seconds: 3600
-  default_execution_seconds: 86400
-  default_review_seconds: 86400
+recovery:
+  maintenance_lock_path: "maintenance.lock"
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100
+financial_effect_recovery:
+  interval_seconds: 2.0
+  max_delivery_attempts_per_cycle: 10
 limits:
-  max_title_length: 200
-  max_spec_length: 10000
-  max_reason_length: 2000
   max_file_size: 10485760
   max_assets_per_task: 20
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
+  signing:
+    kid: "gateway-task-board"
+    private_key_path: "gateway-task-board.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
+deadline_evaluation:
+  actor_id: "system-config-test-deadline"
+  evaluation_interval_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -59,8 +85,6 @@ limits:
     assert settings.database.path == "data/task-board.db"
     assert settings.central_bank.base_url == "http://localhost:8002"
     assert settings.platform.agent_id == "a-platform-id"
-    assert settings.deadlines.default_bidding_seconds == 3600
-    assert settings.limits.max_title_length == 200
 
     os.environ.pop("CONFIG_PATH", None)
 
@@ -82,6 +106,11 @@ logging:
   directory: "data/logs"
 database:
   path: "data/task-board.db"
+identity:
+  base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -90,18 +119,39 @@ central_bank:
   timeout_seconds: 10
 platform:
   agent_id: "a-platform-id"
+  agent_config_path: "agents.yaml"
+asset_upload:
+  stream_chunk_bytes: 262144
+  max_multipart_overhead_bytes: 1048576
+  max_header_count: 8
+  max_header_size: 4224
+  max_boundary_bytes: 70
+  max_display_filename_utf8_bytes: 255
 request:
   max_body_size: 1048576
-deadlines:
-  default_bidding_seconds: 3600
-  default_execution_seconds: 86400
-  default_review_seconds: 86400
+recovery:
+  maintenance_lock_path: "maintenance.lock"
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100
+financial_effect_recovery:
+  interval_seconds: 2.0
+  max_delivery_attempts_per_cycle: 10
 limits:
-  max_title_length: 200
-  max_spec_length: 10000
-  max_reason_length: 2000
   max_file_size: 10485760
   max_assets_per_task: 20
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
+  signing:
+    kid: "gateway-task-board"
+    private_key_path: "gateway-task-board.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
+deadline_evaluation:
+  actor_id: "system-config-test-deadline"
+  evaluation_interval_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -149,6 +199,11 @@ logging:
   directory: "data/logs"
 database:
   path: "data/task-board.db"
+identity:
+  base_url: "http://localhost:8001"
+  get_agent_path: "/agents"
+  verify_jws_path: "/agents/verify-jws"
+  timeout_seconds: 10
 central_bank:
   base_url: "http://localhost:8002"
   escrow_lock_path: "/escrow/lock"
@@ -157,18 +212,39 @@ central_bank:
   timeout_seconds: 10
 platform:
   agent_id: "a-platform-id"
+  agent_config_path: "agents.yaml"
+asset_upload:
+  stream_chunk_bytes: 262144
+  max_multipart_overhead_bytes: 1048576
+  max_header_count: 8
+  max_header_size: 4224
+  max_boundary_bytes: 70
+  max_display_filename_utf8_bytes: 255
 request:
   max_body_size: 1048576
-deadlines:
-  default_bidding_seconds: 3600
-  default_execution_seconds: 86400
-  default_review_seconds: 86400
+recovery:
+  maintenance_lock_path: "maintenance.lock"
+posting_recovery:
+  interval_seconds: 2
+  batch_size: 100
+  diagnostic_limit: 100
+financial_effect_recovery:
+  interval_seconds: 2.0
+  max_delivery_attempts_per_cycle: 10
 limits:
-  max_title_length: 200
-  max_spec_length: 10000
-  max_reason_length: 2000
   max_file_size: 10485760
   max_assets_per_task: 20
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
+  signing:
+    kid: "gateway-task-board"
+    private_key_path: "gateway-task-board.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
+deadline_evaluation:
+  actor_id: "system-config-test-deadline"
+  evaluation_interval_seconds: 10
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)

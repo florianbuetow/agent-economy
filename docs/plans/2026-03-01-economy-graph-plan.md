@@ -1,3 +1,8 @@
+> **SUPERSEDED (2026-06-13, T-026):** This document targets a React/TypeScript/Vite frontend
+> that was never built. Decision: the UI stays vanilla JS — see
+> [2026-06-13-frontend-stack-decision.md](2026-06-13-frontend-stack-decision.md). The
+> animation remains wanted via T-094, to be implemented in plain JS.
+
 # Economy Graph Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

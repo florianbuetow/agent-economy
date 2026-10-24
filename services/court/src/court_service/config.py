@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, field_validator
+from service_auth.gateway import GatewaySignerConfig
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
@@ -41,20 +42,22 @@ class LoggingConfig(BaseModel):
     directory: str
 
 
-class DatabaseConfig(BaseModel):
-    """Database configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    path: str
-
-
 class PlatformConfig(BaseModel):
     """Platform agent configuration."""
 
     model_config = ConfigDict(extra="forbid")
     agent_id: str = ""
     private_key_path: str | None = None
-    agent_config_path: str | None = None
+    agent_config_path: str
+
+    @field_validator("agent_config_path")
+    @classmethod
+    def agent_config_path_must_not_be_blank(cls, value: str) -> str:
+        """Require the load-only platform credential configuration."""
+        if not value.strip():
+            msg = "platform.agent_config_path must not be blank"
+            raise ValueError(msg)
+        return value
 
     @field_validator("private_key_path")
     @classmethod
@@ -75,6 +78,11 @@ class DisputesConfig(BaseModel):
     rebuttal_deadline_seconds: int
     max_claim_length: int
     max_rebuttal_length: int
+    # WP-11 (exception #11): feedback cutoffs and comment cap de-hardcoded off
+    # RulingOrchestrator's ruling->feedback-rating mapping.
+    feedback_extremely_satisfied_cutoff: int
+    feedback_satisfied_cutoff: int
+    feedback_comment_max_length: int
 
 
 class JudgeConfig(BaseModel):
@@ -94,6 +102,8 @@ class JudgesConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     panel_size: int
+    mock_worker_pct: int
+    max_deliverable_bytes: int
     judges: list[JudgeConfig]
 
     @field_validator("judges")
@@ -125,12 +135,17 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
+class GatewaySigningConfig(GatewaySignerConfig):
+    """Court's shared strict Gateway signer configuration."""
+
+
 class DbGatewayConfig(BaseModel):
     """DB Gateway service configuration."""
 
     model_config = ConfigDict(extra="forbid")
     url: str
     timeout_seconds: int
+    signing: GatewaySigningConfig
 
 
 class Settings(BaseModel):
@@ -140,7 +155,6 @@ class Settings(BaseModel):
     service: ServiceConfig
     server: ServerConfig
     logging: LoggingConfig
-    database: DatabaseConfig
     platform: PlatformConfig
     disputes: DisputesConfig
     judges: JudgesConfig

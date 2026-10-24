@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 2 items
+
+tests/unit/test_mp07_writer_transaction_cleanup.py F.                    [100%]
+
+=================================== FAILURES ===================================
+____ test_transition_pending_rejection_releases_generic_writer_transaction _____
+tests/unit/test_mp07_writer_transaction_cleanup.py:79: in test_transition_pending_rejection_releases_generic_writer_transaction
+    _native(db_writer).finalize_operation(str(claimed["operation_id"]), boundary._BOARD_KID)
+src/db_gateway_service/services/task_operation_writer.py:167: in finalize_operation
+    cursor.execute("BEGIN IMMEDIATE")
+E   sqlite3.OperationalError: cannot start a transaction within a transaction
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_writer_transaction_cleanup.py::test_transition_pending_rejection_releases_generic_writer_transaction
+==================== 1 failed, 1 passed, 1 warning in 0.31s ====================

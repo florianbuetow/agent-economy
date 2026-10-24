@@ -1,0 +1,41 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 8 items / 4 deselected / 4 selected
+
+tests/unit/test_platform_signer_keys.py FFFF                             [100%]
+
+=================================== FAILURES ===================================
+__ test_crypto_and_policy_precede_local_principal[expired-TokenExpiredError] ___
+tests/unit/test_platform_signer_keys.py:131: in test_crypto_and_policy_precede_local_principal
+    agent.validate_certificate(token)
+src/service_auth/agent.py:158: in validate_certificate
+    raise ForbiddenError(msg)
+E   service_auth.jws.ForbiddenError: Token key ID does not select the required local principal
+_ test_crypto_and_policy_precede_local_principal[future-TokenNotYetValidError] _
+tests/unit/test_platform_signer_keys.py:131: in test_crypto_and_policy_precede_local_principal
+    agent.validate_certificate(token)
+src/service_auth/agent.py:158: in validate_certificate
+    raise ForbiddenError(msg)
+E   service_auth.jws.ForbiddenError: Token key ID does not select the required local principal
+___ test_crypto_and_policy_precede_local_principal[overlong-InvalidJwsError] ___
+tests/unit/test_platform_signer_keys.py:131: in test_crypto_and_policy_precede_local_principal
+    agent.validate_certificate(token)
+src/service_auth/agent.py:158: in validate_certificate
+    raise ForbiddenError(msg)
+E   service_auth.jws.ForbiddenError: Token key ID does not select the required local principal
+_ test_crypto_and_policy_precede_local_principal[bad_signature-InvalidSignature] _
+tests/unit/test_platform_signer_keys.py:131: in test_crypto_and_policy_precede_local_principal
+    agent.validate_certificate(token)
+src/service_auth/agent.py:158: in validate_certificate
+    raise ForbiddenError(msg)
+E   service_auth.jws.ForbiddenError: Token key ID does not select the required local principal
+=========================== short test summary info ============================
+FAILED tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[expired-TokenExpiredError]
+FAILED tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[future-TokenNotYetValidError]
+FAILED tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[overlong-InvalidJwsError]
+FAILED tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[bad_signature-InvalidSignature]
+======================= 4 failed, 4 deselected in 0.09s ========================

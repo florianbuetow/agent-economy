@@ -1,0 +1,34 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/central-bank
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 181 items
+
+tests/unit/routers/test_accounts.py ............                         [  6%]
+tests/unit/routers/test_escrow.py .......                                [ 10%]
+tests/unit/routers/test_health.py ..                                     [ 11%]
+tests/unit/routers/test_health_gateway_down.py .                         [ 12%]
+tests/unit/routers/test_review_fixes.py .........                        [ 17%]
+tests/unit/routers/test_self_service_account.py ......                   [ 20%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py ..................  [ 30%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py ............   [ 37%]
+tests/unit/routers/test_t072_escrow_gaps.py .......................      [ 49%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py ................... [ 60%]
+........                                                                 [ 64%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py ......         [ 67%]
+tests/unit/routers/test_t072_platform_signer_gaps.py .....               [ 70%]
+tests/unit/routers/test_two_tier_auth.py ......                          [ 74%]
+tests/unit/test_config.py ..                                             [ 75%]
+tests/unit/test_ledger_audit_log.py .....                                [ 77%]
+tests/unit/test_ledger_db_client_normalization.py ....                   [ 80%]
+tests/unit/test_ledger_safety.py ......                                  [ 83%]
+tests/unit/test_ledger_store_contract.py ..............                  [ 91%]
+tests/unit/test_mp03_platform_credentials.py ........                    [ 95%]
+tests/unit/test_mp03_receiver_context.py ....                            [ 97%]
+tests/unit/test_no_base_agent_imports.py .                               [ 98%]
+tests/unit/test_placeholder.py .                                         [ 98%]
+tests/unit/test_platform_integration.py ..                               [100%]
+
+============================= 181 passed in 6.50s ==============================

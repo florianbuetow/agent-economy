@@ -13,8 +13,21 @@ from typing import TYPE_CHECKING
 from reputation_service.services.exceptions import DuplicateFeedbackError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from reputation_service.services.protocol import FeedbackStorageInterface
     from reputation_service.types import FeedbackRecord
+
+
+def _system_clock() -> datetime:
+    """Return the real current UTC datetime."""
+    return datetime.now(UTC)
+
+
+# Injectable clock seam (mirrors service_auth.signing._clock). Tests override the
+# module attribute (e.g. ``feedback._clock = lambda: frozen``) to control the "now"
+# reference the reveal-timeout comparison in is_visible() runs against.
+_clock: Callable[[], datetime] = _system_clock
 
 VALID_CATEGORIES: frozenset[str] = frozenset({"spec_quality", "delivery_quality"})
 VALID_RATINGS: frozenset[str] = frozenset({"dissatisfied", "satisfied", "extremely_satisfied"})
@@ -191,7 +204,7 @@ def is_visible(record: FeedbackRecord, reveal_timeout_seconds: int) -> bool:
 
     # Check timeout
     submitted = datetime.fromisoformat(record.submitted_at)
-    elapsed = (datetime.now(UTC) - submitted).total_seconds()
+    elapsed = (_clock() - submitted).total_seconds()
     return elapsed >= reveal_timeout_seconds
 
 

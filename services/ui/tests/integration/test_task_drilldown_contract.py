@@ -15,6 +15,7 @@ import pytest
 
 if TYPE_CHECKING:
     import httpx
+    from aiosqlite import Connection
 
 
 @pytest.mark.integration
@@ -44,8 +45,13 @@ class TestTaskDrilldownContract:
         assert "bidding_deadline" in deadlines
         # execution_deadline and review_deadline may be null for some statuses
 
-    async def test_returns_bids_array(self, client: httpx.AsyncClient) -> None:
-        """Response must include bids array with bidder details."""
+    async def test_returns_bids_array(
+        self, client: httpx.AsyncClient, write_db: Connection
+    ) -> None:
+        """Post-open bids include bidder details and exact canonical amounts."""
+        await write_db.execute("UPDATE board_bids SET amount=83 WHERE bid_id='bid-1'")
+        await write_db.execute("UPDATE board_bids SET amount=91 WHERE bid_id='bid-2'")
+        await write_db.commit()
         resp = await client.get("/api/tasks/t-task1")
         assert resp.status_code == 200
         data = resp.json()
@@ -56,7 +62,12 @@ class TestTaskDrilldownContract:
         assert "bid_id" in bid
         assert "bidder" in bid
         assert "name" in bid["bidder"]
-        assert "proposal" in bid
+        assert [(item["bid_id"], item["amount"]) for item in data["bids"]] == [
+            ("bid-1", 83),
+            ("bid-2", 91),
+        ]
+        assert all(type(item["amount"]) is int for item in data["bids"])
+        assert all("proposal" not in item for item in data["bids"])
         assert "submitted_at" in bid
 
     async def test_returns_assets_for_submitted_task(self, client: httpx.AsyncClient) -> None:

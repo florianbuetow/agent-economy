@@ -1,0 +1,96 @@
+{
+  "status": "independent review APPROVE; parent library just ci-quiet exit0,379 tests; consumer rollout pending",
+  "boundary": "Transport status/object/state contract only. Caller-specific immutable validation, UI/runtime migration, journal and root gate remain required.",
+  "artifacts": [
+    {
+      "path": "agent-economy-mp07-sdk-status-codespell-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-controls-final.log",
+      "sha256": "04b09b41d00de5955490e007721109d8fa71cace228373caac431ae0cb68656f"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-format-final.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-green.log",
+      "sha256": "7afc636b3387f4399e9919ef414de86fe74b16763fa5a0f6f0a857dc24db0371"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-library-ci.log",
+      "sha256": "e819d57eab158a9b48b5e236fde46c2ba405d18bb1ac4e3a8438acf95f33556b"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-library-units.log",
+      "sha256": "b3b46f42eb92e30a33508e6a739ae7be2ff45968a6d94d44c4a8c6e6671698b6"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-mixin-before.py",
+      "sha256": "c216a6206ee1a7c49695b9572d5e18b92f38d369d93c187355c33358b10066a4"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-mypy-final.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-mypy-product.log",
+      "sha256": "8d79713933abff129fe408caa486f3338d9dc0374196ccb8eb4c8cb84836dd58"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-producer-before.py",
+      "sha256": "f53829c013fc75eccf9490fc89024511699b8fc996d20389749ed97f98b34fee"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-producer-control-final.log",
+      "sha256": "d494b93f572f3048d471e051de3c5f4a41b4757c1eec0058634f2f0ada293924"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-producer-controls.log",
+      "sha256": "6c32cbbfb6aa84aa2d3d23dcffeddf6ad7efe0711a9851294dbceacb5605d9b2"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-red-final.log",
+      "sha256": "58952512cd9a8f85eddddd34b98d7a043bd813bb28e8ceafac3faa34424f2165"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-red-source.py",
+      "sha256": "c0e8c7f44058f7e6a3414a6ce987b56fd1cb1296c2f965b3762bd52226753d46"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-ruff-final.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-sdk-status-sha256-final.log",
+      "sha256": "8e477cc8401295b464c341c4cef10cdd5032e34d3d463f6c560e665d1f51b6b4"
+    }
+  ],
+  "sources": [
+    {
+      "path": "libs/service-auth/src/service_auth/task_board_responses.py",
+      "sha256": "64c20367af6a5d344b37b1752d9bce6ddc13ec60f509ff5669f4f9712f7f0988"
+    },
+    {
+      "path": "libs/service-auth/src/service_auth/mixins/task_board.py",
+      "sha256": "121e1f3d39c76ccb87b6e644a159fc8c458df5a876d1391f6e1426dd64bc8639"
+    },
+    {
+      "path": "libs/service-auth/src/service_auth/__init__.py",
+      "sha256": "30cf6d1881457504915865c501b57456388d6b0f6e5864f2e3959bf19cd9554c"
+    },
+    {
+      "path": "libs/service-auth/tests/unit/test_mp07_task_board_status.py",
+      "sha256": "c0e8c7f44058f7e6a3414a6ce987b56fd1cb1296c2f965b3762bd52226753d46"
+    },
+    {
+      "path": "libs/service-auth/tests/unit/test_mp07_task_board_producer.py",
+      "sha256": "eb6abfa7fce0d3aced9e4821549cdb8e4c7199064259b88f507d4974fc0f976e"
+    },
+    {
+      "path": "docs/plans/2026-10-18-mp07-sdk-status-tests.md",
+      "sha256": "5e1353d047413e4bae4c4eb318e1867116206e20eaa4dbdf437cdebf2f1e0983"
+    }
+  ]
+}

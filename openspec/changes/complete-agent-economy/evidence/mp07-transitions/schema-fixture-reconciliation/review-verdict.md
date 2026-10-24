@@ -1,0 +1,1 @@
+Independent reviewer /root/mp07_board_rollout_review confirmed the sole finding CLOSED: future-version test now loads CURRENT_V3, asserts CURRENT_V3, sets version4, then asserts FUTURE. Other runtime-v3, older-v1/v2 nonmutation, receipt-provenance and corruption controls were already approved. Parent77351 exits0 with34passes/1existing warning. No package closure claimed.

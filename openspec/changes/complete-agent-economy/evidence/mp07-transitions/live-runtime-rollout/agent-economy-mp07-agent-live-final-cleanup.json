@@ -1,0 +1,86 @@
+{
+  "manifest": "/private/tmp/agent-economy-mp07-agent-live-final/runtime-b07676853a174c568cbbf108bf7e857f-ge285g_8/runtime.json",
+  "manifest_sha256": "761d031bdcb9cc85aed5f2806376bcc9dd6006d2e53065c5b8230c1190ffce66",
+  "groups": [
+    {
+      "pid": 32639,
+      "pgid": 32639,
+      "observed_group": "absent",
+      "recorded_running": false,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "pid": 32824,
+      "pgid": 32824,
+      "observed_group": "absent",
+      "recorded_running": false,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "pid": 33223,
+      "pgid": 33223,
+      "observed_group": "absent",
+      "recorded_running": false,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "pid": 33554,
+      "pgid": 33554,
+      "observed_group": "absent",
+      "recorded_running": false,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "pid": 33676,
+      "pgid": 33676,
+      "observed_group": "absent",
+      "recorded_running": false,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "pid": 33970,
+      "pgid": 33970,
+      "observed_group": "absent",
+      "recorded_running": false,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "pid": 34598,
+      "pgid": 34598,
+      "observed_group": "absent",
+      "recorded_running": false,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "pid": 34703,
+      "pgid": 34703,
+      "observed_group": "absent",
+      "recorded_running": false,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "pid": 34806,
+      "pgid": 34806,
+      "observed_group": "absent",
+      "recorded_running": false,
+      "group_drained": true,
+      "cleanup_error": null
+    },
+    {
+      "pid": 32126,
+      "pgid": 32126,
+      "observed_group": "absent",
+      "recorded_running": false,
+      "group_drained": true,
+      "cleanup_error": null
+    }
+  ]
+}

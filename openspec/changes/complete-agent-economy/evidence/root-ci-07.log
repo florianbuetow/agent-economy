@@ -1,0 +1,1703 @@
+
+[0;34m=== Running Full CI (Quiet Mode) ===[0m
+[0;34m--- Phase 0: Project structure ---[0m
+
+[0;34m=== Checking Project Structure ===[0m
+
+[0;32m✓ services/central-bank/justfile[0m
+[0;32m✓ services/court/justfile[0m
+[0;32m✓ services/db-gateway/justfile[0m
+[0;32m✓ services/reputation/justfile[0m
+[0;32m✓ services/task-board/justfile[0m
+[0;32m✓ services/ui/justfile[0m
+
+[0;32m✓ All service justfiles are identical[0m
+
+[0;34m--- Phase 1: Libs CI ---[0m
+Checking service-commons...
+Checking service-commons...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-commons/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-commons
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 4 items
+
+tests/unit/test_smoke.py::test_package_importable PASSED                 [ 25%]
+tests/unit/test_smoke.py::test_exceptions_module_exports PASSED          [ 50%]
+tests/unit/test_smoke.py::test_logging_module_exports PASSED             [ 75%]
+tests/unit/test_smoke.py::test_config_module_exports PASSED              [100%]
+
+============================== 4 passed in 0.09s ===============================
+[0;32m✓ service-commons CI passed[0m
+Checking service-clients...
+Checking service-clients...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-clients/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-clients
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 75 items
+
+tests/unit/test_bank_client.py::TestConnectionFailureMapping::test_connect_error_maps_to_502_central_bank_unavailable PASSED [  1%]
+tests/unit/test_bank_client.py::TestConnectionFailureMapping::test_timeout_maps_to_502_central_bank_unavailable PASSED [  2%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_success PASSED      [  4%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_alias_matches_lock_escrow PASSED [  5%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_402_raises_insufficient_funds PASSED [  6%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_404_raises_account_not_found PASSED [  8%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_403_raises_forbidden PASSED [  9%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_409_raises_conflict_from_body PASSED [ 10%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_500_raises_502_central_bank_unavailable PASSED [ 12%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_success PASSED   [ 13%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_alias_matches_release_escrow PASSED [ 14%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_404_raises_not_found PASSED [ 16%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_403_raises_forbidden PASSED [ 17%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_409_raises_conflict PASSED [ 18%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_400_raises_bad_request PASSED [ 20%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_success PASSED     [ 21%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_alias_matches_split_escrow PASSED [ 22%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_404_raises_not_found PASSED [ 24%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_403_raises_forbidden PASSED [ 25%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_no_split_path_configured_raises_502 PASSED [ 26%]
+tests/unit/test_gateway_client.py::TestConnectionFailureMapping::test_connect_error_maps_to_502_db_gateway_unavailable PASSED [ 28%]
+tests/unit/test_gateway_client.py::TestConnectionFailureMapping::test_timeout_maps_to_502_db_gateway_unavailable PASSED [ 29%]
+tests/unit/test_gateway_client.py::TestIdentity::test_register_agent_success PASSED [ 30%]
+tests/unit/test_gateway_client.py::TestIdentity::test_register_agent_conflict PASSED [ 32%]
+tests/unit/test_gateway_client.py::TestIdentity::test_get_agent_not_found_returns_none PASSED [ 33%]
+tests/unit/test_gateway_client.py::TestIdentity::test_list_agents PASSED [ 34%]
+tests/unit/test_gateway_client.py::TestIdentity::test_count_agents PASSED [ 36%]
+tests/unit/test_gateway_client.py::TestBank::test_create_account_success PASSED [ 37%]
+tests/unit/test_gateway_client.py::TestBank::test_create_account_conflict PASSED [ 38%]
+tests/unit/test_gateway_client.py::TestBank::test_get_account_found PASSED [ 40%]
+tests/unit/test_gateway_client.py::TestBank::test_get_account_not_found_returns_none PASSED [ 41%]
+tests/unit/test_gateway_client.py::TestBank::test_get_transactions PASSED [ 42%]
+tests/unit/test_gateway_client.py::TestBank::test_count_accounts PASSED  [ 44%]
+tests/unit/test_gateway_client.py::TestBank::test_total_escrowed PASSED  [ 45%]
+tests/unit/test_gateway_client.py::TestBank::test_get_escrow_not_found_returns_none PASSED [ 46%]
+tests/unit/test_gateway_client.py::TestBank::test_credit_account PASSED  [ 48%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_lock_insufficient_funds PASSED [ 49%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_release_success PASSED [ 50%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_split_success PASSED [ 52%]
+tests/unit/test_gateway_client.py::TestReputation::test_submit_feedback_success PASSED [ 53%]
+tests/unit/test_gateway_client.py::TestReputation::test_submit_feedback_conflict PASSED [ 54%]
+tests/unit/test_gateway_client.py::TestReputation::test_get_feedback_not_found_returns_none PASSED [ 56%]
+tests/unit/test_gateway_client.py::TestReputation::test_list_feedback_by_task PASSED [ 57%]
+tests/unit/test_gateway_client.py::TestReputation::test_count_feedback PASSED [ 58%]
+tests/unit/test_gateway_client.py::TestCourt::test_file_claim_success PASSED [ 60%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_claim_not_found_returns_none PASSED [ 61%]
+tests/unit/test_gateway_client.py::TestCourt::test_list_claims_with_status_filter PASSED [ 62%]
+tests/unit/test_gateway_client.py::TestCourt::test_update_claim_status_not_found_returns_none PASSED [ 64%]
+tests/unit/test_gateway_client.py::TestCourt::test_update_claim_status_success PASSED [ 65%]
+tests/unit/test_gateway_client.py::TestCourt::test_submit_rebuttal_success PASSED [ 66%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_rebuttal_not_found_returns_none PASSED [ 68%]
+tests/unit/test_gateway_client.py::TestCourt::test_record_ruling_success PASSED [ 69%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_ruling_not_found_returns_none PASSED [ 70%]
+tests/unit/test_gateway_client.py::TestCourt::test_delete_ruling_success PASSED [ 72%]
+tests/unit/test_gateway_client.py::TestCourt::test_delete_ruling_not_found_returns_none PASSED [ 73%]
+tests/unit/test_gateway_client.py::TestCourt::test_count_claims PASSED   [ 74%]
+tests/unit/test_gateway_client.py::TestCourt::test_count_active_claims PASSED [ 76%]
+tests/unit/test_gateway_client.py::TestBoardRead::test_get_task_found PASSED [ 77%]
+tests/unit/test_gateway_client.py::TestBoardRead::test_get_task_not_found_returns_none PASSED [ 78%]
+tests/unit/test_identity_client.py::test_verify_jws_returns_complete_typed_result PASSED [ 80%]
+tests/unit/test_identity_client.py::test_verify_jws_invalid_result_raises_raw_invalid_signature PASSED [ 81%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_missing_header] PASSED [ 82%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_kid_mismatch] PASSED [ 84%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_bool_to_int] PASSED [ 85%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_bool_to_float] PASSED [ 86%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_wrong_valid_type] PASSED [ 88%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_wrong_payload_type] PASSED [ 89%]
+tests/unit/test_identity_client.py::test_claimed_success_for_invalid_requested_token_maps_to_identity_unavailable PASSED [ 90%]
+tests/unit/test_identity_client.py::test_identity_http_errors_are_preserved[400-invalid_jws] PASSED [ 92%]
+tests/unit/test_identity_client.py::test_identity_http_errors_are_preserved[401-token_expired] PASSED [ 93%]
+tests/unit/test_identity_client.py::test_identity_http_errors_are_preserved[404-agent_not_found] PASSED [ 94%]
+tests/unit/test_identity_client.py::test_get_agent_contract_is_unchanged PASSED [ 96%]
+tests/unit/test_identity_client.py::test_unparseable_deep_identity_success_is_unavailable PASSED [ 97%]
+tests/unit/test_identity_client.py::test_internal_transport_recursion_is_not_an_upstream_contract_error PASSED [ 98%]
+tests/unit/test_mp03_bank_context.py::test_release_and_split_use_concrete_bank_resources PASSED [100%]
+
+============================== 75 passed in 0.95s ==============================
+[0;32m✓ service-clients CI passed[0m
+Checking service-auth...
+Checking service-auth...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-auth/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 157 items
+
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_hardens_valid_legacy_pair_without_rewriting_bytes PASSED [  0%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_refuses_invalid_material_without_modification[private-only] PASSED [  1%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_refuses_invalid_material_without_modification[corrupt] PASSED [  1%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_refuses_invalid_material_without_modification[mismatch] PASSED [  2%]
+tests/unit/test_key_bootstrap.py::test_factory_explicit_bootstrap_is_idempotent_and_check_is_load_only PASSED [  3%]
+tests/unit/test_key_bootstrap.py::test_factory_check_reports_absent_pair_without_creating_key_directory PASSED [  3%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[create_agent] PASSED [  4%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[platform_agent] PASSED [  5%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[user_agent] PASSED [  5%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[load_agent_config] PASSED [  6%]
+tests/unit/test_key_loading.py::test_preprovisioned_keys_load_for_every_supported_consumer PASSED [  7%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[mismatch-factory] PASSED [  7%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[mismatch-config] PASSED [  8%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[insecure-factory] PASSED [  8%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[insecure-config] PASSED [  9%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[symlink-factory] PASSED [ 10%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[symlink-config] PASSED [ 10%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_is_idempotent_and_never_replaces_existing_pair PASSED [ 11%]
+tests/unit/test_key_provisioning.py::test_cold_concurrent_generate_keypair_converges_across_processes PASSED [ 12%]
+tests/unit/test_key_provisioning.py::test_partial_pair_is_refused_without_changing_surviving_bytes[private] PASSED [ 12%]
+tests/unit/test_key_provisioning.py::test_partial_pair_is_refused_without_changing_surviving_bytes[public] PASSED [ 13%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[private] PASSED [ 14%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[public] PASSED [ 14%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[both] PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_mismatched_pair_is_refused_without_replacement PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_load_keypair_rejects_mismatched_pair_without_rewrite PASSED [ 16%]
+tests/unit/test_key_provisioning.py::test_fresh_private_key_mode_is_exactly_0600_under_permissive_umask PASSED [ 17%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[] PASSED [ 17%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[.] PASSED [ 18%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[..] PASSED [ 19%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[nested/agent] PASSED [ 19%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[nested\\agent] PASSED [ 20%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[private] PASSED [ 21%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[public] PASSED [ 21%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[lock] PASSED [ 22%]
+tests/unit/test_key_provisioning.py::test_interrupted_public_first_publication_remains_partial_and_is_not_replaced PASSED [ 22%]
+tests/unit/test_key_provisioning.py::test_publication_fsyncs_public_before_private_commit_marker PASSED [ 23%]
+tests/unit/test_key_provisioning.py::test_missing_lock_reader_never_observes_publication_in_progress PASSED [ 24%]
+tests/unit/test_key_provisioning.py::test_lock_acquisition_failure_closes_descriptor_and_preserves_diagnostic PASSED [ 24%]
+tests/unit/test_key_provisioning.py::test_unlock_failure_does_not_mask_body_failure_and_descriptor_is_closed PASSED [ 25%]
+tests/unit/test_mp03_jws_core.py::test_create_and_verify_roundtrip_is_typed_and_keeps_context_in_header PASSED [ 26%]
+tests/unit/test_mp03_jws_core.py::test_signature_covers_received_compact_bytes_without_reserializing PASSED [ 26%]
+tests/unit/test_mp03_jws_core.py::test_wrong_signature_remains_cryptography_invalid_signature PASSED [ 27%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[None] PASSED [ 28%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[value1] PASSED [ 28%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[x] PASSED [ 29%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[1] PASSED [ 29%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[True] PASSED [ 30%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[alg-HS256] PASSED [ 31%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[alg-True] PASSED [ 31%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[typ-JWS] PASSED [ 32%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[typ-1] PASSED [ 33%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[kid- ] PASSED [ 33%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[kid-True] PASSED [ 34%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[iat-True] PASSED [ 35%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[iat-1] PASSED [ 35%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[exp-True] PASSED [ 36%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[exp-1.5] PASSED [ 36%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[aud-] PASSED [ 37%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[aud-7] PASSED [ 38%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-get /tasks/1] PASSED [ 38%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET https://example.test/tasks/1] PASSED [ 39%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET /tasks/1?q=x] PASSED [ 40%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET /tasks/1#x] PASSED [ 40%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET  /tasks/1] PASSED [ 41%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET /tasks/{id}] PASSED [ 42%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[alg] PASSED [ 42%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[typ] PASSED [ 43%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[kid] PASSED [ 43%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[iat] PASSED [ 44%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[exp] PASSED [ 45%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[aud] PASSED [ 45%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[resource] PASSED [ 46%]
+tests/unit/test_mp03_jws_core.py::test_rejects_extra_header_field PASSED [ 47%]
+tests/unit/test_mp03_jws_core.py::test_payload_requires_nonblank_string_action[payload0] PASSED [ 47%]
+tests/unit/test_mp03_jws_core.py::test_payload_requires_nonblank_string_action[payload1] PASSED [ 48%]
+tests/unit/test_mp03_jws_core.py::test_payload_requires_nonblank_string_action[payload2] PASSED [ 49%]
+tests/unit/test_mp03_jws_core.py::test_action_only_payload_and_same_named_domain_fields_are_valid PASSED [ 49%]
+tests/unit/test_mp03_jws_core.py::test_rejects_duplicate_and_nonfinite_json PASSED [ 50%]
+tests/unit/test_mp03_jws_core.py::test_decoder_failures_are_normalized_to_invalid_jws[decoder_error0] PASSED [ 50%]
+tests/unit/test_mp03_jws_core.py::test_decoder_failures_are_normalized_to_invalid_jws[decoder_error1] PASSED [ 51%]
+tests/unit/test_mp03_jws_core.py::test_create_jws_normalizes_recursive_payloads[deep] PASSED [ 52%]
+tests/unit/test_mp03_jws_core.py::test_create_jws_normalizes_recursive_payloads[cycle] PASSED [ 52%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[two.parts] PASSED [ 53%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[...] PASSED [ 54%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[a.b.c.d] PASSED [ 54%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[@@@.e30.AA] PASSED [ 55%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[e30.e30.@@@] PASSED [ 56%]
+tests/unit/test_mp03_jws_core.py::test_signature_must_decode_to_exact_ed25519_length[1] PASSED [ 56%]
+tests/unit/test_mp03_jws_core.py::test_signature_must_decode_to_exact_ed25519_length[63] PASSED [ 57%]
+tests/unit/test_mp03_jws_core.py::test_signature_must_decode_to_exact_ed25519_length[65] PASSED [ 57%]
+tests/unit/test_mp03_jws_core.py::test_valid_length_wrong_signature_remains_invalid_signature PASSED [ 58%]
+tests/unit/test_mp03_jws_core.py::test_token_policy_rejects_bool_and_invalid_ranges PASSED [ 59%]
+tests/unit/test_mp03_jws_core.py::test_temporal_edges_and_maximum_lifetime PASSED [ 59%]
+tests/unit/test_mp03_jws_core.py::test_authentic_signature_is_checked_before_temporal_state PASSED [ 60%]
+tests/unit/test_mp03_jws_core.py::test_context_and_signer_guards PASSED  [ 61%]
+tests/unit/test_mp03_jws_core.py::test_platform_signer_requires_positive_ttl_and_explicit_context PASSED [ 61%]
+tests/unit/test_mp03_jws_core.py::test_platform_signer_requires_canonical_validated_keypair PASSED [ 62%]
+tests/unit/test_mp03_jws_core.py::test_identity_success_parser_binds_complete_wire_to_requested_token PASSED [ 63%]
+tests/unit/test_mp03_jws_core.py::test_identity_binding_compares_json_types_recursively[requested0-claimed0] PASSED [ 63%]
+tests/unit/test_mp03_jws_core.py::test_identity_binding_compares_json_types_recursively[requested1-claimed1] PASSED [ 64%]
+tests/unit/test_mp03_jws_core.py::test_identity_binding_compares_json_types_recursively[requested2-claimed2] PASSED [ 64%]
+tests/unit/test_mp03_jws_core.py::test_claimed_valid_identity_wraps_unparseable_requested_token PASSED [ 65%]
+tests/unit/test_mp03_jws_core.py::test_claimed_valid_identity_wraps_recursive_wire_shape PASSED [ 66%]
+tests/unit/test_mp03_jws_core.py::test_identity_invalid_signature_wire_is_never_success PASSED [ 66%]
+tests/unit/test_mp03_jws_core.py::test_verification_preserves_original_json_serialization[None] PASSED [ 67%]
+tests/unit/test_mp03_jws_core.py::test_verification_preserves_original_json_serialization[2] PASSED [ 68%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload0] PASSED [ 68%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload1] PASSED [ 69%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload2] PASSED [ 70%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload3] PASSED [ 70%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload0] PASSED [ 71%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload1] PASSED [ 71%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload2] PASSED [ 72%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload3] PASSED [ 73%]
+tests/unit/test_mp03_jws_core.py::test_temporal_rejection_precedes_authenticated_action_validation[1893456031-1893456091-TokenNotYetValidError] PASSED [ 73%]
+tests/unit/test_mp03_jws_core.py::test_temporal_rejection_precedes_authenticated_action_validation[1893455900-1893455970-TokenExpiredError] PASSED [ 74%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload0] PASSED [ 75%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload1] PASSED [ 75%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload2] PASSED [ 76%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload3] PASSED [ 77%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload0] PASSED [ 77%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload1] PASSED [ 78%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload2] PASSED [ 78%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload3] PASSED [ 79%]
+tests/unit/test_mp03_outbound_matrix.py::test_platform_bank_court_reputation_and_task_board_tokens PASSED [ 80%]
+tests/unit/test_mp03_outbound_matrix.py::test_platform_sign_requires_explicit_context_and_registration PASSED [ 80%]
+tests/unit/test_mp03_producers.py::test_agent_config_rejects_invalid_ttl_and_policy_mismatch PASSED [ 81%]
+tests/unit/test_mp03_producers.py::test_load_agent_config_requires_complete_strict_signing PASSED [ 82%]
+tests/unit/test_mp03_producers.py::test_post_task_emits_separate_context_bound_tokens PASSED [ 82%]
+tests/unit/test_mp03_producers.py::test_unregistered_agent_cannot_sign PASSED [ 83%]
+tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[None] PASSED [ 84%]
+tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[policy1] PASSED [ 84%]
+tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[policy2] PASSED [ 85%]
+tests/unit/test_platform_signer_keys.py::test_platform_agent_refuses_to_sign_before_registration PASSED [ 85%]
+tests/unit/test_platform_signer_keys.py::test_platform_agent_signs_with_registered_identity_and_config_key PASSED [ 86%]
+tests/unit/test_platform_signer_keys.py::test_local_principal_rejection_precedes_action_content[payload0] PASSED [ 87%]
+tests/unit/test_platform_signer_keys.py::test_local_principal_rejection_precedes_action_content[payload1] PASSED [ 87%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[expired-TokenExpiredError] PASSED [ 88%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[future-TokenNotYetValidError] PASSED [ 89%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[overlong-InvalidJwsError] PASSED [ 89%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[bad_signature-InvalidSignature] PASSED [ 90%]
+tests/unit/test_signing.py::TestKeygenRoundtrip::test_creates_and_loads_keys PASSED [ 91%]
+tests/unit/test_signing.py::TestSignVerify::test_sign_and_verify_roundtrip PASSED [ 91%]
+tests/unit/test_signing.py::TestSignVerify::test_verify_rejects_wrong_key PASSED [ 92%]
+tests/unit/test_signing.py::TestSignVerify::test_malformed_token_raises_value_error PASSED [ 92%]
+tests/unit/test_signing.py::TestSignVerify::test_canonicalization_is_key_order_independent PASSED [ 93%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_payload PASSED [ 94%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_header PASSED [ 94%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_ttl_stamps_iat_exp_into_header_not_payload PASSED [ 95%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_legacy_token_without_exp_is_rejected PASSED [ 96%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_expired_token_is_rejected PASSED [ 96%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_unexpired_token_is_accepted PASSED [ 97%]
+tests/unit/test_signing.py::TestLegacyProfileRejection::test_rejects_base_agent_old_profile PASSED [ 98%]
+tests/unit/test_signing.py::TestLegacyProfileRejection::test_rejects_platform_signer_old_profile PASSED [ 98%]
+tests/unit/test_signing.py::TestPlatformSigner::test_signs_and_verifies PASSED [ 99%]
+tests/unit/test_signing.py::TestPlatformSigner::test_legacy_signer_without_lifetime_is_rejected PASSED [100%]
+
+============================= 157 passed in 0.86s ==============================
+[0;32m✓ service-auth CI passed[0m
+[0;34m--- Phase 2: Service CI ---[0m
+Checking identity...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking central-bank...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking task-board...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking reputation...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking court...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking db-gateway...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking ui...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-format passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+[0;34m--- Phase 3: Per-service integration tests ---[0m
+
+[0;34m=== Running Per-Service Integration Tests ===[0m
+
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-2f7bf06f82384f0ca416846696eaa2d2-16yt1nw2
+provisioned handle=alice fingerprint_sha256=f66b3dca65708eaf4a35e8a41ee769d0b61ddec84e8534d73b0c82fdf873a56c
+provisioned handle=bob fingerprint_sha256=1f908706cf5088ae7e5e650ef7b1ec8e7bd2729fda3a0c90e3a48c60c92e6f72
+provisioned handle=feeder fingerprint_sha256=70a451bb224de28bbd86d9205d71f38ac35483db0c29193c2dcc34f9f16f11e8
+provisioned handle=mathbot fingerprint_sha256=fe2f1ddd64d096fc9d5afb457d3fb71807c9110f9c6f50bdf52a62bc41a25606
+provisioned handle=mathbot_mistral fingerprint_sha256=423a4ef0609236c25cd1cddb0e3da59954adf81e762c553d85bd0f02d11ceec6
+provisioned handle=mathbot_openai fingerprint_sha256=bc325a1420d79ab896d6205a0e36a74037d68a7dc482ac9c3b690e73156801ed
+provisioned handle=operator fingerprint_sha256=1dd9b7211a448197dd1201c15a364adbd43f41892d318c30675c05c6abac518c
+provisioned handle=platform fingerprint_sha256=46a8f71bfecb9b1a17a9d0f486f254c92029235f11a69ef240472ec4158d666b
+[0;34m--- identity ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/identity/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/identity
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 7 items
+
+tests/integration/test_concurrent_registration_live.py::TestConcurrentDuplicateKeyRaceThroughLiveIdentity::test_exactly_one_201_through_live_identity_process PASSED [ 14%]
+tests/integration/test_endpoints.py::TestRegisterAgentGatewayBacked::test_register_agent_persists_row_via_real_gateway PASSED [ 28%]
+tests/integration/test_endpoints.py::TestRegisterAgentGatewayBacked::test_register_agent_writes_event_row_via_real_gateway PASSED [ 42%]
+tests/integration/test_endpoints.py::TestRegisterAgentGatewayBacked::test_duplicate_public_key_rejected_by_real_gateway PASSED [ 57%]
+tests/integration/test_endpoints.py::TestReadPathGatewayBacked::test_get_agent_reads_through_real_gateway PASSED [ 71%]
+tests/integration/test_endpoints.py::TestReadPathGatewayBacked::test_list_agents_reads_through_real_gateway PASSED [ 85%]
+tests/integration/test_endpoints.py::TestVerifyJwsGatewayBacked::test_verify_jws_round_trips_through_real_gateway PASSED [100%]
+
+============================== 7 passed in 1.33s ===============================
+[0;34m--- central-bank ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/central-bank/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/central-bank
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+tests/integration/test_endpoints.py::TestAccountLifecycleGatewayBacked::test_create_account_persists_row_via_real_gateway PASSED [ 33%]
+tests/integration/test_endpoints.py::TestAccountLifecycleGatewayBacked::test_credit_account_updates_balance_via_real_gateway PASSED [ 66%]
+tests/integration/test_endpoints.py::TestEscrowLifecycleGatewayBacked::test_escrow_lock_and_release_moves_real_gateway_balances PASSED [100%]
+
+============================== 3 passed in 0.17s ===============================
+[0;34m--- task-board ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/task-board/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/integration/test_endpoints.py::TestTaskLifecycleGatewayBacked::test_full_lifecycle_persists_through_real_gateway PASSED [100%]
+
+============================== 1 passed in 0.23s ===============================
+[0;34m--- reputation ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/reputation/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/reputation
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 12 items
+
+tests/integration/test_endpoints.py::TestSubmitAndRetrieveFeedbackWorkflow::test_sealed_feedback_becomes_visible_after_mutual_submission PASSED [  8%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_missing_field_returns_400 PASSED [ 16%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_invalid_category_returns_400 PASSED [ 25%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_self_feedback_returns_400 PASSED [ 33%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_duplicate_feedback_returns_409 PASSED [ 41%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_wrong_content_type_returns_415 PASSED [ 50%]
+tests/integration/test_endpoints.py::TestErrorResponsesWorkflow::test_invalid_json_returns_400 PASSED [ 58%]
+tests/integration/test_endpoints.py::TestHealthCheckWorkflow::test_health_tracks_total_feedback_including_sealed PASSED [ 66%]
+tests/integration/test_endpoints.py::TestMethodNotAllowed::test_put_feedback_returns_405 PASSED [ 75%]
+tests/integration/test_endpoints.py::TestMethodNotAllowed::test_delete_health_returns_405 PASSED [ 83%]
+tests/integration/test_endpoints.py::TestCommentHandling::test_feedback_with_comment PASSED [ 91%]
+tests/integration/test_endpoints.py::TestCommentHandling::test_feedback_without_comment PASSED [100%]
+
+============================== 12 passed in 0.46s ==============================
+[0;34m--- court ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/court/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/integration/test_endpoints.py::TestDisputeLifecycleGatewayBacked::test_file_rebut_and_rule_persists_through_real_gateway PASSED [100%]
+
+============================== 1 passed in 0.23s ===============================
+[0;34m--- db-gateway ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 6 items
+
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_register_then_read_round_trips_over_live_http PASSED [ 16%]
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_duplicate_public_key_returns_409_over_live_http PASSED [ 33%]
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_health_total_events_increments_after_live_write PASSED [ 50%]
+tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_exactly_one_201_among_five_racing_distinct_agents PASSED [ 66%]
+tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_winner_is_readable_and_no_duplicate_rows_exist PASSED [ 83%]
+tests/integration/test_endpoints.py::TestHealthIntegration::test_health_check PASSED [100%]
+
+============================== 6 passed in 0.41s ===============================
+[0;34m--- ui ---[0m
+
+[0;34m=== Running Integration Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/ui/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 224 items
+
+tests/integration/test_agents.py::test_list_returns_all_agents PASSED    [  0%]
+tests/integration/test_agents.py::test_list_default_sort_total_earned_desc PASSED [  0%]
+tests/integration/test_agents.py::test_list_sort_by_total_spent PASSED   [  1%]
+tests/integration/test_agents.py::test_list_sort_by_tasks_posted PASSED  [  1%]
+tests/integration/test_agents.py::test_list_sort_by_tasks_completed PASSED [  2%]
+tests/integration/test_agents.py::test_list_sort_by_spec_quality PASSED  [  2%]
+tests/integration/test_agents.py::test_list_sort_by_delivery_quality PASSED [  3%]
+tests/integration/test_agents.py::test_list_sort_asc_reverses PASSED     [  3%]
+tests/integration/test_agents.py::test_list_pagination_limit_offset PASSED [  4%]
+tests/integration/test_agents.py::test_list_invalid_sort_returns_400 PASSED [  4%]
+tests/integration/test_agents.py::test_list_agent_stats_structure PASSED [  4%]
+tests/integration/test_agents.py::test_profile_returns_correct_agent PASSED [  5%]
+tests/integration/test_agents.py::test_profile_not_found_returns_404 PASSED [  5%]
+tests/integration/test_agents.py::test_profile_balance_matches_seed PASSED [  6%]
+tests/integration/test_agents.py::test_profile_recent_tasks_included PASSED [  6%]
+tests/integration/test_agents.py::test_profile_recent_tasks_role_field PASSED [  7%]
+tests/integration/test_agents.py::test_profile_feedback_excludes_invisible PASSED [  7%]
+tests/integration/test_agents.py::test_profile_balance_staleness PASSED  [  8%]
+tests/integration/test_agents.py::test_feed_returns_agent_events PASSED  [  8%]
+tests/integration/test_agents.py::test_feed_pagination_before PASSED     [  8%]
+tests/integration/test_agents.py::test_feed_has_more_flag PASSED         [  9%]
+tests/integration/test_agents.py::test_earnings_total_and_avg PASSED     [  9%]
+tests/integration/test_agents.py::test_earnings_cumulative_data_points PASSED [ 10%]
+tests/integration/test_agents.py::test_earnings_no_earnings_agent PASSED [ 10%]
+tests/integration/test_agents.py::test_earnings_staleness PASSED         [ 11%]
+tests/integration/test_economy_phase_stalled.py::test_economy_phase_stalled_on_empty_db PASSED [ 11%]
+tests/integration/test_economy_phase_stalled.py::test_economy_phase_stable_below_dispute_ceiling PASSED [ 12%]
+tests/integration/test_economy_phase_stalled.py::test_economy_phase_contracting_above_dispute_threshold PASSED [ 12%]
+tests/integration/test_events.py::test_events_returns_reverse_chronological PASSED [ 12%]
+tests/integration/test_events.py::test_events_default_returns_all_25 PASSED [ 13%]
+tests/integration/test_events.py::test_events_limit_param PASSED         [ 13%]
+tests/integration/test_events.py::test_events_limit_clamped_to_200 PASSED [ 14%]
+tests/integration/test_events.py::test_events_before_cursor PASSED       [ 14%]
+tests/integration/test_events.py::test_events_after_cursor PASSED        [ 15%]
+tests/integration/test_events.py::test_events_before_and_after_range PASSED [ 15%]
+tests/integration/test_events.py::test_events_filter_by_source PASSED    [ 16%]
+tests/integration/test_events.py::test_events_filter_by_type PASSED      [ 16%]
+tests/integration/test_events.py::test_events_filter_by_agent_id PASSED  [ 16%]
+tests/integration/test_events.py::test_events_filter_by_task_id PASSED   [ 17%]
+tests/integration/test_events.py::test_events_has_more_true PASSED       [ 17%]
+tests/integration/test_events.py::test_events_has_more_false PASSED      [ 18%]
+tests/integration/test_events.py::test_events_oldest_newest_ids PASSED   [ 18%]
+tests/integration/test_events.py::test_events_invalid_limit_returns_400 PASSED [ 19%]
+tests/integration/test_events.py::test_events_invalid_before_returns_400 PASSED [ 19%]
+tests/integration/test_events.py::test_events_limit_zero_returns_400 PASSED [ 20%]
+tests/integration/test_events.py::test_events_payload_is_dict PASSED     [ 20%]
+tests/integration/test_events.py::test_events_staleness_new_event PASSED [ 20%]
+tests/integration/test_events.py::test_sse_content_type PASSED           [ 21%]
+tests/integration/test_events.py::test_sse_sends_existing_events PASSED  [ 21%]
+tests/integration/test_events.py::test_sse_retry_directive PASSED        [ 22%]
+tests/integration/test_gdp_history_bucketed.py::test_all_points_match_total_when_no_recent_activity PASSED [ 22%]
+tests/integration/test_gdp_history_bucketed.py::test_mid_window_transaction_shifts_only_points_at_or_after_it PASSED [ 23%]
+tests/integration/test_gdp_history_bucketed.py::test_gdp_history_query_count_is_constant_not_per_point PASSED [ 23%]
+tests/integration/test_health.py::test_health_returns_200_with_status_ok PASSED [ 24%]
+tests/integration/test_health.py::test_health_has_uptime_seconds PASSED  [ 24%]
+tests/integration/test_health.py::test_health_has_started_at_iso PASSED  [ 25%]
+tests/integration/test_health.py::test_health_latest_event_id_matches_seed PASSED [ 25%]
+tests/integration/test_health.py::test_health_database_readable_true PASSED [ 25%]
+tests/integration/test_health.py::test_health_post_not_allowed PASSED    [ 26%]
+tests/integration/test_health.py::test_health_response_has_exact_keys PASSED [ 26%]
+tests/integration/test_health.py::test_health_uptime_increases_between_calls PASSED [ 27%]
+tests/integration/test_health.py::test_health_types_correct PASSED       [ 27%]
+tests/integration/test_health.py::test_health_no_db_returns_readable_false PASSED [ 28%]
+tests/integration/test_health.py::test_health_latest_event_id_updates_on_insert PASSED [ 28%]
+tests/integration/test_health.py::test_health_latest_event_id_zero_when_no_events PASSED [ 29%]
+tests/integration/test_list_agents_query_count.py::test_list_agents_query_count_is_constant_not_per_agent PASSED [ 29%]
+tests/integration/test_metrics.py::test_gdp_total PASSED                 [ 29%]
+tests/integration/test_metrics.py::test_gdp_per_agent PASSED             [ 30%]
+tests/integration/test_metrics.py::test_gdp_rate_per_hour PASSED         [ 30%]
+tests/integration/test_metrics.py::test_gdp_staleness PASSED             [ 31%]
+tests/integration/test_metrics.py::test_agents_total_registered PASSED   [ 31%]
+tests/integration/test_metrics.py::test_agents_with_completed_tasks PASSED [ 32%]
+tests/integration/test_metrics.py::test_agents_active PASSED             [ 32%]
+tests/integration/test_metrics.py::test_tasks_total_created PASSED       [ 33%]
+tests/integration/test_metrics.py::test_tasks_completed_all_time PASSED  [ 33%]
+tests/integration/test_metrics.py::test_tasks_open PASSED                [ 33%]
+tests/integration/test_metrics.py::test_tasks_in_execution PASSED        [ 34%]
+tests/integration/test_metrics.py::test_tasks_disputed PASSED            [ 34%]
+tests/integration/test_metrics.py::test_tasks_completion_rate PASSED     [ 35%]
+tests/integration/test_metrics.py::test_tasks_staleness PASSED           [ 35%]
+tests/integration/test_metrics.py::test_escrow_total_locked PASSED       [ 36%]
+tests/integration/test_metrics.py::test_escrow_staleness PASSED          [ 36%]
+tests/integration/test_metrics.py::test_spec_quality_avg_and_breakdown PASSED [ 37%]
+tests/integration/test_metrics.py::test_spec_quality_trend PASSED        [ 37%]
+tests/integration/test_metrics.py::test_labor_avg_bids_and_reward PASSED [ 37%]
+tests/integration/test_metrics.py::test_labor_reward_distribution_buckets PASSED [ 38%]
+tests/integration/test_metrics.py::test_gdp_history_valid_params PASSED  [ 38%]
+tests/integration/test_metrics.py::test_gdp_history_invalid_window_returns_400 PASSED [ 39%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_gdp_includes_delta_1h PASSED [ 39%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_gdp_includes_delta_24h PASSED [ 40%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_task_metrics_include_deltas PASSED [ 40%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_labor_market_includes_deltas PASSED [ 41%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_escrow_includes_delta PASSED [ 41%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_agent_metrics_include_delta PASSED [ 41%]
+tests/integration/test_metrics_delta.py::TestMetricsDeltaFields::test_delta_values_are_numeric_or_null PASSED [ 42%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_accepts_valid_window_and_resolution PASSED [ 42%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_returns_data_points_array PASSED [ 43%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_rejects_invalid_window PASSED [ 43%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_rejects_invalid_resolution PASSED [ 44%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_data_points_have_timestamp_and_value PASSED [ 44%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_data_points_ordered_ascending PASSED [ 45%]
+tests/integration/test_metrics_history.py::TestMetricsHistory::test_includes_window_and_resolution_in_response PASSED [ 45%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_returns_200_for_valid_window PASSED [ 45%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_returns_200_with_default_window PASSED [ 46%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_rejects_invalid_window PASSED [ 46%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_response_has_required_fields PASSED [ 47%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_buckets_are_24_hourly_strings PASSED [ 47%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_metrics_has_all_expected_keys PASSED [ 48%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_each_metric_has_24_values PASSED [ 48%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_all_values_are_non_negative PASSED [ 49%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_registered_agents_non_decreasing PASSED [ 49%]
+tests/integration/test_metrics_sparklines.py::TestMetricsSparklines::test_completion_rate_between_0_and_1 PASSED [ 50%]
+tests/integration/test_quarterly.py::test_quarterly_explicit_2026_q1 PASSED [ 50%]
+tests/integration/test_quarterly.py::test_quarterly_default_current_quarter PASSED [ 50%]
+tests/integration/test_quarterly.py::test_quarterly_invalid_format_returns_400 PASSED [ 51%]
+tests/integration/test_quarterly.py::test_quarterly_invalid_year_returns_400 PASSED [ 51%]
+tests/integration/test_quarterly.py::test_quarterly_no_data_returns_404 PASSED [ 52%]
+tests/integration/test_quarterly.py::test_quarterly_gdp_total PASSED     [ 52%]
+tests/integration/test_quarterly.py::test_quarterly_gdp_previous_quarter_zero PASSED [ 53%]
+tests/integration/test_quarterly.py::test_quarterly_period_boundaries PASSED [ 53%]
+tests/integration/test_quarterly.py::test_quarterly_tasks_posted PASSED  [ 54%]
+tests/integration/test_quarterly.py::test_quarterly_tasks_completed PASSED [ 54%]
+tests/integration/test_quarterly.py::test_quarterly_tasks_disputed PASSED [ 54%]
+tests/integration/test_quarterly.py::test_quarterly_labor_avg_bids PASSED [ 55%]
+tests/integration/test_quarterly.py::test_quarterly_agents_registrations PASSED [ 55%]
+tests/integration/test_quarterly.py::test_quarterly_agents_total_at_end PASSED [ 56%]
+tests/integration/test_quarterly.py::test_quarterly_notable_highest_value_task PASSED [ 56%]
+tests/integration/test_quarterly.py::test_quarterly_notable_top_workers PASSED [ 57%]
+tests/integration/test_quarterly.py::test_quarterly_staleness_new_approved_task PASSED [ 57%]
+tests/integration/test_request_body_size_limit.py::test_oversized_proxy_task_body_rejected_with_413 PASSED [ 58%]
+tests/integration/test_request_body_size_limit.py::test_oversized_proxy_dispute_body_rejected_with_413 PASSED [ 58%]
+tests/integration/test_request_body_size_limit.py::test_body_within_limit_is_not_rejected_for_size PASSED [ 58%]
+tests/integration/test_reward_bucket_boundary.py::test_reward_of_exactly_100_falls_in_51_to_100_bucket PASSED [ 59%]
+tests/integration/test_reward_bucket_boundary.py::test_reward_of_101_falls_in_over_100_bucket PASSED [ 59%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_returns_data_points PASSED [ 60%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_has_sufficient_points PASSED [ 60%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_points_have_numeric_values PASSED [ 61%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_gdp_history_points_have_timestamps PASSED [ 61%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_7d_window_provides_more_points PASSED [ 62%]
+tests/integration/test_sparkline_data.py::TestSparklineDataFromHistory::test_1h_window_with_1m_resolution PASSED [ 62%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_key_present PASSED [ 62%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_has_24_values PASSED [ 63%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_values_between_0_and_1 PASSED [ 63%]
+tests/integration/test_sparklines_unemployment.py::TestUnemploymentSparkline::test_unemployment_rate_all_non_negative PASSED [ 64%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_increasing_trend_low_dispute_rate_is_growing PASSED [ 64%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_decreasing_trend_is_contracting_regardless_of_dispute_rate PASSED [ 65%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_increasing_trend_with_12pct_dispute_rate_is_stable PASSED [ 65%]
+tests/integration/test_t072_economy_phase_boundary_gaps.py::test_stable_trend_with_18pct_dispute_rate_is_stable PASSED [ 66%]
+tests/integration/test_t072_events_default_and_sse_gaps.py::test_events_default_limit_is_50 PASSED [ 66%]
+tests/integration/test_t072_events_default_and_sse_gaps.py::test_sse_sends_keepalive_when_idle PASSED [ 66%]
+tests/integration/test_t072_events_default_and_sse_gaps.py::test_sse_batches_are_capped_at_batch_size PASSED [ 67%]
+tests/integration/test_t072_gdp_history_default_gap.py::test_gdp_history_default_window_and_resolution PASSED [ 67%]
+tests/integration/test_t072_gdp_history_default_gap.py::test_gdp_history_default_data_points_are_cumulative_non_decreasing PASSED [ 68%]
+tests/integration/test_t072_metrics_shape_and_delta_gaps.py::test_metrics_top_level_keys_are_exact PASSED [ 68%]
+tests/integration/test_t072_metrics_shape_and_delta_gaps.py::test_all_delta_fields_are_strictly_null_with_no_prior_period_data PASSED [ 69%]
+tests/integration/test_t072_pagination_and_error_code_gaps.py::test_invalid_task_status_filter_uses_invalid_status_error_code PASSED [ 69%]
+tests/integration/test_t072_pagination_and_error_code_gaps.py::test_uncontested_min_age_minutes_excludes_younger_tasks PASSED [ 70%]
+tests/integration/test_t072_pagination_and_error_code_gaps.py::test_feed_limit_clamped_above_200_not_rejected PASSED [ 70%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_identity_returns_operator_agent_id PASSED [ 70%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_identity_unavailable_when_user_agent_missing PASSED [ 71%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_passthrough_no_auth_header_required PASSED [ 71%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_field_bounds_rejected_with_422[overrides0] PASSED [ 72%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_field_bounds_rejected_with_422[overrides1] PASSED [ 72%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_field_bounds_rejected_with_422[overrides2] PASSED [ 73%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_downstream_failure_surfaces_as_502 PASSED [ 73%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_accept_bid_passthrough PASSED [ 74%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_approve_task_passthrough PASSED [ 74%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_file_dispute_passthrough PASSED [ 75%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_dispute_reason_validation_rejected_with_422[] PASSED [ 75%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_dispute_reason_validation_rejected_with_422[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx] PASSED [ 75%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_create_task_extra_field_rejected_with_422 PASSED [ 76%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_non_json_content_type_rejected_with_415 PASSED [ 76%]
+tests/integration/test_t072_proxy_operator_writepath_gaps.py::test_bodyless_approve_route_not_subject_to_json_validation PASSED [ 77%]
+tests/integration/test_t072_quarterly_default_value_gap.py::test_default_quarter_is_current_quarter_2026_q1 PASSED [ 77%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_core_task_fields PASSED [ 78%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_deadline_fields PASSED [ 78%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_bids_array PASSED [ 79%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_assets_for_submitted_task PASSED [ 79%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_feedback_for_completed_task PASSED [ 79%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_dispute_for_disputed_task PASSED [ 80%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_returns_ruling_for_ruled_task PASSED [ 80%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_404_for_nonexistent_task PASSED [ 81%]
+tests/integration/test_task_drilldown_contract.py::TestTaskDrilldownContract::test_timestamps_present PASSED [ 81%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_returns_200_with_task_list PASSED [ 82%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_task_list_item_schema PASSED [ 82%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_filter_by_status_open PASSED [ 83%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_filter_by_status_disputed PASSED [ 83%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_pagination_limit PASSED [ 83%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_pagination_offset PASSED [ 84%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_default_sort_by_created_at_desc PASSED [ 84%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_invalid_status_returns_400 PASSED [ 85%]
+tests/integration/test_task_list.py::TestTaskListEndpoint::test_empty_list_for_no_matches PASSED [ 85%]
+tests/integration/test_tasks.py::test_competitive_only_tasks_with_bids PASSED [ 86%]
+tests/integration/test_tasks.py::test_competitive_sorted_by_bid_count_desc PASSED [ 86%]
+tests/integration/test_tasks.py::test_competitive_default_status_open PASSED [ 87%]
+tests/integration/test_tasks.py::test_competitive_limit PASSED           [ 87%]
+tests/integration/test_tasks.py::test_competitive_includes_poster_info PASSED [ 87%]
+tests/integration/test_tasks.py::test_competitive_staleness_new_bid PASSED [ 88%]
+tests/integration/test_tasks.py::test_uncontested_open_tasks_without_bids PASSED [ 88%]
+tests/integration/test_tasks.py::test_uncontested_min_age_filter PASSED  [ 89%]
+tests/integration/test_tasks.py::test_uncontested_limit PASSED           [ 89%]
+tests/integration/test_tasks.py::test_uncontested_has_minutes_field PASSED [ 90%]
+tests/integration/test_tasks.py::test_uncontested_staleness_bid_removes_task PASSED [ 90%]
+tests/integration/test_tasks.py::test_drilldown_approved_task_full PASSED [ 91%]
+tests/integration/test_tasks.py::test_drilldown_not_found_returns_404 PASSED [ 91%]
+tests/integration/test_tasks.py::test_drilldown_bids_with_delivery_quality PASSED [ 91%]
+tests/integration/test_tasks.py::test_drilldown_accepted_bid_flag PASSED [ 92%]
+tests/integration/test_tasks.py::test_drilldown_disputed_task_has_dispute PASSED [ 92%]
+tests/integration/test_tasks.py::test_drilldown_non_disputed_has_null_dispute PASSED [ 93%]
+tests/integration/test_tasks.py::test_drilldown_feedback_visible_only PASSED [ 93%]
+tests/integration/test_tasks.py::test_drilldown_staleness_new_bid PASSED [ 94%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_gdp_delta_for_ticker PASSED [ 94%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_task_delta_for_board PASSED [ 95%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_escrow_delta_for_board PASSED [ 95%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_metrics_has_labor_delta_for_board PASSED [ 95%]
+tests/integration/test_ticker_deltas.py::TestTickerDeltaValues::test_delta_values_include_direction PASSED [ 96%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_no_workers_full_unemployment PASSED [ 96%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_all_agents_working_zero_unemployment PASSED [ 97%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_mixed_state_known_values PASSED [ 97%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_delta_within_window_agent_starts_working PASSED [ 98%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_delta_agent_stops_working_approved PASSED [ 98%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_delta_agent_stops_working_disputed PASSED [ 99%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_multiple_transitions_within_window PASSED [ 99%]
+tests/integration/test_unemployment_calculation.py::TestUnemploymentCalculation::test_zero_registered_agents_returns_zero PASSED [100%]
+
+============================= 224 passed in 3.95s ==============================
+
+[0;32m✓ Per-service integration tests passed[0m
+
+[0;34m--- Phase 4: Agents CI ---[0m
+Checking base-agent...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/agents/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 363 items / 92 deselected / 271 selected
+
+tests/integration/test_llm_api_keys.py::TestLLMApiKeys::test_openai_api_key SKIPPED [  0%]
+tests/integration/test_llm_api_keys.py::TestLLMApiKeys::test_mistral_api_key SKIPPED [  0%]
+tests/integration/test_llm_api_keys.py::TestLLMApiKeys::test_lmstudio_api_key SKIPPED [  1%]
+tests/unit/math_worker/test_config.py::TestLLMConfig::test_creates_config PASSED [  1%]
+tests/unit/math_worker/test_config.py::TestLLMConfig::test_rejects_extra_fields PASSED [  1%]
+tests/unit/math_worker/test_config.py::TestMathWorkerConfig::test_creates_config PASSED [  2%]
+tests/unit/math_worker/test_config.py::TestMathWorkerConfig::test_rejects_extra_fields PASSED [  2%]
+tests/unit/math_worker/test_history.py::TestAgentHistory::test_starts_empty PASSED [  2%]
+tests/unit/math_worker/test_history.py::TestAgentHistory::test_record_approved_task PASSED [  3%]
+tests/unit/math_worker/test_history.py::TestAgentHistory::test_record_disputed_tasks PASSED [  3%]
+tests/unit/math_worker/test_history.py::TestAgentHistory::test_multiple_outcomes PASSED [  4%]
+tests/unit/math_worker/test_llm_client.py::TestProductionWiringUnchanged::test_no_transport_builds_real_openai_transport PASSED [  4%]
+tests/unit/math_worker/test_llm_client.py::TestProductionWiringUnchanged::test_production_transport_is_config_driven PASSED [  4%]
+tests/unit/math_worker/test_llm_client.py::TestInjectableTransportSeam::test_injected_transport_bypasses_openai_construction PASSED [  5%]
+tests/unit/math_worker/test_llm_client.py::TestInjectableTransportSeam::test_complete_delegates_to_injected_transport PASSED [  5%]
+tests/unit/math_worker/test_llm_client.py::TestInjectableTransportSeam::test_close_delegates_to_injected_transport PASSED [  5%]
+tests/unit/math_worker/test_loop.py::TestMathWorkerStatusVocabulary::test_scanning_lists_open_tasks PASSED [  6%]
+tests/unit/math_worker/test_loop.py::TestMathWorkerStatusVocabulary::test_waiting_for_acceptance_recognizes_accepted_task PASSED [  6%]
+tests/unit/math_worker/test_loop.py::TestMathWorkerStatusVocabulary::test_waiting_for_acceptance_treats_cancelled_as_terminal PASSED [  7%]
+tests/unit/math_worker/test_loop.py::TestMathWorkerStatusVocabulary::test_waiting_for_review_recognizes_approved_task PASSED [  7%]
+tests/unit/math_worker/test_loop.py::TestMathWorkerStatusVocabulary::test_waiting_for_review_recognizes_disputed_task PASSED [  7%]
+tests/unit/math_worker/test_loop.py::TestMathWorkerStatusVocabulary::test_waiting_for_ruling_recognizes_ruled_task PASSED [  8%]
+tests/unit/math_worker/test_loop.py::TestMathWorkerDisputeRebuttal::test_disputed_phase_submits_rebuttal_for_existing_dispute PASSED [  8%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestPhaseEnumCanonicalVocabulary::test_phase_value_is_canonical_lowercase[Phase.SCANNING-scanning] PASSED [  8%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestPhaseEnumCanonicalVocabulary::test_phase_value_is_canonical_lowercase[Phase.BIDDING-bidding] PASSED [  9%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestPhaseEnumCanonicalVocabulary::test_phase_value_is_canonical_lowercase[Phase.WAITING_FOR_ACCEPTANCE-waiting_for_acceptance] PASSED [  9%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestPhaseEnumCanonicalVocabulary::test_phase_value_is_canonical_lowercase[Phase.SOLVING-solving] PASSED [  9%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestPhaseEnumCanonicalVocabulary::test_phase_value_is_canonical_lowercase[Phase.SUBMITTING-submitting] PASSED [ 10%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestPhaseEnumCanonicalVocabulary::test_phase_value_is_canonical_lowercase[Phase.WAITING_FOR_REVIEW-waiting_for_review] PASSED [ 10%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestPhaseEnumCanonicalVocabulary::test_phase_value_is_canonical_lowercase[Phase.DISPUTED-disputed] PASSED [ 11%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestPhaseEnumCanonicalVocabulary::test_phase_value_is_canonical_lowercase[Phase.WAITING_FOR_RULING-waiting_for_ruling] PASSED [ 11%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestPhaseEnumCanonicalVocabulary::test_no_phase_carries_legacy_uppercase_value PASSED [ 11%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestFullCycleBidNotAccepted::test_bid_never_accepted_records_bid_timeout PASSED [ 12%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestFullCycleSolveFailure::test_unparsable_solution_records_error PASSED [ 12%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestFullCycleApproved::test_full_cycle_reaches_approved_with_full_payout PASSED [ 12%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestFullCycleDisputed::test_full_cycle_disputed_won_records_partial_payout PASSED [ 13%]
+tests/unit/math_worker/test_loop_phase_machine.py::TestFullCycleDisputed::test_full_cycle_disputed_lost_records_zero_payout PASSED [ 13%]
+tests/unit/math_worker/test_main.py::TestMainEntryPointRequiresProfile::test_main_without_profile_fails_loudly PASSED [ 14%]
+tests/unit/math_worker/test_main.py::TestMainEntryPointRequiresProfile::test_main_with_profile_dispatches_to_factory_path PASSED [ 14%]
+tests/unit/math_worker/test_main.py::TestMainEntryPointRequiresProfile::test_no_legacy_entry_point_exists PASSED [ 14%]
+tests/unit/math_worker/test_main.py::TestMainEntryPointRequiresProfile::test_load_math_worker_settings_no_longer_imported PASSED [ 15%]
+tests/unit/math_worker/test_parser.py::TestParseTaskSelection::test_exact_id_match PASSED [ 15%]
+tests/unit/math_worker/test_parser.py::TestParseTaskSelection::test_id_in_sentence PASSED [ 15%]
+tests/unit/math_worker/test_parser.py::TestParseTaskSelection::test_none_response PASSED [ 16%]
+tests/unit/math_worker/test_parser.py::TestParseTaskSelection::test_none_case_insensitive PASSED [ 16%]
+tests/unit/math_worker/test_parser.py::TestParseTaskSelection::test_unrecognised_response PASSED [ 16%]
+tests/unit/math_worker/test_parser.py::TestParseTaskSelection::test_first_match_wins PASSED [ 17%]
+tests/unit/math_worker/test_parser.py::TestParseBidAmount::test_bare_integer PASSED [ 17%]
+tests/unit/math_worker/test_parser.py::TestParseBidAmount::test_integer_in_text PASSED [ 18%]
+tests/unit/math_worker/test_parser.py::TestParseBidAmount::test_out_of_range_too_high PASSED [ 18%]
+tests/unit/math_worker/test_parser.py::TestParseBidAmount::test_out_of_range_zero PASSED [ 18%]
+tests/unit/math_worker/test_parser.py::TestParseBidAmount::test_no_integer PASSED [ 19%]
+tests/unit/math_worker/test_parser.py::TestParseBidAmount::test_exact_max PASSED [ 19%]
+tests/unit/math_worker/test_parser.py::TestParseBidAmount::test_exact_min PASSED [ 19%]
+tests/unit/math_worker/test_parser.py::TestParseSolution::test_answer_marker PASSED [ 20%]
+tests/unit/math_worker/test_parser.py::TestParseSolution::test_answer_marker_case_insensitive PASSED [ 20%]
+tests/unit/math_worker/test_parser.py::TestParseSolution::test_answer_marker_with_spaces PASSED [ 21%]
+tests/unit/math_worker/test_parser.py::TestParseSolution::test_fallback_last_line PASSED [ 21%]
+tests/unit/math_worker/test_parser.py::TestParseSolution::test_empty_response PASSED [ 21%]
+tests/unit/math_worker/test_parser.py::TestParseSolution::test_whitespace_only PASSED [ 22%]
+tests/unit/math_worker/test_parser.py::TestParseSolution::test_multiple_answer_markers_uses_last PASSED [ 22%]
+tests/unit/math_worker/test_prompts.py::TestBuildTaskSelectionPrompt::test_includes_balance PASSED [ 22%]
+tests/unit/math_worker/test_prompts.py::TestBuildTaskSelectionPrompt::test_includes_task_ids PASSED [ 23%]
+tests/unit/math_worker/test_prompts.py::TestBuildTaskSelectionPrompt::test_includes_specs PASSED [ 23%]
+tests/unit/math_worker/test_prompts.py::TestBuildBidAmountPrompt::test_includes_reward_and_balance PASSED [ 23%]
+tests/unit/math_worker/test_prompts.py::TestBuildSolvePrompt::test_includes_spec PASSED [ 24%]
+tests/unit/math_worker/test_prompts.py::TestBuildSolvePrompt::test_includes_title PASSED [ 24%]
+tests/unit/math_worker/test_prompts.py::TestBuildRebuttalPrompt::test_includes_all_context PASSED [ 25%]
+tests/unit/math_worker/test_review_timeout_outcome.py::TestReviewPollExhaustionOutcome::test_cycle_records_timeout_not_approved_on_review_poll_exhaustion PASSED [ 25%]
+tests/unit/math_worker/test_review_timeout_outcome.py::TestReviewPollExhaustionOutcome::test_cycle_timeout_outcome_has_zero_payout PASSED [ 25%]
+tests/unit/math_worker/test_review_timeout_outcome.py::TestPhaseMachineCanonicalStatusVocabulary::test_scanning_queries_exact_lowercase_open_status PASSED [ 26%]
+tests/unit/math_worker/test_review_timeout_outcome.py::TestPhaseMachineCanonicalStatusVocabulary::test_review_polling_normalizes_mixed_case_approved_and_disputed PASSED [ 26%]
+tests/unit/math_worker/test_review_timeout_outcome.py::TestPhaseMachineCanonicalStatusVocabulary::test_ruling_polling_normalizes_mixed_case_ruled PASSED [ 26%]
+tests/unit/task_feeder/test_acceptance.py::TestDeliveryQualityScore::test_averages_delivery_quality_only PASSED [ 27%]
+tests/unit/task_feeder/test_acceptance.py::TestDeliveryQualityScore::test_none_when_no_delivery_feedback PASSED [ 27%]
+tests/unit/task_feeder/test_acceptance.py::TestDeliveryQualityScore::test_none_when_empty PASSED [ 28%]
+tests/unit/task_feeder/test_acceptance.py::TestSelectWinningBid::test_lowest_amount_wins PASSED [ 28%]
+tests/unit/task_feeder/test_acceptance.py::TestSelectWinningBid::test_tie_broken_by_delivery_quality PASSED [ 28%]
+tests/unit/task_feeder/test_acceptance.py::TestSelectWinningBid::test_tie_broken_by_bid_id_when_no_reputation PASSED [ 29%]
+tests/unit/task_feeder/test_acceptance.py::TestSelectWinningBid::test_reputation_does_not_override_lower_amount PASSED [ 29%]
+tests/unit/task_feeder/test_acceptance.py::TestSelectWinningBid::test_empty_bids_raises PASSED [ 29%]
+tests/unit/task_feeder/test_acceptance.py::TestEligibility::test_not_eligible_before_threshold_and_quorum PASSED [ 30%]
+tests/unit/task_feeder/test_acceptance.py::TestEligibility::test_eligible_when_quorum_met PASSED [ 30%]
+tests/unit/task_feeder/test_acceptance.py::TestEligibility::test_eligible_when_time_threshold_passed PASSED [ 30%]
+tests/unit/task_feeder/test_acceptance.py::TestEligibility::test_zero_bids_never_eligible PASSED [ 31%]
+tests/unit/task_feeder/test_acceptance.py::TestAcceptOne::test_accepts_lowest_bid_when_eligible PASSED [ 31%]
+tests/unit/task_feeder/test_acceptance.py::TestAcceptOne::test_does_not_accept_before_eligibility PASSED [ 32%]
+tests/unit/task_feeder/test_acceptance.py::TestAcceptOne::test_zero_bids_left_to_expire PASSED [ 32%]
+tests/unit/task_feeder/test_acceptance.py::TestAcceptOne::test_acceptance_happens_strictly_before_bidding_deadline PASSED [ 32%]
+tests/unit/task_feeder/test_acceptance.py::TestAcceptOne::test_409_marks_done_with_and_does_not_crash PASSED [ 33%]
+tests/unit/task_feeder/test_acceptance.py::TestAcceptOne::test_non_conflict_http_error_propagates PASSED [ 33%]
+tests/unit/task_feeder/test_acceptance.py::TestProcessOpenTasks::test_polls_own_open_tasks_and_accepts_lowest PASSED [ 33%]
+tests/unit/task_feeder/test_acceptance.py::TestProcessOpenTasks::test_amount_tie_broken_by_reputation_via_loop PASSED [ 34%]
+tests/unit/task_feeder/test_acceptance.py::TestProcessOpenTasks::test_finalized_task_not_retried_after_conflict PASSED [ 34%]
+tests/unit/task_feeder/test_acceptance_config.py::TestAcceptanceConfig::test_creates_config PASSED [ 35%]
+tests/unit/task_feeder/test_acceptance_config.py::TestAcceptanceConfig::test_rejects_extra_fields PASSED [ 35%]
+tests/unit/task_feeder/test_acceptance_config.py::TestAcceptanceConfig::test_acceptance_after_must_be_strictly_less_than_bidding_deadline PASSED [ 35%]
+tests/unit/task_feeder/test_acceptance_config.py::TestAcceptanceConfig::test_acceptance_after_equal_to_deadline_is_rejected PASSED [ 36%]
+tests/unit/task_feeder/test_acceptance_config.py::TestLoadAcceptanceSettings::test_loads_acceptance_keys_from_yaml PASSED [ 36%]
+tests/unit/task_feeder/test_acceptance_config.py::TestLoadAcceptanceSettings::test_missing_acceptance_key_fails_fast PASSED [ 36%]
+tests/unit/task_feeder/test_acceptance_config.py::TestLoadAcceptanceSettings::test_bad_ordering_in_yaml_fails_fast PASSED [ 37%]
+tests/unit/task_feeder/test_acceptance_config.py::TestLoadAcceptanceSettings::test_feeder_loader_tolerates_acceptance_keys PASSED [ 37%]
+tests/unit/task_feeder/test_config.py::TestTaskFeederConfig::test_creates_config PASSED [ 38%]
+tests/unit/task_feeder/test_config.py::TestTaskFeederConfig::test_rejects_extra_fields PASSED [ 38%]
+tests/unit/task_feeder/test_loop.py::TestRewardComputation::test_level_1_reward PASSED [ 38%]
+tests/unit/task_feeder/test_loop.py::TestRewardComputation::test_level_9_reward PASSED [ 39%]
+tests/unit/task_feeder/test_loop.py::TestRewardComputation::test_custom_reward_scale PASSED [ 39%]
+tests/unit/task_feeder/test_loop_statuses.py::TestTaskFeederStatusVocabulary::test_count_open_tasks_queries_open_status PASSED [ 39%]
+tests/unit/task_feeder/test_loop_statuses.py::TestTaskFeederStatusVocabulary::test_review_loop_queries_submitted_status PASSED [ 40%]
+tests/unit/task_feeder/test_reader.py::TestLoadTasks::test_loads_single_task PASSED [ 40%]
+tests/unit/task_feeder/test_reader.py::TestLoadTasks::test_loads_multiple_tasks PASSED [ 40%]
+tests/unit/task_feeder/test_reader.py::TestLoadTasks::test_skips_blank_lines PASSED [ 41%]
+tests/unit/task_feeder/test_reader.py::TestLoadTasks::test_raises_on_missing_file PASSED [ 41%]
+tests/unit/task_feeder/test_reader.py::TestLoadTasks::test_raises_on_invalid_json PASSED [ 42%]
+tests/unit/task_feeder/test_reader.py::TestIterateTasks::test_yields_in_order PASSED [ 42%]
+tests/unit/task_feeder/test_reader.py::TestIterateTasks::test_empty_list_yields_nothing PASSED [ 42%]
+tests/unit/task_feeder/test_reader.py::TestIterateTasks::test_shuffle_produces_all_tasks PASSED [ 43%]
+tests/unit/task_feeder/test_review.py::TestCheckAnswer::test_exact_match PASSED [ 43%]
+tests/unit/task_feeder/test_review.py::TestCheckAnswer::test_case_insensitive_match PASSED [ 43%]
+tests/unit/task_feeder/test_review.py::TestCheckAnswer::test_whitespace_trimmed_match PASSED [ 44%]
+tests/unit/task_feeder/test_review.py::TestCheckAnswer::test_combined_case_and_whitespace PASSED [ 44%]
+tests/unit/task_feeder/test_review.py::TestCheckAnswer::test_no_match PASSED [ 45%]
+tests/unit/task_feeder/test_review.py::TestCheckAnswer::test_multiple_valid_solutions_all_accepted PASSED [ 45%]
+tests/unit/task_feeder/test_review.py::TestCheckAnswer::test_empty_submitted_answer PASSED [ 45%]
+tests/unit/task_feeder/test_review.py::TestCheckAnswer::test_empty_solutions_list PASSED [ 46%]
+tests/unit/task_feeder/test_review.py::TestReviewLoop::test_correct_answer_triggers_approve PASSED [ 46%]
+tests/unit/task_feeder/test_review.py::TestReviewLoop::test_incorrect_answer_triggers_dispute PASSED [ 46%]
+tests/unit/task_feeder/test_review.py::TestReviewLoop::test_case_insensitive_comparison_in_review PASSED [ 47%]
+tests/unit/task_feeder/test_review.py::TestReviewLoop::test_whitespace_trimmed_comparison_in_review PASSED [ 47%]
+tests/unit/task_feeder/test_review.py::TestReviewLoop::test_multiple_valid_solutions_accepted_in_review PASSED [ 47%]
+tests/unit/task_feeder/test_review.py::TestReviewLoop::test_task_map_lookup PASSED [ 48%]
+tests/unit/task_feeder/test_review.py::TestReviewLoop::test_unknown_task_id_skipped PASSED [ 48%]
+tests/unit/task_feeder/test_review_asset_fallback.py::TestReviewFallsBackToAssetContent::test_correct_answer_in_asset_triggers_approve PASSED [ 49%]
+tests/unit/task_feeder/test_review_asset_fallback.py::TestReviewFallsBackToAssetContent::test_wrong_answer_in_asset_triggers_dispute PASSED [ 49%]
+tests/unit/task_feeder/test_review_asset_fallback.py::TestReviewFallsBackToAssetContent::test_picks_latest_asset_when_multiple_uploaded PASSED [ 49%]
+tests/unit/task_feeder/test_review_asset_fallback.py::TestReviewFallsBackToAssetContent::test_no_assets_triggers_dispute PASSED [ 50%]
+tests/unit/task_feeder/test_review_asset_fallback.py::TestReviewFallsBackToAssetContent::test_payload_answer_takes_precedence_over_assets PASSED [ 50%]
+tests/unit/test_agent.py::TestBaseAgentInit::test_creates_agent PASSED   [ 50%]
+tests/unit/test_agent.py::TestBaseAgentInit::test_repr PASSED            [ 51%]
+tests/unit/test_agent.py::TestBaseAgentSigning::test_sign_jws_produces_token PASSED [ 51%]
+tests/unit/test_agent.py::TestBaseAgentSigning::test_auth_header_format PASSED [ 52%]
+tests/unit/test_agent.py::TestBaseAgentSigning::test_public_key_b64_is_stable PASSED [ 52%]
+tests/unit/test_bank_mixin.py::TestGetBalance::test_get_balance_returns_account PASSED [ 52%]
+tests/unit/test_bank_mixin.py::TestGetTransactions::test_get_transactions_returns_list PASSED [ 53%]
+tests/unit/test_bank_mixin.py::TestLockEscrow::test_lock_escrow_success PASSED [ 53%]
+tests/unit/test_config.py::TestAgentConfig::test_creates_config PASSED   [ 53%]
+tests/unit/test_config.py::TestAgentConfig::test_config_is_frozen PASSED [ 54%]
+tests/unit/test_court_mixin.py::TestFileClaim::test_file_claim_success PASSED [ 54%]
+tests/unit/test_court_mixin_rebuttal.py::TestCourtMixinRebuttals::test_file_claim_uses_full_court_payload PASSED [ 54%]
+tests/unit/test_court_mixin_rebuttal.py::TestCourtMixinRebuttals::test_submit_rebuttal_uses_court_rebuttal_endpoint PASSED [ 55%]
+tests/unit/test_court_mixin_rebuttal.py::TestCourtMixinRebuttals::test_list_disputes_filters_by_task_id PASSED [ 55%]
+tests/unit/test_court_mixin_rebuttal.py::TestCourtMixinRebuttals::test_trigger_ruling_uses_court_ruling_endpoint PASSED [ 56%]
+tests/unit/test_exports.py::TestPackageExports::test_import_agent_factory PASSED [ 56%]
+tests/unit/test_exports.py::TestPackageExports::test_import_platform_agent PASSED [ 56%]
+tests/unit/test_exports.py::TestPackageExports::test_import_base_agent PASSED [ 57%]
+tests/unit/test_factory.py::TestAgentFactory::test_create_agent_returns_base_agent PASSED [ 57%]
+tests/unit/test_factory.py::TestAgentFactory::test_create_agent_not_platform_agent PASSED [ 57%]
+tests/unit/test_factory.py::TestAgentFactory::test_platform_agent_returns_platform_agent PASSED [ 58%]
+tests/unit/test_factory.py::TestAgentFactory::test_platform_agent_has_privileged_methods PASSED [ 58%]
+tests/unit/test_factory.py::TestAgentFactory::test_unknown_handle_raises PASSED [ 59%]
+tests/unit/test_factory.py::TestAgentFactory::test_same_handle_same_keys PASSED [ 59%]
+tests/unit/test_fund_feeder_cli.py::TestParseArgs::test_parses_positive_amount PASSED [ 59%]
+tests/unit/test_fund_feeder_cli.py::TestParseArgs::test_parses_negative_amount PASSED [ 60%]
+tests/unit/test_fund_feeder_cli.py::TestParseArgs::test_missing_amount_raises_system_exit PASSED [ 60%]
+tests/unit/test_fund_feeder_cli.py::TestParseArgs::test_non_integer_amount_raises_system_exit PASSED [ 60%]
+tests/unit/test_fund_feeder_cli.py::TestParseArgs::test_extra_positional_raises_system_exit PASSED [ 61%]
+tests/unit/test_fund_feeder_cli.py::TestFundRejectsNonPositiveAmount::test_zero_amount_exits_before_touching_factory PASSED [ 61%]
+tests/unit/test_fund_feeder_cli.py::TestFundRejectsNonPositiveAmount::test_negative_amount_exits_before_touching_factory PASSED [ 61%]
+tests/unit/test_fund_feeder_cli.py::TestFundMissingAgentId::test_registration_without_agent_id_exits PASSED [ 62%]
+tests/unit/test_fund_feeder_cli.py::TestFundHappyPath::test_funds_and_prints_summary PASSED [ 62%]
+tests/unit/test_fund_feeder_cli.py::TestFundHappyPath::test_existing_account_409_is_tolerated PASSED [ 63%]
+tests/unit/test_fund_feeder_cli.py::TestFundHappyPath::test_non_409_error_on_create_account_propagates PASSED [ 63%]
+tests/unit/test_fund_feeder_cli.py::TestFundHappyPath::test_closes_agents_even_on_failure PASSED [ 63%]
+tests/unit/test_fund_feeder_cli.py::TestMainEntryPoint::test_main_dispatches_parsed_amount_to_fund PASSED [ 64%]
+tests/unit/test_identity_mixin.py::TestRegister::test_register_success PASSED [ 64%]
+tests/unit/test_identity_mixin.py::TestRegister::test_register_idempotent_409 PASSED [ 64%]
+tests/unit/test_identity_mixin.py::TestGetAgentInfo::test_get_agent_info_returns_record PASSED [ 65%]
+tests/unit/test_identity_mixin.py::TestListAgents::test_list_agents_returns_list PASSED [ 65%]
+tests/unit/test_identity_mixin.py::TestVerifyJws::test_verify_jws_valid PASSED [ 66%]
+tests/unit/test_identity_mixin.py::TestVerifyJws::test_verify_jws_invalid PASSED [ 66%]
+tests/unit/test_key_provision_cli.py::test_provision_command_creates_configured_roster_idempotently PASSED [ 66%]
+tests/unit/test_key_provision_cli.py::test_check_command_fails_actionably_without_creating_keys PASSED [ 67%]
+tests/unit/test_key_provision_cli.py::test_adopt_permissions_command_preserves_pair_bytes_and_hardens_mode PASSED [ 67%]
+tests/unit/test_key_provision_cli.py::test_adopt_permissions_command_refuses_partial_pair_without_repair PASSED [ 67%]
+tests/unit/test_mp03_outbound_tokens.py::test_task_post_emits_separately_bound_strict_tokens PASSED [ 68%]
+tests/unit/test_platform_agent.py::TestPlatformAgentInit::test_creates_platform_agent PASSED [ 68%]
+tests/unit/test_platform_agent.py::TestPlatformAgentInit::test_repr PASSED [ 69%]
+tests/unit/test_platform_agent.py::TestCreateAccount::test_create_account_success PASSED [ 69%]
+tests/unit/test_platform_agent.py::TestCreditAccount::test_credit_account_success PASSED [ 69%]
+tests/unit/test_platform_agent.py::TestReleaseEscrow::test_release_escrow_success PASSED [ 70%]
+tests/unit/test_platform_agent.py::TestSplitEscrow::test_split_escrow_success PASSED [ 70%]
+tests/unit/test_platform_agent.py::TestVerifyPlatformJws::test_verify_valid_platform_token PASSED [ 70%]
+tests/unit/test_platform_agent.py::TestVerifyPlatformJws::test_verify_rejects_non_platform_token PASSED [ 71%]
+tests/unit/test_reputation_mixin.py::TestSubmitFeedback::test_submit_feedback_with_comment PASSED [ 71%]
+tests/unit/test_reputation_mixin.py::TestSubmitFeedback::test_submit_feedback_without_comment PASSED [ 71%]
+tests/unit/test_reputation_mixin.py::TestGetTaskFeedback::test_get_task_feedback_returns_list PASSED [ 72%]
+tests/unit/test_reputation_mixin.py::TestGetAgentFeedback::test_get_agent_feedback_returns_list PASSED [ 72%]
+tests/unit/test_roster_platform.py::TestRosterPlatformEntry::test_roster_has_platform_entry PASSED [ 73%]
+tests/unit/test_signing.py::TestGenerateKeypair::test_creates_key_files PASSED [ 73%]
+tests/unit/test_signing.py::TestGenerateKeypair::test_keys_are_loadable PASSED [ 73%]
+tests/unit/test_signing.py::TestGenerateKeypair::test_creates_directory_if_missing PASSED [ 74%]
+tests/unit/test_signing.py::TestLoadKeys::test_load_missing_private_key_raises PASSED [ 74%]
+tests/unit/test_signing.py::TestLoadKeys::test_load_missing_public_key_raises PASSED [ 74%]
+tests/unit/test_signing.py::TestLoadKeys::test_load_invalid_private_key_raises PASSED [ 75%]
+tests/unit/test_signing.py::TestLoadKeys::test_roundtrip PASSED          [ 75%]
+tests/unit/test_signing.py::TestPublicKeyToB64::test_returns_base64_string PASSED [ 76%]
+tests/unit/test_signing.py::TestPublicKeyToB64::test_deterministic PASSED [ 76%]
+tests/unit/test_signing.py::TestCreateJws::test_produces_three_part_token PASSED [ 76%]
+tests/unit/test_signing.py::TestCreateJws::test_header_contains_eddsa PASSED [ 77%]
+tests/unit/test_signing.py::TestCreateJws::test_payload_is_encoded PASSED [ 77%]
+tests/unit/test_signing.py::TestCreateJws::test_signature_verifies PASSED [ 77%]
+tests/unit/test_task_board_mixin.py::TestPostTask::test_post_task_sends_both_tokens PASSED [ 78%]
+tests/unit/test_task_board_mixin.py::TestListTasks::test_list_tasks_no_filters PASSED [ 78%]
+tests/unit/test_task_board_mixin.py::TestListTasks::test_list_tasks_with_filters PASSED [ 78%]
+tests/unit/test_task_board_mixin.py::TestGetTask::test_get_task_returns_details PASSED [ 79%]
+tests/unit/test_task_board_mixin.py::TestCancelTask::test_cancel_task_success PASSED [ 79%]
+tests/unit/test_task_board_mixin.py::TestSubmitBid::test_submit_bid_success PASSED [ 80%]
+tests/unit/test_task_board_mixin.py::TestListBids::test_list_bids_returns_list PASSED [ 80%]
+tests/unit/test_task_board_mixin.py::TestAcceptBid::test_accept_bid_success PASSED [ 80%]
+tests/unit/test_task_board_mixin.py::TestUploadAsset::test_upload_asset_success PASSED [ 81%]
+tests/unit/test_task_board_mixin.py::TestSubmitDeliverable::test_submit_deliverable_success PASSED [ 81%]
+tests/unit/test_task_board_mixin.py::TestApproveTask::test_approve_task_success PASSED [ 81%]
+tests/unit/test_task_board_mixin.py::TestDisputeTask::test_dispute_task_success PASSED [ 82%]
+tests/unit/test_task_board_mixin_assets.py::TestListAssets::test_list_assets_returns_asset_list PASSED [ 82%]
+tests/unit/test_task_board_mixin_assets.py::TestListAssets::test_list_assets_empty PASSED [ 83%]
+tests/unit/test_task_board_mixin_assets.py::TestDownloadAsset::test_download_asset_returns_raw_content PASSED [ 83%]
+tests/unit/test_task_board_mixin_assets.py::TestDownloadAsset::test_download_asset_raises_on_error_status PASSED [ 83%]
+tests/unit/test_treasury_provision_cli.py::TestProvisionMissingAgentId::test_registration_without_agent_id_exits PASSED [ 84%]
+tests/unit/test_treasury_provision_cli.py::TestProvisionHappyPath::test_provisions_and_prints_summary PASSED [ 84%]
+tests/unit/test_treasury_provision_cli.py::TestProvisionHappyPath::test_existing_account_409_is_tolerated PASSED [ 84%]
+tests/unit/test_treasury_provision_cli.py::TestProvisionHappyPath::test_non_409_error_on_create_account_propagates PASSED [ 85%]
+tests/unit/test_treasury_provision_cli.py::TestProvisionHappyPath::test_closes_agents_even_on_failure PASSED [ 85%]
+tests/unit/test_treasury_provision_cli.py::TestMainEntryPoint::test_main_dispatches_to_provision PASSED [ 85%]
+tests/unit/test_treasury_provision_config.py::TestTreasuryConfig::test_creates_config PASSED [ 86%]
+tests/unit/test_treasury_provision_config.py::TestTreasuryConfig::test_rejects_extra_fields PASSED [ 86%]
+tests/unit/test_treasury_provision_config.py::TestTreasuryConfig::test_rejects_missing_field PASSED [ 87%]
+tests/unit/test_treasury_provision_config.py::TestLoadTreasurySettings::test_loads_from_real_agents_config PASSED [ 87%]
+tests/unit/test_treasury_provision_config.py::TestLoadTreasurySettings::test_missing_treasury_section_raises PASSED [ 87%]
+tests/unit/test_verify_jws.py::TestVerifyJws::test_verify_valid_token PASSED [ 88%]
+tests/unit/test_verify_jws.py::TestVerifyJws::test_verify_rejects_wrong_key PASSED [ 88%]
+tests/unit/test_verify_jws.py::TestVerifyJws::test_verify_rejects_tampered_payload PASSED [ 88%]
+tests/unit/test_verify_jws.py::TestVerifyJws::test_verify_rejects_malformed_token PASSED [ 89%]
+tests/unit/test_worker_config.py::TestResolveEnvVars::test_no_placeholders PASSED [ 89%]
+tests/unit/test_worker_config.py::TestResolveEnvVars::test_single_placeholder PASSED [ 90%]
+tests/unit/test_worker_config.py::TestResolveEnvVars::test_placeholder_in_string PASSED [ 90%]
+tests/unit/test_worker_config.py::TestResolveEnvVars::test_multiple_placeholders PASSED [ 90%]
+tests/unit/test_worker_config.py::TestResolveEnvVars::test_missing_env_var_raises PASSED [ 91%]
+tests/unit/test_worker_config.py::TestResolveEnvVars::test_no_recursive_expansion PASSED [ 91%]
+tests/unit/test_worker_config.py::TestWorkerLLMConfig::test_valid_config PASSED [ 91%]
+tests/unit/test_worker_config.py::TestWorkerLLMConfig::test_https_url_accepted PASSED [ 92%]
+tests/unit/test_worker_config.py::TestWorkerLLMConfig::test_invalid_url_scheme_rejected PASSED [ 92%]
+tests/unit/test_worker_config.py::TestWorkerLLMConfig::test_env_var_in_api_key PASSED [ 92%]
+tests/unit/test_worker_config.py::TestWorkerLLMConfig::test_missing_env_var_in_api_key_raises PASSED [ 93%]
+tests/unit/test_worker_config.py::TestWorkerLLMConfig::test_extra_fields_rejected PASSED [ 93%]
+tests/unit/test_worker_config.py::TestWorkerLLMConfig::test_api_key_masked_in_repr PASSED [ 94%]
+tests/unit/test_worker_config.py::TestWorkerBehaviorConfig::test_valid_config PASSED [ 94%]
+tests/unit/test_worker_config.py::TestWorkerBehaviorConfig::test_extra_fields_rejected PASSED [ 94%]
+tests/unit/test_worker_config.py::TestWorkerProfile::test_valid_profile PASSED [ 95%]
+tests/unit/test_worker_config.py::TestWorkerProfile::test_invalid_handle_with_slashes PASSED [ 95%]
+tests/unit/test_worker_config.py::TestWorkerProfile::test_invalid_handle_with_dots PASSED [ 95%]
+tests/unit/test_worker_config.py::TestWorkerProfile::test_unknown_type_rejected PASSED [ 96%]
+tests/unit/test_worker_config.py::TestWorkerProfile::test_hyphenated_handle_accepted PASSED [ 96%]
+tests/unit/test_worker_config.py::TestWorkerProfile::test_extra_fields_rejected PASSED [ 97%]
+tests/unit/test_worker_factory.py::TestWorkerFactory::test_list_workers PASSED [ 97%]
+tests/unit/test_worker_factory.py::TestWorkerFactory::test_list_workers_sorted PASSED [ 97%]
+tests/unit/test_worker_factory.py::TestWorkerFactory::test_missing_workers_section_raises PASSED [ 98%]
+tests/unit/test_worker_factory.py::TestWorkerFactory::test_empty_workers_section_raises PASSED [ 98%]
+tests/unit/test_worker_factory.py::TestWorkerFactory::test_handle_not_in_roster_raises PASSED [ 98%]
+tests/unit/test_worker_factory.py::TestWorkerFactory::test_create_math_worker_returns_bundle PASSED [ 99%]
+tests/unit/test_worker_factory.py::TestWorkerFactory::test_create_math_worker_unknown_profile_raises PASSED [ 99%]
+tests/unit/test_worker_factory.py::TestWorkerFactory::test_agent_name_matches_roster PASSED [100%]
+
+================ 268 passed, 3 skipped, 92 deselected in 1.08s =================
+[0;32m✓ base-agent CI passed[0m
+[0;34m--- Phase 5: Tools CI ---[0m
+Checking tools...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/tools/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/tools
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 127 items
+
+tests/unit/demo_replay/test_clients.py::TestSubmitFeedbackMatchesRealApiContract::test_signs_from_agent_id_not_role PASSED [  0%]
+tests/unit/demo_replay/test_clients.py::TestSubmitFeedbackMatchesRealApiContract::test_posts_to_feedback_endpoint_with_given_url PASSED [  1%]
+tests/unit/demo_replay/test_clients.py::TestSubmitFeedbackMatchesRealApiContract::test_submit_feedback_has_no_role_parameter PASSED [  2%]
+tests/unit/demo_replay/test_clients.py::TestRevealFeedbackRemoved::test_reveal_feedback_function_does_not_exist PASSED [  3%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_no_url_module_constants PASSED [  3%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[register_agent-identity_url] PASSED [  4%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[create_account-bank_url] PASSED [  5%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[credit_account-bank_url] PASSED [  6%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[post_task-task_board_url] PASSED [  7%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[submit_bid-task_board_url] PASSED [  7%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[list_bids-task_board_url] PASSED [  8%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[accept_bid-task_board_url] PASSED [  9%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[get_task-task_board_url] PASSED [ 10%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[upload_asset-task_board_url] PASSED [ 11%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[submit_deliverable-task_board_url] PASSED [ 11%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[approve_task-task_board_url] PASSED [ 12%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[dispute_task-task_board_url] PASSED [ 13%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[list_disputes-court_url] PASSED [ 14%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[file_claim-court_url] PASSED [ 14%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[submit_rebuttal-task_board_url] PASSED [ 15%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[trigger_ruling-court_url] PASSED [ 16%]
+tests/unit/demo_replay/test_clients.py::TestClientUrlsAreExplicitNoDefaults::test_url_param_has_no_default[submit_feedback-reputation_url] PASSED [ 17%]
+tests/unit/demo_replay/test_clients.py::TestRegisterAgentUsesGivenIdentityUrl::test_register_posts_to_given_identity_url PASSED [ 18%]
+tests/unit/demo_replay/test_config.py::TestPlatformConfig::test_creates_config PASSED [ 18%]
+tests/unit/demo_replay/test_config.py::TestPlatformConfig::test_rejects_extra_fields PASSED [ 19%]
+tests/unit/demo_replay/test_config.py::TestPlatformConfig::test_rejects_missing_field PASSED [ 20%]
+tests/unit/demo_replay/test_config.py::TestPlatformConfig::test_rejects_invalid_token_ttl[None] PASSED [ 21%]
+tests/unit/demo_replay/test_config.py::TestPlatformConfig::test_rejects_invalid_token_ttl[True] PASSED [ 22%]
+tests/unit/demo_replay/test_config.py::TestPlatformConfig::test_rejects_invalid_token_ttl[0] PASSED [ 22%]
+tests/unit/demo_replay/test_config.py::TestPlatformConfig::test_rejects_invalid_token_ttl[-1] PASSED [ 23%]
+tests/unit/demo_replay/test_config.py::TestLoadPlatformSettings::test_loads_urls_from_yaml PASSED [ 24%]
+tests/unit/demo_replay/test_config.py::TestLoadPlatformSettings::test_missing_platform_section_fails_fast PASSED [ 25%]
+tests/unit/demo_replay/test_config.py::TestLoadPlatformSettings::test_missing_url_key_fails_fast PASSED [ 25%]
+tests/unit/demo_replay/test_config.py::TestLoadPlatformSettings::test_non_mapping_file_raises_value_error PASSED [ 26%]
+tests/unit/demo_replay/test_engine.py::TestUnknownActionIsAHardError::test_unknown_action_raises PASSED [ 27%]
+tests/unit/demo_replay/test_engine.py::TestUnknownActionIsAHardError::test_reveal_feedback_is_now_unknown PASSED [ 28%]
+tests/unit/demo_replay/test_engine.py::TestFeedbackDispatchDropsRole::test_do_feedback_calls_submit_feedback_without_role PASSED [ 29%]
+tests/unit/demo_replay/test_engine.py::TestDispatchUsesConfigResolvedUrls::test_do_register_uses_config_identity_and_bank_urls PASSED [ 29%]
+tests/unit/demo_replay/test_engine.py::TestDispatchUsesConfigResolvedUrls::test_do_post_task_uses_config_task_board_url PASSED [ 30%]
+tests/unit/demo_replay/test_engine.py::TestDispatchUsesConfigResolvedUrls::test_do_trigger_ruling_uses_config_court_url PASSED [ 31%]
+tests/unit/demo_replay/test_mp03_key_loading.py::test_demo_platform_rejects_damaged_pair_without_replacement[missing_public] PASSED [ 32%]
+tests/unit/demo_replay/test_mp03_key_loading.py::test_demo_platform_rejects_damaged_pair_without_replacement[mismatched_public] PASSED [ 33%]
+tests/unit/demo_replay/test_mp03_key_loading.py::test_demo_platform_rejects_damaged_pair_without_replacement[unsafe_mode] PASSED [ 33%]
+tests/unit/demo_replay/test_mp03_key_loading.py::test_demo_platform_loads_the_valid_provisioned_pair PASSED [ 34%]
+tests/unit/demo_replay/test_mp03_key_loading.py::test_demo_platform_rejects_a_path_for_another_handle PASSED [ 35%]
+tests/unit/demo_replay/test_mp03_key_loading.py::test_platform_key_configuration_is_required PASSED [ 36%]
+tests/unit/demo_replay/test_mp03_key_loading.py::test_config_resolves_explicit_platform_key_relative_to_config PASSED [ 37%]
+tests/unit/demo_replay/test_mp03_key_loading.py::test_replay_uses_only_the_configured_platform_pair PASSED [ 37%]
+tests/unit/demo_replay/test_mp03_outbound_tokens.py::test_demo_bank_and_two_token_task_post_contexts PASSED [ 38%]
+tests/unit/demo_replay/test_mp03_outbound_tokens.py::test_demo_agent_rejects_nonpositive_or_boolean_ttl PASSED [ 39%]
+tests/unit/test_chains.py::test_produces_valid_mathtask[gen_chain_arithmetic-chain_arithmetic] PASSED [ 40%]
+tests/unit/test_chains.py::test_produces_valid_mathtask[gen_chain_percentage-chain_percentage] PASSED [ 40%]
+tests/unit/test_chains.py::test_produces_valid_mathtask[gen_chain_remainder-chain_remainder] PASSED [ 41%]
+tests/unit/test_chains.py::test_deterministic_with_seed[gen_chain_arithmetic] PASSED [ 42%]
+tests/unit/test_chains.py::test_deterministic_with_seed[gen_chain_percentage] PASSED [ 43%]
+tests/unit/test_chains.py::test_deterministic_with_seed[gen_chain_remainder] PASSED [ 44%]
+tests/unit/test_chains.py::test_variety_across_seeds[gen_chain_arithmetic] PASSED [ 44%]
+tests/unit/test_chains.py::test_variety_across_seeds[gen_chain_percentage] PASSED [ 45%]
+tests/unit/test_chains.py::test_variety_across_seeds[gen_chain_remainder] PASSED [ 46%]
+tests/unit/test_chains.py::test_chain_arithmetic_answer_is_integer PASSED [ 47%]
+tests/unit/test_chains.py::test_chain_percentage_answer_is_integer PASSED [ 48%]
+tests/unit/test_chains.py::test_chain_remainder_answer_is_nonnegative PASSED [ 48%]
+tests/unit/test_combined.py::test_produces_valid_mathtask[gen_combined_chain_constraint-combined_chain_constraint] PASSED [ 49%]
+tests/unit/test_combined.py::test_produces_valid_mathtask[gen_combined_state_large-combined_state_large] PASSED [ 50%]
+tests/unit/test_combined.py::test_produces_valid_mathtask[gen_combined_conditional_chain-combined_conditional_chain] PASSED [ 51%]
+tests/unit/test_combined.py::test_deterministic_with_seed[gen_combined_chain_constraint] PASSED [ 51%]
+tests/unit/test_combined.py::test_deterministic_with_seed[gen_combined_state_large] PASSED [ 52%]
+tests/unit/test_combined.py::test_deterministic_with_seed[gen_combined_conditional_chain] PASSED [ 53%]
+tests/unit/test_combined.py::test_variety_across_seeds[gen_combined_chain_constraint] PASSED [ 54%]
+tests/unit/test_combined.py::test_variety_across_seeds[gen_combined_state_large] PASSED [ 55%]
+tests/unit/test_combined.py::test_variety_across_seeds[gen_combined_conditional_chain] PASSED [ 55%]
+tests/unit/test_combined.py::test_combined_chain_constraint_answer_is_integer PASSED [ 56%]
+tests/unit/test_combined.py::test_combined_state_large_uses_large_numbers PASSED [ 57%]
+tests/unit/test_constraints.py::test_produces_valid_mathtask[gen_number_constraints-number_constraints] PASSED [ 58%]
+tests/unit/test_constraints.py::test_produces_valid_mathtask[gen_scheduling_constraints-scheduling_constraints] PASSED [ 59%]
+tests/unit/test_constraints.py::test_produces_valid_mathtask[gen_allocation_constraints-allocation_constraints] PASSED [ 59%]
+tests/unit/test_constraints.py::test_deterministic_with_seed[gen_number_constraints] PASSED [ 60%]
+tests/unit/test_constraints.py::test_deterministic_with_seed[gen_scheduling_constraints] PASSED [ 61%]
+tests/unit/test_constraints.py::test_deterministic_with_seed[gen_allocation_constraints] PASSED [ 62%]
+tests/unit/test_constraints.py::test_variety_across_seeds[gen_number_constraints] PASSED [ 62%]
+tests/unit/test_constraints.py::test_variety_across_seeds[gen_scheduling_constraints] PASSED [ 63%]
+tests/unit/test_constraints.py::test_variety_across_seeds[gen_allocation_constraints] PASSED [ 64%]
+tests/unit/test_constraints.py::test_number_constraints_answer_in_range PASSED [ 65%]
+tests/unit/test_constraints.py::test_scheduling_answer_is_positive_integer PASSED [ 66%]
+tests/unit/test_large_arithmetic.py::test_produces_valid_mathtask[gen_large_multiplication-large_multiplication] PASSED [ 66%]
+tests/unit/test_large_arithmetic.py::test_produces_valid_mathtask[gen_large_factorial_mod-large_factorial_mod] PASSED [ 67%]
+tests/unit/test_large_arithmetic.py::test_produces_valid_mathtask[gen_large_sum_series-large_sum_series] PASSED [ 68%]
+tests/unit/test_large_arithmetic.py::test_produces_valid_mathtask[gen_digit_manipulation-digit_manipulation] PASSED [ 69%]
+tests/unit/test_large_arithmetic.py::test_deterministic_with_seed[gen_large_multiplication] PASSED [ 70%]
+tests/unit/test_large_arithmetic.py::test_deterministic_with_seed[gen_large_factorial_mod] PASSED [ 70%]
+tests/unit/test_large_arithmetic.py::test_deterministic_with_seed[gen_large_sum_series] PASSED [ 71%]
+tests/unit/test_large_arithmetic.py::test_deterministic_with_seed[gen_digit_manipulation] PASSED [ 72%]
+tests/unit/test_large_arithmetic.py::test_variety_across_seeds[gen_large_multiplication] PASSED [ 73%]
+tests/unit/test_large_arithmetic.py::test_variety_across_seeds[gen_large_factorial_mod] PASSED [ 74%]
+tests/unit/test_large_arithmetic.py::test_variety_across_seeds[gen_large_sum_series] PASSED [ 74%]
+tests/unit/test_large_arithmetic.py::test_variety_across_seeds[gen_digit_manipulation] PASSED [ 75%]
+tests/unit/test_large_arithmetic.py::test_large_multiplication_answer_correctness PASSED [ 76%]
+tests/unit/test_large_arithmetic.py::test_factorial_mod_answer_in_range PASSED [ 77%]
+tests/unit/test_llm_dressup.py::test_extract_numbers PASSED              [ 77%]
+tests/unit/test_llm_dressup.py::test_check_numbers_preserved_all_present PASSED [ 78%]
+tests/unit/test_llm_dressup.py::test_check_numbers_preserved_some_missing PASSED [ 79%]
+tests/unit/test_llm_dressup.py::test_dress_up_returns_same_solutions PASSED [ 80%]
+tests/unit/test_llm_dressup.py::test_dress_up_returns_none_on_failure PASSED [ 81%]
+tests/unit/test_llm_dressup.py::test_dress_up_retries_on_missing_numbers PASSED [ 81%]
+tests/unit/test_llm_dressup.py::test_dress_up_batch PASSED               [ 82%]
+tests/unit/test_state_tracking.py::test_produces_valid_mathtask[gen_warehouse_inventory-warehouse_inventory] PASSED [ 83%]
+tests/unit/test_state_tracking.py::test_produces_valid_mathtask[gen_bank_transactions-bank_transactions] PASSED [ 84%]
+tests/unit/test_state_tracking.py::test_produces_valid_mathtask[gen_production_pipeline-production_pipeline] PASSED [ 85%]
+tests/unit/test_state_tracking.py::test_deterministic_with_seed[gen_warehouse_inventory] PASSED [ 85%]
+tests/unit/test_state_tracking.py::test_deterministic_with_seed[gen_bank_transactions] PASSED [ 86%]
+tests/unit/test_state_tracking.py::test_deterministic_with_seed[gen_production_pipeline] PASSED [ 87%]
+tests/unit/test_state_tracking.py::test_variety_across_seeds[gen_warehouse_inventory] PASSED [ 88%]
+tests/unit/test_state_tracking.py::test_variety_across_seeds[gen_bank_transactions] PASSED [ 88%]
+tests/unit/test_state_tracking.py::test_variety_across_seeds[gen_production_pipeline] PASSED [ 89%]
+tests/unit/test_state_tracking.py::test_warehouse_answer_is_integer PASSED [ 90%]
+tests/unit/test_state_tracking.py::test_production_pipeline_output_positive PASSED [ 91%]
+tests/unit/test_word_problems.py::test_produces_valid_mathtask[gen_multi_step_word-multi_step_word] PASSED [ 92%]
+tests/unit/test_word_problems.py::test_produces_valid_mathtask[gen_distractor_word-distractor_word] PASSED [ 92%]
+tests/unit/test_word_problems.py::test_produces_valid_mathtask[gen_conditional_word-conditional_word] PASSED [ 93%]
+tests/unit/test_word_problems.py::test_deterministic_with_seed[gen_multi_step_word] PASSED [ 94%]
+tests/unit/test_word_problems.py::test_deterministic_with_seed[gen_distractor_word] PASSED [ 95%]
+tests/unit/test_word_problems.py::test_deterministic_with_seed[gen_conditional_word] PASSED [ 96%]
+tests/unit/test_word_problems.py::test_variety_across_seeds[gen_multi_step_word] PASSED [ 96%]
+tests/unit/test_word_problems.py::test_variety_across_seeds[gen_distractor_word] PASSED [ 97%]
+tests/unit/test_word_problems.py::test_variety_across_seeds[gen_conditional_word] PASSED [ 98%]
+tests/unit/test_word_problems.py::test_distractor_word_answer_is_positive PASSED [ 99%]
+tests/unit/test_word_problems.py::test_conditional_word_answer_is_integer PASSED [100%]
+
+============================= 127 passed in 0.36s ==============================
+[0;32m✓ tools CI passed[0m
+[0;34m--- Phase 6: Cross-service and runtime integration tests ---[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/tests
+configfile: pytest.ini
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 43 items
+
+../../tests/integration/test_bank_gateway_writes.py::TestBankGatewayWrites::test_create_account_and_initial_credit_write_rows PASSED [  2%]
+../../tests/integration/test_bank_gateway_writes.py::TestBankGatewayWrites::test_credit_updates_balance_and_logs_transaction PASSED [  4%]
+../../tests/integration/test_bank_gateway_writes.py::TestBankGatewayWrites::test_escrow_lock_release_and_split_write_rows PASSED [  6%]
+../../tests/integration/test_court_gateway_writes.py::TestCourtGatewayWrites::test_file_claim_writes_claim_row PASSED [  9%]
+../../tests/integration/test_court_gateway_writes.py::TestCourtGatewayWrites::test_submit_rebuttal_writes_rebuttal_row PASSED [ 11%]
+../../tests/integration/test_court_gateway_writes.py::TestCourtGatewayWrites::test_record_ruling_writes_ruling_row PASSED [ 13%]
+../../tests/integration/test_identity_gateway_writes.py::TestIdentityGatewayWrites::test_register_agent_creates_identity_row PASSED [ 16%]
+../../tests/integration/test_identity_gateway_writes.py::TestIdentityGatewayWrites::test_register_agent_creates_event_row PASSED [ 18%]
+../../tests/integration/test_identity_gateway_writes.py::TestIdentityGatewayWrites::test_duplicate_public_key_returns_409_and_no_extra_row PASSED [ 20%]
+../../tests/integration/test_reputation_gateway_writes.py::TestReputationGatewayWrites::test_submit_feedback_writes_sealed_row PASSED [ 23%]
+../../tests/integration/test_reputation_gateway_writes.py::TestReputationGatewayWrites::test_second_feedback_reveals_both_rows PASSED [ 25%]
+../../tests/integration/test_services_without_gateway.py::test_identity_endpoint_unreachable PASSED [ 27%]
+../../tests/integration/test_services_without_gateway.py::test_bank_endpoint_unreachable PASSED [ 30%]
+../../tests/integration/test_services_without_gateway.py::test_board_endpoint_unreachable PASSED [ 32%]
+../../tests/integration/test_services_without_gateway.py::test_reputation_endpoint_unreachable PASSED [ 34%]
+../../tests/integration/test_services_without_gateway.py::test_court_endpoint_unreachable PASSED [ 37%]
+../../tests/integration/test_startup_order_regression.py::test_dependent_fails_cleanly_without_identity_then_recovers_once_identity_is_up PASSED [ 39%]
+../../tests/integration/test_taskboard_gateway_writes.py::TestTaskBoardGatewayWrites::test_create_task_writes_board_task_row PASSED [ 41%]
+../../tests/integration/test_taskboard_gateway_writes.py::TestTaskBoardGatewayWrites::test_submit_bid_writes_bid_row PASSED [ 44%]
+../../tests/integration/test_taskboard_gateway_writes.py::TestTaskBoardGatewayWrites::test_update_task_status_writes_updated_fields PASSED [ 46%]
+../../tests/integration/test_taskboard_gateway_writes.py::TestTaskBoardGatewayWrites::test_record_asset_writes_asset_row PASSED [ 48%]
+../../tests/runtime/test_isolated_test_runtime.py::test_two_minimal_stacks_are_isolated_and_preserve_unrelated_listener PASSED [ 51%]
+../../tests/runtime/test_isolated_test_runtime.py::test_startup_failure_is_nonzero_and_reports_the_owned_log PASSED [ 53%]
+../../tests/runtime/test_isolated_test_runtime.py::test_phase_command_receives_generated_runtime_environment PASSED [ 55%]
+../../tests/runtime/test_isolated_test_runtime.py::test_generated_mock_court_import_uses_no_external_model_metadata PASSED [ 58%]
+../../tests/runtime/test_isolated_test_runtime.py::test_phase_command_drains_background_descendants_after_leader_exit[0] PASSED [ 60%]
+../../tests/runtime/test_isolated_test_runtime.py::test_phase_command_drains_background_descendants_after_leader_exit[7] PASSED [ 62%]
+../../tests/runtime/test_isolated_test_runtime.py::test_supervisor_sigterm_stops_only_its_owned_process_groups PASSED [ 65%]
+../../tests/runtime/test_isolated_test_runtime.py::test_shutdown_requested_before_command_registration_is_drained PASSED [ 67%]
+../../tests/runtime/test_isolated_test_runtime.py::test_sigterm_during_command_drain_wins_over_captured_zero_exit PASSED [ 69%]
+../../tests/runtime/test_isolated_test_runtime.py::test_command_drain_failure_preserves_handle_and_manifest_until_retry PASSED [ 72%]
+../../tests/runtime/test_isolated_test_runtime.py::test_stop_attempts_other_services_and_preserves_failed_handle_for_retry PASSED [ 74%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_requires_successful_empty_exact_group_probe[0--True] PASSED [ 76%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_requires_successful_empty_exact_group_probe[0-123 1 123 123 Z\n-False] PASSED [ 79%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_requires_successful_empty_exact_group_probe[1--False] PASSED [ 81%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_requires_successful_empty_exact_group_probe[0-malformed process row\n-False] PASSED [ 83%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_reaps_leader_that_exits_after_initial_poll PASSED [ 86%]
+../../tests/runtime/test_isolated_test_runtime.py::test_signal_zero_permission_propagates_process_probe_timeout PASSED [ 88%]
+../../tests/runtime/test_key_bootstrap.py::test_direct_start_service_bootstraps_only_disposable_configured_roster PASSED [ 90%]
+../../tests/runtime/test_key_bootstrap.py::test_concurrent_platform_registration_converges_per_runtime_and_isolates_runtimes PASSED [ 93%]
+../../tests/runtime/test_key_bootstrap.py::test_runtime_bootstrap_failure_prevents_service_launch PASSED [ 95%]
+../../tests/runtime/test_key_bootstrap.py::test_bootstrap_owned_runner_drains_child_after_parent_exit PASSED [ 97%]
+../../tests/runtime/test_key_bootstrap.py::test_start_all_checks_keys_before_first_service_launch PASSED [100%]
+
+============================= 43 passed in 25.48s ==============================
+[0;34m--- Phase 7: UI Playwright e2e ---[0m
+
+[0;34m=== Running UI Playwright E2E Tests ===[0m
+
+Chromium launch prerequisite passed.
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/ui/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 273 items
+
+tests/e2e/test_agent_page.py::test_agent_page_loads_leaderboard_by_default PASSED [  0%]
+tests/e2e/test_agent_page.py::test_agent_page_leaderboard_sort_select_changes_rows PASSED [  0%]
+tests/e2e/test_agent_page.py::test_agent_page_leaderboard_row_navigates_to_profile PASSED [  1%]
+tests/e2e/test_agent_page.py::test_agent_profile_page_renders_known_agent PASSED [  1%]
+tests/e2e/test_agent_page.py::test_agent_profile_page_unknown_agent_shows_not_found PASSED [  1%]
+tests/e2e/test_agent_page.py::test_agent_profile_back_link_returns_to_leaderboard PASSED [  2%]
+tests/e2e/test_cross_page.py::TestCrossPageEmptyDB::test_x01_empty_db_landing_renders_zero_state PASSED [  2%]
+tests/e2e/test_cross_page.py::TestCrossPageEmptyDB::test_x02_empty_db_observatory_handles_no_feed PASSED [  2%]
+tests/e2e/test_cross_page.py::TestCrossPageEmptyDB::test_x03_empty_db_task_page_stays_in_create_mode PASSED [  3%]
+tests/e2e/test_cross_page.py::TestCrossPageEmptyDB::test_x04_empty_db_api_endpoints_return_safe_defaults PASSED [  3%]
+tests/e2e/test_cross_page.py::TestCrossPageSingleAgent::test_x05_single_agent_landing_kpis_reflect_singleton PASSED [  4%]
+tests/e2e/test_cross_page.py::TestCrossPageSingleAgent::test_x06_single_agent_landing_leaderboard_handles_one_agent PASSED [  4%]
+tests/e2e/test_cross_page.py::TestCrossPageSingleAgent::test_x07_single_agent_observatory_renders_single_poster PASSED [  4%]
+tests/e2e/test_cross_page.py::TestCrossPageNavigation::test_x08_landing_to_observatory_navigation PASSED [  5%]
+tests/e2e/test_cross_page.py::TestCrossPageNavigation::test_x09_observatory_to_task_to_home_navigation PASSED [  5%]
+tests/e2e/test_cross_page.py::TestCrossPageNavigation::test_x10_task_to_observatory_navigation PASSED [  5%]
+tests/e2e/test_cross_page.py::TestCrossPageBrowserEdgeCases::test_x11_back_forward_navigation_keeps_pages_usable PASSED [  6%]
+tests/e2e/test_cross_page.py::TestCrossPageBrowserEdgeCases::test_x12_resize_desktop_to_mobile_keeps_layout_operable PASSED [  6%]
+tests/e2e/test_cross_page.py::TestCrossPageBrowserEdgeCases::test_x13_tab_switch_visibility_change_does_not_break_feed PASSED [  6%]
+tests/e2e/test_cross_page.py::TestCrossPageBrowserEdgeCases::test_x14_reload_preserves_task_route_and_content PASSED [  7%]
+tests/e2e/test_infrastructure.py::test_extended_seed_data_has_10_agents PASSED [  7%]
+tests/e2e/test_infrastructure.py::test_extended_seed_data_has_50_events PASSED [  8%]
+tests/e2e/test_infrastructure.py::test_extended_seed_data_task_statuses PASSED [  8%]
+tests/e2e/test_infrastructure.py::test_landing_page_object PASSED        [  8%]
+tests/e2e/test_infrastructure.py::test_observatory_page_object PASSED    [  9%]
+tests/e2e/test_infrastructure.py::test_task_page_object PASSED           [  9%]
+tests/e2e/test_infrastructure.py::test_db_mutation_inserts_event PASSED  [  9%]
+tests/e2e/test_landing.py::TestLandingNavigation::test_l01_root_route_loads_landing PASSED [ 10%]
+tests/e2e/test_landing.py::TestLandingNavigation::test_l02_observatory_button_navigates PASSED [ 10%]
+tests/e2e/test_landing.py::TestLandingNavigation::test_l03_enter_economy_button_navigates PASSED [ 10%]
+tests/e2e/test_landing.py::TestLandingNavigation::test_l04_post_task_cta_navigates PASSED [ 11%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l05_top_ticker_track_visible PASSED [ 11%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l06_top_ticker_has_24_items PASSED [ 12%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l07_top_ticker_contains_expected_symbols PASSED [ 12%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l08_top_ticker_open_tasks_matches_seed PASSED [ 12%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l09_top_ticker_gdp_total_matches_seed PASSED [ 13%]
+tests/e2e/test_landing.py::TestLandingTopTicker::test_l10_top_ticker_stream_is_doubled PASSED [ 13%]
+tests/e2e/test_landing.py::TestLandingHero::test_l11_hero_section_visible PASSED [ 13%]
+tests/e2e/test_landing.py::TestLandingHero::test_l12_hero_title_copy PASSED [ 14%]
+tests/e2e/test_landing.py::TestLandingHero::test_l13_hero_subtitle_copy PASSED [ 14%]
+tests/e2e/test_landing.py::TestLandingHero::test_l14_hero_cta_buttons_present PASSED [ 15%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l15_kpi_strip_visible PASSED [ 15%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l16_kpi_strip_has_five_cells PASSED [ 15%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l17_kpi_labels_match_expected PASSED [ 16%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l18_kpi_gdp_matches_seed PASSED [ 16%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l19_kpi_active_agents_matches_seed PASSED [ 16%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l20_kpi_tasks_completed_matches_seed PASSED [ 17%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l21_kpi_spec_quality_matches_seed PASSED [ 17%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l22_kpi_phase_is_uppercase_text PASSED [ 17%]
+tests/e2e/test_landing.py::TestLandingKPIStrip::test_l23_kpi_notes_present_for_all_cells PASSED [ 18%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l24_exchange_board_grid_visible PASSED [ 18%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l25_exchange_board_has_15_cells PASSED [ 19%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l26_exchange_board_clock_in_utc PASSED [ 19%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l27_exchange_board_has_required_labels PASSED [ 19%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l28_exchange_board_gdp_total_matches_seed PASSED [ 20%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l29_exchange_board_open_tasks_matches_seed PASSED [ 20%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l30_exchange_board_in_execution_matches_seed PASSED [ 20%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l31_exchange_board_disputes_active_matches_seed PASSED [ 21%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l32_exchange_board_escrow_locked_matches_seed PASSED [ 21%]
+tests/e2e/test_landing.py::TestLandingExchangeBoard::test_l33_exchange_board_each_cell_has_sparkline PASSED [ 21%]
+tests/e2e/test_landing.py::TestLandingHowItWorks::test_l34_how_it_works_has_five_steps PASSED [ 22%]
+tests/e2e/test_landing.py::TestLandingHowItWorks::test_l35_how_it_works_step_order PASSED [ 22%]
+tests/e2e/test_landing.py::TestLandingHowItWorks::test_l36_how_it_works_descriptions_non_empty PASSED [ 23%]
+tests/e2e/test_landing.py::TestLandingMarketStory::test_l37_story_text_visible PASSED [ 23%]
+tests/e2e/test_landing.py::TestLandingMarketStory::test_l38_story_initial_copy_reflects_seed_counts PASSED [ 23%]
+tests/e2e/test_landing.py::TestLandingMarketStory::test_l39_story_title_present PASSED [ 24%]
+tests/e2e/test_landing.py::TestLandingMarketStory::test_l40_story_link_scrolls_to_exchange_board PASSED [ 24%]
+tests/e2e/test_landing.py::TestLandingMarketStory::test_l41_story_rotates_over_time PASSED [ 24%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l42_leaderboard_container_visible PASSED [ 25%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l43_leaderboard_has_two_panels PASSED [ 25%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l44_worker_panel_title PASSED [ 26%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l45_poster_panel_title PASSED [ 26%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l46_worker_row_count_matches_seed PASSED [ 26%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l47_poster_row_count_matches_seed PASSED [ 27%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l48_top_worker_name_matches_seed PASSED [ 27%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l49_top_worker_amount_matches_seed PASSED [ 27%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l50_top_poster_name_matches_seed PASSED [ 28%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l51_top_poster_amount_matches_seed PASSED [ 28%]
+tests/e2e/test_landing.py::TestLandingLeaderboard::test_l52_leaderboard_ranks_sequential PASSED [ 28%]
+tests/e2e/test_landing.py::TestLandingBottomTicker::test_l53_bottom_ticker_visible PASSED [ 29%]
+tests/e2e/test_landing.py::TestLandingBottomTicker::test_l54_bottom_ticker_has_16_items PASSED [ 29%]
+tests/e2e/test_landing.py::TestLandingBottomTicker::test_l55_bottom_ticker_contains_seed_metrics PASSED [ 30%]
+tests/e2e/test_landing.py::TestLandingLiveUpdates::test_l56_kpi_updates_after_status_change PASSED [ 30%]
+tests/e2e/test_landing.py::TestLandingLiveUpdates::test_l57_top_ticker_updates_after_new_open_task PASSED [ 30%]
+tests/e2e/test_landing.py::TestLandingLiveUpdates::test_l58_leaderboard_updates_after_earnings_change PASSED [ 31%]
+tests/e2e/test_observatory.py::test_o01_o05_navigation_layout[O01] PASSED [ 31%]
+tests/e2e/test_observatory.py::test_o01_o05_navigation_layout[O02] PASSED [ 31%]
+tests/e2e/test_observatory.py::test_o01_o05_navigation_layout[O03] PASSED [ 32%]
+tests/e2e/test_observatory.py::test_o01_o05_navigation_layout[O04] PASSED [ 32%]
+tests/e2e/test_observatory.py::test_o01_o05_navigation_layout[O05] PASSED [ 32%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O06] PASSED       [ 33%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O07] PASSED       [ 33%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O08] PASSED       [ 34%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O09] PASSED       [ 34%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O10] PASSED       [ 34%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O11] PASSED       [ 35%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O12] PASSED       [ 35%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O13] PASSED       [ 35%]
+tests/e2e/test_observatory.py::test_o06_o14_vitals_bar[O14] PASSED       [ 36%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O15] PASSED        [ 36%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O16] PASSED        [ 36%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O17] PASSED        [ 37%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O18] PASSED        [ 37%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O19] PASSED        [ 38%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O20] PASSED        [ 38%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O21] PASSED        [ 38%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O22] PASSED        [ 39%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O23] PASSED        [ 39%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O24] PASSED        [ 39%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O25] PASSED        [ 40%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O26] PASSED        [ 40%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O27] PASSED        [ 41%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O28] PASSED        [ 41%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O29] PASSED        [ 41%]
+tests/e2e/test_observatory.py::test_o15_o30_gdp_panel[O30] PASSED        [ 42%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O31] PASSED     [ 42%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O32] PASSED     [ 42%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O33] PASSED     [ 43%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O34] PASSED     [ 43%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O35] PASSED     [ 43%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O36] PASSED     [ 44%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O37] PASSED     [ 44%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O38] PASSED     [ 45%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O39] PASSED     [ 45%]
+tests/e2e/test_observatory.py::test_o31_o40_feed_filters[O40] PASSED     [ 45%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O41] PASSED       [ 46%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O42] PASSED       [ 46%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O43] PASSED       [ 46%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O44] PASSED       [ 47%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O45] PASSED       [ 47%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O46] PASSED       [ 47%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O47] PASSED       [ 48%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O48] PASSED       [ 48%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O49] PASSED       [ 49%]
+tests/e2e/test_observatory.py::test_o41_o50_feed_items[O50] PASSED       [ 49%]
+tests/e2e/test_observatory.py::test_o51_o55_pause_resume[O51] PASSED     [ 49%]
+tests/e2e/test_observatory.py::test_o51_o55_pause_resume[O52] PASSED     [ 50%]
+tests/e2e/test_observatory.py::test_o51_o55_pause_resume[O53] PASSED     [ 50%]
+tests/e2e/test_observatory.py::test_o51_o55_pause_resume[O54] PASSED     [ 50%]
+tests/e2e/test_observatory.py::test_o51_o55_pause_resume[O55] PASSED     [ 51%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O56] PASSED  [ 51%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O57] PASSED  [ 52%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O58] PASSED  [ 52%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O59] PASSED  [ 52%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O60] PASSED  [ 53%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O61] PASSED  [ 53%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O62] PASSED  [ 53%]
+tests/e2e/test_observatory.py::test_o56_o63_sse_live_events[O63] PASSED  [ 54%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O64] PASSED [ 54%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O65] PASSED [ 54%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O66] PASSED [ 55%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O67] PASSED [ 55%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O68] PASSED [ 56%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O69] PASSED [ 56%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O70] PASSED [ 56%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O71] PASSED [ 57%]
+tests/e2e/test_observatory.py::test_o64_o72_leaderboard_tabs[O72] PASSED [ 57%]
+tests/e2e/test_observatory.py::test_o73_o75_bottom_ticker[O73] PASSED    [ 57%]
+tests/e2e/test_observatory.py::test_o73_o75_bottom_ticker[O74] PASSED    [ 58%]
+tests/e2e/test_observatory.py::test_o73_o75_bottom_ticker[O75] PASSED    [ 58%]
+tests/e2e/test_observatory.py::test_o76_o78_periodic_refresh[O76] PASSED [ 58%]
+tests/e2e/test_observatory.py::test_o76_o78_periodic_refresh[O77] PASSED [ 59%]
+tests/e2e/test_observatory.py::test_o76_o78_periodic_refresh[O78] PASSED [ 59%]
+tests/e2e/test_observatory.py::test_o79_o81_edge_cases[O79] PASSED       [ 60%]
+tests/e2e/test_observatory.py::test_o79_o81_edge_cases[O80] PASSED       [ 60%]
+tests/e2e/test_observatory.py::test_o79_o81_edge_cases[O81] PASSED       [ 60%]
+tests/e2e/test_quarterly_report_page.py::test_quarterly_report_page_loads_current_quarter PASSED [ 61%]
+tests/e2e/test_quarterly_report_page.py::test_quarterly_report_page_explicit_quarter_renders_metrics PASSED [ 61%]
+tests/e2e/test_quarterly_report_page.py::test_quarterly_report_page_prev_next_navigation PASSED [ 61%]
+tests/e2e/test_quarterly_report_page.py::test_quarterly_report_page_no_data_quarter_shows_message PASSED [ 62%]
+tests/e2e/test_smoke.py::test_landing_page_loads PASSED                  [ 62%]
+tests/e2e/test_smoke.py::test_observatory_page_loads PASSED              [ 63%]
+tests/e2e/test_smoke.py::test_task_page_loads PASSED                     [ 63%]
+tests/e2e/test_smoke.py::test_health_endpoint PASSED                     [ 63%]
+tests/e2e/test_smoke.py::test_metrics_api PASSED                         [ 64%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T01] PASSED [ 64%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T02] PASSED [ 64%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T03] PASSED [ 65%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T04] PASSED [ 65%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T05] PASSED [ 65%]
+tests/e2e/test_task_lifecycle.py::test_t01_t06_task_selection_routing[T06] PASSED [ 66%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T07] PASSED   [ 66%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T08] PASSED   [ 67%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T09] PASSED   [ 67%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T10] PASSED   [ 67%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T11] PASSED   [ 68%]
+tests/e2e/test_task_lifecycle.py::test_t07_t12_phase_strip[T12] PASSED   [ 68%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T13] PASSED    [ 68%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T14] PASSED    [ 69%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T15] PASSED    [ 69%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T16] PASSED    [ 69%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T17] PASSED    [ 70%]
+tests/e2e/test_task_lifecycle.py::test_t13_t18_post_phase[T18] PASSED    [ 70%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T19] PASSED     [ 71%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T20] PASSED     [ 71%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T21] PASSED     [ 71%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T22] PASSED     [ 72%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T23] PASSED     [ 72%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T24] PASSED     [ 72%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T25] PASSED     [ 73%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T26] PASSED     [ 73%]
+tests/e2e/test_task_lifecycle.py::test_t19_t27_bid_phase[T27] PASSED     [ 73%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T28] PASSED [ 74%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T29] PASSED [ 74%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T30] PASSED [ 75%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T31] PASSED [ 75%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T32] PASSED [ 75%]
+tests/e2e/test_task_lifecycle.py::test_t28_t33_contract_phase[T33] PASSED [ 76%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T34] PASSED [ 76%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T35] PASSED [ 76%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T36] PASSED [ 77%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T37] PASSED [ 77%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T38] PASSED [ 78%]
+tests/e2e/test_task_lifecycle.py::test_t34_t39_deliver_phase[T39] PASSED [ 78%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T40] PASSED  [ 78%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T41] PASSED  [ 79%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T42] PASSED  [ 79%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T43] PASSED  [ 79%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T44] PASSED  [ 80%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T45] PASSED  [ 80%]
+tests/e2e/test_task_lifecycle.py::test_t40_t46_review_phase[T46] PASSED  [ 80%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T47] PASSED [ 81%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T48] PASSED [ 81%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T49] PASSED [ 82%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T50] PASSED [ 82%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T51] PASSED [ 82%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T52] PASSED [ 83%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T53] PASSED [ 83%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T54] PASSED [ 83%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T55] PASSED [ 84%]
+tests/e2e/test_task_lifecycle.py::test_t47_t56_dispute_ruling[T56] PASSED [ 84%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T57] PASSED [ 84%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T58] PASSED [ 85%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T59] PASSED [ 85%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T60] PASSED [ 86%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T61] PASSED [ 86%]
+tests/e2e/test_task_lifecycle.py::test_t57_t62_settlement_phase[T62] PASSED [ 86%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T63] PASSED [ 87%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T64] PASSED [ 87%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T65] PASSED [ 87%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T66] PASSED [ 88%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T67] PASSED [ 88%]
+tests/e2e/test_task_lifecycle.py::test_t63_t68_event_feed_panel[T68] PASSED [ 89%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T69] PASSED [ 89%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T70] PASSED [ 89%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T71] PASSED [ 90%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T72] PASSED [ 90%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T73] PASSED [ 90%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T74] PASSED [ 91%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T75] PASSED [ 91%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T76] PASSED [ 91%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T77] PASSED [ 92%]
+tests/e2e/test_task_lifecycle.py::test_t69_t78_step_navigation_controls[T78] PASSED [ 92%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T79] PASSED [ 93%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T80] PASSED [ 93%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T81] PASSED [ 93%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T82] PASSED [ 94%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T83] PASSED [ 94%]
+tests/e2e/test_task_lifecycle.py::test_t79_t84_keyboard_shortcuts[T84] PASSED [ 94%]
+tests/e2e/test_task_lifecycle.py::test_t85_t88_auto_play[T85] PASSED     [ 95%]
+tests/e2e/test_task_lifecycle.py::test_t85_t88_auto_play[T86] PASSED     [ 95%]
+tests/e2e/test_task_lifecycle.py::test_t85_t88_auto_play[T87] PASSED     [ 95%]
+tests/e2e/test_task_lifecycle.py::test_t85_t88_auto_play[T88] PASSED     [ 96%]
+tests/e2e/test_task_lifecycle.py::test_t89_t93_boundary_guards[T89] PASSED [ 96%]
+tests/e2e/test_task_lifecycle.py::test_t89_t93_boundary_guards[T90] PASSED [ 97%]
+tests/e2e/test_task_lifecycle.py::test_t89_t93_boundary_guards[T91] PASSED [ 97%]
+tests/e2e/test_task_lifecycle.py::test_t89_t93_boundary_guards[T92] PASSED [ 97%]
+tests/e2e/test_task_lifecycle.py::test_t89_t93_boundary_guards[T93] PASSED [ 98%]
+tests/e2e/test_task_lifecycle.py::test_t94_t96_db_mutation_live_updates[T94] PASSED [ 98%]
+tests/e2e/test_task_lifecycle.py::test_t94_t96_db_mutation_live_updates[T95] PASSED [ 98%]
+tests/e2e/test_task_lifecycle.py::test_t94_t96_db_mutation_live_updates[T96] PASSED [ 99%]
+tests/e2e/test_task_lifecycle.py::test_t97_t98_feedback_display[T97] PASSED [ 99%]
+tests/e2e/test_task_lifecycle.py::test_t97_t98_feedback_display[T98] PASSED [100%]
+
+======================= 273 passed in 320.10s (0:05:20) ========================
+
+[0;32m✓ UI Playwright E2E tests passed[0m
+
+[0;34m--- Phase 8: E2E tests ---[0m
+
+[0;34m=== Running E2E Tests ===[0m
+
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-c01c32a59dfd4feab904367a55e1086e-54_387fo
+provisioned handle=alice fingerprint_sha256=c4d9e992548af0aa87f2030c80decd2124a06b9709b620ab93013208a868fb0d
+provisioned handle=bob fingerprint_sha256=4d921a45166221f318ddeafa34dc591ac83c445be92a72a4650373848e4ea305
+provisioned handle=feeder fingerprint_sha256=5f94fcf85c62041907e940be9ccfa23eb0cb0b89a0b44575b42f2b4d51c97b35
+provisioned handle=mathbot fingerprint_sha256=d2fc804e6a86067b8adbc6f5d444ec0d39525725611db9914ed70db82cef90df
+provisioned handle=mathbot_mistral fingerprint_sha256=65cf3f5e89a458b3847c9111f7c99db3164c52fad114f8f02208ca0adc48a3d0
+provisioned handle=mathbot_openai fingerprint_sha256=bcc1283b6217ba3726108c8a812e3cea228728d1b274f461133dfc8e38bd77b6
+provisioned handle=operator fingerprint_sha256=c956187ff3c1a841933e3f42e1acee830d6eab10cfed4fada1a83227beb68e58
+provisioned handle=platform fingerprint_sha256=65e09a66d84f0398d12f251f0efb818da49b75f1a2d0e87d6f27757081eb369d
+2026-10-15T21:18:11 [INFO] httpx: HTTP Request: POST http://127.0.0.1:65504/agents/register "HTTP/1.1 409 Conflict"
+2026-10-15T21:18:11 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65504/agents "HTTP/1.1 200 OK"
+2026-10-15T21:18:11 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65504/agents/a-229bef6d-7592-42c8-89a0-9e8bec643fe9 "HTTP/1.1 200 OK"
+2026-10-15T21:18:11 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65504/agents/a-229bef6d-7592-42c8-89a0-9e8bec643fe9 "HTTP/1.1 200 OK"
+2026-10-15T21:18:11 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-229bef6d-7592-42c8-89a0-9e8bec643fe9
+2026-10-15T21:18:11 [INFO] httpx: HTTP Request: POST http://127.0.0.1:65504/agents/register "HTTP/1.1 201 Created"
+2026-10-15T21:18:11 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-e668f596-5c66-46ba-a04d-ff18d5e9abf3
+2026-10-15T21:18:11 [INFO] httpx: HTTP Request: POST http://127.0.0.1:65505/accounts "HTTP/1.1 201 Created"
+2026-10-15T21:18:11 [INFO] treasury_provision_cli: Bank account created for operator
+2026-10-15T21:18:11 [INFO] httpx: HTTP Request: POST http://127.0.0.1:65505/accounts/a-e668f596-5c66-46ba-a04d-ff18d5e9abf3/credit "HTTP/1.1 200 OK"
+2026-10-15T21:18:11 [INFO] treasury_provision_cli: Treasury provisioned (tx_id=tx-bff46ff1-af5f-47c6-82e8-00d39ff4493b, balance_after=1000000)
+2026-10-15T21:18:11 [INFO] httpx: HTTP Request: GET http://127.0.0.1:65505/accounts/a-e668f596-5c66-46ba-a04d-ff18d5e9abf3 "HTTP/1.1 200 OK"
+agent_id=a-e668f596-5c66-46ba-a04d-ff18d5e9abf3
+genesis_amount=1000000
+balance=1000000
+
+uv run pytest tests/e2e/ -v -m e2e
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/agents/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 92 items
+
+tests/e2e/test_agent_startup.py::test_registered_agent_can_create_own_account PASSED [  1%]
+tests/e2e/test_agent_startup.py::test_registered_agent_can_post_task_after_account_creation PASSED [  2%]
+tests/e2e/test_agent_startup.py::test_create_account_is_idempotent PASSED [  3%]
+tests/e2e/test_agent_startup.py::test_unregistered_agent_cannot_create_account PASSED [  4%]
+tests/e2e/test_asset_store.py::test_download_uploaded_asset PASSED       [  5%]
+tests/e2e/test_asset_store.py::test_multiple_asset_uploads PASSED        [  6%]
+tests/e2e/test_asset_store.py::test_submit_without_assets_rejected PASSED [  7%]
+tests/e2e/test_autonomous_acceptance.py::test_feeder_autonomously_accepts_lowest_bid PASSED [  8%]
+tests/e2e/test_bank.py::test_create_account_and_check_balance PASSED     [  9%]
+tests/e2e/test_bank.py::test_credit_account_and_view_transactions PASSED [ 10%]
+tests/e2e/test_bank.py::test_escrow_lock_insufficient_funds PASSED       [ 11%]
+tests/e2e/test_cancellation_escrow_refund.py::test_cancel_task_with_pending_bid_refunds_escrow_and_orphans_bid PASSED [ 13%]
+tests/e2e/test_court_rulings.py::test_escrow_split_proportional_payout PASSED [ 14%]
+tests/e2e/test_court_rulings.py::test_ruling_recorded_on_task_board PASSED [ 15%]
+tests/e2e/test_court_rulings.py::test_court_posts_reputation_feedback PASSED [ 16%]
+tests/e2e/test_court_rulings.py::test_dispute_proceeds_without_rebuttal PASSED [ 17%]
+tests/e2e/test_court_rulings.py::test_duplicate_dispute_rejected PASSED  [ 18%]
+tests/e2e/test_dispute_court_handoff.py::test_task_board_dispute_auto_files_court_claim PASSED [ 19%]
+tests/e2e/test_disputes.py::test_full_dispute_with_court_ruling PASSED   [ 20%]
+tests/e2e/test_economic_cycle.py::test_economic_cycle_earn_then_spend PASSED [ 21%]
+tests/e2e/test_economic_invariants.py::test_economic_cycle_with_dispute_partial_payout PASSED [ 22%]
+tests/e2e/test_economic_invariants.py::test_insufficient_funds_cannot_post_task PASSED [ 23%]
+tests/e2e/test_fund_feeder.py::test_feeder_registration_is_idempotent PASSED [ 25%]
+tests/e2e/test_fund_feeder.py::test_feeder_account_creation PASSED       [ 26%]
+tests/e2e/test_fund_feeder.py::test_platform_can_credit_feeder PASSED    [ 27%]
+tests/e2e/test_fund_feeder.py::test_credit_idempotency PASSED            [ 28%]
+tests/e2e/test_fund_feeder.py::test_credit_requires_positive_amount PASSED [ 29%]
+tests/e2e/test_fund_feeder.py::test_feeder_balance_reflects_credits PASSED [ 30%]
+tests/e2e/test_fund_feeder.py::test_funding_summary_fields PASSED        [ 31%]
+tests/e2e/test_fund_feeder.py::test_credit_without_account_fails PASSED  [ 32%]
+tests/e2e/test_fund_feeder.py::test_feeder_agent_uses_ed25519_signing PASSED [ 33%]
+tests/e2e/test_fund_feeder.py::test_fund_feeder_full_workflow PASSED     [ 34%]
+tests/e2e/test_identity.py::TestIdentityE2E::test_register_and_verify PASSED [ 35%]
+tests/e2e/test_mp03_token_admission.py::test_bank_remote_identity_admission_matrix[wrong_audience-400-invalid_payload] PASSED [ 36%]
+tests/e2e/test_mp03_token_admission.py::test_bank_remote_identity_admission_matrix[expired-401-token_expired] PASSED [ 38%]
+tests/e2e/test_mp03_token_admission.py::test_bank_remote_identity_admission_matrix[missing_exp-400-invalid_jws] PASSED [ 39%]
+tests/e2e/test_mp03_token_admission.py::test_bank_remote_identity_admission_matrix[bad_signature-403-forbidden] PASSED [ 40%]
+tests/e2e/test_mp03_token_admission.py::test_bank_remote_identity_admission_matrix[bad_signature_missing_action-403-forbidden] PASSED [ 41%]
+tests/e2e/test_mp03_token_admission.py::test_task_board_remote_identity_admission_matrix_has_no_bid_effect[wrong_resource-400-invalid_payload] PASSED [ 42%]
+tests/e2e/test_mp03_token_admission.py::test_task_board_remote_identity_admission_matrix_has_no_bid_effect[wrong_action-400-invalid_payload] PASSED [ 43%]
+tests/e2e/test_mp03_token_admission.py::test_task_board_remote_identity_admission_matrix_has_no_bid_effect[future-401-token_not_yet_valid] PASSED [ 44%]
+tests/e2e/test_mp03_token_admission.py::test_task_board_remote_identity_admission_matrix_has_no_bid_effect[non_object_header-400-invalid_jws] PASSED [ 45%]
+tests/e2e/test_mp03_token_admission.py::test_task_board_remote_identity_admission_matrix_has_no_bid_effect[boolean_time-400-invalid_jws] PASSED [ 46%]
+tests/e2e/test_mp03_token_admission.py::test_reputation_remote_context_rejection_has_no_feedback_effect PASSED [ 47%]
+tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[wrong_audience-400-invalid_payload] PASSED [ 48%]
+tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[wrong_resource-400-invalid_payload] PASSED [ 50%]
+tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[wrong_action-400-invalid_payload] PASSED [ 51%]
+tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[expired-401-token_expired] PASSED [ 52%]
+tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[future-401-token_not_yet_valid] PASSED [ 53%]
+tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[missing_exp-400-invalid_jws] PASSED [ 54%]
+tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[bad_signature-403-forbidden] PASSED [ 55%]
+tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[wrong_platform_kid-403-forbidden] PASSED [ 56%]
+tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[bad_signature_missing_action-403-forbidden] PASSED [ 57%]
+tests/e2e/test_mp03_token_admission.py::test_court_local_platform_admission_matrix_has_no_dispute_effect[wrong_platform_kid_missing_action-403-forbidden] PASSED [ 58%]
+tests/e2e/test_platform_auth.py::test_non_platform_cannot_release_escrow PASSED [ 59%]
+tests/e2e/test_platform_auth.py::test_non_platform_cannot_split_escrow PASSED [ 60%]
+tests/e2e/test_platform_auth.py::test_non_platform_cannot_credit_account PASSED [ 61%]
+tests/e2e/test_proxy_routes.py::test_proxy_identity_is_operator_not_platform PASSED [ 63%]
+tests/e2e/test_proxy_routes.py::test_proxy_create_task_posts_as_operator_not_platform PASSED [ 64%]
+tests/e2e/test_proxy_routes.py::test_proxy_accept_bid_authorized_as_operator_poster PASSED [ 65%]
+tests/e2e/test_proxy_routes.py::test_proxy_approve_task_authorized_as_operator_poster PASSED [ 66%]
+tests/e2e/test_proxy_routes.py::test_proxy_dispute_authorized_as_operator_poster PASSED [ 67%]
+tests/e2e/test_reputation.py::test_mutual_feedback_exchange PASSED       [ 68%]
+tests/e2e/test_reputation_sealed.py::test_sealed_feedback_invisible_until_mutual PASSED [ 69%]
+tests/e2e/test_reputation_sealed.py::test_self_feedback_rejected PASSED  [ 70%]
+tests/e2e/test_reputation_sealed.py::test_duplicate_feedback_rejected PASSED [ 71%]
+tests/e2e/test_task_board.py::test_post_task_with_escrow PASSED          [ 72%]
+tests/e2e/test_task_board.py::test_submit_bid_on_task PASSED             [ 73%]
+tests/e2e/test_task_board.py::test_accept_bid_and_assign_worker PASSED   [ 75%]
+tests/e2e/test_task_board.py::test_post_and_cancel_task PASSED           [ 76%]
+tests/e2e/test_task_board.py::test_happy_path_submit_and_approve PASSED  [ 77%]
+tests/e2e/test_task_board.py::test_competing_bidders PASSED              [ 78%]
+tests/e2e/test_task_board.py::test_sealed_bid_visibility PASSED          [ 79%]
+tests/e2e/test_task_board.py::test_file_dispute PASSED                   [ 80%]
+tests/e2e/test_task_board.py::test_execution_deadline_expiry PASSED      [ 81%]
+tests/e2e/test_task_board.py::test_auto_approve_on_review_timeout PASSED [ 82%]
+tests/e2e/test_task_board_auth.py::test_self_bid_rejected PASSED         [ 83%]
+tests/e2e/test_task_board_auth.py::test_duplicate_bid_rejected PASSED    [ 84%]
+tests/e2e/test_task_board_auth.py::test_non_poster_cannot_cancel_task PASSED [ 85%]
+tests/e2e/test_task_board_auth.py::test_non_poster_cannot_accept_bid PASSED [ 86%]
+tests/e2e/test_task_board_auth.py::test_non_poster_cannot_approve_task PASSED [ 88%]
+tests/e2e/test_task_board_auth.py::test_non_poster_cannot_dispute_task PASSED [ 89%]
+tests/e2e/test_task_board_auth.py::test_non_worker_cannot_upload_asset PASSED [ 90%]
+tests/e2e/test_task_board_auth.py::test_non_worker_cannot_submit_deliverable PASSED [ 91%]
+tests/e2e/test_task_board_auth.py::test_approve_non_submitted_task_rejected PASSED [ 92%]
+tests/e2e/test_task_board_auth.py::test_bidding_deadline_expiry_rejects_bid PASSED [ 93%]
+tests/e2e/test_treasury_provision.py::test_operator_registration_is_idempotent PASSED [ 94%]
+tests/e2e/test_treasury_provision.py::test_operator_account_creation_is_idempotent PASSED [ 95%]
+tests/e2e/test_treasury_provision.py::test_treasury_genesis_credit_is_idempotent PASSED [ 96%]
+tests/e2e/test_treasury_provision.py::test_treasury_provision_full_workflow PASSED [ 97%]
+tests/e2e/test_unattended_economy.py::test_unattended_economy_two_tasks_diverge_correctly PASSED [ 98%]
+tests/e2e/test_wp06_autonomous_ruling.py::test_disputed_task_reaches_ruled_via_polling PASSED [100%]
+
+============================= 92 passed in 28.11s ==============================
+[0;32m✓ E2E tests passed[0m
+
+
+[0;32m✓ E2E tests passed[0m
+
+
+[0;32m✓ Full CI passed (libs + services + agents + tools + integration + ui-e2e + e2e)[0m
+

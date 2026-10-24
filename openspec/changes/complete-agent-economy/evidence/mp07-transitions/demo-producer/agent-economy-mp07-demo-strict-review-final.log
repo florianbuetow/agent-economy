@@ -1,0 +1,2 @@
+tests/unit/demo_replay/test_mp07_task_operations.py:456: error: Module "demo_replay.engine" does not explicitly export attribute "uuid"  [attr-defined]
+Found 1 error in 1 file (checked 4 source files)

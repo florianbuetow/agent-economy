@@ -1,0 +1,11 @@
+
+[0;34m=== Scanning Dependencies for Vulnerabilities ===[0m
+No known vulnerabilities found
+Name               Skip Reason
+------------------ ---------------------------------------------------------------------------------
+db-gateway-service Dependency not found on PyPI and could not be audited: db-gateway-service (0.1.0)
+service-auth       Dependency not found on PyPI and could not be audited: service-auth (0.1.0)
+service-commons    Dependency not found on PyPI and could not be audited: service-commons (0.1.0)
+
+[0;32m✓ No known vulnerabilities found[0m
+

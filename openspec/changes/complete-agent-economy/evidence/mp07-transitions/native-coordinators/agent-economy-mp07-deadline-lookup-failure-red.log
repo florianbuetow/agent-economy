@@ -1,0 +1,203 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 5 items
+
+tests/integration/test_mp07_deadline_lookup_failure.py FFFF.             [100%]
+
+=================================== FAILURES ===================================
+_ test_retryable_bid_lookup_failure_returns_fresh_source_projection[transport-detail] _
+tests/integration/test_mp07_deadline_lookup_failure.py:113: in test_retryable_bid_lookup_failure_returns_fresh_source_projection
+    first = await client.get(path)
+            ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1768: in get
+    return await self.request(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1540: in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1629: in send
+    response = await self._send_handling_auth(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1657: in _send_handling_auth
+    response = await self._send_handling_redirects(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1694: in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1730: in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_transports/asgi.py:170: in handle_async_request
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/applications.py:90: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+src/task_board_service/core/middleware.py:56: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:660: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:680: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:276: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.13/site-packages/fastapi/routing.py:328: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/routers/tasks.py:350: in get_task
+    return await state.task_manager.get_task(task_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_manager.py:132: in get_task
+    return await self._creation.get_task(task_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_creation.py:474: in get_task
+    task = await manager.deadline_evaluator.evaluate_deadline(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/deadline_evaluator.py:93: in evaluate_deadline
+    command = self._automatic_command(task, _now_us())
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/deadline_evaluator.py:145: in _automatic_command
+    has_bid = bool(self._store.get_bids_for_task(task_id))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_deadline_lookup_failure.py:100: in failed_lookup
+    raise httpx.ReadError("injected bid lookup transport failure", request=request)
+E   httpx.ReadError: injected bid lookup transport failure
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:39:52", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-e63a63a2-858c-41f0-9a06-ff0b4e5de712"}}
+{"timestamp": "2026-10-17 23:39:52", "level": "ERROR", "logger": "task-board.task_board_service.core.exceptions", "message": "Unhandled exception", "exception": "Traceback (most recent call last):\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/middleware/errors.py\", line 164, in __call__\n    await self.app(scope, receive, _send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/core/middleware.py\", line 56, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py\", line 63, in __call__\n    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 53, in wrapped_app\n    raise exc\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py\", line 18, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 660, in __call__\n    await self.middleware_stack(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 680, in app\n    await route.handle(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 276, in handle\n    await self.app(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 134, in app\n    await wrap_app_handling_exceptions(app, request)(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 53, in wrapped_app\n    raise exc\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 120, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 674, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 328, in run_endpoint_function\n    return await dependant.call(**values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/routers/tasks.py\", line 350, in get_task\n    return await state.task_manager.get_task(task_id)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/services/task_manager.py\", line 132, in get_task\n    return await self._creation.get_task(task_id)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/services/task_creation.py\", line 474, in get_task\n    task = await manager.deadline_evaluator.evaluate_deadline(task)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/services/deadline_evaluator.py\", line 93, in evaluate_deadline\n    command = self._automatic_command(task, _now_us())\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/services/deadline_evaluator.py\", line 145, in _automatic_command\n    has_bid = bool(self._store.get_bids_for_task(task_id))\n                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_deadline_lookup_failure.py\", line 100, in failed_lookup\n    raise httpx.ReadError(\"injected bid lookup transport failure\", request=request)\nhttpx.ReadError: injected bid lookup transport failure", "extra": {"path": "/tasks/t-e63a63a2-858c-41f0-9a06-ff0b4e5de712"}}
+_ test_retryable_bid_lookup_failure_returns_fresh_source_projection[transport-list] _
+tests/integration/test_mp07_deadline_lookup_failure.py:113: in test_retryable_bid_lookup_failure_returns_fresh_source_projection
+    first = await client.get(path)
+            ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1768: in get
+    return await self.request(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1540: in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1629: in send
+    response = await self._send_handling_auth(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1657: in _send_handling_auth
+    response = await self._send_handling_redirects(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1694: in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1730: in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_transports/asgi.py:170: in handle_async_request
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/applications.py:90: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+src/task_board_service/core/middleware.py:56: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:660: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:680: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:276: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.13/site-packages/fastapi/routing.py:328: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/routers/tasks.py:92: in list_tasks
+    tasks = await state.task_manager.list_tasks(
+src/task_board_service/services/task_manager.py:143: in list_tasks
+    return await self._creation.list_tasks(status, poster_id, worker_id, offset, limit)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/task_creation.py:500: in list_tasks
+    tasks = await manager.deadline_evaluator.evaluate_deadlines_batch(tasks)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/deadline_evaluator.py:249: in evaluate_deadlines_batch
+    evaluated = await self.evaluate_deadline(task)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/deadline_evaluator.py:93: in evaluate_deadline
+    command = self._automatic_command(task, _now_us())
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/task_board_service/services/deadline_evaluator.py:145: in _automatic_command
+    has_bid = bool(self._store.get_bids_for_task(task_id))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_deadline_lookup_failure.py:100: in failed_lookup
+    raise httpx.ReadError("injected bid lookup transport failure", request=request)
+E   httpx.ReadError: injected bid lookup transport failure
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:39:53", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-05d0cfed-adc4-4f1e-a125-02cad8865428"}}
+{"timestamp": "2026-10-17 23:39:53", "level": "ERROR", "logger": "task-board.task_board_service.core.exceptions", "message": "Unhandled exception", "exception": "Traceback (most recent call last):\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/middleware/errors.py\", line 164, in __call__\n    await self.app(scope, receive, _send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/core/middleware.py\", line 56, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py\", line 63, in __call__\n    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 53, in wrapped_app\n    raise exc\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py\", line 18, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 660, in __call__\n    await self.middleware_stack(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 680, in app\n    await route.handle(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 276, in handle\n    await self.app(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 134, in app\n    await wrap_app_handling_exceptions(app, request)(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 53, in wrapped_app\n    raise exc\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 120, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 674, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 328, in run_endpoint_function\n    return await dependant.call(**values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/routers/tasks.py\", line 92, in list_tasks\n    tasks = await state.task_manager.list_tasks(\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<5 lines>...\n    )\n    ^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/services/task_manager.py\", line 143, in list_tasks\n    return await self._creation.list_tasks(status, poster_id, worker_id, offset, limit)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/services/task_creation.py\", line 500, in list_tasks\n    tasks = await manager.deadline_evaluator.evaluate_deadlines_batch(tasks)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/services/deadline_evaluator.py\", line 249, in evaluate_deadlines_batch\n    evaluated = await self.evaluate_deadline(task)\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/services/deadline_evaluator.py\", line 93, in evaluate_deadline\n    command = self._automatic_command(task, _now_us())\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/src/task_board_service/services/deadline_evaluator.py\", line 145, in _automatic_command\n    has_bid = bool(self._store.get_bids_for_task(task_id))\n                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_deadline_lookup_failure.py\", line 100, in failed_lookup\n    raise httpx.ReadError(\"injected bid lookup transport failure\", request=request)\nhttpx.ReadError: injected bid lookup transport failure", "extra": {"path": "/tasks"}}
+_ test_retryable_bid_lookup_failure_returns_fresh_source_projection[typed-503-detail] _
+tests/integration/test_mp07_deadline_lookup_failure.py:114: in test_retryable_bid_lookup_failure_returns_fresh_source_projection
+    projected = _task_from_response(first, task.task_id, view)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_deadline_lookup_failure.py:52: in _task_from_response
+    assert response.status_code == 200, response.text
+E   AssertionError: {"error":"gateway_busy","message":"injected bid lookup 503","details":{}}
+E   assert 503 == 200
+E    +  where 503 = <Response [503 Service Unavailable]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:39:54", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-8a0aa3ef-b699-4916-bc7d-059ccdd1a620"}}
+{"timestamp": "2026-10-17 23:39:54", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "gateway_busy", "status_code": 503, "path": "/tasks/t-8a0aa3ef-b699-4916-bc7d-059ccdd1a620"}}
+_ test_retryable_bid_lookup_failure_returns_fresh_source_projection[typed-503-list] _
+tests/integration/test_mp07_deadline_lookup_failure.py:114: in test_retryable_bid_lookup_failure_returns_fresh_source_projection
+    projected = _task_from_response(first, task.task_id, view)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_deadline_lookup_failure.py:52: in _task_from_response
+    assert response.status_code == 200, response.text
+E   AssertionError: {"error":"gateway_busy","message":"injected bid lookup 503","details":{}}
+E   assert 503 == 200
+E    +  where 503 = <Response [503 Service Unavailable]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:39:54", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-901c8d44-8fc5-4a32-80b7-350d137576c5"}}
+{"timestamp": "2026-10-17 23:39:54", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "gateway_busy", "status_code": 503, "path": "/tasks"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_deadline_lookup_failure.py::test_retryable_bid_lookup_failure_returns_fresh_source_projection[transport-detail]
+FAILED tests/integration/test_mp07_deadline_lookup_failure.py::test_retryable_bid_lookup_failure_returns_fresh_source_projection[transport-list]
+FAILED tests/integration/test_mp07_deadline_lookup_failure.py::test_retryable_bid_lookup_failure_returns_fresh_source_projection[typed-503-detail]
+FAILED tests/integration/test_mp07_deadline_lookup_failure.py::test_retryable_bid_lookup_failure_returns_fresh_source_projection[typed-503-list]
+========================= 4 failed, 1 passed in 2.86s ==========================

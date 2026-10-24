@@ -1,0 +1,9 @@
+5c5202e2492e08c9e9d0f605b880d8a82deeaf53e336dbe705c326d61458f76c  agents/tests/unit/math_worker/test_mp07_native_intent_regressions.py
+f1303ca1584efcdbec2dead0259dd0650b410b069117f354a65646da523261e7  docs/plans/2026-10-18-mp07-worker-intent-tests.md
+423565cc4d5d97adb5c5e68407d4041603bb9ff76e5e907e5047c678715c9248  /private/tmp/agent-economy-mp07-worker-reward-product-sha256.log
+2f5e8025902d3d7d0a530e0b43e1e4a87199b364dd0fe4d1ef1922de500e323d  /private/tmp/agent-economy-mp07-worker-reward-red-final.log
+85686734f0bcfeebbe4fcc37dc8683052001df943852ed5cf31c9b64b0589bbd  /private/tmp/agent-economy-mp07-worker-reward-controls-final.log
+82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18  /private/tmp/agent-economy-mp07-worker-reward-ruff-final.log
+fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50  /private/tmp/agent-economy-mp07-worker-reward-format-final.log
+5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e  /private/tmp/agent-economy-mp07-worker-reward-mypy-final.log
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  /private/tmp/agent-economy-mp07-worker-reward-codespell-final.log

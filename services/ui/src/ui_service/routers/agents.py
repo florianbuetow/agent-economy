@@ -1,12 +1,10 @@
 """Agents route handlers."""
 
-from __future__ import annotations
-
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
-from ui_service.core.state import get_app_state
+from ui_service.core.deps import DbConn
 from ui_service.schemas import (
     AgentEarningsResponse,
     AgentFeedEvent,
@@ -37,6 +35,7 @@ VALID_SORT_FIELDS = {
 
 @router.get("/agents")  # nosemgrep
 async def list_agents(
+    db: DbConn,
     sort_by: str = Query("total_earned"),
     order: str = Query("desc"),
     limit: int = Query(20),
@@ -50,16 +49,6 @@ async def list_agents(
             message=f"Invalid sort_by: {sort_by}. Must be one of: {valid}",
             status_code=400,
             details={"parameter": "sort_by", "value": sort_by},
-        )
-
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
         )
 
     data = await agents_service.list_agents(db, sort_by, order, limit, offset)
@@ -76,7 +65,6 @@ async def list_agents(
                 total_spent=a["stats"]["total_spent"],
                 spec_quality=SpecQualityStats(**a["stats"]["spec_quality"]),
                 delivery_quality=DeliveryQualityStats(**a["stats"]["delivery_quality"]),
-                current_streak=a["stats"]["current_streak"],
             ),
         )
         for a in data["agents"]
@@ -93,18 +81,11 @@ async def list_agents(
 
 
 @router.get("/agents/{agent_id}")
-async def get_agent_profile(agent_id: str) -> JSONResponse:
+async def get_agent_profile(
+    agent_id: str,
+    db: DbConn,
+) -> JSONResponse:
     """Return a single agent's full profile."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     data = await agents_service.get_agent_profile(db, agent_id)
 
     if data is None:
@@ -152,7 +133,6 @@ async def get_agent_profile(agent_id: str) -> JSONResponse:
             total_spent=data["stats"]["total_spent"],
             spec_quality=SpecQualityStats(**data["stats"]["spec_quality"]),
             delivery_quality=DeliveryQualityStats(**data["stats"]["delivery_quality"]),
-            current_streak=data["stats"]["current_streak"],
         ),
         recent_tasks=recent_tasks,
         recent_feedback=recent_feedback,
@@ -164,6 +144,7 @@ async def get_agent_profile(agent_id: str) -> JSONResponse:
 @router.get("/agents/{agent_id}/feed")  # nosemgrep
 async def get_agent_feed(
     agent_id: str,
+    db: DbConn,
     limit: int = Query(50),
     before: int | None = Query(None),
     role: str | None = Query(None),
@@ -171,16 +152,6 @@ async def get_agent_feed(
     time: str | None = Query(None),
 ) -> JSONResponse:
     """Return agent-scoped activity feed with agent-centric framing."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     limit = min(max(limit, 1), 200)
 
     events_list, has_more = await agents_service.get_agent_feed(
@@ -193,18 +164,11 @@ async def get_agent_feed(
 
 
 @router.get("/agents/{agent_id}/earnings")
-async def get_agent_earnings(agent_id: str) -> JSONResponse:
+async def get_agent_earnings(
+    agent_id: str,
+    db: DbConn,
+) -> JSONResponse:
     """Return cumulative earnings over time for an agent."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     data = await agents_service.get_agent_earnings(db, agent_id)
 
     response = AgentEarningsResponse(

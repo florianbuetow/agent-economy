@@ -1,0 +1,54 @@
+{
+  "artifacts": [
+    {
+      "file": "root-ci-22.log",
+      "sha256": "38f4532a658a0482e657684035d61c927b1292d540728c13bdb30eac3f9fde62"
+    },
+    {
+      "file": "root-ci-22.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "file": "root-ci-22-before.json",
+      "sha256": "46623fe4b623e2943160b0384e4cf60c3da0d8594410612987f37b11173f857d"
+    },
+    {
+      "file": "root-ci-22-after.json",
+      "sha256": "46623fe4b623e2943160b0384e4cf60c3da0d8594410612987f37b11173f857d"
+    },
+    {
+      "file": "root-ci-22-log-before.json",
+      "sha256": "eb0e5a45ce9da6aed72435b89578633ee18c8f0fbcd57c3488f2c76a219ffec3"
+    },
+    {
+      "file": "root-ci-22-log-after.json",
+      "sha256": "eb0e5a45ce9da6aed72435b89578633ee18c8f0fbcd57c3488f2c76a219ffec3"
+    },
+    {
+      "file": "root-ci-22-comparison.json",
+      "sha256": "819ef59d9e99446962004357d1fe0865a9d65c47c8998ef919d111f919c90567"
+    },
+    {
+      "file": "root-ci-22-cleanup.json",
+      "sha256": "eb848698d1c1595580bb7e3d76a93085653c4edb400ee8a2092e3fe0a26e18a0"
+    },
+    {
+      "file": "root-ci-22-nested-cleanup.json",
+      "sha256": "7623161315e020ad325d13159960fa34a2c4e458e757219d6fbbb07d14481d3f"
+    },
+    {
+      "file": "root-ci-22-runtime-1.json",
+      "sha256": "7851cb47e9b0c518b4100f019a23a6cb46880a2db67c5b9808679ba2c56546c6"
+    },
+    {
+      "file": "root-ci-22-runtime-2.json",
+      "sha256": "b10dad7752ce5cfc695c761d987f84a8f31eda64ef8f088431e44b5d153aa2c7"
+    }
+  ],
+  "summary": "root-ci-22-summary.json",
+  "root_owned_runtime_manifests": [
+    "root-ci-22-runtime-1.json",
+    "root-ci-22-runtime-2.json"
+  ],
+  "nested_runtime_artifacts": "root-ci-22-runtime-artifacts"
+}

@@ -3,15 +3,20 @@
 from __future__ import annotations
 
 import re
+import uuid
 from typing import TYPE_CHECKING
 
 import pytest
+from service_auth.financial_identity import operation_id_for
 
+from task_board_service.core.state import get_app_state
+from tests.fakes.gateway_task_store import GatewayTaskStore
 from tests.helpers import make_fake_jws, make_jws_token, tamper_jws
 from tests.unit.routers.conftest import (
     accept_bid,
     create_task,
     make_task_id,
+    new_operation_fields,
     setup_task_in_execution,
     setup_task_in_review,
     submit_bid,
@@ -131,6 +136,7 @@ class TestErrorPrecedence:
         token = make_fake_jws(
             {"action": "wrong_action", "task_id": task_id},
             kid=alice_agent_id,
+            resource=f"POST /tasks/{task_id}/cancel",
         )
         resp = await client.post(
             f"/tasks/{task_id}/cancel",
@@ -156,6 +162,7 @@ class TestErrorPrecedence:
                 "task_id": task_id,
                 "poster_id": alice_agent_id,
             },
+            resource=f"POST /tasks/{task_id}/cancel",
         )
         tampered_token = tamper_jws(valid_token)
         resp = await client.post(
@@ -183,6 +190,7 @@ class TestErrorPrecedence:
             bob_keypair[0],
             bob_agent_id,
             {
+                **new_operation_fields(task_id),
                 "action": "submit_bid",
                 "task_id": task_id,
                 "poster_id": alice_agent_id,
@@ -208,6 +216,7 @@ class TestErrorPrecedence:
             bob_keypair[0],
             bob_agent_id,
             {
+                **new_operation_fields(nonexistent_id),
                 "action": "cancel_task",
                 "task_id": nonexistent_id,
                 "poster_id": bob_agent_id,
@@ -221,15 +230,22 @@ class TestErrorPrecedence:
         assert resp.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
-    async def test_status_validation_before_domain_validation(
+    @pytest.mark.parametrize(
+        ("reason", "expected_status", "expected_error"),
+        [("", 400, "invalid_reason"), ("A well-formed dispute", 409, "invalid_status")],
+    )
+    async def test_command_shape_and_task_state_are_both_validated(
         self,
         client: AsyncClient,
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
+        reason: str,
+        expected_status: int,
+        expected_error: str,
     ) -> None:
-        """PREC-09: Status before domain -- wrong status returns 409."""
+        """Native command shape is validated before state; neither rejection writes."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -237,6 +253,7 @@ class TestErrorPrecedence:
             alice_keypair[0],
             alice_agent_id,
             {
+                **new_operation_fields(task_id),
                 "action": "approve_task",
                 "task_id": task_id,
                 "poster_id": alice_agent_id,
@@ -247,23 +264,28 @@ class TestErrorPrecedence:
             json={"token": approve_token},
         )
         assert approve_resp.status_code == 200
+        store = get_app_state().store
+        assert isinstance(store, GatewayTaskStore)
+        before = tuple(store.writer.connection.iterdump())
 
         dispute_token = make_jws_token(
             alice_keypair[0],
             alice_agent_id,
             {
-                "action": "file_dispute",
+                **new_operation_fields(task_id),
+                "action": "dispute_task",
                 "task_id": task_id,
                 "poster_id": alice_agent_id,
-                "reason": "",
+                "reason": reason,
             },
         )
         resp = await client.post(
             f"/tasks/{task_id}/dispute",
             json={"token": dispute_token},
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"] == "invalid_status"
+        assert resp.status_code == expected_status
+        assert resp.json()["error"] == expected_error
+        assert tuple(store.writer.connection.iterdump()) == before
 
     @pytest.mark.unit
     @pytest.mark.usefixtures("mock_central_bank_unavailable")
@@ -278,9 +300,13 @@ class TestErrorPrecedence:
         task_id_2 = make_task_id()
 
         task_payload = {
+            "acceptance_window_seconds": 3600,
             "action": "create_task",
+            "protocol_version": 1,
+            "operation_id": f"op-{uuid.uuid4()}",
             "task_id": task_id_1,
             "poster_id": alice_agent_id,
+            "lock_operation_id": operation_id_for("task-lock", (task_id_1, alice_agent_id)),
             "title": "Test task",
             "spec": "Test specification",
             "reward": 100,
@@ -292,11 +318,18 @@ class TestErrorPrecedence:
 
         escrow_payload = {
             "action": "escrow_lock",
+            "operation_id": operation_id_for("task-lock", (task_id_2, alice_agent_id)),
             "task_id": task_id_2,
             "agent_id": alice_agent_id,
             "amount": 100,
         }
-        escrow_token = make_jws_token(alice_keypair[0], alice_agent_id, escrow_payload)
+        escrow_token = make_jws_token(
+            alice_keypair[0],
+            alice_agent_id,
+            escrow_payload,
+            audience="central-bank",
+            resource="POST /escrow/lock",
+        )
 
         resp = await client.post(
             "/tasks",
@@ -413,6 +446,7 @@ class TestCrossCuttingSecurity:
             alice_keypair[0],
             alice_agent_id,
             {
+                **new_operation_fields(task_id),
                 "action": "cancel_task",
                 "task_id": task_id,
                 "poster_id": alice_agent_id,
@@ -550,6 +584,7 @@ class TestCrossCuttingSecurity:
         task_id = resp.json()["task_id"]
 
         bid_payload = {
+            **new_operation_fields(task_id),
             "action": "submit_bid",
             "task_id": task_id,
             "bidder_id": bob_agent_id,

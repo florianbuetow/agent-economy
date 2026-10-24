@@ -1,0 +1,285 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 42 items
+
+tests/unit/routers/test_court.py FF.....FFFFFFF..FFFFF.....F             [ 64%]
+tests/unit/routers/test_court_reads.py F..FF.FFF.                        [ 88%]
+tests/unit/routers/test_t072_court_reads_gaps.py FF.F.                   [100%]
+
+=================================== FAILURES ===================================
+___________________ TestDisputeClaims.test_file_valid_claim ____________________
+tests/unit/routers/test_court.py:182: in test_file_valid_claim
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:14", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:14", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+______________ TestDisputeClaims.test_duplicate_claim_id_rejected ______________
+tests/unit/routers/test_court.py:209: in test_duplicate_claim_id_rejected
+    assert resp.json()["error"] == "claim_exists"
+E   AssertionError: assert 'foreign_key_violation' == 'claim_exists'
+E     
+E     - claim_exists
+E     + foreign_key_violation
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:15", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:15", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:15", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+________________ TestDisputeClaims.test_claim_and_event_atomic _________________
+tests/unit/routers/test_court.py:333: in test_claim_and_event_atomic
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:17", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:17", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+___________________ TestRebuttals.test_submit_valid_rebuttal ___________________
+tests/unit/routers/test_court.py:378: in test_submit_valid_rebuttal
+    assert resp.status_code == 201
+E   assert 404 == 201
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:17", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:17", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:17", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+_____________ TestRebuttals.test_rebuttal_with_claim_status_update _____________
+tests/unit/routers/test_court.py:403: in test_rebuttal_with_claim_status_update
+    assert resp.status_code == 201
+E   assert 404 == 201
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:17", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:17", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:17", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+___________ TestRebuttals.test_rebuttal_without_claim_status_update ____________
+tests/unit/routers/test_court.py:432: in test_rebuttal_without_claim_status_update
+    assert resp.status_code == 201
+E   assert 404 == 201
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+______________ TestRebuttals.test_duplicate_rebuttal_id_rejected _______________
+tests/unit/routers/test_court.py:472: in test_duplicate_rebuttal_id_rejected
+    assert resp.status_code == 409
+E   assert 404 == 409
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+{"timestamp": "2026-10-18 04:01:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+___________________ TestRebuttals.test_fk_violation_claim_id ___________________
+tests/unit/routers/test_court.py:491: in test_fk_violation_claim_id
+    assert resp.status_code == 409
+E   assert 404 == 409
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+___________________ TestRebuttals.test_fk_violation_agent_id ___________________
+tests/unit/routers/test_court.py:511: in test_fk_violation_agent_id
+    assert resp.status_code == 409
+E   assert 404 == 409
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+_____________ TestRebuttals.test_rebuttal_and_claim_update_atomic ______________
+tests/unit/routers/test_court.py:572: in test_rebuttal_and_claim_update_atomic
+    assert resp.status_code == 201
+E   assert 404 == 201
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+_____________________ TestRulings.test_record_valid_ruling _____________________
+tests/unit/routers/test_court.py:634: in test_record_valid_ruling
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+_______________ TestRulings.test_ruling_with_claim_status_update _______________
+tests/unit/routers/test_court.py:667: in test_ruling_with_claim_status_update
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:20", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:20", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:20", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+_____________ TestRulings.test_ruling_without_claim_status_update ______________
+tests/unit/routers/test_court.py:704: in test_ruling_without_claim_status_update
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:20", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:20", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:20", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+________________ TestRulings.test_duplicate_ruling_id_rejected _________________
+tests/unit/routers/test_court.py:759: in test_duplicate_ruling_id_rejected
+    assert resp.json()["error"] == "ruling_exists"
+E   AssertionError: assert 'foreign_key_violation' == 'ruling_exists'
+E     
+E     - ruling_exists
+E     + foreign_key_violation
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:21", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:21", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:21", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+{"timestamp": "2026-10-18 04:01:21", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+_______________ TestRulings.test_ruling_and_claim_update_atomic ________________
+tests/unit/routers/test_court.py:915: in test_ruling_and_claim_update_atomic
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:23", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:23", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:23", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+_____________________ TestCourtReads.test_get_claim_by_id ______________________
+tests/unit/routers/test_court_reads.py:178: in test_get_claim_by_id
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:24", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:24", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:24", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/claims/clm-decf146e-0dad-40b9-b6db-a91e2faa175d"}}
+_________________ TestCourtReads.test_list_claims_returns_all __________________
+tests/unit/routers/test_court_reads.py:217: in test_list_claims_returns_all
+    assert len(claims) == 2
+E   assert 0 == 2
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:25", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:25", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:25", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:25", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+_______________ TestCourtReads.test_list_claims_filter_by_status _______________
+tests/unit/routers/test_court_reads.py:240: in test_list_claims_filter_by_status
+    assert len(claims) == 1
+E   assert 0 == 1
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:25", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:25", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:25", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:25", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:25", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/claims/clm-9cf0bcd0-4a50-46bb-ad0d-3c5fe232d652/status"}}
+________________ TestCourtReads.test_count_claims_after_filing _________________
+tests/unit/routers/test_court_reads.py:265: in test_count_claims_after_filing
+    assert response.json() == {"count": 3}
+E   AssertionError: assert {'count': 0} == {'count': 3}
+E     
+E     Differing items:
+E     {'count': 0} != {'count': 3}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:26", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:26", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:26", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:26", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:26", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:26", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+______________ TestCourtReads.test_count_active_claims_all_active ______________
+tests/unit/routers/test_court_reads.py:278: in test_count_active_claims_all_active
+    assert response.json() == {"count": 2}
+E   AssertionError: assert {'count': 0} == {'count': 2}
+E     
+E     Differing items:
+E     {'count': 0} != {'count': 2}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+______________ TestCourtReads.test_count_active_claims_some_ruled ______________
+tests/unit/routers/test_court_reads.py:300: in test_count_active_claims_some_ruled
+    assert response.json() == {"count": 1}
+E   AssertionError: assert {'count': 0} == {'count': 1}
+E     
+E     Differing items:
+E     {'count': 0} != {'count': 1}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/claims/clm-df55d41a-4e68-4835-bf3e-f505fe9cd6f9/status"}}
+_________ TestReadClaimsFilterByClaimantId.test_filter_by_claimant_id __________
+tests/unit/routers/test_t072_court_reads_gaps.py:205: in test_filter_by_claimant_id
+    assert len(claims) == 1
+E   assert 0 == 1
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+________ TestReadRebuttalByClaimId.test_get_rebuttal_returns_the_record ________
+tests/unit/routers/test_t072_court_reads_gaps.py:222: in test_get_rebuttal_returns_the_record
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+{"timestamp": "2026-10-18 04:01:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "rebuttal_not_found", "status_code": 404, "path": "/court/claims/clm-5e9bcbab-9ff7-4bfd-872a-0d9a04cdaf22/rebuttal"}}
+__________ TestReadRulingByClaimId.test_get_ruling_returns_the_record __________
+tests/unit/routers/test_t072_court_reads_gaps.py:251: in test_get_ruling_returns_the_record
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 04:01:28", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 04:01:28", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 04:01:28", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+{"timestamp": "2026-10-18 04:01:28", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "ruling_not_found", "status_code": 404, "path": "/court/rulings/clm-3263943c-fb1d-41fc-9d12-8576e46ef82c"}}
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_court.py::TestDisputeClaims::test_file_valid_claim
+FAILED tests/unit/routers/test_court.py::TestDisputeClaims::test_duplicate_claim_id_rejected
+FAILED tests/unit/routers/test_court.py::TestDisputeClaims::test_claim_and_event_atomic
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_submit_valid_rebuttal
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_rebuttal_with_claim_status_update
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_rebuttal_without_claim_status_update
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_duplicate_rebuttal_id_rejected
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_fk_violation_claim_id
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_fk_violation_agent_id
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_rebuttal_and_claim_update_atomic
+FAILED tests/unit/routers/test_court.py::TestRulings::test_record_valid_ruling
+FAILED tests/unit/routers/test_court.py::TestRulings::test_ruling_with_claim_status_update
+FAILED tests/unit/routers/test_court.py::TestRulings::test_ruling_without_claim_status_update
+FAILED tests/unit/routers/test_court.py::TestRulings::test_duplicate_ruling_id_rejected
+FAILED tests/unit/routers/test_court.py::TestRulings::test_ruling_and_claim_update_atomic
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_get_claim_by_id
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_list_claims_returns_all
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_list_claims_filter_by_status
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_count_claims_after_filing
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_count_active_claims_all_active
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_count_active_claims_some_ruled
+FAILED tests/unit/routers/test_t072_court_reads_gaps.py::TestReadClaimsFilterByClaimantId::test_filter_by_claimant_id
+FAILED tests/unit/routers/test_t072_court_reads_gaps.py::TestReadRebuttalByClaimId::test_get_rebuttal_returns_the_record
+FAILED tests/unit/routers/test_t072_court_reads_gaps.py::TestReadRulingByClaimId::test_get_ruling_returns_the_record
+================== 24 failed, 18 passed, 1 warning in 14.98s ===================
