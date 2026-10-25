@@ -587,3 +587,45 @@ The repository SHALL expose working developer commands without arbitrary manual 
 - **THEN** normal demo allocates its internal ID, explicit resume remains available, help works without a terminal, health/startup failures return nonzero, file-write descriptions match behavior, and existing-key permission adoption can precede provisioning of missing keys without replacing identity
 - **AND** safe target checks and fresh full CI pass; performance-target handling follows the owner's recorded choice
 - **Status:** CLOSED 2026-10-25 — Automatic demo IDs and browser opening, truthful health/startup failures, headless help, safe process selection, existing-key adoption, argument validation, and statistics repairs passed full root CI (exit 0; 1,349 source files unchanged). Unsupported performance commands were removed under the owner's feature-first/basic-testing scope; performance test files were preserved. All seven ordinary services remained healthy after final verification. Evidence: `openspec/changes/complete-agent-economy/evidence/justfile-targets/final-result.json`.
+
+### Requirement: Inspectable economy activity and task documents
+The Observatory SHALL link identifiable task and agent activity to existing detail views. Agent profiles SHALL expose all posted and worked jobs through paginated task links. Task lifecycle views SHALL expose exchanged documents with safe viewing or downloading, including retained files on completed tasks through authenticated read-only operator access. Unsigned terminal access SHALL remain unavailable. Demo submissions SHALL use real canned file bytes.
+
+#### Scenario: T-197 Verify activity navigation and document visibility gaps
+- **WHEN** a user follows task activity, an agent, a relevant ticker item, or an uploaded document
+- **THEN** basic browser and endpoint tests demonstrate the missing navigation and document access before implementation; coverage preserves task binding and safe rendering of untrusted document content
+- **Status:** CLOSED 2026-10-25 — Failing-first evidence recorded zero native navigation anchors, missing posted/worked job sections, and missing task documents and browse links before implementation; focused regressions and full root CI passed. Evidence: `openspec/changes/complete-agent-economy/evidence/ui-visibility-2026-10-25/final-result.json`.
+
+#### Scenario: T-198 Connect Observatory activity and task documents
+- **WHEN** T-197 has failing evidence
+- **THEN** task and agent activity and relevant ticker items navigate to meaningful existing views; poster and worker profiles expose their jobs; task lifecycle documents remain inspectable after completion through authenticated operator access without relaxing unsigned terminal access
+- **AND** focused regressions, browser verification, and root CI pass before closure
+- **Status:** CLOSED 2026-10-25 — Activity links, paginated posted/worked jobs, and completed-task document access were connected with authenticated operator reads and safe content handling. Live verification covered poster and worker navigation, retained demo bytes and hashes, operator download 200, and unsigned terminal 410; full root CI passed with 1,362 unchanged inputs. Evidence: `openspec/changes/complete-agent-economy/evidence/ui-visibility-2026-10-25/final-result.json`.
+
+### Requirement: Stable live exchange-board charts
+Metric refreshes SHALL update existing chart nodes without replaying entrance animations. Empty or zero-valued history SHALL render finite zero-height bars.
+
+#### Scenario: T-199 Reproduce exchange-board refresh flicker
+- **WHEN** real landing-page JavaScript receives repeated metric polls
+- **THEN** basic browser tests fail if chart nodes are rebuilt or zero history produces invalid bar heights
+- **Status:** CLOSED 2026-10-25 — The browser regression failed before implementation with `unchanged=False` and empty zero-history heights, then passed after the repair together with full root CI. Evidence: `openspec/changes/complete-agent-economy/evidence/ui-visibility-2026-10-25/final-result.json`.
+
+#### Scenario: T-200 Preserve exchange-board charts during refresh
+- **WHEN** T-199 has failing evidence
+- **THEN** polls update values and bar heights in place, retaining chart nodes and limiting entrance animation to initial rendering
+- **AND** focused browser regressions and root CI pass before closure
+- **Status:** CLOSED 2026-10-25 — Exchange-board refreshes now retain chart nodes, update values and finite bar heights in place, and limit entrance animation to initial rendering; focused chart regressions and full root CI passed. Evidence: `openspec/changes/complete-agent-economy/evidence/ui-visibility-2026-10-25/final-result.json`.
+
+### Requirement: Mount-independent local shutdown discovery
+Local shutdown SHALL identify owned service listeners without probing unrelated network filesystems, while retaining process identity verification and refusing ambiguous ownership.
+
+#### Scenario: T-201 Reproduce shutdown discovery warnings
+- **WHEN** macOS has an inaccessible network backup mount
+- **THEN** regression evidence demonstrates filesystem-scanning listener discovery and covers native socket records, ambiguous discovery, and foreign listeners
+- **Status:** CLOSED 2026-10-25 — Failing-first evidence retained actual `lsof` Time Machine mount warnings plus native-discovery and type-test failures before implementation; focused shutdown regressions and full root CI passed. Evidence: `openspec/changes/complete-agent-economy/evidence/ui-visibility-2026-10-25/final-result.json`.
+
+#### Scenario: T-202 Remove unrelated mount inspection from shutdown
+- **WHEN** T-201 has failing evidence
+- **THEN** macOS listener discovery uses OS socket/process information without hiding mount warnings, and all existing ownership checks remain enforced before signals
+- **AND** focused safety checks and root CI pass before closure
+- **Status:** CLOSED 2026-10-25 — macOS shutdown discovery now uses native socket and process records while preserving ownership and ambiguity checks. Two owned real shutdowns completed without mount warnings; full root CI passed with 478 runtime, 319 browser, and 113 live E2E tests. Evidence: `openspec/changes/complete-agent-economy/evidence/ui-visibility-2026-10-25/final-result.json`.

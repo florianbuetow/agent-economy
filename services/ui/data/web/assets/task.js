@@ -4,7 +4,7 @@
 
   // ── State ──────────────────────────────────────────────────
   var state = {
-    mode: 'create',       // 'create' | 'view'
+    mode: 'create',       // 'create' | 'list' | 'view'
     taskId: null,
     task: null,            // Full drilldown from GET /api/tasks/{task_id}
     myAgentId: null,
@@ -14,8 +14,15 @@
     intentMessage: '',
     currentPhase: 0,
     maxPhase: 0,
-    sseSource: null
+    sseSource: null,
+    documentsAnchorApplied: false,
+    documentsSignature: null,
+    taskList: [],
+    taskListTotal: 0,
+    taskListStatus: 'idle',
+    taskListError: ''
   };
+  var TASK_LIST_PAGE_SIZE = 25;
 
   // ── Phase mapping ──────────────────────────────────────────
   var PHASE_LABELS = ['Post', 'Bid', 'Contract', 'Deliver', 'Review', 'Ruling', 'Settle'];
@@ -357,6 +364,210 @@
     return str ? ATE.escapeHTML(str) : '';
   }
 
+  function formatAssetSize(asset) {
+    if (!Number.isSafeInteger(asset.size_bytes) || asset.size_bytes < 0) return 'Size unavailable';
+    var size = asset.size_bytes;
+    if (size < 1024) return size + ' B';
+    return (size / 1024).toFixed(1) + ' KB';
+  }
+
+  function assetPath(taskId, assetId) {
+    return '/api/proxy/tasks/' + encodeURIComponent(taskId) + '/assets/' + encodeURIComponent(assetId);
+  }
+
+  function isTextAsset(asset) {
+    var contentType = typeof asset.content_type === 'string' ? asset.content_type.toLowerCase() : '';
+    var filename = typeof asset.filename === 'string' ? asset.filename.toLowerCase() : '';
+    return contentType.startsWith('text/') ||
+      ['application/json', 'application/javascript', 'application/xml', 'application/yaml',
+        'application/x-yaml', 'application/markdown'].indexOf(contentType) >= 0 ||
+      /\.(txt|md|markdown|html?|css|js|json|xml|csv|tsv|ya?ml|py)$/.test(filename);
+  }
+
+  function documentText(title, text) {
+    if (typeof text !== 'string' || text.length === 0) return '';
+    return '<div class="document-entry"><div class="document-title">' + esc(title) + '</div>' +
+      '<div class="document-copy">' + esc(text) + '</div></div>';
+  }
+
+  function documentSignature(task) {
+    return JSON.stringify({spec: task.spec, assets: task.assets, dispute: task.dispute});
+  }
+
+  function taskAgentName(task, agentId) {
+    if (task.worker && task.worker.agent_id === agentId) return task.worker.name;
+    if (task.poster && task.poster.agent_id === agentId) return task.poster.name;
+    return agentId;
+  }
+
+  function renderDocuments(task) {
+    var section = document.getElementById('documents');
+    var content = document.getElementById('documents-content');
+    if (!section || !content) return;
+    if (state.mode !== 'view') {
+      section.hidden = true;
+      content.textContent = '';
+      state.documentsSignature = null;
+      return;
+    }
+
+    section.hidden = false;
+    if (!task) {
+      content.innerHTML = '<div class="documents-empty">Loading task documents...</div>';
+      return;
+    }
+
+    var signature = documentSignature(task);
+    if (signature === state.documentsSignature) return;
+
+    var html = documentText('Task specification', task.spec);
+    var assets = Array.isArray(task.assets) ? task.assets : [];
+    html += '<div class="document-entry"><div class="document-title">Uploaded files</div>';
+    if (assets.length === 0) {
+      html += '<div class="documents-empty" style="margin-top:8px">No files have been uploaded.</div>';
+    } else {
+      assets.forEach(function(asset) {
+        var assetId = typeof asset.asset_id === 'string' && asset.asset_id.length > 0 ? asset.asset_id : null;
+        var filename = typeof asset.filename === 'string' && asset.filename.length > 0 ? asset.filename : 'Unnamed file';
+        var contentType = typeof asset.content_type === 'string' && asset.content_type.length > 0 ? asset.content_type : 'Type unavailable';
+        var uploadedAt = typeof asset.uploaded_at === 'string' && asset.uploaded_at.length > 0 ? asset.uploaded_at : 'Upload time unavailable';
+        var uploaderId = typeof asset.uploader_id === 'string' && asset.uploader_id.length > 0 ? asset.uploader_id : null;
+        var contentHash = typeof asset.content_hash === 'string' && asset.content_hash.length > 0 ? asset.content_hash : null;
+        var path = assetId ? assetPath(task.task_id, assetId) : null;
+        var filenameMarkup = path ? '<a class="document-title" href="' + esc(path) + '" download="' +
+          esc(filename) + '">' + esc(filename) + '</a>' : '<div class="document-title">' + esc(filename) + '</div>';
+        html += '<div class="document-entry document-file">' + filenameMarkup +
+          '<div class="document-meta">' + esc(contentType) + ' · ' + esc(formatAssetSize(asset)) + ' · ' + esc(uploadedAt);
+        if (uploaderId) {
+          html += ' · Uploaded by <a href="/agent.html?agent_id=' + encodeURIComponent(uploaderId) + '">' +
+            esc(taskAgentName(task, uploaderId)) + '</a>';
+        }
+        html += '</div>';
+        if (contentHash) {
+          html += '<details class="document-hash"><summary>SHA-256</summary><code>' + esc(contentHash) + '</code></details>';
+        }
+        if (assetId) {
+          html += '<div class="document-actions">';
+          if (isTextAsset(asset)) {
+            html += '<button class="btn" type="button" data-document-preview-button data-asset-id="' + esc(assetId) +
+              '" data-asset-path="' + esc(path) + '" aria-label="View ' + esc(filename) + ' as text">View as text</button>';
+          }
+          html += '<a class="btn" href="' + esc(path) + '" download="' + esc(filename) + '">Download</a></div>' +
+            '<pre class="document-preview" data-asset-preview="' + esc(assetId) + '" hidden></pre>';
+        } else {
+          html += '<div class="documents-empty" style="margin-top:8px">File identifier unavailable.</div>';
+        }
+        html += '</div>';
+      });
+    }
+    html += '</div>';
+
+    var dispute = task.dispute;
+    if (dispute) {
+      html += documentText('Claim', dispute.reason);
+      if (dispute.rebuttal) html += documentText('Rebuttal', dispute.rebuttal.content);
+      if (dispute.ruling) html += documentText('Ruling', dispute.ruling.summary);
+    }
+    content.innerHTML = html || '<div class="documents-empty">No exchanged documents are available.</div>';
+    state.documentsSignature = signature;
+    bindDocumentButtons();
+
+    if (!state.documentsAnchorApplied && window.location.hash === '#documents') {
+      state.documentsAnchorApplied = true;
+      window.requestAnimationFrame(function() { section.scrollIntoView(); });
+    }
+  }
+
+  function bindDocumentButtons() {
+    document.querySelectorAll('[data-document-preview-button]').forEach(function(button) {
+      button.addEventListener('click', async function() {
+        var assetId = this.getAttribute('data-asset-id');
+        var path = this.getAttribute('data-asset-path');
+        var preview = document.querySelector('[data-asset-preview="' + CSS.escape(assetId) + '"]');
+        if (!preview || !path) return;
+        preview.hidden = false;
+        preview.classList.remove('is-error');
+        preview.textContent = 'Loading text preview...';
+        this.disabled = true;
+        try {
+          var response = await fetch(path);
+          if (!response.ok) {
+            preview.classList.add('is-error');
+            preview.textContent = 'Preview unavailable (' + response.status + '). The download link remains available.';
+            return;
+          }
+          preview.textContent = await response.text();
+        } catch (_error) {
+          preview.classList.add('is-error');
+          preview.textContent = 'Preview unavailable. The download link remains available.';
+        } finally {
+          this.disabled = false;
+        }
+      });
+    });
+  }
+
+  function renderTaskBrowser() {
+    var html = '<div class="card"><div class="card-header"><span class="card-label">All Jobs</span>' +
+      '<span style="font-size:9px;color:var(--text-dim)">' + state.taskList.length + ' of ' +
+      state.taskListTotal + '</span></div><div class="card-body no-pad" id="task-list">';
+    if (state.taskListStatus === 'loading' && state.taskList.length === 0) {
+      html += '<div class="task-list-state">Loading jobs...</div>';
+    } else if (state.taskListStatus === 'error' && state.taskList.length === 0) {
+      html += '<div class="task-list-state" style="color:var(--red)">' + esc(state.taskListError) + '</div>';
+    } else if (state.taskList.length === 0) {
+      html += '<div class="task-list-state">No jobs are available.</div>';
+    } else {
+      state.taskList.forEach(function(task) {
+        var badge = statusBadge(task);
+        var title = typeof task.title === 'string' && task.title.length > 0 ? task.title : 'Untitled task';
+        var reward = Number.isSafeInteger(task.reward) ? task.reward + ' ©' : 'Reward unavailable';
+        html += '<a class="task-list-row" href="/task.html?task_id=' + encodeURIComponent(task.task_id) + '">' +
+          '<span class="status-badge ' + esc(badge.cls) + '">' + esc(badge.text) + '</span>' +
+          '<span class="task-list-title">' + esc(title) + '</span>' +
+          '<span class="task-list-meta">' + esc(reward) + '</span></a>';
+      });
+    }
+    html += '</div>';
+    if (state.taskList.length < state.taskListTotal) {
+      html += '<div class="task-list-more"><button class="btn" id="load-more-tasks" type="button"' +
+        (state.taskListStatus === 'loading' ? ' disabled' : '') + '>Load more</button></div>';
+    }
+    if (state.taskListStatus === 'error' && state.taskList.length > 0) {
+      html += '<div class="task-list-state" style="color:var(--red)">' + esc(state.taskListError) + '</div>';
+    }
+    return html + '</div>';
+  }
+
+  function bindTaskBrowser() {
+    var button = document.getElementById('load-more-tasks');
+    if (!button) return;
+    button.addEventListener('click', function() {
+      loadTaskPage(state.taskList.length);
+    });
+  }
+
+  async function loadTaskPage(offset) {
+    state.taskListStatus = 'loading';
+    state.taskListError = '';
+    updateView();
+    try {
+      var response = await fetch('/api/tasks?limit=' + TASK_LIST_PAGE_SIZE + '&offset=' + offset);
+      if (!response.ok) throw new Error('Job list request failed (' + response.status + ').');
+      var data = await response.json();
+      if (!Array.isArray(data.tasks) || !Number.isSafeInteger(data.total_count)) {
+        throw new Error('Job list response is malformed.');
+      }
+      state.taskList = offset === 0 ? data.tasks : state.taskList.concat(data.tasks);
+      state.taskListTotal = data.total_count;
+      state.taskListStatus = 'ready';
+    } catch (error) {
+      state.taskListStatus = 'error';
+      state.taskListError = error instanceof Error ? error.message : 'Job list request failed.';
+    }
+    updateView();
+  }
+
   var OPERATION_FIELDS = [
     'protocol_version', 'operation_id', 'task_id', 'command', 'request_sha256',
     'operation_state', 'source_status', 'source_lifecycle_version', 'target_status',
@@ -604,6 +815,19 @@
     var content = document.getElementById('phase-content');
     var panelTitle = document.getElementById('panel-title');
     var statusEl = document.getElementById('task-status');
+    var phaseStrip = document.getElementById('phase-strip');
+
+    phaseStrip.hidden = state.mode === 'list';
+
+    if (state.mode === 'list') {
+      panelTitle.textContent = 'Browse Jobs';
+      statusEl.textContent = 'ALL';
+      statusEl.className = 'status-badge status-open';
+      content.innerHTML = renderTaskBrowser();
+      renderDocuments(null);
+      bindTaskBrowser();
+      return;
+    }
 
     if (state.mode === 'create') {
       panelTitle.textContent = '&#128221; Post a New Task';
@@ -613,12 +837,14 @@
       state.currentPhase = 0;
       state.maxPhase = 0;
       renderPhaseStrip();
+      renderDocuments(null);
       bindCreateForm();
       return;
     }
 
     if (!state.task) {
       content.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-dim)">Loading task...</div>';
+      renderDocuments(null);
       return;
     }
 
@@ -641,6 +867,7 @@
     renderPhaseStrip();
     renderIntentRecovery();
     bindActionButtons();
+    renderDocuments(state.task);
   }
 
   // ── Phase navigation ───────────────────────────────────────
@@ -865,9 +1092,13 @@
       state.taskId = taskId;
       state.mode = 'view';
       state.pendingIntent = readIntent(taskId);
+      updateView();
       await refreshTaskData(taskId);
       await loadHistoricalEvents(taskId);
       connectTaskSSE(taskId);
+    } else if (params.get('view') === 'list') {
+      state.mode = 'list';
+      await loadTaskPage(0);
     } else {
       state.mode = 'create';
       await ATE.TaskPosting.ready();

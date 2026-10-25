@@ -398,9 +398,11 @@ class OperatorBidListResponse(BaseModel):
 class AssetItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
     asset_id: str
+    uploader_id: str
     filename: str
     content_type: str
     size_bytes: int
+    content_hash: str | None
     uploaded_at: str
 
 

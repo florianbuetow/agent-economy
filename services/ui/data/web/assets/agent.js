@@ -10,6 +10,7 @@
     { value: 'spec_quality', label: 'Spec Quality' },
     { value: 'delivery_quality', label: 'Delivery Quality' }
   ];
+  var TASK_PAGE_SIZE = 25;
 
   var state = {
     sortBy: 'total_earned'
@@ -73,7 +74,7 @@
       var color = ATE.agentColor(agent.agent_id);
       var metric = metricForSort(agent, sortBy);
       var rankClass = index === 0 ? 'lb-rank top' : 'lb-rank';
-      return '<div class="lb-row" data-agent-id="' + ATE.escapeHTML(agent.agent_id) + '">' +
+      return '<a class="lb-row" href="/agent.html?agent_id=' + encodeURIComponent(agent.agent_id) + '">' +
         '<div class="' + rankClass + '">' + (index + 1) + '</div>' +
         '<div class="lb-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + initials(agent.name) + '</div>' +
         '<div class="lb-info">' +
@@ -81,7 +82,7 @@
           '<div class="lb-stat">' + agent.stats.tasks_posted + ' posted · ' + agent.stats.tasks_completed_as_worker + ' completed</div>' +
         '</div>' +
         '<div class="lb-metric"><div class="amount">' + metric.amount + '</div><div class="label-sm">' + metric.label + '</div></div>' +
-      '</div>';
+      '</a>';
     }).join('');
   }
 
@@ -104,11 +105,6 @@
     var data = await fetchLeaderboard(state.sortBy);
     var agents = data && data.agents ? data.agents : [];
     rowsEl.innerHTML = renderLeaderboardRows(agents, state.sortBy);
-    rowsEl.querySelectorAll('.lb-row').forEach(function(row) {
-      row.addEventListener('click', function() {
-        window.location = '/agent.html?agent_id=' + encodeURIComponent(row.getAttribute('data-agent-id'));
-      });
-    });
   }
 
   // ── Profile view ─────────────────────────────────────────────
@@ -134,6 +130,25 @@
     }
   }
 
+  async function fetchAgentTasks(agentId, role, offset) {
+    var filter = role === 'posted' ? 'poster_id' : 'worker_id';
+    try {
+      var url = '/api/tasks?' + filter + '=' + encodeURIComponent(agentId) +
+        '&limit=' + TASK_PAGE_SIZE + '&offset=' + offset;
+      var resp = await fetch(url);
+      if (!resp.ok) return null;
+      var data = await resp.json();
+      if (!data || !Array.isArray(data.tasks) || !Number.isInteger(data.total_count) ||
+          data.total_count < offset + data.tasks.length) {
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.warn('[agent] fetchAgentTasks error:', e.message);
+      return null;
+    }
+  }
+
   function renderQualityRow(label, quality) {
     var total = quality.extremely_satisfied + quality.satisfied + quality.dissatisfied;
     var pctEs = total > 0 ? (quality.extremely_satisfied / total * 100) : 0;
@@ -150,18 +165,39 @@
     '</div>';
   }
 
-  function renderRecentTasks(tasks) {
+  function renderTaskLinks(tasks, role) {
     if (!tasks.length) {
-      return '<div class="lb-empty">No tasks yet.</div>';
+      return '<div class="lb-empty">No ' + role + ' jobs yet.</div>';
     }
     return tasks.map(function(t) {
       var badge = ATE.TASK_STATUS_BADGE[t.status] || { text: t.status.toUpperCase(), cls: 'status-open' };
-      return '<div class="list-row" data-task-id="' + ATE.escapeHTML(t.task_id) + '">' +
+      return '<a class="list-row" href="/task.html?task_id=' + encodeURIComponent(t.task_id) + '">' +
         '<span class="status-badge ' + badge.cls + '">' + badge.text + '</span>' +
         '<span class="lr-title">' + ATE.escapeHTML(t.title) + '</span>' +
-        '<span class="lr-meta">' + ATE.escapeHTML(t.role) + ' · ' + t.reward + ' ©</span>' +
-      '</div>';
+        '<span class="lr-meta">' + t.reward + ' ©</span>' +
+      '</a>';
     }).join('');
+  }
+
+  function renderTaskSection(role, page) {
+    var title = role === 'posted' ? 'Posted Jobs' : 'Worked Jobs';
+    var loaded = page.tasks.length;
+    var more = !page.error && loaded < page.total_count;
+    var count = page.error && loaded === 0 ? 'Unavailable' : loaded + ' of ' + page.total_count;
+    var taskList = loaded > 0 ? renderTaskLinks(page.tasks, role) :
+      page.error ? '' : renderTaskLinks(page.tasks, role);
+    var error = page.error ? '<div class="lb-empty task-load-error" role="status">' +
+      (loaded > 0 ? 'Could not load more jobs. Loaded jobs remain available.' : 'Job history unavailable.') +
+      '</div><button class="load-more" id="retry-' + role + '" type="button">Retry</button>' : '';
+    return '<div class="card task-history-card" id="' + role + '-history">' +
+      '<div class="card-header"><span class="card-label">' + title + '</span>' +
+      '<span class="task-count">' + count + '</span></div>' +
+      '<div class="card-body task-list" id="' + role + '-tasks" style="padding:0">' +
+        taskList +
+      '</div>' +
+      error +
+      (more ? '<button class="load-more" id="load-more-' + role + '" type="button">Load more ' + title.toLowerCase() + '</button>' : '') +
+    '</div>';
   }
 
   function renderRecentFeedback(feedback) {
@@ -179,12 +215,12 @@
     }).join('');
   }
 
-  function renderProfile(profile, earnings) {
+  function renderProfile(profile, earnings, posted, worked) {
     var color = ATE.agentColor(profile.agent_id);
     var stats = profile.stats;
     var earningsPoints = earnings ? earnings.data_points.map(function(p) { return p.cumulative; }) : [];
 
-    return '<div class="back-link" id="back-to-leaderboard">← Back to Leaderboard</div>' +
+    return '<a class="back-link" id="back-to-leaderboard" href="/agent.html">← Back to Leaderboard</a>' +
       '<div class="card">' +
         '<div class="profile-header">' +
           '<div class="profile-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + initials(profile.name) + '</div>' +
@@ -220,10 +256,8 @@
           renderQualityRow('Delivery Quality', stats.delivery_quality) +
         '</div>' +
       '</div>' +
-      '<div class="card">' +
-        '<div class="card-header"><span class="card-label">Recent Tasks</span></div>' +
-        '<div class="card-body" style="padding:0">' + renderRecentTasks(profile.recent_tasks) + '</div>' +
-      '</div>' +
+      renderTaskSection('posted', posted) +
+      renderTaskSection('worked', worked) +
       '<div class="card">' +
         '<div class="card-header"><span class="card-label">Recent Feedback</span></div>' +
         '<div class="card-body" style="padding:0">' + renderRecentFeedback(profile.recent_feedback) + '</div>' +
@@ -235,25 +269,43 @@
     var profile = await fetchProfile(agentId);
 
     if (!profile) {
-      content.innerHTML = '<div class="back-link" id="back-to-leaderboard">← Back to Leaderboard</div>' +
+      content.innerHTML = '<a class="back-link" id="back-to-leaderboard" href="/agent.html">← Back to Leaderboard</a>' +
         '<div class="card"><div class="card-body lb-empty">Agent not found.</div></div>';
-      document.getElementById('back-to-leaderboard').addEventListener('click', function() {
-        window.location = '/agent.html';
-      });
       return;
     }
 
-    var earnings = await fetchEarnings(agentId);
-    content.innerHTML = renderProfile(profile, earnings);
+    var results = await Promise.all([
+      fetchEarnings(agentId),
+      fetchAgentTasks(agentId, 'posted', 0),
+      fetchAgentTasks(agentId, 'worked', 0)
+    ]);
+    var earnings = results[0];
+    var taskPages = {
+      posted: results[1] ? { tasks: results[1].tasks, total_count: results[1].total_count, error: false } : { tasks: [], total_count: 0, error: true },
+      worked: results[2] ? { tasks: results[2].tasks, total_count: results[2].total_count, error: false } : { tasks: [], total_count: 0, error: true }
+    };
 
-    document.getElementById('back-to-leaderboard').addEventListener('click', function() {
-      window.location = '/agent.html';
-    });
-    content.querySelectorAll('.list-row[data-task-id]').forEach(function(row) {
-      row.addEventListener('click', function() {
-        window.location = '/task.html?task_id=' + encodeURIComponent(row.getAttribute('data-task-id'));
+    function render() {
+      content.innerHTML = renderProfile(profile, earnings, taskPages.posted, taskPages.worked);
+      ['posted', 'worked'].forEach(function(role) {
+        var button = document.getElementById('load-more-' + role) || document.getElementById('retry-' + role);
+        if (!button) return;
+        button.addEventListener('click', async function() {
+          button.disabled = true;
+          var next = await fetchAgentTasks(agentId, role, taskPages[role].tasks.length);
+          if (next) {
+            taskPages[role].tasks = taskPages[role].tasks.concat(next.tasks);
+            taskPages[role].total_count = next.total_count;
+            taskPages[role].error = false;
+          } else {
+            taskPages[role].error = true;
+          }
+          render();
+        });
       });
-    });
+    }
+
+    render();
   }
 
   // ── Bottom ticker ────────────────────────────────────────────

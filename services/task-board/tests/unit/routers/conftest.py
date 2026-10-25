@@ -57,9 +57,17 @@ CAROL_AGENT_ID = "a-carol-uuid"
 def _write_platform_agent_config(tmp_path: Path) -> Path:
     keys_dir = tmp_path / "agent-keys"
     provision_keypair("platform", keys_dir)
+    provision_keypair("operator", keys_dir)
     roster_path = tmp_path / "roster.yaml"
     roster_path.write_text(
-        yaml.safe_dump({"agents": {"platform": {"name": "Platform", "type": "platform"}}})
+        yaml.safe_dump(
+            {
+                "agents": {
+                    "platform": {"name": "Platform", "type": "platform"},
+                    "operator": {"name": "UI Operator", "type": "operator"},
+                }
+            }
+        )
     )
     agent_config_path = tmp_path / "agents.yaml"
     agent_config_path.write_text(

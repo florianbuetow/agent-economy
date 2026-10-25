@@ -34,6 +34,8 @@ router = APIRouter()
 async def get_task_list(
     task_board_reader: TaskBoardRead,
     status: str | None = Query(None),
+    poster_id: str | None = Query(None, min_length=1),
+    worker_id: str | None = Query(None, min_length=1),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ) -> JSONResponse:
@@ -48,7 +50,12 @@ async def get_task_list(
         )
 
     tasks_data, total_count = await tasks_service.get_task_list(
-        task_board_reader, status=status, limit=limit, offset=offset
+        task_board_reader,
+        status=status,
+        poster_id=poster_id,
+        worker_id=worker_id,
+        limit=limit,
+        offset=offset,
     )
 
     tasks = [
@@ -156,9 +163,11 @@ async def get_task_drilldown(
     assets = [
         AssetItem(
             asset_id=a["asset_id"],
+            uploader_id=a["uploader_id"],
             filename=a["filename"],
             content_type=a["content_type"],
             size_bytes=a["size_bytes"],
+            content_hash=a["content_hash"],
             uploaded_at=a["uploaded_at"],
         )
         for a in data["assets"]

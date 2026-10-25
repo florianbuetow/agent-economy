@@ -121,11 +121,16 @@ def _patch_dependencies(monkeypatch: pytest.MonkeyPatch, lock_path: Path) -> Non
     monkeypatch.setattr(lifespan_module, "setup_logging", lambda *_args: None)
     monkeypatch.setattr(lifespan_module, "GatewayRequestSigner", lambda *_args, **_kwargs: object())
     monkeypatch.setattr(lifespan_module, "AgentFactory", _Factory)
+    monkeypatch.setattr(lifespan_module, "load_operator_asset_authority", lambda _path: object())
     monkeypatch.setattr(lifespan_module, "IdentityClient", lambda **_kwargs: _Closable())
     monkeypatch.setattr(lifespan_module, "BankClient", lambda **_kwargs: _Closable())
     monkeypatch.setattr(lifespan_module, "TaskDbClient", lambda **_kwargs: _Store())
     monkeypatch.setattr(lifespan_module, "EscrowCoordinator", lambda **_kwargs: object())
-    monkeypatch.setattr(lifespan_module, "TokenValidator", lambda **_kwargs: object())
+    monkeypatch.setattr(
+        lifespan_module,
+        "TokenValidator",
+        lambda **_kwargs: SimpleNamespace(configure_operator_asset_authority=lambda _value: None),
+    )
     monkeypatch.setattr(lifespan_module, "DeadlineEvaluator", _DeadlineEvaluator)
     monkeypatch.setattr(
         lifespan_module, "AssetManager", lambda **_kwargs: SimpleNamespace(close=lambda: None)

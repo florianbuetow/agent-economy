@@ -104,6 +104,18 @@
   .task-detail-key { color: var(--text-dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
   .task-detail-val { font-weight: 600; text-align: right; }
 
+  /* ── Task browser ────────────────────────── */
+  .task-list-row {
+    display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+    border-bottom: 1px solid var(--border); color: inherit; text-decoration: none;
+  }
+  .task-list-row:hover, .task-list-row:focus { background: var(--bg-hover); }
+  .task-list-row:last-child { border-bottom: none; }
+  .task-list-title { flex: 1; font-size: 12px; font-weight: 700; }
+  .task-list-meta { font-size: 10px; color: var(--text-dim); }
+  .task-list-state { padding: 18px 14px; font-size: 10px; color: var(--text-dim); text-align: center; }
+  .task-list-more { padding: 12px 14px; text-align: center; }
+
   /* ── Bid list ────────────────────────────── */
   .bid-row {
     display: flex; align-items: center; padding: 10px 14px;
@@ -141,6 +153,24 @@
     padding: 12px 14px; font-size: 12px; line-height: 1.6;
     color: var(--text-mid); white-space: pre-wrap;
   }
+
+  /* ── Permanent document exchange ─────────── */
+  .documents-card { scroll-margin-top: 12px; }
+  .document-entry { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .document-entry:last-child { border-bottom: none; }
+  .document-title { font-size: 11px; font-weight: 700; color: var(--text); }
+  .document-meta { margin-top: 3px; font-size: 9px; color: var(--text-dim); }
+  .document-hash { margin-top: 6px; font-size: 9px; color: var(--text-dim); }
+  .document-hash code { display: block; margin-top: 4px; overflow-wrap: anywhere; color: var(--text-mid); }
+  .document-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .document-copy, .document-preview {
+    margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border-hi);
+    background: var(--bg); color: var(--text-mid); font-size: 11px;
+    line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .document-preview[hidden] { display: none; }
+  .document-preview.is-error { color: var(--red); }
+  .documents-empty { font-size: 10px; color: var(--text-dim); }
 
   /* ── Dispute panel ───────────────────────── */
   .dispute-panel {
@@ -275,6 +305,12 @@
     <div class="lifecycle-content" id="lifecycle-content">
       <!-- Phase 0: Create Task Form -->
       <div id="phase-content"></div>
+      <section class="card documents-card" id="documents" aria-labelledby="documents-title" hidden>
+        <div class="card-header">
+          <span class="card-label" id="documents-title">Documents</span>
+        </div>
+        <div class="card-body" id="documents-content"></div>
+      </section>
     </div>
   </div>
 

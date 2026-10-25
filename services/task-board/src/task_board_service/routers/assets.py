@@ -90,7 +90,7 @@ async def list_assets(task_id: str) -> dict[str, Any]:
 
 
 @router.get("/tasks/{task_id}/assets/{asset_id}")
-async def download_asset(task_id: str, asset_id: str) -> Response:
+async def download_asset(task_id: str, asset_id: str, request: Request) -> Response:
     """Download an asset file."""
     state = get_app_state()
     if state.asset_manager is None:
@@ -101,10 +101,18 @@ async def download_asset(task_id: str, asset_id: str) -> Response:
             details={},
         )
 
-    content, content_type, filename = await state.asset_manager.download_asset(
-        task_id,
-        asset_id,
-    )
+    token = extract_bearer_token(request.headers.get("authorization"), required=False)
+    if token is None:
+        content, content_type, filename = await state.asset_manager.download_asset(
+            task_id,
+            asset_id,
+        )
+    else:
+        content, content_type, filename = await state.asset_manager.download_asset_for_operator(
+            task_id,
+            asset_id,
+            token,
+        )
     return Response(
         content=content,
         media_type=content_type,

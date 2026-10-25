@@ -561,13 +561,46 @@ class AssetManager:
         return {"task_id": task_id, "assets": assets}
 
     async def download_asset(self, task_id: str, asset_id: str) -> tuple[bytes, str, str]:
-        """Download an asset through its authoritative relative storage key."""
+        """Download public nonterminal bytes through the authoritative storage key."""
+        return await self._download_asset(task_id, asset_id, allow_terminal=False)
+
+    async def download_asset_for_operator(
+        self,
+        task_id: str,
+        asset_id: str,
+        token: str,
+    ) -> tuple[bytes, str, str]:
+        """Download bytes after authenticating the configured read-only operator."""
+        payload = await self._token_validator.validate_operator_asset_token(
+            token,
+            expected_resource=f"GET /tasks/{task_id}/assets/{asset_id}",
+        )
+        if payload.get("task_id") != task_id or payload.get("asset_id") != asset_id:
+            raise ServiceError(
+                "invalid_payload",
+                "Asset token does not match the requested task and asset",
+                400,
+                {},
+            )
+        return await self._download_asset(task_id, asset_id, allow_terminal=True)
+
+    async def _download_asset(
+        self,
+        task_id: str,
+        asset_id: str,
+        *,
+        allow_terminal: bool,
+    ) -> tuple[bytes, str, str]:
+        """Read one task-bound asset with shared storage and integrity enforcement."""
         root_descriptor = self._borrow_root_descriptor()
         try:
             task = self._store.get_task(task_id)
             if task is None:
                 raise ServiceError("task_not_found", "Task not found", 404, {})
-            if task["status"] in {"approved", "ruled", "cancelled", "expired"}:
+            if (
+                task["status"] in {"approved", "ruled", "cancelled", "expired"}
+                and not allow_terminal
+            ):
                 raise ServiceError(
                     "artifact_unavailable",
                     "Artifact bytes are unavailable for terminal tasks",

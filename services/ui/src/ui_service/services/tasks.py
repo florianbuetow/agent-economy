@@ -153,7 +153,8 @@ async def _load_assets(db: aiosqlite.Connection, task_id: str) -> list[dict[str,
     """Load uploaded deliverable assets for a task."""
     asset_rows = await execute_fetchall(
         db,
-        "SELECT asset_id, filename, content_type, size_bytes, uploaded_at "
+        "SELECT asset_id, uploader_id, filename, content_type, size_bytes, "
+        "content_hash, uploaded_at "
         "FROM board_assets WHERE task_id = ? "
         "ORDER BY uploaded_at ASC",
         (task_id,),
@@ -161,10 +162,12 @@ async def _load_assets(db: aiosqlite.Connection, task_id: str) -> list[dict[str,
     return [
         {
             "asset_id": ar[0],
-            "filename": ar[1],
-            "content_type": ar[2],
-            "size_bytes": ar[3],
-            "uploaded_at": ar[4],
+            "uploader_id": ar[1],
+            "filename": ar[2],
+            "content_type": ar[3],
+            "size_bytes": ar[4],
+            "content_hash": ar[5],
+            "uploaded_at": ar[6],
         }
         for ar in asset_rows
     ]
@@ -396,9 +399,16 @@ async def get_uncontested_tasks(
 async def get_task_list(
     reader: TaskBoardReader,
     status: str | None,
+    poster_id: str | None,
+    worker_id: str | None,
     limit: int,
     offset: int,
 ) -> tuple[list[dict[str, Any]], int]:
     """Slice one coherent, ordered Task Board list snapshot."""
-    tasks = await list_authoritative_tasks(reader, status=status)
+    tasks = await list_authoritative_tasks(
+        reader,
+        status=status,
+        poster_id=poster_id,
+        worker_id=worker_id,
+    )
     return tasks[offset : offset + limit], len(tasks)

@@ -343,6 +343,12 @@
     display: inline-flex; gap: 24px; white-space: nowrap; padding-left: 100%;
     animation: ticker-scroll 60s linear infinite;
   }
+  .bottom-ticker:hover .bottom-ticker-track,
+  .bottom-ticker:focus-within .bottom-ticker-track,
+  .bottom-ticker:hover .ticker-track,
+  .bottom-ticker:focus-within .ticker-track {
+    animation-play-state: paused;
+  }
   .bt-item {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 10px; color: var(--text-mid);

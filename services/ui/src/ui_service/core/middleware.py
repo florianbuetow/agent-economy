@@ -66,7 +66,11 @@ class BrowserSecurityMiddleware:
 
         async def send_with_csp(message: Message) -> None:
             if message["type"] == "http.response.start":
-                headers = list(message.get("headers", []))
+                headers = [
+                    (name, value)
+                    for name, value in message.get("headers", [])
+                    if name.lower() != b"x-content-type-options"
+                ]
                 headers.append((b"content-security-policy", self.content_security_policy))
                 headers.append((b"x-content-type-options", b"nosniff"))
                 message = {**message, "headers": headers}

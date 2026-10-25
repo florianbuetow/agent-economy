@@ -1,0 +1,56 @@
+{
+  "command": [
+    "/Users/flo/.local/share/mise/shims/just",
+    "ci-quiet"
+  ],
+  "exit_code": 0,
+  "started_at_utc": "2026-10-25T03:26:43.787994+00:00",
+  "finished_at_utc": "2026-10-25T04:17:59.353349+00:00",
+  "source_files_unchanged": 1362,
+  "source_freeze_sha256": "838818cdadc7bd6fcde4e2baf97947c1842f306aa8b5f898bfb674dff87d557b",
+  "tests": {
+    "ui_integration": 300,
+    "agents_passed": 892,
+    "existing_provider_key_skips": 3,
+    "tools": 331,
+    "cross_service_runtime": 478,
+    "ui_browser": 319,
+    "live_e2e": 113
+  },
+  "focused_checks": {
+    "shutdown": 41,
+    "chart_refresh": 2,
+    "frontend_cache_and_containment": 10,
+    "task_board_integration": 113
+  },
+  "live_verification": {
+    "origin": "http://localhost:8008",
+    "poster_to_posted_jobs_to_completed_task": true,
+    "worker_to_worked_jobs_to_task": true,
+    "event_to_completed_document_preview": true,
+    "completed_demo_files": [
+      {
+        "name": "login-page.html",
+        "bytes": 416,
+        "status": "approved"
+      },
+      {
+        "name": "api-spec.md",
+        "bytes": 244,
+        "status": "ruled"
+      }
+    ],
+    "download_sizes_and_sha256_verified": true,
+    "operator_download_status": 200,
+    "unsigned_terminal_status": 410,
+    "native_shutdown_without_mount_warnings": true,
+    "owned_reload_supervisor_probe": true,
+    "healthy_services_after_ci": 7
+  },
+  "earlier_gate_repairs": [
+    "Use shared YAML loader instead of an undeclared transitive import",
+    "Explicit public and operator download methods",
+    "Add configured operator to isolated test startup fixtures"
+  ],
+  "evidence_log": "root-ci-r3.log"
+}

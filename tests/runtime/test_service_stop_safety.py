@@ -12,10 +12,10 @@ import pytest
 
 import scripts.stop_agent as stop_agent_module
 from scripts.stop_agent import (
-    ProcessIdentity,
     ProcessAbsentError,
+    ProcessIdentity,
     ServiceStopTarget,
-    listener_pids,
+    _lsof_listener_pids,
     select_service_processes,
     stop_service,
 )
@@ -262,7 +262,7 @@ def test_listener_parser_accepts_realistic_process_and_descriptor_fields(
         ),
     )
 
-    assert listener_pids(8001) == (71040,)
+    assert _lsof_listener_pids(8001) == (71040,)
 
 
 def test_listener_parser_accepts_valid_evidence_and_surfaces_unrelated_warning(
@@ -280,7 +280,7 @@ def test_listener_parser_accepts_valid_evidence_and_surfaces_unrelated_warning(
         ),
     )
 
-    assert listener_pids(8001) == (71040,)
+    assert _lsof_listener_pids(8001) == (71040,)
     assert "TimeMachine" in capsys.readouterr().err
 
 
@@ -301,7 +301,7 @@ def test_listener_parser_accepts_clean_empty_result_without_socket_probe(
         ),
     )
 
-    assert listener_pids(8001) == ()
+    assert _lsof_listener_pids(8001) == ()
 
 
 @pytest.mark.parametrize(
@@ -341,7 +341,7 @@ def test_listener_error_refuses_live_or_indeterminate_port(
     )
 
     with pytest.raises(RuntimeError, match=expected):
-        listener_pids(8001)
+        _lsof_listener_pids(8001)
 
 
 def test_listener_error_accepts_independently_proven_connection_refusal(
@@ -373,7 +373,7 @@ def test_listener_error_accepts_independently_proven_connection_refusal(
         "scripts.stop_agent.socket.socket", lambda *_args, **_kwargs: RefusedSocket()
     )
 
-    assert listener_pids(8001) == ()
+    assert _lsof_listener_pids(8001) == ()
 
 
 def test_live_process_with_unreadable_cwd_is_not_reported_as_absent(
@@ -384,8 +384,8 @@ def test_live_process_with_unreadable_cwd_is_not_reported_as_absent(
         "scripts.stop_agent._darwin_bsd_identity", lambda _pid: kernel_identity
     )
     monkeypatch.setattr(
-        "scripts.stop_agent.subprocess.run",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=1, stdout="", stderr=""),
+        "scripts.stop_agent._darwin_cwd",
+        lambda _pid: (_ for _ in ()).throw(RuntimeError("cwd unavailable")),
     )
 
     with pytest.raises(RuntimeError, match="complete metadata for live PID"):

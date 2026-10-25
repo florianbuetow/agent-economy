@@ -6,7 +6,6 @@ import os
 import signal
 import struct
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
@@ -260,13 +259,7 @@ def test_darwin_inspection_rejects_identity_change_during_snapshot(
         "_darwin_procargs",
         lambda _pid: ("/resolved/python", ("python", "-m", "task_feeder"), {}),
     )
-    monkeypatch.setattr(
-        stop_agent_module.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(
-            returncode=0, stdout=f"p99\nn{tmp_path}\n"
-        ),
-    )
+    monkeypatch.setattr(stop_agent_module, "_darwin_cwd", lambda _pid: tmp_path)
 
     with pytest.raises(ProcessLookupError):
         stop_agent_module._darwin_process_identity(99)
