@@ -17,6 +17,7 @@ from service_commons.maintenance_lock import MaintenanceLockMode, hold_maintenan
 from task_board_service.config import get_config_path, get_settings, resolve_recovery_path
 from task_board_service.core.state import init_app_state
 from task_board_service.logging import get_logger, setup_logging
+from task_board_service.operator_authority import load_operator_asset_authority
 from task_board_service.services.asset_manager import AssetManager
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
 from task_board_service.services.escrow_coordinator import EscrowCoordinator
@@ -87,6 +88,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 config_path = Path(get_config_path()).parent / config_path
 
             factory = AgentFactory(config_path=config_path)
+            operator_asset_authority = load_operator_asset_authority(config_path)
             platform_agent = factory.platform_agent()
             await platform_agent.register()
             if platform_agent.agent_id is None:
@@ -129,6 +131,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 platform_agent=platform_agent,
                 identity_client=identity_client,
             )
+            token_validator.configure_operator_asset_authority(operator_asset_authority)
             state.token_validator = token_validator
             if settings.deadline_evaluation is None:
                 msg = "deadline_evaluation configuration is required"

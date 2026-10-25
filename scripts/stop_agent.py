@@ -25,6 +25,8 @@ _CONFIG_ENVIRONMENT_VARIABLE = "AGENT_CONFIG_PATH"
 _KERN_PROCARGS2 = 49
 _CTL_KERN = 1
 _PROC_PIDTBSDINFO = 3
+_PROC_PIDVNODEPATHINFO = 9
+_MAXPATHLEN = 1024
 
 
 class ProcessAbsentError(ProcessLookupError):
@@ -55,6 +57,59 @@ class _DarwinBsdInfo(ctypes.Structure):
         ("nice", ctypes.c_int32),
         ("start_seconds", ctypes.c_uint64),
         ("start_microseconds", ctypes.c_uint64),
+    )
+
+
+class _DarwinVinfoStat(ctypes.Structure):
+    _fields_ = (
+        ("device", ctypes.c_uint32),
+        ("mode", ctypes.c_uint16),
+        ("link_count", ctypes.c_uint16),
+        ("inode", ctypes.c_uint64),
+        ("uid", ctypes.c_uint32),
+        ("gid", ctypes.c_uint32),
+        ("access_seconds", ctypes.c_int64),
+        ("access_nanoseconds", ctypes.c_int64),
+        ("modified_seconds", ctypes.c_int64),
+        ("modified_nanoseconds", ctypes.c_int64),
+        ("changed_seconds", ctypes.c_int64),
+        ("changed_nanoseconds", ctypes.c_int64),
+        ("birth_seconds", ctypes.c_int64),
+        ("birth_nanoseconds", ctypes.c_int64),
+        ("size", ctypes.c_int64),
+        ("blocks", ctypes.c_int64),
+        ("block_size", ctypes.c_int32),
+        ("flags", ctypes.c_uint32),
+        ("generation", ctypes.c_uint32),
+        ("raw_device", ctypes.c_uint32),
+        ("reserved", ctypes.c_int64 * 2),
+    )
+
+
+class _DarwinFsid(ctypes.Structure):
+    _fields_ = (("value", ctypes.c_int32 * 2),)
+
+
+class _DarwinVnodeInfo(ctypes.Structure):
+    _fields_ = (
+        ("stat", _DarwinVinfoStat),
+        ("vnode_type", ctypes.c_int32),
+        ("padding", ctypes.c_int32),
+        ("filesystem_id", _DarwinFsid),
+    )
+
+
+class _DarwinVnodeInfoPath(ctypes.Structure):
+    _fields_ = (
+        ("vnode", _DarwinVnodeInfo),
+        ("path", ctypes.c_char * _MAXPATHLEN),
+    )
+
+
+class _DarwinVnodePathInfo(ctypes.Structure):
+    _fields_ = (
+        ("current_directory", _DarwinVnodeInfoPath),
+        ("root_directory", _DarwinVnodeInfoPath),
     )
 
 
@@ -298,7 +353,7 @@ def _darwin_procargs(pid: int) -> tuple[str, tuple[str, ...], dict[str, str]]:
     return _parse_darwin_procargs_buffer(bytes(buffer.raw[: size.value]), pid)
 
 
-def _darwin_bsd_identity(pid: int) -> tuple[int, int, str]:
+def _darwin_proc_pidinfo(pid: int, flavor: int, process_info: ctypes.Structure) -> None:
     library_name = ctypes.util.find_library("proc")
     if library_name is None:
         raise RuntimeError("Cannot locate the host process library")
@@ -312,11 +367,11 @@ def _darwin_bsd_identity(pid: int) -> tuple[int, int, str]:
         ctypes.c_int,
     )
     proc_pidinfo.restype = ctypes.c_int
-    process_info = _DarwinBsdInfo()
     expected_size = ctypes.sizeof(process_info)
+    ctypes.set_errno(0)
     returned_size = proc_pidinfo(
         pid,
-        _PROC_PIDTBSDINFO,
+        flavor,
         0,
         ctypes.byref(process_info),
         expected_size,
@@ -327,27 +382,32 @@ def _darwin_bsd_identity(pid: int) -> tuple[int, int, str]:
             raise ProcessAbsentError(pid)
         if returned_size == 0 and error_number != 0:
             raise OSError(error_number, os.strerror(error_number), pid)
-        raise RuntimeError(f"Host returned incomplete start identity for PID {pid}")
+        raise RuntimeError(f"Host returned incomplete process metadata for PID {pid}")
+
+
+def _darwin_bsd_identity(pid: int) -> tuple[int, int, str]:
+    process_info = _DarwinBsdInfo()
+    _darwin_proc_pidinfo(pid, _PROC_PIDTBSDINFO, process_info)
     if process_info.pid != pid:
         raise RuntimeError(f"Host returned mismatched identity for PID {pid}")
     start_id = f"{process_info.start_seconds}:{process_info.start_microseconds}"
     return process_info.uid, process_info.ppid, start_id
 
 
+def _darwin_cwd(pid: int) -> Path:
+    path_info = _DarwinVnodePathInfo()
+    _darwin_proc_pidinfo(pid, _PROC_PIDVNODEPATHINFO, path_info)
+    raw_path = bytes(path_info.current_directory.path)
+    if not raw_path:
+        raise RuntimeError(f"Host returned an empty cwd for PID {pid}")
+    path_text = raw_path.decode("utf-8", errors="surrogateescape")
+    return Path(path_text).resolve(strict=True)
+
+
 def _darwin_process_identity(pid: int) -> ProcessIdentity:
     initial_identity = _darwin_bsd_identity(pid)
     try:
-        cwd_facts = subprocess.run(
-            ["/usr/sbin/lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        cwd_lines = tuple(
-            line[1:] for line in cwd_facts.stdout.splitlines() if line.startswith("n")
-        )
-        if cwd_facts.returncode != 0 or len(cwd_lines) != 1:
-            raise RuntimeError(f"Cannot prove cwd for PID {pid}")
+        cwd = _darwin_cwd(pid)
         executable_text, argv, environment = _darwin_procargs(pid)
     except ProcessAbsentError:
         raise
@@ -370,7 +430,7 @@ def _darwin_process_identity(pid: int) -> ProcessIdentity:
         ppid=ppid,
         uid=uid,
         start_id=start_id,
-        cwd=Path(cwd_lines[0]).resolve(strict=True),
+        cwd=cwd,
         executable=Path(executable_text).resolve(strict=True),
         argv=argv,
         environment=environment,
@@ -704,8 +764,8 @@ def _loopback_refusal(port: int) -> bool:
     return True
 
 
-def listener_pids(port: int) -> tuple[int, ...]:
-    """Return the host-reported listener PIDs for one exact TCP port."""
+def _lsof_listener_pids(port: int) -> tuple[int, ...]:
+    """Return listener PIDs through lsof on hosts without Darwin netstat fields."""
 
     lsof = shutil.which("lsof")
     if lsof is None:
@@ -731,6 +791,78 @@ def listener_pids(port: int) -> tuple[int, ...]:
     raise RuntimeError(f"Cannot inspect TCP port {port} listeners")
 
 
+def _parse_darwin_tcp_listeners(output: str, port: int) -> tuple[int, ...]:
+    """Parse matching LISTEN records from macOS netstat's verbose TCP table."""
+
+    lines = output.splitlines()
+    title_present = "Active Internet connections (including servers)" in lines
+    header_present = any(
+        line.startswith("Proto Recv-Q Send-Q") and "process:pid" in line
+        for line in lines
+    )
+    if not title_present or not header_present:
+        raise RuntimeError(
+            f"Host returned unrecognized Darwin TCP table for port {port}"
+        )
+    row_prefix = re.compile(
+        r"^(?P<protocol>tcp[46])\s+\d+\s+\d+\s+"
+        r"(?P<local>\S+)\s+\S+\s+(?P<state>\S+)\s+"
+    )
+    row_suffix = re.compile(r"^\d+\s+\d+\s+\d+\s+\d+\s+.*:(?P<pid>\d+)\s+\S+")
+    pids: list[int] = []
+    for line in lines:
+        prefix = row_prefix.match(line)
+        if prefix is None:
+            if (
+                line.startswith(("tcp4", "tcp6"))
+                and f".{port}" in line
+                and "LISTEN" in line
+            ):
+                raise RuntimeError(
+                    f"Host returned malformed Darwin TCP listener for port {port}"
+                )
+            continue
+        if prefix.group("state") != "LISTEN":
+            continue
+        local_address = prefix.group("local")
+        separator, local_port = local_address.rpartition(".")[1:]
+        if not separator or not local_port.isdigit() or int(local_port) != port:
+            continue
+        suffix = row_suffix.match(line[prefix.end() :])
+        if suffix is None:
+            raise RuntimeError(
+                f"Host returned malformed Darwin TCP listener for port {port}"
+            )
+        pid = int(suffix.group("pid"))
+        if pid == 0:
+            raise RuntimeError(f"Darwin TCP listener for port {port} reported PID 0")
+        if pid not in pids:
+            pids.append(pid)
+    return tuple(pids)
+
+
+def _darwin_listener_pids(port: int) -> tuple[int, ...]:
+    listing = subprocess.run(
+        ["/usr/sbin/netstat", "-anv", "-p", "tcp"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if listing.returncode != 0 or listing.stderr.strip():
+        raise RuntimeError(f"Cannot inspect Darwin TCP socket table for port {port}")
+    return _parse_darwin_tcp_listeners(listing.stdout, port)
+
+
+def listener_pids(port: int) -> tuple[int, ...]:
+    """Return the host-reported listener PIDs for one exact TCP port."""
+
+    if sys.platform == "darwin":
+        return _darwin_listener_pids(port)
+    if sys.platform == "linux":
+        return _lsof_listener_pids(port)
+    raise RuntimeError(f"Unsupported host platform: {sys.platform}")
+
+
 def capture_listener_processes(pids: Sequence[int]) -> tuple[ProcessIdentity, ...]:
     """Capture every initially reported listener or fail closed on a race."""
 
@@ -747,6 +879,62 @@ def capture_listener_processes(pids: Sequence[int]) -> tuple[ProcessIdentity, ..
                 f"Cannot safely inspect listener PID {pid}: {error}"
             ) from error
     return tuple(identities)
+
+
+def capture_service_processes(
+    pids: Sequence[int],
+    target: ServiceStopTarget,
+    *,
+    inspect_process: Callable[[int], ProcessIdentity],
+) -> tuple[ProcessIdentity, ...]:
+    """Capture listeners and recover only their exact direct reload supervisor."""
+
+    listeners: list[ProcessIdentity] = []
+    for pid in pids:
+        try:
+            listeners.append(inspect_process(pid))
+        except ProcessAbsentError as error:
+            raise RuntimeError(
+                f"TCP listener PID {pid} changed during ownership inspection"
+            ) from error
+        except (OSError, RuntimeError) as error:
+            raise RuntimeError(
+                f"Cannot safely inspect listener PID {pid}: {error}"
+            ) from error
+    if not listeners:
+        raise RuntimeError("No service listener identities were captured")
+    if any(
+        _service_invocation_kind(identity, target) is not None for identity in listeners
+    ):
+        return tuple(listeners)
+
+    parent_pids: set[int] = set()
+    for listener in listeners:
+        if not _matches_service_family(listener, target):
+            raise RuntimeError(
+                f"Listener PID {listener.pid} does not match the selected service family"
+            )
+        parent_pids.add(listener.ppid)
+    if len(parent_pids) != 1:
+        raise RuntimeError("Reload listeners do not share one direct supervisor")
+    parent_pid = next(iter(parent_pids))
+    try:
+        parent = inspect_process(parent_pid)
+    except ProcessAbsentError as error:
+        raise RuntimeError(
+            "Reload supervisor exited during ownership inspection"
+        ) from error
+    except (OSError, RuntimeError) as error:
+        raise RuntimeError(
+            f"Cannot safely inspect reload supervisor: {error}"
+        ) from error
+    if parent.pid != parent_pid or _service_invocation_kind(parent, target) != "reload":
+        raise RuntimeError("Listener parent is not the exact reload supervisor")
+    if any(listener.ppid != parent.pid for listener in listeners):
+        raise RuntimeError(
+            "Reload listener parentage changed during ownership inspection"
+        )
+    return (parent, *listeners)
 
 
 def discover_processes(target: StopTarget) -> tuple[ProcessIdentity, ...]:
@@ -831,7 +1019,9 @@ def main(arguments: Sequence[str]) -> int:
             )
             requested = stop_service(
                 service_target,
-                captured=capture_listener_processes(pids),
+                captured=capture_service_processes(
+                    pids, service_target, inspect_process=inspect_process
+                ),
                 timeout_seconds=options.timeout_seconds,
                 inspect_process=inspect_process,
                 send_signal=os.kill,

@@ -7,6 +7,11 @@
 <link rel="stylesheet" href="/assets/style.css">
 <style>
 /* Agent-page-only styles */
+  .topnav-brand, .topnav-link, .bt-item { text-decoration: none; }
+  .topnav-brand:focus-visible, .topnav-link:focus-visible, .bt-item:focus-visible {
+    outline: 1px solid var(--cyan); outline-offset: 3px;
+  }
+  .bt-item:hover { color: var(--text); }
   body { display: flex; flex-direction: column; min-height: 100vh; }
   .page-wrap { max-width: 1100px; margin: 0 auto; padding: 24px; width: 100%; flex: 1; }
 
@@ -36,8 +41,10 @@
   .lb-row {
     display: flex; align-items: center; padding: 12px 14px;
     border-bottom: 1px solid var(--border); transition: background .15s; cursor: pointer;
+    color: inherit; text-decoration: none;
   }
   .lb-row:hover { background: var(--bg-hover); }
+  .lb-row:focus-visible { background: var(--bg-hover); outline: 1px solid var(--cyan); outline-offset: -1px; }
   .lb-row:last-child { border-bottom: none; }
   .lb-rank { width: 26px; font-size: 13px; font-weight: 800; color: var(--text-dim); text-align: center; flex-shrink: 0; }
   .lb-rank.top { color: var(--yellow); }
@@ -89,9 +96,10 @@
   .earnings-figure .label-sm { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
 
   /* ── Recent lists ─────────────────────────────────────────── */
-  .list-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .list-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 11px; color: inherit; text-decoration: none; }
   .list-row:last-child { border-bottom: none; }
   .list-row:hover { background: var(--bg-hover); cursor: pointer; }
+  .list-row:focus-visible { background: var(--bg-hover); outline: 1px solid var(--cyan); outline-offset: -1px; }
   .list-row .lr-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .list-row .lr-meta { color: var(--text-dim); font-size: 10px; flex-shrink: 0; }
   .feedback-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 11px; }
@@ -99,24 +107,28 @@
   .feedback-from { font-weight: 700; width: 90px; flex-shrink: 0; }
   .feedback-rating { font-size: 10px; letter-spacing: .5px; text-transform: uppercase; flex-shrink: 0; }
   .feedback-comment { color: var(--text-dim); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .back-link { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--cyan); cursor: pointer; margin-bottom: 12px; display: inline-block; }
+  .back-link { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--cyan); cursor: pointer; margin-bottom: 12px; display: inline-block; text-decoration: none; }
+  .back-link:hover, .back-link:focus-visible { text-decoration: underline; }
+  .task-count { color: var(--text-dim); font-size: 10px; }
+  .load-more { display: block; width: 100%; padding: 9px 14px; border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--cyan); font: 600 10px var(--mono); letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+  .load-more:hover, .load-more:focus-visible { background: var(--bg-hover); outline: none; color: var(--text); }
 </style>
 </head>
 <body>
 
 <!-- ═══ TOP NAV ════════════════════════════════════════════════ -->
 <nav class="topnav">
-  <div class="topnav-brand" data-nav="/" style="cursor:pointer">
+  <a class="topnav-brand" href="/" aria-label="Agent Task Economy home">
     <span class="topnav-logo">ATE</span>
     <span class="topnav-sep"></span>
     <span class="topnav-sub">Agent Task Economy</span>
-  </div>
+  </a>
   <div class="topnav-links">
-    <span class="topnav-link" data-nav="/">Home</span>
-    <span class="topnav-link" data-nav="/observatory.html">Observatory</span>
-    <span class="topnav-link" data-nav="/task.html">Task Lifecycle</span>
-    <span class="topnav-link" data-nav="/quarterly-report.html">Quarterly Report</span>
-    <span class="topnav-link active">Agents</span>
+    <a class="topnav-link" href="/">Home</a>
+    <a class="topnav-link" href="/observatory.html">Observatory</a>
+    <a class="topnav-link" href="/task.html">Task Lifecycle</a>
+    <a class="topnav-link" href="/quarterly-report.html">Quarterly Report</a>
+    <a class="topnav-link active" href="/agent.html" aria-current="page">Agents</a>
   </div>
 </nav>
 

@@ -382,9 +382,18 @@ def _write_agent_config(runtime_dir: Path) -> Path:
     keys_dir = runtime_dir / "agent-keys"
     if not (keys_dir / "platform.key").exists():
         provision_keypair("platform", keys_dir)
+    if not (keys_dir / "operator.pub").exists():
+        provision_keypair("operator", keys_dir)
     roster_path = runtime_dir / "roster.yaml"
     roster_path.write_text(
-        yaml.safe_dump({"agents": {"platform": {"name": "Platform", "type": "platform"}}})
+        yaml.safe_dump(
+            {
+                "agents": {
+                    "platform": {"name": "Platform", "type": "platform"},
+                    "operator": {"name": "UI Operator", "type": "operator"},
+                }
+            }
+        )
     )
     agent_config_path = runtime_dir / "agents.yaml"
     agent_config_path.write_text(

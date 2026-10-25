@@ -147,6 +147,7 @@ need an initialized operator.
 |---|---|---|---|
 | `GET` | `/api/proxy/browser-config` | — | Returns required `csrf_header_name` and `csrf_header_value`; neither is secret. |
 | `GET` | `/api/proxy/identity` | — | Returns `{"agent_id": "<operator's agent_id>"}`. `503 user_agent_not_registered` if the UserAgent has no `agent_id` yet. |
+| `GET` | `/api/proxy/tasks/{task_id}/assets/{asset_id}` | — | Signs an exact Task Board asset read as the configured operator. Returns retained file bytes, including completed-task files, as an attachment with private/no-store caching and nosniff. Preserves upstream missing/unavailable errors. The existing loopback/origin proxy admission applies. |
 | `GET` | `/api/proxy/tasks/{task_id}/bids` | — | Delegates to the operator's signed public `UserAgent.list_bids` contract. Task Board authorizes poster access to open bids; preserve its 403 rejection. Return canonical amounts and enrich authorized rows with public bidder identity and visible quality. Responses are `Cache-Control: private, no-store`. |
 | `POST` | `/api/proxy/task-postings/prepare` | `{title, spec, reward, bidding_deadline_seconds, acceptance_window_seconds, execution_deadline_seconds, review_deadline_seconds}` | Allocates and returns a complete immutable posting record without transport or economic effect. |
 | `POST` | `/api/proxy/task-postings/{operation_id}/submit` | Complete prepared posting record | Validates the saved record and submits its exact intent. Preserves native published `201`, awaiting-lock `202`, and blocked-integrity `409` outcomes. |
@@ -253,10 +254,17 @@ Query param: `window` (only `"24h"` is valid today — `400 invalid_parameter` o
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/tasks` | Paginated, filterable by `status` (must be a canonical lowercase status — `400 invalid_status` otherwise). |
+| `GET` | `/api/tasks` | Paginated with `limit`/`offset`, filterable by exact `poster_id`, `worker_id`, and `status` (canonical lowercase status — `400 invalid_status` otherwise). Filters apply before pagination and `total_count`. |
 | `GET` | `/api/tasks/-/competitive` | Open (or `status`-filtered) tasks ranked by bid count, `limit` 1–20. |
 | `GET` | `/api/tasks/-/uncontested` | Open tasks with zero bids older than `min_age_minutes`. |
 | `GET` | `/api/tasks/{task_id}` | Actor-independent drilldown: poster/worker, deadlines, timestamps, aggregate `bid_count`, status-permitted bids, assets, visible feedback and dispute. Open tasks expose no bid entries; after the open phase, bids include canonical integer `amount`, public bidder identity and visible quality. `404 task_not_found`. |
+
+Asset metadata includes `asset_id`, `uploader_id`, `filename`, `content_type`,
+`size_bytes`, `content_hash`, and `uploaded_at`. The task page keeps a Documents
+section available throughout the lifecycle, including completion. Text previews
+render file bytes as inert text; downloads use the operator proxy. Agent profiles
+provide paginated Posted Jobs and Worked Jobs links. `/task.html?view=list`
+provides a task browser; `/task.html?task_id=...#documents` opens a task's documents.
 
 The public bid count is independent of permission to read bid details. An observer sees the Bid
 phase and a sealed-count message when offers exist, without bidder identities, amounts or private

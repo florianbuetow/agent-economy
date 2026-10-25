@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 from typing import TYPE_CHECKING
 
 import pytest
@@ -36,6 +37,7 @@ async def test_lifespan_closes_concrete_asset_manager_before_later_close_failure
     monkeypatch.setattr(lifespan_module, "AssetManager", AssetManager)
     monkeypatch.setattr(lifespan_module, "TaskManager", _RaisingTaskManager)
 
+    gc.collect()
     close_calls: list[AssetManager] = []
     original_close = AssetManager.close
 

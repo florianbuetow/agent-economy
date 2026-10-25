@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import base64
 import hashlib
-from typing import TYPE_CHECKING, Any, Literal, NoReturn, cast
+import re
+from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, cast
+from urllib.parse import quote
 
 import httpx
 from service_auth import TaskBoardCommandContractError, TaskBoardCommandResponse, public_key_to_b64
@@ -17,6 +19,35 @@ from ui_service.core.state import get_app_state
 
 if TYPE_CHECKING:
     from service_auth import UserAgent
+
+
+class _AuthHeader(Protocol):
+    def __call__(
+        self,
+        payload: dict[str, object],
+        *,
+        audience: str,
+        resource: str,
+    ) -> dict[str, str]: ...
+
+
+class _RawRequest(Protocol):
+    async def __call__(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: dict[str, str],
+    ) -> httpx.Response: ...
+
+
+class _OperatorAssetTransport:
+    """Typed local bridge to the inherited UserAgent signing and raw-read methods."""
+
+    def __init__(self, agent: UserAgent) -> None:
+        self.auth_header: _AuthHeader = agent.__getattribute__("_auth_header")
+        self.request_raw: _RawRequest = agent.__getattribute__("_request_raw")
+
 
 _OPERATION_FIELDS = {
     "protocol_version",
@@ -37,6 +68,10 @@ _OPERATION_FIELDS = {
     "event_id",
     "result",
 }
+_ATTACHMENT_DISPOSITION = re.compile(
+    r'^attachment; filename="(?:[^"\\\x00-\x1f\x7f]|\\[\x20-\x7e])*"; '
+    r"filename\*=UTF-8''[!#$&+\-.^_`|~%0-9A-Za-z]+$"
+)
 
 
 def _get_user_agent() -> UserAgent:
@@ -272,6 +307,45 @@ async def get_identity() -> str:
             {},
         )
     return agent_id
+
+
+async def download_asset(task_id: str, asset_id: str) -> httpx.Response:
+    """Fetch exact asset bytes through a configured-operator signed Task Board read."""
+    agent = _get_user_agent()
+    transport = _OperatorAssetTransport(agent)
+    resource = f"GET /tasks/{task_id}/assets/{asset_id}"
+    encoded_task_id = quote(task_id, safe="")
+    encoded_asset_id = quote(asset_id, safe="")
+    url = f"{agent.config.task_board_url}/tasks/{encoded_task_id}/assets/{encoded_asset_id}"
+    headers = transport.auth_header(
+        {"action": "download_asset", "task_id": task_id, "asset_id": asset_id},
+        audience="task-board",
+        resource=resource,
+    )
+    try:
+        response = await transport.request_raw("GET", url, headers=headers)
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        _raise_task_board_error(exc, "asset_download_failed")
+    except Exception as exc:
+        _request_failed("asset_download_failed", exc)
+    required_headers = ("content-type", "content-disposition")
+    if any(not response.headers.get(name) for name in required_headers):
+        raise ServiceError(
+            "asset_download_failed",
+            "Task Board returned malformed asset headers",
+            502,
+            {},
+        )
+    disposition = response.headers["content-disposition"]
+    if _ATTACHMENT_DISPOSITION.fullmatch(disposition) is None:
+        raise ServiceError(
+            "asset_download_failed",
+            "Task Board returned an unsafe asset filename header",
+            502,
+            {},
+        )
+    return response
 
 
 def _posting_scope(agent: UserAgent) -> dict[str, object]:

@@ -895,10 +895,18 @@ List all assets for a task.
 Download an asset file.
 
 Public bytes are available only while the authoritative task read is nonterminal.
-Reads observing `approved`, `ruled`, `cancelled` or `expired` return
-`410 artifact_unavailable`; listing and stored evidence remain intact. The
-current status check is preparatory: the atomic Gateway grant and dedicated
-Court evidence route remain open MP-09 work.
+Unsigned reads observing `approved`, `ruled`, `cancelled` or `expired` return
+`410 artifact_unavailable`; listing and stored evidence remain intact.
+
+The configured human operator may inspect retained terminal assets using a Bearer
+JWS with action `download_asset`, exact `task_id` and `asset_id`, audience
+`task-board`, and resource `GET /tasks/{task_id}/assets/{asset_id}`. Task Board
+verifies the signature and lifetime against the public key of the unique roster
+entry with `type: operator`, and binds its signer ID to that public key through
+Identity. This read-only authority applies across tasks; it grants no economic
+mutation authority. Other signers are rejected. File size/hash and task binding
+checks remain mandatory. Atomic Gateway grants, archive handling, and the
+dedicated Court evidence route remain separate MP-09 work.
 
 **Response (200 OK):**
 
@@ -924,7 +932,9 @@ X-Content-Type-Options: nosniff
 | 404    | `task_not_found`  | No task with this `task_id` |
 | 404    | `asset_not_found` | No asset with this `asset_id` for this task |
 | 409    | `artifact_integrity_blocked` | Stored file size or SHA-256 does not match its recorded metadata |
-| 410    | `artifact_unavailable` | The task is approved, ruled, cancelled or expired |
+| 410    | `artifact_unavailable` | Unsigned request for an approved, ruled, cancelled or expired task |
+| 403    | `forbidden` | Signed request is not from the configured operator identity |
+| 400    | `invalid_payload` | Authenticated action, route, task or asset binding does not match |
 
 ---
 

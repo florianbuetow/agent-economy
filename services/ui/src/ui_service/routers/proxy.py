@@ -1,7 +1,7 @@
 """Proxy route handlers — task lifecycle via UserAgent."""
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from ui_service.config import get_settings
 from ui_service.core.deps import DbConn
@@ -35,6 +35,21 @@ async def get_identity() -> ProxyIdentityResponse:
     """Return the UserAgent's agent_id."""
     agent_id = await proxy_service.get_identity()
     return ProxyIdentityResponse(agent_id=agent_id)
+
+
+@router.get("/proxy/tasks/{task_id}/assets/{asset_id}")
+async def download_asset(task_id: str, asset_id: str) -> Response:
+    """Return exact retained bytes through the configured operator authority."""
+    upstream = await proxy_service.download_asset(task_id=task_id, asset_id=asset_id)
+    return Response(
+        content=upstream.content,
+        media_type=upstream.headers["content-type"],
+        headers={
+            "Content-Disposition": upstream.headers["content-disposition"],
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post("/proxy/task-postings/prepare")

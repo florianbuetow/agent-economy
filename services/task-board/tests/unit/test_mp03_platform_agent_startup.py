@@ -24,11 +24,19 @@ if TYPE_CHECKING:
 def _write_agent_config(tmp_path: Path, *, corrupt_private_key: bool) -> Path:
     keys_dir = tmp_path / "agent-keys"
     generate_keypair("platform", keys_dir)
+    generate_keypair("operator", keys_dir)
     if corrupt_private_key:
         (keys_dir / "platform.key").write_text("not a private key")
     roster_path = tmp_path / "roster.yaml"
     roster_path.write_text(
-        yaml.safe_dump({"agents": {"platform": {"name": "Platform", "type": "platform"}}})
+        yaml.safe_dump(
+            {
+                "agents": {
+                    "platform": {"name": "Platform", "type": "platform"},
+                    "operator": {"name": "UI Operator", "type": "operator"},
+                }
+            }
+        )
     )
     agent_config_path = tmp_path / "agents.yaml"
     agent_config_path.write_text(

@@ -90,13 +90,15 @@ async def list_authoritative_tasks(
     reader: TaskBoardReader,
     *,
     status: str | None,
+    poster_id: str | None,
+    worker_id: str | None,
 ) -> list[dict[str, Any]]:
     """Read and strictly validate one ordered Task Board list snapshot."""
     try:
         raw_tasks = await reader.list_tasks(
             status=status,
-            poster_id=None,
-            worker_id=None,
+            poster_id=poster_id,
+            worker_id=worker_id,
         )
         if not isinstance(raw_tasks, list):
             raise TypeError("Task Board list response must be a list")
@@ -106,6 +108,10 @@ async def list_authoritative_tasks(
             raise ValueError("Task Board list contains duplicate task IDs")
         if status is not None and any(task.status != status for task in tasks):
             raise ValueError("Task Board list violates the requested status filter")
+        if poster_id is not None and any(task.poster_id != poster_id for task in tasks):
+            raise ValueError("Task Board list violates the requested poster filter")
+        if worker_id is not None and any(task.worker_id != worker_id for task in tasks):
+            raise ValueError("Task Board list violates the requested worker filter")
         return [task.model_dump() for task in tasks]
     except Exception as exc:
         if isinstance(exc, ServiceError):
