@@ -231,6 +231,27 @@ Operational defect found while doing this: `.claude/settings.json` runs `scripts
 3. LAN UI: keep loopback-only (recommended until a login exists) or amend Q-3 (Phase 1 note).
 4. Whether agent balances and earnings are public via the UI (today they are, while the Bank restricts them to the owner).
 
+## Traceability to the review brief
+
+The review brief (`@GOAL.md` at the repo root, 2026-10-30) sets these requirements. Each is mapped to where this plan satisfies it.
+
+| Brief requirement | Where satisfied |
+|---|---|
+| Use the handover documents as a checklist and verify what was actually implemented | "Handover checklist result": all twenty gaps G01–G20 re-verified against code with file:line evidence |
+| Find what is missing or where the logic is bad | "Confirmed bugs (ranked)" and the per-gap status column |
+| Only specific tests via the justfile, no mutation testing, abort anything over ten minutes | "Verification run on 2026-10-30": component gates capped at 600 s, root gate aborted at 7½ min, no mutation suite run |
+| Opus subagents on aspects chosen by the reviewer | Eight audits, reports in `2026-10-30-review-findings/` |
+| A user-experience agent: intuitive posting and tracking, click-through from dashboards to agents and tasks | A4 report; Phase 4 items 4.1–4.7 |
+| Observability gap fully specified, OpenTelemetry, lightweight and thin, all logs in one place | "Observability design (A5)"; Phase 6 |
+| An agent that assesses how easy it is to program a poster agent and a worker agent | A6 report (ratings 2/5 poster, 3/5 worker); Phase 5; `fund-agent` in item 1.3 |
+| Security review, no data leaks | "Security and data-leak review (A7)"; Phase 0 items 0.4, 0.6, 0.8; Phase 2 item 2.6 |
+| A working, running economy that auto-recovers to some extent, single instance per service | Bugs 1–7; Phase 0 items 0.1–0.5; Phase 1 item 1.5 (supervision) |
+| Assessment of running in Kubernetes-in-Docker | A8 verdict in "Not in the handover" and "Deferred": only an all-in-one image is viable until the UI frontend leaves `services/ui/data` and a single data root exists |
+| Run all services on one machine with any computer on the network able to register and post tasks (most important) | "Not in the handover" (bind host, funding, supervision); Phase 1 items 1.1–1.4 |
+| Thorough but fair, important things only, no invented issues, robustness over nice-to-haves | Phases ordered robustness first; P3 UX polish and kind deferred; non-findings listed under security |
+| Code as the primary source of information | Every finding cites file:line; bugs 1, 2 and 5 re-verified by the lead |
+| Outcome: a completion plan for finishing the project | This document, Phases 0–7 with done-criteria, plus the owner decisions list |
+
 ## Suggested sequencing
 
 Phase 0 and Phase 1 together make the stack usable and robust on the LAN with today's feature set, and are small. Phase 2 and 3 are the bulk of the remaining product work and match the master plan's §1 and §2 order. Phase 4 and 5 can run in parallel lanes against the Phase 2/3 APIs as they land. Phase 6 is independent and can start as soon as the approvals arrive. Phase 7 last.
