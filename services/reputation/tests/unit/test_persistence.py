@@ -21,6 +21,7 @@ from httpx import ASGITransport, AsyncClient
 from reputation_service.app import create_app
 from reputation_service.config import clear_settings_cache
 from reputation_service.core.state import get_app_state, reset_app_state
+from tests.fakes.fake_task_board import FakeTaskBoard
 from tests.helpers import make_jws_token, make_mock_platform_agent
 
 if TYPE_CHECKING:
@@ -65,11 +66,17 @@ logging:
   directory: "{tmp_path / "logs" / "reputation"}"
 platform:
   agent_config_path: ""
+task_board:
+  base_url: "http://localhost:8003"
+  timeout_seconds: 10
 request:
   max_body_size: 1048576
 feedback:
   reveal_timeout_seconds: {reveal_timeout}
   max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -93,6 +100,13 @@ def _restore_env(old_config: str | None) -> None:
         os.environ["CONFIG_PATH"] = old_config
     clear_settings_cache()
     reset_app_state()
+
+
+def _prepare(payload: dict[str, object]) -> dict[str, object]:
+    """Authorize the payload against the fake Task Board (these tests cover storage)."""
+    board = get_app_state().task_board_client
+    assert isinstance(board, FakeTaskBoard)
+    return board.prepare(payload)
 
 
 def _inject_mock_identity(payload: dict[str, object], kid: str) -> None:
@@ -124,6 +138,7 @@ async def _submit_feedback(client: AsyncClient, **overrides: object) -> dict[str
     """Submit valid feedback with optional overrides, wrapped in JWS."""
     payload: dict[str, object] = dict(VALID_FEEDBACK)
     payload.update(overrides)
+    payload = _prepare(payload)
     kid = str(payload.get("from_agent_id", "agent-alice"))
     _inject_mock_identity(payload, kid)
     token = make_jws_token(payload, kid=kid)
@@ -140,7 +155,7 @@ async def _post_feedback_jws(
     body: Mapping[str, object],
 ) -> Any:
     """Post feedback body wrapped in JWS and return the response."""
-    payload: dict[str, object] = {"action": "submit_feedback", **body}
+    payload: dict[str, object] = _prepare({"action": "submit_feedback", **body})
     kid = str(payload.get("from_agent_id", "agent-alice"))
     _inject_mock_identity(payload, kid)
     token = make_jws_token(payload, kid=kid)
@@ -182,11 +197,17 @@ logging:
   directory: "{tmp_path / "logs" / "reputation"}"
 platform:
   agent_config_path: ""
+task_board:
+  base_url: "http://localhost:8003"
+  timeout_seconds: 10
 request:
   max_body_size: 1048576
 feedback:
   reveal_timeout_seconds: 86400
   max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
@@ -226,6 +247,9 @@ logging:
 feedback:
   reveal_timeout_seconds: 86400
   max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -256,6 +280,9 @@ logging:
 feedback:
   reveal_timeout_seconds: 86400
   max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
 db_gateway: {}
 """
     config_path = tmp_path / "config.yaml"
@@ -292,11 +319,17 @@ logging:
   directory: "data/logs"
 platform:
   agent_config_path: ""
+task_board:
+  base_url: "http://localhost:8003"
+  timeout_seconds: 10
 request:
   max_body_size: 1048576
 feedback:
   reveal_timeout_seconds: 86400
   max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
 db_gateway:
   url: ""
   timeout_seconds: 10
@@ -698,9 +731,10 @@ async def test_persist_10_uniqueness_survives_restart(tmp_path: Path) -> None:
                     "from_agent_id": "a-alice",
                     "to_agent_id": "a-bob",
                     "category": "delivery_quality",
-                    "rating": "satisfied",
+                    "rating": "dissatisfied",
                 },
             )
+            # Changed content for an existing (task, from, to) triple conflicts.
             assert resp.status_code == 409
             assert resp.json()["error"] == "feedback_exists"
     finally:
@@ -884,7 +918,7 @@ async def test_db_01_concurrent_duplicate_safe(tmp_path: Path) -> None:
                 "category": "delivery_quality",
                 "rating": "satisfied",
             }
-            payload: dict[str, object] = {"action": "submit_feedback", **body}
+            payload: dict[str, object] = _prepare({"action": "submit_feedback", **body})
             _inject_mock_identity(payload, "a-alice")
             token = make_jws_token(payload, kid="a-alice")
             jws_body: dict[str, object] = {"token": token}
@@ -894,7 +928,8 @@ async def test_db_01_concurrent_duplicate_safe(tmp_path: Path) -> None:
                 client.post("/feedback", json=jws_body, headers=hdrs),
             )
             status_codes = sorted([r.status_code for r in results])
-            assert status_codes == [201, 409]
+            # The loser of the insert race is an exact replay of the winner.
+            assert status_codes == [200, 201]
     finally:
         _restore_env(old)
 
@@ -921,7 +956,9 @@ async def test_db_02_concurrent_mutual_reveal_atomic(tmp_path: Path) -> None:
                 "category": "delivery_quality",
                 "rating": "satisfied",
             }
-            reveal_payload: dict[str, object] = {"action": "submit_feedback", **reveal_body}
+            reveal_payload: dict[str, object] = _prepare(
+                {"action": "submit_feedback", **reveal_body}
+            )
             _inject_mock_identity(reveal_payload, "a-bob")
             reveal_token = make_jws_token(reveal_payload, kid="a-bob")
             post_resp, get_resp = await asyncio.gather(

@@ -471,6 +471,8 @@ class TaskDrilldownResponse(BaseModel):
     status: str
     bid_count: int
     accepted_price: int | None
+    worker_payment: int | None
+    poster_refund: int | None
     deadlines: TaskDeadlines
     timestamps: TaskTimestamps
     bids: list[BidItem]

@@ -288,10 +288,13 @@ class TestSubmitRebuttal:
         assert response.json()["error"] == "rebuttal_already_submitted"
 
     async def test_reb_04_rebuttal_after_ruling(self, client: AsyncClient) -> None:
-        """REB-04: Rebuttal after ruling is rejected with 409."""
+        """REB-04: Rebuttal after ruling is rejected with 409.
+
+        An identical replay is idempotent (plan 3.3); a new rebuttal is rejected.
+        """
         ruling = await file_rebut_and_rule(client)
         dispute_id = ruling["dispute_id"]
-        reb_pay = rebuttal_payload(dispute_id)
+        reb_pay = rebuttal_payload(dispute_id, rebuttal="A new argument after the ruling.")
         inject_identity_verify(PLATFORM_AGENT_ID, reb_pay)
         response = await client.post(
             f"/disputes/{dispute_id}/rebuttal",
@@ -543,7 +546,7 @@ class TestTriggerRuling:
         assert get_response.json()["status"] == "rebuttal_pending"
 
     async def test_rule_16_central_bank_unavailable(self, client: AsyncClient) -> None:
-        """RULE-16: Task Board failure returns 502, status remains rebuttal_pending."""
+        """RULE-16: Task Board failure returns 502; the persisted decision is kept."""
         dispute = await file_and_rebut(client)
         dispute_id = dispute["dispute_id"]
         inject_judge(worker_pct=70)
@@ -558,10 +561,13 @@ class TestTriggerRuling:
         assert response.json()["error"] == "task_board_unavailable"
 
         get_response = await client.get(f"/disputes/{dispute_id}")
-        assert get_response.json()["status"] == "rebuttal_pending"
+        # Plan 0.3: the decision was claimed before delivery and is never deleted;
+        # it stays unpublished (judging) until every delivery is acknowledged.
+        assert get_response.json()["status"] == "judging"
+        assert get_response.json()["worker_pct"] is None
 
     async def test_rule_17_reputation_unavailable(self, client: AsyncClient) -> None:
-        """RULE-17: Reputation failure returns 502, status remains rebuttal_pending."""
+        """RULE-17: Reputation failure returns 502; a retry resumes without re-judging."""
         dispute = await file_and_rebut(client)
         dispute_id = dispute["dispute_id"]
         inject_judge(worker_pct=70)
@@ -576,7 +582,19 @@ class TestTriggerRuling:
         assert response.json()["error"] == "reputation_service_unavailable"
 
         get_response = await client.get(f"/disputes/{dispute_id}")
-        assert get_response.json()["status"] == "rebuttal_pending"
+        assert get_response.json()["status"] == "judging"
+
+        state = get_app_state()
+        state.platform_agent.submit_platform_feedback.side_effect = None
+        judge = state.judges[0]
+        retry_pay = ruling_payload(dispute_id)
+        inject_identity_verify(PLATFORM_AGENT_ID, retry_pay)
+        retry = await client.post(f"/disputes/{dispute_id}/rule", json=token_body(retry_pay))
+        assert retry.status_code == 200, retry.text
+        assert retry.json()["status"] == "ruled"
+        assert retry.json()["worker_pct"] == 70
+        judge.evaluate.assert_awaited_once()
+        state.platform_agent.record_ruling.assert_awaited_once()
 
     async def test_rule_18_wrong_action(self, client: AsyncClient) -> None:
         """RULE-18: Wrong action value returns 400."""

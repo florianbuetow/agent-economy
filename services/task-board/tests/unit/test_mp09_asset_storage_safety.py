@@ -376,9 +376,11 @@ async def test_unknown_existing_generated_destination_is_never_clobbered(
     with _accepted_task(tmp_path, monkeypatch) as scenario:
         fixed_uuid = _fixed_uuid(monkeypatch)
         manager = _manager(scenario, storage_root)
-        contract_destination = storage_root / "live" / fixed_uuid.hex[:2] / f"{fixed_uuid}.blob"
-        (storage_root / "live").mkdir(mode=0o700)
-        contract_destination.parent.mkdir(mode=0o700)
+        agent_key = hashlib.sha256(scenario.worker_id.encode("utf-8")).hexdigest()[:32]
+        contract_destination = (
+            storage_root / "live" / agent_key / fixed_uuid.hex[:2] / f"{fixed_uuid}.blob"
+        )
+        contract_destination.parent.mkdir(mode=0o700, parents=True)
         contract_destination.write_bytes(existing_bytes)
         legacy_destination = storage_root / _TASK_ID / f"asset-{fixed_uuid}" / display_filename
         legacy_destination.parent.mkdir(parents=True)

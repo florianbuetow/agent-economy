@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import aiosqlite
+import httpx
 import pytest
 from service_commons.exceptions import ServiceError
 
@@ -131,22 +132,43 @@ async def test_malformed_service_report_is_an_error(db: aiosqlite.Connection) ->
     assert excinfo.value.status_code == 502
 
 
+class _SdkConfig:
+    reputation_url = "http://reputation.test"
+
+
 class _FakeUserAgent:
-    class config:  # noqa: N801 - mirrors the SDK attribute name
-        reputation_url = "http://reputation.test"
-
-    def __init__(self) -> None:
-        self.urls: list[str] = []
-
-    async def _request(self, method: str, url: str) -> dict[str, Any]:
-        assert method == "GET"
-        self.urls.append(url)
-        return REPORTS["a-1"]
+    config = _SdkConfig()
 
 
 @pytest.mark.unit
 async def test_sdk_reader_calls_the_reputation_endpoint() -> None:
-    user_agent = _FakeUserAgent()
-    reader = agents_service.UserAgentQualityReader(user_agent)  # type: ignore[arg-type]
-    assert await reader.get_agent_quality("a-1") == REPORTS["a-1"]
-    assert user_agent.urls == ["http://reputation.test/agents/a-1/quality"]
+    urls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert "authorization" not in request.headers
+        urls.append(str(request.url))
+        return httpx.Response(200, json=REPORTS["a-1"])
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        reader = agents_service.ReputationQualityReader(
+            _FakeUserAgent(),  # type: ignore[arg-type]
+            client,
+        )
+        assert await reader.get_agent_quality("a-1") == REPORTS["a-1"]
+    assert urls == ["http://reputation.test/agents/a-1/quality"]
+
+
+@pytest.mark.unit
+async def test_reputation_outage_is_an_error(db: aiosqlite.Connection) -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json={"error": "task_board_unavailable"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        reader = agents_service.ReputationQualityReader(
+            _FakeUserAgent(),  # type: ignore[arg-type]
+            client,
+        )
+        with pytest.raises(ServiceError) as excinfo:
+            await agents_service.get_agent_profile(db, reader, "a-1")
+    assert excinfo.value.status_code == 502

@@ -73,10 +73,22 @@ class SplitRequest(StrictModel):
     source_reference: Text
 
 
+class SettlementRequest(StrictModel):
+    """Canonical version-one exact-amount escrow split (G01 accepted-bid settlement)."""
+
+    request_version: Literal[1]
+    operation_kind: Literal["escrow_split"]
+    escrow_id: Text
+    worker_account_id: Text
+    poster_account_id: Text
+    worker_amount: PositiveGatewayInteger
+    source_reference: Text
+
+
 class EffectIntent(StrictModel):
     """Persisted immutable financial request and its authoritative predicates."""
 
-    financial_request: ReleaseRequest | SplitRequest
+    financial_request: ReleaseRequest | SplitRequest | SettlementRequest
     request_sha256: Sha256
     expected_escrow: ExpectedEscrow
 
@@ -87,6 +99,11 @@ class EffectIntent(StrictModel):
             raise ValueError("Financial request hash does not match")
         if request["escrow_id"] != self.expected_escrow.escrow_id:
             raise ValueError("Financial request escrow does not match")
+        if (
+            isinstance(self.financial_request, SettlementRequest)
+            and self.financial_request.worker_amount >= self.expected_escrow.amount
+        ):
+            raise ValueError("Settlement payment must leave a refund inside the escrow")
         return self
 
 
@@ -113,7 +130,7 @@ class EffectDeliveryLease(StrictModel):
         if self.effect_kind == "bank_release":
             if not isinstance(self.effect_intent.financial_request, ReleaseRequest):
                 raise ValueError("Release lease has non-release intent")
-        elif not isinstance(self.effect_intent.financial_request, SplitRequest):
+        elif not isinstance(self.effect_intent.financial_request, SplitRequest | SettlementRequest):
             raise ValueError("Split lease has non-split intent")
         if self.source_kind == "native_task_operation":
             if self.source_id != self.effect_operation_id:

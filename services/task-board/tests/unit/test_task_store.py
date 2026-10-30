@@ -51,7 +51,7 @@ def store(tmp_path: Path) -> Iterator[GatewayTaskStore]:
         db_path=tmp_path / "task-board.db",
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
         caller_kid="gateway-task-board",
         authority=BoardAuthority(
             platform_public_key=platform_public_key,

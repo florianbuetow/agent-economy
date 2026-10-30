@@ -59,12 +59,26 @@ SELECT t.*,
        c.review_cutoff_us,
        c.accepted_reward,
        c.accepted_bid_amount,
+       settled.worker_amount AS worker_payment,
+       settled.poster_amount AS poster_refund,
        active.pending_transition_json AS _pending_transition_json,
        COALESCE(legacy.reconciliations_json, '[]') AS _legacy_reconciliations_json
 FROM board_tasks AS t
 LEFT JOIN board_task_contracts AS c ON c.task_id = t.task_id
 LEFT JOIN active_task_operations AS active ON active.task_id = t.task_id
 LEFT JOIN legacy_reconciliations AS legacy ON legacy.task_id = t.task_id
+LEFT JOIN (
+    SELECT r.escrow_id,
+           SUM(CASE WHEN l.account_id = e.payer_account_id THEN 0 ELSE l.amount END)
+               AS worker_amount,
+           SUM(CASE WHEN l.account_id = e.payer_account_id THEN l.amount ELSE 0 END)
+               AS poster_amount
+    FROM bank_operation_receipts AS r
+    JOIN bank_operation_legs AS l ON l.operation_id = r.operation_id
+    JOIN bank_escrow AS e ON e.escrow_id = r.escrow_id
+    WHERE r.operation_kind IN ('escrow_release', 'escrow_split')
+    GROUP BY r.escrow_id
+) AS settled ON settled.escrow_id = t.escrow_id
 """
 
 
@@ -446,7 +460,7 @@ class DbReader:
         """Get feedback by ID."""
         cursor = self._db.execute(
             "SELECT feedback_id, task_id, from_agent_id, to_agent_id, role, "
-            "category, rating, comment, submitted_at, visible "
+            "category, rating, comment, submitted_at, visible, source "
             "FROM reputation_feedback WHERE feedback_id = ?",
             (feedback_id,),
         )
@@ -459,7 +473,7 @@ class DbReader:
         """Get all feedback for a task."""
         cursor = self._db.execute(
             "SELECT feedback_id, task_id, from_agent_id, to_agent_id, role, "
-            "category, rating, comment, submitted_at, visible "
+            "category, rating, comment, submitted_at, visible, source "
             "FROM reputation_feedback WHERE task_id = ? ORDER BY submitted_at",
             (task_id,),
         )
@@ -469,7 +483,7 @@ class DbReader:
         """Get all feedback where to_agent_id matches."""
         cursor = self._db.execute(
             "SELECT feedback_id, task_id, from_agent_id, to_agent_id, role, "
-            "category, rating, comment, submitted_at, visible "
+            "category, rating, comment, submitted_at, visible, source "
             "FROM reputation_feedback WHERE to_agent_id = ? ORDER BY submitted_at",
             (agent_id,),
         )
@@ -494,6 +508,7 @@ class DbReader:
             "comment": row[7],
             "submitted_at": row[8],
             "visible": bool(row[9]),
+            "source": row[10],
         }
 
     # ------------------------------------------------------------------

@@ -14,7 +14,6 @@ from service_auth.financial_responses import (
     parse_native_financial_envelope,
     validate_operation_id,
 )
-from service_clients.gateway import GatewayClient
 from service_commons.exceptions import ServiceError
 
 from central_bank_service.logging import get_logger
@@ -22,6 +21,10 @@ from central_bank_service.monetary import (
     require_nonnegative_money,
     require_positive_money,
     require_worker_percentage,
+)
+from central_bank_service.services.settlement import (
+    SettlementGatewayClient,
+    parse_settlement_envelope,
 )
 
 if TYPE_CHECKING:
@@ -90,7 +93,7 @@ class LedgerDbClient:
         timeout_seconds: int,
         signer: GatewayRequestSigner,
     ) -> None:
-        self._gateway = GatewayClient(
+        self._gateway = SettlementGatewayClient(
             base_url=base_url,
             timeout_seconds=timeout_seconds,
             signer=signer,
@@ -445,6 +448,67 @@ class LedgerDbClient:
                 "worker_account_id": worker_account_id,
                 "poster_account_id": poster_account_id,
                 "worker_pct": worker_pct,
+                "source_reference": source_reference,
+                "operation_id": operation_id,
+            },
+        )
+        return result
+
+    async def escrow_settle(
+        self,
+        escrow_id: str,
+        worker_account_id: str,
+        worker_amount: int,
+        poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
+    ) -> dict[str, object]:
+        worker_amount = require_nonnegative_money(worker_amount, "worker_amount")
+        source_reference = _require_utf8(source_reference, "source_reference")
+
+        try:
+            data = await self._gateway.escrow_settle(
+                escrow_id=escrow_id,
+                worker_account_id=worker_account_id,
+                poster_account_id=poster_account_id,
+                worker_tx_id=self._new_tx_id(),
+                poster_tx_id=self._new_tx_id(),
+                resolved_at=self._now(),
+                worker_amount=worker_amount,
+                source_reference=source_reference,
+                operation_id=operation_id,
+            )
+        except ServiceError as exc:
+            self._raise_preserved_money_error(exc)
+            if exc.status_code == 404:
+                if exc.error == "account_not_found":
+                    raise ServiceError("account_not_found", "Account not found", 404, {}) from exc
+                raise ServiceError("escrow_not_found", "Escrow not found", 404, {}) from exc
+            if exc.status_code == 409:
+                raise ServiceError(
+                    "escrow_already_resolved", "Escrow has already been resolved", 409, {}
+                ) from exc
+            raise self._as_gateway_runtime_error(exc) from exc
+
+        result = parse_settlement_envelope(
+            data,
+            operation_id,
+            {
+                "escrow_id": escrow_id,
+                "worker_account_id": worker_account_id,
+                "poster_account_id": poster_account_id,
+                "worker_amount": worker_amount,
+                "source_reference": source_reference,
+            },
+        )
+        _logger.info(
+            "audit",
+            extra={
+                "operation": "escrow_settle",
+                "escrow_id": escrow_id,
+                "worker_account_id": worker_account_id,
+                "poster_account_id": poster_account_id,
+                "worker_amount": worker_amount,
                 "source_reference": source_reference,
                 "operation_id": operation_id,
             },

@@ -1,30 +1,31 @@
-"""VIS-09 — reveal-timeout clock seam (WP-07).
+"""G11 — durable timed reveal (plan item 3.4), driven by the injectable clock seam.
 
-``is_visible()`` compares "now" against ``submitted_at + reveal_timeout_seconds``.
-Before this seam, "now" was ``datetime.now(UTC)`` inline, so no test could drive the
-24h lazy-reveal path deterministically. The pre-existing ``TestIsVisible`` tests in
-``test_feedback_service.py`` work around this by hand-constructing a
-``FeedbackRecord`` with a pre-computed *past* ``submitted_at`` -- they never move
-"now" itself, so they do not exercise a submission made through the real
-``submit_feedback`` path with time advancing after the fact.
+Before G11, timeout visibility was computed at read time, so the Reputation API
+showed timed-out feedback while the stored ``visible`` flag (read by the UI)
+stayed 0. Now reads follow the stored flag only, and a sweep durably reveals
+sealed feedback once ``reveal_timeout_seconds`` have passed.
 
-This suite drives the real path: submit sealed feedback (no counterpart) through
-``submit_feedback``, capture the store's own ``submitted_at``, then move the frozen
-clock across the ``reveal_timeout_seconds`` boundary and re-read through
-``get_feedback_by_id``/``get_feedback_for_task``.
+This suite submits sealed feedback through the real ``submit_feedback`` path,
+moves the frozen clock across the timeout, and checks that the API view and the
+stored flag agree before and after the sweep.
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 import pytest
 
+from reputation_service.core.reveal_sweep import reveal_sweep_loop
+from reputation_service.core.state import AppState
 from reputation_service.services import feedback as feedback_module
 from reputation_service.services.feedback import (
     get_feedback_by_id,
     get_feedback_for_task,
+    reveal_timed_out_feedback,
     submit_feedback,
 )
 from reputation_service.types import FeedbackRecord
@@ -65,60 +66,93 @@ def _valid_body(**overrides: object) -> dict[str, object]:
     return base
 
 
+def _submit_sealed(store: SqliteFeedbackStore, task_id: str) -> FeedbackRecord:
+    result = submit_feedback(
+        store,
+        _valid_body(task_id=task_id),
+        MAX_COMMENT_LENGTH,
+        force_visible=False,
+        source="peer",
+    )
+    assert isinstance(result, FeedbackRecord)
+    assert result.visible is False
+    return result
+
+
+def _stored_flag(store: SqliteFeedbackStore, feedback_id: str) -> bool:
+    record = store.get_by_id(feedback_id)
+    assert record is not None
+    return record.visible
+
+
 @pytest.mark.unit
-class TestRevealTimeoutClockSeam:
-    """The 24h lazy reveal is driven by an injectable clock, not the wall clock."""
+@pytest.mark.usefixtures("reset_clock")
+class TestDurableTimedReveal:
+    """The API view and the stored flag agree before and after the timeout sweep."""
 
-    @pytest.mark.usefixtures("reset_clock")
-    def test_sealed_feedback_becomes_visible_once_the_frozen_clock_crosses_the_timeout(
-        self,
-        tmp_path: Path,
-    ) -> None:
+    def test_sweep_before_timeout_reveals_nothing(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
-        assert isinstance(result, FeedbackRecord)
-        assert result.visible is False
-
-        submitted_at = datetime.fromisoformat(result.submitted_at)
-
-        # Before the timeout: still sealed on read.
-        feedback_module._clock = lambda: (
-            submitted_at + timedelta(seconds=REVEAL_TIMEOUT_SECONDS - 1)
-        )
-        before = get_feedback_by_id(store, result.feedback_id, REVEAL_TIMEOUT_SECONDS)
-        assert before is None, "sealed record must stay hidden before the timeout elapses"
-
-        # After the timeout: revealed on read, even though no counterpart ever arrived.
-        feedback_module._clock = lambda: (
-            submitted_at + timedelta(seconds=REVEAL_TIMEOUT_SECONDS + 1)
-        )
-        after = get_feedback_by_id(store, result.feedback_id, REVEAL_TIMEOUT_SECONDS)
-        assert after is not None, "sealed record must become visible once the timeout elapses"
-        assert after.feedback_id == result.feedback_id
-
-    @pytest.mark.usefixtures("reset_clock")
-    def test_task_listing_honors_the_frozen_clock_too(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """get_feedback_for_task filters through the same seam-driven is_visible."""
-        store = _make_store(tmp_path)
-        result = submit_feedback(
-            store,
-            _valid_body(task_id="task-vis09-list"),
-            MAX_COMMENT_LENGTH,
-            force_visible=False,
-        )
-        assert isinstance(result, FeedbackRecord)
-        submitted_at = datetime.fromisoformat(result.submitted_at)
+        record = _submit_sealed(store, "task-g11-before")
+        submitted_at = datetime.fromisoformat(record.submitted_at)
 
         feedback_module._clock = lambda: (
             submitted_at + timedelta(seconds=REVEAL_TIMEOUT_SECONDS - 1)
         )
-        assert get_feedback_for_task(store, "task-vis09-list", REVEAL_TIMEOUT_SECONDS) == []
+        assert reveal_timed_out_feedback(store, REVEAL_TIMEOUT_SECONDS) == 0
+        assert get_feedback_by_id(store, record.feedback_id) is None
+        assert _stored_flag(store, record.feedback_id) is False
+
+    def test_reads_do_not_reveal_without_the_sweep(self, tmp_path: Path) -> None:
+        """Past the timeout but before the sweep, the API agrees with the stored 0."""
+        store = _make_store(tmp_path)
+        record = _submit_sealed(store, "task-g11-unswept")
+        submitted_at = datetime.fromisoformat(record.submitted_at)
 
         feedback_module._clock = lambda: (
             submitted_at + timedelta(seconds=REVEAL_TIMEOUT_SECONDS + 1)
         )
-        visible = get_feedback_for_task(store, "task-vis09-list", REVEAL_TIMEOUT_SECONDS)
-        assert [r.feedback_id for r in visible] == [result.feedback_id]
+        assert get_feedback_by_id(store, record.feedback_id) is None
+        assert get_feedback_for_task(store, "task-g11-unswept") == []
+        assert _stored_flag(store, record.feedback_id) is False
+
+    def test_sweep_after_timeout_reveals_durably_once(self, tmp_path: Path) -> None:
+        store = _make_store(tmp_path)
+        record = _submit_sealed(store, "task-g11-after")
+        submitted_at = datetime.fromisoformat(record.submitted_at)
+
+        feedback_module._clock = lambda: (
+            submitted_at + timedelta(seconds=REVEAL_TIMEOUT_SECONDS + 1)
+        )
+        assert reveal_timed_out_feedback(store, REVEAL_TIMEOUT_SECONDS) == 1
+        assert _stored_flag(store, record.feedback_id) is True
+        revealed = get_feedback_by_id(store, record.feedback_id)
+        assert revealed is not None
+        assert [r.feedback_id for r in get_feedback_for_task(store, "task-g11-after")] == [
+            record.feedback_id
+        ]
+
+        # A second sweep finds nothing left to reveal.
+        assert reveal_timed_out_feedback(store, REVEAL_TIMEOUT_SECONDS) == 0
+
+
+@pytest.mark.unit
+@pytest.mark.usefixtures("reset_clock")
+async def test_background_loop_reveals_timed_out_feedback(tmp_path: Path) -> None:
+    """The lifespan's sweep loop performs the durable reveal on its own."""
+    store = _make_store(tmp_path)
+    record = _submit_sealed(store, "task-g11-loop")
+    submitted_at = datetime.fromisoformat(record.submitted_at)
+    feedback_module._clock = lambda: submitted_at + timedelta(seconds=REVEAL_TIMEOUT_SECONDS + 1)
+
+    state = AppState(feedback_store=store, feedback_reveal_timeout_seconds=REVEAL_TIMEOUT_SECONDS)
+    loop = asyncio.create_task(reveal_sweep_loop(state, 0.01))
+    try:
+        for _ in range(200):
+            if _stored_flag(store, record.feedback_id):
+                break
+            await asyncio.sleep(0.01)
+    finally:
+        loop.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await loop
+    assert _stored_flag(store, record.feedback_id) is True

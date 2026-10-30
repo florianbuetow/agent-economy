@@ -8,7 +8,7 @@ from service_auth.financial_identity import operation_id_for
 from service_commons.exceptions import ServiceError
 
 if TYPE_CHECKING:
-    from service_clients.bank import BankClient
+    from task_board_service.clients.settlement_bank import SettlementBankClient
 
 
 class EscrowCoordinator:
@@ -16,7 +16,7 @@ class EscrowCoordinator:
 
     def __init__(
         self,
-        central_bank_client: BankClient,
+        central_bank_client: SettlementBankClient,
     ) -> None:
         self._central_bank_client = central_bank_client
 
@@ -78,6 +78,38 @@ class EscrowCoordinator:
             raise ServiceError(
                 "central_bank_unavailable",
                 "Central Bank escrow split failed",
+                502,
+                {},
+            ) from exc
+
+    async def settle_escrow(
+        self,
+        escrow_id: str,
+        worker_id: str,
+        poster_id: str,
+        worker_amount: int,
+        operation_id: str,
+        source_reference: str,
+    ) -> None:
+        """Pay the worker an exact amount and refund the rest of the escrow to the poster.
+
+        Raises ServiceError("central_bank_unavailable", ..., 502) on failure.
+        """
+        try:
+            await self._central_bank_client.settle_escrow(
+                escrow_id=escrow_id,
+                worker_account_id=worker_id,
+                poster_account_id=poster_id,
+                worker_amount=worker_amount,
+                operation_id=operation_id,
+                source_reference=source_reference,
+            )
+        except ServiceError:
+            raise
+        except Exception as exc:
+            raise ServiceError(
+                "central_bank_unavailable",
+                "Central Bank escrow settlement failed",
                 502,
                 {},
             ) from exc

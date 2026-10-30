@@ -90,6 +90,7 @@ def _submit(
         rating="satisfied",
         comment="ok",
         force_visible=force_visible,
+        source="court" if force_visible else "peer",
     )
 
 

@@ -110,6 +110,7 @@ class CentralBankConfig(BaseModel):
     escrow_lock_path: str
     escrow_release_path: str
     escrow_split_path: str | None = None
+    escrow_settle_path: str
     timeout_seconds: int
 
 
@@ -141,6 +142,29 @@ class AssetUploadConfig(BaseModel):
     max_header_size: int = Field(strict=True, gt=0)
     max_boundary_bytes: int = Field(strict=True, gt=0)
     max_display_filename_utf8_bytes: int = Field(strict=True, gt=0)
+
+
+class AssetQuotaConfig(BaseModel):
+    """Total stored-asset byte limits enforced before an upload is accepted."""
+
+    model_config = ConfigDict(extra="forbid")
+    max_total_bytes_per_agent: int = Field(strict=True, gt=0)
+    max_total_bytes: int = Field(strict=True, gt=0)
+
+
+class ArtifactsConfig(BaseModel):
+    """Governed V6 artifact policy, crash recovery and terminal archive (no defaults)."""
+
+    model_config = ConfigDict(extra="forbid")
+    max_manifest_bytes: int = Field(strict=True, gt=0)
+    reservation_ttl_seconds: int = Field(strict=True, gt=0)
+    reservation_renew_before_expiry_seconds: int = Field(strict=True, ge=0)
+    max_upload_duration_seconds: int = Field(strict=True, gt=0)
+    recovery_interval_seconds: float = Field(strict=True, gt=0, allow_inf_nan=False)
+    stale_file_seconds: int = Field(strict=True, gt=0)
+    # Owner decision: archive once a job has been terminal for MORE than this age.
+    archive_after_seconds: int = Field(strict=True, gt=0)
+    archive_batch_size: int = Field(strict=True, gt=0)
 
 
 class RequestConfig(BaseModel):
@@ -238,9 +262,11 @@ class Settings(BaseModel):
     request: RequestConfig
     db_gateway: DbGatewayConfig
     asset_upload: AssetUploadConfig
+    asset_quota: AssetQuotaConfig
     assets: AssetsConfig | None = None
     limits: LimitsConfig | None = None
     deadline_evaluation: DeadlineEvaluationConfig | None = None
+    artifacts: ArtifactsConfig | None = None
     recovery: RecoveryConfig
     posting_recovery: PostingRecoveryConfig
     financial_effect_recovery: FinancialEffectRecoveryConfig

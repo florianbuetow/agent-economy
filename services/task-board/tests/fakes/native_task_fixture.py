@@ -440,7 +440,7 @@ def native_task_context(
         db_path=tmp_path / "native-deadlines.db",
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
         caller_kid="gateway-task-board",
         authority=authority,
         clock_us=clock,

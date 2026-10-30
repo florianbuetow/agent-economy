@@ -1,8 +1,9 @@
 """Unit tests for the Task Feeder autonomous acceptance loop (WP-15 / Q-16 / T-035).
 
 Winner rule (Q-16): lowest ``amount`` wins; amount ties break toward the bidder
-with the higher delivery-quality reputation (derived feeder-side from raw
-Reputation feedback per Q-12); any remaining tie breaks toward the
+with the higher delivery-quality score read from the Reputation service's
+`GET /agents/{id}/quality` (G12; the feeder no longer aggregates raw feedback);
+an unrated bidder ranks 0. Any remaining tie breaks toward the
 lexicographically smallest bid id.  A task is only eligible once the acceptance
 window has opened (``acceptance_after_seconds``) or a bid quorum
 (``min_bids_to_accept``) is met, and never with zero bids.
@@ -14,12 +15,13 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
 import pytest
 from service_auth.financial_identity import operation_id_for
 
 from task_feeder.acceptance import (
     AcceptanceLoop,
-    delivery_quality_score,
+    delivery_rank,
     select_winning_bid,
 )
 from task_feeder.config import AcceptanceConfig
@@ -64,17 +66,14 @@ def _bid(bid_id: str, bidder_id: str, amount: int) -> dict[str, Any]:
     }
 
 
-def _feedback(category: str, rating: str, to_agent_id: str = "w-a") -> dict[str, Any]:
+def _quality(score: int | None) -> dict[str, Any]:
+    """A Reputation quality report whose delivery dimension has ``score``."""
+    rated = score is not None
     return {
-        "feedback_id": "f-1",
-        "task_id": "t-1",
-        "from_agent_id": "poster",
-        "to_agent_id": to_agent_id,
-        "category": category,
-        "rating": rating,
-        "comment": None,
-        "submitted_at": _iso(BASE),
-        "visible": True,
+        "agent_id": "w-x",
+        "formula_version": "quality-v1",
+        "specification_quality": {"rated": False, "score": None, "task_count": 0},
+        "delivery_quality": {"rated": rated, "score": score, "task_count": 1 if rated else 0},
     }
 
 
@@ -90,17 +89,22 @@ def _task(
 
 def _make_agent(
     bids: list[dict[str, Any]] | None = None,
-    feedback_by_agent: dict[str, list[dict[str, Any]]] | None = None,
+    quality_by_agent: dict[str, dict[str, Any]] | None = None,
 ) -> MagicMock:
     agent = make_agent()
     agent.get_task = AsyncMock(return_value=open_task())
     agent.list_bids = AsyncMock(return_value=bids if bids is not None else [])
-    feedback = feedback_by_agent if feedback_by_agent is not None else {}
+    quality = quality_by_agent if quality_by_agent is not None else {}
 
-    async def _get_feedback(agent_id: str) -> list[dict[str, Any]]:
-        return feedback.get(agent_id, [])
+    async def _get(method: str, url: str) -> dict[str, Any]:
+        assert method == "GET"
+        prefix = f"{agent.config.reputation_url}/agents/"
+        assert url.startswith(prefix)
+        assert url.endswith("/quality")
+        return quality.get(url[len(prefix) : -len("/quality")], _quality(None))
 
-    agent.get_agent_feedback = AsyncMock(side_effect=_get_feedback)
+    agent._request = AsyncMock(side_effect=_get)
+    agent.get_agent_feedback = AsyncMock(side_effect=AssertionError("raw feedback read"))
     return agent
 
 
@@ -114,21 +118,27 @@ def _eligibility_loop(now: datetime) -> AcceptanceLoop:
 
 
 @pytest.mark.unit
-class TestDeliveryQualityScore:
-    def test_averages_delivery_quality_only(self) -> None:
-        feedback = [
-            _feedback("delivery_quality", "extremely_satisfied"),
-            _feedback("delivery_quality", "satisfied"),
-            _feedback("spec_quality", "dissatisfied"),
-        ]
-        # delivery ratings map to 2.0 and 1.0 -> average 1.5; spec_quality ignored.
-        assert delivery_quality_score(feedback) == 1.5
+class TestDeliveryRank:
+    def test_rated_score_is_the_rank(self) -> None:
+        assert delivery_rank(_quality(67)) == 67
 
-    def test_none_when_no_delivery_feedback(self) -> None:
-        assert delivery_quality_score([_feedback("spec_quality", "satisfied")]) is None
+    def test_unrated_ranks_zero(self) -> None:
+        assert delivery_rank(_quality(None)) == 0
 
-    def test_none_when_empty(self) -> None:
-        assert delivery_quality_score([]) is None
+    @pytest.mark.parametrize(
+        "report",
+        [
+            {},
+            {**_quality(50), "formula_version": "quality-v2"},
+            {**_quality(50), "delivery_quality": {"rated": True, "score": None}},
+            {**_quality(None), "delivery_quality": {"rated": False, "score": 10}},
+            {**_quality(50), "delivery_quality": {"rated": True, "score": 101}},
+            {**_quality(50), "delivery_quality": {"rated": "yes", "score": 50}},
+        ],
+    )
+    def test_malformed_report_is_not_unrated(self, report: dict[str, Any]) -> None:
+        with pytest.raises(ValueError, match="quality"):
+            delivery_rank(report)
 
 
 @pytest.mark.unit
@@ -301,10 +311,7 @@ class TestProcessOpenTasks:
     async def test_amount_tie_broken_by_reputation_via_loop(self, tmp_path: Path) -> None:
         agent = _make_agent(
             bids=[_bid("b-1", "w-a", 6), _bid("b-2", "w-b", 6)],
-            feedback_by_agent={
-                "w-a": [_feedback("delivery_quality", "dissatisfied", to_agent_id="w-a")],
-                "w-b": [_feedback("delivery_quality", "extremely_satisfied", to_agent_id="w-b")],
-            },
+            quality_by_agent={"w-a": _quality(0), "w-b": _quality(100)},
         )
         agent.list_tasks = AsyncMock(return_value=[_task(bid_count=2)])
         with runtime_commands(tmp_path, agent) as (commands, _store):
@@ -313,6 +320,39 @@ class TestProcessOpenTasks:
             )
             await loop.process_open_tasks()
         assert agent.accept_bid.await_args.args == (TASK_ID, "b-2")
+        # One service score per contender; no raw feedback is read or averaged.
+        urls = sorted(call.args[1] for call in agent._request.await_args_list)
+        assert urls == [
+            f"{agent.config.reputation_url}/agents/w-a/quality",
+            f"{agent.config.reputation_url}/agents/w-b/quality",
+        ]
+        agent.get_agent_feedback.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_unrated_ties_rated_zero_and_falls_to_bid_id(self, tmp_path: Path) -> None:
+        agent = _make_agent(
+            bids=[_bid("b-2", "w-rated", 6), _bid("b-1", "w-unrated", 6)],
+            quality_by_agent={"w-rated": _quality(0), "w-unrated": _quality(None)},
+        )
+        agent.list_tasks = AsyncMock(return_value=[_task(bid_count=2)])
+        with runtime_commands(tmp_path, agent) as (commands, _store):
+            loop = AcceptanceLoop(
+                agent=agent, config=_make_config(), now=lambda: BASE, commands=commands
+            )
+            await loop.process_open_tasks()
+        assert agent.accept_bid.await_args.args == (TASK_ID, "b-1")
+
+    @pytest.mark.asyncio
+    async def test_quality_lookup_failure_does_not_accept(self, tmp_path: Path) -> None:
+        agent = _make_agent(bids=[_bid("b-1", "w-a", 6), _bid("b-2", "w-b", 6)])
+        agent._request = AsyncMock(side_effect=httpx.ConnectError("reputation down"))
+        agent.list_tasks = AsyncMock(return_value=[_task(bid_count=2)])
+        with runtime_commands(tmp_path, agent) as (commands, _store):
+            loop = AcceptanceLoop(
+                agent=agent, config=_make_config(), now=lambda: BASE, commands=commands
+            )
+            await loop.process_open_tasks()
+        agent.accept_bid.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_definitively_rejected_task_is_not_sent_again(self, tmp_path: Path) -> None:

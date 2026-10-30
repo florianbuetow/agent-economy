@@ -27,34 +27,6 @@ _FINANCIAL_KEYS = {
     "pending_target_status",
 }
 _EXPECTED: dict[str, dict[str, object]] = {
-    "legacy_pending": {
-        "settlement_state": "pending",
-        "receipt_state": "absent",
-        "outcome": None,
-        "business_projection_pending": False,
-        "pending_target_status": None,
-    },
-    "legacy_succeeded": {
-        "settlement_state": "pending",
-        "receipt_state": "confirmed",
-        "outcome": "worker_paid",
-        "business_projection_pending": True,
-        "pending_target_status": "approved",
-    },
-    "historical_paid": {
-        "settlement_state": "historical",
-        "receipt_state": "historical",
-        "outcome": "worker_paid",
-        "business_projection_pending": False,
-        "pending_target_status": None,
-    },
-    "court_only": {
-        "settlement_state": "locked",
-        "receipt_state": "absent",
-        "outcome": None,
-        "business_projection_pending": False,
-        "pending_target_status": None,
-    },
     "native_pending": {
         "settlement_state": "pending",
         "receipt_state": "absent",
@@ -170,11 +142,10 @@ def _expected(history: dict[str, Any]) -> dict[str, object]:
     kind = history["kind"]
     operation_id = history["operation_id"]
     confirmed = _EXPECTED[kind]["receipt_state"] == "confirmed"
-    modern = kind not in {"historical_paid", "court_only"}
     return {
         "schema_version": 1,
         **_EXPECTED[kind],
-        "operation_id": operation_id if modern else None,
+        "operation_id": operation_id,
         "receipt_reference": operation_id if confirmed else None,
     }
 

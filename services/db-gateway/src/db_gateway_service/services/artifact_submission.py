@@ -54,8 +54,11 @@ def reject_governed_protocol_v1_submission(
             "Artifact governance is incomplete; protocol version 1 is unavailable",
             400,
         )
+    # A protocol-1 publication bound to an empty input manifest at acceptance stays V1-submittable.
     governed = cursor.execute(
-        "SELECT 1 FROM board_task_artifact_contracts WHERE task_id=?",
+        "SELECT 1 FROM board_task_artifact_contracts c WHERE c.task_id=? AND NOT EXISTS ("
+        "SELECT 1 FROM board_task_publications p WHERE p.operation_id=c.publication_operation_id "
+        "AND p.request_protocol_version=1)",
         (task_id,),
     ).fetchone()
     cutover = cursor.execute("SELECT 1 FROM board_artifact_cutover LIMIT 1").fetchone()

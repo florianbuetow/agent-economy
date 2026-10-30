@@ -268,7 +268,9 @@ def _assert_published(cursor: sqlite3.Cursor, row: tuple[Any, ...], admission: A
         or lock_event[1] != "escrow.locked"
         or lock_event[3] not in {None, admission.task_id}
         or lock_event[4] != admission.actor_id
-        or not int(row[9]) <= int(row[25]) <= int(row[29]) <= lock_time <= int(row[13])
+        or not int(row[9]) <= int(row[25]) <= int(row[29])
+        # Central Bank stamps whole seconds: the lock may share the authorizing second.
+        or not int(row[29]) - int(row[29]) % 1_000_000 <= lock_time <= int(row[13])
         or tuple(artifact)
         != (
             1,

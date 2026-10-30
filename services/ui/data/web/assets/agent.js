@@ -211,7 +211,8 @@
         '<a class="feedback-from" href="/agent.html?agent_id=' + encodeURIComponent(fb.from_agent_id) + '">' + ATE.escapeHTML(fb.from_agent_name) + '</a>' +
         '<span class="feedback-rating" style="color:' + color + '">' + ATE.escapeHTML(fb.category.replace('_', ' ')) + ': ' + ATE.escapeHTML(fb.rating.replace('_', ' ')) + '</span>' +
         '<span class="feedback-comment">' + ATE.escapeHTML(fb.comment || '') + '</span>' +
-        '<a href="/task.html?task_id=' + encodeURIComponent(fb.task_id) + '">task</a>' +
+        (fb.task_id ? '<a class="feedback-task" href="/task.html?task_id=' + encodeURIComponent(fb.task_id) + '">' +
+          ATE.escapeHTML('Task ' + String(fb.task_id).slice(0, 12)) + '</a>' : '') +
       '</div>';
     }).join('');
   }

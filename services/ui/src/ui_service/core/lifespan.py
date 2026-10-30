@@ -7,13 +7,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiosqlite
+import httpx
 from service_auth import AgentFactory
 from service_commons.maintenance_lock import MaintenanceLockMode, hold_maintenance_lock
 
 from ui_service.config import get_settings, resolve_recovery_path
 from ui_service.core.state import init_app_state
 from ui_service.logging import get_logger, setup_logging
-from ui_service.services.agents import UserAgentQualityReader
+from ui_service.services.agents import ReputationQualityReader
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -37,6 +38,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         state = init_app_state()
         user_agent = None
         db = None
+        quality_client = httpx.AsyncClient()
         try:
             config_path = Path(settings.user_agent.agent_config_path)
             if not config_path.is_absolute():
@@ -44,7 +46,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             factory = AgentFactory(config_path=config_path.resolve())
             user_agent = factory.user_agent(settings.user_agent.handle)
             state.task_board_reader = user_agent
-            state.quality_reader = UserAgentQualityReader(user_agent)
+            state.quality_reader = ReputationQualityReader(user_agent, quality_client)
 
             db_uri = f"file:{settings.database.path}?mode=ro"
             try:
@@ -83,6 +85,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
             yield
         finally:
+            await quality_client.aclose()
             if user_agent is not None:
                 await user_agent.close()
                 logger.info("UserAgent closed")

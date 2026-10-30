@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any, Final
 from uuid import NAMESPACE_URL, uuid5
 
+from db_gateway_service.schema import SchemaState, load_schema_sql
+
 TASK_ID: Final[str] = "t-h1-legacy-asset"
 POSTER_ID: Final[str] = "poster-h1-legacy-asset"
 WORKER_ID: Final[str] = "worker-h1-legacy-asset"
@@ -216,16 +218,8 @@ def open_h1_source_database(database_path: Path) -> sqlite3.Connection:
     connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys=ON")
-    resources = Path(__file__).parents[2] / "src" / "db_gateway_service" / "schema_resources"
     try:
-        for resource_name in (
-            "current_v5.sql",
-            "task_operations_v3.sql",
-            "publication_v6.sql",
-            "task_effect_recovery_v5.sql",
-            "artifacts_v6.sql",
-        ):
-            connection.executescript((resources / resource_name).read_text(encoding="utf-8"))
+        connection.executescript(load_schema_sql(SchemaState.CURRENT_V6))
         for agent_id in (POSTER_ID, WORKER_ID, OTHER_WORKER_ID, OPAQUE_WORKER_ID):
             connection.execute(
                 "INSERT INTO identity_agents (agent_id,name,public_key,registered_at) "

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from task_board_service.config import get_settings
-from task_board_service.services.streaming_upload import AssetUploadLimits
+from task_board_service.services.streaming_upload import AssetStorageQuota, AssetUploadLimits
 
 if TYPE_CHECKING:
     from task_board_service.services.asset_manager import AssetManager
@@ -27,4 +27,13 @@ def resolve_asset_upload_limits(asset_manager: AssetManager) -> AssetUploadLimit
     )
 
 
-__all__ = ["resolve_asset_upload_limits"]
+def resolve_asset_storage_quota() -> AssetStorageQuota:
+    """Build the explicit stored-bytes quota at the core configuration boundary."""
+    quota = get_settings().asset_quota
+    return AssetStorageQuota(
+        max_total_bytes_per_agent=quota.max_total_bytes_per_agent,
+        max_total_bytes=quota.max_total_bytes,
+    )
+
+
+__all__ = ["resolve_asset_storage_quota", "resolve_asset_upload_limits"]

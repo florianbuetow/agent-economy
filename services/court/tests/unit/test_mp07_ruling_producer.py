@@ -17,7 +17,7 @@ from service_auth.jws import TokenPolicy, parse_jws
 from service_auth.platform import PlatformAgent
 from service_commons.exceptions import ServiceError
 
-from court_service.services.ruling_orchestrator import RulingOrchestrator
+from court_service.services.ruling_orchestrator import RulingClaim, RulingOrchestrator
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 
@@ -26,6 +26,7 @@ _TASK_ID = "t-00000000-0000-0000-0000-000000000001"
 _OPERATION_ID = operation_id_for("court-ruling", (_DISPUTE_ID,))
 _SQLITE_MAX_INTEGER = (1 << 63) - 1
 _SUMMARY = "The worker substantially completed the task."
+_LEASE_ID = "lease-00000000-0000-0000-0000-000000000001"
 
 
 def _dispute() -> dict[str, Any]:
@@ -40,13 +41,17 @@ def _dispute() -> dict[str, Any]:
     }
 
 
+def _claim() -> RulingClaim:
+    return RulingClaim(dispute=_dispute(), lease_id=_LEASE_ID, decided=False)
+
+
 def _task(version: object = 3) -> dict[str, Any]:
     return {
         "task_id": _TASK_ID,
         "title": "Ruling producer",
         "spec": "Produce the requested artifact.",
         "reward": 100,
-        "deliverables": ["artifact"],
+        "deliverables": [],
         "lifecycle_version": version,
     }
 
@@ -60,6 +65,7 @@ def _orchestrator() -> tuple[RulingOrchestrator, MagicMock]:
             feedback_extremely_satisfied_cutoff=80,
             feedback_satisfied_cutoff=40,
             feedback_comment_max_length=256,
+            judging_lease_seconds=60,
         ),
         store,
     )
@@ -69,8 +75,13 @@ def _judge(worker_pct: int = 70) -> MagicMock:
     judge = MagicMock()
     judge.evaluate = AsyncMock(
         return_value={
+            "schema_version": 1,
             "judge_id": "judge-0",
             "worker_pct": worker_pct,
+            "spec_quality": "satisfied",
+            "spec_quality_explanation": _SUMMARY,
+            "delivery_quality": "satisfied",
+            "delivery_quality_explanation": _SUMMARY,
             "reasoning": _SUMMARY,
             "voted_at": "2026-10-18T12:00:00Z",
         }
@@ -347,7 +358,7 @@ async def test_valid_completed_ack_allows_feedback_and_local_persist() -> None:
 
     ruled = await orchestrator.finish_ruling(
         _DISPUTE_ID,
-        _dispute(),
+        _claim(),
         [judge],
         _task(3),
         platform,
@@ -356,7 +367,7 @@ async def test_valid_completed_ack_allows_feedback_and_local_persist() -> None:
     assert ruled["status"] == "ruled"
     platform.record_ruling.assert_awaited_once()
     platform.submit_platform_feedback.assert_awaited()
-    store.persist_ruling.assert_called_once()
+    store.complete_ruling.assert_called_once_with(_DISPUTE_ID, _LEASE_ID)
 
 
 @pytest.mark.parametrize(
@@ -375,7 +386,7 @@ async def test_completed_release_ack_allows_feedback_and_local_persist(
 
     ruled = await orchestrator.finish_ruling(
         _DISPUTE_ID,
-        _dispute(),
+        _claim(),
         [judge],
         _task(3),
         platform,
@@ -390,7 +401,7 @@ async def test_completed_release_ack_allows_feedback_and_local_persist(
     assert operation["effect_result_reference"] == _OPERATION_ID
     assert operation["result"]["effect_result_reference"] == _OPERATION_ID
     platform.submit_platform_feedback.assert_awaited()
-    store.persist_ruling.assert_called_once()
+    store.complete_ruling.assert_called_once_with(_DISPUTE_ID, _LEASE_ID)
 
 
 @pytest.mark.parametrize(
@@ -415,7 +426,7 @@ async def test_release_ack_rejects_wrong_settlement_recipient(
     with pytest.raises(ServiceError) as raised:
         await orchestrator.finish_ruling(
             _DISPUTE_ID,
-            _dispute(),
+            _claim(),
             [judge],
             _task(3),
             platform,
@@ -424,8 +435,8 @@ async def test_release_ack_rejects_wrong_settlement_recipient(
     assert raised.value.status_code == 502
     assert raised.value.error == "invalid_task_board_ack"
     platform.submit_platform_feedback.assert_not_awaited()
-    store.persist_ruling.assert_not_called()
-    store.revert_to_rebuttal_pending.assert_called_once_with(_DISPUTE_ID)
+    store.complete_ruling.assert_not_called()
+    store.release_judging_lease.assert_called_once_with(_DISPUTE_ID, _LEASE_ID)
 
 
 async def test_synthetic_later_projection_uses_immutable_operation_result() -> None:
@@ -436,7 +447,7 @@ async def test_synthetic_later_projection_uses_immutable_operation_result() -> N
 
     ruled = await orchestrator.finish_ruling(
         _DISPUTE_ID,
-        _dispute(),
+        _claim(),
         [judge],
         _task(3),
         platform,
@@ -445,7 +456,7 @@ async def test_synthetic_later_projection_uses_immutable_operation_result() -> N
     assert ruled["status"] == "ruled"
     platform.record_ruling.assert_awaited_once()
     platform.submit_platform_feedback.assert_awaited()
-    store.persist_ruling.assert_called_once()
+    store.complete_ruling.assert_called_once_with(_DISPUTE_ID, _LEASE_ID)
     ack = _synthetic_later_projection_ack()
     assert ack["lifecycle_version"] == 9
     assert ack["ruling_summary"] != ack["operation"]["result"]["summary"]
@@ -530,7 +541,7 @@ async def test_invalid_task_board_ack_stops_before_feedback_and_local_persist(ca
     with pytest.raises(ServiceError) as raised:
         await orchestrator.finish_ruling(
             _DISPUTE_ID,
-            _dispute(),
+            _claim(),
             [judge],
             _task(3),
             platform,
@@ -540,9 +551,10 @@ async def test_invalid_task_board_ack_stops_before_feedback_and_local_persist(ca
     assert raised.value.error == "invalid_task_board_ack"
     judge.evaluate.assert_awaited_once()
     platform.record_ruling.assert_awaited_once()
+    store.claim_decision.assert_called_once()
     platform.submit_platform_feedback.assert_not_awaited()
-    store.persist_ruling.assert_not_called()
-    store.revert_to_rebuttal_pending.assert_called_once_with(_DISPUTE_ID)
+    store.complete_ruling.assert_not_called()
+    store.release_judging_lease.assert_called_once_with(_DISPUTE_ID, _LEASE_ID)
 
 
 async def test_same_snapshot_retry_preserves_native_ruling_identity() -> None:
@@ -554,7 +566,7 @@ async def test_same_snapshot_retry_preserves_native_ruling_identity() -> None:
     for _ in range(2):
         await orchestrator.finish_ruling(
             _DISPUTE_ID,
-            _dispute(),
+            _claim(),
             [judge],
             snapshot,
             platform,
@@ -590,7 +602,7 @@ async def test_invalid_task_snapshot_version_stops_before_external_calls(version
     with pytest.raises(ServiceError) as raised:
         await orchestrator.finish_ruling(
             _DISPUTE_ID,
-            _dispute(),
+            _claim(),
             [judge],
             task,
             platform,
@@ -602,8 +614,9 @@ async def test_invalid_task_snapshot_version_stops_before_external_calls(version
     platform.record_ruling.assert_not_awaited()
     platform.submit_platform_feedback.assert_not_awaited()
     platform.get_task.assert_not_awaited()
-    store.persist_ruling.assert_not_called()
-    store.revert_to_rebuttal_pending.assert_called_once_with(_DISPUTE_ID)
+    store.complete_ruling.assert_not_called()
+    store.claim_decision.assert_not_called()
+    store.release_judging_lease.assert_called_once_with(_DISPUTE_ID, _LEASE_ID)
 
 
 async def test_stale_version_conflict_retries_same_attempt_without_refresh(
@@ -638,7 +651,7 @@ async def test_stale_version_conflict_retries_same_attempt_without_refresh(
             with pytest.raises(ServiceError) as raised:
                 await orchestrator.finish_ruling(
                     _DISPUTE_ID,
-                    _dispute(),
+                    _claim(),
                     [judge],
                     snapshot,
                     platform,
@@ -656,8 +669,8 @@ async def test_stale_version_conflict_retries_same_attempt_without_refresh(
     assert [payload["expected_lifecycle_version"] for payload in payloads] == [3, 3]
     assert [payload["ruling_id"] for payload in payloads] == [_DISPUTE_ID, _DISPUTE_ID]
     feedback.assert_not_awaited()
-    store.persist_ruling.assert_not_called()
-    assert store.revert_to_rebuttal_pending.call_count == 2
+    store.complete_ruling.assert_not_called()
+    assert store.release_judging_lease.call_count == 2
 
 
 @pytest.mark.parametrize(
@@ -750,7 +763,7 @@ async def test_unrecognized_or_malformed_http_409_remains_dependency_error(
         with pytest.raises(ServiceError) as raised:
             await orchestrator.finish_ruling(
                 _DISPUTE_ID,
-                _dispute(),
+                _claim(),
                 [judge],
                 _task(3),
                 platform,
@@ -763,5 +776,5 @@ async def test_unrecognized_or_malformed_http_409_remains_dependency_error(
     assert raised.value.details == {}
     assert len(requests) == 1
     feedback.assert_not_awaited()
-    store.persist_ruling.assert_not_called()
-    store.revert_to_rebuttal_pending.assert_called_once_with(_DISPUTE_ID)
+    store.complete_ruling.assert_not_called()
+    store.release_judging_lease.assert_called_once_with(_DISPUTE_ID, _LEASE_ID)

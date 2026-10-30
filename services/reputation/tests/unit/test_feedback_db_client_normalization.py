@@ -90,6 +90,7 @@ class TestReputationFeedbackSchemaShape:
             "comment",
             "submitted_at",
             "visible",
+            "source",
         }
 
 
@@ -112,6 +113,7 @@ class TestDictToRecordCoversEveryColumn:
             "comment": "Great spec",
             "submitted_at": "2026-03-01T09:00:00Z",
             "visible": True,
+            "source": "peer",
         }
         client._client.send = MagicMock(return_value=_mock_response(200, row))
 
@@ -137,6 +139,7 @@ class TestDictToRecordCoversEveryColumn:
             "comment": None,
             "submitted_at": "2026-03-01T09:00:00Z",
             "visible": False,
+            "source": "peer",
         }
         client._client.send = MagicMock(return_value=_mock_response(200, row))
 
@@ -159,6 +162,7 @@ class TestDictToRecordCoversEveryColumn:
             "comment": None,
             "submitted_at": "2026-03-01T09:00:00Z",
             "visible": True,
+            "source": "peer",
         }
         client._client.send = MagicMock(return_value=_mock_response(200, row))
 

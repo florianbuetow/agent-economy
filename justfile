@@ -89,6 +89,8 @@ help:
     @printf "  \033[0;37mjust supervise-uninstall\033[0;34m Remove the supervision units\033[0m\n"
     @printf "  \033[0;37mjust supervise-status \033[0;34m Show supervision unit state\033[0m\n"
     @printf "  \033[0;37mjust backup <dest.tar.gz>\033[0;34m Stop the stack and archive all economy state\033[0m\n"
+    @printf "  \033[0;37mjust economy-report   \033[0;34m Per-worker selection, approval, cost and quality report\033[0m\n"
+    @printf "  \033[0;37mjust start-classbot <profile>\033[0;34m Start a classification worker (classbot_keyword | classbot_llm)\033[0m\n"
     @printf "  \033[0;37mjust restore <src.tar.gz>\033[0;34m Stop the stack and restore an archive (then run start-all)\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
     @printf "  \033[0;37mjust logs             \033[0;34m Tail all service logs (color-coded)\033[0m\n"
@@ -578,6 +580,14 @@ backup dest:
 # Stop the stack and restore an archive (stack stays stopped; run start-all afterwards)
 restore src:
     uv run --project agents scripts/backup.py restore {{quote(src)}} --yes
+
+# Print per-worker selection, approval, cost and quality from the agent journals (no scripted winner)
+economy-report:
+    cd agents && uv run python -m economy_report
+
+# Start a classification worker from a named profile (classbot_keyword or classbot_llm)
+start-classbot profile:
+    cd agents && uv run python -m classification_worker {{quote(profile)}} &
 
 # Provision the treasury (idempotent genesis for the UI operator account).
 # Q-9 decision: `just start-all` does NOT auto-mint the treasury any more —

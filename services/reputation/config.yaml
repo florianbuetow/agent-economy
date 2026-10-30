@@ -6,7 +6,7 @@ service:
   version: "0.1.0"
 
 server:
-  host: "127.0.0.1"
+  host: "0.0.0.0"
   port: 8004
   log_level: "info"
 
@@ -23,12 +23,20 @@ identity:
   verify_jws_path: "/agents/verify-jws"
   timeout_seconds: 10
 
+task_board:
+  base_url: "http://localhost:8003"
+  timeout_seconds: 10
+
 request:
   max_body_size: 1048576  # 1MB
 
 feedback:
   reveal_timeout_seconds: 86400  # 24 hours
   max_comment_length: 256
+  reveal_sweep_interval_seconds: 60  # how often timed-out sealed feedback is revealed
+
+quality:
+  operator_name: "operator"  # Identity name whose signed reads may see all quality provenance
 
 db_gateway:
   url: "http://127.0.0.1:8007"

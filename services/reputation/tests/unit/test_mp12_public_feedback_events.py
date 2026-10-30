@@ -44,6 +44,7 @@ def test_feedback_submission_event_contains_no_party_or_quality_fields() -> None
             rating="extremely_satisfied",
             comment="comment-secret",
             force_visible=False,
+            source="peer",
         )
     finally:
         client.close()

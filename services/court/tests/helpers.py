@@ -303,7 +303,12 @@ def make_mock_judge(
         mock_judge.evaluate.side_effect = side_effect
     else:
         mock_judge.evaluate.return_value = {
+            "schema_version": 1,
             "worker_pct": worker_pct,
+            "spec_quality": "satisfied",
+            "spec_quality_explanation": reasoning,
+            "delivery_quality": "satisfied",
+            "delivery_quality_explanation": reasoning,
             "reasoning": reasoning,
         }
     return mock_judge
@@ -330,7 +335,7 @@ def make_task_data(task_id: str | None = None) -> dict[str, Any]:
         "task_id": task_id or new_task_id(),
         "title": "Implement email validation",
         "spec": "Build a login page with email validation.",
-        "deliverables": "Login page with email field.",
+        "deliverables": [],
         "reward": 1000,
         "status": "disputed",
         "lifecycle_version": 3,

@@ -13,6 +13,8 @@ from service_commons.config import (
 )
 from service_commons.config import get_config_path as resolve_config_path
 
+from court_service.judges.output import validate_rating
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -83,6 +85,10 @@ class DisputesConfig(BaseModel):
     feedback_extremely_satisfied_cutoff: int
     feedback_satisfied_cutoff: int
     feedback_comment_max_length: int
+    # Plan 0.3: a ruling run owns a dispute through a Gateway judging lease of
+    # this many seconds; the reclaim sweep resumes expired or released leases.
+    judging_lease_seconds: int
+    reclaim_interval_seconds: int
 
 
 class JudgeConfig(BaseModel):
@@ -103,8 +109,16 @@ class JudgesConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     panel_size: int
     mock_worker_pct: int
-    max_deliverable_bytes: int
+    # Plan 3.2: mock judges return these fixed quality findings (dev/test/CI).
+    mock_spec_quality: str
+    mock_delivery_quality: str
     judges: list[JudgeConfig]
+
+    @field_validator("mock_spec_quality", "mock_delivery_quality")
+    @classmethod
+    def validate_mock_rating(cls, value: str, info: Any) -> str:
+        """Mock findings must use the Reputation rating vocabulary."""
+        return validate_rating(str(info.field_name), value)
 
     @field_validator("judges")
     @classmethod
@@ -126,6 +140,43 @@ class JudgesConfig(BaseModel):
                 raise ValueError(msg)
             seen.add(judge.id)
         return judges
+
+
+class EvidenceConfig(BaseModel):
+    """Plan 3.1: evidence limits and supported text formats for the judge bundle."""
+
+    model_config = ConfigDict(extra="forbid")
+    max_total_bytes: int
+    max_file_bytes: int
+    allowed_extensions: list[str]
+    allowed_content_types: list[str]
+
+    @field_validator("max_total_bytes", "max_file_bytes")
+    @classmethod
+    def limits_must_be_positive(cls, value: int, info: Any) -> int:
+        """Reject non-positive byte limits."""
+        if value < 1:
+            msg = f"evidence.{info.field_name} must be >= 1"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("allowed_extensions")
+    @classmethod
+    def extensions_must_be_dotted_lowercase(cls, value: list[str]) -> list[str]:
+        """Extensions are compared lowercase and include the leading dot."""
+        if not value or any(not e.startswith(".") or e != e.lower() for e in value):
+            msg = "evidence.allowed_extensions must be non-empty lowercase '.ext' values"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("allowed_content_types")
+    @classmethod
+    def content_types_must_be_lowercase(cls, value: list[str]) -> list[str]:
+        """Media types are compared lowercase without parameters."""
+        if not value or any(t != t.lower() or ";" in t or "/" not in t for t in value):
+            msg = "evidence.allowed_content_types must be non-empty lowercase media types"
+            raise ValueError(msg)
+        return value
 
 
 class RequestConfig(BaseModel):
@@ -158,6 +209,7 @@ class Settings(BaseModel):
     platform: PlatformConfig
     disputes: DisputesConfig
     judges: JudgesConfig
+    evidence: EvidenceConfig
     request: RequestConfig
     db_gateway: DbGatewayConfig | None = None
 

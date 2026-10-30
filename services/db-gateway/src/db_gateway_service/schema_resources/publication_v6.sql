@@ -1,4 +1,4 @@
--- Additive MP-09 V6 publication journal. Runtime schema admission remains V5.
+-- MP-09 V6 publication journal; replaces publication_v4.sql in the current V6 catalog.
 
 CREATE TABLE board_task_publications (
     operation_id TEXT PRIMARY KEY NOT NULL

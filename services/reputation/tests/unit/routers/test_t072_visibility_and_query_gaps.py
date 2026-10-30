@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from reputation_service.core.state import get_app_state
+from tests.fakes.fake_task_board import FakeTaskBoard
 from tests.helpers import make_jws_token, make_mock_platform_agent
 
 if TYPE_CHECKING:
@@ -59,6 +60,9 @@ def _inject_mock(payload: dict[str, object]) -> None:
 @pytest.mark.unit
 async def test_agent_02_feedback_about_agent_from_multiple_tasks(client: AsyncClient) -> None:
     """AGENT-02: feedback about bob from two different tasks/senders both appear."""
+    board = get_app_state().task_board_client
+    assert isinstance(board, FakeTaskBoard)
+    board.set_task("t-agent02-2", CAROL_ID, BOB_ID, "approved")
     payload_ab = _feedback_payload(
         task_id="t-agent02-1", from_agent_id=ALICE_ID, to_agent_id=BOB_ID
     )
@@ -66,7 +70,7 @@ async def test_agent_02_feedback_about_agent_from_multiple_tasks(client: AsyncCl
     await client.post("/feedback", json=_token_body(payload_ab, kid=ALICE_ID))
 
     payload_ba = _feedback_payload(
-        task_id="t-agent02-1", from_agent_id=BOB_ID, to_agent_id=ALICE_ID
+        task_id="t-agent02-1", from_agent_id=BOB_ID, to_agent_id=ALICE_ID, category="spec_quality"
     )
     _inject_mock(payload_ba)
     await client.post("/feedback", json=_token_body(payload_ba, kid=BOB_ID))
@@ -78,7 +82,7 @@ async def test_agent_02_feedback_about_agent_from_multiple_tasks(client: AsyncCl
     await client.post("/feedback", json=_token_body(payload_cb, kid=CAROL_ID))
 
     payload_bc = _feedback_payload(
-        task_id="t-agent02-2", from_agent_id=BOB_ID, to_agent_id=CAROL_ID
+        task_id="t-agent02-2", from_agent_id=BOB_ID, to_agent_id=CAROL_ID, category="spec_quality"
     )
     _inject_mock(payload_bc)
     await client.post("/feedback", json=_token_body(payload_bc, kid=BOB_ID))
@@ -101,7 +105,9 @@ async def test_read_05_idempotent_read_returns_identical_response(client: AsyncC
     resp1 = await client.post("/feedback", json=_token_body(payload_ab))
     feedback_id = resp1.json()["feedback_id"]
 
-    payload_ba = _feedback_payload(task_id="t-read05", from_agent_id=BOB_ID, to_agent_id=ALICE_ID)
+    payload_ba = _feedback_payload(
+        task_id="t-read05", from_agent_id=BOB_ID, to_agent_id=ALICE_ID, category="spec_quality"
+    )
     _inject_mock(payload_ba)
     await client.post("/feedback", json=_token_body(payload_ba, kid=BOB_ID))
 
@@ -121,7 +127,9 @@ async def test_vis_08_revealing_one_task_does_not_affect_another(client: AsyncCl
     _inject_mock(payload_1a)
     await client.post("/feedback", json=_token_body(payload_1a))
 
-    payload_1b = _feedback_payload(task_id="t-vis08-1", from_agent_id=BOB_ID, to_agent_id=ALICE_ID)
+    payload_1b = _feedback_payload(
+        task_id="t-vis08-1", from_agent_id=BOB_ID, to_agent_id=ALICE_ID, category="spec_quality"
+    )
     _inject_mock(payload_1b)
     await client.post("/feedback", json=_token_body(payload_1b, kid=BOB_ID))
 
@@ -149,7 +157,9 @@ async def test_vis_10_concurrent_mutual_reveal_settles_to_both_visible(
     assert resp1.json()["visible"] is False
     sealed_id = resp1.json()["feedback_id"]
 
-    payload_ba = _feedback_payload(task_id="t-vis10", from_agent_id=BOB_ID, to_agent_id=ALICE_ID)
+    payload_ba = _feedback_payload(
+        task_id="t-vis10", from_agent_id=BOB_ID, to_agent_id=ALICE_ID, category="spec_quality"
+    )
     _inject_mock(payload_ba)
 
     post_resp, _get_resp = await asyncio.gather(

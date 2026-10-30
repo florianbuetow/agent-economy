@@ -58,10 +58,14 @@ central_bank:
   escrow_lock_path: "/escrow/lock"
   escrow_release_path: "/escrow/release"
   escrow_split_path: "/escrow/split"
+  escrow_settle_path: "/escrow/settle"
   timeout_seconds: 10
 platform:
   agent_id: "a-platform-test-id"
   agent_config_path: "agents.yaml"
+asset_quota:
+  max_total_bytes_per_agent: 536870912
+  max_total_bytes: 4294967296
 asset_upload:
   stream_chunk_bytes: 262144
   max_multipart_overhead_bytes: 1048576

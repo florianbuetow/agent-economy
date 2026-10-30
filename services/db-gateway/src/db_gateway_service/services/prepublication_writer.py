@@ -68,13 +68,14 @@ class PrepublicationWriter:
         connection: sqlite3.Connection,
         *,
         clock_us: Callable[[], int],
-        artifact_policy: ArtifactPolicy,
+        artifact_policy: ArtifactPolicy | None,
         current_task_board_caller_kid: str,
     ) -> None:
+        """Construct with the caller-supplied policy; only admission requires one."""
         if not callable(clock_us):
             raise TypeError("clock_us must be callable")
-        if not isinstance(artifact_policy, ArtifactPolicy):
-            raise TypeError("artifact_policy must be an ArtifactPolicy")
+        if artifact_policy is not None and not isinstance(artifact_policy, ArtifactPolicy):
+            raise TypeError("artifact_policy must be an ArtifactPolicy or None")
         if not isinstance(current_task_board_caller_kid, str) or not current_task_board_caller_kid:
             raise ValueError("current_task_board_caller_kid must be a nonempty string")
         self._db = connection
@@ -105,6 +106,12 @@ class PrepublicationWriter:
                 request.lock_operation_id,
             )
             self._assert_task_available(cursor, request.task_id)
+            if self._policy is None:
+                raise _error(
+                    "invalid_artifact_policy",
+                    "Admission requires the explicit artifact policy",
+                    400,
+                )
             if request.expected_input_count > self._policy.max_files_per_manifest:
                 raise _error(
                     "invalid_payload",

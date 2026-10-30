@@ -149,6 +149,38 @@ class RouterGatewayEffects:
             }
         )
 
+    async def settle(
+        self,
+        *,
+        escrow_id: str,
+        worker_account_id: str,
+        poster_account_id: str,
+        worker_amount: int,
+        operation_id: str,
+        source_reference: str,
+    ) -> dict[str, Any]:
+        """Commit the exact Central Bank settlement write: pay the price, refund the rest."""
+        escrow = self.store.writer.connection.execute(
+            "SELECT task_id FROM bank_escrow WHERE escrow_id=?", (escrow_id,)
+        ).fetchone()
+        assert escrow is not None
+        return self.store.writer.escrow_split(
+            {
+                "operation_id": operation_id,
+                "escrow_id": escrow_id,
+                "worker_account_id": worker_account_id,
+                "poster_account_id": poster_account_id,
+                "worker_amount": worker_amount,
+                "source_reference": source_reference,
+                "resolved_at": epoch_us_to_utc_text(self.clock_us()),
+                "worker_tx_id": f"tx-{uuid.uuid4()}",
+                "poster_tx_id": f"tx-{uuid.uuid4()}",
+                "event": self.event(
+                    "central-bank", "escrow.split", str(escrow[0]), worker_account_id
+                ),
+            }
+        )
+
     async def file_claim(
         self, *, task_id: str, claimant_id: str, respondent_id: str, claim: str, escrow_id: str
     ) -> dict[str, Any]:

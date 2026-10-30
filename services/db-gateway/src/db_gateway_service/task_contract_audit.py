@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from service_commons.exceptions import ServiceError
 
 from db_gateway_service.financial_requests import canonical_request
+from db_gateway_service.settlement_terms import ruling_worker_amount, settlement_request_fields
 from db_gateway_service.task_operation_requests import (
     TaskOperationRequest,
     parse_task_operation_request,
@@ -270,7 +271,7 @@ def _native_ruling_completion_matches(
         return False
     context = connection.execute(
         "SELECT t.poster_id, t.worker_id, t.escrow_id, t.reward, "
-        "c.lifecycle_version, c.accepted_reward FROM board_tasks t "
+        "c.lifecycle_version, c.accepted_reward, c.accepted_bid_amount FROM board_tasks t "
         "JOIN board_task_contracts c ON c.task_id=t.task_id WHERE t.task_id=?",
         (task_id,),
     ).fetchone()
@@ -281,6 +282,60 @@ def _native_ruling_completion_matches(
         return False
     accepted_reward = context[5]
     reward = context[3] if accepted_reward is None else accepted_reward
+    if type(reward) is not int:
+        return False
+    return any(
+        _native_ruling_form_matches(
+            connection,
+            task_id,
+            task,
+            operation,
+            request,
+            context,
+            worker_pct=worker_pct,
+            reward=reward,
+            accepted_price=accepted_price,
+        )
+        for accepted_price in _ruling_price_forms(context[6])
+    )
+
+
+def _ruling_price_forms(accepted_bid_amount: object) -> tuple[int | None, ...]:
+    """Accepted-bid pricing, plus historical rulings that split the whole budget."""
+    if type(accepted_bid_amount) is int:
+        return (accepted_bid_amount, None)
+    return (None,)
+
+
+def _native_ruling_form_matches(
+    connection: sqlite3.Connection,
+    task_id: str,
+    task: sqlite3.Row | tuple[object, ...],
+    operation: tuple[object, ...],
+    request: TaskOperationRequest,
+    context: sqlite3.Row | tuple[object, ...],
+    *,
+    worker_pct: int,
+    reward: int,
+    accepted_price: int | None,
+) -> bool:
+    expected_intent = _expected_ruling_effect_intent(
+        task_id,
+        context,
+        claim_id=str(task[3]),
+        worker_pct=worker_pct,
+        reward=reward,
+        accepted_price=accepted_price,
+    )
+    if expected_intent is None:
+        return False
+    financial_request = expected_intent["financial_request"]
+    assert isinstance(financial_request, dict)
+    expected_effect_kind = (
+        "bank_release"
+        if financial_request["operation_kind"] == "escrow_release"
+        else "bank_split"
+    )
     expected_arguments = {
         "poster_id": context[0],
         "worker_id": context[1],
@@ -291,8 +346,7 @@ def _native_ruling_completion_matches(
         "summary": task[7],
         "source_reference": f"task:{task_id}:ruling:{task[3]}",
     }
-    expected_effect_kind = "bank_split" if worker_pct not in {0, 100} else "bank_release"
-    expected_result = {
+    expected_result: dict[str, object] = {
         "task_id": task_id,
         "command": "record_ruling",
         "status": "ruled",
@@ -305,14 +359,22 @@ def _native_ruling_completion_matches(
         "summary": task[7],
         "reward": reward,
     }
+    lifecycle_version = context[4]
+    if type(lifecycle_version) is not int:
+        return False
+    if accepted_price is not None:
+        worker_payment = ruling_worker_amount(accepted_price, worker_pct)
+        expected_result["accepted_price"] = accepted_price
+        expected_result["worker_payment"] = worker_payment
+        expected_result["poster_refund"] = reward - worker_payment
     return (
         request.task_id == task_id
-        and request.expected_lifecycle_version == context[4] - 1
+        and request.expected_lifecycle_version == lifecycle_version - 1
         and dict(request.arguments) == expected_arguments
         and operation[3:12]
         == (
             "disputed",
-            context[4] - 1,
+            lifecycle_version - 1,
             "ruled",
             context[4],
             "completed",
@@ -321,14 +383,7 @@ def _native_ruling_completion_matches(
             operation[0],
             operation[0],
         )
-        and _json_object(operation[12])
-        == _expected_ruling_effect_intent(
-            task_id,
-            context,
-            claim_id=str(task[3]),
-            worker_pct=worker_pct,
-            reward=int(reward),
-        )
+        and _json_object(operation[12]) == expected_intent
         and _json_object(operation[14]) == expected_result
         and _board_ruling_event_matches(
             connection, operation[13], task_id, operation_id=str(operation[0])
@@ -338,8 +393,7 @@ def _native_ruling_completion_matches(
             str(operation[0]),
             task_id,
             context,
-            claim_id=str(task[3]),
-            worker_pct=worker_pct,
+            expected_intent,
         )
     )
 
@@ -384,9 +438,24 @@ def _expected_ruling_effect_intent(
     claim_id: str,
     worker_pct: int,
     reward: int,
-) -> dict[str, object]:
+    accepted_price: int | None,
+) -> dict[str, object] | None:
     source_reference = f"task:{task_id}:ruling:{claim_id}"
-    if worker_pct in {0, 100}:
+    kind: str
+    fields: dict[str, object]
+    if accepted_price is not None:
+        try:
+            kind, fields = settlement_request_fields(
+                escrow_id=str(context[2]),
+                poster_id=str(context[0]),
+                worker_id=None if context[1] is None else str(context[1]),
+                escrow_amount=reward,
+                worker_amount=ruling_worker_amount(accepted_price, worker_pct),
+                source_reference=source_reference,
+            )
+        except ValueError:
+            return None
+    elif worker_pct in {0, 100}:
         kind = "escrow_release"
         fields = {
             "escrow_id": context[2],
@@ -444,23 +513,11 @@ def _ruling_receipt_matches(
     operation_id: str,
     task_id: str,
     context: sqlite3.Row | tuple[object, ...],
-    *,
-    claim_id: str,
-    worker_pct: int,
+    expected_intent: dict[str, object],
 ) -> bool:
-    reward = context[3] if context[5] is None else context[5]
-    if type(reward) is not int:
-        return False
-    expected_intent = _expected_ruling_effect_intent(
-        task_id,
-        context,
-        claim_id=claim_id,
-        worker_pct=worker_pct,
-        reward=reward,
-    )
     financial_request = expected_intent["financial_request"]
     assert isinstance(financial_request, dict)
-    expected_kind = "escrow_release" if worker_pct in {0, 100} else "escrow_split"
+    expected_kind = financial_request["operation_kind"]
     receipt = connection.execute(
         "SELECT receipt_version, operation_kind, canonical_request_json, request_sha256, "
         "source_reference, escrow_id, event_id FROM bank_operation_receipts "

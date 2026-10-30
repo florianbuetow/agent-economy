@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.integration
 _ROOT = Path(__file__).resolve().parents[4]
 _BUILD_HISTORY = Path(__file__).resolve().parents[1] / "fakes" / "mp08_financial_history.py"
-_KINDS = ("receipt_projection_pending", "conflict_wrong_receipt", "historical_paid")
+_KINDS = ("receipt_projection_pending", "conflict_wrong_receipt")
 
 
 def _service_module(service: str, module: str) -> Any:
@@ -247,7 +247,6 @@ async def test_real_services_preserve_authoritative_financial_effect(
     expected = {
         "receipt_projection_pending": ("pending", "confirmed", "worker_paid"),
         "conflict_wrong_receipt": ("conflict", "absent", None),
-        "historical_paid": ("historical", "historical", "worker_paid"),
     }[kind]
     assert (
         gateway_effect["settlement_state"],

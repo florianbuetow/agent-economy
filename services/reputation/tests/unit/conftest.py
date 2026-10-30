@@ -12,6 +12,7 @@ from service_auth.signing import generate_keypair
 
 from reputation_service.config import clear_settings_cache
 from reputation_service.core.state import get_app_state, reset_app_state
+from tests.fakes.fake_task_board import default_task_board
 from tests.fakes.sqlite_feedback_store import SqliteFeedbackStore
 
 try:
@@ -138,6 +139,7 @@ db_gateway:
         ):
             state = get_app_state()
             state.feedback_store = SqliteFeedbackStore(db_path=db_path_holder["path"])
+            state.task_board_client = default_task_board()
             yield client
 
     monkeypatch.setattr(persistence_tests, "_write_config", _write_config_with_gateway)

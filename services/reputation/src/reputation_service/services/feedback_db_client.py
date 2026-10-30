@@ -72,6 +72,7 @@ class FeedbackDbClient:
             submitted_at=str(data["submitted_at"]),
             visible=bool(data["visible"]),
             role=str(data["role"]) if data.get("role") is not None else None,
+            source=str(data["source"]),
         )
 
     def insert_feedback(
@@ -84,6 +85,7 @@ class FeedbackDbClient:
         comment: str | None,
         *,
         force_visible: bool,
+        source: str,
     ) -> FeedbackRecord:
         """
         Persist feedback via the gateway, which owns the sealed-reveal policy.
@@ -107,6 +109,7 @@ class FeedbackDbClient:
             "comment": comment,
             "submitted_at": submitted_at,
             "force_visible": force_visible,
+            "source": source,
             "event": {
                 "event_source": "reputation",
                 "event_type": "feedback.submitted",
@@ -141,6 +144,7 @@ class FeedbackDbClient:
             comment=comment,
             submitted_at=submitted_at,
             visible=bool(body["visible"]),
+            source=source,
         )
 
     def get_by_id(self, feedback_id: str) -> FeedbackRecord | None:
@@ -179,6 +183,20 @@ class FeedbackDbClient:
         items_raw = data.get("feedback", [])
         items = items_raw if isinstance(items_raw, list) else []
         return [self._dict_to_record(item) for item in items if isinstance(item, dict)]
+
+    def reveal_expired(self, cutoff: str) -> int:
+        """Ask the gateway to reveal sealed feedback submitted at or before ``cutoff``."""
+        payload: dict[str, Any] = {
+            "cutoff": cutoff,
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+        response = self._request(
+            "POST", "/reputation/feedback/reveal-expired", json=payload, params=None
+        )
+        if response.status_code != 200:
+            msg = f"Gateway error: {response.status_code} {response.text}"
+            raise RuntimeError(msg)
+        return int(self._json(response)["revealed"])
 
     def count(self) -> int:
         response = self._request("GET", "/reputation/feedback/count", json=None, params=None)

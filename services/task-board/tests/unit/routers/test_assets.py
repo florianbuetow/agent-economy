@@ -12,6 +12,8 @@ from task_board_service.config import get_settings
 from tests.helpers import make_jws_token
 from tests.unit.routers.conftest import (
     create_task,
+    download_asset_headers,
+    list_assets_headers,
     setup_task_in_execution,
     upload_asset,
 )
@@ -408,7 +410,10 @@ class TestAssetRetrieval:
             content=b"content two",
         )
 
-        resp = await client.get(f"/tasks/{task_id}/assets")
+        resp = await client.get(
+            f"/tasks/{task_id}/assets",
+            headers=list_assets_headers(alice_keypair, alice_agent_id, task_id),
+        )
 
         assert resp.status_code == 200
         data = resp.json()
@@ -437,7 +442,10 @@ class TestAssetRetrieval:
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
 
-        resp = await client.get(f"/tasks/{task_id}/assets")
+        resp = await client.get(
+            f"/tasks/{task_id}/assets",
+            headers=list_assets_headers(alice_keypair, alice_agent_id, task_id),
+        )
 
         assert resp.status_code == 200
         data = resp.json()
@@ -470,7 +478,10 @@ class TestAssetRetrieval:
         assert upload_resp.status_code == 201
         asset_id = upload_resp.json()["asset_id"]
 
-        resp = await client.get(f"/tasks/{task_id}/assets/{asset_id}")
+        resp = await client.get(
+            f"/tasks/{task_id}/assets/{asset_id}",
+            headers=download_asset_headers(alice_keypair, alice_agent_id, task_id, asset_id),
+        )
 
         assert resp.status_code == 200
         assert resp.content == file_content
@@ -489,7 +500,12 @@ class TestAssetRetrieval:
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
 
-        resp = await client.get(f"/tasks/{task_id}/assets/{NONEXISTENT_ASSET_ID}")
+        resp = await client.get(
+            f"/tasks/{task_id}/assets/{NONEXISTENT_ASSET_ID}",
+            headers=download_asset_headers(
+                alice_keypair, alice_agent_id, task_id, NONEXISTENT_ASSET_ID
+            ),
+        )
 
         assert resp.status_code == 404
         assert resp.json()["error"] == "asset_not_found"
@@ -498,15 +514,20 @@ class TestAssetRetrieval:
     async def test_list_assets_nonexistent_task(
         self,
         client: AsyncClient,
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
     ) -> None:
         """AR-05: GET /tasks/{task_id}/assets for nonexistent task returns 404 task_not_found."""
-        resp = await client.get(f"/tasks/{NONEXISTENT_TASK_ID}/assets")
+        resp = await client.get(
+            f"/tasks/{NONEXISTENT_TASK_ID}/assets",
+            headers=list_assets_headers(alice_keypair, alice_agent_id, NONEXISTENT_TASK_ID),
+        )
 
         assert resp.status_code == 404
         assert resp.json()["error"] == "task_not_found"
 
     @pytest.mark.unit
-    async def test_assets_are_public_no_auth(
+    async def test_assets_require_signed_reader(
         self,
         client: AsyncClient,
         alice_keypair: tuple[Ed25519PrivateKey, str],
@@ -514,7 +535,7 @@ class TestAssetRetrieval:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """AR-06: Asset list and download endpoints require no authentication."""
+        """AR-06: Asset list and download endpoints reject requests without a Bearer token."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -532,9 +553,9 @@ class TestAssetRetrieval:
 
         # List assets without any Authorization header
         list_resp = await client.get(f"/tasks/{task_id}/assets")
-        assert list_resp.status_code == 200
+        assert list_resp.status_code == 401
 
         # Download asset without any Authorization header
         download_resp = await client.get(f"/tasks/{task_id}/assets/{asset_id}")
-        assert download_resp.status_code == 200
-        assert download_resp.content == b"public content"
+        assert download_resp.status_code == 401
+        assert download_resp.json()["error"] == "unauthorized"

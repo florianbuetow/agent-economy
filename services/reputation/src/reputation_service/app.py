@@ -15,7 +15,7 @@ from reputation_service.config import get_settings
 from reputation_service.core.exceptions import register_exception_handlers
 from reputation_service.core.lifespan import lifespan
 from reputation_service.core.middleware import RequestValidationMiddleware
-from reputation_service.routers import feedback, health
+from reputation_service.routers import feedback, health, quality
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -95,6 +95,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, tags=["Operations"])
     app.include_router(feedback.router, tags=["Feedback"])
+    app.include_router(quality.router, tags=["Quality"])
 
     app.add_middleware(
         RequestValidationMiddleware,

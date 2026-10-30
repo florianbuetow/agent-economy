@@ -228,6 +228,8 @@ async def get_task_drilldown(
         lifecycle_version=data["lifecycle_version"],
         bid_count=data["bid_count"],
         accepted_price=data["accepted_price"],
+        worker_payment=data["worker_payment"],
+        poster_refund=data["poster_refund"],
         deadlines=TaskDeadlines(**data["deadlines"]),
         timestamps=TaskTimestamps(**data["timestamps"]),
         bids=bids,

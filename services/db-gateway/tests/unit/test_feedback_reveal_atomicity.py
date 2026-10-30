@@ -269,6 +269,7 @@ def _payload(
         "from_agent_id": from_agent_id,
         "to_agent_id": to_agent_id,
         "role": role,
+        "source": "peer",
         "category": category,
         "rating": "satisfied",
         "comment": "ok",

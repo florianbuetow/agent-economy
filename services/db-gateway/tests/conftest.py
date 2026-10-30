@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 @pytest.fixture
 def schema_sql() -> str:
     """Load the exact composed V5 schema admitted by the current runtime."""
-    return load_schema_sql(SchemaState.CURRENT_V5)
+    return load_schema_sql(SchemaState.CURRENT_V6)
 
 
 @pytest.fixture

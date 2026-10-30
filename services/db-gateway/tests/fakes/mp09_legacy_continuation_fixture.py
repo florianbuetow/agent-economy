@@ -7,7 +7,6 @@ import json
 import sqlite3
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal
 from uuid import uuid4
 
@@ -27,6 +26,7 @@ from tests.fakes.mp09_receipt_adoption_fixture import full_snapshot
 from tests.fakes.native_publication_fixture import publish_native_task
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from types import TracebackType
 
 BOARD_KID: Final[str] = "gateway-task-board"
@@ -409,7 +409,7 @@ def open_preserved_v1_cutover_fixture(database_path: Path) -> LegacyContinuation
         db_path=str(database_path),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
         current_task_board_caller_kid=BOARD_KID,
     )
     try:
@@ -460,9 +460,13 @@ def open_preserved_v1_cutover_fixture(database_path: Path) -> LegacyContinuation
             lock_timestamp=epoch_us_to_utc_text(CREATED_US - 1_000_000),
         )
         publication = writer.connection.execute(
-            "SELECT * FROM board_task_publications WHERE task_id=?", (TASK_ID,)
+            "SELECT operation_id,publication_contract_version,task_id,canonical_request_json,"
+            "request_sha256,caller_kid,actor_id,lock_operation_id,state,admitted_at_us,"
+            "escrow_id,lock_request_sha256,lock_receipt_event_id,published_at_us,"
+            "creation_event_id,result_json,error_json FROM board_task_publications WHERE task_id=?",
+            (TASK_ID,),
         ).fetchone()
-        assert publication is not None and len(publication) == 17
+        assert publication is not None
         preserved_publication = tuple(publication)
         preserved_graph = _v1_referenced_snapshot(writer.connection)
     finally:
@@ -472,36 +476,6 @@ def open_preserved_v1_cutover_fixture(database_path: Path) -> LegacyContinuation
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys=ON")
     try:
-        resources = Path(__file__).parents[2] / "src" / "db_gateway_service" / "schema_resources"
-        publication_v6 = (resources / "publication_v6.sql").read_text(encoding="utf-8")
-        table_start = publication_v6.index("CREATE TABLE board_task_publications")
-        indexes_start = publication_v6.index("CREATE INDEX idx_board_task_publications_recovery")
-        cutover_start = publication_v6.index("CREATE TABLE board_publication_cutover")
-        exact_table_ddl = publication_v6[table_start:indexes_start]
-        exact_index_ddl = publication_v6[indexes_start:cutover_start]
-        connection.execute(
-            "ALTER TABLE board_task_publications RENAME TO preserved_v1_publications"
-        )
-        connection.executescript(exact_table_ddl)
-        connection.execute(
-            "INSERT INTO board_task_publications ("
-            "operation_id,publication_contract_version,task_id,canonical_request_json,"
-            "request_sha256,caller_kid,actor_id,lock_operation_id,state,admitted_at_us,"
-            "escrow_id,lock_request_sha256,lock_receipt_event_id,published_at_us,"
-            "creation_event_id,result_json,error_json,request_protocol_version,"
-            "expected_input_count,base_request_sha256,freeze_operation_id,"
-            "canonical_freeze_request_json,freeze_request_sha256,input_manifest_sha256,"
-            "publication_contract_sha256,inputs_frozen_at_us,publish_operation_id,"
-            "canonical_publish_request_json,publish_request_sha256,publish_authorized_at_us) "
-            "SELECT operation_id,publication_contract_version,task_id,canonical_request_json,"
-            "request_sha256,caller_kid,actor_id,lock_operation_id,state,admitted_at_us,"
-            "escrow_id,lock_request_sha256,lock_receipt_event_id,published_at_us,"
-            "creation_event_id,result_json,error_json,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"
-            "NULL,NULL,NULL,NULL,NULL FROM preserved_v1_publications"
-        )
-        connection.execute("DROP TABLE preserved_v1_publications")
-        connection.executescript(exact_index_ddl)
-        connection.executescript((resources / "artifacts_v6.sql").read_text(encoding="utf-8"))
         retained = connection.execute(
             "SELECT operation_id,publication_contract_version,task_id,canonical_request_json,"
             "request_sha256,caller_kid,actor_id,lock_operation_id,state,admitted_at_us,"

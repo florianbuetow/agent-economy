@@ -216,7 +216,7 @@ def test_v6_prototype_preserves_base_resources_and_publication_sidecars(tmp_path
     resources = importlib.resources.files("db_gateway_service.schema_resources")
     baseline = sqlite3.connect(":memory:")
     for resource_name in (
-        "current_v5.sql",
+        "current_v6.sql",
         "task_operations_v3.sql",
         "task_effect_recovery_v5.sql",
     ):
@@ -230,7 +230,7 @@ def test_v6_prototype_preserves_base_resources_and_publication_sidecars(tmp_path
 
     v4_reference = sqlite3.connect(":memory:")
     for resource_name in (
-        "current_v5.sql",
+        "current_v6.sql",
         "task_operations_v3.sql",
         "publication_v4.sql",
         "task_effect_recovery_v5.sql",
@@ -276,7 +276,7 @@ def test_v6_prototype_preserves_base_resources_and_publication_sidecars(tmp_path
             "SELECT version FROM schema_metadata WHERE singleton=1"
         ).fetchone()
         assert metadata is not None
-        assert tuple(metadata) == (5,)
+        assert tuple(metadata) == (6,)
     finally:
         connection.close()
 

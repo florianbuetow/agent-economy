@@ -16,6 +16,7 @@ from service_commons.exceptions import ServiceError
 from reputation_service.app import create_app
 from reputation_service.config import clear_settings_cache
 from reputation_service.core.state import get_app_state, reset_app_state
+from tests.fakes.fake_task_board import default_task_board
 from tests.fakes.sqlite_feedback_store import SqliteFeedbackStore
 from tests.helpers import make_jws_token, make_mock_platform_agent
 
@@ -93,11 +94,17 @@ identity:
   get_agent_path: "/agents"
   verify_jws_path: "/agents/verify-jws"
   timeout_seconds: 10
+task_board:
+  base_url: "http://localhost:8003"
+  timeout_seconds: 10
 request:
   max_body_size: 1048576
 feedback:
   reveal_timeout_seconds: 86400
   max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
@@ -144,6 +151,7 @@ async def client(app: FastAPI, _isolate_test: str) -> AsyncIterator[AsyncClient]
     ):
         state = get_app_state()
         state.feedback_store = SqliteFeedbackStore(db_path=_isolate_test)
+        state.task_board_client = default_task_board()
         await state.platform_agent.close()
         inject_mock_identity()
         yield c

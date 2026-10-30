@@ -62,7 +62,7 @@ def v3_writer(tmp_path: Path) -> Iterator[DbWriter]:
         db_path=str(tmp_path / "operation-regressions.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
         current_task_board_caller_kid=_BOARD_KID,
     )
     yield writer

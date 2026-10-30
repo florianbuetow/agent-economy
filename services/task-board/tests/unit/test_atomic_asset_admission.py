@@ -10,7 +10,11 @@ import pytest
 from service_commons.exceptions import ServiceError
 
 from task_board_service.services.asset_manager import AssetManager
-from task_board_service.services.streaming_upload import AssetUploadLimits, ParsedAssetUpload
+from task_board_service.services.streaming_upload import (
+    AssetStorageQuota,
+    AssetUploadLimits,
+    ParsedAssetUpload,
+)
 from task_board_service.services.task_db_client import TaskDbClient
 
 if TYPE_CHECKING:
@@ -139,6 +143,8 @@ async def test_streamed_upload_keeps_pre_body_lifecycle_version(
         token="token",
         request=request,  # type: ignore[arg-type]
         limits=limits,
+        quota=AssetStorageQuota(max_total_bytes_per_agent=1 << 20, max_total_bytes=1 << 30),
+        idempotency_key=None,
     )
 
     assert len(store.insert_calls) == 1

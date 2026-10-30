@@ -8,12 +8,15 @@ import importlib.util
 import json
 import sqlite3
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from service_auth.financial_identity import operation_id_for
 
 from db_gateway_service.financial_requests import canonical_request
+from db_gateway_service.schema import SchemaState, load_schema_sql
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 BOARD_KID: Final[str] = "gateway-task-board"
 BODY_A: Final[bytes] = b"alpha artifact\n"
@@ -193,22 +196,12 @@ def require_v6_api() -> V6Api:
 
 
 def open_v6_database(database_path: Path) -> sqlite3.Connection:
-    """Compose the fresh schema-V5-labeled V6 prototype without migration SQL."""
+    """Open a fresh database with the current V6 bootstrap catalog."""
     connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys=ON")
-    resources = Path(__file__).parents[2] / "src" / "db_gateway_service" / "schema_resources"
     try:
-        for resource_name in (
-            "current_v5.sql",
-            "task_operations_v3.sql",
-            "publication_v6.sql",
-            "task_effect_recovery_v5.sql",
-            "artifacts_v6.sql",
-        ):
-            resource = resources / resource_name
-            assert resource.is_file(), f"Missing V6 capability: schema_resources/{resource_name}"
-            connection.executescript(resource.read_text(encoding="utf-8"))
+        connection.executescript(load_schema_sql(SchemaState.CURRENT_V6))
         return connection
     except BaseException:
         connection.close()

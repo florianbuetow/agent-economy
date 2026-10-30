@@ -90,6 +90,8 @@ def _resource_for_payload(payload: dict[str, Any], agent_id: str) -> str:
         resource = f"GET /accounts/{payload.get('account_id') or agent_id}/transactions"
     elif action == "escrow_release" or "recipient_account_id" in payload:
         resource = f"POST /escrow/{payload.get('escrow_id')}/release"
+    elif action == "escrow_settle":
+        resource = f"POST /escrow/{payload.get('escrow_id')}/settle"
     elif action == "escrow_split" or "worker_pct" in payload:
         resource = f"POST /escrow/{payload.get('escrow_id')}/split"
     else:

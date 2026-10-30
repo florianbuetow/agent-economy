@@ -34,6 +34,7 @@ def _insert_once(store: FeedbackStore) -> None:
         rating="satisfied",
         comment=None,
         force_visible=False,
+        source="peer",
     )
 
 

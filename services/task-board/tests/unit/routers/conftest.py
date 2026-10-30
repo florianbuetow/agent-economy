@@ -209,10 +209,14 @@ central_bank:
   escrow_lock_path: "/escrow/lock"
   escrow_release_path: "/escrow/release"
   escrow_split_path: "/escrow/split"
+  escrow_settle_path: "/escrow/settle"
   timeout_seconds: 10
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
   agent_config_path: "{agent_config_path}"
+asset_quota:
+  max_total_bytes_per_agent: 536870912
+  max_total_bytes: 4294967296
 asset_upload:
   stream_chunk_bytes: 262144
   max_multipart_overhead_bytes: 1048576
@@ -290,7 +294,7 @@ deadline_evaluation:
                         db_path=db_path,
                         busy_timeout_ms=5000,
                         journal_mode="wal",
-                        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+                        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
                         caller_kid="gateway-task-board",
                         authority=BoardAuthority(
                             platform_public_key=platform_keypair[1],
@@ -362,6 +366,7 @@ deadline_evaluation:
                 mock_bank.escrow_lock = AsyncMock(side_effect=effects.lock)
                 mock_bank.escrow_release = AsyncMock(side_effect=effects.release)
                 mock_bank.escrow_split = AsyncMock(side_effect=effects.split)
+                mock_bank.settle_escrow = AsyncMock(side_effect=effects.settle)
                 state.central_bank_client = mock_bank
                 posting_recovery = PostingRecovery(
                     store=recovery_store,
@@ -792,6 +797,32 @@ async def upload_asset(
         headers={"Authorization": f"Bearer {token}"},
         files={"file": (filename, content, "application/octet-stream")},
     )
+
+
+def list_assets_headers(
+    keypair: tuple[Ed25519PrivateKey, str], agent_id: str, task_id: str
+) -> dict[str, str]:
+    """Signed Bearer header for GET /tasks/{task_id}/assets."""
+    token = make_jws_token(
+        keypair[0],
+        agent_id,
+        {"action": "list_assets", "task_id": task_id},
+        resource=f"GET /tasks/{task_id}/assets",
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+def download_asset_headers(
+    keypair: tuple[Ed25519PrivateKey, str], agent_id: str, task_id: str, asset_id: str
+) -> dict[str, str]:
+    """Signed Bearer header for GET /tasks/{task_id}/assets/{asset_id}."""
+    token = make_jws_token(
+        keypair[0],
+        agent_id,
+        {"action": "download_asset", "task_id": task_id, "asset_id": asset_id},
+        resource=f"GET /tasks/{task_id}/assets/{asset_id}",
+    )
+    return {"Authorization": f"Bearer {token}"}
 
 
 async def submit_deliverable(

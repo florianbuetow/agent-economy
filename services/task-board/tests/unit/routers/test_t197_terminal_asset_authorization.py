@@ -10,7 +10,7 @@ from service_auth.jws import TokenPolicy
 
 from task_board_service.core.state import get_app_state
 from task_board_service.operator_authority import OperatorAssetAuthority
-from tests.helpers import make_jws_token
+from tests.helpers import generate_keypair, make_jws_token
 from tests.unit.routers.conftest import (
     approve_task,
     setup_task_in_execution,
@@ -40,7 +40,7 @@ def _download_headers(
     return {"Authorization": f"Bearer {token}"}
 
 
-async def test_terminal_asset_requires_the_configured_operator_key(
+async def test_terminal_asset_admits_parties_and_configured_operator(
     client: AsyncClient,
     alice_keypair: tuple[Ed25519PrivateKey, str],
     alice_agent_id: str,
@@ -88,11 +88,11 @@ async def test_terminal_asset_requires_the_configured_operator_key(
     )
 
     unsigned = await client.get(f"/tasks/{task_id}/assets/{asset_id}")
-    poster_not_operator = await client.get(
+    poster = await client.get(
         f"/tasks/{task_id}/assets/{asset_id}",
         headers=_download_headers(alice_keypair, alice_agent_id, task_id, asset_id),
     )
-    worker_not_operator = await client.get(
+    worker = await client.get(
         f"/tasks/{task_id}/assets/{asset_id}",
         headers=_download_headers(bob_keypair, bob_agent_id, task_id, asset_id),
     )
@@ -101,15 +101,9 @@ async def test_terminal_asset_requires_the_configured_operator_key(
         headers=_download_headers(carol_keypair, carol_agent_id, task_id, asset_id),
     )
 
-    assert (unsigned.status_code, unsigned.json()["error"]) == (410, "artifact_unavailable")
-    assert (poster_not_operator.status_code, poster_not_operator.json()["error"]) == (
-        403,
-        "forbidden",
-    )
-    assert (worker_not_operator.status_code, worker_not_operator.json()["error"]) == (
-        403,
-        "forbidden",
-    )
+    assert (unsigned.status_code, unsigned.json()["error"]) == (401, "unauthorized")
+    assert poster.status_code == 200 and poster.content == content
+    assert worker.status_code == 200 and worker.content == content
     assert operator.status_code == 200 and operator.content == content
 
 
@@ -154,36 +148,38 @@ async def test_terminal_token_is_bound_to_exact_task_and_asset(
     assert response.json()["error"] == "invalid_payload"
 
 
-async def test_signed_nonterminal_download_still_requires_configured_operator(
+async def test_signed_non_party_download_requires_configured_operator(
     client: AsyncClient,
     alice_keypair: tuple[Ed25519PrivateKey, str],
     alice_agent_id: str,
     bob_keypair: tuple[Ed25519PrivateKey, str],
     bob_agent_id: str,
     carol_keypair: tuple[Ed25519PrivateKey, str],
+    carol_agent_id: str,
 ) -> None:
     task_id, _bid_id = await setup_task_in_execution(
         client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
     )
     uploaded = await upload_asset(client, bob_keypair, bob_agent_id, task_id)
     asset_id = uploaded.json()["asset_id"]
+    operator_private, operator_public = generate_keypair()
     state = get_app_state()
     assert state.token_validator is not None
     assert state.identity_client is not None
     state.token_validator.configure_operator_asset_authority(
         OperatorAssetAuthority(
-            public_key=carol_keypair[0].public_key(),
-            canonical_public_key=carol_keypair[1],
+            public_key=operator_private.public_key(),
+            canonical_public_key=operator_public,
             token_policy=TokenPolicy(max_lifetime_seconds=60, clock_skew_seconds=0),
         )
     )
     state.identity_client.get_agent = AsyncMock(  # type: ignore[method-assign]
-        return_value={"agent_id": alice_agent_id, "public_key": alice_keypair[1]}
+        return_value={"agent_id": carol_agent_id, "public_key": carol_keypair[1]}
     )
 
     response = await client.get(
         f"/tasks/{task_id}/assets/{asset_id}",
-        headers=_download_headers(alice_keypair, alice_agent_id, task_id, asset_id),
+        headers=_download_headers(carol_keypair, carol_agent_id, task_id, asset_id),
     )
 
     assert response.status_code == 403

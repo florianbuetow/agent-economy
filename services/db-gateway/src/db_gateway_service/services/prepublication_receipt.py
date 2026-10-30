@@ -99,7 +99,9 @@ def materialize_publication(
 ) -> dict[str, object]:
     published_at_us = clock_us()
     committed_at_us = parse_utc_text_to_epoch_us(proof.committed_at)
-    if committed_at_us < int(row[29]):
+    authorized_us = int(row[29])
+    # Central Bank stamps whole seconds: a lock in the authorizing second is valid.
+    if committed_at_us < authorized_us - authorized_us % 1_000_000:
         raise PublicationEvidenceError("clock_out_of_range")
     if published_at_us < max(int(row[9]), int(row[25]), int(row[29]), committed_at_us):
         raise PublicationEvidenceError("clock_out_of_range")

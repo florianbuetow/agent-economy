@@ -804,7 +804,7 @@ def test_completed_cutover_without_artifact_contract_cannot_fall_back_to_protoco
             connection.execute("SELECT version FROM schema_metadata WHERE singleton=1").fetchone()[
                 0
             ]
-            == 5
+            == 6
         )
         assert (
             connection.execute("SELECT COUNT(*) FROM board_task_artifact_contracts").fetchone()[0]

@@ -92,6 +92,7 @@ def task_to_response(row: dict[str, Any]) -> dict[str, Any]:
         "ruling_summary": row["ruling_summary"],
         "expired_at": row["expired_at"],
         "escrow_pending": bool(row["escrow_pending"]),
+        "accepted_price": contract["accepted_bid_amount"],
         **contract,
         "bidding_deadline": _cutoff_iso(contract["bidding_cutoff_us"]),
         "acceptance_deadline": _cutoff_iso(contract["acceptance_cutoff_us"]),

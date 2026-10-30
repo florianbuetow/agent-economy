@@ -132,10 +132,9 @@ class _FixtureQualityReader:
     shape (one observation per row); the real formula is tested in Reputation.
     """
 
-    _POINTS = {"dissatisfied": 0, "satisfied": 50, "extremely_satisfied": 100}
-
     def __init__(self, database: Path) -> None:
         self._database = database
+        self._points = {"dissatisfied": 0, "satisfied": 50, "extremely_satisfied": 100}
 
     async def get_agent_quality(self, agent_id: str) -> dict[str, object]:
         connection = sqlite3.connect(str(self._database))
@@ -152,13 +151,13 @@ class _FixtureQualityReader:
             ("spec_quality", "specification_quality"),
             ("delivery_quality", "delivery_quality"),
         ):
-            ratings = [r for c, r in rows if c == category and r in self._POINTS]
-            points = [self._POINTS[r] for r in ratings]
+            ratings = [r for c, r in rows if c == category and r in self._points]
+            points = [self._points[r] for r in ratings]
             report[name] = {
                 "rated": bool(points),
                 "score": (2 * sum(points) + len(points)) // (2 * len(points)) if points else None,
                 "task_count": len(points),
-                "rating_counts": {rating: ratings.count(rating) for rating in self._POINTS},
+                "rating_counts": {rating: ratings.count(rating) for rating in self._points},
             }
         return report
 

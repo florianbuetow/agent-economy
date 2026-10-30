@@ -107,7 +107,8 @@ class FinancialEffect(StrictModel):
             targets = {
                 "worker_paid": {"approved", "ruled"},
                 "poster_refunded": {"cancelled", "expired", "ruled"},
-                "split": {"ruled"},
+                # G01: approval pays the accepted price and refunds the unused budget.
+                "split": {"approved", "ruled"},
             }
             if self.pending_target_status not in targets[str(self.outcome)]:
                 raise ValueError("Receipt outcome contradicts the pending business target")
@@ -126,6 +127,10 @@ class TaskContractProjection(StrictModel):
     review_cutoff_us: Integer | None
     accepted_reward: Annotated[int, Field(gt=0)] | None
     accepted_bid_amount: Integer | None
+    worker_payment: Integer | None
+    """G01: credits the settlement receipt paid the worker; null until settled."""
+    poster_refund: Integer | None
+    """G01: credits the settlement receipt returned to the poster; null until settled."""
     pending_transition: PendingTransition | None
     legacy_reconciliations: list[LegacyReconciliation]
     financial_effect: FinancialEffect

@@ -11,6 +11,7 @@ from service_commons.exceptions import ServiceError
 from db_gateway_service.financial_requests import canonical_request
 from db_gateway_service.services.artifact_acceptance import (
     AcceptedArtifactBinding,
+    EmptyInputAcceptanceBinding,
     commit_acceptance_binding,
     inspect_acceptance_binding,
 )
@@ -31,6 +32,10 @@ from db_gateway_service.services.task_operation_court import (
     locked_escrow_matches,
 )
 from db_gateway_service.services.task_operation_guards import assert_no_competing_task_work
+from db_gateway_service.settlement_terms import (
+    ruling_worker_amount,
+    settlement_request_fields,
+)
 from db_gateway_service.task_operation_requests import (
     COMMAND_TARGET_STATUS,
     TaskOperationRequest,
@@ -568,6 +573,7 @@ class TaskOperationWriter:
             raise _service_error("self_bid", "Cannot bid on your own task", 400, {})
         bid_id = str(request.argument("bid_id"))
         amount = int(request.argument("amount"))
+        self._require_bid_within_budget(amount, task)
         collision = cursor.execute(
             "SELECT 1 FROM board_bids WHERE bid_id = ? OR (task_id = ? AND bidder_id = ?) LIMIT 1",
             (bid_id, request.task_id, bidder_id),
@@ -637,7 +643,8 @@ class TaskOperationWriter:
             "bid_amount"
         ):
             raise _service_error("payload_mismatch", "Selected bid facts do not match", 409, {})
-        execution_cutoff_us = add_seconds_to_epoch_us(now_us, task["deadline_seconds"])
+        self._require_bid_within_budget(bid_amount, task)
+        execution_cutoff_us =add_seconds_to_epoch_us(now_us, task["deadline_seconds"])
         accepted_at = epoch_us_to_utc_text(now_us)
         binding = inspect_acceptance_binding(
             cursor,
@@ -733,8 +740,9 @@ class TaskOperationWriter:
             "worker_id": worker_id,
             "reward": int(task["reward"]),
             "bid_amount": bid_amount,
+            "accepted_price": bid_amount,
         }
-        if binding is not None:
+        if binding is not None and not isinstance(binding, EmptyInputAcceptanceBinding):
             result["accepted_binding_kind"] = binding.kind
             result["accepted_binding_sha256"] = binding.sha256
         return self._persist_pure(cursor, request, caller_kid, now_us, result)
@@ -993,39 +1001,21 @@ class TaskOperationWriter:
         )
         if request.command == "record_ruling":
             self._validate_ruling_linkage(cursor, request, task)
-            worker_pct = int(request.argument("worker_pct"))
-            if worker_pct not in {0, 100}:
-                operation_kind = "escrow_split"
-                fields: dict[str, object] = {
-                    "escrow_id": str(task["escrow_id"]),
-                    "worker_account_id": str(task["worker_id"]),
-                    "poster_account_id": str(task["poster_id"]),
-                    "worker_pct": worker_pct,
-                    "source_reference": expected_source_reference,
-                }
-                effect_kind = "bank_split"
-            else:
-                operation_kind = "escrow_release"
-                fields = {
-                    "escrow_id": str(task["escrow_id"]),
-                    "recipient_account_id": (
-                        str(task["poster_id"]) if worker_pct == 0 else str(task["worker_id"])
-                    ),
-                    "source_reference": expected_source_reference,
-                }
-                effect_kind = "bank_release"
-        else:
-            operation_kind = "escrow_release"
-            fields = {
-                "escrow_id": str(task["escrow_id"]),
-                "recipient_account_id": (
-                    str(task["worker_id"])
-                    if request.command in {"approve_task", "auto_approve"}
-                    else str(task["poster_id"])
-                ),
-                "source_reference": expected_source_reference,
-            }
-            effect_kind = "bank_release"
+        worker_amount = self._settlement_worker_amount(request, contract)
+        try:
+            operation_kind, fields = settlement_request_fields(
+                escrow_id=str(task["escrow_id"]),
+                poster_id=str(task["poster_id"]),
+                worker_id=None if task["worker_id"] is None else str(task["worker_id"]),
+                escrow_amount=int(expected_reward),
+                worker_amount=worker_amount,
+                source_reference=expected_source_reference,
+            )
+        except ValueError as exc:
+            raise _service_error(
+                "task_contract_invalid", "Accepted price does not fit the escrow", 500, {}
+            ) from exc
+        effect_kind = "bank_release" if operation_kind == "escrow_release" else "bank_split"
         financial = canonical_request(operation_kind, fields)
         return effect_kind, {
             "financial_request": json.loads(financial.canonical_json),
@@ -1037,6 +1027,33 @@ class TaskOperationWriter:
                 "amount": int(expected_reward),
             },
         }
+
+    @staticmethod
+    def _settlement_worker_amount(
+        request: TaskOperationRequest,
+        contract: dict[str, Any],
+    ) -> int:
+        """Return the worker's share of the final settlement under accepted-bid pricing."""
+        if request.command not in {"approve_task", "auto_approve", "record_ruling"}:
+            return 0
+        accepted_price = contract["accepted_bid_amount"]
+        if not isinstance(accepted_price, int):
+            raise _service_error(
+                "task_contract_invalid", "Accepted price is missing", 500, {}
+            )
+        if request.command == "record_ruling":
+            return ruling_worker_amount(accepted_price, int(request.argument("worker_pct")))
+        return accepted_price
+
+    @staticmethod
+    def _require_bid_within_budget(amount: int, task: dict[str, Any]) -> None:
+        if amount > int(task["reward"]):
+            raise _service_error(
+                "bid_exceeds_budget",
+                "Bid amount must not exceed the posted reward",
+                400,
+                {"reward": int(task["reward"])},
+            )
 
     @staticmethod
     def _validate_ruling_linkage(
@@ -1575,13 +1592,16 @@ class TaskOperationWriter:
         committed_at: str,
         result: object,
     ) -> bool:
-        worker_pct = expected_request.get("worker_pct")
         total = expected_escrow.get("amount")
-        if not isinstance(worker_pct, int) or not isinstance(total, int) or len(legs) != 2:
+        share_field = "worker_amount" if "worker_amount" in expected_request else "worker_pct"
+        share = expected_request.get(share_field)
+        if not isinstance(share, int) or not isinstance(total, int) or len(legs) != 2:
             return False
-        worker_amount = total * worker_pct // 100
+        worker_amount = share if share_field == "worker_amount" else total * share // 100
         poster_amount = total - worker_amount
-        expected_result = {"escrow_status_at_commit": "split", "worker_pct": worker_pct}
+        if poster_amount < 0:
+            return False
+        expected_result = {"escrow_status_at_commit": "split", share_field: share}
         return (
             result == expected_result
             and TaskOperationWriter._leg_provenance_matches(
@@ -1779,9 +1799,15 @@ class TaskOperationWriter:
             result["worker_pct"] = int(event_request.argument("worker_pct"))
             result["summary"] = str(event_request.argument("summary"))
         accepted_reward = contract["accepted_reward"]
-        result["reward"] = (
+        escrow_amount = (
             int(accepted_reward) if isinstance(accepted_reward, int) else int(task["reward"])
         )
+        result["reward"] = escrow_amount
+        if command in {"approve_task", "auto_approve", "record_ruling"}:
+            worker_payment = self._settlement_worker_amount(event_request, contract)
+            result["accepted_price"] = int(contract["accepted_bid_amount"])
+            result["worker_payment"] = worker_payment
+            result["poster_refund"] = escrow_amount - worker_payment
         cursor.execute(
             "UPDATE board_task_operations SET operation_state='completed', "
             "effect_state='succeeded', effect_result_reference=?, completed_at_us=?, "

@@ -92,6 +92,18 @@ COMMANDS: dict[str, tuple[str, str, str, frozenset[str]]] = {
         ),
     ),
 }
+# Protocol 2 exists only for submit_deliverable: it freezes the governed output manifest.
+SUBMIT_V2_FIELDS: frozenset[str] = frozenset(
+    {"worker_id", "manifest_id", "accepted_binding_kind", "accepted_binding_sha256"}
+)
+SUBMIT_V2_RESULT_FIELDS: frozenset[str] = frozenset({"worker_id", "manifest_id", "manifest_sha256"})
+ACCEPT_BINDING_RESULT_FIELDS: frozenset[str] = frozenset(
+    {"accepted_binding_kind", "accepted_binding_sha256"}
+)
+# G01: final settlements report the accepted price, the worker payment and the poster refund.
+SETTLEMENT_RESULT_FIELDS: frozenset[str] = frozenset(
+    {"accepted_price", "worker_payment", "poster_refund"}
+)
 
 
 class StrictModel(BaseModel):
@@ -103,7 +115,7 @@ class StrictModel(BaseModel):
 class TaskCommand(StrictModel):
     """Complete semantic input, excluding transport signing metadata."""
 
-    protocol_version: Annotated[int, Field(ge=1, le=1)]
+    protocol_version: Annotated[int, Field(ge=1, le=2)]
     operation_id: OperationId
     task_id: Text
     command: Text
@@ -117,7 +129,7 @@ class TaskCommand(StrictModel):
 class OperationEnvelope(StrictModel):
     """Original command outcome, separate from the task's mutable read projection."""
 
-    protocol_version: Annotated[int, Field(ge=1, le=1)]
+    protocol_version: Annotated[int, Field(ge=1, le=2)]
     operation_id: OperationId
     task_id: Text
     command: Text
@@ -167,6 +179,9 @@ def validate_command(payload: object) -> TaskCommand:
     try:
         command = TaskCommand.model_validate(payload)
         source, _target, actor, fields = COMMANDS[command.command]
+        if command.protocol_version == 2:
+            _require(command.command == "submit_deliverable")
+            fields = SUBMIT_V2_FIELDS
         _require(command.expected_status == source and command.actor_kind == actor)
         _require(frozenset(command.arguments) == fields)
         ranges = {
@@ -250,16 +265,26 @@ def _validate_intent(envelope: OperationEnvelope) -> None:
         fields.add("recipient_account_id")
     else:
         _require(
-            financial["operation_kind"] == "escrow_split" and envelope.command == "record_ruling"
+            financial["operation_kind"] == "escrow_split"
+            and envelope.command in {"approve_task", "auto_approve", "record_ruling"}
         )
-        fields.update({"worker_account_id", "poster_account_id", "worker_pct"})
-        _require(type(financial["worker_pct"]) is int and 0 < financial["worker_pct"] < 100)
+        if "worker_amount" in financial:
+            # G01: the Gateway prices the settlement from the accepted bid.
+            fields.update({"worker_account_id", "poster_account_id", "worker_amount"})
+            _require(
+                type(financial["worker_amount"]) is int
+                and 0 < financial["worker_amount"] < escrow["amount"]
+            )
+        else:
+            _require(envelope.command == "record_ruling")
+            fields.update({"worker_account_id", "poster_account_id", "worker_pct"})
+            _require(type(financial["worker_pct"]) is int and 0 < financial["worker_pct"] < 100)
     _require(set(financial) == fields)
     _require(
         all(
             isinstance(value, str) and value
             for key, value in financial.items()
-            if key not in {"request_version", "worker_pct"}
+            if key not in {"request_version", "worker_pct", "worker_amount"}
         )
     )
 
@@ -324,20 +349,30 @@ def _bind_intent_to_command(envelope: OperationEnvelope, command: TaskCommand) -
             "escrow_id": args["escrow_id"],
             "source_reference": args["source_reference"],
         }
-        if command.command == "record_ruling" and args["worker_pct"] not in {0, 100}:
-            _require(envelope.effect_kind == "bank_split")
+        settles = command.command in {"approve_task", "auto_approve", "record_ruling"}
+        stored = envelope.effect_intent
+        stored_financial = stored.get("financial_request") if isinstance(stored, dict) else None
+        if envelope.effect_kind == "bank_split":
+            # The Gateway prices the two-sided settlement from the frozen accepted bid.
+            _require(settles and isinstance(stored_financial, dict))
+            assert isinstance(stored_financial, dict)
+            share = "worker_amount" if "worker_amount" in stored_financial else "worker_pct"
+            _require(share == "worker_amount" or stored_financial[share] == args["worker_pct"])
             financial.update(
                 {
                     "operation_kind": "escrow_split",
                     "worker_account_id": args["worker_id"],
                     "poster_account_id": args["poster_id"],
-                    "worker_pct": args["worker_pct"],
+                    share: stored_financial[share],
                 }
             )
         else:
             _require(envelope.effect_kind == "bank_release")
             pays_worker = command.command in {"approve_task", "auto_approve"} or (
-                command.command == "record_ruling" and args["worker_pct"] == 100
+                command.command == "record_ruling"
+                and args["worker_pct"] != 0
+                and isinstance(stored_financial, dict)
+                and stored_financial.get("recipient_account_id") == args["worker_id"]
             )
             financial.update(
                 {
@@ -371,20 +406,37 @@ def _validate_result_facts(envelope: OperationEnvelope, command: TaskCommand | N
         "dispute_task": {"dispute_id", "reason", "worker_id"},
         "record_ruling": {"reward", "worker_id", "ruling_id", "worker_pct", "summary"},
     }[envelope.command]
+    if envelope.protocol_version == 2:
+        _require(envelope.command == "submit_deliverable")
+        command_fields = set(SUBMIT_V2_RESULT_FIELDS)
+    # Governed (V6) acceptance reports the artifact binding later uploads/submit carry.
+    if envelope.command == "accept_bid" and set(ACCEPT_BINDING_RESULT_FIELDS) <= set(result):
+        command_fields = command_fields | set(ACCEPT_BINDING_RESULT_FIELDS)
+    # G01 accepted-bid pricing facts; results committed before G01 carry none of them.
+    priced_fields = {
+        "accept_bid": {"accepted_price"},
+        "approve_task": set(SETTLEMENT_RESULT_FIELDS),
+        "auto_approve": set(SETTLEMENT_RESULT_FIELDS),
+        "record_ruling": set(SETTLEMENT_RESULT_FIELDS),
+    }.get(envelope.command, set())
+    if priced_fields and priced_fields <= set(result):
+        command_fields = command_fields | priced_fields
     fields.update(command_fields)
     if envelope.effect_kind != "none":
         fields.add("effect_result_reference")
     _require(set(result) == fields)
     for field in command_fields:
         value = result[field]
-        if field in {"amount", "reward", "bid_amount", "worker_pct"}:
-            low = 0 if field in {"bid_amount", "worker_pct"} else 1
+        if field in {"amount", "reward", "bid_amount", "worker_pct", *SETTLEMENT_RESULT_FIELDS}:
+            low = 1 if field in {"amount", "reward"} else 0
             high = 100 if field == "worker_pct" else MAX_INTEGER
             _require(type(value) is int and low <= value <= high)
         else:
             _require(isinstance(value, str) and bool(value))
         if command is not None and field in command.arguments:
             _require(value == command.arguments[field])
+    if "accepted_price" in command_fields and envelope.command == "accept_bid":
+        _require(result["accepted_price"] == result["bid_amount"])
     intent = envelope.effect_intent
     if intent is None:
         return
@@ -397,23 +449,42 @@ def _validate_result_facts(envelope: OperationEnvelope, command: TaskCommand | N
         return
     _require(result["reward"] == intent["expected_escrow"]["amount"])
     financial = intent["financial_request"]
-    if envelope.command in {"approve_task", "auto_approve"}:
-        _require(result["worker_id"] == financial["recipient_account_id"])
+    if envelope.command in {"approve_task", "auto_approve", "record_ruling"}:
+        _validate_settlement_facts(envelope, result, intent)
     if envelope.command == "record_ruling":
         _require(
             financial["source_reference"] == f"task:{envelope.task_id}:ruling:{result['ruling_id']}"
         )
-        if envelope.effect_kind == "bank_split":
-            _require(result["worker_id"] == financial["worker_account_id"])
+        if envelope.effect_kind == "bank_split" and "worker_pct" in financial:
             _require(result["worker_pct"] == financial["worker_pct"])
-        else:
-            _require(result["worker_pct"] in {0, 100})
-            recipient = (
-                result["worker_id"]
-                if result["worker_pct"] == 100
-                else intent["expected_escrow"]["payer_account_id"]
-            )
-            _require(financial["recipient_account_id"] == recipient)
+
+
+def _validate_settlement_facts(
+    envelope: OperationEnvelope,
+    result: dict[str, Any],
+    intent: dict[str, Any],
+) -> None:
+    """Bind the final payment and refund to the exact stored Bank intent."""
+    financial = intent["financial_request"]
+    escrow_amount = intent["expected_escrow"]["amount"]
+    poster_id = intent["expected_escrow"]["payer_account_id"]
+    if envelope.effect_kind == "bank_split":
+        _require(result["worker_id"] == financial["worker_account_id"])
+        worker_payment = financial.get("worker_amount")
+    else:
+        recipient = financial["recipient_account_id"]
+        _require(recipient in {result["worker_id"], poster_id})
+        worker_payment = escrow_amount if recipient == result["worker_id"] else 0
+    if envelope.command in {"approve_task", "auto_approve"}:
+        _require(worker_payment != 0)
+    if "worker_payment" not in result:
+        return
+    _require(result["worker_payment"] + result["poster_refund"] == escrow_amount)
+    _require(0 < result["accepted_price"] <= escrow_amount)
+    if worker_payment is not None:
+        _require(result["worker_payment"] == worker_payment)
+    else:
+        _require(result["worker_payment"] == result["accepted_price"] * result["worker_pct"] // 100)
 
 
 def validate_envelope(
@@ -427,6 +498,8 @@ def validate_envelope(
     try:
         envelope = OperationEnvelope.model_validate(data)
         _require(envelope.operation_id == operation_id)
+        if command is not None:
+            _require(envelope.protocol_version == command.protocol_version)
         source, target, _actor, _fields = COMMANDS[envelope.command]
         _require((envelope.source_status, envelope.target_status) == (source, target))
         increment = 0 if envelope.command == "submit_bid" else 1

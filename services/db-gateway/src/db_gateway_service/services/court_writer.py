@@ -6,11 +6,13 @@ the shared-connection/no-await invariant this preserves.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service import task_time
 from db_gateway_service.services.db_writer_helpers import (
     check_constraint_violation,
     compile_constraints,
@@ -23,6 +25,13 @@ from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 
 if TYPE_CHECKING:
     from db_gateway_service.services.db_writer import DbWriter
+
+_LEASE_EVENT = "claim.judging_lease"
+_RELEASE_EVENT = "claim.judging_released"
+_DECISION_EVENT = "ruling.decided"
+_ACK_EVENT = "ruling.acknowledged"
+_DELIVERED_EVENT = "ruling.delivered"
+ACKNOWLEDGMENT_STEPS = frozenset({"task_board", "reputation"})
 
 
 class CourtWriter:
@@ -430,3 +439,379 @@ class CourtWriter:
         except Exception:
             db.rollback()
             raise
+
+
+class CourtRulingWriter:
+    """Durable Court ruling progress (plan item 0.3).
+
+    One leased Court run owns a ``judging`` claim at a time. The lease, the
+    request snapshot of the decision and every delivery acknowledgment are
+    appended to the shared ``events`` log inside the same ``BEGIN IMMEDIATE``
+    transaction as the claim/ruling row they guard, so the existing
+    version-fingerprinted schema stays unchanged. The latest lease or release
+    event for a claim is authoritative; the Gateway clock decides expiry.
+
+    Upgrade path: if these event-derived rows get awkward (volume, querying,
+    retention), move lease, request snapshot and acknowledgments into a dedicated
+    court_ruling_progress table in the next schema version.
+    """
+
+    def __init__(self, writer: DbWriter) -> None:
+        self._writer = writer
+
+    # -- helpers ---------------------------------------------------------
+
+    @staticmethod
+    def _claim_row(cursor: sqlite3.Cursor, claim_id: str) -> tuple[str, str]:
+        row = cursor.execute(
+            "SELECT task_id, status FROM court_claims WHERE claim_id = ?", (claim_id,)
+        ).fetchone()
+        if row is None:
+            raise ServiceError("claim_not_found", "No claim with this claim_id", 404, {})
+        return str(row[0]), str(row[1])
+
+    @staticmethod
+    def _court_events(
+        cursor: sqlite3.Cursor, task_id: str, event_types: tuple[str, ...]
+    ) -> list[tuple[str, dict[str, Any]]]:
+        # Every caller asks for one or two court event types; a fixed two-slot IN
+        # keeps the statement static (the single-type case repeats its type).
+        first, second = event_types[0], event_types[-1]
+        rows = cursor.execute(
+            "SELECT event_type, payload FROM events "
+            "WHERE event_source = 'court' AND task_id = ? AND event_type IN (?, ?) "
+            "ORDER BY event_id",
+            (task_id, first, second),
+        ).fetchall()
+        events: list[tuple[str, dict[str, Any]]] = []
+        for event_type, payload in rows:
+            parsed = json.loads(str(payload))
+            events.append((str(event_type), parsed if isinstance(parsed, dict) else {}))
+        return events
+
+    def _current_lease(
+        self, cursor: sqlite3.Cursor, task_id: str, claim_id: str
+    ) -> dict[str, Any] | None:
+        """Return the live-or-expired lease payload, or None when released/absent."""
+        events = [
+            (event_type, payload)
+            for event_type, payload in self._court_events(
+                cursor, task_id, (_LEASE_EVENT, _RELEASE_EVENT)
+            )
+            if payload.get("claim_id") == claim_id
+        ]
+        if not events:
+            return None
+        event_type, payload = events[-1]
+        return payload if event_type == _LEASE_EVENT else None
+
+    def _require_lease(
+        self, cursor: sqlite3.Cursor, task_id: str, claim_id: str, lease_id: str
+    ) -> None:
+        lease = self._current_lease(cursor, task_id, claim_id)
+        if lease is None or lease.get("lease_id") != lease_id:
+            raise ServiceError(
+                "judging_lease_lost",
+                "This ruling run no longer owns the judging lease",
+                409,
+                {},
+            )
+
+    @staticmethod
+    def _ruling_row(cursor: sqlite3.Cursor, claim_id: str) -> tuple[Any, ...] | None:
+        row = cursor.execute(
+            "SELECT worker_pct, summary, judge_votes, ruled_at FROM court_rulings "
+            "WHERE claim_id = ?",
+            (claim_id,),
+        ).fetchone()
+        return None if row is None else tuple(row)
+
+    def _acknowledged_steps(self, cursor: sqlite3.Cursor, task_id: str, claim_id: str) -> list[str]:
+        steps = {
+            str(payload.get("step"))
+            for _event_type, payload in self._court_events(cursor, task_id, (_ACK_EVENT,))
+            if payload.get("claim_id") == claim_id
+        }
+        return sorted(steps)
+
+    def _decision_request(
+        self, cursor: sqlite3.Cursor, task_id: str, claim_id: str
+    ) -> dict[str, Any] | None:
+        for _event_type, payload in reversed(
+            self._court_events(cursor, task_id, (_DECISION_EVENT,))
+        ):
+            if payload.get("claim_id") == claim_id:
+                request = payload.get("request")
+                return request if isinstance(request, dict) else None
+        return None
+
+    @staticmethod
+    def _event(
+        cursor: sqlite3.Cursor,
+        event_type: str,
+        task_id: str,
+        summary: str,
+        payload: dict[str, Any],
+        timestamp: str,
+    ) -> int:
+        return insert_event(
+            cursor,
+            {
+                "event_source": "court",
+                "event_type": event_type,
+                "timestamp": timestamp,
+                "task_id": task_id,
+                "agent_id": None,
+                "summary": summary,
+                "payload": json.dumps(payload, sort_keys=True, separators=(",", ":")),
+            },
+        )
+
+    def _transaction(self) -> tuple[sqlite3.Connection, sqlite3.Cursor]:
+        db = self._writer.connection
+        cursor = db.cursor()
+        cursor.execute("BEGIN IMMEDIATE")
+        return db, cursor
+
+    # -- commands --------------------------------------------------------
+
+    def acquire_judging_lease(
+        self, claim_id: str, lease_id: str, lease_seconds: int
+    ) -> dict[str, Any]:
+        """CAS ``rebuttal_pending``/expired ``judging`` -> ``judging`` under a new lease."""
+        db, cursor = self._transaction()
+        try:
+            task_id, status = self._claim_row(cursor, claim_id)
+            now_us = task_time.utc_now_us()
+            reclaimed = False
+            if status == "judging":
+                lease = self._current_lease(cursor, task_id, claim_id)
+                if lease is not None and int(lease["lease_expires_at_us"]) > now_us:
+                    raise ServiceError(
+                        "judging_lease_held",
+                        "Another ruling run holds a live judging lease",
+                        409,
+                        {},
+                    )
+                reclaimed = True
+            elif status != "rebuttal_pending":
+                raise ServiceError(
+                    "invalid_claim_status",
+                    "Claim cannot be judged from its current status",
+                    409,
+                    {"current_status": status},
+                )
+            cursor.execute(
+                "UPDATE court_claims SET status = 'judging' WHERE claim_id = ? AND status = ?",
+                (claim_id, status),
+            )
+            if cursor.rowcount != 1:
+                raise ServiceError(
+                    "invalid_claim_status", "Claim status changed concurrently", 409, {}
+                )
+            expires_us = task_time.add_seconds_to_epoch_us(now_us, lease_seconds)
+            expires_at = task_time.epoch_us_to_utc_text(expires_us)
+            self._event(
+                cursor,
+                _LEASE_EVENT,
+                task_id,
+                f"Claim {claim_id} judging lease acquired",
+                {
+                    "claim_id": claim_id,
+                    "lease_id": lease_id,
+                    "lease_expires_at": expires_at,
+                    "lease_expires_at_us": expires_us,
+                    "reclaimed": reclaimed,
+                },
+                task_time.epoch_us_to_utc_text(now_us),
+            )
+            decided = self._ruling_row(cursor, claim_id) is not None
+            db.commit()
+            return {
+                "claim_id": claim_id,
+                "status": "judging",
+                "lease_id": lease_id,
+                "lease_expires_at": expires_at,
+                "reclaimed": reclaimed,
+                "decided": decided,
+            }
+        except Exception:
+            db.rollback()
+            raise
+
+    def release_judging_lease(self, claim_id: str, lease_id: str) -> dict[str, Any]:
+        """Give up the lease; an undecided claim returns to ``rebuttal_pending``."""
+        db, cursor = self._transaction()
+        try:
+            task_id, status = self._claim_row(cursor, claim_id)
+            if status != "judging":
+                raise ServiceError("judging_lease_lost", "Claim is no longer being judged", 409, {})
+            self._require_lease(cursor, task_id, claim_id, lease_id)
+            decided = self._ruling_row(cursor, claim_id) is not None
+            new_status = "judging" if decided else "rebuttal_pending"
+            if not decided:
+                cursor.execute(
+                    "UPDATE court_claims SET status = 'rebuttal_pending' "
+                    "WHERE claim_id = ? AND status = 'judging'",
+                    (claim_id,),
+                )
+            self._event(
+                cursor,
+                _RELEASE_EVENT,
+                task_id,
+                f"Claim {claim_id} judging lease released",
+                {"claim_id": claim_id, "lease_id": lease_id},
+                task_time.epoch_us_to_utc_text(task_time.utc_now_us()),
+            )
+            db.commit()
+            return {"claim_id": claim_id, "status": new_status, "decided": decided}
+        except Exception:
+            db.rollback()
+            raise
+
+    def claim_decision(self, claim_id: str, data: dict[str, Any]) -> dict[str, Any]:
+        """Persist the judged decision and its delivery request snapshot exactly once."""
+        db, cursor = self._transaction()
+        try:
+            task_id, status = self._claim_row(cursor, claim_id)
+            if status != "judging":
+                raise ServiceError("judging_lease_lost", "Claim is no longer being judged", 409, {})
+            self._require_lease(cursor, task_id, claim_id, str(data["lease_id"]))
+            if self._ruling_row(cursor, claim_id) is not None:
+                raise ServiceError(
+                    "ruling_exists", "A decision is already recorded for this claim", 409, {}
+                )
+            decided_at = task_time.epoch_us_to_utc_text(task_time.utc_now_us())
+            cursor.execute(
+                "INSERT INTO court_rulings "
+                "(ruling_id, claim_id, task_id, worker_pct, summary, judge_votes, ruled_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    claim_id,
+                    claim_id,
+                    task_id,
+                    data["worker_pct"],
+                    data["summary"],
+                    data["judge_votes"],
+                    decided_at,
+                ),
+            )
+            event_id = self._event(
+                cursor,
+                _DECISION_EVENT,
+                task_id,
+                f"Ruling decided for claim {claim_id}",
+                {
+                    "claim_id": claim_id,
+                    "lease_id": data["lease_id"],
+                    "worker_pct": data["worker_pct"],
+                    "request": data["request"],
+                },
+                decided_at,
+            )
+            db.commit()
+            return {"ruling_id": claim_id, "decided_at": decided_at, "event_id": event_id}
+        except sqlite3.IntegrityError as exc:
+            db.rollback()
+            if is_foreign_key_violation(exc):
+                raise ServiceError(
+                    "foreign_key_violation", "Foreign key constraint failed", 409, {}
+                ) from exc
+            raise
+        except Exception:
+            db.rollback()
+            raise
+
+    def record_acknowledgment(self, claim_id: str, lease_id: str, step: str) -> dict[str, Any]:
+        """Record one completed delivery of the stored decision (idempotent)."""
+        db, cursor = self._transaction()
+        try:
+            task_id, status = self._claim_row(cursor, claim_id)
+            if status != "judging":
+                raise ServiceError("judging_lease_lost", "Claim is no longer being judged", 409, {})
+            self._require_lease(cursor, task_id, claim_id, lease_id)
+            if self._ruling_row(cursor, claim_id) is None:
+                raise ServiceError(
+                    "decision_missing", "No decision is recorded for this claim", 409, {}
+                )
+            if step not in self._acknowledged_steps(cursor, task_id, claim_id):
+                self._event(
+                    cursor,
+                    _ACK_EVENT,
+                    task_id,
+                    f"Ruling for claim {claim_id} acknowledged by {step}",
+                    {"claim_id": claim_id, "lease_id": lease_id, "step": step},
+                    task_time.epoch_us_to_utc_text(task_time.utc_now_us()),
+                )
+            acknowledged = self._acknowledged_steps(cursor, task_id, claim_id)
+            db.commit()
+            return {"claim_id": claim_id, "acknowledgments": acknowledged}
+        except Exception:
+            db.rollback()
+            raise
+
+    def complete_ruling(self, claim_id: str, lease_id: str) -> dict[str, Any]:
+        """CAS ``judging`` -> ``ruled`` once every delivery is acknowledged."""
+        db, cursor = self._transaction()
+        try:
+            task_id, status = self._claim_row(cursor, claim_id)
+            if status == "ruled":
+                db.rollback()
+                return {"claim_id": claim_id, "status": "ruled"}
+            if status != "judging":
+                raise ServiceError("judging_lease_lost", "Claim is no longer being judged", 409, {})
+            self._require_lease(cursor, task_id, claim_id, lease_id)
+            ruling = self._ruling_row(cursor, claim_id)
+            if ruling is None:
+                raise ServiceError(
+                    "decision_missing", "No decision is recorded for this claim", 409, {}
+                )
+            missing = ACKNOWLEDGMENT_STEPS - set(
+                self._acknowledged_steps(cursor, task_id, claim_id)
+            )
+            if missing:
+                raise ServiceError(
+                    "acknowledgments_pending",
+                    "Ruling deliveries are not all acknowledged",
+                    409,
+                    {"missing": sorted(missing)},
+                )
+            cursor.execute(
+                "UPDATE court_claims SET status = 'ruled' "
+                "WHERE claim_id = ? AND status = 'judging'",
+                (claim_id,),
+            )
+            self._event(
+                cursor,
+                _DELIVERED_EVENT,
+                task_id,
+                f"Ruling delivered for claim {claim_id}",
+                {"claim_id": claim_id, "worker_pct": ruling[0]},
+                task_time.epoch_us_to_utc_text(task_time.utc_now_us()),
+            )
+            db.commit()
+            return {"claim_id": claim_id, "status": "ruled"}
+        except Exception:
+            db.rollback()
+            raise
+
+    def ruling_progress(self, claim_id: str) -> dict[str, Any]:
+        """Return the stored decision, its request snapshot and acknowledgments."""
+        cursor = self._writer.connection.cursor()
+        task_id, status = self._claim_row(cursor, claim_id)
+        ruling = self._ruling_row(cursor, claim_id)
+        decision: dict[str, Any] | None = None
+        if ruling is not None:
+            decision = {
+                "worker_pct": ruling[0],
+                "summary": ruling[1],
+                "judge_votes": ruling[2],
+                "decided_at": ruling[3],
+                "request": self._decision_request(cursor, task_id, claim_id),
+            }
+        return {
+            "claim_id": claim_id,
+            "status": status,
+            "decision": decision,
+            "acknowledgments": self._acknowledged_steps(cursor, task_id, claim_id),
+        }

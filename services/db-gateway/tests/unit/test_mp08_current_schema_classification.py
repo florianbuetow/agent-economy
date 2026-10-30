@@ -67,17 +67,17 @@ def test_v5_unexpected_catalog_object_is_unknown_not_future() -> None:
         connection.close()
 
 
-def test_version_six_is_future_even_with_exact_v5_catalog() -> None:
+def test_version_seven_is_future_even_with_exact_v5_catalog() -> None:
     connection = _fresh_v5()
     try:
         connection.execute("PRAGMA ignore_check_constraints=ON")
-        connection.execute("UPDATE schema_metadata SET version=6")
+        connection.execute("UPDATE schema_metadata SET version=7")
         connection.execute("PRAGMA ignore_check_constraints=OFF")
 
         classification = classify_schema(connection)
 
         assert classification.state is SchemaState.FUTURE
-        assert classification.version == 6
+        assert classification.version == 7
         assert "metadata:future_version" in classification.findings
     finally:
         connection.close()

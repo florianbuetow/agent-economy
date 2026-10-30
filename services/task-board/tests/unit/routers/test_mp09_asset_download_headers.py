@@ -10,7 +10,7 @@ import pytest
 
 from task_board_service.core.state import get_app_state
 from tests.helpers import make_jws_token
-from tests.unit.routers.conftest import setup_task_in_execution
+from tests.unit.routers.conftest import download_asset_headers, setup_task_in_execution
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -155,7 +155,11 @@ async def _download_named_asset(
         "SETUP FAILURE: persisted metadata did not preserve the exact raw display filename"
     )
     try:
-        response = await client.get(f"/tasks/{task_id}/assets/{upload['asset_id']}")
+        asset_id = str(upload["asset_id"])
+        response = await client.get(
+            f"/tasks/{task_id}/assets/{asset_id}",
+            headers=download_asset_headers(worker_keypair, worker_id, task_id, asset_id),
+        )
     except BaseException as exc:
         return None, exc, content
     return response, None, content

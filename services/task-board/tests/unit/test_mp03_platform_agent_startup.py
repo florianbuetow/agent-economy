@@ -96,9 +96,14 @@ def _write_service_config(
                     "escrow_lock_path": "/escrow/lock",
                     "escrow_release_path": "/escrow/{escrow_id}/release",
                     "escrow_split_path": "/escrow/{escrow_id}/split",
+                    "escrow_settle_path": "/escrow/{escrow_id}/settle",
                     "timeout_seconds": 1,
                 },
                 "platform": platform,
+                "asset_quota": {
+                    "max_total_bytes_per_agent": 536_870_912,
+                    "max_total_bytes": 4_294_967_296,
+                },
                 "asset_upload": {
                     "stream_chunk_bytes": 262_144,
                     "max_multipart_overhead_bytes": 1_048_576,

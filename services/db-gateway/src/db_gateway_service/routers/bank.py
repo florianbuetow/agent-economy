@@ -288,6 +288,50 @@ async def escrow_split(request: Request) -> JSONResponse:
     return JSONResponse(status_code=200, content=result)
 
 
+_SETTLE_FIELDS = (
+    "operation_id",
+    "escrow_id",
+    "worker_account_id",
+    "poster_account_id",
+    "worker_amount",
+    "source_reference",
+    "worker_tx_id",
+    "poster_tx_id",
+    "resolved_at",
+)
+
+
+@router.post("/escrow/settle")
+async def escrow_settle(request: Request) -> JSONResponse:
+    """Pay the worker an exact amount and refund the rest of the escrow to the poster."""
+    body = await request.body()
+    data = parse_json_body(body)
+    _reject_unknown_fields(data, {*_SETTLE_FIELDS, "event"})
+    validate_required_fields(data, list(_SETTLE_FIELDS))
+    _require_operation_id(data)
+    validate_event(data)
+    amount = data.get("worker_amount")
+    if isinstance(amount, bool) or not isinstance(amount, int) or amount < 0:
+        raise ServiceError(
+            "invalid_amount",
+            "worker_amount must be a non-negative integer",
+            400,
+            {"field": "worker_amount"},
+        )
+
+    state = get_app_state()
+    if state.db_writer is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
+
+    result = state.db_writer.escrow_split(data)
+    return JSONResponse(status_code=200, content=result)
+
+
 @router.get("/accounts/count")
 async def count_accounts() -> JSONResponse:
     """Count total bank accounts."""

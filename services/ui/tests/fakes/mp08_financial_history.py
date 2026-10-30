@@ -1,10 +1,9 @@
-"""Build authentic V5 financial histories for UI MP-08 acceptance tests."""
+"""Build authentic V6 financial histories for UI MP-08 acceptance tests."""
 
 from __future__ import annotations
 
 import json
 import os
-import sqlite3
 import sys
 from datetime import UTC, datetime
 from importlib import import_module
@@ -24,23 +23,15 @@ _GATEWAY_ROOT = Path.cwd()
 if str(_GATEWAY_ROOT) not in sys.path:
     sys.path.insert(0, str(_GATEWAY_ROOT))
 
-migration: Any = import_module("db_gateway_service.migration")
-recovery: Any = import_module("db_gateway_service.recovery")
 clear_settings_cache: Any = import_module("db_gateway_service.config").clear_settings_cache
 init_app_state: Any = import_module("db_gateway_service.core.state").init_app_state
 DbReader: Any = import_module("db_gateway_service.services.db_reader").DbReader
 DbWriter: Any = import_module("db_gateway_service.services.db_writer").DbWriter
 write_gateway_config: Any = import_module("tests.fakes.gateway_mp08_config").write_gateway_config
 _effects: Any = import_module("tests.fakes.gateway_mp08_effects")
-prepare_legacy_v5: Any = _effects.prepare_legacy_v5
 prepare_native_pending: Any = _effects.prepare_native_pending
 prepare_native_refund_pending: Any = _effects.prepare_native_refund_pending
 prepare_native_split_pending: Any = _effects.prepare_native_split_pending
-_legacy_history: Any = import_module("tests.fakes.gateway_mp08_legacy_history")
-prepare_historical_approved_worker_payment_v4: Any = (
-    _legacy_history.prepare_historical_approved_worker_payment_v4
-)
-prepare_legacy_court_claim_v4: Any = _legacy_history.prepare_legacy_court_claim_v4
 _native_history: Any = import_module("tests.fakes.native_board_history")
 TaskGraph: Any = _native_history.TaskGraph
 BusinessClock: Any = _native_history.BusinessClock
@@ -52,10 +43,6 @@ settle_release: Any = _native_history.settle_release
 settle_split: Any = _native_history.settle_split
 
 HistoryKind = Literal[
-    "legacy_pending",
-    "legacy_succeeded",
-    "historical_paid",
-    "court_only",
     "native_pending",
     "receipt_projection_pending",
     "completed_refund",
@@ -81,25 +68,6 @@ class _DomainAuth(httpx.Auth):
         ) or request.url.path.startswith("/board/legacy-effect-observations/")
         access = "write" if protected_delivery or request.method != "GET" else "read"
         yield signer.sign_request(request, action=f"gateway.{domain}.{access}")
-
-
-def _migrate_v4(source: Any, *, backup_id: str) -> None:
-    recovery.create_backup(
-        source.inventory,
-        backup_root=source.backup_root,
-        backup_id=backup_id,
-        work_root=source.work_root,
-    )
-    migrate = getattr(migration, "migrate_v4_to_v5", None)
-    assert callable(migrate), "Missing explicit backup-bound V4-to-V5 migration"
-    migrate(
-        source.inventory,
-        backup_root=source.backup_root,
-        backup_id=backup_id,
-        work_root=source.work_root,
-        busy_timeout_ms=5000,
-        current_task_board_caller_kid="gateway-task-board",
-    )
 
 
 def _cutoff_iso(value: object) -> str | None:
@@ -130,47 +98,6 @@ def _write_board_sidecar(database: Path, record: dict[str, Any]) -> None:
     database.with_suffix(".board-projections.json").write_text(json.dumps([record], sort_keys=True))
 
 
-def _legacy(root: Path, kind: HistoryKind) -> dict[str, object]:
-    if kind in {"legacy_pending", "legacy_succeeded"}:
-        source, writer = prepare_legacy_v5(
-            root,
-            kind="pending" if kind == "legacy_pending" else "succeeded",
-        )
-        record = DbReader(writer.connection).get_task(source.task_id)
-        assert record is not None
-        _write_board_sidecar(source.database, _board_projection(record))
-        writer.close()
-        return {
-            "database": str(source.database),
-            "task_id": source.task_id,
-            "operation_id": source.operation_id,
-        }
-    if kind == "historical_paid":
-        source = prepare_historical_approved_worker_payment_v4(
-            root,
-            caller_kid="gateway-task-board",
-        )
-    else:
-        source = prepare_legacy_court_claim_v4(
-            root,
-            caller_kid="gateway-task-board",
-        )
-    _migrate_v4(source, backup_id=f"before-v5-{kind}")
-    connection = sqlite3.connect(str(source.database))
-    connection.row_factory = sqlite3.Row
-    try:
-        record = DbReader(connection).get_task(source.task_id)
-        assert record is not None
-        _write_board_sidecar(source.database, _board_projection(record))
-    finally:
-        connection.close()
-    return {
-        "database": str(source.database),
-        "task_id": source.task_id,
-        "operation_id": None,
-    }
-
-
 def _signers(config_dir: Path) -> dict[str, GatewayRequestSigner]:
     handles = {
         "identity": "gateway-identity",
@@ -195,32 +122,33 @@ def _signers(config_dir: Path) -> dict[str, GatewayRequestSigner]:
 
 
 def _native_client(root: Path) -> tuple[TestClient, Any, Path]:
-    source, initial_writer = prepare_legacy_v5(root / "seed", kind="pending")
-    initial_writer.close()
+    database = root / "seed" / "economy.db"
+    database.parent.mkdir(parents=True, exist_ok=True)
     task_time: Any = import_module("db_gateway_service.task_time")
     task_time.utc_now_us = BusinessClock(now_us=FIXED_NOW_US)
     config_dir = root / "gateway-config"
     config_dir.mkdir(parents=True, exist_ok=True)
     config_path = config_dir / "config.yaml"
     signers = _signers(config_dir)
-    write_gateway_config(str(source.database), config_path)
+    write_gateway_config(str(database), config_path)
     os.environ["CONFIG_PATH"] = str(config_path)
     clear_settings_cache()
+    schema_module: Any = import_module("db_gateway_service.schema")
     create_app: Any = import_module("db_gateway_service.app").create_app
     app = create_app()
     client = TestClient(app)
     client.auth = _DomainAuth(signers)
     writer = DbWriter(
-        str(source.database),
+        str(database),
         5000,
         "wal",
-        None,
+        schema_module.load_schema_sql(schema_module.SchemaState.CURRENT_V6),
         current_task_board_caller_kid="gateway-task-board",  # type: ignore[call-arg]
     )
     state = init_app_state()
     state.db_writer = writer
     state.db_reader = DbReader(writer.connection)
-    return client, writer, source.database
+    return client, writer, database
 
 
 def _finalize(client: TestClient, operation_id: str, expected_status: int) -> None:
@@ -358,8 +286,6 @@ def _native(root: Path, kind: HistoryKind) -> dict[str, object]:
 
 
 def build(root: Path, kind: HistoryKind) -> dict[str, object]:
-    if kind in {"legacy_pending", "legacy_succeeded", "historical_paid", "court_only"}:
-        return _legacy(root, kind)
     return _native(root, kind)
 
 

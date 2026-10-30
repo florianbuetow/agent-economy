@@ -13,9 +13,38 @@ from typing import TYPE_CHECKING, Any
 from service_commons.exceptions import ServiceError
 
 from db_gateway_service.services.db_writer_helpers import insert_event, is_foreign_key_violation
+from db_gateway_service.task_time import parse_utc_text_to_epoch_us
 
 if TYPE_CHECKING:
     from db_gateway_service.services.db_writer import DbWriter
+
+
+# Feedback provenance: "court" for platform (ruling) feedback, "peer" for
+# feedback between a task's poster and worker.
+FEEDBACK_SOURCES = frozenset({"peer", "court"})
+
+
+def _require_valid_source(data: dict[str, Any]) -> None:
+    source = data.get("source")
+    if source not in FEEDBACK_SOURCES:
+        raise ServiceError(
+            "invalid_source",
+            "source must be 'peer' or 'court'",
+            400,
+            {"source": source},
+        )
+
+
+def _parse_utc_us(value: object, field: str) -> int:
+    try:
+        return parse_utc_text_to_epoch_us(value)
+    except ValueError as exc:
+        raise ServiceError(
+            "invalid_timestamp",
+            f"{field} must be explicit ISO-8601 UTC text",
+            400,
+            {"field": field},
+        ) from exc
 
 
 class ReputationWriter:
@@ -96,6 +125,7 @@ class ReputationWriter:
 
         ``force_visible`` bypasses sealing for platform-submitted ruling feedback.
         """
+        _require_valid_source(data)
         db = self._writer.connection
         force_visible = bool(data.get("force_visible", False))
         cursor = db.cursor()
@@ -104,8 +134,8 @@ class ReputationWriter:
             cursor.execute(
                 "INSERT INTO reputation_feedback "
                 "(feedback_id, task_id, from_agent_id, to_agent_id, role, "
-                "category, rating, comment, submitted_at, visible) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "category, rating, comment, submitted_at, visible, source) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     data["feedback_id"],
                     data["task_id"],
@@ -117,6 +147,7 @@ class ReputationWriter:
                     data.get("comment"),
                     data["submitted_at"],
                     1 if force_visible else 0,
+                    data["source"],
                 ),
             )
             # The reverse lookup is a fact about the database, not a caller policy:
@@ -157,6 +188,55 @@ class ReputationWriter:
                 409,
                 {},
             ) from exc
+        except Exception:
+            db.rollback()
+            raise
+
+    def reveal_expired(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Durably reveal sealed feedback submitted at or before ``cutoff``.
+
+        Flips ``visible`` and emits one ``feedback.revealed`` event per revealed row
+        inside one BEGIN IMMEDIATE transaction. Only rows still sealed are touched,
+        so repeating the call never emits a second event for the same row.
+        """
+        cutoff_us = _parse_utc_us(data.get("cutoff"), "cutoff")
+        timestamp = data.get("timestamp")
+        _parse_utc_us(timestamp, "timestamp")
+        db = self._writer.connection
+        cursor = db.cursor()
+        try:
+            cursor.execute("BEGIN IMMEDIATE")
+            cursor.execute(
+                "SELECT feedback_id, task_id, from_agent_id, to_agent_id, category, "
+                "submitted_at FROM reputation_feedback WHERE visible = 0 "
+                "ORDER BY submitted_at, feedback_id"
+            )
+            expired = [
+                row
+                for row in cursor.fetchall()
+                if parse_utc_text_to_epoch_us(row["submitted_at"]) <= cutoff_us
+            ]
+            for row in expired:
+                cursor.execute(
+                    "UPDATE reputation_feedback SET visible = 1 "
+                    "WHERE feedback_id = ? AND visible = 0",
+                    (row["feedback_id"],),
+                )
+                insert_event(
+                    cursor,
+                    self._build_reveal_event(
+                        cursor,
+                        {
+                            "task_id": row["task_id"],
+                            "from_agent_id": row["from_agent_id"],
+                            "to_agent_id": row["to_agent_id"],
+                            "category": row["category"],
+                            "submitted_at": timestamp,
+                        },
+                    ),
+                )
+            db.commit()
+            return {"revealed": len(expired)}
         except Exception:
             db.rollback()
             raise

@@ -161,7 +161,7 @@ def test_publication_v6_schema_supports_input_owner_without_task_or_escrow(tmp_p
             connection.execute("SELECT version FROM schema_metadata WHERE singleton=1").fetchone()[
                 0
             ]
-            == 5
+            == 6
         )
         manifest_columns = {
             str(row[1]) for row in connection.execute("PRAGMA table_info(board_artifact_manifests)")

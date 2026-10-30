@@ -1,0 +1,138 @@
+[
+  {
+    "title": "Route five support tickets (batch A)",
+    "task_type": "ticket_routing",
+    "level": 2,
+    "instructions": "Assign each customer support ticket to the one team that should handle it: billing (charges, invoices, refunds, payment methods), bug (the product misbehaves or crashes), feature_request (asks for something the product does not do yet), account (login, password, profile, account deletion).",
+    "labels": ["billing", "bug", "feature_request", "account"],
+    "inputs": [
+      {"id": "a1", "text": "I was charged twice for the March invoice."},
+      {"id": "a2", "text": "The export button does nothing when I click it."},
+      {"id": "a3", "text": "Could you add a dark mode to the dashboard?"},
+      {"id": "a4", "text": "I forgot my password and the reset email never arrives."},
+      {"id": "a5", "text": "Please switch my payment method to the new credit card."}
+    ],
+    "expected": {"a1": "billing", "a2": "bug", "a3": "feature_request", "a4": "account", "a5": "billing"},
+    "min_correct": 4,
+    "rationale_max_chars": 600
+  },
+  {
+    "title": "Route five support tickets (batch B)",
+    "task_type": "ticket_routing",
+    "level": 3,
+    "instructions": "Assign each customer support ticket to the one team that should handle it: billing (charges, invoices, refunds, payment methods), bug (the product misbehaves or crashes), feature_request (asks for something the product does not do yet), account (login, password, profile, account deletion).",
+    "labels": ["billing", "bug", "feature_request", "account"],
+    "inputs": [
+      {"id": "b1", "text": "Since yesterday's update the mobile app closes as soon as I open a report."},
+      {"id": "b2", "text": "It would be great if reports could be scheduled weekly."},
+      {"id": "b3", "text": "I want my money back for the unused months."},
+      {"id": "b4", "text": "Please delete my profile and all data you hold about me."},
+      {"id": "b5", "text": "Totals in the summary view are off by one cent."}
+    ],
+    "expected": {"b1": "bug", "b2": "feature_request", "b3": "billing", "b4": "account", "b5": "bug"},
+    "min_correct": 4,
+    "rationale_max_chars": 600
+  },
+  {
+    "title": "Route five support tickets (batch C)",
+    "task_type": "ticket_routing",
+    "level": 3,
+    "instructions": "Assign each customer support ticket to the one team that should handle it: billing (charges, invoices, refunds, payment methods), bug (the product misbehaves or crashes), feature_request (asks for something the product does not do yet), account (login, password, profile, account deletion).",
+    "labels": ["billing", "bug", "feature_request", "account"],
+    "inputs": [
+      {"id": "c1", "text": "Two-factor codes are rejected even though they are correct, so I cannot sign in."},
+      {"id": "c2", "text": "Your pricing page says 9 euros but my statement shows 12."},
+      {"id": "c3", "text": "An API endpoint for bulk uploads would save us hours."},
+      {"id": "c4", "text": "Search returns no results for words with umlauts."},
+      {"id": "c5", "text": "How do I change the email address on my login?"}
+    ],
+    "expected": {"c1": "account", "c2": "billing", "c3": "feature_request", "c4": "bug", "c5": "account"},
+    "min_correct": 4,
+    "rationale_max_chars": 600
+  },
+  {
+    "title": "Route five support tickets (batch D)",
+    "task_type": "ticket_routing",
+    "level": 4,
+    "instructions": "Assign each customer support ticket to the one team that should handle it: billing (charges, invoices, refunds, payment methods), bug (the product misbehaves or crashes), feature_request (asks for something the product does not do yet), account (login, password, profile, account deletion).",
+    "labels": ["billing", "bug", "feature_request", "account"],
+    "inputs": [
+      {"id": "d1", "text": "The invoice PDF renders with overlapping text."},
+      {"id": "d2", "text": "Can teams share one subscription and split the cost?"},
+      {"id": "d3", "text": "My colleague left; how do I transfer her workspace to me?"},
+      {"id": "d4", "text": "You billed us after we cancelled in January."},
+      {"id": "d5", "text": "Charts freeze the browser tab when the range exceeds a year."}
+    ],
+    "expected": {"d1": "bug", "d2": "feature_request", "d3": "account", "d4": "billing", "d5": "bug"},
+    "min_correct": 4,
+    "rationale_max_chars": 600
+  },
+  {
+    "title": "Label sentiment of five product reviews (batch A)",
+    "task_type": "sentiment",
+    "level": 1,
+    "instructions": "Label the overall sentiment the reviewer expresses about the product: positive, negative, or neutral (factual or mixed with no clear lean).",
+    "labels": ["positive", "negative", "neutral"],
+    "inputs": [
+      {"id": "s1", "text": "Absolutely love it, works great every single day."},
+      {"id": "s2", "text": "Terrible battery, broke after a week."},
+      {"id": "s3", "text": "It arrived on Tuesday in a blue box."},
+      {"id": "s4", "text": "Great value and excellent support."},
+      {"id": "s5", "text": "Awful sound quality, I want a refund."}
+    ],
+    "expected": {"s1": "positive", "s2": "negative", "s3": "neutral", "s4": "positive", "s5": "negative"},
+    "min_correct": 4,
+    "rationale_max_chars": 500
+  },
+  {
+    "title": "Label sentiment of five product reviews (batch B)",
+    "task_type": "sentiment",
+    "level": 1,
+    "instructions": "Label the overall sentiment the reviewer expresses about the product: positive, negative, or neutral (factual or mixed with no clear lean).",
+    "labels": ["positive", "negative", "neutral"],
+    "inputs": [
+      {"id": "s6", "text": "Excellent build, I love the keyboard."},
+      {"id": "s7", "text": "The manual is 40 pages long."},
+      {"id": "s8", "text": "Bad fit and poor stitching, very disappointed."},
+      {"id": "s9", "text": "Great camera, happy with the purchase."},
+      {"id": "s10", "text": "Worst purchase this year, it broke immediately."}
+    ],
+    "expected": {"s6": "positive", "s7": "neutral", "s8": "negative", "s9": "positive", "s10": "negative"},
+    "min_correct": 4,
+    "rationale_max_chars": 500
+  },
+  {
+    "title": "Label sentiment of five product reviews (batch C)",
+    "task_type": "sentiment",
+    "level": 2,
+    "instructions": "Label the overall sentiment the reviewer expresses about the product: positive, negative, or neutral (factual or mixed with no clear lean).",
+    "labels": ["positive", "negative", "neutral"],
+    "inputs": [
+      {"id": "s11", "text": "Not bad at all, I would buy it again."},
+      {"id": "s12", "text": "I expected great things and got a disappointing gadget."},
+      {"id": "s13", "text": "Ships with a USB-C cable."},
+      {"id": "s14", "text": "Hardly the excellent product the ads promised."},
+      {"id": "s15", "text": "Love the color, hate the weight; overall it is okay."}
+    ],
+    "expected": {"s11": "positive", "s12": "negative", "s13": "neutral", "s14": "negative", "s15": "neutral"},
+    "min_correct": 4,
+    "rationale_max_chars": 500
+  },
+  {
+    "title": "Label sentiment of five product reviews (batch D)",
+    "task_type": "sentiment",
+    "level": 2,
+    "instructions": "Label the overall sentiment the reviewer expresses about the product: positive, negative, or neutral (factual or mixed with no clear lean).",
+    "labels": ["positive", "negative", "neutral"],
+    "inputs": [
+      {"id": "s16", "text": "Great, another charger that stopped working after two days."},
+      {"id": "s17", "text": "Solid and reliable, exactly as described, very happy."},
+      {"id": "s18", "text": "The box contains the device and a quick-start card."},
+      {"id": "s19", "text": "Broke twice, but support replaced it fast and now I love it."},
+      {"id": "s20", "text": "Poor value, I regret it."}
+    ],
+    "expected": {"s16": "negative", "s17": "positive", "s18": "neutral", "s19": "positive", "s20": "negative"},
+    "min_correct": 4,
+    "rationale_max_chars": 500
+  }
+]

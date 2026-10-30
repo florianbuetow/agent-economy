@@ -13,10 +13,12 @@ less than the bidding deadline (T-035), so the window always opens before expiry
 Winner rule (Q-16): the lowest ``amount`` wins — accepting the first bid to
 arrive is forbidden because it destroys the undercutting the thesis rests on.
 Ties on amount break toward the bidder with the higher delivery-quality
-reputation, derived feeder-side from the Reputation service's raw feedback
-(Q-12 keeps aggregation on the consumer side).  Any remaining tie (e.g. two
-unproven bidders) breaks deterministically toward the lexicographically smallest
-bid id.
+score, read from the Reputation service's ``GET /agents/{id}/quality`` (G12:
+the service owns the formula; the feeder never aggregates raw feedback).  An
+unrated bidder ranks 0, so it ties with a rated 0.  Any remaining tie breaks
+deterministically toward the lexicographically smallest bid id.  A failed or
+malformed quality lookup is a dependency failure, never an unrated score: no
+acceptance intent is created and the task is retried on the next pass.
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ from typing import TYPE_CHECKING, Any
 from service_auth.financial_identity import operation_id_for
 
 from base_agent.runtime_task_intent_factory import acceptance_intent
+from task_feeder.resilience import RECOVERABLE_DEPENDENCY_ERRORS
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -40,39 +43,35 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Delivery-quality ratings are ordinal (dissatisfied < satisfied <
-# extremely_satisfied); mapped to a numeric scale and averaged to score an agent.
-_DELIVERY_QUALITY_CATEGORY = "delivery_quality"
-_DELIVERY_RATING_SCORES: dict[str, float] = {
-    "dissatisfied": 0.0,
-    "satisfied": 1.0,
-    "extremely_satisfied": 2.0,
-}
-# A bidder with no delivery-quality feedback has no track record and enters the
-# tie-break at the floor of the scale; equal scores fall through to the
-# deterministic bid-id fallback.
-_NO_FEEDBACK_SCORE = 0.0
+QUALITY_FORMULA_VERSION = "quality-v1"
+# Q-M3 feeder ranking: an unrated bidder has selection rank 0 (it still shows as
+# unrated everywhere else).
+_UNRATED_RANK = 0
+_MAX_SCORE = 100
 
 
-def delivery_quality_score(feedback: list[dict[str, Any]]) -> float | None:
-    """Average delivery-quality rating from an agent's raw feedback records.
+def delivery_rank(report: dict[str, Any]) -> int:
+    """Selection rank from a Reputation quality report's delivery dimension.
 
-    Returns ``None`` when the agent has no ``delivery_quality`` feedback.
+    Raises ``ValueError`` for an unsupported formula or a malformed dimension.
     """
-    scores = [
-        _DELIVERY_RATING_SCORES[str(record["rating"])]
-        for record in feedback
-        if record.get("category") == _DELIVERY_QUALITY_CATEGORY
-        and str(record.get("rating")) in _DELIVERY_RATING_SCORES
-    ]
-    if not scores:
-        return None
-    return sum(scores) / len(scores)
+    if report.get("formula_version") != QUALITY_FORMULA_VERSION:
+        raise ValueError("unsupported quality formula_version")
+    delivery = report.get("delivery_quality")
+    if not isinstance(delivery, dict):
+        raise ValueError("quality report lacks delivery_quality")
+    rated = delivery.get("rated")
+    score = delivery.get("score")
+    if rated is False and score is None:
+        return _UNRATED_RANK
+    if rated is True and type(score) is int and 0 <= score <= _MAX_SCORE:
+        return score
+    raise ValueError("malformed delivery quality dimension")
 
 
 def select_winning_bid(
     bids: list[dict[str, Any]],
-    delivery_scores: dict[str, float],
+    delivery_scores: dict[str, int],
 ) -> dict[str, Any]:
     """Pick the winning bid per the Q-16 rule.
 
@@ -87,7 +86,7 @@ def select_winning_bid(
         bids,
         key=lambda bid: (
             int(bid["amount"]),
-            -delivery_scores.get(str(bid["bidder_id"]), _NO_FEEDBACK_SCORE),
+            -delivery_scores.get(str(bid["bidder_id"]), _UNRATED_RANK),
             str(bid["bid_id"]),
         ),
     )
@@ -140,13 +139,11 @@ class AcceptanceLoop:
         age_seconds = (self._now() - _parse_created_at(created_at)).total_seconds()
         return age_seconds >= self._config.acceptance_after_seconds
 
-    async def _delivery_scores_for(self, bidder_ids: set[str]) -> dict[str, float]:
-        scores: dict[str, float] = {}
-        for bidder_id in bidder_ids:
-            feedback = await self._agent.get_agent_feedback(bidder_id)
-            score = delivery_quality_score(feedback)
-            if score is not None:
-                scores[bidder_id] = score
+    async def _delivery_scores_for(self, bidder_ids: set[str]) -> dict[str, int]:
+        scores: dict[str, int] = {}
+        for bidder_id in sorted(bidder_ids):
+            url = f"{self._agent.config.reputation_url}/agents/{bidder_id}/quality"
+            scores[bidder_id] = delivery_rank(await self._agent._request("GET", url))
         return scores
 
     async def accept_one(self, task: dict[str, Any]) -> str:
@@ -231,7 +228,7 @@ class AcceptanceLoop:
             except Exception:
                 logger.exception("Failed to process task_id=%s for acceptance", task_id)
 
-    async def run(self) -> None:
+    async def run(self, retry_backoff_seconds: int) -> None:
         """Continuously accept eligible bids on this poster's open tasks."""
         logger.info(
             "Acceptance loop starting (poll=%ss, after=%ss, quorum=%s)",
@@ -240,7 +237,15 @@ class AcceptanceLoop:
             self._config.min_bids_to_accept,
         )
         while self._running:
-            await self.process_open_tasks()
+            try:
+                await self.process_open_tasks()
+            except RECOVERABLE_DEPENDENCY_ERRORS:
+                logger.exception(
+                    "Acceptance pass failed on a dependency error; retrying in %ss",
+                    retry_backoff_seconds,
+                )
+                await asyncio.sleep(retry_backoff_seconds)
+                continue
             await asyncio.sleep(self._config.acceptance_poll_interval_seconds)
 
     def stop(self) -> None:

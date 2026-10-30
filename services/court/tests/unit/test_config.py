@@ -41,10 +41,18 @@ disputes:
   feedback_extremely_satisfied_cutoff: 80
   feedback_satisfied_cutoff: 40
   feedback_comment_max_length: 256
+  judging_lease_seconds: 60
+  reclaim_interval_seconds: 3600
+evidence:
+  max_total_bytes: 262144
+  max_file_bytes: 65536
+  allowed_extensions: [".txt", ".py", ".json", ".csv", ".md"]
+  allowed_content_types: ["text/plain", "application/json", "text/csv"]
 judges:
   panel_size: {panel_size}
   mock_worker_pct: 50
-  max_deliverable_bytes: 65536
+  mock_spec_quality: satisfied
+  mock_delivery_quality: satisfied
   judges:{judges_yaml}
 """
     config_path = tmp_path / "config.yaml"

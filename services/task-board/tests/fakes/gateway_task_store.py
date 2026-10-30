@@ -12,6 +12,7 @@ import httpx
 from db_gateway_service.routers.helpers import validate_constraints
 from db_gateway_service.services.db_reader import DbReader
 from db_gateway_service.services.db_writer import DbWriter
+from db_gateway_service.services.input_manifest_reader import read_task_input_manifest
 from db_gateway_service.services.task_operation_writer import TaskOperationWriter
 from db_gateway_service.services.task_publication_writer import TaskPublicationWriter
 from db_gateway_service.task_operation_requests import parse_task_operation_request
@@ -159,6 +160,8 @@ class GatewayTaskStore(TaskDbClient):
                 self._reader.get_asset(parts[2], params["task_id"]), "asset"
             )
         if len(parts) == 4 and parts[:2] == ["board", "tasks"]:
+            if parts[3] == "input-manifest":
+                return 200, read_task_input_manifest(self._writer.connection, parts[2])
             if parts[3] == "bids":
                 return 200, {"bids": self._reader.get_bids_for_task(parts[2])}
             if parts[3] == "assets":
