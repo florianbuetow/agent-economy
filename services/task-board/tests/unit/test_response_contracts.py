@@ -20,6 +20,7 @@ from fastapi.routing import APIRoute
 
 from task_board_service.app import create_app
 from task_board_service.config import clear_settings_cache
+from task_board_service.input_schemas import TaskDetailResponse
 from task_board_service.schemas import (
     AssetListResponse,
     AssetResponse,
@@ -28,7 +29,6 @@ from task_board_service.schemas import (
     TaskListResponse,
     TaskMutationResponse,
     TaskPublicationEnvelope,
-    TaskResponse,
 )
 
 # create_app() only reads settings.service/.request to build the FastAPI
@@ -139,7 +139,7 @@ def test_asset_response_includes_content_hash() -> None:
 def test_task_endpoints_wire_response_model(app) -> None:
     assert _route_response_model(app, "/tasks", "POST") is TaskPublicationEnvelope
     assert _route_response_model(app, "/tasks", "GET") is TaskListResponse
-    assert _route_response_model(app, "/tasks/{task_id}", "GET") is TaskResponse
+    assert _route_response_model(app, "/tasks/{task_id}", "GET") is TaskDetailResponse
     assert _route_response_model(app, "/tasks/{task_id}/cancel", "POST") is TaskMutationResponse
     assert _route_response_model(app, "/tasks/{task_id}/submit", "POST") is TaskMutationResponse
     assert _route_response_model(app, "/tasks/{task_id}/approve", "POST") is TaskMutationResponse

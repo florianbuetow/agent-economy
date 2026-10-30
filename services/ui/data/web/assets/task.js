@@ -20,6 +20,7 @@
     sseSource: null,
     documentsAnchorApplied: false,
     documentsSignature: null,
+    inputs: { taskId: null, status: 'idle', manifest: null },
     taskList: [],
     taskListTotal: 0,
     taskListStatus: 'idle',
@@ -182,6 +183,11 @@
       '<div class="form-row">' +
         durationField('f-exec-dl', 'Delivery time', 'After you accept a bid, how long the worker has to deliver.') +
         durationField('f-rev-dl', 'Review time', 'After delivery, how long you have to approve or dispute before it is approved automatically.') +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label" for="f-inputs">Input files (optional)</label>' +
+        '<input class="form-input" id="f-inputs" type="file" multiple accept=".txt,.md,.json,.csv,.py,.js,.ts,.html,.css,.sql,.sh" aria-describedby="f-inputs-hint">' +
+        '<span class="form-hint" id="f-inputs-hint">Files workers need for the job. Bidders can read them before bidding, and they cannot change after posting.</span>' +
       '</div>' +
       '<div style="margin-top:14px">' +
         '<button class="btn btn-cyan solid" id="btn-post-task">Post Task</button>' +
@@ -543,7 +549,48 @@
   }
 
   function documentSignature(task) {
-    return JSON.stringify({spec: task.spec, assets: task.assets, dispute: task.dispute});
+    return JSON.stringify({spec: task.spec, assets: task.assets, dispute: task.dispute, inputs: state.inputs});
+  }
+
+  function loadTaskInputs(taskId) {
+    if (state.inputs.taskId === taskId) return;
+    state.inputs = { taskId: taskId, status: 'loading', manifest: null };
+    fetch('/api/proxy/tasks/' + encodeURIComponent(taskId) + '/inputs')
+      .then(function(response) { return response.ok ? response.json() : Promise.reject(new Error('HTTP ' + response.status)); })
+      .then(function(body) {
+        if (state.inputs.taskId !== taskId) return;
+        state.inputs = { taskId: taskId, status: 'ready', manifest: body && body.input_manifest ? body.input_manifest : null };
+        if (state.task) renderDocuments(state.task);
+      })
+      .catch(function() {
+        if (state.inputs.taskId !== taskId) return;
+        state.inputs = { taskId: taskId, status: 'error', manifest: null };
+        if (state.task) renderDocuments(state.task);
+      });
+  }
+
+  function inputFilesHtml(task) {
+    var inputs = state.inputs;
+    var html = '<div class="document-entry" data-task-inputs><div class="document-title">Input files</div>';
+    if (inputs.status === 'loading' || inputs.status === 'idle') {
+      return html + '<div class="documents-empty" style="margin-top:8px">Loading input files...</div></div>';
+    }
+    if (inputs.status === 'error') {
+      return html + '<div class="documents-empty" style="margin-top:8px">Input files could not be loaded.</div></div>';
+    }
+    var files = inputs.manifest && Array.isArray(inputs.manifest.files) ? inputs.manifest.files : [];
+    if (files.length === 0) {
+      return html + '<div class="documents-empty" style="margin-top:8px">This task has no input files.</div></div>';
+    }
+    files.forEach(function(file) {
+      var name = typeof file.filename === 'string' ? file.filename : 'Unnamed file';
+      var path = assetPath(task.task_id, String(file.asset_id));
+      html += '<div class="document-entry document-file" data-task-input="' + esc(String(file.asset_id)) + '">' +
+        '<a class="document-title" href="' + esc(path) + '" download="' + esc(name) + '">' + esc(name) + '</a>' +
+        '<div class="document-meta">' + esc(String(file.content_type)) + ' · ' + esc(formatAssetSize(file)) + '</div>' +
+        '<details class="document-hash"><summary>SHA-256</summary><code>' + esc(String(file.content_sha256)) + '</code></details></div>';
+    });
+    return html + '</div>';
   }
 
   function taskAgentName(task, agentId) {
@@ -572,7 +619,9 @@
     var signature = documentSignature(task);
     if (signature === state.documentsSignature) return;
 
+    loadTaskInputs(task.task_id);
     var html = documentText('Task specification', task.spec);
+    html += inputFilesHtml(task);
     var assets = Array.isArray(task.assets) ? task.assets : [];
     html += '<div class="document-entry"><div class="document-title">Uploaded files</div>';
     if (assets.length === 0) {

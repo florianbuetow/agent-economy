@@ -741,7 +741,7 @@ async def submit_bid(
     bidder_id: str,
     task_id: str,
     *,
-    amount: int = 90,
+    amount: int = 100,
 ) -> Any:
     """Submit a bid via POST /tasks/{task_id}/bids and return the response."""
     private_key = bidder_keypair[0]

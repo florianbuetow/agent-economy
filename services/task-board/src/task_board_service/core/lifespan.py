@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING, Literal, cast
 
 from service_auth.factory import AgentFactory
 from service_auth.gateway import GatewayRequestSigner
-from service_clients.bank import BankClient
 from service_clients.identity import IdentityClient
 from service_commons.maintenance_lock import MaintenanceLockMode, hold_maintenance_lock
 
+from task_board_service.clients.settlement_bank import SettlementBankClient
 from task_board_service.config import get_config_path, get_settings, resolve_recovery_path
 from task_board_service.core.state import init_app_state
 from task_board_service.logging import get_logger, setup_logging
@@ -185,11 +185,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             )
             state.identity_client = identity_client
 
-            central_bank_client = BankClient(
+            central_bank_client = SettlementBankClient(
                 base_url=settings.central_bank.base_url,
                 escrow_lock_path=settings.central_bank.escrow_lock_path,
                 escrow_release_path=settings.central_bank.escrow_release_path,
                 escrow_split_path=settings.central_bank.escrow_split_path,
+                escrow_settle_path=settings.central_bank.escrow_settle_path,
                 timeout_seconds=settings.central_bank.timeout_seconds,
                 platform_signer=platform_agent,
             )

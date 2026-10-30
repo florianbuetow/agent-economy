@@ -21,15 +21,18 @@ def settlement_request_fields(
     escrow_amount: int,
     worker_amount: int,
     source_reference: str,
+    ruling_pct: int | None,
 ) -> tuple[str, dict[str, object]]:
     """Choose the exact Bank primitive for one final settlement.
 
-    One-sided outcomes stay a full release. Every two-sided outcome is an exact-amount
-    escrow_split that pays ``worker_amount`` and refunds ``escrow_amount - worker_amount``.
+    One-sided outcomes stay a full release. A Court ruling keeps the percentage split
+    whenever that split yields exactly the same legs (for example price == budget).
+    Every other two-sided outcome is an exact-amount escrow_split that pays
+    ``worker_amount`` and refunds ``escrow_amount - worker_amount``.
     """
     if not 0 <= worker_amount <= escrow_amount:
         raise ValueError("Worker amount must fit the escrowed budget")
-    if worker_amount == 0 or worker_amount == escrow_amount:
+    if worker_amount in {0, escrow_amount}:
         recipient = poster_id if worker_amount == 0 else worker_id
         if recipient is None:
             raise ValueError("A worker payment requires an accepted worker")
@@ -40,6 +43,14 @@ def settlement_request_fields(
         }
     if worker_id is None:
         raise ValueError("A worker payment requires an accepted worker")
+    if ruling_pct is not None and ruling_worker_amount(escrow_amount, ruling_pct) == worker_amount:
+        return "escrow_split", {
+            "escrow_id": escrow_id,
+            "worker_account_id": worker_id,
+            "poster_account_id": poster_id,
+            "worker_pct": ruling_pct,
+            "source_reference": source_reference,
+        }
     return "escrow_split", {
         "escrow_id": escrow_id,
         "worker_account_id": worker_id,

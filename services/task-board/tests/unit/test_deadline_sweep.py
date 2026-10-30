@@ -78,8 +78,8 @@ async def test_sweep_visits_accepted_submitted_and_disputed_statuses(
     for task_id in (_OPEN, _ACCEPTED, _SUBMITTED, _DISPUTED):
         native_tasks.open_task(task_id, _SHORT_TERMS)
     for task_id in (_ACCEPTED, _SUBMITTED, _DISPUTED):
-        native_tasks.bid(task_id, 90)
-        native_tasks.accept(task_id, 90)
+        native_tasks.bid(task_id, 100)
+        native_tasks.accept(task_id, 100)
     for task_id in (_SUBMITTED, _DISPUTED):
         native_tasks.submit(task_id)
     native_tasks.dispute(_DISPUTED, rebuttal_seconds=1)

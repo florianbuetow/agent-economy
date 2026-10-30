@@ -465,7 +465,7 @@ class TestBidSubmission:
             "SELECT bid_count FROM board_tasks WHERE task_id=?",
             (graph.task_id,),
         ).fetchone()
-        assert bid is not None and tuple(bid) == (graph.task_id, bidder, 90)
+        assert bid is not None and tuple(bid) == (graph.task_id, bidder, 100)
         assert event is not None and tuple(event) == ("bid.submitted", graph.task_id, bidder)
         assert task is not None and tuple(task) == (1,)
 
@@ -645,7 +645,7 @@ class TestTaskStatusUpdate:
             2,
             FIXED_NOW_US + 43_200 * 1_000_000,
             100,
-            90,
+            100,
         )
 
     def test_update_to_approved(

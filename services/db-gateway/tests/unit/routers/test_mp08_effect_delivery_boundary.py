@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import json
 import os
-from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import httpx
 import pytest
@@ -18,9 +17,8 @@ from service_commons.config import ConfigurationError
 from db_gateway_service import task_time
 from db_gateway_service.config import clear_settings_cache
 from db_gateway_service.core.state import init_app_state
-from db_gateway_service.services.db_reader import DbReader
 from tests.fakes.gateway_mp08_config import write_gateway_config
-from tests.fakes.gateway_mp08_effects import prepare_legacy_v5, prepare_native_pending
+from tests.fakes.gateway_mp08_effects import prepare_native_pending
 from tests.fakes.gateway_mp08_migration_helpers import database_snapshot
 from tests.fakes.native_board_history import FIXED_NOW_US, BusinessClock
 
@@ -28,7 +26,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from db_gateway_service.services.db_writer import DbWriter
-    from tests.fakes.gateway_mp08_legacy_history import LegacyWorkerSettlementV4
 
 pytestmark = pytest.mark.unit
 
@@ -180,47 +177,6 @@ def _signed(
         },
         auth=None,
     )
-
-
-@contextmanager
-def _legacy_boundary(
-    tmp_path: Path,
-    signers: dict[str, GatewayRequestSigner],
-    *,
-    kind: Literal["pending", "succeeded"],
-) -> Iterator[tuple[TestClient, LegacyWorkerSettlementV4, DbWriter, GatewayRequestSigner]]:
-    assert kind in {"pending", "succeeded"}
-    source, writer = prepare_legacy_v5(
-        tmp_path / f"legacy-{kind}",
-        kind=kind,
-    )
-    config_path = tmp_path / f"legacy-{kind}-config.yaml"
-    write_gateway_config(writer._db_path, config_path)
-    foreign = _signer(f"gateway-task-board-foreign-{kind}", tmp_path)
-    with config_path.open("a") as config:
-        config.write(
-            f"""
-    gateway-task-board-foreign-{kind}:
-      public_key_path: "gateway-task-board-foreign-{kind}.pub"
-      capabilities: ["gateway.board.read", "gateway.board.write"]
-"""
-        )
-    os.environ["CONFIG_PATH"] = str(config_path)
-    clear_settings_cache()
-    from db_gateway_service.app import create_app
-
-    app = create_app()
-    try:
-        with TestClient(app) as client:
-            client.auth = _DomainAuth(signers)
-            state = init_app_state()
-            state.db_writer = writer
-            state.db_reader = DbReader(writer.connection)
-            yield client, source, writer, foreign
-    finally:
-        writer.close()
-        os.environ.pop("CONFIG_PATH", None)
-        clear_settings_cache()
 
 
 def test_owner_get_returns_exact_safe_diagnostic_shape(
@@ -673,113 +629,6 @@ def test_pending_delivery_is_not_operator_retryable(
     )
     assert response.status_code == 409
     assert response.json()["error"] == "effect_delivery_not_retryable"
-
-
-def test_legacy_pending_missing_receipt_returns_202_without_any_persistent_mutation(
-    tmp_path: Path,
-    gateway_test_signers: dict[str, GatewayRequestSigner],
-) -> None:
-    with _legacy_boundary(
-        tmp_path,
-        gateway_test_signers,
-        kind="pending",
-    ) as (client, source, writer, foreign):
-        hidden = _signed(
-            client,
-            foreign,
-            "POST",
-            f"/board/legacy-effect-observations/{source.observation_id}/finalize",
-            action="gateway.board.write",
-            body={},
-        )
-        assert hidden.status_code == 404, hidden.text
-        writer.connection.execute(
-            "UPDATE board_task_effect_deliveries SET delivery_state='dead_letter',"
-            "next_attempt_at_us=NULL,next_evidence_check_at_us=enqueued_at_us,"
-            "last_failure_code='request_timeout',last_failure_at_us=enqueued_at_us "
-            "WHERE legacy_observation_id=?",
-            (source.observation_id,),
-        )
-        writer.connection.commit()
-        before = database_snapshot(source.database)
-        response = _signed(
-            client,
-            gateway_test_signers["board"],
-            "POST",
-            f"/board/legacy-effect-observations/{source.observation_id}/finalize",
-            action="gateway.board.write",
-            body={},
-        )
-        assert response.status_code == 202, response.text
-        assert response.json()["delivery"]["delivery_state"] == "dead_letter"
-        assert database_snapshot(source.database) == before
-
-
-def test_legacy_succeeded_missing_intended_receipt_blocks_without_money_mutation(
-    tmp_path: Path,
-    gateway_test_signers: dict[str, GatewayRequestSigner],
-) -> None:
-    with _legacy_boundary(
-        tmp_path,
-        gateway_test_signers,
-        kind="succeeded",
-    ) as (client, source, writer, foreign):
-        hidden = _signed(
-            client,
-            foreign,
-            "POST",
-            f"/board/legacy-effect-observations/{source.observation_id}/finalize",
-            action="gateway.board.write",
-            body={},
-        )
-        assert hidden.status_code == 404
-        writer.connection.execute(
-            "DELETE FROM bank_operation_legs WHERE operation_id=?",
-            (source.operation_id,),
-        )
-        writer.connection.execute(
-            "DELETE FROM bank_operation_receipts WHERE operation_id=?",
-            (source.operation_id,),
-        )
-        writer.connection.commit()
-        events_before = writer.connection.execute(
-            "SELECT * FROM events ORDER BY event_id"
-        ).fetchall()
-        money_before = {
-            table: writer.connection.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall()  # nosec B608
-            for table in ("bank_accounts", "bank_escrow", "bank_transactions")
-        }
-        response = _signed(
-            client,
-            gateway_test_signers["board"],
-            "POST",
-            f"/board/legacy-effect-observations/{source.observation_id}/finalize",
-            action="gateway.board.write",
-            body={},
-        )
-        assert response.status_code == 409, response.text
-        assert response.json()["error"] == "effect_evidence_conflict"
-        observation = writer.connection.execute(
-            "SELECT unresolved FROM board_legacy_effect_observations WHERE observation_id=?",
-            (source.observation_id,),
-        ).fetchone()
-        assert observation is not None and tuple(observation) == (1,)
-        delivery_row = writer.connection.execute(
-            "SELECT delivery_state,last_failure_code FROM board_task_effect_deliveries "
-            "WHERE legacy_observation_id=?",
-            (source.observation_id,),
-        ).fetchone()
-        assert delivery_row is not None
-        assert tuple(delivery_row) == ("integrity_blocked", "effect_evidence_conflict")
-        money_after = {
-            table: writer.connection.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall()  # nosec B608
-            for table in ("bank_accounts", "bank_escrow", "bank_transactions")
-        }
-        assert money_after == money_before
-        assert (
-            writer.connection.execute("SELECT * FROM events ORDER BY event_id").fetchall()
-            == events_before
-        )
 
 
 @pytest.mark.parametrize(

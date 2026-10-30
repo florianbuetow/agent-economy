@@ -89,6 +89,8 @@ def _task_row(*, legacy: bool) -> dict[str, Any]:
         "review_cutoff_us": _REVIEW_CUTOFF_US,
         "accepted_reward": 100,
         "accepted_bid_amount": 90,
+        "worker_payment": None,
+        "poster_refund": None,
         "pending_transition": pending_transition,
         "legacy_reconciliations": legacy_reconciliations,
         "financial_effect": {

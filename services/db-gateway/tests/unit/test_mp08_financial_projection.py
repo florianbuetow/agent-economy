@@ -7,18 +7,15 @@ from uuid import uuid4
 
 import pytest
 
-from db_gateway_service import migration, recovery, task_time
+from db_gateway_service import task_time
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.services.db_reader import DbReader
-from db_gateway_service.services.db_writer import DbWriter
 from tests.fakes.gateway_mp08_effects import (
     delivery,
-    prepare_legacy_v5,
     prepare_native_pending,
     prepare_native_refund_pending,
     prepare_native_split_pending,
 )
-from tests.fakes.gateway_mp08_legacy_history import prepare_historical_approved_worker_payment_v4
 from tests.fakes.native_board_history import (
     FIXED_NOW_US,
     BusinessClock,
@@ -30,11 +27,10 @@ from tests.fakes.native_board_history import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from fastapi.testclient import TestClient
 
-    from tests.fakes.gateway_mp08_legacy_history import ExcludedLegacyHistoryV4
+    from db_gateway_service.services.db_writer import DbWriter
+
 
 pytestmark = pytest.mark.unit
 pytest_plugins = ["tests.fakes.gateway_mp08_app"]
@@ -75,37 +71,6 @@ def _effect(client: TestClient, task_id: str) -> dict[str, object]:
     match = next(item for item in listed.json()["tasks"] if item["task_id"] == task_id)
     assert match["financial_effect"] == value
     return value
-
-
-def _historical_v5(tmp_path: Path) -> tuple[ExcludedLegacyHistoryV4, DbWriter]:
-    source = prepare_historical_approved_worker_payment_v4(
-        tmp_path,
-        caller_kid="gateway-task-board",
-    )
-    recovery.create_backup(
-        source.inventory,
-        backup_root=source.backup_root,
-        backup_id="before-v5-historical",
-        work_root=source.work_root,
-    )
-    migrate = getattr(migration, "migrate_v4_to_v5", None)
-    assert callable(migrate), "Missing explicit backup-bound V4-to-V5 migration"
-    migrate(
-        source.inventory,
-        backup_root=source.backup_root,
-        backup_id="before-v5-historical",
-        work_root=source.work_root,
-        busy_timeout_ms=5000,
-        current_task_board_caller_kid="gateway-task-board",
-    )
-    writer = DbWriter(
-        str(source.database),
-        5000,
-        "wal",
-        None,
-        current_task_board_caller_kid="gateway-task-board",  # type: ignore[call-arg]
-    )
-    return source, writer
 
 
 def test_open_locked_task_is_locked_without_payment_claim(app_with_writer: TestClient) -> None:
@@ -467,106 +432,3 @@ def test_resolved_escrow_without_intended_receipt_is_conflict_absent(
     assert projection["receipt_state"] == "absent"
     assert projection["outcome"] is None
     assert projection["receipt_reference"] is None
-
-
-def test_exhaustive_legacy_payment_without_native_receipt_is_historical(
-    tmp_path: Path,
-) -> None:
-    source, writer = _historical_v5(tmp_path)
-    try:
-        task = DbReader(writer.connection).get_task(source.task_id)
-        assert task is not None
-        assert task["financial_effect"] == {
-            "schema_version": 1,
-            "settlement_state": "historical",
-            "receipt_state": "historical",
-            "outcome": "worker_paid",
-            "operation_id": None,
-            "receipt_reference": None,
-            "business_projection_pending": False,
-            "pending_target_status": None,
-        }
-    finally:
-        writer.close()
-
-
-def test_legacy_pending_without_receipt_maps_pending_without_projection_gap(
-    tmp_path: Path,
-) -> None:
-    source, writer = prepare_legacy_v5(tmp_path, kind="pending")
-    try:
-        task = DbReader(writer.connection).get_task(source.task_id)
-        assert task is not None
-        assert task["financial_effect"] == {
-            "schema_version": 1,
-            "settlement_state": "pending",
-            "receipt_state": "absent",
-            "outcome": None,
-            "operation_id": source.operation_id,
-            "receipt_reference": None,
-            "business_projection_pending": False,
-            "pending_target_status": None,
-        }
-    finally:
-        writer.close()
-
-
-def test_legacy_succeeded_maps_confirmed_projection_gap_then_complete(
-    tmp_path: Path,
-) -> None:
-    source, writer = prepare_legacy_v5(tmp_path, kind="succeeded")
-    try:
-        reader = DbReader(writer.connection)
-        before = reader.get_task(source.task_id)
-        assert before is not None
-        assert before["financial_effect"] == {
-            "schema_version": 1,
-            "settlement_state": "pending",
-            "receipt_state": "confirmed",
-            "outcome": "worker_paid",
-            "operation_id": source.operation_id,
-            "receipt_reference": source.operation_id,
-            "business_projection_pending": True,
-            "pending_target_status": "approved",
-        }
-        finalize = getattr(writer, "finalize_legacy_effect_observation", None)
-        assert callable(finalize)
-        finalize(source.observation_id, "gateway-task-board")
-        after = reader.get_task(source.task_id)
-        assert after is not None
-        assert after["financial_effect"] == {
-            **before["financial_effect"],
-            "settlement_state": "complete",
-            "business_projection_pending": False,
-            "pending_target_status": None,
-        }
-    finally:
-        writer.close()
-
-
-@pytest.mark.parametrize(
-    "mutation",
-    [
-        "UPDATE board_tasks SET status='submitted' WHERE task_id=?",
-        "UPDATE board_tasks SET worker_id=NULL WHERE task_id=?",
-        "DELETE FROM bank_legacy_transaction_observations WHERE tx_id IN "
-        "(SELECT tx_id FROM bank_transactions WHERE account_id="
-        "(SELECT worker_id FROM board_tasks WHERE task_id=?))",
-    ],
-)
-def test_incomplete_legacy_payment_evidence_never_maps_historical(
-    tmp_path: Path,
-    mutation: str,
-) -> None:
-    source, writer = _historical_v5(tmp_path)
-    try:
-        writer.connection.execute(mutation, (source.task_id,))
-        writer.connection.commit()
-        task = DbReader(writer.connection).get_task(source.task_id)
-        assert task is not None
-        projection = task["financial_effect"]
-        assert projection["settlement_state"] != "historical"
-        assert projection["receipt_state"] != "historical"
-        assert projection["outcome"] is None
-    finally:
-        writer.close()

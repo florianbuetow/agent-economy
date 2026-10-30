@@ -239,7 +239,7 @@ async def create_submitted_task(
             "expected_lifecycle_version": 0,
             "task_id": task_id,
             "bidder_id": worker_id,
-            "amount": 90,
+            "amount": 100,
         },
     )
     assert bid.status_code == 201, bid.text

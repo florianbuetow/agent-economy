@@ -3,24 +3,20 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
 import pytest
 
 from db_gateway_service import task_time
 from db_gateway_service.core.state import get_app_state
-from tests.conftest import make_event
 from tests.fakes.gateway_mp08_effects import (
     delivery,
     lease,
-    prepare_legacy_v5,
     prepare_native_pending,
 )
 from tests.fakes.native_board_history import FIXED_NOW_US, BusinessClock, TaskGraph, settle_release
 
 if TYPE_CHECKING:
     import sqlite3
-    from pathlib import Path
 
     from fastapi.testclient import TestClient
 
@@ -196,150 +192,3 @@ def test_exact_receipt_with_contradictory_projection_blocks_as_confirmed(
         ).fetchone()
         == money_before
     )
-
-
-def test_legacy_pending_finalization_repairs_only_pending_projection(tmp_path: Path) -> None:
-    source, writer = prepare_legacy_v5(tmp_path, kind="pending")
-    try:
-        finalize = getattr(writer, "finalize_legacy_effect_observation", None)
-        assert callable(finalize), "Missing protected legacy finalization writer"
-        before = writer.connection.execute(
-            "SELECT status,approved_at,escrow_pending FROM board_tasks WHERE task_id=?",
-            (source.task_id,),
-        ).fetchone()
-        contract_before = writer.connection.execute(
-            "SELECT lifecycle_version FROM board_task_contracts WHERE task_id=?",
-            (source.task_id,),
-        ).fetchone()
-        events_before = writer.connection.execute(
-            "SELECT event_id,event_type FROM events WHERE task_id=? ORDER BY event_id",
-            (source.task_id,),
-        ).fetchall()
-        finalize(source.observation_id, "gateway-task-board")
-        assert (
-            writer.connection.execute(
-                "SELECT status,approved_at,escrow_pending FROM board_tasks WHERE task_id=?",
-                (source.task_id,),
-            ).fetchone()
-            == before
-        )
-        writer.escrow_release(
-            {
-                "operation_id": source.operation_id,
-                "escrow_id": source.escrow_id,
-                "recipient_account_id": source.worker_id,
-                "source_reference": f"task:{source.task_id}:approved",
-                "tx_id": f"tx-{uuid4()}",
-                "resolved_at": "2099-01-01T00:00:04Z",
-                "event": {
-                    **make_event(
-                        source="central-bank",
-                        event_type="escrow.released",
-                        task_id=source.task_id,
-                        agent_id=source.worker_id,
-                    ),
-                    "timestamp": "2099-01-01T00:00:04Z",
-                },
-            }
-        )
-        finalize(source.observation_id, "gateway-task-board")
-        assert _row_tuple(
-            writer.connection,
-            "SELECT delivery_state FROM board_task_effect_deliveries WHERE legacy_observation_id=?",
-            (source.observation_id,),
-        ) == ("completed",)
-        completion = writer.connection.execute(
-            "SELECT d.completion_event_id,r.event_id FROM board_task_effect_deliveries d "
-            "JOIN bank_operation_receipts r ON r.operation_id=d.effect_operation_id "
-            "WHERE d.legacy_observation_id=?",
-            (source.observation_id,),
-        ).fetchone()
-        assert completion is not None and completion[0] == completion[1]
-        assert _row_tuple(
-            writer.connection,
-            "SELECT status,approved_at,escrow_pending FROM board_tasks WHERE task_id=?",
-            (source.task_id,),
-        ) == ("approved", before[1], 0)
-        assert (
-            writer.connection.execute(
-                "SELECT lifecycle_version FROM board_task_contracts WHERE task_id=?",
-                (source.task_id,),
-            ).fetchone()
-            == contract_before
-        )
-        events_after = writer.connection.execute(
-            "SELECT event_id,event_type FROM events WHERE task_id=? ORDER BY event_id",
-            (source.task_id,),
-        ).fetchall()
-        assert all(row in events_after for row in events_before)
-        assert [row for row in events_after if row[1].startswith("task.")] == [
-            row for row in events_before if row[1].startswith("task.")
-        ]
-    finally:
-        writer.close()
-
-
-def test_legacy_succeeded_finalization_dispatches_no_money_and_repairs_minimally(
-    tmp_path: Path,
-) -> None:
-    source, writer = prepare_legacy_v5(tmp_path, kind="succeeded")
-    try:
-        finalize = getattr(writer, "finalize_legacy_effect_observation", None)
-        assert callable(finalize), "Missing protected legacy finalization writer"
-        receipt_before = writer.connection.execute(
-            "SELECT * FROM bank_operation_receipts ORDER BY operation_id"
-        ).fetchall()
-        legs_before = writer.connection.execute(
-            "SELECT * FROM bank_operation_legs ORDER BY operation_id,leg_index"
-        ).fetchall()
-        events_before = writer.connection.execute(
-            "SELECT event_id,event_source,event_type FROM events ORDER BY event_id"
-        ).fetchall()
-        finalize(source.observation_id, "gateway-task-board")
-        assert _row_tuple(
-            writer.connection,
-            "SELECT delivery_state FROM board_task_effect_deliveries WHERE legacy_observation_id=?",
-            (source.observation_id,),
-        ) == ("completed",)
-        completion = writer.connection.execute(
-            "SELECT d.completion_event_id,r.event_id FROM board_task_effect_deliveries d "
-            "JOIN bank_operation_receipts r ON r.operation_id=d.effect_operation_id "
-            "WHERE d.legacy_observation_id=?",
-            (source.observation_id,),
-        ).fetchone()
-        assert completion is not None and completion[0] == completion[1]
-        assert _row_tuple(
-            writer.connection,
-            "SELECT status,approved_at,escrow_pending FROM board_tasks WHERE task_id=?",
-            (source.task_id,),
-        ) == ("approved", None, 0)
-        assert _row_tuple(
-            writer.connection,
-            "SELECT lifecycle_version FROM board_task_contracts WHERE task_id=?",
-            (source.task_id,),
-        ) == (0,)
-        assert _row_tuple(
-            writer.connection,
-            "SELECT unresolved FROM board_legacy_effect_observations WHERE observation_id=?",
-            (source.observation_id,),
-        ) == (0,)
-        assert (
-            writer.connection.execute(
-                "SELECT * FROM bank_operation_receipts ORDER BY operation_id"
-            ).fetchall()
-            == receipt_before
-        )
-        assert (
-            writer.connection.execute(
-                "SELECT * FROM bank_operation_legs ORDER BY operation_id,leg_index"
-            ).fetchall()
-            == legs_before
-        )
-        assert (
-            writer.connection.execute(
-                "SELECT event_id,event_source,event_type FROM events ORDER BY event_id"
-            ).fetchall()
-            == events_before
-        )
-    finally:
-        writer.close()

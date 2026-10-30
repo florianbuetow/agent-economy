@@ -764,3 +764,44 @@ class ProxyIdentityResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     agent_id: str
+
+
+MAX_INPUT_FILES = 1000
+
+
+class TaskInputPostingPrepareRequest(TaskPostingPrepareRequest):
+    """Posting terms plus the number of input files the browser will attach."""
+
+    expected_input_count: int = Field(ge=1, le=MAX_INPUT_FILES)
+
+
+class TaskInputPostingIntentPayload(BaseModel):
+    """Exact protocol-2 Gateway admission request owned by the browser record."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    protocol_version: Literal[2]
+    publication_operation_id: OperationId
+    task_id: str
+    actor_kind: Literal["agent"]
+    actor_id: str = Field(min_length=1)
+    action: Literal["task_publication_admit"]
+    resource: Literal["POST /task-publications"]
+    lock_operation_id: OperationId
+    title: str = Field(min_length=1, max_length=200)
+    spec: str = Field(min_length=1, max_length=10000)
+    reward: int = Field(gt=0, le=MAX_SAFE_INTEGER)
+    bidding_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    acceptance_window_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    execution_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    review_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    expected_input_count: int = Field(ge=1, le=MAX_INPUT_FILES)
+
+
+class TaskInputPostingRecord(BaseModel):
+    """Complete immutable protocol-2 record persisted by the browser before transport."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    record_version: Literal[2]
+    scope: TaskPostingScope
+    intent: TaskInputPostingIntentPayload
+    request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")

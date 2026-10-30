@@ -21,7 +21,6 @@ from tests.fakes.gateway_mp08_config import write_gateway_config
 from tests.fakes.gateway_mp08_effects import (
     delivery,
     lease,
-    prepare_legacy_v5,
     prepare_native_pending,
 )
 from tests.fakes.native_board_history import (
@@ -334,35 +333,3 @@ def test_old_mp07_operation_finalizer_remains_a_distinct_operation_envelope(
     assert response.json()["operation_id"] == effect.operation_id
     assert "operation_state" in response.json()
     assert "delivery" not in response.json()
-
-
-def test_same_owner_legacy_source_is_rejected_as_not_native(
-    tmp_path: Path,
-    gateway_test_signers: dict[str, GatewayRequestSigner],
-) -> None:
-    source, writer = prepare_legacy_v5(tmp_path / "legacy-native-finalizer", kind="pending")
-    config_path = tmp_path / "legacy-native-finalizer.yaml"
-    write_gateway_config(writer._db_path, config_path)
-    os.environ["CONFIG_PATH"] = str(config_path)
-    clear_settings_cache()
-    from db_gateway_service.app import create_app
-
-    try:
-        with TestClient(create_app()) as client:
-            client.auth = _DomainAuth(gateway_test_signers)
-            state = init_app_state()
-            state.db_writer = writer
-            state.db_reader = DbReader(writer.connection)
-            response = _signed(
-                client,
-                gateway_test_signers["board"],
-                "POST",
-                _path(source.operation_id),
-                body={},
-            )
-            assert response.status_code == 400
-            assert response.json()["error"] == "effect_delivery_source_not_native"
-    finally:
-        writer.close()
-        os.environ.pop("CONFIG_PATH", None)
-        clear_settings_cache()

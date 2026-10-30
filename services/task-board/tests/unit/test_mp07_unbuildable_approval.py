@@ -66,6 +66,8 @@ def _task(
         "escrow_id": "esc-1",
         "accepted_reward": 100 if accepted_terms else None,
         "accepted_bid_amount": 90 if accepted_terms else None,
+        "worker_payment": None,
+        "poster_refund": None,
         "status": status,
         "lifecycle_version": lifecycle_version,
         "pending_transition": pending,

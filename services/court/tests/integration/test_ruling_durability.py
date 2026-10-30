@@ -122,14 +122,17 @@ class _GatewayTaskBoard:
         envelope: dict[str, Any] = claimed.json()
         if envelope["operation_state"] != "completed":
             financial = envelope["effect_intent"]["financial_request"]
+            # G01: an accepted-price settlement carries worker_amount; an equivalent
+            # whole-budget split keeps worker_pct.
+            share = "worker_amount" if "worker_amount" in financial else "worker_pct"
             split = await self._client.post(
-                "/bank/escrow/split",
+                "/bank/escrow/settle" if share == "worker_amount" else "/bank/escrow/split",
                 json={
                     "operation_id": envelope["effect_operation_id"],
                     "escrow_id": financial["escrow_id"],
                     "worker_account_id": financial["worker_account_id"],
                     "poster_account_id": financial["poster_account_id"],
-                    "worker_pct": financial["worker_pct"],
+                    share: financial[share],
                     "source_reference": financial["source_reference"],
                     "worker_tx_id": f"tx-{uuid.uuid4()}",
                     "poster_tx_id": f"tx-{uuid.uuid4()}",

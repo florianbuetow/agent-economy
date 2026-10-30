@@ -85,6 +85,8 @@ def _row(financial_effect: dict[str, object], *, status: str = "submitted") -> d
         "review_cutoff_us": 240_000_000,
         "accepted_reward": 100,
         "accepted_bid_amount": 90,
+        "worker_payment": None,
+        "poster_refund": None,
         "pending_transition": None,
         "legacy_reconciliations": [],
         "financial_effect": financial_effect,

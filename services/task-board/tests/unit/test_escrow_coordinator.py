@@ -38,8 +38,8 @@ def native_tasks_fixture(
 
 def prepare_submitted(scenario: NativeTaskFixture, task_id: str) -> None:
     scenario.open_task(task_id, TERMS)
-    scenario.bid(task_id, 90)
-    scenario.accept(task_id, 90)
+    scenario.bid(task_id, 100)
+    scenario.accept(task_id, 100)
     scenario.submit(task_id)
 
 

@@ -125,9 +125,7 @@ async def test_ruling_50_percent_on_price_61_pays_30_and_refunds_70(
     disputed = await file_dispute(client, alice_keypair, alice_agent_id, task_id)
     assert disputed.status_code == 200, disputed.text
 
-    ruled = await submit_ruling(
-        client, platform_keypair, platform_agent_id, task_id, worker_pct=50
-    )
+    ruled = await submit_ruling(client, platform_keypair, platform_agent_id, task_id, worker_pct=50)
 
     assert ruled.status_code == 200, ruled.text
     body = ruled.json()

@@ -29,8 +29,8 @@ async def test_approved_job_keeps_evidence_but_stops_public_downloads(
     """A real submission and approval stop bytes without deleting the evidence."""
     with native_task_context(tmp_path, monkeypatch) as scenario:
         scenario.open_task(_TASK_ID, TaskTerms(100, 3600, 3600, 3600, 3600))
-        scenario.bid(_TASK_ID, 90)
-        scenario.accept(_TASK_ID, 90)
+        scenario.bid(_TASK_ID, 100)
+        scenario.accept(_TASK_ID, 100)
         validator = AsyncMock()
         validator.validate_jws_token = AsyncMock(
             return_value={"task_id": _TASK_ID, "_signer_id": scenario.worker_id}

@@ -506,6 +506,11 @@
       }
       if (button) button.disabled = true;
       if (element) element.textContent = '';
+      var inputFiles = selectedInputFiles();
+      if (inputFiles.length > 0) {
+        await createInputPosting(terms, inputFiles);
+        return;
+      }
       var response = await postingFetch('/api/proxy/task-postings/prepare', terms);
       var record = await response.json().catch(function() { return null; });
       if (!response.ok) throw new Error(record && record.message ? record.message : 'Posting preparation failed.');
@@ -527,6 +532,193 @@
     }
   }
 
+  // ── Protocol-2 posting with input files (used only when files are attached) ──
+  var RECORD_V2_PREFIX = 'ate.task-posting:v2:';
+  var COMPLETION_V2_PREFIX = 'ate.task-posting-completion:v2:';
+
+  function validScope(scope) {
+    if (!exactKeys(scope, ['schema_version', 'operator_agent_id', 'operator_public_fingerprint_sha256', 'service_urls']) ||
+        scope.schema_version !== 1 || typeof scope.operator_agent_id !== 'string' || !scope.operator_agent_id ||
+        !SHA256_PATTERN.test(scope.operator_public_fingerprint_sha256)) return false;
+    var urls = scope.service_urls;
+    var urlKeys = ['identity_url', 'bank_url', 'task_board_url', 'reputation_url', 'court_url'];
+    return exactKeys(urls, urlKeys) && urlKeys.every(function(key) {
+      return typeof urls[key] === 'string' && urls[key].length > 0;
+    });
+  }
+
+  function validRecordV2(record) {
+    if (!exactKeys(record, ['record_version', 'scope', 'intent', 'request_sha256']) ||
+        record.record_version !== 2 || !SHA256_PATTERN.test(record.request_sha256) ||
+        !validScope(record.scope)) return false;
+    var intent = record.intent;
+    var intentKeys = [
+      'protocol_version', 'publication_operation_id', 'task_id', 'actor_kind', 'actor_id',
+      'action', 'resource', 'lock_operation_id', 'title', 'spec', 'reward',
+      'bidding_deadline_seconds', 'acceptance_window_seconds', 'execution_deadline_seconds',
+      'review_deadline_seconds', 'expected_input_count'
+    ];
+    return exactKeys(intent, intentKeys) && intent.protocol_version === 2 &&
+      OPERATION_PATTERN.test(intent.publication_operation_id) &&
+      OPERATION_PATTERN.test(intent.lock_operation_id) &&
+      intent.publication_operation_id !== intent.lock_operation_id &&
+      typeof intent.task_id === 'string' && TASK_PATTERN.test(intent.task_id) &&
+      intent.actor_kind === 'agent' && intent.actor_id === record.scope.operator_agent_id &&
+      intent.action === 'task_publication_admit' && intent.resource === 'POST /task-publications' &&
+      validText(intent.title, 200) && validText(intent.spec, 10000) &&
+      validPositiveInteger(intent.reward, SAFE_INTEGER_MAX) &&
+      validPositiveInteger(intent.bidding_deadline_seconds, DURATION_MAX) &&
+      validPositiveInteger(intent.acceptance_window_seconds, DURATION_MAX) &&
+      validPositiveInteger(intent.execution_deadline_seconds, DURATION_MAX) &&
+      validPositiveInteger(intent.review_deadline_seconds, DURATION_MAX) &&
+      validPositiveInteger(intent.expected_input_count, 1000);
+  }
+
+  async function requestHashV2(intent) {
+    var digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalJson(intent)));
+    return Array.from(new Uint8Array(digest)).map(function(value) {
+      return value.toString(16).padStart(2, '0');
+    }).join('');
+  }
+
+  function validPublicationV2(publication, record, states) {
+    return !!publication && Object.getPrototypeOf(publication) === Object.prototype &&
+      publication.protocol_version === 2 &&
+      publication.publication_operation_id === record.intent.publication_operation_id &&
+      publication.task_id === record.intent.task_id &&
+      publication.request_sha256 === record.request_sha256 &&
+      states.indexOf(publication.publication_state) !== -1;
+  }
+
+  function v2Element(record) {
+    return operationElement({intent: {operation_id: record.intent.publication_operation_id}});
+  }
+
+  function completedV2(record) {
+    return localStorage.getItem(COMPLETION_V2_PREFIX + record.intent.publication_operation_id) !== null;
+  }
+
+  function renderCompletedV2(record) {
+    var element = v2Element(record);
+    if (!element) return;
+    element.style.color = 'var(--green)';
+    element.textContent = record.intent.title + ' — Posting with ' + record.intent.expected_input_count +
+      ' input file(s) completed. ';
+    var link = document.createElement('a');
+    link.href = '/task.html?task_id=' + encodeURIComponent(record.intent.task_id);
+    link.textContent = 'Open the task';
+    link.dataset.taskPostingLink = record.intent.task_id;
+    element.appendChild(link);
+  }
+
+  function renderRecoveryV2(record, message) {
+    var element = v2Element(record);
+    if (!element) return;
+    element.style.color = '';
+    element.textContent = record.intent.title + ' — ' + message + ' ';
+    var retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'btn btn-cyan';
+    retry.textContent = 'Try publishing again';
+    retry.title = 'Publishes the same saved task again. It cannot create a duplicate.';
+    retry.addEventListener('click', function() { publishV2(record); });
+    element.appendChild(retry);
+  }
+
+  async function postJsonV2(path, record) {
+    var response = await postingFetch(path, record);
+    var value = await response.json().catch(function() { return null; });
+    return {response: response, value: value};
+  }
+
+  async function publishV2(record) {
+    try {
+      var path = '/api/proxy/task-publications/' + encodeURIComponent(record.intent.publication_operation_id) + '/publish';
+      var result = await postJsonV2(path, record);
+      if (!result.response.ok) {
+        throw new Error(result.value && result.value.message ? result.value.message :
+          'Publishing failed (HTTP ' + result.response.status + ').');
+      }
+      if (result.response.status === 201 && validPublicationV2(result.value, record, ['published'])) {
+        localStorage.setItem(COMPLETION_V2_PREFIX + record.intent.publication_operation_id,
+          JSON.stringify({task_id: record.intent.task_id, request_sha256: record.request_sha256}));
+        renderCompletedV2(record);
+        document.dispatchEvent(new CustomEvent('ate:posting-completed'));
+        return;
+      }
+      if (!validPublicationV2(result.value, record, ['awaiting_lock'])) {
+        throw new Error('Publish acknowledgment does not match the saved intent.');
+      }
+      renderRecoveryV2(record, 'Your task is not posted yet. The platform is still locking the reward in escrow. Next step: press "Try publishing again" in a few seconds.');
+    } catch (error) {
+      renderRecoveryV2(record, (error && error.message ? error.message : 'The platform did not answer.') +
+        ' Next step: press "Try publishing again".');
+    }
+  }
+
+  async function uploadInputV2(record, file, index) {
+    var form = new FormData();
+    form.append('file', file, file.name);
+    var headers = {'Idempotency-Key': record.intent.publication_operation_id + ':input:' + index};
+    headers[browserConfig.csrf_header_name] = browserConfig.csrf_header_value;
+    var response = await fetch('/api/proxy/task-publications/' +
+      encodeURIComponent(record.intent.publication_operation_id) + '/inputs',
+      {method: 'POST', headers: headers, body: form});
+    if (response.status !== 201) {
+      var value = await response.json().catch(function() { return null; });
+      throw new Error((value && value.message ? value.message : 'Upload failed (HTTP ' + response.status + ')') +
+        ' (' + file.name + ').');
+    }
+  }
+
+  async function createInputPosting(terms, files) {
+    var body = Object.assign({}, terms, {expected_input_count: files.length});
+    var prepared = await postJsonV2('/api/proxy/task-publications/prepare', body);
+    var record = prepared.value;
+    if (!prepared.response.ok) throw new Error(record && record.message ? record.message : 'Posting preparation failed.');
+    if (!validRecordV2(record) || !recordMatchesTerms(record, terms) ||
+        record.intent.expected_input_count !== files.length) {
+      throw new Error('Prepared posting record is malformed.');
+    }
+    if (await requestHashV2(record.intent) !== record.request_sha256) {
+      throw new Error('Prepared posting record has an invalid request hash.');
+    }
+    var key = RECORD_V2_PREFIX + record.intent.publication_operation_id;
+    localStorage.setItem(key, JSON.stringify(record));
+    if (localStorage.getItem(key) !== JSON.stringify(record)) {
+      throw new Error('Posting could not be verified in browser storage.');
+    }
+    var admitted = await postJsonV2('/api/proxy/task-publications/' +
+      encodeURIComponent(record.intent.publication_operation_id) + '/admit', record);
+    if (admitted.response.status !== 202 ||
+        !validPublicationV2(admitted.value, record, ['awaiting_inputs', 'awaiting_publish', 'awaiting_lock', 'published'])) {
+      throw new Error(admitted.value && admitted.value.message ? admitted.value.message : 'Posting admission failed.');
+    }
+    if (admitted.value.publication_state === 'awaiting_inputs') {
+      for (var index = 0; index < files.length; index += 1) {
+        await uploadInputV2(record, files[index], index);
+      }
+    }
+    await publishV2(record);
+  }
+
+  function recoverInputPostings() {
+    for (var index = 0; index < localStorage.length; index += 1) {
+      var key = localStorage.key(index);
+      if (!key || key.indexOf(RECORD_V2_PREFIX) !== 0) continue;
+      try {
+        var record = JSON.parse(localStorage.getItem(key));
+        if (!validRecordV2(record) || completedV2(record)) continue;
+        renderRecoveryV2(record, 'This posting with input files was not confirmed as published.');
+      } catch (_error) { /* malformed v2 records are ignored; they were never sent */ }
+    }
+  }
+
+  function selectedInputFiles() {
+    var input = document.getElementById('f-inputs');
+    return input && input.files ? Array.from(input.files) : [];
+  }
+
   function bindCreateForm() {
     var button = document.getElementById('btn-post-task');
     if (button) button.addEventListener('click', function() { createPosting(false); });
@@ -538,6 +730,7 @@
     try {
       corruptRecordKeys = [];
       recoveredChoiceRequired = false;
+      recoverInputPostings();
       for (var index = 0; index < localStorage.length; index += 1) {
         var key = localStorage.key(index);
         if (!key || key.indexOf(RECORD_PREFIX) !== 0) continue;

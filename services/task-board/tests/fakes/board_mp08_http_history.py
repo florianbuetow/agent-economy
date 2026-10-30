@@ -218,7 +218,7 @@ async def _submitted(
             version=0,
             actor_kind="agent",
             actor_id=worker_id,
-            arguments={"bid_id": bid_id, "bidder_id": worker_id, "amount": 90},
+            arguments={"bid_id": bid_id, "bidder_id": worker_id, "amount": 100},
         ),
     )
     assert bid.status_code == 200, bid.text
@@ -237,7 +237,7 @@ async def _submitted(
                 "worker_id": worker_id,
                 "escrow_id": escrow_id,
                 "reward": 100,
-                "bid_amount": 90,
+                "bid_amount": 100,
             },
         ),
     )

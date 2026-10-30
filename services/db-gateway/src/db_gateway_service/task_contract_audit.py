@@ -332,9 +332,7 @@ def _native_ruling_form_matches(
     financial_request = expected_intent["financial_request"]
     assert isinstance(financial_request, dict)
     expected_effect_kind = (
-        "bank_release"
-        if financial_request["operation_kind"] == "escrow_release"
-        else "bank_split"
+        "bank_release" if financial_request["operation_kind"] == "escrow_release" else "bank_split"
     )
     expected_arguments = {
         "poster_id": context[0],
@@ -452,6 +450,7 @@ def _expected_ruling_effect_intent(
                 escrow_amount=reward,
                 worker_amount=ruling_worker_amount(accepted_price, worker_pct),
                 source_reference=source_reference,
+                ruling_pct=worker_pct,
             )
         except ValueError:
             return None

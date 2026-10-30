@@ -72,7 +72,7 @@ def _seed_stored_bid_history(writer: DbWriter, graph: _Graph) -> None:
             graph.task_id,
             graph.worker_id,
             "Complete the submitted Court fixture.",
-            90,
+            100,
             "2099-01-01T00:00:01Z",
         ),
     )
@@ -111,7 +111,7 @@ def _seed_stored_bid_history(writer: DbWriter, graph: _Graph) -> None:
         graph.task_id,
         graph.worker_id,
         "Complete the submitted Court fixture.",
-        90,
+        100,
         "2099-01-01T00:00:01Z",
     )
     assert stored_event is not None and tuple(stored_event) == tuple(event.values())
@@ -271,7 +271,7 @@ def _seed_submitted(
     writer.connection.execute(
         "UPDATE board_task_contracts SET lifecycle_version=2, "
         "execution_cutoff_us=?, review_cutoff_us=?, accepted_reward=100, "
-        "accepted_bid_amount=90 WHERE task_id=?",
+        "accepted_bid_amount=100 WHERE task_id=?",
         (
             parse_utc_text_to_epoch_us("2099-01-02T00:00:01Z"),
             parse_utc_text_to_epoch_us("2099-01-02T00:00:02Z"),

@@ -14,6 +14,7 @@ from service_commons.exceptions import ServiceError
 from task_board_service.effect_recovery_contract import (
     EffectDeliveryLease,
     ReleaseRequest,
+    SettlementRequest,
     failure_identity,
     invalid_gateway_response,
     parse_diagnostic_envelope,
@@ -51,6 +52,8 @@ class RecoveryBank(Protocol):
     async def escrow_release(self, **terms: object) -> object: ...
 
     async def escrow_split(self, **terms: object) -> object: ...
+
+    async def settle_escrow(self, **terms: object) -> object: ...
 
 
 class RecoveryFinalizeResult(Protocol):
@@ -213,6 +216,16 @@ class FinancialEffectRecovery:
             await self._bank.escrow_release(
                 escrow_id=request.escrow_id,
                 recipient_account_id=request.recipient_account_id,
+                operation_id=lease.effect_operation_id,
+                source_reference=request.source_reference,
+            )
+            return
+        if isinstance(request, SettlementRequest):
+            await self._bank.settle_escrow(
+                escrow_id=request.escrow_id,
+                worker_account_id=request.worker_account_id,
+                poster_account_id=request.poster_account_id,
+                worker_amount=request.worker_amount,
                 operation_id=lease.effect_operation_id,
                 source_reference=request.source_reference,
             )

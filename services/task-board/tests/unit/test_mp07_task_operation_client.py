@@ -70,6 +70,8 @@ _V3_TASK_FIELDS = (
     "review_cutoff_us",
     "accepted_reward",
     "accepted_bid_amount",
+    "worker_payment",
+    "poster_refund",
     "pending_transition",
     "legacy_reconciliations",
     "financial_effect",
@@ -599,6 +601,8 @@ def _task_projection(*, legacy: bool) -> dict[str, Any]:
         "review_cutoff_us": 4070908982000000,
         "accepted_reward": 100,
         "accepted_bid_amount": 90,
+        "worker_payment": None,
+        "poster_refund": None,
         "pending_transition": pending_transition,
         "legacy_reconciliations": legacy_reconciliations,
         "financial_effect": {
