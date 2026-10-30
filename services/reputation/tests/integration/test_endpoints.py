@@ -85,7 +85,9 @@ class TestSubmitAndRetrieveFeedbackWorkflow:
         assert resp2.json()["error"] == "feedback_not_found"
 
         # Step 3: Submit reverse feedback B->A (mutual reveal)
-        payload_ba = _feedback_payload(from_agent_id=BOB_ID, to_agent_id=ALICE_ID)
+        payload_ba = _feedback_payload(
+            from_agent_id=BOB_ID, to_agent_id=ALICE_ID, category="spec_quality"
+        )
         _inject_mock(payload_ba, agent_id=BOB_ID)
         resp3 = await client.post(
             "/feedback",
@@ -161,13 +163,15 @@ class TestErrorResponsesWorkflow:
         assert "details" in data
 
     async def test_duplicate_feedback_returns_409(self, client: AsyncClient) -> None:
-        """POST /feedback twice with same (task, from, to) returns 409 feedback_exists."""
+        """POST /feedback with changed content for the same triple returns 409."""
         payload = _feedback_payload()
         _inject_mock(payload)
         resp1 = await client.post("/feedback", json=_token_body(payload))
         assert resp1.status_code == 201
 
-        resp2 = await client.post("/feedback", json=_token_body(payload))
+        changed = _feedback_payload(rating="dissatisfied")
+        _inject_mock(changed)
+        resp2 = await client.post("/feedback", json=_token_body(changed))
         assert resp2.status_code == 409
         data = resp2.json()
         assert data["error"] == "feedback_exists"

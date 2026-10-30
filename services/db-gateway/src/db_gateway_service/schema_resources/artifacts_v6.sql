@@ -1,4 +1,4 @@
--- Additive MP-09 artifact schema capability. Runtime schema admission remains V5.
+-- MP-09 artifact schema; part of the current V6 catalog.
 
 CREATE TABLE board_artifact_manifests (
     manifest_id TEXT PRIMARY KEY NOT NULL CHECK (typeof(manifest_id)='text' AND length(manifest_id)>0),

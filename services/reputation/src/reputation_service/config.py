@@ -126,6 +126,33 @@ class FeedbackConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reveal_timeout_seconds: int
     max_comment_length: int
+    reveal_sweep_interval_seconds: int = Field(strict=True, gt=0)
+
+
+class QualityConfig(BaseModel):
+    """Quality score configuration."""
+
+    model_config = ConfigDict(extra="forbid")
+    # Identity display name of the local operator, who may read all source-level
+    # quality provenance (Q-M3 visibility P-A).
+    operator_name: str = Field(min_length=1)
+
+
+class TaskBoardConfig(BaseModel):
+    """Task Board service configuration (task lookups for feedback authorization)."""
+
+    model_config = ConfigDict(extra="forbid")
+    base_url: str
+    timeout_seconds: int = Field(strict=True, gt=0)
+
+    @field_validator("base_url")
+    @classmethod
+    def base_url_must_be_http_url(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        if value != value.strip() or parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            msg = "task_board.base_url must be a non-blank HTTP(S) URL"
+            raise ValueError(msg)
+        return value
 
 
 class GatewaySigningConfig(GatewaySignerConfig):
@@ -155,8 +182,10 @@ class Settings(BaseModel):
     logging: LoggingConfig
     platform: PlatformConfig
     identity: IdentityConfig
+    task_board: TaskBoardConfig
     request: RequestConfig
     feedback: FeedbackConfig
+    quality: QualityConfig
     db_gateway: DbGatewayConfig
 
 

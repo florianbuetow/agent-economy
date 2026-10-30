@@ -497,6 +497,9 @@ class BankWriter:
             raise
 
     def escrow_split(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Split by percentage, or settle an exact worker amount when worker_amount is given."""
+        exact = "worker_amount" in data
+        share_field = "worker_amount" if exact else "worker_pct"
         operation_id, request = _financial_request(
             data,
             "escrow_split",
@@ -504,11 +507,11 @@ class BankWriter:
                 "escrow_id": data["escrow_id"],
                 "worker_account_id": data["worker_account_id"],
                 "poster_account_id": data["poster_account_id"],
-                "worker_pct": data["worker_pct"],
+                share_field: data[share_field],
                 "source_reference": data["source_reference"],
             },
         )
-        worker_pct = int(data["worker_pct"])
+        share = int(data[share_field])
         db = self._writer.connection
         cursor = db.cursor()
         try:
@@ -522,7 +525,11 @@ class BankWriter:
             event = _settlement_event(data["event"], escrow["task_id"])
             if data["poster_account_id"] != escrow["payer_account_id"]:
                 raise ServiceError("payload_mismatch", "Poster is not the escrow payer", 400, {})
-            worker_amount = escrow["amount"] * worker_pct // 100
+            if exact and share > escrow["amount"]:
+                raise ServiceError(
+                    "invalid_amount", "Worker amount exceeds the escrow amount", 400, {}
+                )
+            worker_amount = share if exact else escrow["amount"] * share // 100
             poster_amount = escrow["amount"] - worker_amount
             event_id = insert_event(cursor, event)
             worker_balance = self._credit_split_leg(
@@ -575,7 +582,7 @@ class BankWriter:
                 data["resolved_at"],
                 event_id,
                 data["escrow_id"],
-                {"escrow_status_at_commit": "split", "worker_pct": worker_pct},
+                {"escrow_status_at_commit": "split", share_field: share},
                 legs,
             )
             db.commit()

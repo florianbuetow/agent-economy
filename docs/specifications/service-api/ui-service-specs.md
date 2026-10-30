@@ -155,6 +155,12 @@ need an initialized operator.
 | `POST` | `/api/proxy/tasks/{task_id}/bids/{bid_id}/accept` | `{operation_id, expected_lifecycle_version}` | Accepts a bid on `task_id` as the operator (poster), retaining native response status. `502 bid_acceptance_failed` on transport or malformed response. |
 | `POST` | `/api/proxy/tasks/{task_id}/approve` | `{operation_id, expected_lifecycle_version}` | Approves a submitted task as the operator (poster), retaining native response status. `502 task_approval_failed` on transport or malformed response. |
 | `POST` | `/api/proxy/tasks/{task_id}/dispute` | `{operation_id, expected_lifecycle_version, reason}` | Files a dispute on a submitted task as the operator (poster), retaining native response status. `502 dispute_filing_failed` on transport or malformed response. |
+| `POST` | `/api/proxy/tasks/{task_id}/cancel` | `{operation_id, expected_lifecycle_version}` | Cancels the operator's own open task; Task Board refunds escrow. Status codes and error codes from Task Board are preserved. `502 task_cancellation_failed` on transport or malformed response. |
+| `POST` | `/api/proxy/tasks/{task_id}/bids` | `{amount, operation_id, expected_lifecycle_version}` | Places a binding bid as the operator (bidder on another poster's task). Returns `201` with `{bid_id, task_id, bidder_id, amount, submitted_at}`. `502 bid_submission_failed` on transport or malformed response. |
+| `POST` | `/api/proxy/tasks/{task_id}/assets` | Multipart form-data, optional `Idempotency-Key` header | Forwards one multipart deliverable upload as the assigned operator. Returns `201` with asset metadata. Requires `Content-Type: multipart/form-data` — `415 unsupported_media_type` otherwise. `502 asset_upload_failed` on transport. The `Idempotency-Key` header (when present) is forwarded to Task Board for replay guard semantics. |
+| `POST` | `/api/proxy/tasks/{task_id}/submit` | `{operation_id, expected_lifecycle_version}` | Submits uploaded deliverables for review as the assigned operator. Status codes and error codes from Task Board are preserved. `502 deliverable_submission_failed` on transport or malformed response. |
+| `POST` | `/api/proxy/tasks/{task_id}/rebuttal` | `{rebuttal}` where rebuttal is a string, min length 1 | Rebuts the dispute on a task the operator worked. Task must be in `disputed` status with a recorded dispute. Only the task's worker can submit. Returns `200` with result. `403 forbidden` if operator is not the worker; `409 invalid_status` if task is not disputed or has no recorded dispute. |
+| `POST` | `/api/proxy/tasks/{task_id}/feedback` | `{rating, comment}` where rating is `"dissatisfied"` \| `"satisfied"` \| `"extremely_satisfied"`, comment optional string | Rates the counterpart of an approved or ruled task. Poster rates worker's delivery, worker rates poster's spec. Only task parties can submit; task must be in `approved` or `ruled` status. Returns `201` with feedback details. `403 forbidden` if operator is not a task party; `403 not_task_party` if not poster or worker; `409 task_not_eligible` if task not in eligible status. |
 
 Request bodies: `TaskPostingPrepareRequest` (`title` 1–200 chars, `spec` 1–10,000 chars,
 strict positive integer `reward`, and all four duration fields including the poster-selected
@@ -257,7 +263,7 @@ Query param: `window` (only `"24h"` is valid today — `400 invalid_parameter` o
 | `GET` | `/api/tasks` | Paginated with `limit`/`offset`, filterable by exact `poster_id`, `worker_id`, and `status` (canonical lowercase status — `400 invalid_status` otherwise). Filters apply before pagination and `total_count`. |
 | `GET` | `/api/tasks/-/competitive` | Open (or `status`-filtered) tasks ranked by bid count, `limit` 1–20. |
 | `GET` | `/api/tasks/-/uncontested` | Open tasks with zero bids older than `min_age_minutes`. |
-| `GET` | `/api/tasks/{task_id}` | Actor-independent drilldown: poster/worker, deadlines, timestamps, aggregate `bid_count`, status-permitted bids, assets, visible feedback and dispute. Open tasks expose no bid entries; after the open phase, bids include canonical integer `amount`, public bidder identity and visible quality. `404 task_not_found`. |
+| `GET` | `/api/tasks/{task_id}` | Actor-independent drilldown: poster/worker, deadlines, timestamps, aggregate `bid_count`, status-permitted bids, assets, visible feedback and dispute. Open tasks expose no bid entries; after the open phase, bids include canonical integer `amount`, public bidder identity and visible quality. Response includes `accepted_price` (integer or null, the winning bid amount) and `acceptance_deadline` (ISO 8601 timestamp or null, the deadline for accepting a bid once the task moves to accepted status). `404 task_not_found`. |
 
 Asset metadata includes `asset_id`, `uploader_id`, `filename`, `content_type`,
 `size_bytes`, `content_hash`, and `uploaded_at`. The task page keeps a Documents
@@ -278,7 +284,7 @@ authorized details are available.
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/events` | Reverse-chronological, cursor-paginated (`before`/`after`), filterable by `source`/`type`/`agent_id`/`task_id`. `limit` clamped to ≤200; non-integer `limit`/`before`/`after` → `400 invalid_parameter`. |
+| `GET` | `/api/events` | Reverse-chronological, cursor-paginated (`before`/`after`), filterable by `source`/`type`/`agent_id`/`task_id`. Optional `task_id` query parameter narrows the result set to a specific task. `limit` clamped to ≤200; non-integer `limit`/`before`/`after` → `400 invalid_parameter`. |
 | `GET` | `/api/events/stream` | Server-Sent Events. Polls at `sse.poll_interval_seconds`, emits keep-alive comments every `sse.keepalive_interval_seconds`, delivers up to `sse.batch_size` events per cycle. Resumable via `?last_event_id=`. |
 
 MP-12 requires one public event projection for history, initial/resumed SSE and agent feeds. Legacy
@@ -322,6 +328,8 @@ _mount_frontend`).
 Decoded page requests, the fallback index and the asset mount must resolve within the configured
 frontend root. Traversal, absolute paths and symlinks that escape that root return 404 without
 serving the external file. Ordinary unknown paths inside the root retain the index fallback.
+
+The OpenAPI documentation routes (`/docs`, `/redoc`, `/openapi.json`) return `404`. The UI service does not expose auto-generated API documentation; canonical API specifications live in this directory (`docs/specifications/service-api/`).
 
 ## Health
 

@@ -30,6 +30,7 @@ documented below, exactly like task-board's `_RECOMPUTED_COLUMNS`:
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -248,3 +249,73 @@ class TestComposeDisputeCoversEveryNonRedundantColumn:
         assert dispute["ruling_summary"] is None
         assert dispute["ruled_at"] is None
         assert dispute["votes"] == []
+
+
+def _vote(judge_id: str, spec: str, delivery: str) -> dict[str, object]:
+    return {
+        "judge_id": judge_id,
+        "worker_pct": 70,
+        "spec_quality": spec,
+        "spec_quality_explanation": f"{judge_id} spec",
+        "delivery_quality": delivery,
+        "delivery_quality_explanation": f"{judge_id} delivery",
+        "reasoning": "ok",
+        "voted_at": "2026-03-01T11:00:00Z",
+    }
+
+
+@pytest.mark.unit
+def test_ruled_dispute_exposes_vote_quality_and_panel_findings(client: DisputeDbClient) -> None:
+    """GET /disputes/{id} and GET /disputes carry each vote's quality ratings and
+    the panel's median findings."""
+    dispute_id = "clm-q"
+    claim = {
+        "claim_id": dispute_id,
+        "task_id": "t-q",
+        "claimant_id": "a-poster",
+        "respondent_id": "a-worker",
+        "reason": "Spec was not met",
+        "status": "ruled",
+        "rebuttal_deadline": "2026-03-01T12:00:00Z",
+        "filed_at": "2026-03-01T09:00:00Z",
+    }
+    votes = [
+        _vote("judge-1", "dissatisfied", "satisfied"),
+        _vote("judge-2", "satisfied", "extremely_satisfied"),
+        _vote("judge-3", "satisfied", "satisfied"),
+    ]
+    ruling = {
+        "ruling_id": dispute_id,
+        "claim_id": dispute_id,
+        "task_id": "t-q",
+        "worker_pct": 70,
+        "summary": "Mostly delivered",
+        "judge_votes": json.dumps(votes),
+        "ruled_at": "2026-03-01T11:00:00Z",
+    }
+
+    def _send(request: httpx.Request, **_kwargs: object) -> MagicMock:
+        path = request.url.path
+        if path == f"/court/claims/{dispute_id}":
+            return _mock_response(200, claim)
+        if path == f"/court/rulings/{dispute_id}":
+            return _mock_response(200, ruling)
+        if path == "/court/claims":
+            return _mock_response(200, {"claims": [claim]})
+        if path == "/board/tasks/t-q":
+            return _mock_response(200, {"escrow_id": "esc-q"})
+        return _mock_response(404)
+
+    client._client.send = MagicMock(side_effect=_send)
+
+    dispute = client.get_dispute(dispute_id)
+    assert dispute is not None
+    assert dispute["votes"][0]["spec_quality"] == "dissatisfied"
+    assert dispute["votes"][1]["delivery_quality"] == "extremely_satisfied"
+    assert dispute["votes"][2]["delivery_quality_explanation"] == "judge-3 delivery"
+    assert dispute["spec_quality"] == "satisfied"
+    assert dispute["delivery_quality"] == "satisfied"
+
+    listed = client.list_disputes(None, None)
+    assert listed[0]["spec_quality"] == "satisfied"
+    assert listed[0]["delivery_quality"] == "satisfied"

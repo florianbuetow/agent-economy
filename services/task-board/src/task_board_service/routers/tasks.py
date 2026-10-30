@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
 from task_board_service.core.state import get_app_state
+from task_board_service.input_schemas import TaskDetailResponse
 from task_board_service.routers.validation import (
     extract_bearer_token,
     extract_token,
@@ -18,8 +19,11 @@ from task_board_service.schemas import (
     TaskListResponse,
     TaskMutationResponse,
     TaskPublicationEnvelope,
-    TaskResponse,
 )
+from task_board_service.services.input_manager import public_input_manifest
+
+if TYPE_CHECKING:
+    from task_board_service.services.input_manager import PrepublicationStore
 
 router = APIRouter()
 
@@ -368,9 +372,9 @@ async def ruling_method_not_allowed(task_id: str, request: Request) -> None:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/tasks/{task_id}", response_model=TaskResponse)
+@router.get("/tasks/{task_id}", response_model=TaskDetailResponse)
 async def get_task(task_id: str) -> dict[str, Any]:
-    """Get full task details."""
+    """Get full task details, including the frozen input manifest."""
     state = get_app_state()
     if state.task_manager is None:
         raise ServiceError(
@@ -380,4 +384,10 @@ async def get_task(task_id: str) -> dict[str, Any]:
             details={},
         )
 
-    return await state.task_manager.get_task(task_id)
+    task = await state.task_manager.get_task(task_id)
+    store = cast("PrepublicationStore", state.store)
+    manifest = store.get_task_input_manifest(task_id)["input_manifest"]
+    return {
+        **task,
+        "input_manifest": None if manifest is None else public_input_manifest(manifest),
+    }

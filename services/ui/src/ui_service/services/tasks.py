@@ -266,6 +266,14 @@ def _accepted_price(extra: dict[str, Any] | None) -> int | None:
     return None
 
 
+def _settled_amount(extra: dict[str, Any] | None, name: str) -> int | None:
+    """Return a receipt-based settlement amount from the Task Board read, if settled."""
+    value = (extra or {}).get(name)
+    if type(value) is int and value >= 0:
+        return value
+    return None
+
+
 async def get_task_drilldown(
     db: aiosqlite.Connection,
     reader: TaskBoardReader,
@@ -302,6 +310,8 @@ async def get_task_drilldown(
         "lifecycle_version": task.lifecycle_version,
         "bid_count": task.bid_count,
         "accepted_price": _accepted_price(task.model_extra),
+        "worker_payment": _settled_amount(task.model_extra, "worker_payment"),
+        "poster_refund": _settled_amount(task.model_extra, "poster_refund"),
         "deadlines": {
             "bidding_deadline": task.bidding_deadline,
             "acceptance_deadline": task.acceptance_deadline,

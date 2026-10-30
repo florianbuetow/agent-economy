@@ -73,8 +73,8 @@ def test_set_status_updates_dispute_status(tmp_path) -> None:
 
 
 @pytest.mark.unit
-def test_persist_ruling_updates_dispute_and_votes(tmp_path) -> None:
-    """persist_ruling() writes ruled state and vote rows atomically."""
+def test_leased_decision_becomes_ruling_after_acknowledgments(tmp_path) -> None:
+    """A leased decision is public only once every delivery is acknowledged."""
     store = DisputeStore(db_path=str(tmp_path / "court.db"))
     dispute = store.insert_dispute(
         task_id="task-1",
@@ -99,7 +99,23 @@ def test_persist_ruling_updates_dispute_and_votes(tmp_path) -> None:
             "voted_at": datetime.now(UTC).isoformat(),
         },
     ]
-    store.persist_ruling(dispute["dispute_id"], 65, "Combined ruling", votes)
+    dispute_id = dispute["dispute_id"]
+    store.acquire_judging_lease(dispute_id, "lease-1", 60)
+    store.claim_decision(
+        dispute_id,
+        "lease-1",
+        65,
+        "Combined ruling",
+        votes,
+        {"expected_lifecycle_version": 3, "reward": 100},
+    )
+    pending = store.get_dispute(dispute_id)
+    assert pending is not None
+    assert pending["status"] == "judging"
+    assert pending["worker_pct"] is None
+    store.record_acknowledgment(dispute_id, "lease-1", "task_board")
+    store.record_acknowledgment(dispute_id, "lease-1", "reputation")
+    store.complete_ruling(dispute_id, "lease-1")
 
     ruled = store.get_dispute(dispute["dispute_id"])
     assert ruled is not None

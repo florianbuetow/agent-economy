@@ -127,8 +127,8 @@ class TaskPublicationWriter:
                 "operation_id,publication_contract_version,task_id,canonical_request_json,"
                 "request_sha256,caller_kid,actor_id,lock_operation_id,state,admitted_at_us,"
                 "escrow_id,lock_request_sha256,lock_receipt_event_id,published_at_us,"
-                "creation_event_id,result_json,error_json"
-                ") VALUES (?,1,?,?,?,?,?,?,'awaiting_lock',?,NULL,NULL,NULL,NULL,NULL,NULL,NULL)",
+                "creation_event_id,result_json,error_json,request_protocol_version"
+                ") VALUES (?,1,?,?,?,?,?,?,'awaiting_lock',?,NULL,NULL,NULL,NULL,NULL,NULL,NULL,1)",
                 (
                     request.operation_id,
                     request.task_id,
@@ -252,7 +252,7 @@ class TaskPublicationWriter:
             "UNION ALL "
             "SELECT ('native:' || operation_id) AS cursor,'native' AS kind,"
             "operation_id AS identity FROM board_task_publications "
-            "WHERE caller_kid=? AND state='awaiting_lock'"
+            "WHERE caller_kid=? AND state='awaiting_lock' AND request_protocol_version=1"
             ") WHERE cursor > ? COLLATE BINARY ORDER BY cursor COLLATE BINARY LIMIT ?",
             (owner, owner, cursor_key, limit + 1),
         ).fetchall()

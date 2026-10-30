@@ -21,8 +21,13 @@ _JSON_VALIDATION_ENDPOINTS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("POST", re.compile(r"^/tasks/[^/]+/ruling$")),
     ("POST", re.compile(r"^/tasks/[^/]+/bids$")),
     ("POST", re.compile(r"^/tasks/[^/]+/bids/[^/]+/accept$")),
+    ("POST", re.compile(r"^/task-publications$")),
+    ("POST", re.compile(r"^/task-publications/[^/]+/publish$")),
 )
-_MULTIPART_VALIDATION_ENDPOINT = ("POST", re.compile(r"^/tasks/[^/]+/assets$"))
+_MULTIPART_VALIDATION_ENDPOINT = (
+    "POST",
+    re.compile(r"^(?:/tasks/[^/]+/assets|/task-publications/[^/]+/inputs)$"),
+)
 
 
 class RequestValidationMiddleware:

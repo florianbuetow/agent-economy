@@ -769,15 +769,15 @@ class TestPublicEndpoints:
         alice_keypair: tuple[Ed25519PrivateKey, str],
         alice_agent_id: str,
     ) -> None:
-        """PUB-04: GET /tasks/{task_id}/assets requires no authentication and returns 200."""
+        """PUB-04: GET /tasks/{task_id}/assets without a Bearer token returns 401."""
         resp = await create_task(client, alice_keypair, alice_agent_id)
         assert resp.status_code == 201
         task_id = resp.json()["result"]["task_id"]
 
         resp = await client.get(f"/tasks/{task_id}/assets")
 
-        assert resp.status_code == 200
-        assert "assets" in resp.json()
+        assert resp.status_code == 401
+        assert resp.json()["error"] == "unauthorized"
 
     @pytest.mark.unit
     async def test_download_asset_no_auth(
@@ -788,7 +788,7 @@ class TestPublicEndpoints:
         bob_keypair: tuple[Ed25519PrivateKey, str],
         bob_agent_id: str,
     ) -> None:
-        """PUB-05: GET /tasks/{id}/assets/{asset_id} requires no auth and returns 200."""
+        """PUB-05: GET /tasks/{id}/assets/{asset_id} without a Bearer token returns 401."""
         task_id, _bid_id = await setup_task_in_execution(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
@@ -800,7 +800,8 @@ class TestPublicEndpoints:
         # Download without any Authorization header
         resp = await client.get(f"/tasks/{task_id}/assets/{asset_id}")
 
-        assert resp.status_code == 200
+        assert resp.status_code == 401
+        assert resp.json()["error"] == "unauthorized"
 
     @pytest.mark.unit
     async def test_health_no_auth(

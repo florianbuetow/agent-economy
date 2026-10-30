@@ -16,7 +16,11 @@ from service_commons.exceptions import ServiceError
 
 from central_bank_service.core.state import get_app_state
 from central_bank_service.logging import get_logger
-from central_bank_service.monetary import require_positive_money, require_worker_percentage
+from central_bank_service.monetary import (
+    require_nonnegative_money,
+    require_positive_money,
+    require_worker_percentage,
+)
 from central_bank_service.routers.helpers import (
     parse_json_body,
     verify_jws_token,
@@ -334,6 +338,87 @@ async def escrow_split(request: Request, escrow_id: str) -> dict[str, object]:
             "worker_account_id": worker_leg.account_id,
             "poster_account_id": poster_leg.account_id,
             "worker_pct": receipt.result["worker_pct"],
+            "worker_amount": worker_leg.amount,
+            "poster_amount": poster_leg.amount,
+            "operation_id": receipt.operation_id,
+            "source_reference": receipt.source_reference,
+        },
+    )
+    return result
+
+
+# === POST /escrow/{escrow_id}/settle — Exact Payment + Refund (Platform-signed) ===
+
+
+@router.post("/escrow/{escrow_id}/settle")
+async def escrow_settle(request: Request, escrow_id: str) -> dict[str, object]:
+    """Pay the worker an exact amount and refund the rest of the escrow to the poster."""
+    body = await request.body()
+    data = parse_json_body(body)
+
+    if "token" not in data or data["token"] is None:
+        raise ServiceError("invalid_jws", "Missing JWS token in request body", 400, {})
+    if not isinstance(data["token"], str):
+        raise ServiceError("invalid_jws", "JWS token must be a string", 400, {})
+
+    verified = verify_platform_signature(
+        data["token"],
+        audience="central-bank",
+        resource=f"POST /escrow/{escrow_id}/settle",
+        allowed_action="escrow_settle",
+    )
+    payload = verified.payload
+    _reject_unknown_payload_fields(
+        payload,
+        {
+            "action",
+            "operation_id",
+            "escrow_id",
+            "worker_account_id",
+            "worker_amount",
+            "poster_account_id",
+            "source_reference",
+        },
+    )
+    operation_id = _required_operation_id(payload)
+    source_reference = _required_payload_string(payload, "source_reference")
+    worker_account_id = _required_payload_string(payload, "worker_account_id")
+    poster_account_id = _required_payload_string(payload, "poster_account_id")
+    worker_amount = require_nonnegative_money(payload.get("worker_amount"), "worker_amount")
+    if payload.get("escrow_id") != escrow_id:
+        raise ServiceError(
+            "payload_mismatch",
+            "JWS payload escrow_id does not match URL",
+            400,
+            {},
+        )
+
+    state = get_app_state()
+    if state.ledger is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="Ledger not initialized",
+            status_code=503,
+            details={},
+        )
+
+    result = await state.ledger.escrow_settle(
+        escrow_id,
+        worker_account_id,
+        worker_amount,
+        poster_account_id,
+        operation_id,
+        source_reference,
+    )
+
+    receipt, legs = _native_escrow_result(result, "escrow_split", ("worker", "poster"))
+    worker_leg, poster_leg = legs
+    get_logger(__name__).info(
+        "Escrow settled",
+        extra={
+            "escrow_id": receipt.escrow_id,
+            "worker_account_id": worker_leg.account_id,
+            "poster_account_id": poster_leg.account_id,
             "worker_amount": worker_leg.amount,
             "poster_amount": poster_leg.amount,
             "operation_id": receipt.operation_id,

@@ -12,11 +12,12 @@ class HealthResponse(BaseModel):
     """Response model for GET /health."""
 
     model_config = ConfigDict(extra="forbid")
-    status: Literal["ok"]
+    status: Literal["ok", "degraded"]
     uptime_seconds: float
     started_at: str
     total_tasks: int
     tasks_by_status: dict[str, int]
+    background_loops: dict[str, Literal["running", "dead"]]
 
 
 class ErrorResponse(BaseModel):
@@ -129,6 +130,8 @@ class TaskResponse(TaskContractProjection):
     ruling_summary: str | None
     expired_at: str | None
     escrow_pending: bool
+    accepted_price: int | None
+    """Accepted bid amount; the posted ``reward`` stays the escrowed budget."""
     bidding_deadline: str
     acceptance_deadline: str
     execution_deadline: str | None
@@ -201,6 +204,16 @@ class BidListResponse(BaseModel):
     bids: list[BidSummary]
 
 
+IDEMPOTENCY_KEY_HEADER = "Idempotency-Key"
+"""Optional upload header of 1-128 chars from ``[A-Za-z0-9._:-]``.
+
+A malformed key fails with 400 ``invalid_idempotency_key``. A retry with the same
+key, signer and task returns the stored asset (201, same body) without reading
+the new body. Uploads that would push the signer's or the service's
+stored bytes past ``asset_quota`` fail with 413 ``storage_quota_exceeded``.
+"""
+
+
 class AssetResponse(BaseModel):
     """Response model for POST /tasks/{task_id}/assets."""
 
@@ -226,6 +239,8 @@ class AssetSummary(BaseModel):
     size_bytes: int
     content_hash: str
     uploaded_at: str
+    # "input": poster's published instructions files; "output": worker deliverables.
+    role: Literal["input", "output"]
 
 
 class AssetListResponse(BaseModel):

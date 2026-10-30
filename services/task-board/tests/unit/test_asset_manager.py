@@ -192,6 +192,7 @@ async def test_list_assets_success(tmp_path: Path, monkeypatch: pytest.MonkeyPat
                 "size_bytes": 5,
                 "content_hash": "abc",
                 "uploaded_at": scenario.clock.iso(),
+                "role": "output",
             }
         ]
 

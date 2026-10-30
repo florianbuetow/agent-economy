@@ -26,24 +26,51 @@ disputes:
   feedback_extremely_satisfied_cutoff: 80
   feedback_satisfied_cutoff: 40
   feedback_comment_max_length: 256
+  # Judging lease held by one ruling run (must exceed the slowest judge panel),
+  # and how often the reclaim sweep resumes expired or released leases.
+  judging_lease_seconds: 300
+  reclaim_interval_seconds: 30
 
 judges:
-  panel_size: 1
-  # Fixed worker payout percentage returned by mock judges (dev/test/CI).
+  # Production panel (plan 3.2, business rule 5): three OpenAI-compatible judges,
+  # median aggregation. The defaults point at a local LM Studio server; set
+  # api_base/model to any OpenAI-compatible endpoint. COURT_JUDGE_API_KEY must be
+  # set (services/court/.env, chmod 600); LM Studio accepts any non-empty value.
+  # Dev/test/CI select the mock profile instead: panel_size 1 and one judge with
+  # provider "mock" (scripts/isolated_test_runtime.py applies that override).
+  panel_size: 3
+  # Fixed findings returned by mock judges (dev/test/CI only).
   mock_worker_pct: 50
-  # Maximum total bytes of deliverable content fetched into the judge prompt.
-  max_deliverable_bytes: 65536
+  mock_spec_quality: "satisfied"
+  mock_delivery_quality: "satisfied"
   judges:
     - id: "judge-0"
-      provider: "mock"
-      model: "mock-judge"
-    # Real LM Studio judge config — restore this block (and remove the mock judge
-    # above) to run live LLM rulings against LM Studio at localhost:1234:
-    # - id: "judge-0"
-    #   model: "openai/google/gemma-3-1b"
-    #   api_base: "http://localhost:1234/v1"
-    #   api_key_env: "LMSTUDIO_API_KEY"
-    #   temperature: 0.3
+      provider: "llm"
+      model: "openai/qwen2.5-7b-instruct"
+      api_base: "http://localhost:1234/v1"
+      api_key_env: "COURT_JUDGE_API_KEY"
+      temperature: 0.2
+    - id: "judge-1"
+      provider: "llm"
+      model: "openai/llama-3.1-8b-instruct"
+      api_base: "http://localhost:1234/v1"
+      api_key_env: "COURT_JUDGE_API_KEY"
+      temperature: 0.2
+    - id: "judge-2"
+      provider: "llm"
+      model: "openai/gemma-3-12b-it"
+      api_base: "http://localhost:1234/v1"
+      api_key_env: "COURT_JUDGE_API_KEY"
+      temperature: 0.2
+
+# Plan 3.1: evidence handed to judges is never truncated or leniently decoded.
+# Files over max_file_bytes, files beyond max_total_bytes, unsupported formats and
+# invalid UTF-8 are listed in the manifest with an explicit status and no content.
+evidence:
+  max_total_bytes: 262144
+  max_file_bytes: 65536
+  allowed_extensions: [".txt", ".md", ".py", ".js", ".ts", ".java", ".go", ".rs", ".c", ".h", ".cpp", ".sh", ".sql", ".html", ".css", ".yaml", ".yml", ".toml", ".json", ".csv"]
+  allowed_content_types: ["text/plain", "text/markdown", "text/x-python", "text/csv", "application/json"]
 
 request:
   max_body_size: 1048576

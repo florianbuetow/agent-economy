@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NoReturn
 
 from cryptography.exceptions import InvalidSignature
 from fastapi import APIRouter, Request
@@ -14,11 +14,16 @@ from starlette.concurrency import run_in_threadpool
 from reputation_service.core.exceptions import ServiceError
 from reputation_service.core.state import get_app_state
 from reputation_service.services.feedback import (
+    SOURCE_COURT,
+    SOURCE_PEER,
+    FeedbackReplay,
     ValidationError,
+    authorize_peer_feedback,
     get_feedback_by_id,
     get_feedback_for_agent,
     get_feedback_for_task,
     submit_feedback,
+    validate_feedback,
 )
 from reputation_service.types import FeedbackRecord
 
@@ -108,7 +113,38 @@ def _record_to_dict(record: object) -> dict[str, object]:
         "comment": record.comment,
         "submitted_at": record.submitted_at,
         "visible": record.visible,
+        "source": record.source,
     }
+
+
+def _raise_validation_error(result: ValidationError) -> NoReturn:
+    raise ServiceError(
+        error=result.error,
+        message=result.message,
+        status_code=result.status_code,
+        details=result.details,
+    )
+
+
+async def _authorize_against_task(state: AppState, body: dict[str, object]) -> None:
+    """Reject peer feedback that the referenced task does not authorize.
+
+    Field validation runs first so malformed input never costs a Task Board call.
+    """
+    validation_error = validate_feedback(body, state.feedback_max_comment_length)
+    if validation_error is not None:
+        _raise_validation_error(validation_error)
+    if state.task_board_client is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="Task Board client not initialized",
+            status_code=503,
+            details={},
+        )
+    task = await state.task_board_client.get_task(str(body["task_id"]))
+    authorization_error = authorize_peer_feedback(task, body)
+    if authorization_error is not None:
+        _raise_validation_error(authorization_error)
 
 
 @router.post("/feedback")
@@ -206,21 +242,23 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
         state.platform_agent is not None and signer_agent_id == state.platform_agent.agent_id
     )
 
+    if not is_platform:
+        await _authorize_against_task(state, feedback_body)
+
     result = await run_in_threadpool(
         submit_feedback,
         store=state.feedback_store,
         body=feedback_body,
         max_comment_length=state.feedback_max_comment_length,
         force_visible=is_platform,
+        source=SOURCE_COURT if is_platform else SOURCE_PEER,
     )
 
     if isinstance(result, ValidationError):
-        raise ServiceError(
-            error=result.error,
-            message=result.message,
-            status_code=result.status_code,
-            details=result.details,
-        )
+        _raise_validation_error(result)
+
+    if isinstance(result, FeedbackReplay):
+        return JSONResponse(status_code=200, content=_record_to_dict(result.record))
 
     return JSONResponse(
         status_code=201,
@@ -244,7 +282,6 @@ async def get_task_feedback(task_id: str) -> JSONResponse:
         get_feedback_for_task,
         store=state.feedback_store,
         task_id=task_id,
-        reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
     )
     return JSONResponse(
         status_code=200,
@@ -271,7 +308,6 @@ async def get_agent_feedback(agent_id: str) -> JSONResponse:
         get_feedback_for_agent,
         store=state.feedback_store,
         agent_id=agent_id,
-        reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
     )
     return JSONResponse(
         status_code=200,
@@ -298,7 +334,6 @@ async def get_feedback(feedback_id: str) -> JSONResponse:
         get_feedback_by_id,
         store=state.feedback_store,
         feedback_id=feedback_id,
-        reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
     )
     if record is None:
         raise ServiceError(

@@ -51,18 +51,36 @@ async def test_execute_ruling_with_mock_judges(tmp_path) -> None:
         rebuttal_deadline=datetime.now(UTC).isoformat(),
     )
     store.update_rebuttal(dispute["dispute_id"], "Rebuttal text")
-    store.set_status(dispute["dispute_id"], "rebuttal_submitted")
 
     orchestrator = RulingOrchestrator(
         store=store,
         feedback_extremely_satisfied_cutoff=80,
         feedback_satisfied_cutoff=40,
         feedback_comment_max_length=256,
+        judging_lease_seconds=60,
     )
     judges = [
-        MockJudge(judge_id="judge-1", fixed_worker_pct=60, reasoning="Vote one"),
-        MockJudge(judge_id="judge-2", fixed_worker_pct=70, reasoning="Vote two"),
-        MockJudge(judge_id="judge-3", fixed_worker_pct=80, reasoning="Vote three"),
+        MockJudge(
+            judge_id="judge-1",
+            fixed_worker_pct=60,
+            spec_quality="satisfied",
+            delivery_quality="satisfied",
+            reasoning="Vote one",
+        ),
+        MockJudge(
+            judge_id="judge-2",
+            fixed_worker_pct=70,
+            spec_quality="satisfied",
+            delivery_quality="satisfied",
+            reasoning="Vote two",
+        ),
+        MockJudge(
+            judge_id="judge-3",
+            fixed_worker_pct=80,
+            spec_quality="satisfied",
+            delivery_quality="satisfied",
+            reasoning="Vote three",
+        ),
     ]
     platform_agent = _make_mock_platform_agent()
 
@@ -71,7 +89,7 @@ async def test_execute_ruling_with_mock_judges(tmp_path) -> None:
         judges=judges,
         task_data={
             "spec": "Build feature X",
-            "deliverables": ["artifact-a"],
+            "deliverables": [],
             "title": "Task 1",
             "reward": 100,
             "lifecycle_version": 3,
@@ -95,6 +113,7 @@ async def test_validate_ruling_preconditions_dispute_not_found(tmp_path) -> None
         feedback_extremely_satisfied_cutoff=80,
         feedback_satisfied_cutoff=40,
         feedback_comment_max_length=256,
+        judging_lease_seconds=60,
     )
     platform_agent = _make_mock_platform_agent()
 
@@ -128,6 +147,7 @@ async def test_validate_ruling_preconditions_wrong_status(tmp_path) -> None:
         feedback_extremely_satisfied_cutoff=80,
         feedback_satisfied_cutoff=40,
         feedback_comment_max_length=256,
+        judging_lease_seconds=60,
     )
     platform_agent = _make_mock_platform_agent()
 
@@ -144,47 +164,8 @@ async def test_validate_ruling_preconditions_wrong_status(tmp_path) -> None:
 
 
 @pytest.mark.unit
-def test_normalize_vote_clamps_worker_pct() -> None:
-    """_normalize_vote() clamps worker_pct and applies defaults."""
-    high_vote = RulingOrchestrator._normalize_vote({"worker_pct": 200}, 0)
-    assert high_vote.worker_pct == 100
-    assert high_vote.reasoning == "No reasoning provided."
-    assert high_vote.judge_id == "judge-0"
-    assert high_vote.voted_at != ""
-
-    low_vote = RulingOrchestrator._normalize_vote({"worker_pct": -10}, 1)
-    assert low_vote.worker_pct == 0
-
-    default_vote = RulingOrchestrator._normalize_vote({}, 2)
-    assert default_vote.worker_pct == 50
-    assert default_vote.reasoning == "No reasoning provided."
-    assert default_vote.judge_id == "judge-2"
-    assert default_vote.voted_at != ""
-
-
-def _make_orchestrator_for_rating_tests() -> RulingOrchestrator:
-    """Build a RulingOrchestrator with the configured 80/40 cutoffs (WP-11, exception #11)."""
-    return RulingOrchestrator(
-        store=MagicMock(),
-        feedback_extremely_satisfied_cutoff=80,
-        feedback_satisfied_cutoff=40,
-        feedback_comment_max_length=256,
-    )
-
-
-@pytest.mark.unit
-def test_delivery_rating_mapping() -> None:
-    """_delivery_rating() maps worker_pct to expected rating."""
-    orchestrator = _make_orchestrator_for_rating_tests()
-    assert orchestrator._delivery_rating(80) == "extremely_satisfied"
-    assert orchestrator._delivery_rating(40) == "satisfied"
-    assert orchestrator._delivery_rating(39) == "dissatisfied"
-
-
-@pytest.mark.unit
-def test_spec_rating_mapping() -> None:
-    """_spec_rating() maps worker_pct to expected rating."""
-    orchestrator = _make_orchestrator_for_rating_tests()
-    assert orchestrator._spec_rating(80) == "dissatisfied"
-    assert orchestrator._spec_rating(40) == "satisfied"
-    assert orchestrator._spec_rating(39) == "extremely_satisfied"
+@pytest.mark.parametrize("raw", [{"worker_pct": 200}, {"worker_pct": -10}, {}])
+def test_normalize_vote_rejects_malformed_votes(raw: dict[str, object]) -> None:
+    """_normalize_vote() never clamps or defaults (plan 3.2): malformed raises."""
+    with pytest.raises(ValueError):
+        RulingOrchestrator._normalize_vote(raw, 0)

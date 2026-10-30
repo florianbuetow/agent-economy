@@ -489,7 +489,7 @@ def test_partial_artifact_governance_surface_fails_closed(
     missing: frozenset[str],
 ) -> None:
     suffix = "-".join(sorted(missing))
-    writer, operations, request = _prepare_v5_acceptance(tmp_path / f"partial-{suffix}")
+    writer, operations, request = _prepare_protocol_v1_acceptance(tmp_path / f"partial-{suffix}")
     try:
         install_partial_governance_surface(writer.connection, missing=missing)
         before = tuple(writer.connection.iterdump())
@@ -763,14 +763,14 @@ def _submission_request(
     )
 
 
-def _prepare_v5_acceptance(
+def _prepare_protocol_v1_acceptance(
     database: Path,
 ) -> tuple[DbWriter, TaskOperationWriter, Any]:
     writer = DbWriter(
         db_path=str(database),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
         current_task_board_caller_kid=BOARD_KID,
     )
     poster = f"poster-v5-{uuid4()}"
@@ -872,8 +872,8 @@ def _prepare_v5_acceptance(
         raise
 
 
-def test_current_v5_acceptance_bytes_and_bank_receipts_remain_unchanged(tmp_path: Path) -> None:
-    writer, operations, request = _prepare_v5_acceptance(tmp_path / "v5-control.sqlite3")
+def test_ungoverned_protocol_v1_acceptance_bytes_and_receipts_unchanged(tmp_path: Path) -> None:
+    writer, operations, request = _prepare_protocol_v1_acceptance(tmp_path / "v5-control.sqlite3")
     try:
         present_tables = {
             str(row[0])
@@ -881,7 +881,13 @@ def test_current_v5_acceptance_bytes_and_bank_receipts_remain_unchanged(tmp_path
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )
         }
-        assert not (ARTIFACT_TABLES & present_tables)
+        assert present_tables >= ARTIFACT_TABLES
+        assert (
+            writer.connection.execute(
+                "SELECT 1 FROM board_task_artifact_contracts WHERE task_id=?", (request.task_id,)
+            ).fetchone()
+            is None
+        )
         bank_before = tuple(
             tuple(row)
             for row in writer.connection.execute(

@@ -139,7 +139,10 @@ def _open(
     return page, requested
 
 
-@pytest.mark.parametrize("page_name", ["task.html", "quarterly-report.html", "index.html"])
+@pytest.mark.parametrize(
+    "page_name",
+    ["task.html", "quarterly-report.html", "index.html", "observatory.html", "agent.html"],
+)
 def test_static_navigation_has_jobs_and_post_anchors(page_name: str) -> None:
     html = (WEB / page_name).read_text()
 

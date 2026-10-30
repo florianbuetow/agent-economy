@@ -30,7 +30,19 @@ _REQUEST_FIELDS: dict[str, tuple[str, ...]] = {
         "source_reference",
     ),
 }
-_INTEGER_FIELDS = {"amount": (1, SQLITE_MAX_INTEGER), "worker_pct": (0, 100)}
+# Exact-amount escrow_split shape: pay the worker this many credits, refund the rest.
+SETTLEMENT_FIELDS: tuple[str, ...] = (
+    "escrow_id",
+    "worker_account_id",
+    "poster_account_id",
+    "worker_amount",
+    "source_reference",
+)
+_INTEGER_FIELDS = {
+    "amount": (1, SQLITE_MAX_INTEGER),
+    "worker_pct": (0, 100),
+    "worker_amount": (0, SQLITE_MAX_INTEGER),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +92,8 @@ def canonical_request(operation_kind: str, fields: Mapping[str, object]) -> Fina
     if not isinstance(operation_kind, str) or operation_kind not in _REQUEST_FIELDS:
         raise ValueError("Unknown financial operation kind")
     required = _REQUEST_FIELDS[operation_kind]
+    if operation_kind == "escrow_split" and set(fields) == set(SETTLEMENT_FIELDS):
+        required = SETTLEMENT_FIELDS
     if set(fields) != set(required):
         raise ValueError("Financial business fields do not match the operation kind")
     payload: dict[str, str | int] = {

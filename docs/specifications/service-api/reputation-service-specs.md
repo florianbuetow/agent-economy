@@ -26,8 +26,10 @@ Verified against `services/reputation/config.yaml` and `reputation_service/confi
 | `feedback.max_comment_length`       | integer | Maximum comment length in Unicode codepoints (Python `len()`). Configured value: `256`. |
 | `request.max_body_size`             | integer | Maximum request body size in bytes, enforced by `RequestValidationMiddleware`. |
 | `platform.agent_config_path`        | string  | Path to `agents/config.yaml`, used to materialize the service's own `PlatformAgent` at startup (see auth spec). |
+| `quality.operator_name`             | string  | Agent registry name of the operator who is allowed to see all provenance on `/agents/{id}/quality` reads. Typically `"operator"`. Required. |
 | `identity.base_url` / `get_agent_path` / `verify_jws_path` / `timeout_seconds` | — | Identity service location for agent-op JWS verification. The whole `identity` section is **optional** (`Settings.identity: IdentityConfig | None`) — see auth spec for the fallback behavior when it is absent. |
-| `db_gateway.url` / `timeout_seconds` | — | DB Gateway location; feedback is persisted exclusively through the gateway's HTTP API (`FeedbackDbClient`), never via a local SQLite file in production. |
+| `db_gateway.url` / `timeout_seconds` | — | DB Gateway location; feedback is persisted exclusively through the gateway's HTTP API (`FeedbackDbClient`), never via a local SQLite file in production. Also used by `/agents/{id}/quality` to verify task eligibility. |
+| `task_board.base_url` / `timeout_seconds` | — | Task Board service location; used by `/agents/{id}/quality` to verify task status and parties. Required for the quality endpoint. |
 
 ## Data Model
 
@@ -228,6 +230,97 @@ Get all visible feedback **about** an agent (where `to_agent_id` matches). No au
 **Response (200 OK):** shape mirrors `GET /feedback/task/{task_id}`, keyed by `agent_id` instead of `task_id`. Only visible feedback is returned; sealed feedback is excluded. Chronological order by `submitted_at`. No pagination.
 
 SQL injection and path traversal in `agent_id` return 200 with an empty feedback array. No internal diagnostics are leaked.
+
+---
+
+### GET /agents/{agent_id}/quality
+
+Public quality scores and counts with optional provenance for authorized readers. Implements formula version `quality-v1`: each dimension (specification_quality, delivery_quality) is scored separately by averaging eligible task observations on a 0-100 scale (0/50/100 points per rating), rounded half-up to an integer. An agent with no eligible observations carries `score: null`.
+
+**Authentication (optional):** Bearer JWS token with `aud: "reputation"`, `resource: "GET /agents/{agent_id}/quality"`, `action: "get_quality"`. Invalid tokens are rejected; omitting the header allows a public (unsigned) read.
+
+**Response (200 OK):**
+```json
+{
+  "agent_id": "a-550e8400-e29b-41d4-a716-446655440000",
+  "formula_version": "quality-v1",
+  "specification_quality": {
+    "rated": true,
+    "score": 75,
+    "task_count": 8,
+    "rating_counts": {
+      "extremely_satisfied": 5,
+      "satisfied": 3,
+      "dissatisfied": 0
+    },
+    "provenance": [
+      {
+        "feedback_id": "fb-aaa",
+        "task_id": "t-task-1",
+        "source": "peer",
+        "from_agent_id": "a-worker-1",
+        "rating": "extremely_satisfied",
+        "submitted_at": "2026-02-22T10:30:00Z",
+        "included": true,
+        "exclusion_reason": null
+      },
+      {
+        "feedback_id": "fb-bbb",
+        "task_id": "t-task-2",
+        "source": "court",
+        "from_agent_id": "a-worker-2",
+        "rating": "satisfied",
+        "submitted_at": "2026-02-22T11:00:00Z",
+        "included": false,
+        "exclusion_reason": "court_override"
+      }
+    ]
+  },
+  "delivery_quality": {
+    "rated": true,
+    "score": 82,
+    "task_count": 7,
+    "rating_counts": {
+      "extremely_satisfied": 6,
+      "satisfied": 1,
+      "dissatisfied": 0
+    }
+  }
+}
+```
+
+**Eligibility and Observation Rules:**
+
+- **Eligible statuses:** `approved`, `auto_approved` (timeout-expired), and `ruled` (dispute decided). Tasks in other statuses contribute no observations.
+- **Court override:** When a task has both peer feedback and a court ruling for a given dimension, only the court finding is included in the score; peer observations for that task/dimension are marked `excluded` with reason `court_override`.
+- **Sealed feedback:** Feedback that is still sealed (not yet revealed) is excluded from eligibility entirely, with reason `task_not_eligible` (a sealed record cannot tell whether a task is approved or ruled).
+- **Uniqueness per task:** At most one observation is included per task per dimension, even if multiple feedback records exist.
+- **Mean calculation:** The included observations' rating points (0, 50, or 100) are averaged and rounded half-up to an integer (e.g. mean of [100, 100, 50] = 250 / 3 = 83.333... → 83).
+- **Unrated case:** If no observations are eligible for a dimension, `rated: false`, `score: null`, `task_count: 0`, and all rating counts are 0.
+
+**Provenance Visibility:**
+
+The `provenance` array is included only when the requesting client authenticates with a valid JWS token. Visibility within that array follows these rules:
+
+- **Subject sees all:** If `viewer_id == agent_id`, all source records for tasks visible to that agent are included.
+- **Operator sees all:** If the authenticated viewer is the configured `quality.operator_name` agent (verified via Agent Directory lookup), all source records are included.
+- **Participants see their own tasks:** Any other authenticated viewer sees only records for tasks in which they are the poster or worker. If they participate in none of the subject's tasks, no provenance is included.
+- **Public read (unsigned):** If no Authorization header is present, `provenance` is null/absent — only public scores and counts are returned.
+
+**Errors:**
+
+| Status | Code                     | Description                                                     |
+|--------|--------------------------|-----------------------------------------------------------------|
+| 400    | `invalid_jws`            | Authorization header present but not in form `Bearer <token>`    |
+| 403    | `forbidden`              | JWS signature verification failed                                |
+| 400    | (varies from JWS check)  | JWS audience, resource, or action mismatch (via `require_context`) |
+| 503    | `service_not_ready`      | Feedback store, Task Board client, or Identity client not initialized |
+
+**Service Dependencies:**
+
+- **Feedback Store** — reads feedback records visible to the subject.
+- **Task Board Client** — verifies task eligibility (status, poster, worker) for each task referenced. A Task Board outage (503) is surfaced as-is.
+- **Identity Client (optional)** — verifies JWS signatures and looks up the operator agent. Only consulted if Authorization header is present.
 
 ---
 

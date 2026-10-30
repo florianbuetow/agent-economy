@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -11,10 +13,12 @@ from service_auth.gateway import GatewayRequestSigner
 from service_clients.identity import IdentityClient
 
 from reputation_service.config import get_config_path, get_settings
+from reputation_service.core.reveal_sweep import reveal_sweep_loop
 from reputation_service.core.state import init_app_state
 from reputation_service.logging import get_logger, setup_logging
 from reputation_service.services.feedback_db_client import FeedbackDbClient
 from reputation_service.services.platform_identity_client import PlatformJwsVerifier
+from reputation_service.services.task_board_client import TaskBoardClient
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -34,6 +38,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     state = init_app_state()
     state.feedback_reveal_timeout_seconds = settings.feedback.reveal_timeout_seconds
     state.feedback_max_comment_length = settings.feedback.max_comment_length
+    state.quality_operator_name = settings.quality.operator_name
 
     # Validate required, pre-provisioned credentials before opening clients.
     gateway_signer = GatewayRequestSigner(
@@ -76,6 +81,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         verify_jws_path=identity_config.verify_jws_path,
         timeout_seconds=identity_config.timeout_seconds,
     )
+    state.agent_directory = state.identity_client
+
+    # Peer feedback is authorized against the task it references.
+    task_board_client = TaskBoardClient(
+        base_url=settings.task_board.base_url,
+        timeout_seconds=settings.task_board.timeout_seconds,
+    )
+    state.task_board_client = task_board_client
+
+    reveal_sweep = asyncio.create_task(
+        reveal_sweep_loop(state, settings.feedback.reveal_sweep_interval_seconds),
+        name="reputation-reveal-sweep",
+    )
 
     logger.info(
         "Service starting",
@@ -90,6 +108,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # === SHUTDOWN ===
     logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
+    reveal_sweep.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await reveal_sweep
+    await task_board_client.close()
     if state.identity_client is not None:  # pyright: ignore[reportUnnecessaryComparison]
         await state.identity_client.close()
     if state.feedback_store is not None:  # pyright: ignore[reportUnnecessaryComparison]

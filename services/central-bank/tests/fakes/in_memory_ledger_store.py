@@ -77,6 +77,24 @@ class InMemoryLedgerStore:
             source_reference,
         )
 
+    async def escrow_settle(
+        self,
+        escrow_id: str,
+        worker_account_id: str,
+        worker_amount: int,
+        poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
+    ) -> dict[str, object]:
+        return self._store.escrow_settle(
+            escrow_id,
+            worker_account_id,
+            worker_amount,
+            poster_account_id,
+            operation_id,
+            source_reference,
+        )
+
     async def count_accounts(self) -> int:
         return self._store.count_accounts()
 

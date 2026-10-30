@@ -157,6 +157,15 @@ async def complete_bank_operation(
                 pending["effect_operation_id"],
                 financial["source_reference"],
             )
+        elif pending["effect_kind"] == "bank_split" and "worker_amount" in financial:
+            await escrow_coordinator.settle_escrow(
+                financial["escrow_id"],
+                financial["worker_account_id"],
+                financial["poster_account_id"],
+                financial["worker_amount"],
+                pending["effect_operation_id"],
+                financial["source_reference"],
+            )
         elif pending["effect_kind"] == "bank_split":
             await escrow_coordinator.split_escrow(
                 financial["escrow_id"],

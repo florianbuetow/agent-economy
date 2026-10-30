@@ -794,7 +794,7 @@ def test_current_v5_acceptance_preserves_historical_result_and_bank_receipts(
         db_path=str(tmp_path / "v5-control.sqlite3"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
         current_task_board_caller_kid=BOARD_KID,
     )
     poster = f"poster-{uuid4()}"

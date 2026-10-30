@@ -34,6 +34,15 @@ class AssetUploadLimits(BaseModel):
     max_display_filename_utf8_bytes: int = Field(gt=0)
 
 
+class AssetStorageQuota(BaseModel):
+    """Required positive totals for stored asset bytes, per uploader and overall."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    max_total_bytes_per_agent: int = Field(gt=0)
+    max_total_bytes: int = Field(gt=0)
+
+
 @dataclass(frozen=True, slots=True)
 class ParsedAssetUpload:
     """Validated metadata derived from the one streamed file part."""
@@ -258,4 +267,9 @@ async def stream_asset_upload(
     )
 
 
-__all__ = ["AssetUploadLimits", "ParsedAssetUpload", "stream_asset_upload"]
+__all__ = [
+    "AssetStorageQuota",
+    "AssetUploadLimits",
+    "ParsedAssetUpload",
+    "stream_asset_upload",
+]

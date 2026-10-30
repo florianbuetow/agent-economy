@@ -282,7 +282,7 @@ def test_unexpected_view_or_trigger_is_unknown(tmp_path: Path, extra_sql: str) -
         (
             "CREATE TABLE schema_metadata ("
             "singleton INTEGER PRIMARY KEY, version INTEGER NOT NULL);"
-            "INSERT INTO schema_metadata VALUES (1, 6)",
+            "INSERT INTO schema_metadata VALUES (1, 7)",
             SchemaState.FUTURE,
         ),
     ],
@@ -306,7 +306,7 @@ def test_classifies_rejected_existing_layouts(
     ("sql", "expected_error"),
     [
         (None, "schema_required"),
-        (_legacy_schema_without_connection_pragmas(), "migration_required"),
+        (_legacy_schema_without_connection_pragmas(), "database_reset_required"),
         ("CREATE TABLE identity_agents (agent_id TEXT PRIMARY KEY);", "invalid_schema"),
     ],
 )
@@ -345,13 +345,13 @@ def test_empty_constructor_requires_exact_current_schema_and_closes_connection(
 @pytest.mark.parametrize(
     ("existing_sql", "expected_error"),
     [
-        (_legacy_schema_without_connection_pragmas(), "migration_required"),
+        (_legacy_schema_without_connection_pragmas(), "database_reset_required"),
         ("CREATE TABLE identity_agents (agent_id TEXT PRIMARY KEY)", "invalid_schema"),
         ("CREATE TABLE unrelated (value TEXT)", "invalid_schema"),
         (
             "CREATE TABLE schema_metadata ("
             "singleton INTEGER PRIMARY KEY, version INTEGER NOT NULL);"
-            "INSERT INTO schema_metadata VALUES (1, 6)",
+            "INSERT INTO schema_metadata VALUES (1, 7)",
             "unsupported_schema_version",
         ),
     ],
@@ -434,10 +434,10 @@ def test_bootstrap_fault_rolls_back_all_application_objects(
 
 
 @pytest.mark.unit
-def test_existing_current_v5_allows_omitted_schema_sql(tmp_path: Path) -> None:
+def test_existing_current_v6_allows_omitted_schema_sql(tmp_path: Path) -> None:
     path = tmp_path / "current.db"
     connection = _open(path)
-    connection.executescript(load_schema_sql(SchemaState.CURRENT_V5))
+    connection.executescript(load_schema_sql(SchemaState.CURRENT_V6))
     connection.close()
 
     writer = DbWriter(
@@ -448,7 +448,7 @@ def test_existing_current_v5_allows_omitted_schema_sql(tmp_path: Path) -> None:
         current_task_board_caller_kid="gateway-task-board",
     )
     try:
-        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V5
+        assert classify_schema(writer.connection).state is SchemaState.CURRENT_V6
     finally:
         writer.close()
 
@@ -459,7 +459,7 @@ def test_journal_setup_failure_closes_admitted_connection(
 ) -> None:
     path = tmp_path / "journal-failure.db"
     bootstrap = _open(path)
-    bootstrap.executescript(load_schema_sql(SchemaState.CURRENT_V5))
+    bootstrap.executescript(load_schema_sql(SchemaState.CURRENT_V6))
     bootstrap.close()
     opened: list[sqlite3.Connection] = []
     real_connect = sqlite3.connect
@@ -597,7 +597,7 @@ def test_constructor_rejects_invalid_pragma_configuration(
 ) -> None:
     path = tmp_path / "invalid-pragma.db"
     connection = _open(path)
-    connection.executescript(load_schema_sql(SchemaState.CURRENT_V5))
+    connection.executescript(load_schema_sql(SchemaState.CURRENT_V6))
     connection.close()
 
     with pytest.raises(ServiceError, match="database configuration"):
@@ -617,7 +617,7 @@ def test_constructor_verifies_effective_pragma_postconditions(
 ) -> None:
     path = tmp_path / f"ignored-{ignored_pragma}.db"
     connection = _open(path)
-    connection.executescript(load_schema_sql(SchemaState.CURRENT_V5))
+    connection.executescript(load_schema_sql(SchemaState.CURRENT_V6))
     connection.close()
     original_connect = sqlite3.connect
 

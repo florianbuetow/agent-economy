@@ -220,7 +220,7 @@ CREATE TABLE reputation_feedback (
     submitted_at   TEXT NOT NULL,
     visible        INTEGER NOT NULL DEFAULT 0,  -- 0 = sealed, 1 = revealed
                                                 -- revealed when both parties submit
-    source         TEXT,                        -- feedback origin; NULL until a writer sets it
+    source         TEXT NOT NULL CHECK (source IN ('peer', 'court')),  -- feedback origin
 
     FOREIGN KEY (task_id)       REFERENCES board_tasks (task_id),
     FOREIGN KEY (from_agent_id) REFERENCES identity_agents (agent_id),

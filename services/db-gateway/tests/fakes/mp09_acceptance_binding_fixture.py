@@ -418,11 +418,14 @@ def install_partial_governance_surface(
     *,
     missing: frozenset[str],
 ) -> None:
-    """Create schema-only table names for a partial-surface V5 control."""
+    """Drop the named governance tables from a bootstrapped V6 database."""
     assert missing and missing < ARTIFACT_TABLES
-    for table in sorted(ARTIFACT_TABLES - missing):
-        connection.execute(f'CREATE TABLE "{table}" (fixture_only INTEGER)')  # nosec B608
     connection.commit()
+    connection.execute("PRAGMA foreign_keys=OFF")
+    for table in sorted(missing):
+        connection.execute(f'DROP TABLE "{table}"')  # nosec B608
+    connection.commit()
+    connection.execute("PRAGMA foreign_keys=ON")
 
 
 def coherently_tamper_frozen_manifest(connection: sqlite3.Connection) -> None:

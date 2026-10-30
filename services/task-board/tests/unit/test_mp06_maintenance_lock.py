@@ -83,6 +83,7 @@ def _settings(lock_path: Path) -> SimpleNamespace:
             escrow_lock_path="/escrow/lock",
             escrow_release_path="/escrow/release",
             escrow_split_path="/escrow/split",
+            escrow_settle_path="/escrow/settle",
             timeout_seconds=1,
         ),
         platform=SimpleNamespace(agent_config_path=str(lock_path.parent / "agents.yaml")),

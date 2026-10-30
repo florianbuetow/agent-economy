@@ -13,6 +13,7 @@ one-sentence prompt.
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -20,6 +21,7 @@ import pytest
 from court_service.judges.base import DisputeContext
 from court_service.judges.llm_judge import LLMJudge
 from court_service.judges.prompts import SYSTEM_PROMPT
+from court_service.services.evidence_bundle import build_evidence_bundle
 
 pytestmark = pytest.mark.unit
 
@@ -52,7 +54,16 @@ class TestVaguenessRubricReachesTheLLMCall:
     not just defined in prompts.py and never wired through."""
 
     async def test_evaluate_sends_the_rubric_as_the_system_message(self) -> None:
-        response = {"choices": [{"message": {"content": '{"worker_pct": 50, "reasoning": "x"}'}}]}
+        reply = {
+            "schema_version": 1,
+            "worker_pct": 50,
+            "spec_quality": "satisfied",
+            "spec_quality_explanation": "x",
+            "delivery_quality": "satisfied",
+            "delivery_quality_explanation": "x",
+            "reasoning": "x",
+        }
+        response = {"choices": [{"message": {"content": json.dumps(reply)}}]}
         mock_acompletion = AsyncMock(return_value=response)
         judge = LLMJudge(
             judge_id="judge-0",
@@ -61,19 +72,22 @@ class TestVaguenessRubricReachesTheLLMCall:
             api_base=None,
             api_key=None,
         )
-        context = DisputeContext(
-            task_spec="Write something",
-            deliverables=["file.txt"],
-            claim="Not good enough",
-            rebuttal=None,
-            task_title="Task",
-            reward=100,
+        bundle = build_evidence_bundle(
+            {"spec": "Write something", "deliverables": []},
+            {
+                "claimant_id": "p",
+                "respondent_id": "w",
+                "claim": "Not good enough",
+                "rebuttal": None,
+            },
         )
+        context = DisputeContext(task_title="Task", reward=100, evidence=bundle)
         with patch("court_service.judges.llm_judge.litellm.acompletion", new=mock_acompletion):
             await judge.evaluate(context)
 
         _, kwargs = mock_acompletion.call_args
         system_message = kwargs["messages"][0]
         assert system_message["role"] == "system"
-        assert system_message["content"] == SYSTEM_PROMPT
+        # The fixed rubric prompt, followed only by this evaluation's delimiter nonce.
+        assert system_message["content"].startswith(SYSTEM_PROMPT)
         assert "acceptance criteria" in system_message["content"].lower()

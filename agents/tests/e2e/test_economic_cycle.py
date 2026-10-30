@@ -70,7 +70,8 @@ async def test_economic_cycle_earn_then_spend(make_funded_agent) -> None:
         assert approved_command_task["status"] == "approved"
 
         balance_b_after_earn = await agent_b.get_balance()
-        assert balance_b_after_earn["balance"] == 500
+        # Accepted-bid pricing: the 400 bid is paid; 100 of the 500 budget returns to A.
+        assert balance_b_after_earn["balance"] == 400
 
         second_task = await publish_task(
             agent_b,
@@ -120,7 +121,8 @@ async def test_economic_cycle_earn_then_spend(make_funded_agent) -> None:
         final_balance_a = await agent_a.get_balance()
         final_balance_b = await agent_b.get_balance()
 
-        assert final_balance_a["balance"] == 4800
-        assert final_balance_b["balance"] == 200
+        # A: 5000 - 400 paid + 250 earned. B: 400 earned - 250 paid.
+        assert final_balance_a["balance"] == 4850
+        assert final_balance_b["balance"] == 150
     finally:
         await _close_agents(agents_to_close)

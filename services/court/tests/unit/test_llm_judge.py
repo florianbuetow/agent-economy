@@ -12,6 +12,7 @@ completion would return.
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -19,22 +20,40 @@ from service_commons.exceptions import ServiceError
 
 from court_service.judges.base import DisputeContext
 from court_service.judges.llm_judge import LLMJudge
+from court_service.services.evidence_bundle import build_evidence_bundle
 
 
 def _context() -> DisputeContext:
-    return DisputeContext(
-        task_spec="Write a haiku about SQLite",
-        deliverables=["haiku.txt"],
-        claim="The haiku does not scan correctly",
-        rebuttal="Haiku scansion is intentionally loose here",
-        task_title="Haiku task",
-        reward=100,
+    bundle = build_evidence_bundle(
+        {"spec": "Write a haiku about SQLite", "deliverables": []},
+        {
+            "claimant_id": "a-poster",
+            "respondent_id": "a-worker",
+            "claim": "The haiku does not scan correctly",
+            "rebuttal": "Haiku scansion is intentionally loose here",
+        },
     )
+    return DisputeContext(task_title="Haiku task", reward=100, evidence=bundle)
 
 
 def _completion_response(content: str) -> dict[str, object]:
     """A realistic litellm/OpenAI-shaped chat completion response."""
     return {"choices": [{"message": {"content": content}}]}
+
+
+def _reply(worker_pct: object, reasoning: object) -> str:
+    """A versioned judge reply (plan 3.2) with the given payout fields."""
+    return json.dumps(
+        {
+            "schema_version": 1,
+            "worker_pct": worker_pct,
+            "spec_quality": "satisfied",
+            "spec_quality_explanation": "Spec is mostly clear.",
+            "delivery_quality": "satisfied",
+            "delivery_quality_explanation": "Delivery is acceptable.",
+            "reasoning": reasoning,
+        }
+    )
 
 
 def _judge() -> LLMJudge:
@@ -50,7 +69,7 @@ def _judge() -> LLMJudge:
 @pytest.mark.unit
 class TestLLMJudgeHappyPath:
     async def test_evaluate_parses_valid_json_response(self) -> None:
-        response = _completion_response('{"worker_pct": 70, "reasoning": "Mostly complete"}')
+        response = _completion_response(_reply(70, "Mostly complete"))
         with patch(
             "court_service.judges.llm_judge.litellm.acompletion",
             new=AsyncMock(return_value=response),
@@ -63,9 +82,7 @@ class TestLLMJudgeHappyPath:
         assert vote.voted_at
 
     async def test_evaluate_strips_markdown_code_fences(self) -> None:
-        response = _completion_response(
-            '```json\n{"worker_pct": 40, "reasoning": "Partial delivery"}\n```'
-        )
+        response = _completion_response("```json\n" + _reply(40, "Partial delivery") + "\n```")
         with patch(
             "court_service.judges.llm_judge.litellm.acompletion",
             new=AsyncMock(return_value=response),
@@ -76,7 +93,7 @@ class TestLLMJudgeHappyPath:
         assert vote.reasoning == "Partial delivery"
 
     async def test_evaluate_passes_model_and_prompts_to_litellm(self) -> None:
-        response = _completion_response('{"worker_pct": 50, "reasoning": "Split"}')
+        response = _completion_response(_reply(50, "Split"))
         mock_acompletion = AsyncMock(return_value=response)
         with patch("court_service.judges.llm_judge.litellm.acompletion", new=mock_acompletion):
             await _judge().evaluate(_context())
@@ -107,7 +124,7 @@ class TestLLMJudgeErrorHandling:
         assert excinfo.value.status_code == 502
 
     async def test_evaluate_raises_judge_unavailable_on_out_of_range_worker_pct(self) -> None:
-        response = _completion_response('{"worker_pct": 150, "reasoning": "Overshoot"}')
+        response = _completion_response(_reply(150, "Overshoot"))
         with (
             patch(
                 "court_service.judges.llm_judge.litellm.acompletion",
@@ -120,7 +137,7 @@ class TestLLMJudgeErrorHandling:
         assert excinfo.value.error == "judge_unavailable"
 
     async def test_evaluate_raises_judge_unavailable_on_empty_reasoning(self) -> None:
-        response = _completion_response('{"worker_pct": 50, "reasoning": "  "}')
+        response = _completion_response(_reply(50, "  "))
         with (
             patch(
                 "court_service.judges.llm_judge.litellm.acompletion",

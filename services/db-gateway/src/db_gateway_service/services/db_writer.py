@@ -279,7 +279,7 @@ class DbWriter:
         )
 
     def _bootstrap_schema(self, schema_sql: str | None) -> SchemaClassification:
-        """Create the exact current V5 schema atomically without implicit commits."""
+        """Create the exact current V6 schema atomically without implicit commits."""
         if schema_sql is None:
             raise ServiceError(
                 "schema_required",
@@ -338,9 +338,8 @@ class DbWriter:
             },
         )
 
-    @staticmethod
-    def _admit_existing_schema(classification: SchemaClassification) -> None:
-        if classification.state is SchemaState.CURRENT_V5:
+    def _admit_existing_schema(self, classification: SchemaClassification) -> None:
+        if classification.state is SchemaState.CURRENT_V6:
             return
         details: dict[str, object] = {
             "state": classification.state.value,
@@ -355,10 +354,17 @@ class DbWriter:
             SchemaState.CURRENT_V2,
             SchemaState.CURRENT_V3,
             SchemaState.CURRENT_V4,
+            SchemaState.CURRENT_V5,
         }:
+            database = Path(self._db_path).resolve()
+            reset_command = (
+                f"just stop-all && rm -f {database} {database}-wal {database}-shm && just start-all"
+            )
+            details["reset_command"] = reset_command
             raise ServiceError(
-                "migration_required",
-                "The older schema requires an explicit verified migration",
+                "database_reset_required",
+                "The database uses an older schema with no migration to the current V6 "
+                f"schema; reset it (all data is discarded): {reset_command}",
                 503,
                 details,
             )
@@ -647,6 +653,10 @@ class DbWriter:
     def submit_feedback(self, data: dict[str, Any]) -> dict[str, Any]:
         """Submit feedback, revealing the sealed pair atomically."""
         return self._reputation.submit_feedback(data)
+
+    def reveal_expired_feedback(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Durably reveal sealed feedback past the caller's cutoff."""
+        return self._reputation.reveal_expired(data)
 
     def file_claim(self, data: dict[str, Any]) -> dict[str, Any]:
         """File a dispute claim."""

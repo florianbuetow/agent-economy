@@ -169,6 +169,7 @@ def _write_case(domain: str, graph: dict[str, str]) -> tuple[str, dict[str, Any]
                 "from_agent_id": graph["poster"],
                 "to_agent_id": graph["worker"],
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": 5,
                 "comment": "Valid authority proof feedback",

@@ -52,9 +52,7 @@ async def list_agents(
             details={"parameter": "sort_by", "value": sort_by},
         )
 
-    data = await agents_service.list_agents(
-        db, quality_reader, sort_by, order, limit, offset
-    )
+    data = await agents_service.list_agents(db, quality_reader, sort_by, order, limit, offset)
 
     agents = [
         AgentListItem(

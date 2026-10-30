@@ -135,7 +135,7 @@ def v3_writer(tmp_path: Path) -> Iterator[DbWriter]:
         db_path=str(tmp_path / "court-operation-contract.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
         current_task_board_caller_kid=_BOARD_KID,
     )
     yield writer
@@ -168,7 +168,7 @@ def _isolated_writer(database_root: Path, label: str) -> Iterator[DbWriter]:
         db_path=str(database_root / f"court-authority-{label}.db"),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
         current_task_board_caller_kid=_BOARD_KID,
     )
     try:

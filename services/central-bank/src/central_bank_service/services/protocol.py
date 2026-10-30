@@ -57,6 +57,16 @@ class LedgerStorageInterface(Protocol):
         source_reference: str,
     ) -> dict[str, object]: ...
 
+    async def escrow_settle(
+        self,
+        escrow_id: str,
+        worker_account_id: str,
+        worker_amount: int,
+        poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
+    ) -> dict[str, object]: ...
+
     async def count_accounts(self) -> int: ...
 
     async def total_escrowed(self) -> int: ...

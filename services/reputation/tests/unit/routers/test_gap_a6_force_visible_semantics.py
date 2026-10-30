@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from reputation_service.core.state import get_app_state
+from tests.fakes.fake_task_board import FakeTaskBoard
 from tests.helpers import make_jws_token, make_mock_platform_agent
 
 if TYPE_CHECKING:
@@ -81,6 +82,8 @@ def _inject_mock(payload: dict[str, object], *, platform_id: str | None = None) 
     if platform_id is not None:
         mock_agent.agent_id = platform_id
     state.platform_agent = mock_agent
+    # Every task in this file is approved with POSTER_ID as poster and WORKER_ID as worker.
+    state.task_board_client = FakeTaskBoard(default=(POSTER_ID, WORKER_ID, "approved"))
 
 
 @pytest.mark.unit

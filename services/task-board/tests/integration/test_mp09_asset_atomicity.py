@@ -442,7 +442,10 @@ async def test_upload_that_read_accepted_cannot_publish_after_submission_wins(
                 "filename": "ready.txt",
                 "content_type": "text/plain",
                 "size_bytes": 5,
-                "storage_path": (f"live/{baseline_uuid.hex[:2]}/{baseline_uuid}.blob"),
+                "storage_path": (
+                    f"live/{hashlib.sha256(task.worker_id.encode()).hexdigest()[:32]}/"
+                    f"{baseline_uuid.hex[:2]}/{baseline_uuid}.blob"
+                ),
                 "content_hash": hashlib.sha256(b"ready").hexdigest(),
                 "uploaded_at": baseline["uploaded_at"],
             }

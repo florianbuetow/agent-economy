@@ -26,7 +26,7 @@ JOURNAL_MODE = "wal"
 def _create_current_database(path: Path) -> None:
     connection = sqlite3.connect(path)
     try:
-        connection.executescript(load_schema_sql(SchemaState.CURRENT_V5))
+        connection.executescript(load_schema_sql(SchemaState.CURRENT_V6))
         connection.commit()
     finally:
         connection.close()
@@ -207,7 +207,7 @@ def test_health_check_database_error_is_safe_and_non_mutating(
     try:
         assert check.execute("PRAGMA journal_mode").fetchone() == ("delete",)
         assert check.execute("SELECT * FROM schema_metadata").fetchall() == [
-            (1, 5, None, None, None)
+            (1, 6, None, None, None)
         ]
         assert check.execute("SELECT * FROM identity_agents").fetchall() == []
         assert check.execute("SELECT * FROM bank_accounts").fetchall() == []
@@ -234,7 +234,7 @@ def test_empty_database_bootstraps_and_passes_health_admission(tmp_path: Path) -
         db_path=str(tmp_path / "healthy-bootstrap.db"),
         busy_timeout_ms=BUSY_TIMEOUT_MS,
         journal_mode=JOURNAL_MODE,
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
         current_task_board_caller_kid="gateway-task-board",
     )
     try:

@@ -68,9 +68,14 @@ class TaskReviewCoordinator:
         if signer_id != payload["worker_id"]:
             raise ServiceError("forbidden", "Signer does not match worker_id", 403, {})
 
+        # ponytail: protocol 1 remains only for tasks without an artifact contract; drop
+        # it once every accepted task is governed (all posting is protocol 2).
+        # Governed (V6) tasks submit with protocol 2: the Gateway freezes the exact
+        # ready-upload manifest bound to the accepted terms in the same transaction.
+        governed_arguments = manager.asset_manager.submission_arguments(task_id, signer_id)
         envelope = manager.store.claim_task_operation(
             {
-                "protocol_version": 1,
+                "protocol_version": 1 if governed_arguments is None else 2,
                 "operation_id": operation_id,
                 "task_id": task_id,
                 "command": "submit_deliverable",
@@ -78,7 +83,9 @@ class TaskReviewCoordinator:
                 "expected_lifecycle_version": expected_version,
                 "actor_kind": "agent",
                 "actor_id": signer_id,
-                "arguments": {"worker_id": signer_id},
+                "arguments": (
+                    {"worker_id": signer_id} if governed_arguments is None else governed_arguments
+                ),
             }
         )
         return operation_response(manager.store, envelope)

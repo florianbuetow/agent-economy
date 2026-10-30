@@ -10,7 +10,6 @@ from service_auth.jws import (
     VerifiedJws,
     parse_jws,
     require_context,
-    verify_jws,
 )
 from service_commons.exceptions import ServiceError
 
@@ -38,54 +37,40 @@ class TokenValidator:
         """Install the public-key-only authority loaded from the configured roster."""
         self._operator_asset_authority = authority
 
-    async def validate_operator_asset_token(
+    async def validate_asset_read_token(
         self,
         token: str,
+        expected_action: str,
         *,
         expected_resource: str,
-    ) -> dict[str, Any]:
-        """Authenticate the configured operator key and bind its registered identity."""
+    ) -> tuple[dict[str, Any], bool]:
+        """Authenticate an asset reader; return the payload and whether it is the platform."""
         self._require_compact_format(token)
-        authority = self._operator_asset_authority
-        if authority is None or self._identity_client is None:
-            raise ServiceError(
-                "service_not_ready",
-                "Operator asset authority is not initialized",
-                503,
-                {},
-            )
         try:
-            verified = verify_jws(
-                token,
-                authority.public_key,
-                policy=authority.token_policy,
-            )
-            require_context(
-                verified,
-                audience="task-board",
-                resource=expected_resource,
-                allowed_action="download_asset",
-            )
-        except InvalidSignature as exc:
-            raise ServiceError(
-                "forbidden",
-                "Signer is not the configured operator",
-                403,
-                {},
-            ) from exc
+            kid = parse_jws(token).header.kid
         except JwsAdmissionError as exc:
             raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
+        if kid == self._platform_agent.agent_id:
+            payload = await self.validate_platform_jws_token(
+                token, expected_action, expected_resource=expected_resource
+            )
+            return payload, True
+        payload = await self.validate_jws_token(
+            token, expected_action, expected_resource=expected_resource
+        )
+        return payload, False
 
-        agent = await self._identity_client.get_agent(verified.header.kid)
-        if (
-            not isinstance(agent, dict)
-            or agent.get("agent_id") != verified.header.kid
-            or agent.get("public_key") != authority.canonical_public_key
-        ):
-            raise ServiceError("forbidden", "Signer is not the configured operator", 403, {})
-        payload = dict(verified.payload)
-        payload["_signer_id"] = verified.header.kid
-        return payload
+    async def is_configured_operator(self, agent_id: str) -> bool:
+        """Return whether an authenticated agent is registered with the operator key."""
+        authority = self._operator_asset_authority
+        if authority is None or self._identity_client is None:
+            return False
+        agent = await self._identity_client.get_agent(agent_id)
+        return (
+            isinstance(agent, dict)
+            and agent.get("agent_id") == agent_id
+            and agent.get("public_key") == authority.canonical_public_key
+        )
 
     async def validate_jws_token(
         self,

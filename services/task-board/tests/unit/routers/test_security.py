@@ -623,9 +623,9 @@ class TestCrossCuttingSecurity:
         client: AsyncClient,
         sqli_path: str,
     ) -> None:
-        """SEC-08: SQL injection in path params returns 404, no leakage."""
+        """SEC-08: SQL injection in path params is rejected (404, or 401 for signed reads)."""
         resp = await client.get(sqli_path)
-        assert resp.status_code == 404
+        assert resp.status_code == (401 if sqli_path.endswith("/assets") else 404)
 
         body_text = resp.text
         for pattern in [

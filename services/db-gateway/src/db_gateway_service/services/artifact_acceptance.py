@@ -51,7 +51,25 @@ class LegacyAcceptancePlan:
         return self.record.observation.observation_sha256
 
 
-type AcceptedArtifactBinding = NativeAcceptanceBinding | LegacyAcceptancePlan
+@dataclass(frozen=True, slots=True)
+class EmptyInputAcceptanceBinding:
+    """Protocol-1 task posted without inputs: bind an explicit empty input manifest."""
+
+    task_id: str
+    kind: Literal["publication_contract"]
+    sha256: str
+    publication_operation_id: str
+    poster_id: str
+    base_request_sha256: str
+    manifest_id: str
+    canonical_manifest_json: str
+    manifest_sha256: str
+    frozen_at_us: int
+
+
+type AcceptedArtifactBinding = (
+    NativeAcceptanceBinding | LegacyAcceptancePlan | EmptyInputAcceptanceBinding
+)
 
 
 def _error(code: str, message: str, status: int) -> ServiceError:
@@ -239,6 +257,84 @@ def _legacy_acceptance_plan(
     return LegacyAcceptancePlan(task_id, "legacy_accepted_continuation", record)
 
 
+def _is_ungoverned_protocol_v1_task(cursor: sqlite3.Cursor, task_id: str) -> bool:
+    """A task without a contract is ungoverned only on an uncut-over DB without V2 publication."""
+    if cursor.execute("SELECT 1 FROM board_artifact_cutover LIMIT 1").fetchone() is not None:
+        return False
+    return (
+        cursor.execute(
+            "SELECT 1 FROM board_task_publications WHERE task_id=? AND request_protocol_version<>1",
+            (task_id,),
+        ).fetchone()
+        is None
+    )
+
+
+def publication_contract_sha256(base_request_sha256: str, input_manifest_sha256: str) -> str:
+    """Derive the V1 artifact contract hash from the base request and input manifest."""
+    canonical_contract = json.dumps(
+        {
+            "artifact_contract_version": 1,
+            "base_request_sha256": base_request_sha256,
+            "input_manifest_sha256": input_manifest_sha256,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+    return hashlib.sha256(canonical_contract.encode()).hexdigest()
+
+
+def empty_input_manifest(*, manifest_id: str, task_id: str, poster_id: str) -> tuple[str, str]:
+    """Canonical bytes and SHA-256 of an input manifest with zero artifacts."""
+    rendered = json.dumps(
+        {
+            "format_version": 1,
+            "manifest_id": manifest_id,
+            "task_id": task_id,
+            "kind": "input",
+            "actor_id": poster_id,
+            "artifacts": [],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+    return rendered, hashlib.sha256(rendered.encode("utf-8")).hexdigest()
+
+
+def _empty_input_binding(
+    cursor: sqlite3.Cursor, *, task_id: str, poster_id: str, accepted_at_us: int
+) -> EmptyInputAcceptanceBinding | None:
+    publication = cursor.execute(
+        "SELECT operation_id,request_sha256 FROM board_task_publications "
+        "WHERE task_id=? AND actor_id=? AND state='published' AND request_protocol_version=1",
+        (task_id, poster_id),
+    ).fetchone()
+    if publication is None:
+        return None
+    operation_id = str(publication[0])
+    base_request_sha256 = str(publication[1])
+    manifest_id = f"manifest-input-{operation_id}"
+    manifest_json, manifest_sha256 = empty_input_manifest(
+        manifest_id=manifest_id, task_id=task_id, poster_id=poster_id
+    )
+    return EmptyInputAcceptanceBinding(
+        task_id=task_id,
+        kind="publication_contract",
+        sha256=publication_contract_sha256(base_request_sha256, manifest_sha256),
+        publication_operation_id=operation_id,
+        poster_id=poster_id,
+        base_request_sha256=base_request_sha256,
+        manifest_id=manifest_id,
+        canonical_manifest_json=manifest_json,
+        manifest_sha256=manifest_sha256,
+        frozen_at_us=accepted_at_us,
+    )
+
+
 def inspect_acceptance_binding(
     cursor: sqlite3.Cursor,
     *,
@@ -273,6 +369,10 @@ def inspect_acceptance_binding(
         (task_id,),
     ).fetchone()
     if contract is None:
+        if _is_ungoverned_protocol_v1_task(cursor, task_id):
+            return _empty_input_binding(
+                cursor, task_id=task_id, poster_id=poster_id, accepted_at_us=accepted_at_us
+            )
         raise _error("artifact_contract_missing", "Task artifact contract is missing", 409)
     if type(contract[0]) is int and contract[0] == 0:
         return _legacy_acceptance_plan(
@@ -306,18 +406,7 @@ def inspect_acceptance_binding(
         "FROM board_artifact_manifests WHERE manifest_id=?",
         (contract[4],),
     ).fetchone()
-    canonical_contract = json.dumps(
-        {
-            "artifact_contract_version": 1,
-            "base_request_sha256": contract[3],
-            "input_manifest_sha256": contract[5],
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-        allow_nan=False,
-    )
-    derived = hashlib.sha256(canonical_contract.encode()).hexdigest()
+    derived = publication_contract_sha256(str(contract[3]), str(contract[5]))
     if (
         contract[0] != 1
         or contract[2] is not None
@@ -344,6 +433,9 @@ def commit_acceptance_binding(
     *,
     binding: AcceptedArtifactBinding,
 ) -> None:
+    if isinstance(binding, EmptyInputAcceptanceBinding):
+        _commit_empty_input_binding(cursor, binding)
+        return
     if isinstance(binding, LegacyAcceptancePlan):
         observation = binding.record.observation
         cursor.execute(
@@ -394,10 +486,57 @@ def commit_acceptance_binding(
         raise _error("task_version_conflict", "Task changed during acceptance", 409)
 
 
+def _commit_empty_input_binding(
+    cursor: sqlite3.Cursor, binding: EmptyInputAcceptanceBinding
+) -> None:
+    cursor.execute(
+        "INSERT INTO board_artifact_manifests (manifest_id,task_id,kind,actor_id,format_version,"
+        "state,canonical_manifest_json,manifest_sha256,frozen_at_us,publication_operation_id,"
+        "public_task_id) VALUES (?,?,'input',?,1,'frozen',?,?,?,?,NULL)",
+        (
+            binding.manifest_id,
+            binding.task_id,
+            binding.poster_id,
+            binding.canonical_manifest_json,
+            binding.manifest_sha256,
+            binding.frozen_at_us,
+            binding.publication_operation_id,
+        ),
+    )
+    cursor.execute(
+        "INSERT INTO board_task_artifact_contracts (task_id,artifact_contract_version,"
+        "input_provenance,accepted_binding_kind,base_request_sha256,input_manifest_id,"
+        "input_manifest_sha256,publication_contract_sha256,accepted_publication_contract_sha256,"
+        "legacy_acceptance_observation_sha256,legacy_acceptance_observation_status,"
+        "source_publication_request_sha256,publication_operation_id,input_manifest_kind,"
+        "input_actor_id) VALUES (?,1,'native_v6',?,?,?,?,?,?,NULL,NULL,NULL,?,'input',?)",
+        (
+            binding.task_id,
+            binding.kind,
+            binding.base_request_sha256,
+            binding.manifest_id,
+            binding.manifest_sha256,
+            binding.sha256,
+            binding.sha256,
+            binding.publication_operation_id,
+            binding.poster_id,
+        ),
+    )
+    if cursor.rowcount != 1:
+        raise _error(
+            "task_operation_persistence_failed",
+            "Task operation could not be persisted atomically",
+            500,
+        )
+
+
 __all__ = [
     "AcceptedArtifactBinding",
+    "EmptyInputAcceptanceBinding",
     "LegacyAcceptancePlan",
     "NativeAcceptanceBinding",
     "commit_acceptance_binding",
+    "empty_input_manifest",
     "inspect_acceptance_binding",
+    "publication_contract_sha256",
 ]

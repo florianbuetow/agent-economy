@@ -7,11 +7,13 @@ solution text reaches the judge's DisputeContext (hence the judge prompt).
 
 from __future__ import annotations
 
+import hashlib
 from typing import TYPE_CHECKING
 
 import pytest
 
 from court_service.core.state import get_app_state
+from court_service.services.evidence_bundle import EvidenceFile
 from tests.helpers import make_mock_judge
 from tests.unit.routers.conftest import (
     PLATFORM_AGENT_ID,
@@ -26,13 +28,26 @@ if TYPE_CHECKING:
 
 
 class _FakeDeliverableFetcher:
-    def __init__(self, texts: list[str]) -> None:
-        self._texts = texts
+    def __init__(self, texts: list[str], uploader_id: str) -> None:
+        self._files = [
+            EvidenceFile(
+                asset_id=f"asset-{index}",
+                filename=f"solution-{index}.py",
+                content_type="text/x-python",
+                size_bytes=len(text.encode()),
+                sha256=hashlib.sha256(text.encode()).hexdigest(),
+                uploader_id=uploader_id,
+                uploaded_at="2026-10-30T10:00:00Z",
+                status="included",
+                text=text,
+            )
+            for index, text in enumerate(texts)
+        ]
         self.calls: list[str] = []
 
-    async def fetch(self, task_id: str) -> list[str]:
+    async def fetch(self, task_id: str) -> list[EvidenceFile]:
         self.calls.append(task_id)
-        return list(self._texts)
+        return list(self._files)
 
 
 @pytest.mark.unit
@@ -45,7 +60,7 @@ async def test_judge_context_contains_uploaded_deliverable(client: AsyncClient) 
     capturing_judge = make_mock_judge(worker_pct=70)
     state = get_app_state()
     state.judges = [capturing_judge]
-    state.deliverable_fetcher = _FakeDeliverableFetcher([solution])
+    state.deliverable_fetcher = _FakeDeliverableFetcher([solution], str(dispute["respondent_id"]))
 
     rule_pay = ruling_payload(dispute_id)
     inject_identity_verify(PLATFORM_AGENT_ID, rule_pay)
@@ -54,4 +69,5 @@ async def test_judge_context_contains_uploaded_deliverable(client: AsyncClient) 
 
     assert capturing_judge.evaluate.await_count == 1
     context = capturing_judge.evaluate.call_args.args[0]
-    assert any(solution in deliverable for deliverable in context.deliverables)
+    assert [f.text for f in context.evidence.outputs] == [solution]
+    assert context.evidence.inputs == ()

@@ -29,7 +29,7 @@ def _extract_imports(filepath: Path) -> set[str]:
 @pytest.mark.architecture
 class TestDbClientIsolation:
     def test_only_http_clients_import_httpx(self) -> None:
-        allowed = {_DB_CLIENT_MODULE, "identity_client"}
+        allowed = {_DB_CLIENT_MODULE, "identity_client", "task_board_client"}
         violations: list[str] = []
         for py_file in _iter_production_files():
             if py_file.stem in allowed:

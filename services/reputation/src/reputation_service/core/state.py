@@ -11,7 +11,12 @@ from reputation_service.types import FeedbackRecord
 if TYPE_CHECKING:
     from service_auth.platform import PlatformAgent
 
-    from reputation_service.services.protocol import FeedbackStorageInterface, JwsVerifier
+    from reputation_service.services.protocol import (
+        FeedbackStorageInterface,
+        JwsVerifier,
+        TaskLookup,
+    )
+    from reputation_service.services.quality import AgentDirectory
 
 
 @dataclass
@@ -23,8 +28,11 @@ class AppState:
     platform_agent: PlatformAgent | None = None
     identity_client: JwsVerifier | None = None
     platform_verifier: JwsVerifier | None = None
+    task_board_client: TaskLookup | None = None
     feedback_reveal_timeout_seconds: int = 0
     feedback_max_comment_length: int = 0
+    agent_directory: AgentDirectory | None = None
+    quality_operator_name: str = ""
 
     @property
     def uptime_seconds(self) -> float:

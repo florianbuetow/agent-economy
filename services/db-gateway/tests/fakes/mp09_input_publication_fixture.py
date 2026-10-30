@@ -8,12 +8,15 @@ import importlib.util
 import json
 import sqlite3
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from service_auth.financial_identity import operation_id_for
 
 from db_gateway_service.artifact_upload_requests import parse_artifact_policy
+from db_gateway_service.schema import SchemaState, load_schema_sql
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 BOARD_KID: Final[str] = "gateway-task-board"
 POSTER_ID: Final[str] = "poster-input-v2"
@@ -130,24 +133,12 @@ def require_prepublication_api() -> PrepublicationApi:
 
 
 def open_prototype_database(database_path: Path) -> sqlite3.Connection:
-    """Compose the fresh schema-V5-labeled V6 prototype without migration SQL."""
+    """Open a fresh database with the current V6 bootstrap catalog."""
     connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys=ON")
-    resources = Path(__file__).parents[2] / "src" / "db_gateway_service" / "schema_resources"
     try:
-        publication_v6 = resources / "publication_v6.sql"
-        assert publication_v6.is_file(), (
-            "Missing V2 capability: schema_resources/publication_v6.sql"
-        )
-        for resource_name in (
-            "current_v5.sql",
-            "task_operations_v3.sql",
-            "publication_v6.sql",
-            "task_effect_recovery_v5.sql",
-            "artifacts_v6.sql",
-        ):
-            connection.executescript((resources / resource_name).read_text(encoding="utf-8"))
+        connection.executescript(load_schema_sql(SchemaState.CURRENT_V6))
         return connection
     except BaseException:
         connection.close()

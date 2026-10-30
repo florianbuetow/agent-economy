@@ -43,15 +43,22 @@ class AppState:
     posting_recovery_task: asyncio.Task[None] | None = None
     financial_effect_recovery: FinancialEffectRecovery | None = None
     financial_effect_recovery_task: asyncio.Task[None] | None = None
+    artifact_maintenance_task: asyncio.Task[None] | None = None
     shutting_down: bool = False
 
     def background_loops(self) -> dict[str, LoopStatus]:
-        """Liveness of each supervised background loop: "running" or "dead"."""
+        """Liveness of each supervised background loop: "running" or "dead".
+
+        The artifact maintenance loop only exists when the `artifacts` config section
+        is present, so it is reported only once it has been started.
+        """
         loops = {
             "deadline_sweep": self.deadline_sweep_task,
             "posting_recovery": self.posting_recovery_task,
             "financial_effect_recovery": self.financial_effect_recovery_task,
         }
+        if self.artifact_maintenance_task is not None:
+            loops["artifact_maintenance"] = self.artifact_maintenance_task
         return {
             name: "running" if task is not None and not task.done() else "dead"
             for name, task in loops.items()

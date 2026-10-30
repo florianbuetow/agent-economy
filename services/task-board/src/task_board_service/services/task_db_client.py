@@ -144,6 +144,10 @@ class TaskDbClient:
             or path.startswith("/board/posting-recovery")
             or path.startswith("/board/legacy-posting-observations/")
             or path.startswith("/board/task-effect-deliveries")
+            or path.startswith("/board/artifact-uploads/")
+            or path.startswith("/board/artifact-recovery")
+            or path.startswith("/board/artifact-archive/")
+            or path.startswith("/board/prepublications")
         )
         action = (
             "gateway.board.write"
@@ -911,6 +915,206 @@ class TaskDbClient:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
         return int(self._json(response)["count"])
+
+    # ------------------------------------------------------------------
+    # V6 artifact uploads, manifests, recovery and archive (ArtifactStore)
+    # ------------------------------------------------------------------
+
+    def _artifact_call(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, Any] | None,
+        params: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        response = self._request(method, path, json=json, params=params)
+        if response.status_code != 200:
+            self._raise_gateway_error(response)
+        return self._strict_json(response)
+
+    def get_artifact_context(self, task_id: str) -> dict[str, Any]:
+        """Return governance, binding and submission-manifest facts for one task."""
+        return self._artifact_call(
+            "GET", f"/board/tasks/{task_id}/artifact-context", json=None, params=None
+        )
+
+    def reserve_artifact_upload(
+        self, policy: dict[str, int], request: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Reserve, replay or take over one upload operation."""
+        return self._artifact_call(
+            "POST",
+            "/board/artifact-uploads/reserve",
+            json={"policy": policy, "request": request},
+            params=None,
+        )
+
+    def finalize_artifact_upload(
+        self,
+        upload_operation_id: str,
+        policy: dict[str, int],
+        fence: dict[str, Any],
+        *,
+        observed_size_bytes: int,
+        observed_sha256: str,
+    ) -> dict[str, Any]:
+        """Mark the exact observed bytes ready under the attempt fence."""
+        return self._artifact_call(
+            "POST",
+            f"/board/artifact-uploads/{upload_operation_id}/finalize",
+            json={
+                "policy": policy,
+                "owner_id": fence["owner_id"],
+                "generation": fence["generation"],
+                "attempt_nonce": fence["attempt_nonce"],
+                "observed_size_bytes": observed_size_bytes,
+                "observed_sha256": observed_sha256,
+            },
+            params=None,
+        )
+
+    def orphan_artifact_upload(
+        self,
+        upload_operation_id: str,
+        policy: dict[str, int],
+        fence: dict[str, Any],
+        *,
+        failure_code: str,
+    ) -> dict[str, Any]:
+        """Durably abandon the current attempt."""
+        return self._artifact_call(
+            "POST",
+            f"/board/artifact-uploads/{upload_operation_id}/orphan",
+            json={
+                "policy": policy,
+                "owner_id": fence["owner_id"],
+                "generation": fence["generation"],
+                "attempt_nonce": fence["attempt_nonce"],
+                "failure_code": failure_code,
+            },
+            params=None,
+        )
+
+    def get_artifact_upload(self, upload_operation_id: str) -> dict[str, Any] | None:
+        """Return one upload's durable state, or None when unknown."""
+        response = self._request(
+            "GET", f"/board/artifact-uploads/{upload_operation_id}", json=None, params=None
+        )
+        if response.status_code == 404:
+            return None
+        if response.status_code != 200:
+            self._raise_gateway_error(response)
+        return self._strict_json(response)
+
+    def list_task_artifacts(self, task_id: str) -> dict[str, Any]:
+        """Return ready/archived artifacts and manifests of one task."""
+        return self._artifact_call(
+            "GET", f"/board/tasks/{task_id}/artifacts", json=None, params=None
+        )
+
+    def get_artifact_recovery(self) -> dict[str, Any]:
+        """Return reserved-upload fences and every storage key that must be kept."""
+        return self._artifact_call("GET", "/board/artifact-recovery", json=None, params=None)
+
+    def list_archive_candidates(self, archive_after_seconds: int, limit: int) -> dict[str, Any]:
+        """Return live bytes of tasks terminal for longer than the configured age."""
+        return self._artifact_call(
+            "GET",
+            "/board/artifact-archive/candidates",
+            json=None,
+            params={"archive_after_seconds": archive_after_seconds, "limit": limit},
+        )
+
+    def finalize_archive(self, candidate: dict[str, Any]) -> dict[str, Any]:
+        """Point one artifact at its already-written archive copy."""
+        return self._artifact_call(
+            "POST", "/board/artifact-archive/finalize", json=candidate, params=None
+        )
+
+    # ------------------------------------------------------------------
+    # Protocol-V2 poster-input publications (lane U, G03)
+    # ------------------------------------------------------------------
+
+    def _prepublication_call(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, Any] | None,
+        params: dict[str, Any] | None,
+        ok_statuses: frozenset[int],
+    ) -> tuple[int, dict[str, Any]]:
+        response = self._request(method, path, json=json, params=params)
+        if response.status_code not in ok_statuses:
+            self._raise_gateway_error(response)
+        return response.status_code, self._strict_json(response)
+
+    def admit_prepublication(
+        self, policy: dict[str, int], request: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Reserve a V2 posting identity and its draft input manifest before escrow."""
+        return self._prepublication_call(
+            "POST",
+            "/board/prepublications",
+            json={"request": request, "policy": policy},
+            params=None,
+            ok_statuses=frozenset({202}),
+        )[1]
+
+    def get_prepublication(self, publication_operation_id: str, poster_id: str) -> dict[str, Any]:
+        """Read one V2 publication owned by ``poster_id``."""
+        validated = validate_operation_id(publication_operation_id)
+        return self._prepublication_call(
+            "GET",
+            f"/board/prepublications/{validated}",
+            json=None,
+            params={"poster_id": poster_id},
+            ok_statuses=frozenset({200}),
+        )[1]
+
+    def freeze_prepublication_inputs(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Freeze the ready input set into the publication's manifest."""
+        validated = validate_operation_id(str(request["publication_operation_id"]))
+        return self._prepublication_call(
+            "POST",
+            f"/board/prepublications/{validated}/inputs/freeze",
+            json=request,
+            params=None,
+            ok_statuses=frozenset({200}),
+        )[1]
+
+    def authorize_prepublication_publish(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Authorize the escrow lock for the frozen publication contract."""
+        validated = validate_operation_id(str(request["publication_operation_id"]))
+        return self._prepublication_call(
+            "POST",
+            f"/board/prepublications/{validated}/publish",
+            json=request,
+            params=None,
+            ok_statuses=frozenset({202}),
+        )[1]
+
+    def reconcile_prepublication(self, publication_operation_id: str) -> tuple[int, dict[str, Any]]:
+        """Publish from persisted lock evidence; 201 published, 202 still awaiting lock."""
+        validated = validate_operation_id(publication_operation_id)
+        return self._prepublication_call(
+            "POST",
+            f"/board/prepublications/{validated}/reconcile",
+            json={},
+            params=None,
+            ok_statuses=frozenset({201, 202}),
+        )
+
+    def get_task_input_manifest(self, task_id: str) -> dict[str, Any]:
+        """Return the task's frozen input manifest (``input_manifest`` null for V1 tasks)."""
+        return self._prepublication_call(
+            "GET",
+            f"/board/tasks/{task_id}/input-manifest",
+            json=None,
+            params=None,
+            ok_statuses=frozenset({200}),
+        )[1]
 
     def close(self) -> None:
         self._client.close()

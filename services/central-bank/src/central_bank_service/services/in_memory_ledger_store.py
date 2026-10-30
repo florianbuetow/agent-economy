@@ -600,9 +600,49 @@ class InMemoryLedgerStore:
         operation_id: str,
         source_reference: str,
     ) -> dict[str, object]:
+        return self._split(
+            escrow_id,
+            worker_account_id,
+            poster_account_id,
+            operation_id,
+            source_reference,
+            share_field="worker_pct",
+            share=require_worker_percentage(worker_pct),
+        )
+
+    def escrow_settle(
+        self,
+        escrow_id: str,
+        worker_account_id: str,
+        worker_amount: int,
+        poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
+    ) -> dict[str, object]:
+        """Pay the worker an exact amount and refund the rest of the escrow to the poster."""
+        return self._split(
+            escrow_id,
+            worker_account_id,
+            poster_account_id,
+            operation_id,
+            source_reference,
+            share_field="worker_amount",
+            share=require_nonnegative_money(worker_amount, "worker_amount"),
+        )
+
+    def _split(
+        self,
+        escrow_id: str,
+        worker_account_id: str,
+        poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
+        *,
+        share_field: str,
+        share: int,
+    ) -> dict[str, object]:
         escrow_id = _require_text(escrow_id, "escrow_id")
         worker_account_id = _require_text(worker_account_id, "worker_account_id")
-        worker_pct = require_worker_percentage(worker_pct)
         poster_account_id = _require_text(poster_account_id, "poster_account_id")
         operation_id = _require_operation_id(operation_id)
         source_reference = _require_text(source_reference, "source_reference")
@@ -610,7 +650,7 @@ class InMemoryLedgerStore:
             "escrow_id": escrow_id,
             "worker_account_id": worker_account_id,
             "poster_account_id": poster_account_id,
-            "worker_pct": worker_pct,
+            share_field: share,
             "source_reference": source_reference,
         }
         request_sha256 = _request_hash("escrow_split", fields)
@@ -641,7 +681,11 @@ class InMemoryLedgerStore:
                 )
 
             amount = int(escrow["amount"])
-            worker_amount = amount * worker_pct // 100
+            if share_field == "worker_amount" and share > amount:
+                raise ServiceError(
+                    "invalid_amount", "Worker amount exceeds the escrow amount", 400, {}
+                )
+            worker_amount = share if share_field == "worker_amount" else amount * share // 100
             poster_amount = amount - worker_amount
             credit_amounts: dict[str, int] = {}
             if worker_amount > 0:
@@ -673,7 +717,7 @@ class InMemoryLedgerStore:
                 source_reference,
                 committed_at,
                 escrow_id,
-                {"escrow_status_at_commit": "split", "worker_pct": worker_pct},
+                {"escrow_status_at_commit": "split", share_field: share},
                 [worker_leg, poster_leg],
             )
             _logger.info(
@@ -683,7 +727,7 @@ class InMemoryLedgerStore:
                     "escrow_id": escrow_id,
                     "worker_account_id": worker_account_id,
                     "poster_account_id": poster_account_id,
-                    "worker_pct": worker_pct,
+                    share_field: share,
                     "worker_amount": worker_amount,
                     "poster_amount": poster_amount,
                     "source_reference": source_reference,

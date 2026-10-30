@@ -39,3 +39,24 @@ async def test_health_degraded_when_sweep_loop_dead(client) -> None:
     assert data["background_loops"]["financial_effect_recovery"] == "running"
     assert isinstance(data["uptime_seconds"], (int, float))
     assert isinstance(data["tasks_by_status"], dict)
+
+
+async def test_health_reports_artifact_maintenance_loop_when_started(client) -> None:
+    state = get_app_state()
+    artifact_loop = asyncio.create_task(asyncio.Event().wait())
+    state.artifact_maintenance_task = artifact_loop
+    try:
+        running = await client.get("/health")
+        assert running.status_code == 200
+        assert running.json()["background_loops"]["artifact_maintenance"] == "running"
+
+        artifact_loop.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await artifact_loop
+        dead = await client.get("/health")
+        assert dead.status_code == 503
+        assert dead.json()["status"] == "degraded"
+        assert dead.json()["background_loops"]["artifact_maintenance"] == "dead"
+    finally:
+        artifact_loop.cancel()
+        state.artifact_maintenance_task = None

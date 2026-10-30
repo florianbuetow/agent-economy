@@ -102,6 +102,7 @@ def _submit_feedback(
             "from_agent_id": from_id,
             "to_agent_id": to_id,
             "role": "poster",
+            "source": "peer",
             "category": "delivery_quality",
             "rating": "satisfied",
             "comment": "Good work",

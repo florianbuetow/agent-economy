@@ -201,7 +201,7 @@ def test_protocol_v1_current_v5_replay_preserves_stored_bytes(tmp_path: Path) ->
         db_path=str(database),
         busy_timeout_ms=5000,
         journal_mode="wal",
-        schema_sql=load_schema_sql(SchemaState.CURRENT_V5),
+        schema_sql=load_schema_sql(SchemaState.CURRENT_V6),
         current_task_board_caller_kid=BOARD_KID,
     )
     poster_id = f"poster-v1-{uuid4()}"

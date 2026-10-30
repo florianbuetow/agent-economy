@@ -17,7 +17,15 @@ from db_gateway_service.core.middleware import (
     RequestValidationMiddleware,
     TrustedGatewayCaller,
 )
-from db_gateway_service.routers import bank, board, court, health, identity, reputation
+from db_gateway_service.routers import (
+    bank,
+    board,
+    court,
+    health,
+    identity,
+    prepublications,
+    reputation,
+)
 
 
 def create_app() -> FastAPI:
@@ -66,6 +74,7 @@ def create_app() -> FastAPI:
     app.include_router(identity.router)
     app.include_router(bank.router)
     app.include_router(board.router)
+    app.include_router(prepublications.router)
     app.include_router(reputation.router)
     app.include_router(court.router)
 

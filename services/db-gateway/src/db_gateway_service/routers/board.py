@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service import task_time
 from db_gateway_service.asset_admission import parse_asset_admission
 from db_gateway_service.board_authority import BoardAuthority
+from db_gateway_service.config import get_settings
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.effect_delivery_requests import (
     DELIVERY_STATES,
@@ -29,10 +31,24 @@ from db_gateway_service.routers.helpers import (
     validate_positive_integer,
     validate_required_fields,
 )
+from db_gateway_service.services.artifact_runtime import (
+    archive_candidates,
+    artifact_recovery_listing,
+    finalize_archive,
+    finalize_artifact_upload,
+    get_artifact_upload,
+    list_task_artifacts,
+    orphan_artifact_upload,
+    renew_artifact_upload,
+    reserve_artifact_upload,
+    task_artifact_context,
+)
 from db_gateway_service.task_operation_requests import parse_task_operation_request
 from db_gateway_service.task_publication_requests import parse_task_publication_request
 
 if TYPE_CHECKING:
+    import sqlite3
+
     from db_gateway_service.services.db_writer import DbWriter
 
 router = APIRouter(prefix="/board", tags=["Board"])
@@ -633,3 +649,152 @@ async def get_asset(asset_id: str, request: Request) -> JSONResponse:
             details={},
         )
     return JSONResponse(status_code=200, content=asset)
+
+
+# ---------------------------------------------------------------------------
+# V6 artifact uploads, manifests, crash recovery and archive (lane T)
+# ---------------------------------------------------------------------------
+
+
+def _artifact_context(request: Request) -> tuple[sqlite3.Connection, str, str]:
+    caller_kid: object = getattr(request.state, "gateway_caller_kid", None)
+    if not isinstance(caller_kid, str) or not caller_kid:
+        raise ServiceError("forbidden", "Authenticated Gateway caller is required", 403, {})
+    writer = get_app_state().db_writer
+    if writer is None:
+        raise ServiceError("service_not_ready", "DbWriter not initialized", 503, {})
+    current = get_settings().board_effect_recovery.current_task_board_caller_kid
+    return writer.connection, caller_kid, current
+
+
+async def _json_object(request: Request) -> dict[str, object]:
+    data: object = parse_json_body(await request.body())
+    if not isinstance(data, dict):
+        raise ServiceError("invalid_payload", "JSON object body is required", 400, {})
+    return cast("dict[str, object]", data)
+
+
+def _positive_query_int(request: Request, name: str) -> int:
+    raw = request.query_params.get(name)
+    if raw is None or not raw.isdigit() or int(raw) < 1:
+        raise ServiceError(
+            "invalid_payload", f"Query parameter '{name}' must be a positive integer", 400, {}
+        )
+    return int(raw)
+
+
+@router.get("/tasks/{task_id}/artifact-context")
+async def get_task_artifact_context(task_id: str, request: Request) -> JSONResponse:
+    """Report artifact governance and the binding an upload or submit must carry."""
+    connection, _caller, _current = _artifact_context(request)
+    return JSONResponse(status_code=200, content=task_artifact_context(connection, task_id))
+
+
+@router.get("/tasks/{task_id}/artifacts")
+async def get_task_artifacts(task_id: str, request: Request) -> JSONResponse:
+    """List ready/archived artifacts and the task's manifests."""
+    connection, _caller, _current = _artifact_context(request)
+    return JSONResponse(status_code=200, content=list_task_artifacts(connection, task_id))
+
+
+@router.post("/artifact-uploads/reserve")
+async def reserve_upload(request: Request) -> JSONResponse:
+    """Reserve, replay or take over one upload operation before any bytes are published."""
+    connection, caller, current = _artifact_context(request)
+    result = reserve_artifact_upload(
+        connection,
+        await _json_object(request),
+        caller_kid=caller,
+        clock_us=task_time.utc_now_us,
+        current_task_board_caller_kid=current,
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.get("/artifact-uploads/{upload_operation_id}")
+async def read_upload(upload_operation_id: str, request: Request) -> JSONResponse:
+    """Read one caller-owned upload's durable state."""
+    connection, caller, _current = _artifact_context(request)
+    return JSONResponse(
+        status_code=200,
+        content=get_artifact_upload(connection, upload_operation_id, caller_kid=caller),
+    )
+
+
+@router.post("/artifact-uploads/{upload_operation_id}/finalize")
+async def finalize_upload(upload_operation_id: str, request: Request) -> JSONResponse:
+    """Mark exact observed bytes ready under the current attempt fence."""
+    connection, caller, current = _artifact_context(request)
+    result = finalize_artifact_upload(
+        connection,
+        upload_operation_id,
+        await _json_object(request),
+        caller_kid=caller,
+        clock_us=task_time.utc_now_us,
+        current_task_board_caller_kid=current,
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/artifact-uploads/{upload_operation_id}/renew")
+async def renew_upload(upload_operation_id: str, request: Request) -> JSONResponse:
+    """Extend the current attempt lease."""
+    connection, caller, current = _artifact_context(request)
+    result = renew_artifact_upload(
+        connection,
+        upload_operation_id,
+        await _json_object(request),
+        caller_kid=caller,
+        clock_us=task_time.utc_now_us,
+        current_task_board_caller_kid=current,
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/artifact-uploads/{upload_operation_id}/orphan")
+async def orphan_upload(upload_operation_id: str, request: Request) -> JSONResponse:
+    """Durably abandon the current attempt."""
+    connection, caller, current = _artifact_context(request)
+    result = orphan_artifact_upload(
+        connection,
+        upload_operation_id,
+        await _json_object(request),
+        caller_kid=caller,
+        clock_us=task_time.utc_now_us,
+        current_task_board_caller_kid=current,
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.get("/artifact-recovery")
+async def read_artifact_recovery(request: Request) -> JSONResponse:
+    """List stale reservations and every storage key that must survive a sweep."""
+    connection, caller, _current = _artifact_context(request)
+    return JSONResponse(
+        status_code=200, content=artifact_recovery_listing(connection, caller_kid=caller)
+    )
+
+
+@router.get("/artifact-archive/candidates")
+async def read_archive_candidates(request: Request) -> JSONResponse:
+    """List live bytes of tasks terminal for longer than the caller's configured age."""
+    connection, _caller, _current = _artifact_context(request)
+    after = _positive_query_int(request, "archive_after_seconds")
+    limit = _positive_query_int(request, "limit")
+    result = archive_candidates(
+        connection,
+        archive_after_seconds=after,
+        limit=limit,
+        now_us=task_time.utc_now_us(),
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/artifact-archive/finalize")
+async def finalize_artifact_archive(request: Request) -> JSONResponse:
+    """Point one artifact at its already-written archive copy."""
+    connection, _caller, _current = _artifact_context(request)
+    result = finalize_archive(
+        connection, await _json_object(request), clock_us=task_time.utc_now_us
+    )
+    return JSONResponse(status_code=200, content=result)

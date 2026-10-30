@@ -337,10 +337,10 @@ def persisting_release(
 
 
 def financial_controls(db_path: str) -> tuple[int, int, int]:
-    """Assert exact V5 ownership/audits and return conservation components."""
+    """Assert exact V6 ownership/audits and return conservation components."""
     connection = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     try:
-        assert classify_schema(connection).state is SchemaState.CURRENT_V5
+        assert classify_schema(connection).state is SchemaState.CURRENT_V6
         assert audit_money(connection).financially_clean
         assert audit_receipt_ownership(connection).ownership_clean
         assert audit_task_contracts(connection).contracts_clean
@@ -458,10 +458,14 @@ central_bank:
   escrow_lock_path: "/escrow/lock"
   escrow_release_path: "/escrow/release"
   escrow_split_path: "/escrow/split"
+  escrow_settle_path: "/escrow/settle"
   timeout_seconds: 10
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
   agent_config_path: "{agent_config_path}"
+asset_quota:
+  max_total_bytes_per_agent: 536870912
+  max_total_bytes: 4294967296
 asset_upload:
   stream_chunk_bytes: 262144
   max_multipart_overhead_bytes: 1048576

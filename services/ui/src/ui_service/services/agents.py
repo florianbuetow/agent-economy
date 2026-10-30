@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import asyncio
+from typing import TYPE_CHECKING, Any, Protocol
+
+from service_commons.exceptions import ServiceError
 
 from ui_service.services.database import (
     execute_fetchall,
@@ -23,9 +26,85 @@ from ui_service.taxonomy import (
 )
 
 if TYPE_CHECKING:
-    from typing import Any
-
     import aiosqlite
+    import httpx
+    from service_auth import UserAgent
+
+
+QUALITY_FORMULA_VERSION = "quality-v1"
+_RATINGS = ("extremely_satisfied", "satisfied", "dissatisfied")
+_DIMENSIONS = {"spec_quality": "specification_quality", "delivery_quality": "delivery_quality"}
+
+
+class QualityReader(Protocol):
+    """Reads the Reputation service's ``GET /agents/{id}/quality`` report (G12)."""
+
+    async def get_agent_quality(self, agent_id: str) -> dict[str, Any]: ...
+
+
+class ReputationQualityReader:
+    """Public, unsigned quality reads from the operator SDK's Reputation URL."""
+
+    def __init__(self, user_agent: UserAgent, client: httpx.AsyncClient) -> None:
+        self._user_agent = user_agent
+        self._client = client
+
+    async def get_agent_quality(self, agent_id: str) -> dict[str, Any]:
+        base_url = self._user_agent.config.reputation_url
+        response = await self._client.get(f"{base_url}/agents/{agent_id}/quality")
+        response.raise_for_status()
+        body: dict[str, Any] = response.json()
+        return body
+
+
+def _quality_unavailable(agent_id: str) -> ServiceError:
+    return ServiceError(
+        error="reputation_unavailable",
+        message="Reputation quality report is unavailable",
+        status_code=502,
+        details={"agent_id": agent_id},
+    )
+
+
+def _quality_stats(agent_id: str, report: object) -> dict[str, Any]:
+    """Map a service quality report to the UI's per-dimension rating counts.
+
+    Also returns each dimension's service score (None when unrated) under
+    ``_scores`` for sorting; it is not part of the response shape.
+    """
+    if not isinstance(report, dict) or report.get("formula_version") != QUALITY_FORMULA_VERSION:
+        raise _quality_unavailable(agent_id)
+    stats: dict[str, Any] = {"_scores": {}}
+    for ui_name, service_name in _DIMENSIONS.items():
+        dimension = report.get(service_name)
+        counts = dimension.get("rating_counts") if isinstance(dimension, dict) else None
+        if not isinstance(dimension, dict) or not isinstance(counts, dict):
+            raise _quality_unavailable(agent_id)
+        values = {rating: counts.get(rating) for rating in _RATINGS}
+        score = dimension.get("score")
+        if any(type(v) is not int for v in values.values()) or not (
+            score is None or type(score) is int
+        ):
+            raise _quality_unavailable(agent_id)
+        stats[ui_name] = values
+        stats["_scores"][ui_name] = score
+    return stats
+
+
+async def _read_quality(reader: QualityReader, agent_ids: list[str]) -> dict[str, dict[str, Any]]:
+    """Fetch and validate quality reports for ``agent_ids`` concurrently."""
+
+    async def one(agent_id: str) -> dict[str, Any]:
+        try:
+            report = await reader.get_agent_quality(agent_id)
+        except ServiceError:
+            raise
+        except Exception as exc:
+            raise _quality_unavailable(agent_id) from exc
+        return _quality_stats(agent_id, report)
+
+    results = await asyncio.gather(*(one(agent_id) for agent_id in agent_ids))
+    return dict(zip(agent_ids, results, strict=True))
 
 
 async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[str, Any]:
@@ -68,115 +147,33 @@ async def _compute_agent_stats(db: aiosqlite.Connection, agent_id: str) -> dict[
         or 0
     )
 
-    # Spec quality from visible feedback
-    spec_es = int(
-        await execute_scalar(
-            db,
-            "SELECT COUNT(*) FROM reputation_feedback "
-            "WHERE to_agent_id = ? AND category = 'spec_quality' "
-            "AND visible = 1 AND rating = 'extremely_satisfied'",
-            (agent_id,),
-        )
-        or 0
-    )
-    spec_sat = int(
-        await execute_scalar(
-            db,
-            "SELECT COUNT(*) FROM reputation_feedback "
-            "WHERE to_agent_id = ? AND category = 'spec_quality' "
-            "AND visible = 1 AND rating = 'satisfied'",
-            (agent_id,),
-        )
-        or 0
-    )
-    spec_dis = int(
-        await execute_scalar(
-            db,
-            "SELECT COUNT(*) FROM reputation_feedback "
-            "WHERE to_agent_id = ? AND category = 'spec_quality' "
-            "AND visible = 1 AND rating = 'dissatisfied'",
-            (agent_id,),
-        )
-        or 0
-    )
-
-    # Delivery quality from visible feedback
-    del_es = int(
-        await execute_scalar(
-            db,
-            "SELECT COUNT(*) FROM reputation_feedback "
-            "WHERE to_agent_id = ? AND category = 'delivery_quality' "
-            "AND visible = 1 AND rating = 'extremely_satisfied'",
-            (agent_id,),
-        )
-        or 0
-    )
-    del_sat = int(
-        await execute_scalar(
-            db,
-            "SELECT COUNT(*) FROM reputation_feedback "
-            "WHERE to_agent_id = ? AND category = 'delivery_quality' "
-            "AND visible = 1 AND rating = 'satisfied'",
-            (agent_id,),
-        )
-        or 0
-    )
-    del_dis = int(
-        await execute_scalar(
-            db,
-            "SELECT COUNT(*) FROM reputation_feedback "
-            "WHERE to_agent_id = ? AND category = 'delivery_quality' "
-            "AND visible = 1 AND rating = 'dissatisfied'",
-            (agent_id,),
-        )
-        or 0
-    )
-
     return {
         "tasks_posted": tasks_posted,
         "tasks_completed_as_worker": tasks_completed_as_worker,
         "total_earned": total_earned,
         "total_spent": total_spent,
-        "spec_quality": {
-            "extremely_satisfied": spec_es,
-            "satisfied": spec_sat,
-            "dissatisfied": spec_dis,
-        },
-        "delivery_quality": {
-            "extremely_satisfied": del_es,
-            "satisfied": del_sat,
-            "dissatisfied": del_dis,
-        },
     }
 
 
-def _quality_ratio_sql(es_expr: str, sat_expr: str, dis_expr: str) -> str:
-    """Build a SQL CASE expression for extremely_satisfied / total ratio.
-
-    Mirrors ``_quality_sort_key``'s Python-side computation, but as SQL so it
-    can be used directly in an ``ORDER BY`` clause (GAP-E10).
-    """
-    total = f"({es_expr} + {sat_expr} + {dis_expr})"
-    return f"CASE WHEN {total} = 0 THEN 0.0 ELSE CAST({es_expr} AS REAL) / {total} END"
-
-
 # Maps the router's validated sort_by values to a SELECT-list alias in the
-# list_agents query below. "0" is a safe no-op fallback (matches the
-# pre-GAP-E10 dict.get(sort_by, 0) behavior) — unreachable in practice since
-# the router already 400s on an unknown sort_by before calling this.
+# list_agents query below. The "0" fallback is unreachable: the router already
+# 400s on an unknown sort_by before calling this.
+# Quality sorts use the Reputation service score instead (G12).
 _SORT_ALIASES: dict[str, str] = {
     "total_earned": "total_earned",
     "total_spent": "total_spent",
     "tasks_completed": "tasks_completed_as_worker",
     "tasks_completed_as_worker": "tasks_completed_as_worker",
     "tasks_posted": "tasks_posted",
-    "spec_quality": "spec_quality_ratio",
-    "delivery_quality": "delivery_quality_ratio",
 }
+_QUALITY_SORTS = frozenset({"spec_quality", "delivery_quality"})
+# Unrated agents sort below every rated agent (scores are 0-100).
+_UNRATED_SORT_SCORE = -1
 
 
 async def list_agents(
     db: aiosqlite.Connection,
+    quality_reader: QualityReader,
     sort_by: str,
     order: str,
     limit: int,
@@ -184,21 +181,20 @@ async def list_agents(
 ) -> dict[str, Any]:
     """List agents with computed stats, sorted and paginated.
 
-    Single aggregated query (GAP-E10): one LEFT JOIN per stat category,
-    computed and sorted in SQL, instead of an N+1 fan-out (~10 queries per
-    agent) followed by a Python-side sort and slice.
+    Non-quality stats come from one aggregated query (GAP-E10). Quality stats
+    come from the Reputation service (G12): only the page's agents are read,
+    except for a quality sort, which needs every agent's service score.
     """
     total_count = int(await execute_scalar(db, "SELECT COUNT(*) FROM identity_agents", ()) or 0)
 
-    sort_alias = _SORT_ALIASES.get(sort_by, "0")
+    quality_sort = sort_by in _QUALITY_SORTS
     direction = "DESC" if order == "desc" else "ASC"
-
-    spec_es_expr = "COALESCE(sq.spec_es, 0)"
-    spec_sat_expr = "COALESCE(sq.spec_sat, 0)"
-    spec_dis_expr = "COALESCE(sq.spec_dis, 0)"
-    del_es_expr = "COALESCE(dq.del_es, 0)"
-    del_sat_expr = "COALESCE(dq.del_sat, 0)"
-    del_dis_expr = "COALESCE(dq.del_dis, 0)"
+    order_clause = (
+        "ia.rowid ASC"
+        if quality_sort
+        else f"{_SORT_ALIASES.get(sort_by, '0')} {direction}, ia.rowid ASC"
+    )
+    page_clause = "" if quality_sort else "LIMIT ? OFFSET ?"
 
     # nosec B608 -- sort_alias/direction come from the fixed _SORT_ALIASES lookup
     # above, never raw user input; sort_by is also pre-validated by the router's
@@ -208,11 +204,7 @@ async def list_agents(
         "COALESCE(tp.tasks_posted, 0) AS tasks_posted, "
         "COALESCE(tc.tasks_completed_as_worker, 0) AS tasks_completed_as_worker, "
         "COALESCE(er.total_earned, 0) AS total_earned, "
-        "COALESCE(ts.total_spent, 0) AS total_spent, "
-        f"{spec_es_expr} AS spec_es, {spec_sat_expr} AS spec_sat, {spec_dis_expr} AS spec_dis, "
-        f"{del_es_expr} AS del_es, {del_sat_expr} AS del_sat, {del_dis_expr} AS del_dis, "
-        f"{_quality_ratio_sql(spec_es_expr, spec_sat_expr, spec_dis_expr)} AS spec_quality_ratio, "
-        f"{_quality_ratio_sql(del_es_expr, del_sat_expr, del_dis_expr)} AS delivery_quality_ratio "
+        "COALESCE(ts.total_spent, 0) AS total_spent "
         "FROM identity_agents ia "
         "LEFT JOIN ("
         "  SELECT poster_id AS agent_id, COUNT(*) AS tasks_posted "
@@ -230,27 +222,22 @@ async def list_agents(
         "  SELECT account_id AS agent_id, SUM(amount) AS total_spent "
         "  FROM bank_transactions WHERE type = 'escrow_lock' GROUP BY account_id"
         ") ts ON ts.agent_id = ia.agent_id "
-        "LEFT JOIN ("
-        "  SELECT to_agent_id AS agent_id, "
-        "    SUM(CASE WHEN rating = 'extremely_satisfied' THEN 1 ELSE 0 END) AS spec_es, "
-        "    SUM(CASE WHEN rating = 'satisfied' THEN 1 ELSE 0 END) AS spec_sat, "
-        "    SUM(CASE WHEN rating = 'dissatisfied' THEN 1 ELSE 0 END) AS spec_dis "
-        "  FROM reputation_feedback WHERE category = 'spec_quality' AND visible = 1 "
-        "  GROUP BY to_agent_id"
-        ") sq ON sq.agent_id = ia.agent_id "
-        "LEFT JOIN ("
-        "  SELECT to_agent_id AS agent_id, "
-        "    SUM(CASE WHEN rating = 'extremely_satisfied' THEN 1 ELSE 0 END) AS del_es, "
-        "    SUM(CASE WHEN rating = 'satisfied' THEN 1 ELSE 0 END) AS del_sat, "
-        "    SUM(CASE WHEN rating = 'dissatisfied' THEN 1 ELSE 0 END) AS del_dis "
-        "  FROM reputation_feedback WHERE category = 'delivery_quality' AND visible = 1 "
-        "  GROUP BY to_agent_id"
-        ") dq ON dq.agent_id = ia.agent_id "
-        f"ORDER BY {sort_alias} {direction}, ia.rowid ASC "
-        "LIMIT ? OFFSET ?"
+        f"ORDER BY {order_clause} "
+        f"{page_clause}"
     )
+    params: tuple[Any, ...] = (
+        (TaskStatus.APPROVED,) if quality_sort else (TaskStatus.APPROVED, limit, offset)
+    )
+    rows = list(await execute_fetchall(db, sql, params))
+    quality = await _read_quality(quality_reader, [str(row["agent_id"]) for row in rows])
 
-    rows = await execute_fetchall(db, sql, (TaskStatus.APPROVED, limit, offset))
+    if quality_sort:
+
+        def score_key(row: Any) -> int:
+            score = quality[str(row["agent_id"])]["_scores"][sort_by]
+            return _UNRATED_SORT_SCORE if score is None else int(score)
+
+        rows = sorted(rows, key=score_key, reverse=order == "desc")[offset : offset + limit]
 
     agents: list[dict[str, Any]] = [
         {
@@ -262,16 +249,8 @@ async def list_agents(
                 "tasks_completed_as_worker": int(row["tasks_completed_as_worker"]),
                 "total_earned": int(row["total_earned"]),
                 "total_spent": int(row["total_spent"]),
-                "spec_quality": {
-                    "extremely_satisfied": int(row["spec_es"]),
-                    "satisfied": int(row["spec_sat"]),
-                    "dissatisfied": int(row["spec_dis"]),
-                },
-                "delivery_quality": {
-                    "extremely_satisfied": int(row["del_es"]),
-                    "satisfied": int(row["del_sat"]),
-                    "dissatisfied": int(row["del_dis"]),
-                },
+                "spec_quality": quality[str(row["agent_id"])]["spec_quality"],
+                "delivery_quality": quality[str(row["agent_id"])]["delivery_quality"],
             },
         }
         for row in rows
@@ -285,7 +264,11 @@ async def list_agents(
     }
 
 
-async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str, Any] | None:
+async def get_agent_profile(
+    db: aiosqlite.Connection,
+    quality_reader: QualityReader,
+    agent_id: str,
+) -> dict[str, Any] | None:
     """Get a single agent's full profile."""
     # Check agent exists
     agent_row = await execute_fetchone(
@@ -310,6 +293,9 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str
 
     # Stats
     stats = await _compute_agent_stats(db, agent_id)
+    quality = (await _read_quality(quality_reader, [agent_id]))[agent_id]
+    stats["spec_quality"] = quality["spec_quality"]
+    stats["delivery_quality"] = quality["delivery_quality"]
 
     # Recent tasks (up to 10, most recent first)
     # Tasks where the agent is poster or worker
@@ -368,7 +354,7 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str
         (
             feedback_id,
             task_id_val,
-            _from_agent_id,
+            from_agent_id,
             from_agent_name,
             category,
             rating,
@@ -379,6 +365,7 @@ async def get_agent_profile(db: aiosqlite.Connection, agent_id: str) -> dict[str
             {
                 "feedback_id": feedback_id,
                 "task_id": task_id_val,
+                "from_agent_id": from_agent_id,
                 "from_agent_name": from_agent_name,
                 "category": category,
                 "rating": rating,
@@ -416,6 +403,14 @@ def _derive_agent_role(
     if worker_id == agent_id:
         return "WORKER"
     return None
+
+
+# Feed filters finer than the backend badge taxonomy: disputes and rulings
+# share the TASK badge but can be filtered on their own.
+_FEED_FINE_TYPES: dict[str, tuple[str, ...]] = {
+    "DISPUTE": ("task.disputed",),
+    "RULING": ("task.ruled",),
+}
 
 
 async def get_agent_feed(
@@ -460,7 +455,7 @@ async def get_agent_feed(
         params.append(agent_id)
 
     if type_filter is not None:
-        matching_event_types = tuple(
+        matching_event_types = _FEED_FINE_TYPES.get(type_filter) or tuple(
             event_type for event_type, badge in EVENT_TYPE_TO_BADGE.items() if badge == type_filter
         )
         if matching_event_types:
