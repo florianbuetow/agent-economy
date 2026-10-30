@@ -4,7 +4,7 @@ Review of the tree at `802fe37` (branch `refactor`) against the handover documen
 
 ## Verdict
 
-The foundations hold. Root CI was green on 2026-10-25, identity and signing are sound, platform authority cannot be gained by an ordinary agent, escrow money is conserved, and the autonomous math economy runs end to end. The handover inventory is accurate: of the twenty gaps G01–G20, **none is closed**; five are partial, fifteen are missing. On top of the inventory the review found a small number of robustness and security bugs that are more urgent than any missing feature, and three things the handover does not mention at all: the stack cannot be bound to the LAN, no supervisor restarts a crashed service, and there is no observability.
+The foundations hold. Root CI was green on 2026-10-25, identity and signing are sound, platform authority cannot be gained by an ordinary agent, escrow money is conserved, and the autonomous math economy runs end to end. The handover inventory is accurate: of the twenty gaps G01–G20, **none is closed**; nine are partial, eleven are missing. On top of the inventory the review found a small number of robustness and security bugs that are more urgent than any missing feature, and three things the handover does not mention at all: the stack cannot be bound to the LAN, no supervisor restarts a crashed service, and there is no observability.
 
 The project is finishable without architecture change. The order below puts "runs robustly on the LAN" before "all features", because that is the owner's stated use.
 
@@ -37,7 +37,7 @@ The project is finishable without architecture change. The order below puts "run
 
 Each was verified by the auditing agent reading the cited code; bug 1 was additionally reproduced with a probe. Bugs 1, 2 and 5 were then **re-verified independently by the review lead** at the cited lines; the confirming evidence is noted inline.
 
-1. **A db-gateway outage permanently stops Task Board's deadline sweep and posting recovery.** `deadline_evaluator.py:275-284` calls `list_tasks` outside the per-task try; a transport error ends the asyncio task and nothing restarts it. `posting_recovery.py:115-122` catches only typed errors. After one gateway restart, review timeouts, auto-approve and dispute-to-Court triggers stop until Task Board restarts. (A3) *Lead re-verified:* `self._store.list_tasks(...)` at line 278 sits before the `try` at line 286; the store is a sync `httpx.Client` (`task_db_client.py:127`) whose `ConnectError` is not caught there; `core/lifespan.py` attaches no `add_done_callback` to `deadline_sweep_task` (line 145) or `posting_recovery_task` (line 178).
+1. **A db-gateway outage permanently stops Task Board's deadline sweep.** `deadline_evaluator.py:275-284` calls `list_tasks` outside the per-task try; a transport error ends the asyncio task and nothing restarts it. After one gateway restart, review timeouts, auto-approve and dispute-to-Court triggers stop until Task Board restarts. (A3) *Lead re-verified:* `self._store.list_tasks(...)` at line 278 sits before the `try` at line 286; the store is a sync `httpx.Client` (`task_db_client.py:127`) whose `ConnectError` is not caught there; `core/lifespan.py` attaches no `add_done_callback` to `deadline_sweep_task` (line 145). The A3 report also named posting recovery; that part is **withdrawn**: `posting_recovery.py:120` catches `PlatformHttpError`, which is `httpx.HTTPError` (`task_db_client.py:56`) and therefore includes `ConnectError`, and `financial_effect_recovery.py:317-326` catches `Exception`. Only the deadline sweep is vulnerable.
 2. **A partly delivered Court ruling never finishes.** `ruling_orchestrator.py:444-475` settles on Task Board, then records feedback, then persists the ruling. If step 2 or 3 fails the dispute is reverted; Task Board stops triggering because the task is already `ruled`; a manual retry re-judges and the Gateway rejects the duplicate `operation_id`. Money is paid, ruling never stored. The existing retry test passes only because its fake Task Board accepts duplicates. (A2) *Lead re-verified:* order at lines 448-473 is `_evaluate_judges` → `_record_task_ruling` → `_record_feedback` → `persist_ruling`; the `except ServiceError` at 474 calls `revert_to_rebuttal_pending`, which (`dispute_db_client.py:296-298`) sets `rebuttal_pending` and deletes any ruling; the ruling `operation_id` is deterministic per dispute (`operation_id_for("court-ruling", (dispute_id,))`, line 362), so a retry with a new lifecycle version collides at the Gateway; `task_ruling.py:231-246` only accepts the ruling when the task is still `disputed`.
 3. **A crash during judging leaves the dispute stuck in `judging` forever.** No lease, no reclaim. (A2)
 4. **Two concurrent ruling triggers can both run judges**; the loser's revert undoes the winner. (A2)
@@ -77,11 +77,11 @@ Checked and holding: no path for an ordinary agent to gain platform authority; a
 
 ## Observability design (A5)
 
-**Current state.** Structured JSON logs go to stdout and a daily file per service (`service_commons/logging.py:17-137`), configured per service. Timestamps have second precision; there is no request, trace or correlation id anywhere. Every `/health` returns ok unconditionally; Task Board's three background loops have no liveness signal, so a dead deadline sweep (the only autonomous path to Court) is invisible. Every `ServiceError` logs at WARNING (`exceptions.py:75`), producing about 100k expected-404 warnings. `ruling_orchestrator.py` has no log calls. Agents log plain text to stderr at a hardcoded INFO level (`task_feeder/__main__.py:43`, `math_worker/__main__.py:39`). Services launched by `start-all` send crash output only to the launching terminal.
+**Current state.** Structured JSON logs go to stdout and a daily file per service (`service_commons/logging.py:17-137`), configured per service. Timestamps have second precision; there is no request, trace or correlation id anywhere. No `/health` reflects background-loop liveness (db-gateway and reputation do return 503 when their database is unavailable, `db-gateway/routers/health.py:37-44`; the others return ok whenever the process is up); Task Board's three background loops have no liveness signal, so a dead deadline sweep (the only autonomous path to Court) is invisible. Every `ServiceError` logs at WARNING (`exceptions.py:75`), producing about 100k expected-404 warnings. `ruling_orchestrator.py` has no log calls. Agents log plain text to stderr at a hardcoded INFO level (`task_feeder/__main__.py:43`, `math_worker/__main__.py:39`). Services launched by `start-all` send crash output only to the launching terminal.
 
 **Design: one thin OpenTelemetry helper, nothing per service.**
 
-- Dependencies, added only to `libs/service-commons/pyproject.toml`: `opentelemetry-sdk>=1.45,<2`, `opentelemetry-exporter-otlp-proto-http>=1.45,<2`, `opentelemetry-instrumentation-fastapi==0.66b2`, `opentelemetry-instrumentation-httpx==0.66b2`. No logging, sqlite, LiteLLM or asyncio instrumentation and no Prometheus client.
+- Dependencies, added only to `libs/service-commons/pyproject.toml`, pinned as a matched pair because each instrumentation beta tracks exactly one SDK minor: `opentelemetry-sdk~=1.45.0`, `opentelemetry-exporter-otlp-proto-http~=1.45.0`, `opentelemetry-instrumentation-fastapi==0.66b2`, `opentelemetry-instrumentation-httpx==0.66b2`; bump all four together. No logging, sqlite, LiteLLM or asyncio instrumentation and no Prometheus client.
 - Config, a required `telemetry:` section in all seven `services/*/config.yaml` and `agents/config.yaml`, no defaults, `extra="forbid"`:
   ```yaml
   telemetry:
@@ -95,7 +95,7 @@ Checked and holding: no path for an ordinary agent to gain platform authority; a
 - `JSONFormatter` gains `trace_id`/`span_id` from the current span (about 6 lines), so file logs and OTLP logs share ids and `just logs` keeps working. `ServiceError` with status below 500 logs at INFO.
 - Per-service code is limited to the config field, one `setup_telemetry` call in `create_app`, and one `shutdown_telemetry` in lifespan shutdown. Agents call the helper with `app=None`, use a configured log level, and open one span per loop cycle so their outbound calls nest under it.
 - Business attributes via `annotate(...)` at the lifecycle sites (post `task_creation.py:168`, bid/accept `task_bidding.py:40,222`, submit/approve `task_review.py:31,86`, dispute/ruling `task_ruling.py:37,198`, ruling execution `ruling_orchestrator.py:494`, settlement `ledger_db_client.py:285,332,388`, deadline sweep, recovery cycles, worker and feeder decisions), always including `task.id`, so one TraceQL query `{ span.task.id = "…" }` returns every step of a task across services.
-- Task Board `/health` reports loop liveness (`task.done()` per background task) and returns a non-ok status when any loop is dead.
+- Task Board `/health` loop liveness is delivered by Phase 0 item 0.1; Phase 6 only consumes it through the httpcheck receiver (item 6.4 depends on 0.1).
 - Viewer: `grafana/otel-lgtm`, one container bundling the collector, Loki, Tempo, Prometheus and Grafana, OTLP on 4318 and Grafana on 3000, with a ~30-line collector override adding an `httpcheck` receiver on the seven `/health` URLs so health, logs and traces share one UI. Two justfile recipes, `observability-up` and `observability-down`. Exporters are batch and non-blocking; if the collector is down, file logs remain the record. Fallback if containers are refused: the OpenObserve single binary.
 - Total about 350 lines, roughly half tests and config. Change list and attribute table are in the A5 report.
 
@@ -109,33 +109,35 @@ Checked and holding: no path for an ordinary agent to gain platform authority; a
 
 ## Plan
 
-Each phase ends with its own focused tests and a component `just ci-quiet`; root `just ci-quiet` at the end of phases 1, 3, 5 and 7. Follow the project's failing-test-first rule per item. Sizes: S < half a day, M one to two days, L several days.
+Work with focused tests and the component `just ci-quiet` while implementing. An item closes only under the delivery-governance rule: its own failing-test-first proof plus root `just ci-quiet` exit 0 from the repo root (about 50 minutes; several finished items may share one root run). Sizes: S < half a day, M one to two days, L several days.
+
+Tracker: the canonical tracker is `openspec/specs/completion-backlog/spec.md`. Items in Phases 2–4 and 7 fall under existing open scenario pairs and close through them: 2.x → T-126/T-127 (artifacts) and the accepted-price part of T-120/T-121; 3.1–3.3 → T-128–T-131; 3.4–3.5 and 0.4 → T-134–T-137; 4.x → T-138/T-139 and T-146/T-147; 0.5 → T-142–T-145; 5.x → T-140/T-141; 1.6–1.7 → T-150/T-151; 7.x → T-152–T-159. Items with no existing scenario (0.1, 0.2, 0.3, 0.6, 0.7, 0.8, 1.1–1.5, 1.8, 6.1–6.4, and the commit-hook fix) must be registered as new `T-203+` scenario pairs with WHEN/THEN wording before implementation starts; this document is the design rationale, not a second tracker.
 
 ### Phase 0 — Stop the bleeding (robustness and security bugs)
 
 | # | Item | Done when | Size |
 |---|---|---|---|
-| 0.1 | Supervise Task Board background loops: catch transport errors around `list_tasks`/`run_batch`, add a done-callback that logs and restarts; report loop liveness in `/health`. | Test with gateway down for N intervals shows sweep and posting recovery resume; `/health` is non-ok while a loop is dead. | S |
+| 0.1 | Supervise Task Board background loops: catch transport errors around the sweep's `list_tasks`, add a done-callback on all three loop tasks that logs and restarts; report loop liveness in Task Board `/health` (this is the single owner of that health change; Phase 6 only consumes it). | Test with gateway down for N intervals shows the deadline sweep resume; `/health` is non-ok while any loop task is done. | S |
 | 0.2 | Feeder loops survive dependency restarts (wrap iterations, back off on `httpx.HTTPError`/`ServiceError`). | Task Board raising `ConnectError` once leaves all three loops running. | S |
 | 0.3 | Court: persist votes, `worker_pct`, summary and request snapshot in one compare-and-set claim **before** any Task Board/Reputation call; delivery replays the stored payload with the stored `expected_lifecycle_version`; add a judging lease with expiry and a reclaim sweep; make `begin_ruling` a status-checked CAS. | Reputation failing once after settlement reaches `ruled` with one judge invocation and one settlement against real Gateway `operation_id` semantics; expired `judging` lease is reclaimed; two concurrent triggers produce one ruling. | M |
 | 0.4 | Reputation feedback authorization: look up the task; accept only approved/auto-approved/ruled tasks, only between that task's poster and worker, direction and category checked; store `source` = `peer` or `court`; exact replay 200, changed content 409. (Closes G10.) | Non-party, wrong direction, unknown task and ineligible outcome are rejected through `POST /feedback`. | M |
 | 0.5 | Worker resumes assigned jobs: on each cycle list `accepted`/`submitted`/`disputed` tasks with `worker_id == me` before scanning open tasks; persist solution and upload state; journal the upload inside the intent; poll acceptance until the task leaves `open`; fix the ruling payout field. (Closes most of G16.) | Worker killed after acceptance, restarted, submits and is paid; restart after dispute files exactly one rebuttal. | M |
 | 0.6 | Asset read authorization: list/download require a signed token; allow poster, assigned worker, platform/court, operator; Court's `DeliverableFetcher` sends a platform token; always serve `application/octet-stream`. | Unauthenticated or third-party download of a submitted task returns 401/403; poster and worker get 200. | S |
 | 0.7 | Fix the UI repeat-post bug and link to the new task after posting. | Second Post click with new terms creates a new task; completed posting shows an anchor to the task page. | S |
-| 0.8 | Court 502 bodies become "Judge N failed"; exception logged server-side only. Gateway `/health` and UI bid-list errors stop echoing internal paths/URLs. | Unit tests assert the fixed messages. | S |
+| 0.8 | Court 502 bodies become "Judge N failed"; exception logged server-side only. Gateway `/health` and UI bid-list errors stop echoing internal paths/URLs. UI `/docs` and `/openapi.json` are disabled. | Unit tests assert the fixed messages; `GET /docs` on the UI returns 404. | S |
 
 ### Phase 1 — Run on the LAN, stay up
 
 | # | Item | Done when | Size |
 |---|---|---|---|
 | 1.1 | Make `server.host` authoritative: `_launch-*`, per-service `run` recipes and `stop_agent.py` read the host from the effective config. No new flag, no default. | `start-all` then `stop-all` succeed with `server.host: 0.0.0.0` on identity; `lsof` shows `*:8001`. | S |
-| 1.2 | LAN config: `0.0.0.0` for identity, central-bank, task-board, reputation (court optional); db-gateway, UI and court stay `127.0.0.1`. Document NTP (30 s skew) and the macOS firewall prompt. | Second LAN machine: `curl http://<ip>:8003/health` ok, `:8007` refused. | S |
+| 1.2 | LAN config: `0.0.0.0` for identity, central-bank, task-board and reputation (the four exposed ports); db-gateway, court and UI stay `127.0.0.1` (Task Board reaches Court locally and Court's only agent-facing routes are public reads). Document NTP (30 s skew) and the macOS firewall prompt. | Second LAN machine: `curl http://<ip>:8003/health` ok, `:8005` and `:8007` refused. | S |
 | 1.3 | `just fund-agent <agent_id> <amount> <operation_id>` generalising `fund_feeder_cli`; document the grant procedure in README. | An externally registered, non-roster agent is funded with one command and can post. | S |
 | 1.4 | Remote-agent kit doc: config copy with `platform.*_url = http://<server-ip>:800x`, trimmed roster, own `keys_dir`, NTP. | A math worker on a second machine registers, bids and is paid end to end. | S |
 | 1.5 | Supervision: `just supervise-install` / `supervise-uninstall` generating launchd plists (macOS) or systemd user units (Linux) from one template, using the exact launch argv so `stop_agent.py` still recognises them; include feeder and mathbot units. Document that stop/start go through the supervisor in that mode. | `kill -9` of the task-board pid is followed by a healthy restart within 10 s. | M |
 | 1.6 | `start-all` partial-failure cleanup and per-service log redirection. | Injected Court start failure leaves no listening ports. | S |
 | 1.7 | `just backup <dest>` / `just restore <src>`: stop, tar `economy.db` (+wal/shm), `data/keys`, task-board assets, `data/agent-runtime`, court `.env`, start. | Restore into a fresh checkout then `start-all` shows the same balances and resumes a pending task. | S |
-| 1.8 | Hygiene: untrack `services/ui/data/logs/*`, fix stale `UI__`/`AGENT__` env-override comments, create `data/keys` with 0700, fail `start-all` on a world-readable court `.env`. | `git ls-files 'services/*/data/logs'` is empty. | S |
+| 1.8 | Hygiene and registration: untrack `services/ui/data/logs/*` (14 files tracked today), fix stale `UI__`/`AGENT__` env-override comments, create `data/keys` with 0700, fail `start-all` on a world-readable court `.env`, reserve the `platform` and `operator` display names at Identity registration (L1). | `git ls-files services/ui/data/logs` prints nothing; a registration named `platform` is rejected by a test. | S |
 
 Decision for the owner (not blocking 1.1–1.8): **LAN UI.** Exposing the dashboard needs the loopback validators relaxed, the operator proxy kept loopback-only or given a bearer token, and a Q-3 amendment. Until decided, the UI stays on the server host and is used there or over SSH port-forward. **TLS**: tokens travel in clear on the LAN for 300 s; sealed bids are readable on the wire. Accept for a trusted home LAN, or front the four exposed ports with one TLS reverse proxy later.
 
@@ -209,7 +211,7 @@ Requires two owner approvals first: editing `libs/service-commons` (AGENTS.md sa
 
 ## Verification run on 2026-10-30
 
-The commit hook runs root `just ci-quiet` and reported a failure during this review. Cause: every service's `code-audit` gate (pip-audit) failed on two advisories published after the 2026-10-25 green run, `msgpack 1.2.1` (GHSA-j586-36cw-2gc2, fixed in 1.2.3) and `joserfc 1.7.1` (GHSA-jpxq-7h8p-2q76, GHSA-9pg5-8c7x-5hfx, fixed in 1.7.6). No code or test failed. Fix applied the same way as commit `e8c7fd0`: constraint floors raised to `msgpack>=1.2.3` in all seven service `pyproject.toml` files and `joserfc>=1.7.6` in central-bank, task-board and court, then each service re-locked with `uv sync --all-extras`.
+The commit hook runs `just ci-quiet` in the session's current directory and blocked the first commit attempt during this review (session directory was `services/identity`, so the identity gate ran). Cause: every service's `code-audit` gate (pip-audit) failed on two advisories published after the 2026-10-25 green run, `msgpack 1.2.1` (GHSA-j586-36cw-2gc2, fixed in 1.2.3) and `joserfc 1.7.1` (GHSA-jpxq-7h8p-2q76, GHSA-9pg5-8c7x-5hfx, fixed in 1.7.6). No code or test failed. Fix applied the same way as commit `e8c7fd0`: constraint floors raised to `msgpack>=1.2.3` in all seven service `pyproject.toml` files and `joserfc>=1.7.6` in central-bank, task-board and court, then each service re-locked with `uv sync --all-extras`.
 
 | Gate | Result |
 |---|---|
@@ -226,14 +228,15 @@ Operational defect found while doing this: `.claude/settings.json` runs `scripts
 
 ## Decisions needed from the owner
 
-1. Approve editing `libs/service-commons` for the telemetry helper (Phase 6).
+1. Approve editing shared libraries, which AGENTS.md lists as not edited directly: `libs/service-commons` for the telemetry helper (Phase 6) and `libs/service-auth` for the standalone SDK split (Phase 5, item 5.1).
 2. Approve one Docker container for the observability viewer (Phase 6).
 3. LAN UI: keep loopback-only (recommended until a login exists) or amend Q-3 (Phase 1 note).
 4. Whether agent balances and earnings are public via the UI (today they are, while the Bank restricts them to the owner).
+5. TLS on the LAN (security finding M3): accept clear-text HTTP on a trusted home network for now (recommended), or add one TLS reverse proxy in front of the four exposed ports as a Phase 1 item.
 
 ## Traceability to the review brief
 
-The review brief (`@GOAL.md` at the repo root, 2026-10-30) sets these requirements. Each is mapped to where this plan satisfies it.
+The review brief (tracked verbatim as [`2026-10-30-review-findings/review-brief.md`](2026-10-30-review-findings/review-brief.md); the working copy is the untracked `@GOAL.md` at the repo root) sets these requirements. Each is mapped to where this plan satisfies it.
 
 | Brief requirement | Where satisfied |
 |---|---|
