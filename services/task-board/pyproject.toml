@@ -38,7 +38,7 @@ dev = [
     "pygount>=1.8.0",
     "types-PyYAML>=6.0.0",
     "types-aiofiles>=24.0.0",
-    "joserfc>=1.6.7",
+    "joserfc>=1.7.6",
     "cryptography>=48.0.1",
     "freezegun>=1.5.0",
     # Test-only: builds an in-process DB Gateway for the TaskDbClient side of
@@ -59,7 +59,7 @@ constraint-dependencies = [
     "filelock>=4.2.1,<5",
     "gitpython>=3.1.60",
     "idna>=3.15",
-    "msgpack>=1.2.1",
+    "msgpack>=1.2.3",
     "pillow>=13.0.0",
     "pip>=26.2",
     "pydantic-settings>=2.14.2",

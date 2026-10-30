@@ -1,5 +1,7 @@
 # Feature completeness inventory
 
+> **Review 2026-10-30:** all twenty gaps below were re-verified against the code; none is closed. The consolidated verdict, confirmed bugs, and the ordered completion plan are in [`docs/plans/2026-10-30-completion-plan.md`](docs/plans/2026-10-30-completion-plan.md), with the eight audit reports in `docs/plans/2026-10-30-review-findings/`. Follow that plan; this inventory remains the gap reference.
+
 Updated 2026-10-23 from the current worktree. This is the product-level inventory for the [master plan](MASTERPLAN-TO-COMPLETE-THE-PROJECT.md), covering all seven services, public SDK, autonomous agents, human UI, operations, and the economic Vision.
 
 **Implemented** means a current route, background task, CLI, or caller provides the behavior. It does not mean the entire product has passed final verification. **Partial** means useful implementation exists but the stated feature is incomplete or disconnected. Existing test coverage is identified below so it can be reused rather than rewritten. Root CI R8 now passes on the 2026-10-24 verified snapshot; see [the result and limitations](openspec/changes/complete-agent-economy/evidence/ci-feature-first-2026-10-23/ci-result.md).

@@ -51,10 +51,20 @@ JWS profile (libs/service-auth/src/service_auth/jws.py): EdDSA only, exact heade
 - Scenario: anyone on the Wi-Fi sniffs bid tokens (payload is base64 JSON containing `amount`) defeating sealed bidding, reads feedback before reveal, and replays `GET /accounts/{id}` Bearer tokens to read balances/transactions within 5 min.
 - Fix: put the LAN-facing services behind one TLS reverse proxy (Caddy with internal CA) and keep the backends on loopback.
 
-### M4. UI proxy is unauthenticated; LAN exposure would let any visitor spend the operator's money
-- Where: services/ui/src/ui_service/config.py:42-44 documents it; loopback is enforced at :226. Proxy routes in routers/proxy.py sign with the operator key on behalf of any caller passing Host/Origin checks.
-- Scenario: the stated goal is LAN access. If someone relaxes the loopback validator to reach the dashboard from another machine, every LAN host can post tasks, accept bids, approve, or dispute as `operator`.
-- Fix: keep the UI loopback-only, or add real login before any non-loopback binding; keep the validator.
+### M4. UI loopback guard validates an unused setting; operator proxy has no secret
+- Where: services/ui/src/ui_service/config.py:226-236 validates `server.host`, but justfile:251 starts uvicorn with a hard-coded `--host 127.0.0.1`, so the validator never sees the real bind address. Proxy writes rely on loopback client IP (core/middleware.py:92, 173-180), a matching Origin, and the fixed marker `X-ATE-CSRF: local-operator` served by GET /api/proxy/browser-config (routers/proxy.py:23).
+- Scenario: editing the justfile to `--host 0.0.0.0` passes validation; a LAN client sends `Host: localhost:8008` and reads every UI route. Behind any same-host forwarder (ssh -L, socat, Tailscale serve) every request looks loopback, and a non-browser client can post, accept, approve, and dispute as `operator`.
+- Fix: start uvicorn from `settings.server.host/port`, and require a bearer secret from env on `/api/proxy/*`.
+
+### M5. UI publishes every agent's balance and earnings
+- Where: services/ui/src/ui_service/services/agents.py:302-306, :561-590, :227-231. Central Bank restricts balances to the owner (central-bank routers/accounts.py:279, :330).
+- Scenario: a bidder reads a poster's remaining funds and competitors' earnings to tune bids; after LAN rebinding, any LAN host can.
+- Fix: drop balances from public UI responses, or explicitly decide balances are public.
+
+### M6. Disk exhaustion through uploads
+- Where: services/task-board/src/task_board_service/services/asset_manager.py:238 caps only per task (10 files x 10 MiB); registration is open.
+- Scenario: one funded agent posts many 1-credit tasks to its own Sybil workers, each uploading 100 MiB into data/assets until the disk fills and SQLite writes fail.
+- Fix: per-agent and global storage quota in the upload eligibility check.
 
 ### L1. Open registration without proof of possession; display names not unique
 - services/identity/src/identity_service/routers/agents.py:24-43. Anyone can register names like "platform" or "operator" and show up in UI confusingly. Authority is by agent_id and key, so no escalation found. Fix: reserve platform/operator names, require a signed registration nonce.
@@ -64,6 +74,15 @@ JWS profile (libs/service-auth/src/service_auth/jws.py): EdDSA only, exact heade
 
 ### L3. services/court/.env is mode 0644
 - LLM API keys readable by other local users. gitignored (.gitignore:49). Fix: chmod 600, and have start-all warn on looser modes. data/keys/*.key are 0600 (good); data/keys dir is 0755 (pub files only exposed).
+
+### L4. Court 502 messages embed raw LiteLLM exception text
+- services/court/src/court_service/judges/llm_judge.py:117-122, services/ruling_orchestrator.py:259-264. May include provider errors, api_base, or LLM output. Callers are platform-signed, so exposure depends on Task Board relaying it. Fix: generic message, log details server-side.
+
+### L5. Uploader-chosen Content-Type is served back
+- task-board streaming_upload.py:175-184, routers/assets.py:118, ui routers/proxy.py:40-52. attachment + nosniff + CSP block XSS today, but a `text/javascript` upload served from the UI origin satisfies `script-src 'self'`. Fix: serve application/octet-stream.
+
+### L6. Info leaks in errors and docs
+- db-gateway routers/health.py:41 shows the absolute DB path on failure; ui services/proxy.py:532 echoes `{exc}`; UI /docs and /openapi.json are enabled (app.py:38). Fix: fixed messages, disable docs.
 
 ### Non-findings (checked)
 - DB gateway: unauthenticated callers can only hit /health; every other request needs a JWS from a configured service key with exact body/query digests and capability grant. LAN exposure is not a hole, though it should stay loopback.
@@ -78,5 +97,8 @@ JWS profile (libs/service-auth/src/service_auth/jws.py): EdDSA only, exact heade
 2. Asset read authorization (M1) — done when an unauthenticated or third-party download of a submitted task's deliverable returns 401/403 and poster/worker still succeed.
 3. Judge prompt hardening (M2) — done when a unit test with an injected section header in the rebuttal shows it rendered inside a JSON string, not as a section.
 4. TLS front proxy for LAN mode (M3) — done when a LAN client can only reach services over HTTPS and backends still bind 127.0.0.1.
-5. UI auth before any LAN binding (M4) — done when the loopback validator stays and a documented, authenticated remote-access path exists.
-6. Reserve names / registration proof (L1), chmod court .env (L3) — done when tests reject "platform" names and start-all fails on a world-readable .env.
+5. UI bind from settings + proxy bearer secret (M4) — done when uvicorn binds `settings.server.host` and proxy writes without the env secret return 401.
+6. Remove other agents' balances from UI (M5) — done when /api/agents/{id} no longer returns a non-operator balance.
+7. Upload storage quota (M6) — done when an upload beyond the per-agent quota is rejected in a test.
+8. Generic court/gateway/UI error messages, octet-stream downloads, docs off (L4-L6) — done when tests assert fixed messages and octet-stream.
+9. Reserve names / registration proof (L1), chmod court .env (L3) — done when tests reject "platform" names and start-all fails on a world-readable .env.
