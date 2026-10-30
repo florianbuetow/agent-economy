@@ -83,7 +83,7 @@ def _recover_in_two_tabs(
     status_pattern = f"**/api/proxy/task-postings/{operation_id}/status"
     first.route(status_pattern, lambda route: route.abort("failed"))
     first.reload()
-    first.get_by_role("button", name="Retry exact intent").wait_for(state="visible")
+    first.get_by_role("button", name="Try posting again").wait_for(state="visible")
     recovered_operation_id, recovered_record = read_single_posting(first)
     assert recovered_operation_id == operation_id
     assert recovered_record == record
@@ -91,7 +91,7 @@ def _recover_in_two_tabs(
     second = context.new_page()
     second.route(status_pattern, lambda route: route.abort("failed"))
     second.goto(f"{ui_url}/task.html")
-    second.get_by_role("button", name="Retry exact intent").wait_for(state="visible")
+    second.get_by_role("button", name="Try posting again").wait_for(state="visible")
     second_operation_id, second_record = read_single_posting(second)
     assert second_operation_id == operation_id
     assert second_record == record
@@ -119,9 +119,9 @@ def _retry_from_both_tabs(first: Any, second: Any, operation_id: str) -> None:
 
     first.route(submit_pattern, lose_committed_retry_response)
     second.route(submit_pattern, lose_committed_retry_response)
-    first.get_by_role("button", name="Retry exact intent").click()
+    first.get_by_role("button", name="Try posting again").click()
     wait_for_lost_retries(first, 1)
-    second.get_by_role("button", name="Retry exact intent").click()
+    second.get_by_role("button", name="Try posting again").click()
     wait_for_lost_retries(second, 2)
 
     for page in (first, second):
@@ -169,7 +169,7 @@ def test_lost_committed_response_and_two_tab_retry_conserve_one_publication(
     first.route(submit_pattern, lose_first_committed_response)
     _fill_form(first)
     first.locator("#btn-post-task").click()
-    first.get_by_role("button", name="Retry exact intent").wait_for(state="visible")
+    first.get_by_role("button", name="Try posting again").wait_for(state="visible")
     operation_id, record = read_single_posting(first)
     assert committed["publication"]["operation_id"] == operation_id  # type: ignore[index]
     assert committed["publication"]["publication_state"] == "published"  # type: ignore[index]

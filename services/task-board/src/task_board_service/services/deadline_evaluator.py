@@ -265,7 +265,8 @@ class DeadlineEvaluator:
         real ``await``s (escrow retry, possible Court calls) — control is yielded
         to the event loop between every task, so a large sweep never blocks other
         requests. A single task's failure is logged and does not abort the sweep
-        or the loop; the next interval retries it.
+        or the loop; the next interval retries it. A gateway outage while listing
+        tasks (transport or service error) is logged and retried next interval.
 
         Concurrent sweep/read evaluators submit the same deterministic operation identity.
         Gateway owns status/version/cutoff predicates and exact replay. Typed claim or
@@ -275,13 +276,20 @@ class DeadlineEvaluator:
         while True:
             await asyncio.sleep(interval_seconds)
             for status in _SWEEPABLE_STATUSES:
-                tasks = self._store.list_tasks(
-                    status=status,
-                    poster_id=None,
-                    worker_id=None,
-                    limit=None,
-                    offset=None,
-                )
+                try:
+                    tasks = self._store.list_tasks(
+                        status=status,
+                        poster_id=None,
+                        worker_id=None,
+                        limit=None,
+                        offset=None,
+                    )
+                except (PlatformHttpError, ServiceError):
+                    logger.exception(
+                        "Deadline sweep could not list tasks; will retry next interval",
+                        extra={"status": status},
+                    )
+                    continue
                 for task in tasks:
                     try:
                         await self.evaluate_deadline(task)

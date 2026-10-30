@@ -167,6 +167,7 @@ def _write_config(tmp_path: Path) -> tuple[Path, Path]:
             "execution_deadline_seconds": 30,
             "review_deadline_seconds": 30,
             "review_interval_seconds": 1,
+            "retry_backoff_seconds": 1,
             "auto_approve_on_error": False,
             "base_reward": 10,
             "reward_per_level": 5,
@@ -219,6 +220,7 @@ def _feeder_config(tmp_path: Path) -> TaskFeederConfig:
         execution_deadline_seconds=30,
         review_deadline_seconds=30,
         review_interval_seconds=1,
+        retry_backoff_seconds=1,
         auto_approve_on_error=False,
         base_reward=10,
         reward_per_level=5,
@@ -606,7 +608,8 @@ async def test_feeder_resolves_one_config_shares_commands_and_holds_lease(
             self.commands = commands
             command_ids.append(id(commands))
 
-        async def run(self) -> None:
+        async def run(self, backoff: int) -> None:
+            assert backoff == 1
             lock_path = _feeder_lock_path(runtime_config, agent)
             _assert_lease_busy(lock_path)
             events.append("acceptance-run")
@@ -626,8 +629,8 @@ async def test_feeder_resolves_one_config_shares_commands_and_holds_lease(
             self.commands = commands
             command_ids.append(id(commands))
 
-        async def run(self, interval: int) -> None:
-            assert interval == 1
+        async def run(self, interval: int, backoff: int) -> None:
+            assert interval == 1 and backoff == 1
             events.append("review-run")
 
         def stop(self) -> None:

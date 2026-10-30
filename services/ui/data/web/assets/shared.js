@@ -49,6 +49,33 @@
     });
   }
 
+  // Every page nav carries Jobs and Post anchors. Pages whose HTML already has them are left alone.
+  function ensureJobNav() {
+    document.querySelectorAll('.topnav-links').forEach(function(container) {
+      if (container.querySelector('[data-job-nav]')) return;
+      var legacy = container.querySelector('a[href="/task.html"], [data-nav="/task.html"]');
+      var jobs = document.createElement('a');
+      jobs.className = 'topnav-link';
+      jobs.href = '/task.html?view=list';
+      jobs.textContent = 'Jobs';
+      jobs.setAttribute('data-job-nav', 'jobs');
+      var post = document.createElement('a');
+      post.className = 'topnav-link';
+      post.href = '/task.html';
+      post.textContent = 'Post';
+      post.setAttribute('data-job-nav', 'post');
+      if (legacy) {
+        legacy.parentNode.insertBefore(jobs, legacy);
+        legacy.parentNode.insertBefore(post, legacy);
+        legacy.remove();
+      } else {
+        container.appendChild(jobs);
+        container.appendChild(post);
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', ensureJobNav);
   document.addEventListener('DOMContentLoaded', bindStaticActions);
 
   var browserConfigPromise = null;

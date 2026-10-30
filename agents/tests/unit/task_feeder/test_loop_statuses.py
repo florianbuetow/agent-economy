@@ -27,6 +27,7 @@ def _make_config(**overrides: object) -> TaskFeederConfig:
         "acceptance_window_seconds": 120,
         "execution_deadline_seconds": 300,
         "review_deadline_seconds": 120,
+        "retry_backoff_seconds": 1,
         "base_reward": 10,
         "reward_per_level": 10,
         "shuffle": True,
@@ -66,7 +67,7 @@ class TestTaskFeederStatusVocabulary:
             original_sleep = review_module.asyncio.sleep
             review_module.asyncio.sleep = stop_after_first_poll
             try:
-                await loop.run(interval_seconds=0)
+                await loop.run(interval_seconds=0, retry_backoff_seconds=1)
             finally:
                 review_module.asyncio.sleep = original_sleep
 

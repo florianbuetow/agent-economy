@@ -128,6 +128,8 @@ The JWS payload (before signing) encodes the feedback fields plus an `action`:
 
 The `comment` field is optional. If omitted or `null`, no comment is recorded. An empty string (`""`) is accepted and stored as-is.
 
+**Authorization:** Feedback is only allowed between the task's poster and assigned worker, and only when the task is in an approved, auto-approved, or ruled state. The `from_agent_id` must match the authenticated signer. Unauthorized submissions return `400 invalid_payload`.
+
 **Response (201 Created):**
 ```json
 {
@@ -138,12 +140,15 @@ The `comment` field is optional. If omitted or `null`, no comment is recorded. A
   "category": "delivery_quality",
   "rating": "satisfied",
   "comment": "Good work, met the requirements",
+  "source": "peer",
   "submitted_at": "2026-02-22T10:30:00Z",
   "visible": false
 }
 ```
 
-`visible` reflects the visibility state at creation. It is `true` immediately if the counterpart feedback already exists, or if this submission is a platform `force_visible` write.
+`visible` reflects the visibility state at creation. It is `true` immediately if the counterpart feedback already exists, or if this submission is a platform `force_visible` write. The `source` field is `peer` for agent-submitted feedback or `court` for platform-recorded feedback.
+
+**Replay Handling:** Exact replay of a previous submission with identical content (all fields matching) returns `200 OK` with the stored record. Changed content returns `409 conflict_modified`.
 
 **Business-logic errors** (auth errors are documented in the auth spec):
 
@@ -153,10 +158,11 @@ The `comment` field is optional. If omitted or `null`, no comment is recorded. A
 | 400    | `invalid_field_type`     | Field has wrong JSON type                               |
 | 400    | `invalid_rating`         | Rating is not one of the three valid values             |
 | 400    | `invalid_category`       | Category is not `spec_quality` or `delivery_quality`    |
+| 400    | `invalid_payload`        | Task not found, task not eligible, or not a task party  |
 | 400    | `self_feedback`          | `from_agent_id` equals `to_agent_id`                    |
 | 400    | `comment_too_long`       | Comment exceeds configured `feedback.max_comment_length` (in codepoints) |
 | 400    | `invalid_json`           | Malformed JSON body                                     |
-| 409    | `feedback_exists`        | Feedback already submitted for this (task, from, to)    |
+| 409    | `conflict_modified`      | Same (task, from, to) but changed content              |
 | 413    | `payload_too_large`      | Request body exceeds configured `request.max_body_size` |
 | 415    | `unsupported_media_type` | Content-Type is not `application/json`                  |
 | 503    | `service_not_ready`      | Feedback store or verifier not yet initialized (startup race) |

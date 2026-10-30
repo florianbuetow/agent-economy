@@ -13,6 +13,7 @@ from service_commons.maintenance_lock import MaintenanceLockMode, hold_maintenan
 from ui_service.config import get_settings, resolve_recovery_path
 from ui_service.core.state import init_app_state
 from ui_service.logging import get_logger, setup_logging
+from ui_service.services.agents import UserAgentQualityReader
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -43,6 +44,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             factory = AgentFactory(config_path=config_path.resolve())
             user_agent = factory.user_agent(settings.user_agent.handle)
             state.task_board_reader = user_agent
+            state.quality_reader = UserAgentQualityReader(user_agent)
 
             db_uri = f"file:{settings.database.path}?mode=ro"
             try:

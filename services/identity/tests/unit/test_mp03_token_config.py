@@ -23,6 +23,7 @@ def _config() -> dict[str, object]:
             "max_lifetime_seconds": 300,
             "clock_skew_seconds": 30,
         },
+        "registration": {"reserved_names": ["platform"], "trusted_key_files": []},
         "db_gateway": {"url": "http://localhost:8007", "timeout_seconds": 10},
     }
 
@@ -53,5 +54,13 @@ def test_token_policy_configuration_rejects_invalid_values(field: str, value: ob
     token_validation = config["token_validation"]
     assert isinstance(token_validation, dict)
     token_validation[field] = value
+    with pytest.raises(ValidationError):
+        Settings.model_validate(config)
+
+
+@pytest.mark.unit
+def test_registration_configuration_is_required() -> None:
+    config = _config()
+    del config["registration"]
     with pytest.raises(ValidationError):
         Settings.model_validate(config)

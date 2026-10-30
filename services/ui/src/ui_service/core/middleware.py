@@ -21,6 +21,11 @@ _JSON_VALIDATION_ENDPOINTS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/bids/[^/]+/accept$")),
     ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/approve$")),
     ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/dispute$")),
+    ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/cancel$")),
+    ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/bids$")),
+    ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/submit$")),
+    ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/rebuttal$")),
+    ("POST", re.compile(r"^/api/proxy/tasks/[^/]+/feedback$")),
 )
 
 _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})

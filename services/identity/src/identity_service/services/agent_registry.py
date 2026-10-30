@@ -6,13 +6,17 @@ import base64
 from typing import TYPE_CHECKING
 
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from service_auth.jws import JwsAdmissionError, TokenPolicy, parse_jws, verify_jws
 from service_commons.exceptions import ServiceError
 
 from identity_service.services.errors import DuplicateAgentError
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from identity_service.services.protocol import IdentityStorageInterface
 
 
@@ -28,12 +32,16 @@ class AgentRegistry:
         public_key_bytes: int,
         signature_bytes: int,
         token_policy: TokenPolicy,
+        reserved_names: frozenset[str],
+        trusted_key_files: tuple[Path, ...],
     ) -> None:
         self._store = store
         self._public_key_prefix = public_key_prefix
         self._public_key_bytes = public_key_bytes
         self._signature_bytes = signature_bytes
         self._token_policy = token_policy
+        self._reserved_names = reserved_names
+        self._trusted_key_files = trusted_key_files
 
     async def register_agent(self, name: str, public_key: str) -> dict[str, str]:
         """
@@ -47,6 +55,7 @@ class AgentRegistry:
         """
         self._validate_name(name)
         canonical_public_key = self._validate_public_key(public_key)
+        self._check_reserved_name(name, canonical_public_key)
 
         try:
             return await self._store.insert(name, canonical_public_key)
@@ -129,6 +138,33 @@ class AgentRegistry:
     async def close(self) -> None:
         """Close the database connection."""
         await self._store.close()
+
+    def _check_reserved_name(self, name: str, canonical_public_key: str) -> None:
+        """Reject reserved display names unless the key is a pinned platform key."""
+        if name.strip().casefold() not in self._reserved_names:
+            return
+        if canonical_public_key in self._trusted_public_keys():
+            return
+        raise ServiceError(
+            "reserved_name",
+            "This display name is reserved",
+            409,
+            {},
+        )
+
+    def _trusted_public_keys(self) -> set[str]:
+        """Read the pinned PEM public keys; unreadable or absent files pin nothing."""
+        keys: set[str] = set()
+        for path in self._trusted_key_files:
+            try:
+                loaded = serialization.load_pem_public_key(path.read_bytes())
+            except (OSError, ValueError):
+                continue
+            if not isinstance(loaded, Ed25519PublicKey):
+                continue
+            raw = loaded.public_bytes(Encoding.Raw, PublicFormat.Raw)
+            keys.add(f"{self._public_key_prefix}{base64.b64encode(raw).decode()}")
+        return keys
 
     def _validate_name(self, name: str) -> None:
         """Validate agent display name."""

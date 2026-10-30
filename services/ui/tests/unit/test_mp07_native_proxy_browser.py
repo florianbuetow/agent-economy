@@ -590,7 +590,10 @@ def test_create_form_requires_poster_selected_acceptance_window(page: Page) -> N
     page.goto(TASK_URL)
 
     expect(page.locator("#f-accept-window")).to_be_visible()
-    assert page.locator("#f-accept-window").get_attribute("placeholder") == "Required"
+    assert page.locator("#f-accept-window").get_attribute("placeholder") is None
+    expect(page.locator("label[for=f-accept-window]")).to_contain_text(
+        "Acceptance window (seconds)"
+    )
     page.locator("#f-title").fill("Native UI task")
     page.locator("#f-spec").fill("Keep the caller intent explicit.")
     page.locator("#f-reward").fill("75")
@@ -751,7 +754,7 @@ def test_pending_approval_reuses_frozen_intent_after_reload(page: Page) -> None:
         frozen_body["operation_id"],
     )
     assert len(task_reads) == 2
-    expect(page.locator("body")).to_contain_text(re.compile("pending", re.IGNORECASE))
+    expect(page.locator("body")).to_contain_text(re.compile("not finished it yet", re.IGNORECASE))
     expect(page.locator("[data-operation-rejection-reset]")).to_have_count(0)
     stored_intents = _stored_intents(page)
     assert len(stored_intents) == 1
@@ -826,7 +829,9 @@ def test_invalid_completion_ack_retains_intent_without_success(
     assert len(task_reads) == 1
     expect(page.locator("#task-status")).to_have_text("SUBMITTED")
     expect(page.locator("body")).to_contain_text(
-        re.compile("acknowledgment|invalid|malformed|mismatch|response", re.IGNORECASE)
+        re.compile(
+            "acknowledgment|invalid|malformed|mismatch|response|could not read", re.IGNORECASE
+        )
     )
     expect(page.locator("body")).not_to_contain_text("TASK LIFECYCLE COMPLETE")
     expect(page.locator("[data-operation-rejection-reset]")).to_have_count(0)
@@ -907,7 +912,7 @@ def test_proxy_error_retains_intent_without_refresh_or_success(
     assert len(task_reads) == 1
     expect(page.locator("#task-status")).to_have_text("SUBMITTED")
     expect(page.locator("body")).to_contain_text(
-        re.compile("conflict|failed|retry|response", re.IGNORECASE)
+        re.compile("conflict|failed|retry|try again|response", re.IGNORECASE)
     )
     expect(page.locator("body")).not_to_contain_text("TASK LIFECYCLE COMPLETE")
     rejection_reset = page.locator("[data-operation-rejection-reset]")

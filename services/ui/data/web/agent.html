@@ -112,6 +112,17 @@
   .task-count { color: var(--text-dim); font-size: 10px; }
   .load-more { display: block; width: 100%; padding: 9px 14px; border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--cyan); font: 600 10px var(--mono); letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
   .load-more:hover, .load-more:focus-visible { background: var(--bg-hover); outline: none; color: var(--text); }
+  /* ── Activity feed ───────────────────────────────────────── */
+  .act-toolbar { display: flex; gap: 10px; align-items: center; }
+  .act-toolbar select { font-family: var(--mono); font-size: 11px; background: var(--bg); border: 1px solid var(--border-hi); color: var(--text); padding: 4px 6px; }
+  .act-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .act-row:last-child { border-bottom: none; }
+  .act-badge { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; padding: 2px 6px; border: 1px solid var(--border); flex-shrink: 0; min-width: 62px; text-align: center; }
+  .act-role { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; width: 54px; flex-shrink: 0; }
+  .act-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .act-text a, .feedback-row a { color: var(--cyan); text-decoration: none; }
+  .act-text a:hover, .feedback-row a:hover, .act-text a:focus-visible, .feedback-row a:focus-visible { text-decoration: underline; }
+  .act-time { color: var(--text-dim); font-size: 10px; flex-shrink: 0; }
 </style>
 </head>
 <body>

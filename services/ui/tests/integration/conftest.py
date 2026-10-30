@@ -80,7 +80,7 @@ class _FixtureTaskBoardReader:
         connection.row_factory = sqlite3.Row
         try:
             rows = connection.execute(
-                "SELECT bt.*, btc.lifecycle_version, "
+                "SELECT bt.*, btc.lifecycle_version, btc.accepted_bid_amount, "
                 "(SELECT COUNT(*) FROM board_bids bb WHERE bb.task_id = bt.task_id) "
                 "AS _authoritative_bid_count "
                 "FROM board_tasks bt LEFT JOIN board_task_contracts btc "
@@ -123,6 +123,44 @@ class _FixtureTaskBoardReader:
             json={"error": "task_not_found", "message": "Task not found", "details": {}},
         )
         raise httpx.HTTPStatusError("task not found", request=request, response=response)
+
+
+class _FixtureQualityReader:
+    """Network-free stand-in for Reputation ``GET /agents/{id}/quality``.
+
+    Projects the fixture database's visible feedback into the service report
+    shape (one observation per row); the real formula is tested in Reputation.
+    """
+
+    _POINTS = {"dissatisfied": 0, "satisfied": 50, "extremely_satisfied": 100}
+
+    def __init__(self, database: Path) -> None:
+        self._database = database
+
+    async def get_agent_quality(self, agent_id: str) -> dict[str, object]:
+        connection = sqlite3.connect(str(self._database))
+        try:
+            rows = connection.execute(
+                "SELECT category, rating FROM reputation_feedback "
+                "WHERE to_agent_id = ? AND visible = 1",
+                (agent_id,),
+            ).fetchall()
+        finally:
+            connection.close()
+        report: dict[str, object] = {"agent_id": agent_id, "formula_version": "quality-v1"}
+        for category, name in (
+            ("spec_quality", "specification_quality"),
+            ("delivery_quality", "delivery_quality"),
+        ):
+            ratings = [r for c, r in rows if c == category and r in self._POINTS]
+            points = [self._POINTS[r] for r in ratings]
+            report[name] = {
+                "rated": bool(points),
+                "score": (2 * sum(points) + len(points)) // (2 * len(points)) if points else None,
+                "task_count": len(points),
+                "rating_counts": {rating: ratings.count(rating) for rating in self._POINTS},
+            }
+        return report
 
 
 @pytest.fixture
@@ -191,6 +229,7 @@ user_agent:
         test_app = create_app()
         async with lifespan(test_app):
             get_app_state().task_board_reader = _FixtureTaskBoardReader(db_path)
+            get_app_state().quality_reader = _FixtureQualityReader(db_path)
             yield test_app
     finally:
         reset_app_state()

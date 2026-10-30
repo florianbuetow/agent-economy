@@ -79,14 +79,36 @@ class _PublicReviewAgent:
             raise self.task_error
         return self.payload
 
-    async def list_assets(self, task_id: str) -> list[dict[str, object]]:
+    def _auth_header(
+        self, payload: dict[str, object], *, audience: str, resource: str
+    ) -> dict[str, str]:
+        assert audience == "task-board"
+        assert payload["action"] in {"list_assets", "download_asset"}
+        assert resource.startswith(f"GET /tasks/{_TASK_ID}/assets")
+        return {"Authorization": "Bearer fixture"}
+
+    async def _request(
+        self, method: str, url: str, *, headers: dict[str, str]
+    ) -> dict[str, object]:
+        assert method == "GET" and url.endswith("/assets")
+        assert headers == {"Authorization": "Bearer fixture"}
+        return {"assets": await self._list_assets(_TASK_ID)}
+
+    async def _list_assets(self, task_id: str) -> list[dict[str, object]]:
         assert task_id == _TASK_ID
         self.list_asset_calls += 1
         if self.asset_list_error is not None:
             raise self.asset_list_error
         return self.assets
 
-    async def download_asset(self, task_id: str, asset_id: str) -> bytes:
+    async def _request_raw(
+        self, method: str, url: str, *, headers: dict[str, str]
+    ) -> httpx.Response:
+        assert method == "GET" and headers == {"Authorization": "Bearer fixture"}
+        asset_id = url.rsplit("/", 1)[1]
+        return httpx.Response(200, content=await self._download_asset(_TASK_ID, asset_id))
+
+    async def _download_asset(self, task_id: str, asset_id: str) -> bytes:
         assert task_id == _TASK_ID
         assert asset_id == "asset-review-708"
         self.download_asset_calls += 1

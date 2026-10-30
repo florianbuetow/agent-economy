@@ -79,6 +79,7 @@ def _config(path: Path, *, shuffle: bool = False, base_reward: int = 10) -> Task
         execution_deadline_seconds=300,
         review_deadline_seconds=240,
         review_interval_seconds=30,
+        retry_backoff_seconds=1,
         auto_approve_on_error=False,
         base_reward=base_reward,
         reward_per_level=10,

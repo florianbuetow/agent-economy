@@ -86,6 +86,14 @@ class DbGatewayConfig(BaseModel):
     signing: GatewaySigningConfig
 
 
+class RegistrationConfig(BaseModel):
+    """Registration policy: reserved display names and the keys allowed to use them."""
+
+    model_config = ConfigDict(extra="forbid")
+    reserved_names: list[str]
+    trusted_key_files: list[str]
+
+
 class Settings(BaseModel):
     """
     Root configuration container.
@@ -101,6 +109,7 @@ class Settings(BaseModel):
     crypto: CryptoConfig
     request: RequestConfig
     token_validation: TokenValidationConfig
+    registration: RegistrationConfig
     db_gateway: DbGatewayConfig | None = None
 
 

@@ -6,7 +6,7 @@ import pytest
 
 from base_agent.runtime_task_commands import RuntimeTaskCommands
 from math_worker.config import MathWorkerConfig
-from math_worker.loop import MathWorkerLoop
+from math_worker.loop import MathWorkerLoop, _ruling_payout
 
 
 def _make_config(**overrides: object) -> MathWorkerConfig:
@@ -44,26 +44,35 @@ class TestMathWorkerStatusVocabulary:
         agent.list_tasks.assert_awaited_once_with(status="open")
 
     @pytest.mark.asyncio
-    async def test_waiting_for_acceptance_recognizes_accepted_task(self) -> None:
+    async def test_waiting_for_acceptance_returns_task_once_accepted(self) -> None:
         agent = MagicMock()
         agent.agent_id = "a-worker"
-        agent.get_task = AsyncMock(return_value={"status": "accepted", "worker_id": "a-worker"})
+        accepted = {"status": "accepted", "worker_id": "a-worker"}
+        agent.get_task = AsyncMock(return_value=accepted)
         loop = _make_loop(agent)
 
-        accepted = await loop._phase_waiting_for_acceptance("t-1", "b-1")
-
-        assert accepted
+        assert await loop._phase_waiting_for_acceptance("t-1") == accepted
 
     @pytest.mark.asyncio
-    async def test_waiting_for_acceptance_treats_cancelled_as_terminal(self) -> None:
+    async def test_waiting_for_acceptance_returns_cancelled_task_as_left_bidding(self) -> None:
         agent = MagicMock()
         agent.agent_id = "a-worker"
-        agent.get_task = AsyncMock(return_value={"status": "cancelled", "worker_id": None})
+        cancelled = {"status": "cancelled", "worker_id": None}
+        agent.get_task = AsyncMock(return_value=cancelled)
         loop = _make_loop(agent)
 
-        accepted = await loop._phase_waiting_for_acceptance("t-1", "b-1")
+        assert await loop._phase_waiting_for_acceptance("t-1") == cancelled
 
-        assert not accepted
+    @pytest.mark.asyncio
+    async def test_waiting_for_acceptance_still_open_returns_none_without_giving_up(
+        self,
+    ) -> None:
+        agent = MagicMock()
+        agent.agent_id = "a-worker"
+        agent.get_task = AsyncMock(return_value={"status": "open", "worker_id": None})
+        loop = _make_loop(agent)
+
+        assert await loop._phase_waiting_for_acceptance("t-1") is None
 
     @pytest.mark.asyncio
     async def test_waiting_for_review_recognizes_approved_task(self) -> None:
@@ -88,14 +97,20 @@ class TestMathWorkerStatusVocabulary:
     @pytest.mark.asyncio
     async def test_waiting_for_ruling_recognizes_ruled_task(self) -> None:
         agent = MagicMock()
-        agent.get_task = AsyncMock(
-            return_value={"status": "ruled", "worker_pct": 100, "reward": 50}
-        )
+        ruled = {"status": "ruled", "worker_pct": 100, "reward": 50}
+        agent.get_task = AsyncMock(return_value=ruled)
         loop = _make_loop(agent)
 
         result = await loop._phase_waiting_for_ruling("t-1")
 
-        assert result == {"payout": 50, "status": "ruled"}
+        assert result == ruled
+        assert _ruling_payout(ruled) == 50
+
+    def test_ruling_payout_is_worker_pct_of_settlement_amount_rounded_down(self) -> None:
+        assert _ruling_payout({"worker_pct": 50, "accepted_reward": 61, "reward": 61}) == 30
+        assert _ruling_payout({"worker_pct": 60, "accepted_price": 40, "reward": 50}) == 24
+        assert _ruling_payout({"worker_pct": 0, "reward": 50}) == 0
+        assert _ruling_payout({"worker_payout": 50, "reward": 50}) == 0
 
 
 @pytest.mark.unit
@@ -116,7 +131,9 @@ class TestMathWorkerDisputeRebuttal:
             config=_make_config(),
             commands=commands,
         )
-        loop._phase_waiting_for_ruling = AsyncMock(return_value={"payout": 50, "status": "ruled"})
+        loop._phase_waiting_for_ruling = AsyncMock(
+            return_value={"task_id": "t-1", "status": "ruled", "worker_pct": 100, "reward": 50}
+        )
 
         await loop._phase_disputed(
             {
@@ -125,7 +142,7 @@ class TestMathWorkerDisputeRebuttal:
                 "reward": 50,
                 "dispute_reason": "Wrong answer",
             },
-            "4",
+            {"phase": "disputed", "bid_amount": 40, "solution": "4", "outcome": None},
         )
 
         agent.list_disputes.assert_awaited_once_with(task_id="t-1")
@@ -135,3 +152,5 @@ class TestMathWorkerDisputeRebuttal:
             "The submitted answer is correct.",
         )
         agent.file_claim.assert_not_awaited()
+        assert loop._history.records[0].payout == 50
+        assert loop._history.records[0].bid_amount == 40

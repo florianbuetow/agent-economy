@@ -448,7 +448,7 @@ async def test_feeder_sibling_failure_drains_under_lease_before_close_and_releas
         def __init__(self, *, commands: RuntimeTaskCommands, **_kwargs: object) -> None:
             self.commands = commands
 
-        async def run(self) -> None:
+        async def run(self, _backoff: int) -> None:
             sibling_started["acceptance"].set()
             try:
                 await asyncio.Event().wait()
@@ -465,7 +465,7 @@ async def test_feeder_sibling_failure_drains_under_lease_before_close_and_releas
         ) -> None:
             self.commands = commands
 
-        async def run(self, _interval: int) -> None:
+        async def run(self, _interval: int, _backoff: int) -> None:
             sibling_started["review"].set()
             try:
                 await asyncio.Event().wait()

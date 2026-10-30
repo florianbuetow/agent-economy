@@ -20,6 +20,7 @@ async def app(tmp_path):
     """Create a test app with a temporary database."""
     db_path = tmp_path / "test.db"
     generate_keypair("gateway-identity", tmp_path)
+    generate_keypair("platform", tmp_path)
     config_content = f"""
 service:
   name: "identity"
@@ -40,6 +41,9 @@ request:
 token_validation:
   max_lifetime_seconds: 300
   clock_skew_seconds: 0
+registration:
+  reserved_names: ["platform", "operator", "ui operator"]
+  trusted_key_files: ["platform.pub"]
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
@@ -69,6 +73,12 @@ db_gateway:
             token_policy=TokenPolicy(
                 max_lifetime_seconds=settings.token_validation.max_lifetime_seconds,
                 clock_skew_seconds=settings.token_validation.clock_skew_seconds,
+            ),
+            reserved_names=frozenset(
+                n.strip().casefold() for n in settings.registration.reserved_names
+            ),
+            trusted_key_files=tuple(
+                tmp_path / key_file for key_file in settings.registration.trusted_key_files
             ),
         )
         yield test_app

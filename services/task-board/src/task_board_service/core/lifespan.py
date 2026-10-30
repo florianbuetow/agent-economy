@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from service_auth.factory import AgentFactory
 from service_auth.gateway import GatewayRequestSigner
@@ -32,11 +32,90 @@ from task_board_service.services.task_manager import TaskManager
 from task_board_service.services.token_validator import TokenValidator
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable, Coroutine
+    from typing import Any
 
     from fastapi import FastAPI
 
+    from task_board_service.core.state import AppState
     from task_board_service.services.protocol import TaskStorageInterface
+
+
+SupervisedLoop = Literal[
+    "deadline_sweep_task",
+    "posting_recovery_task",
+    "financial_effect_recovery_task",
+]
+
+
+def supervise_loop(
+    state: AppState,
+    attr: SupervisedLoop,
+    loop_factory: Callable[[], Coroutine[Any, Any, None]],
+    *,
+    restart_delay_seconds: float,
+) -> asyncio.Task[None]:
+    """Start a background loop, store it on ``state``, and restart it if it ever stops.
+
+    Cancellation is a deliberate stop and is never restarted. Any other exit (an
+    escaped exception or an unexpected return) is logged and the loop is re-created
+    after ``restart_delay_seconds``, unless the service is shutting down.
+    """
+    return _start_supervised(state, attr, loop_factory, restart_delay_seconds, initial_delay=0)
+
+
+def _start_supervised(
+    state: AppState,
+    attr: SupervisedLoop,
+    loop_factory: Callable[[], Coroutine[Any, Any, None]],
+    restart_delay_seconds: float,
+    *,
+    initial_delay: float,
+) -> asyncio.Task[None]:
+    async def run() -> None:
+        if initial_delay > 0:
+            await asyncio.sleep(initial_delay)
+        await loop_factory()
+
+    task = asyncio.create_task(run(), name=attr)
+    setattr(state, attr, task)
+
+    def on_done(done: asyncio.Task[None]) -> None:
+        if done.cancelled():
+            return
+        logger = get_logger(__name__)
+        error = done.exception()
+        if state.shutting_down or getattr(state, attr) is not done:
+            if error is not None:
+                logger.error(
+                    "Background loop stopped during shutdown",
+                    exc_info=error,
+                    extra={"loop": attr},
+                )
+            return
+        logger.error(
+            "Background loop stopped unexpectedly; restarting",
+            exc_info=error,
+            extra={"loop": attr, "restart_delay_seconds": restart_delay_seconds},
+        )
+        _start_supervised(
+            state,
+            attr,
+            loop_factory,
+            restart_delay_seconds,
+            initial_delay=restart_delay_seconds,
+        )
+
+    task.add_done_callback(on_done)
+    return task
+
+
+async def _stop_loop(task: asyncio.Task[None] | None) -> None:
+    if task is None:
+        return
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
 
 
 @asynccontextmanager
@@ -60,9 +139,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         recovery_store: TaskDbClient | None = None
         task_manager = None
         asset_manager: AssetManager | None = None
-        deadline_sweep_task: asyncio.Task[None] | None = None
-        posting_recovery_task: asyncio.Task[None] | None = None
-        financial_effect_recovery_task: asyncio.Task[None] | None = None
         try:
             # db_gateway configuration is required by Settings and has no fallback.
             gateway_signer = GatewayRequestSigner(
@@ -142,12 +218,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 platform_agent=state.platform_agent,
                 deadline_actor_id=settings.deadline_evaluation.actor_id,
             )
-            deadline_sweep_task = asyncio.create_task(
-                deadline_evaluator.run_periodic_sweep(
-                    settings.deadline_evaluation.evaluation_interval_seconds
-                )
+            sweep_interval = settings.deadline_evaluation.evaluation_interval_seconds
+            supervise_loop(
+                state,
+                "deadline_sweep_task",
+                lambda: deadline_evaluator.run_periodic_sweep(sweep_interval),
+                restart_delay_seconds=sweep_interval,
             )
-            state.deadline_sweep_task = deadline_sweep_task
             asset_manager = AssetManager(
                 store=store,
                 token_validator=token_validator,
@@ -175,12 +252,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 diagnostic_limit=settings.posting_recovery.diagnostic_limit,
             )
             state.posting_recovery = posting_recovery
-            posting_recovery_task = asyncio.create_task(
-                posting_recovery.run_periodic(
-                    interval_seconds=settings.posting_recovery.interval_seconds
-                )
+            posting_interval = settings.posting_recovery.interval_seconds
+            supervise_loop(
+                state,
+                "posting_recovery_task",
+                lambda: posting_recovery.run_periodic(interval_seconds=posting_interval),
+                restart_delay_seconds=posting_interval,
             )
-            state.posting_recovery_task = posting_recovery_task
             recovery_store = TaskDbClient(
                 base_url=settings.db_gateway.url,
                 timeout_seconds=settings.db_gateway.timeout_seconds,
@@ -195,12 +273,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 ),
             )
             state.financial_effect_recovery = financial_effect_recovery
-            financial_effect_recovery_task = asyncio.create_task(
-                financial_effect_recovery.run_periodic(
-                    interval_seconds=settings.financial_effect_recovery.interval_seconds
-                )
+            financial_interval = settings.financial_effect_recovery.interval_seconds
+            supervise_loop(
+                state,
+                "financial_effect_recovery_task",
+                lambda: financial_effect_recovery.run_periodic(interval_seconds=financial_interval),
+                restart_delay_seconds=financial_interval,
             )
-            state.financial_effect_recovery_task = financial_effect_recovery_task
 
             logger.info(
                 "Service starting",
@@ -218,20 +297,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             yield
         finally:
             logger.info("Service shutting down", extra={"uptime_seconds": state.uptime_seconds})
-            if financial_effect_recovery_task is not None:
-                financial_effect_recovery_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await financial_effect_recovery_task
+            state.shutting_down = True
+            await _stop_loop(state.financial_effect_recovery_task)
             if recovery_store is not None:
                 recovery_store.close()
-            if posting_recovery_task is not None:
-                posting_recovery_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await posting_recovery_task
-            if deadline_sweep_task is not None:
-                deadline_sweep_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await deadline_sweep_task
+            await _stop_loop(state.posting_recovery_task)
+            await _stop_loop(state.deadline_sweep_task)
             if asset_manager is not None:
                 asset_manager.close()
             if task_manager is not None:

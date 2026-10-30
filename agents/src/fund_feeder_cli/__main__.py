@@ -19,10 +19,8 @@ import asyncio
 import logging
 import sys
 
-import httpx
-from service_auth.financial_responses import LegacyFinancialEnvelope
-
 from base_agent.factory import AgentFactory
+from fund_agent_cli.__main__ import credit_agent
 
 
 def _parse_args() -> argparse.Namespace:
@@ -71,45 +69,8 @@ async def _fund(amount: int, operation_id: str, reference: str) -> None:
             logger.error("Feeder registration did not return an agent_id")
             sys.exit(1)
 
-        # Step 2: Ensure feeder has a bank account (idempotent)
-        try:
-            await platform.create_account(agent_id=feeder_id, initial_balance=0, operation_id=None)
-            logger.info("Bank account created for feeder")
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 409:
-                logger.info("Bank account already exists for feeder")
-            else:
-                raise
-
-        # Step 3: Credit funds via platform agent
-        result = await platform.credit_account(
-            account_id=feeder_id,
-            amount=amount,
-            reference=reference,
-            operation_id=operation_id,
-        )
-        if result["outcome"] == "legacy_observation":
-            legacy = LegacyFinancialEnvelope.model_validate(result)
-            raise RuntimeError(
-                "Feeder funding received a historical observation "
-                f"(tx_id={legacy.observation.transaction.tx_id}, "
-                f"observed_fact_sha256={legacy.observation.observed_fact_sha256}); "
-                "no native operation confirmation was created"
-            )
-        receipt = result["receipt"]
-        if (
-            result["outcome"] != "native_receipt"
-            or receipt["operation_id"] != operation_id
-            or receipt["operation_kind"] != "credit"
-        ):
-            raise RuntimeError("Feeder funding returned an unexpected receipt")
-        logger.info(
-            "Funding confirmed for %d coins (operation_id=%s, tx_id=%s, balance_after=%s)",
-            amount,
-            receipt["operation_id"],
-            receipt["legs"][0]["transaction_id"],
-            receipt["result"]["balance_after"],
-        )
+        # Step 2-3: Ensure the bank account exists and credit it (shared with fund_agent_cli)
+        receipt = await credit_agent(platform, feeder_id, amount, operation_id, reference)
 
         # Step 4: Verify balance
         balance_info = await feeder.get_balance()

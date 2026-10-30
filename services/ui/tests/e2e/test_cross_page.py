@@ -328,7 +328,7 @@ class TestCrossPageNavigation:
     ) -> None:
         observatory = ObservatoryPage(e2e_page, e2e_server)
         observatory.navigate()
-        e2e_page.locator(".topnav-link:has-text('Task Lifecycle')").click()
+        e2e_page.locator(".topnav-link:has-text('Post')").click()
         e2e_page.wait_for_url("**/task.html")
         e2e_page.locator(".topnav-link:has-text('Home')").click()
         e2e_page.wait_for_url("**/")

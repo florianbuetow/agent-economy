@@ -188,6 +188,7 @@ class ServiceStopTarget:
     config_path: Path
     entrypoint: str
     port: int
+    host: str
 
     @classmethod
     def create(
@@ -237,7 +238,19 @@ class ServiceStopTarget:
             config_path=resolved_config,
             entrypoint=entrypoint,
             port=port,
+            host=_read_server_host(resolved_config),
         )
+
+
+def _read_server_host(config_path: Path) -> str:
+    import yaml
+
+    document = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    server = document.get("server") if isinstance(document, dict) else None
+    host = server.get("host") if isinstance(server, dict) else None
+    if not isinstance(host, str) or not host:
+        raise ValueError(f"Service config has no server.host: {config_path}")
+    return host
 
 
 def _decode_host_string(raw: bytes) -> str:
@@ -506,7 +519,7 @@ def _service_invocation_kind(
         or launcher != target.uvicorn_launcher
     ):
         return None
-    common_tail = ("--host", "127.0.0.1", "--port", str(target.port))
+    common_tail = ("--host", target.host, "--port", str(target.port))
     foreground = (target.entrypoint, "--factory", *common_tail)
     reload = (target.entrypoint, "--factory", "--reload", *common_tail)
     if identity.argv[2:] == foreground:

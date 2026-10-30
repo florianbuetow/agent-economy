@@ -16,6 +16,7 @@
   var activeRecord = null;
   var recoveryInProgress = false;
   var recoveredChoiceRequired = false;
+  var operatorBalance = null;
   var corruptRecordKeys = [];
   var browserConfigPromise = fetch('/api/proxy/browser-config').then(function(response) {
     if (!response.ok) throw new Error('Browser security configuration unavailable.');
@@ -337,21 +338,34 @@
     var separate = document.createElement('button');
     separate.type = 'button';
     separate.className = 'btn btn-cyan';
-    separate.textContent = 'Create separate posting';
+    separate.textContent = 'Post as a new task';
+    separate.title = 'Ignore the saved posting above and post the terms currently in the form as a new task.';
     separate.addEventListener('click', function() { createPosting(true); });
     element.appendChild(separate);
+  }
+
+  function recoveryText(error, fallback) {
+    var base = error && error.message ? String(error.message) : fallback;
+    if (!/[.!?]$/.test(base)) base += '.';
+    return base + ' Next step: press "Check status".';
   }
 
   function renderCompleted(record) {
     var element = operationElement(record);
     if (!element) return;
+    element.style.color = 'var(--green)';
     element.textContent = record.intent.title + ' — Posting completed. ';
-    appendSeparateAction(element);
+    var link = document.createElement('a');
+    link.href = '/task.html?task_id=' + encodeURIComponent(record.intent.task_id);
+    link.textContent = 'Open the task';
+    link.dataset.taskPostingLink = record.intent.task_id;
+    element.appendChild(link);
   }
 
   function renderRecovery(record, message) {
     var element = operationElement(record);
     if (!element) return;
+    element.style.color = '';
     element.textContent = record.intent.title + ' — ' + message + ' ';
     var check = document.createElement('button');
     check.type = 'button';
@@ -361,7 +375,8 @@
     var retry = document.createElement('button');
     retry.type = 'button';
     retry.className = 'btn btn-cyan';
-    retry.textContent = 'Retry exact intent';
+    retry.textContent = 'Try posting again';
+    retry.title = 'Sends the same task again. It cannot create a duplicate.';
     retry.addEventListener('click', function() { submit(record); });
     element.appendChild(check);
     element.appendChild(retry);
@@ -385,10 +400,22 @@
     } catch (_error) { return null; }
   }
 
+  function finishPosting(record) {
+    if (activeRecord !== null && activeRecord.intent.operation_id === record.intent.operation_id) {
+      activeRecord = null;
+    }
+    document.dispatchEvent(new CustomEvent('ate:posting-completed'));
+  }
+
+  function showCompleted(record) {
+    renderCompleted(record);
+    finishPosting(record);
+  }
+
   function complete(record, observation) {
     var existing = existingCompletion(record);
     if (existing !== null) {
-      renderCompleted(record);
+      showCompleted(record);
       return;
     }
     var publication = observation.publication;
@@ -407,15 +434,15 @@
       if (localStorage.getItem(key) !== raw && existingCompletion(record) === null) {
         throw new Error('Completion marker readback failed.');
       }
-      renderCompleted(record);
+      showCompleted(record);
     } catch (_error) {
-      renderRecovery(record, 'Publication succeeded, but completion could not be saved.');
+      renderRecovery(record, 'Your task was posted, but this browser could not save that fact. Next step: press "Check status" to confirm it.');
     }
   }
 
   async function observe(record, kind) {
     if (existingCompletion(record) !== null) {
-      renderCompleted(record);
+      showCompleted(record);
       return;
     }
     var operationId = encodeURIComponent(record.intent.operation_id);
@@ -429,26 +456,27 @@
     }
     var observation = validateObservation(value, response.status, record, kind);
     if (observation.publication.publication_state === 'published') complete(record, observation);
-    else if (existingCompletion(record) !== null) renderCompleted(record);
+    else if (existingCompletion(record) !== null) showCompleted(record);
     else if (observation.publication.publication_state === 'blocked_integrity') {
-      renderRecovery(record, 'Posting is blocked by an integrity finding.');
-    } else renderRecovery(record, 'Posting is pending.');
+      renderRecovery(record, 'Your task was not posted because the platform stopped it for a safety check, and your reward was not spent. Next step: press "Check status". If it stays blocked, ask the operator to review it.');
+    } else renderRecovery(record, 'Your task is not posted yet. The platform is still locking the reward in escrow. Next step: press "Check status" in a few seconds.');
   }
 
   async function submit(record) {
     try { await observe(record, 'submit'); }
-    catch (error) { renderRecovery(record, error.message || 'Posting response was not received.'); }
+    catch (error) { renderRecovery(record, recoveryText(error, 'The platform did not answer, so your task may or may not be posted.')); }
   }
 
   async function checkStatus(record) {
     try { await observe(record, 'status'); }
-    catch (error) { renderRecovery(record, error.message || 'Posting status is unavailable.'); }
+    catch (error) { renderRecovery(record, recoveryText(error, 'The posting status could not be read.')); }
   }
 
   async function createPosting(forceSeparate) {
     var button = document.getElementById('btn-post-task');
     var element = generalErrorElement();
     try {
+      if (activeRecord !== null && existingCompletion(activeRecord) !== null) activeRecord = null;
       if (activeRecord !== null && forceSeparate !== true) {
         await submit(activeRecord);
         return;
@@ -472,6 +500,10 @@
         return;
       }
       var terms = termsFromForm();
+      if (operatorBalance !== null && terms.reward > operatorBalance) {
+        throw new Error('The reward (' + terms.reward + ' \u00a9) is more than your balance (' +
+          operatorBalance + ' \u00a9). The reward is locked in escrow when you post, so lower the reward or add funds first.');
+      }
       if (button) button.disabled = true;
       if (element) element.textContent = '';
       var response = await postingFetch('/api/proxy/task-postings/prepare', terms);
@@ -523,8 +555,7 @@
       }
       for (var recordIndex = 0; recordIndex < records.length; recordIndex += 1) {
         var record = records[recordIndex];
-        if (existingCompletion(record) !== null) renderCompleted(record);
-        else await checkStatus(record);
+        if (existingCompletion(record) === null) await checkStatus(record);
       }
       var unresolved = records.filter(function(record) {
         return existingCompletion(record) === null;
@@ -534,15 +565,19 @@
       else if (unresolved.length > 1) {
         activeRecord = null;
         recoveredChoiceRequired = true;
-      } else if (records.length > 0) activeRecord = records[records.length - 1];
-      else activeRecord = null;
+      } else activeRecord = null;
     } finally {
       recoveryInProgress = false;
     }
   }
 
+  function setBalance(value) {
+    operatorBalance = Number.isSafeInteger(value) && value >= 0 ? value : null;
+  }
+
   ATE.TaskPosting = {
     ready: ready,
+    setBalance: setBalance,
     bindCreateForm: bindCreateForm,
     recoverExisting: recoverExisting
   };

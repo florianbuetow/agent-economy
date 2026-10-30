@@ -1,5 +1,5 @@
-"""Acceptance tests for H-4 (GAP-A7): review-poll exhaustion must record
-TaskOutcome.TIMEOUT with zero payout, not silently auto-approve full reward.
+"""Acceptance tests for H-4 (GAP-A7): review-poll exhaustion must never record
+an approval or earnings; the submitted job stays journaled and resumes (plan 0.5).
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import pytest
 from base_agent.runtime_task_commands import RuntimeTaskCommands
 from math_worker.config import MathWorkerConfig
 from math_worker.history import TaskOutcome
-from math_worker.loop import MathWorkerLoop
+from math_worker.loop import MathWorkerLoop, _ruling_payout
 from tests.unit.math_worker.runtime_fixtures import (
     TASK_ID,
     install_successful_native_transports,
@@ -50,7 +50,7 @@ def _make_full_cycle_llm() -> MagicMock:
     return llm
 
 
-async def _run_timeout_cycle(tmp_path: Path) -> MathWorkerLoop:
+async def _run_timeout_cycle(tmp_path: Path) -> tuple[MathWorkerLoop, dict[str, Any] | None]:
     """Drive the real runtime command boundary to a nonterminal review snapshot."""
     async with runtime_worker(tmp_path / "runtime") as (agent, store, commands):
         mocked = cast("Any", agent)
@@ -62,7 +62,6 @@ async def _run_timeout_cycle(tmp_path: Path) -> MathWorkerLoop:
                 task_snapshot("open", 7),
                 task_snapshot("accepted", 8),
                 task_snapshot("accepted", 8),
-                task_snapshot("accepted", 8),
                 task_snapshot("submitted", 9),
             ]
         )
@@ -71,8 +70,9 @@ async def _run_timeout_cycle(tmp_path: Path) -> MathWorkerLoop:
         loop = MathWorkerLoop(agent, _make_full_cycle_llm(), _make_config(), commands)
 
         await loop._cycle()
+        job = commands.jobs.load(TASK_ID)
 
-    return loop
+    return loop, job
 
 
 def _make_polling_loop(agent: MagicMock) -> MathWorkerLoop:
@@ -83,24 +83,22 @@ def _make_polling_loop(agent: MagicMock) -> MathWorkerLoop:
 @pytest.mark.unit
 class TestReviewPollExhaustionOutcome:
     @pytest.mark.asyncio
-    async def test_cycle_records_timeout_not_approved_on_review_poll_exhaustion(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        loop = await _run_timeout_cycle(tmp_path)
+    async def test_review_poll_exhaustion_records_no_approval(self, tmp_path: Path) -> None:
+        loop, _job = await _run_timeout_cycle(tmp_path)
 
-        assert len(loop._history.records) == 1
-        record = loop._history.records[0]
-        assert record.outcome == TaskOutcome.TIMEOUT
-        assert record.outcome != TaskOutcome.APPROVED
+        assert all(r.outcome != TaskOutcome.APPROVED for r in loop._history.records)
+        assert loop._history.records == []
 
     @pytest.mark.asyncio
-    async def test_cycle_timeout_outcome_has_zero_payout(self, tmp_path: Path) -> None:
-        loop = await _run_timeout_cycle(tmp_path)
+    async def test_review_poll_exhaustion_has_zero_earnings_and_stays_resumable(
+        self, tmp_path: Path
+    ) -> None:
+        loop, job = await _run_timeout_cycle(tmp_path)
 
-        record = loop._history.records[0]
-        assert record.payout == 0
         assert loop._history.total_earnings == 0
+        assert job is not None
+        assert job["phase"] == "submitted"
+        assert job["outcome"] is None
 
 
 @pytest.mark.unit
@@ -137,9 +135,12 @@ class TestPhaseMachineCanonicalStatusVocabulary:
     @pytest.mark.asyncio
     async def test_ruling_polling_normalizes_mixed_case_ruled(self) -> None:
         agent = MagicMock()
-        agent.get_task = AsyncMock(return_value={"status": "Ruled", "worker_payout": 30})
+        agent.get_task = AsyncMock(
+            return_value={"status": "Ruled", "worker_pct": 60, "accepted_reward": 50}
+        )
         loop = _make_polling_loop(agent)
 
         result = await loop._phase_waiting_for_ruling("t-1")
 
-        assert result == {"payout": 30, "status": "ruled"}
+        assert result is not None
+        assert _ruling_payout(result) == 30

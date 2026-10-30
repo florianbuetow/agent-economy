@@ -78,7 +78,7 @@ class _PublicFeederAgent:
         self.events: list[str] = []
         self.tasks: list[dict[str, object]] = []
         self.bids: list[dict[str, object]] = []
-        self.feedback: dict[str, list[dict[str, object]]] = {}
+        self.delivery_scores: dict[str, int | None] = {}
         self.task_payload: dict[str, object] = {}
         self.assets: list[dict[str, object]] = []
         self.asset_content = b""
@@ -112,21 +112,49 @@ class _PublicFeederAgent:
         self.events.append("list_bids")
         return self.bids
 
-    async def get_agent_feedback(self, agent_id: str) -> list[dict[str, object]]:
-        self.events.append(f"feedback:{agent_id}")
-        return self.feedback.get(agent_id, [])
-
     async def get_task(self, task_id: str) -> dict[str, object]:
         assert task_id == _TASK_ID
         self.events.append("get_task")
         return self.task_payload
 
-    async def list_assets(self, task_id: str) -> list[dict[str, object]]:
+    def _auth_header(
+        self, payload: dict[str, object], *, audience: str, resource: str
+    ) -> dict[str, str]:
+        assert audience == "task-board"
+        assert payload["action"] in {"list_assets", "download_asset"}
+        assert resource.startswith(f"GET /tasks/{_TASK_ID}/assets")
+        return {"Authorization": "Bearer fixture"}
+
+    async def _request(
+        self, method: str, url: str, *, headers: dict[str, str] | None = None
+    ) -> dict[str, object]:
+        if url.endswith("/quality"):
+            assert method == "GET" and headers is None
+            agent_id = url.rsplit("/", 2)[1]
+            self.events.append(f"quality:{agent_id}")
+            score = self.delivery_scores.get(agent_id)
+            return {
+                "agent_id": agent_id,
+                "formula_version": "quality-v1",
+                "delivery_quality": {"rated": score is not None, "score": score},
+            }
+        assert method == "GET" and url.endswith("/assets")
+        assert headers == {"Authorization": "Bearer fixture"}
+        return {"assets": await self._list_assets(_TASK_ID)}
+
+    async def _list_assets(self, task_id: str) -> list[dict[str, object]]:
         assert task_id == _TASK_ID
         self.events.append("list_assets")
         return self.assets
 
-    async def download_asset(self, task_id: str, asset_id: str) -> bytes:
+    async def _request_raw(
+        self, method: str, url: str, *, headers: dict[str, str]
+    ) -> httpx.Response:
+        assert method == "GET" and headers == {"Authorization": "Bearer fixture"}
+        asset_id = url.rsplit("/", 1)[1]
+        return httpx.Response(200, content=await self._download_asset(_TASK_ID, asset_id))
+
+    async def _download_asset(self, task_id: str, asset_id: str) -> bytes:
         assert task_id == _TASK_ID
         self.events.append(f"download_asset:{asset_id}")
         return self.asset_content
@@ -516,10 +544,7 @@ async def test_new_acceptance_freezes_source_and_q16_winner_before_transport(
     agent = _PublicFeederAgent()
     agent.task_payload = _open_task()
     agent.bids = [_bid("bid-b", "worker-b", 60), _bid("bid-a", _WORKER_ID, 60)]
-    agent.feedback = {
-        "worker-b": [{"category": "delivery_quality", "rating": "satisfied"}],
-        _WORKER_ID: [{"category": "delivery_quality", "rating": "extremely_satisfied"}],
-    }
+    agent.delivery_scores = {"worker-b": 50, _WORKER_ID: 100}
     with _store(tmp_path, agent) as store:
         loop = _acceptance_loop(agent, _commands(agent, store))
         result = await loop.accept_one(_open_task())
@@ -544,7 +569,7 @@ async def test_new_acceptance_freezes_source_and_q16_winner_before_transport(
         "selected_bid_amount": 60,
     }
     assert agent.events[0] == "list_bids"
-    assert set(agent.events[1:-2]) == {"feedback:worker-b", f"feedback:{_WORKER_ID}"}
+    assert set(agent.events[1:-2]) == {"quality:worker-b", f"quality:{_WORKER_ID}"}
     assert agent.events[-2] == "get_task"
     assert agent.events[-1] == "accept_bid"
 
@@ -763,7 +788,7 @@ async def test_review_poll_replays_known_work_before_filtered_submitted_list(
 
         agent.list_tasks = stop_after_list  # type: ignore[method-assign]
         with patch("task_feeder.review.asyncio.sleep", new=AsyncMock()) as sleep:
-            await loop.run(interval_seconds=1)
+            await loop.run(interval_seconds=1, retry_backoff_seconds=1)
 
     assert agent.events == ["approve_task", "list_tasks:submitted"]
     sleep.assert_awaited_once_with(1)

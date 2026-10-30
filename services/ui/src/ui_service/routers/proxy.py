@@ -1,21 +1,26 @@
 """Proxy route handlers — task lifecycle via UserAgent."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
+from service_commons.exceptions import ServiceError
 
 from ui_service.config import get_settings
-from ui_service.core.deps import DbConn
+from ui_service.core.deps import DbConn, TaskBoardRead
 from ui_service.schemas import (
     BidItem,
+    FeedbackRequest,
     FileDisputeRequest,
     NativeMutationRequest,
     OperatorBidListResponse,
     ProxyIdentityResponse,
+    RebuttalRequest,
+    SubmitBidRequest,
     TaskPostingPrepareRequest,
     TaskPostingRecord,
 )
 from ui_service.services import proxy as proxy_service
 from ui_service.services import tasks as tasks_service
+from ui_service.services.task_board_reads import get_authoritative_task
 
 router = APIRouter()
 
@@ -144,3 +149,77 @@ async def file_dispute(
         expected_lifecycle_version=body.expected_lifecycle_version,
     )
     return JSONResponse(status_code=result.status_code, content=result.body)
+
+
+@router.post("/proxy/tasks/{task_id}/cancel")
+async def cancel_task(task_id: str, body: NativeMutationRequest) -> JSONResponse:
+    """Cancel the operator's own open task."""
+    result = await proxy_service.cancel_task(
+        task_id=task_id,
+        operation_id=body.operation_id,
+        expected_lifecycle_version=body.expected_lifecycle_version,
+    )
+    return JSONResponse(status_code=result.status_code, content=result.body)
+
+
+@router.post("/proxy/tasks/{task_id}/bids")
+async def submit_bid(task_id: str, body: SubmitBidRequest) -> JSONResponse:
+    """Place a binding bid as the operator."""
+    result = await proxy_service.submit_bid(
+        task_id=task_id,
+        amount=body.amount,
+        operation_id=body.operation_id,
+        expected_lifecycle_version=body.expected_lifecycle_version,
+    )
+    return JSONResponse(status_code=201, content=result)
+
+
+@router.post("/proxy/tasks/{task_id}/assets")
+async def upload_asset(task_id: str, request: Request) -> JSONResponse:
+    """Forward one multipart deliverable upload as the assigned operator."""
+    content_type = request.headers.get("content-type", "")
+    if not content_type.lower().startswith("multipart/form-data"):
+        raise ServiceError(
+            "unsupported_media_type",
+            "Content-Type must be multipart/form-data",
+            415,
+            {},
+        )
+    result = await proxy_service.upload_asset(
+        task_id,
+        content=await request.body(),
+        content_type=content_type,
+        idempotency_key=request.headers.get(proxy_service.IDEMPOTENCY_KEY_HEADER),
+    )
+    return JSONResponse(status_code=201, content=result)
+
+
+@router.post("/proxy/tasks/{task_id}/submit")
+async def submit_deliverable(task_id: str, body: NativeMutationRequest) -> JSONResponse:
+    """Submit uploaded deliverables for review as the assigned operator."""
+    result = await proxy_service.submit_deliverable(
+        task_id=task_id,
+        operation_id=body.operation_id,
+        expected_lifecycle_version=body.expected_lifecycle_version,
+    )
+    return JSONResponse(status_code=result.status_code, content=result.body)
+
+
+@router.post("/proxy/tasks/{task_id}/rebuttal")
+async def submit_rebuttal(
+    task_id: str, body: RebuttalRequest, task_board_reader: TaskBoardRead
+) -> JSONResponse:
+    """Rebut the dispute on a task the operator worked."""
+    task = await get_authoritative_task(task_board_reader, task_id=task_id)
+    result = await proxy_service.submit_rebuttal(task, body.rebuttal)
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/proxy/tasks/{task_id}/feedback")
+async def submit_feedback(
+    task_id: str, body: FeedbackRequest, task_board_reader: TaskBoardRead
+) -> JSONResponse:
+    """Rate the counterpart of an approved or ruled task."""
+    task = await get_authoritative_task(task_board_reader, task_id=task_id)
+    result = await proxy_service.submit_feedback(task, body.rating, body.comment)
+    return JSONResponse(status_code=201, content=result)

@@ -248,6 +248,28 @@
     display: flex; align-items: center; gap: 6px;
   }
 
+  /* ── Task page additions ─────────────────── */
+  .action-error {
+    margin: 0 0 12px; padding: 10px 14px; font-size: 12px; line-height: 1.5;
+    color: var(--red); border: 1px solid var(--red); background: var(--bg);
+  }
+  .action-error.action-success { color: var(--green); border-color: var(--green); }
+  .task-section { scroll-margin-top: 12px; border-left: 2px solid transparent; }
+  .task-section.selected { border-left-color: var(--cyan); }
+  .phase-step.current-phase { cursor: pointer; color: var(--text-mid); }
+  .countdown { margin-left: 6px; font-size: 10px; color: var(--amber); }
+  .operator-action { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--border); }
+  .operator-action-label { width: 100%; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--cyan); }
+  .agent-link { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+  .agent-link:hover, .agent-link:focus-visible { color: var(--cyan); }
+  .form-hint { display: block; margin-top: 4px; font-size: 10px; line-height: 1.5; color: var(--text-dim); }
+  .form-note { margin-bottom: 12px; padding: 8px 12px; font-size: 11px; line-height: 1.5; color: var(--text-mid); border: 1px solid var(--border); background: var(--bg); }
+  .form-note strong { color: var(--green); }
+  .task-filters { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .task-filters label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
+  .task-filters select { background: var(--bg); color: var(--text); border: 1px solid var(--border-hi); padding: 4px 6px; font: inherit; }
+  .needs-action-group { padding: 8px 14px 4px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--amber); }
+  .task-terminal-note { padding: 12px 16px; font-size: 11px; text-align: center; color: var(--text-dim); letter-spacing: 1px; }
 </style>
 </head>
 <body>
@@ -260,11 +282,12 @@
     <span class="topnav-sub">Agent Task Economy</span>
   </div>
   <div class="topnav-links">
-    <span class="topnav-link" data-nav="/">Home</span>
-    <span class="topnav-link" data-nav="/observatory.html">Observatory</span>
-    <span class="topnav-link active">Task Lifecycle</span>
-    <span class="topnav-link" data-nav="/quarterly-report.html">Quarterly Report</span>
-    <span class="topnav-link" data-nav="/agent.html">Agents</span>
+    <a class="topnav-link" href="/">Home</a>
+    <a class="topnav-link" href="/observatory.html">Observatory</a>
+    <a class="topnav-link" href="/task.html?view=list" data-job-nav="jobs">Jobs</a>
+    <a class="topnav-link" href="/task.html" data-job-nav="post">Post</a>
+    <a class="topnav-link" href="/quarterly-report.html">Quarterly Report</a>
+    <a class="topnav-link" href="/agent.html">Agents</a>
   </div>
 </nav>
 
@@ -304,6 +327,7 @@
     </div>
     <div class="lifecycle-content" id="lifecycle-content">
       <!-- Phase 0: Create Task Form -->
+      <div id="action-error" class="action-error" role="alert" hidden></div>
       <div id="phase-content"></div>
       <section class="card documents-card" id="documents" aria-labelledby="documents-title" hidden>
         <div class="card-header">

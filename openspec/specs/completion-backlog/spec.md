@@ -1054,3 +1054,75 @@ Local shutdown SHALL identify owned service listeners without probing unrelated 
 - **THEN** macOS listener discovery uses OS socket/process information without hiding mount warnings, and all existing ownership checks remain enforced before signals
 - **AND** focused safety checks and root CI pass before closure
 - **Status:** CLOSED 2026-10-25 — macOS shutdown discovery now uses native socket and process records while preserving ownership and ambiguity checks. Two owned real shutdowns completed without mount warnings; full root CI passed with 478 runtime, 319 browser, and 113 live E2E tests. Evidence: `openspec/changes/complete-agent-economy/evidence/ui-visibility-2026-10-25/final-result.json`.
+
+### Requirement: Robust background work under dependency restarts
+Task Board and the autonomous agents SHALL keep their periodic work alive across an ordinary restart of a dependency, and health SHALL report a dead loop. Source: `docs/plans/2026-10-30-completion-plan.md` items 0.1, 0.2, 0.5.
+
+#### Scenario: T-203 Prove background loops die on a gateway outage
+- **WHEN** the DB Gateway is unreachable for several sweep intervals, or Task Board restarts while the feeder runs
+- **THEN** failing-first tests show the deadline sweep task ending, Task Board `/health` still reporting ok, the feeder process exiting, and a worker never resuming an accepted job after restart
+
+#### Scenario: T-204 Deliver supervised loops, loop liveness, and worker resume
+- **WHEN** T-203 has failing evidence
+- **THEN** the deadline sweep survives transport errors, every Task Board loop task restarts after an unexpected exit, `/health` reports `background_loops` and a non-ok status while any loop is dead, feeder loops back off and continue after `httpx` errors, and a restarted worker resumes accepted, submitted, and disputed jobs exactly once with the ruling payout recorded from `worker_pct`
+- **AND** focused regressions and root CI pass before closure
+
+### Requirement: Durable adjudication delivery
+Court SHALL persist a decision before any settlement or reputation side effect and resume delivery without re-judging. Source: plan items 0.3 and 3.3 (refines T-128/T-129).
+
+#### Scenario: T-205 Prove ruling delivery is not recoverable
+- **WHEN** Reputation fails once after Task Board settled a ruling, judging is interrupted, or two triggers race
+- **THEN** failing-first tests against real Gateway `operation_id` semantics show a reverted dispute with money paid, a dispute stuck in `judging`, and duplicate judge invocations, and show an identical rebuttal replay returning 409 and a late rebuttal accepted
+
+#### Scenario: T-206 Deliver claim-before-deliver rulings, leases, and rebuttal replay
+- **WHEN** T-205 has failing evidence
+- **THEN** the decision is claimed atomically before delivery, acknowledgments replay the stored payload, expired judging leases are reclaimed by the periodic trigger, concurrent triggers yield one ruling, identical rebuttals return 200, changed rebuttals 409, late rebuttals are rejected, and judge failures return a generic 502 body
+- **AND** focused regressions and root CI pass before closure
+
+### Requirement: Party-bound asset access and error hygiene
+Task Board asset reads SHALL require a signed principal that is party to the task, uploads SHALL be bounded by storage quotas and idempotent on retry, and error bodies SHALL not disclose internals. Source: plan items 0.6, 0.8, 2.6 and security findings M1, M6, L4, L5, L6.
+
+#### Scenario: T-207 Prove unauthenticated asset reads and internal error disclosure
+- **WHEN** a non-party client lists or downloads a submitted task's files, an upload is retried after a lost response, or a judge provider fails
+- **THEN** failing-first tests show 200 for the stranger, a duplicate asset, uploader-chosen content types served back, and provider text in the 502 body
+
+#### Scenario: T-208 Deliver signed asset reads, quotas, idempotent uploads, and fixed error bodies
+- **WHEN** T-207 has failing evidence
+- **THEN** list and download require a signed poster, assigned worker, platform, or operator token, downloads are served as `application/octet-stream`, configured per-agent and global byte quotas are enforced, an upload idempotency key returns the stored asset, and Court, Gateway health, and UI bid-list errors use fixed messages while UI `/docs` is disabled
+- **AND** focused regressions and root CI pass before closure
+
+### Requirement: LAN operation of the stack
+The stack SHALL run on one host with agents on any LAN machine, with configured bind hosts, operator funding for any agent, supervised restarts, partial-start cleanup, and cold backup. Source: plan items 1.1 to 1.8.
+
+#### Scenario: T-209 Prove the stack cannot leave loopback
+- **WHEN** `server.host` is set to a LAN address in a service config
+- **THEN** failing-first tests show the launch recipes and stop script still use the literal loopback host, no recipe funds an arbitrary agent id, a failed start tier leaves earlier tiers running, and no backup or supervision recipe exists
+
+#### Scenario: T-210 Deliver configured bind hosts, funding, supervision, cleanup, and backup
+- **WHEN** T-209 has failing evidence
+- **THEN** launch and stop read `server.host` from each service's config, identity, central-bank, task-board, and reputation bind `0.0.0.0` while db-gateway, court, and UI stay loopback, `just fund-agent` credits any registered agent idempotently, `just supervise-install` installs launchd or systemd units that restart a killed service, start-all stops its own processes on a tier failure and logs per service, `just backup`/`just restore` round-trip the data paths, tracked UI logs are removed, and reserved display names are rejected at registration
+- **AND** the remote-agent kit document and README describe the shipped procedure, and focused regressions and root CI pass before closure
+
+### Requirement: Usable human task pages
+The UI SHALL let the operator post repeatedly, find tasks needing action, see errors, and navigate from every agent name and feed item. Source: plan items 0.7, 4.1, 4.3, 4.6, 4.7 (refines T-138/T-139 and T-146/T-147).
+
+#### Scenario: T-211 Prove the task pages block ordinary use
+- **WHEN** the operator posts a second task, looks for submissions awaiting review, or reconnects the event stream
+- **THEN** failing-first evidence shows the old posting re-submitted, no link to the new task, no job filters or needs-action view, silent accept/approve failures, plain-text agent names, an unused agent feed route, and duplicate events after reconnect
+
+#### Scenario: T-212 Deliver repeat posting, navigation, visible errors, and resumable events
+- **WHEN** T-211 has failing evidence
+- **THEN** a second Post Task creates a new task and links to it, every nav has Jobs and Post, the list filters by status and by the operator's role with a needs-action panel, action failures render on the page with plain-language recovery copy, balance and escrow are shown on the create form, every agent name is an anchor, the agent page renders its feed live, the stream honours `Last-Event-ID` without duplicates, and paused feeds buffer events
+- **AND** focused regressions and root CI pass before closure
+
+### Requirement: Effective commit gate
+The commit hook SHALL run a gate that can complete within its timeout. Source: plan "Verification run on 2026-10-30".
+
+#### Scenario: T-213 Prove the commit hook cannot complete from the repository root
+- **WHEN** a commit is made with the session directory at the repository root
+- **THEN** evidence shows the hook running the root gate, being terminated at 300 s, and the commit proceeding ungated
+
+#### Scenario: T-214 Deliver a staged-path commit gate
+- **WHEN** T-213 has evidence
+- **THEN** the hook runs the component `ci-quiet` gates for the components touched by the staged paths, exits 0 quickly for documentation-only commits, and blocks on any failure
+- **AND** root CI remains the closure gate for every item

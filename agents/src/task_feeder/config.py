@@ -37,6 +37,7 @@ class TaskFeederConfig(BaseModel):
     execution_deadline_seconds: int
     review_deadline_seconds: int
     review_interval_seconds: int = 30
+    retry_backoff_seconds: int = Field(strict=True, ge=1)
     auto_approve_on_error: bool = False
     base_reward: int
     reward_per_level: int

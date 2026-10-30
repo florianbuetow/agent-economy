@@ -351,7 +351,8 @@ def test_t01_t06_task_selection_routing(
         nav_text = " ".join(e2e_page.locator(".topnav-links").all_text_contents())
         assert "Home" in nav_text
         assert "Observatory" in nav_text
-        assert "Task Lifecycle" in nav_text
+        assert "Jobs" in nav_text
+        assert "Post" in nav_text
     else:
         raise AssertionError(f"Unhandled ticket: {ticket}")
 

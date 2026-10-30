@@ -30,6 +30,9 @@ request:
 token_validation:
   max_lifetime_seconds: 300
   clock_skew_seconds: 30
+registration:
+  reserved_names: ["platform", "operator"]
+  trusted_key_files: []
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -70,6 +73,9 @@ request:
 token_validation:
   max_lifetime_seconds: 300
   clock_skew_seconds: 30
+registration:
+  reserved_names: ["platform", "operator"]
+  trusted_key_files: []
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)

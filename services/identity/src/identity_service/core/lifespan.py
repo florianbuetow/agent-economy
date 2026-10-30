@@ -60,6 +60,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             max_lifetime_seconds=settings.token_validation.max_lifetime_seconds,
             clock_skew_seconds=settings.token_validation.clock_skew_seconds,
         ),
+        reserved_names=frozenset(
+            name.strip().casefold() for name in settings.registration.reserved_names
+        ),
+        trusted_key_files=tuple(
+            Path(get_config_path()).parent / key_file
+            for key_file in settings.registration.trusted_key_files
+        ),
     )
 
     logger.info(

@@ -1,5 +1,5 @@
 # Base Agent Configuration
-# Environment variable overrides use prefix: AGENT__
+# Settings come from this file; the agents runtime has no environment-variable override prefix.
 
 platform:
   identity_url: "http://localhost:8001"
@@ -47,6 +47,8 @@ task_feeder:
   execution_deadline_seconds: 300
   review_deadline_seconds: 120
   review_interval_seconds: 30
+  # Wait before retrying a loop pass after a dependency (Task Board etc.) error.
+  retry_backoff_seconds: 5
   auto_approve_on_error: false
   base_reward: 10
   reward_per_level: 10
@@ -110,3 +112,71 @@ workers:
       error_backoff_seconds: 5
       min_reward: 50
       max_reward: 10000
+
+# Text-classification workers (G18). To feed classification tasks instead of
+# math, render the tracked seed once and point task_feeder.tasks_file at it:
+#   uv run python -m task_feeder.workloads \
+#     src/task_feeder/workloads/classification_seed.json ../data/classification_tasks.jsonl
+# Pricing is integer percent of the task reward and adapts per task type from
+# the outcomes each worker records in its durable job journal.
+classification_workers:
+  classbot_llm:
+    handle: "classbot_llm"
+    strategy: "llm"
+    llm:
+      base_url: "http://127.0.0.1:1234/v1"
+      api_key: "${LMSTUDIO_API_KEY}"
+      model_id: "gemma-3-1b-it"
+      temperature: 0.2
+      max_tokens: 1024
+    keywords: null
+    behavior:
+      scan_interval_seconds: 10
+      poll_interval_seconds: 3
+      max_poll_attempts: 100
+      error_backoff_seconds: 5
+      min_reward: 1
+      max_reward: 10000
+    pricing:
+      initial_bid_pct: 90
+      min_bid_pct: 60
+      max_bid_pct: 100
+      raise_step_pct: 5
+      lower_step_pct: 10
+      min_samples: 4
+      min_approval_pct: 50
+
+  classbot_keyword:
+    handle: "classbot_keyword"
+    strategy: "keyword"
+    llm: null
+    keywords:
+      positive: ["love", "great", "excellent", "happy", "solid", "reliable", "would buy"]
+      negative: ["terrible", "broke", "awful", "worst", "poor", "bad", "disappointed", "regret", "refund"]
+      neutral: ["arrived", "contains", "ships with", "pages", "box"]
+      billing: ["charged", "invoice", "refund", "payment", "billed", "money back"]
+      bug: ["crash", "does nothing", "freeze", "error"]
+      feature_request: ["could you add", "would be great", "would save"]
+      account: ["password", "login", "sign in", "profile"]
+    behavior:
+      scan_interval_seconds: 10
+      poll_interval_seconds: 3
+      max_poll_attempts: 100
+      error_backoff_seconds: 5
+      min_reward: 1
+      max_reward: 10000
+    pricing:
+      initial_bid_pct: 70
+      min_bid_pct: 40
+      max_bid_pct: 95
+      raise_step_pct: 5
+      lower_step_pct: 10
+      min_samples: 3
+      min_approval_pct: 50
+
+# Measured economy report (G18): reads worker job journals and Reputation quality.
+economy_report:
+  worker_roles: ["classification-worker"]
+  # Normal-approximation z for the Wilson score interval (1.96 = 95%).
+  confidence_z: 1.96
+  quality_timeout_seconds: 5

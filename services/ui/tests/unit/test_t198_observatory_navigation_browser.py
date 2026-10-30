@@ -280,7 +280,7 @@ def _open_agent_profile(
 def test_observatory_exposes_native_encoded_drilldown_links(browser: Browser) -> None:
     page, _ = _open_observatory(browser)
     try:
-        expect(page.locator(".topnav a.topnav-link")).to_have_count(5)
+        expect(page.locator(".topnav a.topnav-link")).to_have_count(6)
         expect(page.locator(".topnav a[aria-current=page]")).to_have_text("Observatory")
         hrefs = page.locator("#feed-scroll a.feed-link").evaluate_all(
             "links => links.map(link => link.getAttribute('href'))"

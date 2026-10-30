@@ -179,9 +179,10 @@ async def _call_submitting(
     task_id: str,
     solution: str,
 ) -> FrozenTaskIntent:
+    job: dict[str, object] = {"upload": None}
     return cast(
         "FrozenTaskIntent",
-        await cast("Any", loop._phase_submitting)(task_id, solution),
+        await cast("Any", loop._phase_submitting)(task_id, solution, job),
     )
 
 
@@ -595,15 +596,13 @@ async def test_only_completed_bid_enters_acceptance_polling(
         mocked_agent = cast("Any", worker_agent)
         mocked_loop._phase_scanning = AsyncMock(return_value=_TASK_ID)
         mocked_loop._phase_bidding = AsyncMock(return_value=bid)
-        mocked_loop._phase_waiting_for_acceptance = AsyncMock(return_value=False)
+        mocked_loop._phase_waiting_for_acceptance = AsyncMock(return_value=None)
         mocked_agent.get_task = AsyncMock(return_value=_task("open", 7))
 
         await loop._cycle()
 
     if should_poll:
-        mocked_loop._phase_waiting_for_acceptance.assert_awaited_once_with(
-            _TASK_ID, f"bid-{_BID_OPERATION_ID[3:]}"
-        )
+        mocked_loop._phase_waiting_for_acceptance.assert_awaited_once_with(_TASK_ID)
     else:
         mocked_loop._phase_waiting_for_acceptance.assert_not_awaited()
         mocked_agent.get_task.assert_not_awaited()
@@ -631,11 +630,13 @@ async def test_only_completed_submission_enters_review_and_can_earn(
         mocked_agent = cast("Any", worker_agent)
         mocked_loop._phase_scanning = AsyncMock(return_value=_TASK_ID)
         mocked_loop._phase_bidding = AsyncMock(return_value=completed_bid)
-        mocked_loop._phase_waiting_for_acceptance = AsyncMock(return_value=True)
+        mocked_loop._phase_waiting_for_acceptance = AsyncMock(side_effect=AssertionError)
         mocked_loop._phase_solving = AsyncMock(return_value="42")
         mocked_loop._phase_submitting = AsyncMock(return_value=submission)
         mocked_loop._phase_waiting_for_review = AsyncMock(return_value="approved")
-        mocked_agent.get_task = AsyncMock(return_value=_task("accepted", 11))
+        mocked_agent.get_task = AsyncMock(
+            side_effect=[_task("accepted", 11), _task("approved", 13)]
+        )
 
         await loop._cycle()
 
@@ -662,9 +663,9 @@ async def test_cycle_replays_known_pending_once_before_new_filtered_discovery(
         events.append("replay")
         raise httpx.ReadTimeout("acknowledgment unavailable", request=request)
 
-    async def discover(*, status: str) -> list[dict[str, object]]:
-        assert status == "open"
-        events.append("discover")
+    async def discover(*, status: str, worker_id: str | None = None) -> list[dict[str, object]]:
+        assert worker_id == (None if status == "open" else _WORKER_ID)
+        events.append(f"discover:{status}")
         return []
 
     mocked = cast("Any", worker_agent)
@@ -675,7 +676,13 @@ async def test_cycle_replays_known_pending_once_before_new_filtered_discovery(
         await loop._cycle()
         retained = store.load(_TASK_ID, "bid")
 
-    assert events == ["replay", "discover"]
+    assert events == [
+        "replay",
+        "discover:accepted",
+        "discover:submitted",
+        "discover:disputed",
+        "discover:open",
+    ]
     assert retained is not None and retained.state == "pending"
     mocked.submit_bid.assert_awaited_once_with(
         _TASK_ID,
@@ -683,5 +690,5 @@ async def test_cycle_replays_known_pending_once_before_new_filtered_discovery(
         operation_id=_BID_OPERATION_ID,
         expected_lifecycle_version=7,
     )
-    mocked.list_tasks.assert_awaited_once_with(status="open")
+    mocked.list_tasks.assert_any_await(status="open")
     _assert_public_transport_only(worker_agent)

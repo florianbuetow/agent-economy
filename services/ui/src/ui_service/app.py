@@ -24,6 +24,8 @@ _ASSET_REFERENCE = re.compile(
     re.IGNORECASE,
 )
 _HTML_CACHE_HEADERS = {"Cache-Control": "no-cache"}
+# Interactive API documentation is disabled; the SPA fallback must not answer for it.
+_DISABLED_DOC_ROUTES = frozenset({"docs", "redoc", "openapi.json"})
 
 
 def create_app() -> FastAPI:
@@ -39,6 +41,9 @@ def create_app() -> FastAPI:
         title=f"{settings.service.name} Service",
         version=settings.service.version,
         lifespan=lifespan,
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
     )
 
     register_exception_handlers(app)
@@ -87,6 +92,8 @@ def _mount_frontend(app: FastAPI, web_root: str) -> None:
 
     async def spa_fallback(full_path: str) -> HTMLResponse:
         """Serve index.html for SPA client-side routing."""
+        if full_path.strip("/").split("/")[0] in _DISABLED_DOC_ROUTES:
+            return HTMLResponse(content="Not Found", status_code=404)
         file_path = _contained_frontend_path(web_dir, full_path)
         if file_path is None:
             return HTMLResponse(content="Not Found", status_code=404)

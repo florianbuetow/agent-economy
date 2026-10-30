@@ -17,6 +17,7 @@ def _make_config(**overrides: object) -> TaskFeederConfig:
         "acceptance_window_seconds": 120,
         "execution_deadline_seconds": 300,
         "review_deadline_seconds": 120,
+        "retry_backoff_seconds": 1,
         "base_reward": 10,
         "reward_per_level": 10,
         "shuffle": True,

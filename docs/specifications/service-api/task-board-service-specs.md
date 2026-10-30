@@ -394,7 +394,7 @@ Both paths call the same `evaluate_deadline` logic, so behavior is identical reg
 
 ### GET /health
 
-Service health check.
+Service health check and background loop liveness.
 
 **Response (200 OK):**
 ```json
@@ -412,9 +412,26 @@ Service health check.
     "disputed": 1,
     "ruled": 1,
     "expired": 0
+  },
+  "background_loops": {
+    "posting_recovery": "running",
+    "financial_effect_recovery": "running",
+    "deadline_sweep": "running"
   }
 }
 ```
+
+**Response (503 Degraded):**
+```json
+{
+  "status": "degraded",
+  "uptime_seconds": 3621,
+  "started_at": "2026-02-20T08:00:00Z",
+  "message": "One or more background loops stopped"
+}
+```
+
+When any background loop has stopped (deadline_sweep, posting_recovery, or financial_effect_recovery), the health check returns `503 Service Unavailable` with status `degraded`.
 
 ---
 
@@ -430,96 +447,9 @@ Create a new task with escrow.
 }
 ```
 
-**`task_token` JWS Payload:**
-```json
-{
-  "action": "create_task",
-  "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
-  "poster_id": "a-alice-uuid",
-  "title": "Implement login page",
-  "spec": "Create a login page with email and password fields. The page must validate email format and enforce minimum 8-character passwords. On success, redirect to /dashboard. On failure, show inline error messages without clearing the form.",
-  "reward": 100,
-  "bidding_deadline_seconds": 86400,
-  "deadline_seconds": 3600,
-  "review_deadline_seconds": 600
-}
-```
+**Payloads, signing and responses:** the legacy example that stood here (no `operation_id`, `protocol_version`, `lock_operation_id` or `acceptance_window_seconds`; `deadline_seconds` instead of `execution_deadline_seconds`) has been removed. The current `task_token` and `escrow_token` payloads, the deterministic `lock_operation_id` recipe with a test vector, and the 201/202 publication semantics are specified in [`agent-protocol.md`](agent-protocol.md) section 4.1 and 6, and in [`task-board-native-operations.md`](task-board-native-operations.md). The success body is the publication envelope (`publication_state`, `operation_id`, `task_id`, `request_sha256`, `lock_operation_id`, `escrow_id`, `result`).
 
-**`escrow_token` JWS Payload:**
-```json
-{
-  "action": "escrow_lock",
-  "agent_id": "a-alice-uuid",
-  "amount": 100,
-  "task_id": "t-550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
-**Validation:**
-
-1. Both `task_token` and `escrow_token` must be present and valid JWS tokens
-2. `task_token` is verified via the Identity service
-3. `task_token.action` must be `"create_task"`
-4. `task_token.poster_id` must match the signer (`kid`) of `task_token`
-5. `task_token.task_id` must match the `t-<uuid4>` format
-6. `task_token.task_id` must not already exist in the database
-7. `escrow_token.task_id` must match `task_token.task_id`
-8. `escrow_token.amount` must match `task_token.reward`
-9. `escrow_token` is forwarded to the Central Bank (not verified locally — the Central Bank handles signature verification)
-
-**Response (201 Created):**
-```json
-{
-  "task_id": "t-550e8400-e29b-41d4-a716-446655440000",
-  "poster_id": "a-alice-uuid",
-  "title": "Implement login page",
-  "spec": "Create a login page with...",
-  "reward": 100,
-  "bidding_deadline_seconds": 86400,
-  "deadline_seconds": 3600,
-  "review_deadline_seconds": 600,
-  "status": "open",
-  "escrow_id": "esc-770e8400-e29b-41d4-a716-446655440000",
-  "bid_count": 0,
-  "worker_id": null,
-  "accepted_bid_id": null,
-  "created_at": "2026-02-27T10:00:00Z",
-  "accepted_at": null,
-  "submitted_at": null,
-  "approved_at": null,
-  "cancelled_at": null,
-  "disputed_at": null,
-  "dispute_reason": null,
-  "dispute_id": null,
-  "ruling_id": null,
-  "ruled_at": null,
-  "worker_pct": null,
-  "ruling_summary": null,
-  "expired_at": null,
-  "escrow_pending": false,
-  "bidding_deadline": "2026-02-28T10:00:00Z",
-  "execution_deadline": null,
-  "review_deadline": null
-}
-```
-
-**Errors:**
-
-| Status | Code                             | Description |
-|--------|----------------------------------|-------------|
-| 400    | `invalid_jws`                   | `task_token` or `escrow_token` is malformed |
-| 400    | `invalid_payload`               | Missing required fields or `action` is not `"create_task"` |
-| 400    | `invalid_task_id`               | `task_id` does not match `t-<uuid4>` format |
-| 400    | `token_mismatch`                | `task_id` or `amount`/`reward` mismatch between tokens |
-| 400    | `invalid_reward`                | Reward is not a positive integer |
-| 400    | `invalid_deadline`              | Any deadline is not a positive integer |
-| 402    | `insufficient_funds`            | Central Bank reports insufficient funds |
-| 403    | `forbidden`                     | JWS verification failed or signer mismatch |
-| 409    | `task_already_exists`           | A task with this `task_id` already exists |
-| 502    | `identity_service_unavailable`  | Cannot reach Identity service |
-| 502    | `central_bank_unavailable`     | Cannot reach Central Bank or escrow lock failed |
-
-**Error rollback:** If the escrow lock succeeds but the database insert fails, the Task Board releases the escrow back to the poster before returning the error.
+**Errors:** use the standard `{"error","message","details"}` body. An insufficient balance is `402 insufficient_funds`, an existing `task_id` is `409`, and an unreachable Identity or Central Bank is `502`.
 
 ---
 
@@ -862,6 +792,8 @@ bytes are received.
 
 List all assets for a task.
 
+**Authentication:** Requires a signed Bearer JWS token. Allowed signers: task poster, assigned worker, platform, or operator. Unsigned requests return `401 unauthorized`; other signers return `403 forbidden`.
+
 **Response (200 OK):**
 ```json
 {
@@ -880,12 +812,14 @@ List all assets for a task.
 }
 ```
 
-**No authentication required.** Returns an empty list if no assets exist.
+Returns an empty list if no assets exist.
 
 **Errors:**
 
 | Status | Code              | Description |
 |--------|-------------------|-------------|
+| 401    | `unauthorized`    | No signed Bearer token provided |
+| 403    | `forbidden`       | Signer is not the poster, worker, platform, or operator |
 | 404    | `task_not_found`  | No task with this `task_id` |
 
 ---
@@ -894,32 +828,18 @@ List all assets for a task.
 
 Download an asset file.
 
-Public bytes are available only while the authoritative task read is nonterminal.
-Unsigned reads observing `approved`, `ruled`, `cancelled` or `expired` return
-`410 artifact_unavailable`; listing and stored evidence remain intact.
-
-The configured human operator may inspect retained terminal assets using a Bearer
-JWS with action `download_asset`, exact `task_id` and `asset_id`, audience
-`task-board`, and resource `GET /tasks/{task_id}/assets/{asset_id}`. Task Board
-verifies the signature and lifetime against the public key of the unique roster
-entry with `type: operator`, and binds its signer ID to that public key through
-Identity. This read-only authority applies across tasks; it grants no economic
-mutation authority. Other signers are rejected. File size/hash and task binding
-checks remain mandatory. Atomic Gateway grants, archive handling, and the
-dedicated Court evidence route remain separate MP-09 work.
+**Authentication:** Requires a signed Bearer JWS token. Allowed signers: task poster, assigned worker, platform, or operator. Unsigned requests return `401 unauthorized`; other signers return `403 forbidden`.
 
 **Response (200 OK):**
 
-Returns the exact file content after checking its size and SHA-256 against the
-authoritative metadata using the same opened file descriptor. Corrupt bytes
-are not returned or silently rewritten.
+Returns the exact file content as `application/octet-stream` after checking its size and SHA-256 against the authoritative metadata. Corrupt bytes are not returned or silently rewritten.
 
-Responses include `Content-Type`, `Cache-Control: no-store`,
+Responses include `Content-Type: application/octet-stream`, `Cache-Control: no-store`,
 `X-Content-Type-Options: nosniff`, and `Content-Disposition` with a safely quoted
 ASCII fallback plus an exact UTF-8 encoded `filename*` parameter.
 
 ```
-Content-Type: application/zip
+Content-Type: application/octet-stream
 Content-Disposition: attachment; filename="login-page.zip"; filename*=UTF-8''login-page.zip
 Cache-Control: no-store
 X-Content-Type-Options: nosniff
@@ -929,12 +849,11 @@ X-Content-Type-Options: nosniff
 
 | Status | Code              | Description |
 |--------|-------------------|-------------|
+| 401    | `unauthorized`    | No signed Bearer token provided |
+| 403    | `forbidden`       | Signer is not the poster, worker, platform, or operator |
 | 404    | `task_not_found`  | No task with this `task_id` |
 | 404    | `asset_not_found` | No asset with this `asset_id` for this task |
 | 409    | `artifact_integrity_blocked` | Stored file size or SHA-256 does not match its recorded metadata |
-| 410    | `artifact_unavailable` | Unsigned request for an approved, ruled, cancelled or expired task |
-| 403    | `forbidden` | Signed request is not from the configured operator identity |
-| 400    | `invalid_payload` | Authenticated action, route, task or asset binding does not match |
 
 ---
 
