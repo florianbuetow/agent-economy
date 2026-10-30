@@ -530,7 +530,7 @@ Service health check. No authentication required.
 
 | Status | Code                   | Description                                          |
 |--------|------------------------|-------------------------------------------------------|
-| 503    | `database_unavailable` | The database file could not be stat'd (`OSError`)     |
+| 503    | `database_unavailable` | The database file could not be accessed (e.g., `OSError`). Error message is fixed text without echoing paths. |
 
 ---
 

@@ -166,10 +166,12 @@ def _fill_form(page: Page, terms: dict[str, object]) -> None:
     page.locator("#f-rev-dl").fill(str(terms["review_deadline_seconds"]))
 
 
-def test_completed_posting_exposes_explicit_separate_posting_action(page: Page) -> None:
+def _route_two_postings(
+    page: Page,
+    prepare_bodies: list[dict[str, Any]],
+    submitted_operations: list[str],
+) -> None:
     prepared = [FIRST_RECORD, SECOND_RECORD]
-    prepare_bodies: list[dict[str, Any]] = []
-    submitted_operations: list[str] = []
 
     def route_request(route: Route) -> None:
         url = route.request.url
@@ -189,28 +191,82 @@ def test_completed_posting_exposes_explicit_separate_posting_action(page: Page) 
             route.abort()
 
     page.route("http://localhost/**", route_request)
+
+
+def test_completed_posting_links_to_the_new_task_in_non_error_styling(page: Page) -> None:
+    _route_two_postings(page, [], [])
     _open(page)
     _fill_form(page, POSTING_TERMS)
     page.locator("#btn-post-task").click()
 
     completed = page.locator(f'[data-task-posting-operation="{FIRST_OPERATION_ID}"]')
-    expect(completed).to_have_count(1)
     expect(completed).to_contain_text("Posting completed")
-    separate = completed.get_by_role("button", name="Create separate posting")
-    expect(separate).to_be_visible()
+    link = completed.get_by_role("link", name="Open the task")
+    expect(link).to_have_attribute("href", f"/task.html?task_id={FIRST_TASK_ID}")
+    assert completed.evaluate("element => element.style.color") == "var(--green)"
+    expect(completed.get_by_role("button")).to_have_count(0)
+
+
+def test_second_post_click_after_completion_posts_the_new_form_terms(page: Page) -> None:
+    prepare_bodies: list[dict[str, Any]] = []
+    submitted_operations: list[str] = []
+    _route_two_postings(page, prepare_bodies, submitted_operations)
+    _open(page)
+    _fill_form(page, POSTING_TERMS)
+    page.locator("#btn-post-task").click()
+    expect(page.locator(f'[data-task-posting-operation="{FIRST_OPERATION_ID}"]')).to_contain_text(
+        "Posting completed"
+    )
 
     second_terms = {**POSTING_TERMS, "title": SECOND_INTENT.title, "reward": SECOND_INTENT.reward}
     _fill_form(page, second_terms)
-    separate.click()
+    page.locator("#btn-post-task").click()
 
     expect(page.locator(f'[data-task-posting-operation="{SECOND_OPERATION_ID}"]')).to_contain_text(
         "Posting completed"
     )
-    assert [body["title"] for body in prepare_bodies] == [
-        FIRST_INTENT.title,
-        SECOND_INTENT.title,
-    ]
+    assert [body["title"] for body in prepare_bodies] == [FIRST_INTENT.title, SECOND_INTENT.title]
     assert submitted_operations == [FIRST_OPERATION_ID, SECOND_OPERATION_ID]
+
+
+def test_completed_postings_from_earlier_sessions_are_not_relisted(page: Page) -> None:
+    prepare_bodies: list[dict[str, Any]] = []
+    submitted_operations: list[str] = []
+    _route_two_postings(page, prepare_bodies, submitted_operations)
+    _open(page)
+    _fill_form(page, POSTING_TERMS)
+    page.locator("#btn-post-task").click()
+    expect(page.locator(f'[data-task-posting-operation="{FIRST_OPERATION_ID}"]')).to_contain_text(
+        "Posting completed"
+    )
+
+    page.reload()
+    page.wait_for_function("() => window.__postingReady === true")
+    expect(page.locator("[data-task-posting-operation]")).to_have_count(0)
+
+    second_terms = {**POSTING_TERMS, "title": SECOND_INTENT.title, "reward": SECOND_INTENT.reward}
+    _fill_form(page, second_terms)
+    page.locator("#btn-post-task").click()
+    expect(page.locator(f'[data-task-posting-operation="{SECOND_OPERATION_ID}"]')).to_contain_text(
+        "Posting completed"
+    )
+    assert submitted_operations == [FIRST_OPERATION_ID, SECOND_OPERATION_ID]
+
+
+def test_reward_above_the_operator_balance_is_blocked_before_anything_is_sent(
+    page: Page,
+) -> None:
+    prepare_bodies: list[dict[str, Any]] = []
+    _route_two_postings(page, prepare_bodies, [])
+    _open(page)
+    page.evaluate("window.ATE.TaskPosting.setBalance(50)")
+    _fill_form(page, {**POSTING_TERMS, "reward": 51})
+    page.locator("#btn-post-task").click()
+
+    expect(page.locator("[data-task-posting-general]")).to_contain_text(
+        "more than your balance (50"
+    )
+    assert prepare_bodies == []
 
 
 def test_multiple_recovered_records_require_operation_specific_retry(page: Page) -> None:
@@ -275,7 +331,7 @@ def test_multiple_recovered_records_require_operation_specific_retry(page: Page)
             f"/api/proxy/task-postings/{FIRST_OPERATION_ID}/submit"
         )
     ):
-        first.get_by_role("button", name="Retry exact intent").click()
+        first.get_by_role("button", name="Try posting again").click()
     assert submit_operations == [FIRST_OPERATION_ID]
 
 

@@ -88,6 +88,7 @@ Register a new agent identity. Open and self-service — no authentication is re
 | 400    | `invalid_public_key`  | Key does not start with the configured prefix, is not valid base64, decodes to the wrong length, is all-zero, or is not a valid Ed25519 point |
 | 400    | `invalid_json`        | Request body is malformed JSON        |
 | 409    | `public_key_exists`   | This public key is already registered |
+| 409    | `reserved_name`       | This display name is reserved         |
 | 413    | `payload_too_large`   | Request body exceeds the configured max size |
 | 415    | `unsupported_media_type` | `Content-Type` is not `application/json` |
 

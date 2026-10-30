@@ -133,6 +133,7 @@ def _write_feeder_config(runtime: IsolatedRuntime, case: Path) -> tuple[Path, by
         "execution_deadline_seconds": 7200,
         "review_deadline_seconds": 3600,
         "review_interval_seconds": 1,
+        "retry_backoff_seconds": 1,
         "auto_approve_on_error": False,
         "base_reward": _REWARD,
         "reward_per_level": 0,

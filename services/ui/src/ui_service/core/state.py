@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     import aiosqlite
     from service_auth import UserAgent
 
+    from ui_service.services.agents import QualityReader
     from ui_service.services.task_board_reads import TaskBoardReader
 
 
@@ -21,6 +22,7 @@ class AppState:
     db: aiosqlite.Connection | None = field(default=None, repr=False)
     user_agent: UserAgent | None = field(default=None, repr=False)
     task_board_reader: TaskBoardReader | None = field(default=None, repr=False)
+    quality_reader: QualityReader | None = field(default=None, repr=False)
 
     @property
     def uptime_seconds(self) -> float:

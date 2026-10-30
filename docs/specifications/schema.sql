@@ -1,27 +1,27 @@
--- Agent Task Economy — Unified SQLite Schema v5
+-- Runtime schema loaded by the DB Gateway on a fresh database (config: database.schema_path).
+-- Generated from db_gateway_service/schema_resources: current_v6.sql, task_operations_v3.sql,
+-- publication_v6.sql, task_effect_recovery_v5.sql, artifacts_v6.sql. Edit those, not this file.
+
+-- Agent Task Economy — Unified SQLite Schema v6 base
 -- Single file: data/economy.db
 -- Table prefix per service domain
 -- All timestamps are ISO 8601 UTC
 -- All IDs are TEXT with format prefixes (a-, t-, bid-, esc-, etc.)
 
 -- Connection PRAGMAs are applied by DbWriter only after schema admission.
+-- V6 is created fresh only; there is no migration into V6 (older data is reset).
 
 CREATE TABLE schema_metadata (
     singleton                        INTEGER PRIMARY KEY CHECK (singleton = 1),
-    version                          INTEGER NOT NULL CHECK (version = 5),
+    version                          INTEGER NOT NULL CHECK (version = 6),
     migrated_from_version            INTEGER,
     migration_backup_id              TEXT,
     migration_backup_manifest_sha256 TEXT,
 
     CHECK (
-        (migrated_from_version IS NULL
-         AND migration_backup_id IS NULL
-         AND migration_backup_manifest_sha256 IS NULL)
-        OR
-        (migrated_from_version IS NOT NULL
-         AND migrated_from_version = 4
-         AND migration_backup_id IS NOT NULL
-         AND migration_backup_manifest_sha256 IS NOT NULL)
+        migrated_from_version IS NULL
+        AND migration_backup_id IS NULL
+        AND migration_backup_manifest_sha256 IS NULL
     )
 ) WITHOUT ROWID;
 
@@ -31,7 +31,7 @@ INSERT INTO schema_metadata (
     migrated_from_version,
     migration_backup_id,
     migration_backup_manifest_sha256
-) VALUES (1, 5, NULL, NULL, NULL);
+) VALUES (1, 6, NULL, NULL, NULL);
 
 -- ============================================================================
 -- IDENTITY
@@ -45,6 +45,7 @@ CREATE TABLE identity_agents (
     public_key     TEXT NOT NULL UNIQUE,        -- "ed25519:<base64>"
     registered_at  TEXT NOT NULL                -- ISO 8601
 );
+
 
 -- ============================================================================
 -- CENTRAL BANK
@@ -219,6 +220,7 @@ CREATE TABLE reputation_feedback (
     submitted_at   TEXT NOT NULL,
     visible        INTEGER NOT NULL DEFAULT 0,  -- 0 = sealed, 1 = revealed
                                                 -- revealed when both parties submit
+    source         TEXT,                        -- feedback origin; NULL until a writer sets it
 
     FOREIGN KEY (task_id)       REFERENCES board_tasks (task_id),
     FOREIGN KEY (from_agent_id) REFERENCES identity_agents (agent_id),
@@ -869,130 +871,240 @@ CREATE TABLE board_legacy_effect_observations (
 
 CREATE INDEX idx_board_legacy_effect_task
     ON board_legacy_effect_observations (task_id, unresolved, observation_id);
--- MP-05 schema-v4 durable task-publication sidecars.
--- Applied only to an admitted v3 schema by the explicit v3-to-v4 migration.
+
+-- MP-09 V6 publication journal; replaces publication_v4.sql in the current V6 catalog.
 
 CREATE TABLE board_task_publications (
     operation_id TEXT PRIMARY KEY NOT NULL
-            CHECK (typeof(operation_id) = 'text'
-                   AND length(operation_id) = 39
-                   AND substr(operation_id, 1, 3) = 'op-'
-                   AND substr(operation_id, 12, 1) = '-'
-                   AND substr(operation_id, 17, 1) = '-'
-                   AND substr(operation_id, 22, 1) = '-'
-                   AND substr(operation_id, 27, 1) = '-'
-                   AND length(replace(substr(operation_id, 4), '-', '')) = 32
-                   AND replace(substr(operation_id, 4), '-', '') NOT GLOB '*[^0-9a-f]*'),
+        CHECK (typeof(operation_id)='text' AND length(operation_id)=39
+               AND substr(operation_id,1,3)='op-' AND substr(operation_id,12,1)='-'
+               AND substr(operation_id,17,1)='-' AND substr(operation_id,22,1)='-'
+               AND substr(operation_id,27,1)='-'
+               AND length(replace(substr(operation_id,4),'-',''))=32
+               AND replace(substr(operation_id,4),'-','') NOT GLOB '*[^0-9a-f]*'),
     publication_contract_version INTEGER NOT NULL
-            CHECK (typeof(publication_contract_version) = 'integer'
-                   AND publication_contract_version = 1),
+        CHECK (typeof(publication_contract_version)='integer' AND publication_contract_version=1),
     task_id TEXT NOT NULL UNIQUE
-            CHECK (typeof(task_id) = 'text'
-                   AND length(task_id) = 38
-                   AND substr(task_id, 1, 2) = 't-'
-                   AND substr(task_id, 11, 1) = '-'
-                   AND substr(task_id, 16, 1) = '-'
-                   AND substr(task_id, 21, 1) = '-'
-                   AND substr(task_id, 26, 1) = '-'
-                   AND length(replace(substr(task_id, 3), '-', '')) = 32
-                   AND lower(replace(substr(task_id, 3), '-', '')) NOT GLOB '*[^0-9a-f]*'),
+        CHECK (typeof(task_id)='text' AND length(task_id)=38
+               AND substr(task_id,1,2)='t-' AND substr(task_id,11,1)='-'
+               AND substr(task_id,16,1)='-' AND substr(task_id,21,1)='-'
+               AND substr(task_id,26,1)='-'
+               AND length(replace(substr(task_id,3),'-',''))=32
+               AND lower(replace(substr(task_id,3),'-','')) NOT GLOB '*[^0-9a-f]*'),
     canonical_request_json TEXT NOT NULL
-            CHECK (typeof(canonical_request_json) = 'text'
-                   AND json_valid(canonical_request_json) = 1
-                   AND json_type(canonical_request_json) = 'object'),
+        CHECK (typeof(canonical_request_json)='text' AND json_valid(canonical_request_json)=1
+               AND json_type(canonical_request_json)='object'),
     request_sha256 TEXT NOT NULL
-            CHECK (typeof(request_sha256) = 'text'
-                   AND length(request_sha256) = 64
-                   AND request_sha256 NOT GLOB '*[^0-9a-f]*'),
-    caller_kid TEXT NOT NULL
-            CHECK (typeof(caller_kid) = 'text' AND length(CAST(caller_kid AS BLOB)) > 0),
-    actor_id TEXT NOT NULL
-            CHECK (typeof(actor_id) = 'text' AND length(CAST(actor_id AS BLOB)) > 0),
+        CHECK (typeof(request_sha256)='text' AND length(request_sha256)=64
+               AND request_sha256 NOT GLOB '*[^0-9a-f]*'),
+    caller_kid TEXT NOT NULL CHECK (typeof(caller_kid)='text' AND length(CAST(caller_kid AS BLOB))>0),
+    actor_id TEXT NOT NULL CHECK (typeof(actor_id)='text' AND length(CAST(actor_id AS BLOB))>0),
     lock_operation_id TEXT NOT NULL UNIQUE
-            CHECK (typeof(lock_operation_id) = 'text'
-                   AND length(lock_operation_id) = 39
-                   AND substr(lock_operation_id, 1, 3) = 'op-'
-                   AND substr(lock_operation_id, 12, 1) = '-'
-                   AND substr(lock_operation_id, 17, 1) = '-'
-                   AND substr(lock_operation_id, 22, 1) = '-'
-                   AND substr(lock_operation_id, 27, 1) = '-'
-                   AND length(replace(substr(lock_operation_id, 4), '-', '')) = 32
-                   AND replace(substr(lock_operation_id, 4), '-', '') NOT GLOB '*[^0-9a-f]*'),
-    state TEXT NOT NULL
-            CHECK (typeof(state) = 'text'
-                   AND state IN ('awaiting_lock', 'published', 'blocked_integrity')),
-    admitted_at_us INTEGER NOT NULL
-            CHECK (typeof(admitted_at_us) = 'integer'
-                   AND admitted_at_us BETWEEN 0 AND 9223372036854775807),
+        CHECK (typeof(lock_operation_id)='text' AND length(lock_operation_id)=39
+               AND substr(lock_operation_id,1,3)='op-' AND substr(lock_operation_id,12,1)='-'
+               AND substr(lock_operation_id,17,1)='-' AND substr(lock_operation_id,22,1)='-'
+               AND substr(lock_operation_id,27,1)='-'
+               AND length(replace(substr(lock_operation_id,4),'-',''))=32
+               AND replace(substr(lock_operation_id,4),'-','') NOT GLOB '*[^0-9a-f]*'),
+    state TEXT NOT NULL CHECK (state IN (
+        'awaiting_inputs','awaiting_publish','awaiting_lock','published','blocked_integrity'
+    )),
+    admitted_at_us INTEGER NOT NULL CHECK (
+        typeof(admitted_at_us)='integer' AND admitted_at_us BETWEEN 0 AND 9223372036854775807
+    ),
     escrow_id TEXT,
     lock_request_sha256 TEXT,
     lock_receipt_event_id INTEGER,
     published_at_us INTEGER,
     creation_event_id INTEGER UNIQUE,
-    result_json TEXT
-            CHECK (result_json IS NULL
-                   OR (typeof(result_json) = 'text'
-                       AND json_valid(result_json) = 1
-                       AND json_type(result_json) = 'object')),
-    error_json TEXT
-            CHECK (error_json IS NULL
-                   OR (typeof(error_json) = 'text'
-                       AND json_valid(error_json) = 1
-                       AND json_type(error_json) = 'object')),
-    CHECK (operation_id != lock_operation_id),
-    CHECK (escrow_id IS NULL
-           OR (typeof(escrow_id) = 'text' AND length(CAST(escrow_id AS BLOB)) > 0)),
-    CHECK (lock_request_sha256 IS NULL
-           OR (typeof(lock_request_sha256) = 'text'
-               AND length(lock_request_sha256) = 64
-               AND lock_request_sha256 NOT GLOB '*[^0-9a-f]*')),
-    CHECK (lock_receipt_event_id IS NULL
-           OR (typeof(lock_receipt_event_id) = 'integer'
-               AND lock_receipt_event_id BETWEEN 1 AND 9223372036854775807)),
-    CHECK (published_at_us IS NULL
-           OR (typeof(published_at_us) = 'integer'
-               AND published_at_us BETWEEN admitted_at_us AND 9223372036854775807)),
-    CHECK (creation_event_id IS NULL
-           OR (typeof(creation_event_id) = 'integer'
-               AND creation_event_id BETWEEN 1 AND 9223372036854775807)),
+    result_json TEXT CHECK (result_json IS NULL OR (
+        typeof(result_json)='text' AND json_valid(result_json)=1 AND json_type(result_json)='object'
+    )),
+    error_json TEXT CHECK (error_json IS NULL OR (
+        typeof(error_json)='text' AND json_valid(error_json)=1 AND json_type(error_json)='object'
+    )),
+    request_protocol_version INTEGER NOT NULL
+        CHECK (typeof(request_protocol_version)='integer' AND request_protocol_version IN (1,2)),
+    expected_input_count INTEGER CHECK (expected_input_count IS NULL OR (
+        typeof(expected_input_count)='integer' AND expected_input_count BETWEEN 0 AND 9223372036854775807
+    )),
+    base_request_sha256 TEXT CHECK (base_request_sha256 IS NULL OR (
+        typeof(base_request_sha256)='text' AND length(base_request_sha256)=64
+        AND base_request_sha256 NOT GLOB '*[^0-9a-f]*'
+    )),
+    freeze_operation_id TEXT UNIQUE,
+    canonical_freeze_request_json TEXT CHECK (canonical_freeze_request_json IS NULL OR (
+        typeof(canonical_freeze_request_json)='text' AND json_valid(canonical_freeze_request_json)=1
+        AND json_type(canonical_freeze_request_json)='object'
+    )),
+    freeze_request_sha256 TEXT,
+    input_manifest_sha256 TEXT,
+    publication_contract_sha256 TEXT,
+    inputs_frozen_at_us INTEGER,
+    publish_operation_id TEXT UNIQUE,
+    canonical_publish_request_json TEXT CHECK (canonical_publish_request_json IS NULL OR (
+        typeof(canonical_publish_request_json)='text' AND json_valid(canonical_publish_request_json)=1
+        AND json_type(canonical_publish_request_json)='object'
+    )),
+    publish_request_sha256 TEXT,
+    publish_authorized_at_us INTEGER,
+    UNIQUE (operation_id,task_id),
+    UNIQUE (operation_id,task_id,actor_id),
+    CHECK (operation_id!=lock_operation_id),
+    CHECK (freeze_operation_id IS NULL OR (
+        typeof(freeze_operation_id)='text' AND length(freeze_operation_id)=39
+        AND substr(freeze_operation_id,1,3)='op-'
+        AND substr(freeze_operation_id,12,1)='-'
+        AND substr(freeze_operation_id,17,1)='-'
+        AND substr(freeze_operation_id,22,1)='-'
+        AND substr(freeze_operation_id,27,1)='-'
+        AND length(replace(substr(freeze_operation_id,4),'-',''))=32
+        AND replace(substr(freeze_operation_id,4),'-','') NOT GLOB '*[^0-9a-f]*'
+        AND freeze_operation_id NOT IN (operation_id,lock_operation_id)
+    )),
+    CHECK (publish_operation_id IS NULL OR (
+        typeof(publish_operation_id)='text' AND length(publish_operation_id)=39
+        AND substr(publish_operation_id,1,3)='op-'
+        AND substr(publish_operation_id,12,1)='-'
+        AND substr(publish_operation_id,17,1)='-'
+        AND substr(publish_operation_id,22,1)='-'
+        AND substr(publish_operation_id,27,1)='-'
+        AND length(replace(substr(publish_operation_id,4),'-',''))=32
+        AND replace(substr(publish_operation_id,4),'-','') NOT GLOB '*[^0-9a-f]*'
+        AND publish_operation_id NOT IN (operation_id,lock_operation_id)
+        AND (freeze_operation_id IS NULL OR publish_operation_id!=freeze_operation_id)
+    )),
+    CHECK (freeze_request_sha256 IS NULL OR (
+        typeof(freeze_request_sha256)='text' AND length(freeze_request_sha256)=64
+        AND freeze_request_sha256 NOT GLOB '*[^0-9a-f]*'
+    )),
+    CHECK (input_manifest_sha256 IS NULL OR (
+        typeof(input_manifest_sha256)='text' AND length(input_manifest_sha256)=64
+        AND input_manifest_sha256 NOT GLOB '*[^0-9a-f]*'
+    )),
+    CHECK (publication_contract_sha256 IS NULL OR (
+        typeof(publication_contract_sha256)='text' AND length(publication_contract_sha256)=64
+        AND publication_contract_sha256 NOT GLOB '*[^0-9a-f]*'
+    )),
+    CHECK (publish_request_sha256 IS NULL OR (
+        typeof(publish_request_sha256)='text' AND length(publish_request_sha256)=64
+        AND publish_request_sha256 NOT GLOB '*[^0-9a-f]*'
+    )),
+    CHECK (inputs_frozen_at_us IS NULL OR (
+        typeof(inputs_frozen_at_us)='integer' AND inputs_frozen_at_us BETWEEN admitted_at_us AND 9223372036854775807
+    )),
+    CHECK (publish_authorized_at_us IS NULL OR (
+        typeof(publish_authorized_at_us)='integer'
+        AND publish_authorized_at_us BETWEEN admitted_at_us AND 9223372036854775807
+    )),
+    CHECK (escrow_id IS NULL OR (typeof(escrow_id)='text' AND length(CAST(escrow_id AS BLOB))>0)),
+    CHECK (lock_request_sha256 IS NULL OR (
+        typeof(lock_request_sha256)='text' AND length(lock_request_sha256)=64
+        AND lock_request_sha256 NOT GLOB '*[^0-9a-f]*'
+    )),
+    CHECK (lock_receipt_event_id IS NULL OR (
+        typeof(lock_receipt_event_id)='integer' AND lock_receipt_event_id BETWEEN 1 AND 9223372036854775807
+    )),
+    CHECK (published_at_us IS NULL OR (
+        typeof(published_at_us)='integer' AND published_at_us BETWEEN admitted_at_us AND 9223372036854775807
+    )),
+    CHECK (creation_event_id IS NULL OR (
+        typeof(creation_event_id)='integer' AND creation_event_id BETWEEN 1 AND 9223372036854775807
+    )),
     CHECK (
-        (state = 'awaiting_lock'
-         AND escrow_id IS NULL
-         AND lock_request_sha256 IS NULL
-         AND lock_receipt_event_id IS NULL
-         AND published_at_us IS NULL
-         AND creation_event_id IS NULL
-         AND result_json IS NULL
-         AND error_json IS NULL)
+        (request_protocol_version=1
+         AND expected_input_count IS NULL AND base_request_sha256 IS NULL
+         AND freeze_operation_id IS NULL AND canonical_freeze_request_json IS NULL
+         AND freeze_request_sha256 IS NULL AND input_manifest_sha256 IS NULL
+         AND publication_contract_sha256 IS NULL AND inputs_frozen_at_us IS NULL
+         AND publish_operation_id IS NULL AND canonical_publish_request_json IS NULL
+         AND publish_request_sha256 IS NULL AND publish_authorized_at_us IS NULL
+         AND state IN ('awaiting_lock','published','blocked_integrity'))
         OR
-        (state = 'published'
-         AND escrow_id IS NOT NULL
-         AND lock_request_sha256 IS NOT NULL
-         AND lock_receipt_event_id IS NOT NULL
-         AND published_at_us IS NOT NULL
-         AND creation_event_id IS NOT NULL
-         AND result_json IS NOT NULL
-         AND error_json IS NULL)
-        OR
-        (state = 'blocked_integrity'
-         AND escrow_id IS NULL
-         AND lock_request_sha256 IS NULL
-         AND lock_receipt_event_id IS NULL
-         AND published_at_us IS NULL
-         AND creation_event_id IS NULL
-         AND result_json IS NULL
-         AND error_json IS NOT NULL)
+        (request_protocol_version=2
+         AND task_id=lower(task_id)
+         AND expected_input_count IS NOT NULL AND base_request_sha256 IS NOT NULL)
     ),
-    FOREIGN KEY (escrow_id) REFERENCES bank_escrow (escrow_id)
-        ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (lock_receipt_event_id) REFERENCES events (event_id)
-        ON UPDATE RESTRICT ON DELETE RESTRICT,
-    FOREIGN KEY (creation_event_id) REFERENCES events (event_id)
-        ON UPDATE RESTRICT ON DELETE RESTRICT
+    CHECK (
+        request_protocol_version=1 OR
+        (state='awaiting_inputs'
+         AND freeze_operation_id IS NULL AND canonical_freeze_request_json IS NULL
+         AND freeze_request_sha256 IS NULL AND input_manifest_sha256 IS NULL
+         AND publication_contract_sha256 IS NULL AND inputs_frozen_at_us IS NULL
+         AND publish_operation_id IS NULL AND canonical_publish_request_json IS NULL
+         AND publish_request_sha256 IS NULL AND publish_authorized_at_us IS NULL
+         AND escrow_id IS NULL AND lock_request_sha256 IS NULL
+         AND lock_receipt_event_id IS NULL AND published_at_us IS NULL
+         AND creation_event_id IS NULL AND result_json IS NULL AND error_json IS NULL)
+        OR
+        (state='awaiting_publish'
+         AND freeze_operation_id IS NOT NULL AND canonical_freeze_request_json IS NOT NULL
+         AND freeze_request_sha256 IS NOT NULL AND input_manifest_sha256 IS NOT NULL
+         AND publication_contract_sha256 IS NOT NULL AND inputs_frozen_at_us IS NOT NULL
+         AND publish_operation_id IS NULL AND canonical_publish_request_json IS NULL
+         AND publish_request_sha256 IS NULL AND publish_authorized_at_us IS NULL
+         AND escrow_id IS NULL AND lock_request_sha256 IS NULL
+         AND lock_receipt_event_id IS NULL AND published_at_us IS NULL
+         AND creation_event_id IS NULL AND result_json IS NULL AND error_json IS NULL)
+        OR
+        (state='awaiting_lock'
+         AND freeze_operation_id IS NOT NULL AND canonical_freeze_request_json IS NOT NULL
+         AND freeze_request_sha256 IS NOT NULL AND input_manifest_sha256 IS NOT NULL
+         AND publication_contract_sha256 IS NOT NULL AND inputs_frozen_at_us IS NOT NULL
+         AND publish_operation_id IS NOT NULL AND canonical_publish_request_json IS NOT NULL
+         AND publish_request_sha256 IS NOT NULL AND publish_authorized_at_us IS NOT NULL
+         AND escrow_id IS NULL AND lock_request_sha256 IS NULL
+         AND lock_receipt_event_id IS NULL AND published_at_us IS NULL
+         AND creation_event_id IS NULL AND result_json IS NULL AND error_json IS NULL)
+        OR
+        (state='published'
+         AND freeze_operation_id IS NOT NULL AND canonical_freeze_request_json IS NOT NULL
+         AND freeze_request_sha256 IS NOT NULL AND input_manifest_sha256 IS NOT NULL
+         AND publication_contract_sha256 IS NOT NULL AND inputs_frozen_at_us IS NOT NULL
+         AND publish_operation_id IS NOT NULL AND canonical_publish_request_json IS NOT NULL
+         AND publish_request_sha256 IS NOT NULL AND publish_authorized_at_us IS NOT NULL
+         AND escrow_id IS NOT NULL AND lock_request_sha256 IS NOT NULL
+         AND lock_receipt_event_id IS NOT NULL AND published_at_us IS NOT NULL
+         AND creation_event_id IS NOT NULL AND result_json IS NOT NULL AND error_json IS NULL)
+        OR
+        (state='blocked_integrity'
+         AND freeze_operation_id IS NOT NULL AND canonical_freeze_request_json IS NOT NULL
+         AND freeze_request_sha256 IS NOT NULL AND input_manifest_sha256 IS NOT NULL
+         AND publication_contract_sha256 IS NOT NULL AND inputs_frozen_at_us IS NOT NULL
+         AND publish_operation_id IS NOT NULL AND canonical_publish_request_json IS NOT NULL
+         AND publish_request_sha256 IS NOT NULL AND publish_authorized_at_us IS NOT NULL
+         AND escrow_id IS NULL AND lock_request_sha256 IS NULL
+         AND lock_receipt_event_id IS NULL AND published_at_us IS NULL
+         AND creation_event_id IS NULL AND result_json IS NULL AND error_json IS NOT NULL)
+    ),
+    CHECK (
+        request_protocol_version=2 OR
+        (state='awaiting_lock' AND escrow_id IS NULL AND lock_request_sha256 IS NULL
+         AND lock_receipt_event_id IS NULL AND published_at_us IS NULL
+         AND creation_event_id IS NULL AND result_json IS NULL AND error_json IS NULL)
+        OR
+        (state='published' AND escrow_id IS NOT NULL AND lock_request_sha256 IS NOT NULL
+         AND lock_receipt_event_id IS NOT NULL AND published_at_us IS NOT NULL
+         AND creation_event_id IS NOT NULL AND result_json IS NOT NULL AND error_json IS NULL)
+        OR
+        (state='blocked_integrity' AND escrow_id IS NULL AND lock_request_sha256 IS NULL
+         AND lock_receipt_event_id IS NULL AND published_at_us IS NULL
+         AND creation_event_id IS NULL AND result_json IS NULL AND error_json IS NOT NULL)
+    ),
+    FOREIGN KEY (actor_id) REFERENCES identity_agents(agent_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (escrow_id) REFERENCES bank_escrow(escrow_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (lock_receipt_event_id) REFERENCES events(event_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (creation_event_id) REFERENCES events(event_id) ON UPDATE RESTRICT ON DELETE RESTRICT
 );
 
 CREATE INDEX idx_board_task_publications_recovery
     ON board_task_publications (caller_kid, state, operation_id);
+
+CREATE UNIQUE INDEX idx_board_tasks_task_poster_v6
+    ON board_tasks (task_id, poster_id);
+
+CREATE UNIQUE INDEX idx_board_tasks_task_worker_v6
+    ON board_tasks (task_id, worker_id);
 
 CREATE TABLE board_publication_cutover (
     singleton INTEGER PRIMARY KEY NOT NULL
@@ -1169,6 +1281,7 @@ CREATE TABLE board_legacy_posting_observations (
 CREATE INDEX idx_board_legacy_posting_recovery
     ON board_legacy_posting_observations (caller_kid, state, observation_id);
 
+-- Fresh v4 has no legacy publication ownership and no invented migration provenance.
 INSERT INTO board_publication_cutover (
     singleton,
     cutover_version,
@@ -1198,6 +1311,8 @@ INSERT INTO board_publication_cutover (
     '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
     0
 );
+
+
 -- MP-08 schema-v5 durable financial-effect recovery sidecars.
 -- Applied only to an admitted v4 schema by the explicit v4-to-v5 migration.
 
@@ -1551,3 +1666,157 @@ INSERT INTO board_task_effect_delivery_cutover (
     0,
     '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'
 );
+
+-- MP-09 artifact schema; part of the current V6 catalog.
+
+CREATE TABLE board_artifact_manifests (
+    manifest_id TEXT PRIMARY KEY NOT NULL CHECK (typeof(manifest_id)='text' AND length(manifest_id)>0),
+    task_id TEXT NOT NULL CHECK (typeof(task_id)='text' AND length(task_id)>0),
+    kind TEXT NOT NULL CHECK (kind IN ('input','submission')),
+    actor_id TEXT NOT NULL CHECK (typeof(actor_id)='text' AND length(actor_id)>0),
+    format_version INTEGER NOT NULL CHECK (typeof(format_version)='integer' AND format_version=1),
+    state TEXT NOT NULL CHECK (state IN ('draft','frozen','closed_unsubmitted')),
+    canonical_manifest_json TEXT CHECK (canonical_manifest_json IS NULL OR (json_valid(canonical_manifest_json)=1 AND json_type(canonical_manifest_json)='object')),
+    manifest_sha256 TEXT CHECK (manifest_sha256 IS NULL OR (length(manifest_sha256)=64 AND manifest_sha256 NOT GLOB '*[^0-9a-f]*')),
+    frozen_at_us INTEGER CHECK (frozen_at_us IS NULL OR (typeof(frozen_at_us)='integer' AND frozen_at_us BETWEEN 0 AND 9223372036854775807)),
+    publication_operation_id TEXT,
+    public_task_id TEXT,
+    UNIQUE (manifest_id,kind,task_id,actor_id),
+    UNIQUE (manifest_id,kind,task_id,publication_operation_id,actor_id),
+    CHECK ((state='frozen' AND canonical_manifest_json IS NOT NULL AND manifest_sha256 IS NOT NULL AND frozen_at_us IS NOT NULL) OR (state!='frozen' AND canonical_manifest_json IS NULL AND manifest_sha256 IS NULL AND frozen_at_us IS NULL)),
+    CHECK ((kind='input' AND publication_operation_id IS NOT NULL AND public_task_id IS NULL) OR (kind='submission' AND publication_operation_id IS NULL AND public_task_id IS NOT NULL AND public_task_id=task_id)),
+    FOREIGN KEY (publication_operation_id,task_id,actor_id)
+        REFERENCES board_task_publications(operation_id,task_id,actor_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (public_task_id,actor_id)
+        REFERENCES board_tasks(task_id,worker_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+CREATE UNIQUE INDEX idx_board_artifact_one_input_manifest
+    ON board_artifact_manifests(publication_operation_id)
+    WHERE publication_operation_id IS NOT NULL;
+
+CREATE TABLE board_task_artifact_contracts (
+    task_id TEXT PRIMARY KEY NOT NULL,
+    artifact_contract_version INTEGER NOT NULL CHECK (typeof(artifact_contract_version)='integer' AND artifact_contract_version IN (0,1)),
+    input_provenance TEXT NOT NULL CHECK (input_provenance IN ('native_v6','unknown_pre_v6')),
+    accepted_binding_kind TEXT CHECK (accepted_binding_kind IS NULL OR accepted_binding_kind IN ('publication_contract','legacy_accepted_continuation')),
+    base_request_sha256 TEXT,
+    input_manifest_id TEXT,
+    input_manifest_sha256 TEXT,
+    publication_contract_sha256 TEXT,
+    accepted_publication_contract_sha256 TEXT,
+    legacy_acceptance_observation_sha256 TEXT,
+    legacy_acceptance_observation_status TEXT CHECK (legacy_acceptance_observation_status IS NULL OR legacy_acceptance_observation_status IN ('verified','incomplete_corrupt')),
+    source_publication_request_sha256 TEXT,
+    publication_operation_id TEXT,
+    input_manifest_kind TEXT,
+    input_actor_id TEXT,
+    CHECK ((artifact_contract_version=1 AND input_provenance='native_v6' AND base_request_sha256 IS NOT NULL AND input_manifest_id IS NOT NULL AND input_manifest_sha256 IS NOT NULL AND publication_contract_sha256 IS NOT NULL AND legacy_acceptance_observation_sha256 IS NULL AND legacy_acceptance_observation_status IS NULL AND source_publication_request_sha256 IS NULL AND publication_operation_id IS NOT NULL AND input_manifest_kind='input' AND input_actor_id IS NOT NULL) OR (artifact_contract_version=0 AND input_provenance='unknown_pre_v6' AND base_request_sha256 IS NULL AND input_manifest_id IS NULL AND input_manifest_sha256 IS NULL AND publication_contract_sha256 IS NULL AND accepted_publication_contract_sha256 IS NULL AND publication_operation_id IS NULL AND input_manifest_kind IS NULL AND input_actor_id IS NULL AND ((accepted_binding_kind IS NULL AND legacy_acceptance_observation_sha256 IS NULL AND legacy_acceptance_observation_status IS NULL) OR (accepted_binding_kind='legacy_accepted_continuation' AND legacy_acceptance_observation_sha256 IS NOT NULL AND legacy_acceptance_observation_status IS NOT NULL)))),
+    CHECK ((accepted_binding_kind IS NULL AND accepted_publication_contract_sha256 IS NULL AND legacy_acceptance_observation_sha256 IS NULL AND legacy_acceptance_observation_status IS NULL) OR (accepted_binding_kind='publication_contract' AND accepted_publication_contract_sha256 IS NOT NULL AND legacy_acceptance_observation_sha256 IS NULL AND legacy_acceptance_observation_status IS NULL) OR (accepted_binding_kind='legacy_accepted_continuation' AND accepted_publication_contract_sha256 IS NULL AND legacy_acceptance_observation_sha256 IS NOT NULL AND legacy_acceptance_observation_status IS NOT NULL)),
+    CHECK (base_request_sha256 IS NULL OR (length(base_request_sha256)=64 AND base_request_sha256 NOT GLOB '*[^0-9a-f]*')),
+    CHECK (input_manifest_sha256 IS NULL OR (length(input_manifest_sha256)=64 AND input_manifest_sha256 NOT GLOB '*[^0-9a-f]*')),
+    CHECK (publication_contract_sha256 IS NULL OR (length(publication_contract_sha256)=64 AND publication_contract_sha256 NOT GLOB '*[^0-9a-f]*')),
+    CHECK (accepted_publication_contract_sha256 IS NULL OR (length(accepted_publication_contract_sha256)=64 AND accepted_publication_contract_sha256 NOT GLOB '*[^0-9a-f]*')),
+    CHECK (legacy_acceptance_observation_sha256 IS NULL OR (length(legacy_acceptance_observation_sha256)=64 AND legacy_acceptance_observation_sha256 NOT GLOB '*[^0-9a-f]*')),
+    CHECK (source_publication_request_sha256 IS NULL OR (length(source_publication_request_sha256)=64 AND source_publication_request_sha256 NOT GLOB '*[^0-9a-f]*')),
+    FOREIGN KEY (task_id,input_actor_id) REFERENCES board_tasks(task_id,poster_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (publication_operation_id,task_id,input_actor_id) REFERENCES board_task_publications(operation_id,task_id,actor_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (input_manifest_id,input_manifest_kind,task_id,publication_operation_id,input_actor_id) REFERENCES board_artifact_manifests(manifest_id,kind,task_id,publication_operation_id,actor_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+CREATE TABLE board_artifact_uploads (
+    upload_operation_id TEXT PRIMARY KEY NOT NULL,
+    request_sha256 TEXT NOT NULL CHECK (length(request_sha256)=64 AND request_sha256 NOT GLOB '*[^0-9a-f]*'),
+    canonical_request_json TEXT NOT NULL CHECK (json_valid(canonical_request_json)=1 AND json_type(canonical_request_json)='object'),
+    caller_kid TEXT NOT NULL CHECK (typeof(caller_kid)='text' AND length(caller_kid)>0),
+    resource TEXT NOT NULL,
+    task_id TEXT NOT NULL,
+    manifest_id TEXT NOT NULL,
+    actor_id TEXT NOT NULL,
+    actor_role TEXT NOT NULL CHECK (actor_role IN ('poster','worker')),
+    display_filename TEXT NOT NULL CHECK (typeof(display_filename)='text' AND length(display_filename)>0),
+    evidence_format TEXT NOT NULL CHECK (evidence_format IN ('text','source','json','csv')),
+    media_type TEXT NOT NULL CHECK (typeof(media_type)='text' AND length(media_type)>0),
+    declared_size_bytes INTEGER NOT NULL CHECK (typeof(declared_size_bytes)='integer' AND declared_size_bytes BETWEEN 0 AND 9223372036854775807),
+    content_sha256 TEXT NOT NULL CHECK (length(content_sha256)=64 AND content_sha256 NOT GLOB '*[^0-9a-f]*'),
+    expected_lifecycle_version INTEGER CHECK (expected_lifecycle_version IS NULL OR (typeof(expected_lifecycle_version)='integer' AND expected_lifecycle_version BETWEEN 0 AND 9223372036854775807)),
+    accepted_binding_kind TEXT CHECK (accepted_binding_kind IS NULL OR accepted_binding_kind IN ('publication_contract','legacy_accepted_continuation')),
+    accepted_binding_sha256 TEXT CHECK (accepted_binding_sha256 IS NULL OR (length(accepted_binding_sha256)=64 AND accepted_binding_sha256 NOT GLOB '*[^0-9a-f]*')),
+    manifest_kind TEXT NOT NULL CHECK (manifest_kind IN ('input','submission')),
+    publication_operation_id TEXT,
+    state TEXT NOT NULL CHECK (state IN ('reserved','ready','archived','orphaned','integrity_blocked')),
+    artifact_id TEXT NOT NULL UNIQUE,
+    object_key TEXT NOT NULL UNIQUE,
+    current_attempt_id TEXT,
+    created_at_us INTEGER NOT NULL CHECK (typeof(created_at_us)='integer' AND created_at_us BETWEEN 0 AND 9223372036854775807),
+    finalized_at_us INTEGER CHECK (finalized_at_us IS NULL OR (typeof(finalized_at_us)='integer' AND finalized_at_us BETWEEN 0 AND 9223372036854775807)),
+    CHECK ((state='reserved' AND current_attempt_id IS NOT NULL AND finalized_at_us IS NULL) OR (state!='reserved' AND current_attempt_id IS NULL AND finalized_at_us IS NOT NULL)),
+    CHECK ((manifest_kind='input' AND publication_operation_id IS NOT NULL AND actor_role='poster' AND resource=('POST /task-publications/' || publication_operation_id || '/inputs') AND expected_lifecycle_version IS NULL AND accepted_binding_kind IS NULL AND accepted_binding_sha256 IS NULL) OR (manifest_kind='submission' AND publication_operation_id IS NULL AND actor_role='worker' AND resource='POST /board/artifact-uploads/reserve' AND expected_lifecycle_version IS NOT NULL AND accepted_binding_kind IS NOT NULL AND accepted_binding_sha256 IS NOT NULL)),
+    FOREIGN KEY (manifest_id,manifest_kind,task_id,actor_id) REFERENCES board_artifact_manifests(manifest_id,kind,task_id,actor_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (manifest_id,manifest_kind,task_id,publication_operation_id,actor_id) REFERENCES board_artifact_manifests(manifest_id,kind,task_id,publication_operation_id,actor_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    FOREIGN KEY (current_attempt_id,upload_operation_id)
+        REFERENCES board_artifact_upload_attempts(attempt_id,upload_operation_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE TABLE board_artifact_upload_attempts (
+    attempt_id TEXT PRIMARY KEY NOT NULL,
+    upload_operation_id TEXT NOT NULL,
+    owner_id TEXT NOT NULL CHECK (typeof(owner_id)='text' AND length(owner_id)>0),
+    generation INTEGER NOT NULL CHECK (typeof(generation)='integer' AND generation BETWEEN 1 AND 9223372036854775807),
+    attempt_nonce TEXT NOT NULL CHECK (length(attempt_nonce)=32 AND attempt_nonce NOT GLOB '*[^0-9a-f]*'),
+    staging_key TEXT NOT NULL UNIQUE,
+    intended_object_key TEXT NOT NULL,
+    lease_expires_at_us INTEGER NOT NULL CHECK (typeof(lease_expires_at_us)='integer' AND lease_expires_at_us BETWEEN 0 AND 9223372036854775807),
+    absolute_upload_deadline_us INTEGER NOT NULL CHECK (typeof(absolute_upload_deadline_us)='integer' AND absolute_upload_deadline_us BETWEEN 0 AND 9223372036854775807),
+    state TEXT NOT NULL CHECK (state IN ('active','staged','installed','expired','orphaned','finalized','finalize_unknown','integrity_blocked')),
+    observed_size_bytes INTEGER CHECK (observed_size_bytes IS NULL OR (typeof(observed_size_bytes)='integer' AND observed_size_bytes BETWEEN 0 AND 9223372036854775807)),
+    observed_sha256 TEXT CHECK (observed_sha256 IS NULL OR (length(observed_sha256)=64 AND observed_sha256 NOT GLOB '*[^0-9a-f]*')),
+    failure_code TEXT CHECK (failure_code IS NULL OR (typeof(failure_code)='text' AND length(failure_code)>0)),
+    created_at_us INTEGER NOT NULL CHECK (typeof(created_at_us)='integer' AND created_at_us BETWEEN 0 AND 9223372036854775807),
+    updated_at_us INTEGER NOT NULL CHECK (typeof(updated_at_us)='integer' AND updated_at_us BETWEEN 0 AND 9223372036854775807),
+    UNIQUE (upload_operation_id,generation),
+    UNIQUE (upload_operation_id,attempt_nonce),
+    UNIQUE (attempt_id,upload_operation_id),
+    CHECK (lease_expires_at_us<=absolute_upload_deadline_us),
+    FOREIGN KEY (upload_operation_id) REFERENCES board_artifact_uploads(upload_operation_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE INDEX idx_board_artifact_upload_manifest_state ON board_artifact_uploads(manifest_id,state);
+
+CREATE TABLE board_legacy_artifact_observations (
+    task_id TEXT PRIMARY KEY NOT NULL,
+    observation_status TEXT NOT NULL CHECK (observation_status IN ('verified','incomplete_corrupt')),
+    canonical_observation_json TEXT NOT NULL CHECK (json_valid(canonical_observation_json)=1 AND json_type(canonical_observation_json)='object'),
+    observation_sha256 TEXT NOT NULL CHECK (length(observation_sha256)=64 AND observation_sha256 NOT GLOB '*[^0-9a-f]*'),
+    observed_at_us INTEGER NOT NULL CHECK (typeof(observed_at_us)='integer' AND observed_at_us BETWEEN 0 AND 9223372036854775807),
+    FOREIGN KEY (task_id) REFERENCES board_tasks(task_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+CREATE TABLE board_artifact_archive_attempts (
+    archive_operation_id TEXT PRIMARY KEY NOT NULL,
+    artifact_id TEXT NOT NULL,
+    owner_id TEXT NOT NULL,
+    attempt_nonce TEXT NOT NULL UNIQUE CHECK (length(attempt_nonce)=32 AND attempt_nonce NOT GLOB '*[^0-9a-f]*'),
+    live_object_key TEXT NOT NULL,
+    archive_object_key TEXT NOT NULL UNIQUE,
+    expected_size_bytes INTEGER NOT NULL CHECK (typeof(expected_size_bytes)='integer' AND expected_size_bytes BETWEEN 0 AND 9223372036854775807),
+    expected_sha256 TEXT NOT NULL CHECK (length(expected_sha256)=64 AND expected_sha256 NOT GLOB '*[^0-9a-f]*'),
+    state TEXT NOT NULL CHECK (state IN ('planned','installed','finalized','finalize_unknown','integrity_blocked')),
+    created_at_us INTEGER NOT NULL CHECK (typeof(created_at_us)='integer' AND created_at_us BETWEEN 0 AND 9223372036854775807),
+    updated_at_us INTEGER NOT NULL CHECK (typeof(updated_at_us)='integer' AND updated_at_us BETWEEN 0 AND 9223372036854775807),
+    FOREIGN KEY (artifact_id) REFERENCES board_artifact_uploads(artifact_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+) WITHOUT ROWID;
+
+CREATE TABLE board_artifact_cutover (
+    singleton INTEGER PRIMARY KEY NOT NULL CHECK (typeof(singleton)='integer' AND singleton=1),
+    cutover_state TEXT NOT NULL CHECK (cutover_state IN ('planned','copying','verified','completed','blocked')),
+    source_schema_version INTEGER NOT NULL CHECK (typeof(source_schema_version)='integer' AND source_schema_version=5),
+    migration_plan_sha256 TEXT NOT NULL CHECK (length(migration_plan_sha256)=64 AND migration_plan_sha256 NOT GLOB '*[^0-9a-f]*'),
+    source_row_set_sha256 TEXT NOT NULL CHECK (length(source_row_set_sha256)=64 AND source_row_set_sha256 NOT GLOB '*[^0-9a-f]*'),
+    created_at_us INTEGER NOT NULL CHECK (typeof(created_at_us)='integer' AND created_at_us BETWEEN 0 AND 9223372036854775807),
+    completed_at_us INTEGER CHECK (completed_at_us IS NULL OR (typeof(completed_at_us)='integer' AND completed_at_us BETWEEN 0 AND 9223372036854775807)),
+    CHECK ((cutover_state='completed' AND completed_at_us IS NOT NULL) OR (cutover_state!='completed' AND completed_at_us IS NULL))
+) WITHOUT ROWID;

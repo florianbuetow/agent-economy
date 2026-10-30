@@ -92,8 +92,13 @@ async def _run_loops(
 
     async with asyncio.TaskGroup() as tasks:
         tasks.create_task(loop.run())
-        tasks.create_task(acceptance.run())
-        tasks.create_task(review.run(feeder_config.review_interval_seconds))
+        tasks.create_task(acceptance.run(feeder_config.retry_backoff_seconds))
+        tasks.create_task(
+            review.run(
+                feeder_config.review_interval_seconds,
+                feeder_config.retry_backoff_seconds,
+            )
+        )
 
 
 async def _main() -> None:

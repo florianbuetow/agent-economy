@@ -116,7 +116,7 @@ destroy:
 run:
     @echo ""
     @printf "\033[0;34m=== Running {{DISPLAY_NAME}} Service Locally on port {{PORT}} ===\033[0m\n"
-    @uv run uvicorn {{SERVICE_NAME}}.app:create_app --factory --reload --host 127.0.0.1 --port {{PORT}}
+    @uv run uvicorn {{SERVICE_NAME}}.app:create_app --factory --reload --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{PORT}}
 
 # Stop the locally running service
 kill:

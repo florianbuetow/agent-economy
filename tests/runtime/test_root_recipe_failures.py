@@ -345,3 +345,69 @@ def test_stop_all_reports_failure_after_attempting_every_stop(tmp_path: Path) ->
     assert marker.read_text(encoding="utf-8").splitlines() == list(services)
     assert not agent_marker.exists()
     assert "1 service(s) could not be stopped" in output
+
+
+def test_start_all_failure_stops_only_services_it_launched_and_logs_output(
+    tmp_path: Path,
+) -> None:
+    failed_service = "court"
+    ports = dict(zip(_SERVICE_RECIPES, _unused_ports(len(_SERVICE_RECIPES)), strict=True))
+    kills = tmp_path / "kills.log"
+    kills_arg = shlex.quote(str(kills))
+    with ExitStack() as stack:
+        for service in _SERVICE_RECIPES:
+            if service not in (failed_service, "identity"):
+                ports[service] = stack.enter_context(
+                    _running_health_server(b'{"status":"ok"}', 200)
+                )
+        ports["identity"] = stack.enter_context(
+            _running_health_server(b'{"status":"ok"}', 200)
+        )
+        justfile = _copy_justfile(tmp_path, ports)
+        overrides = ["", "set allow-duplicate-recipes", "", "check-keys:", "    @:"]
+        for service, recipe in _SERVICE_RECIPES.items():
+            overrides.extend(
+                ("", f"{recipe}:", f"    @printf 'output-of-{service}\\n'")
+            )
+            overrides.append("    @false")
+            service_dir = tmp_path / "services" / service
+            service_dir.mkdir(parents=True)
+            (service_dir / "justfile").write_text(
+                f"kill:\n    @printf '%s\\n' {service} >> {kills_arg}\n",
+                encoding="utf-8",
+            )
+        with justfile.open("a", encoding="utf-8") as handle:
+            handle.write("\n".join(overrides) + "\n")
+        result = _run_just(justfile, "start-all")
+
+    output = result.stdout + result.stderr
+    assert result.returncode != 0, output
+    assert kills.read_text(encoding="utf-8").splitlines() == [failed_service]
+    log_file = tmp_path / "data" / "logs" / f"{failed_service}.out"
+    assert "output-of-court" in log_file.read_text(encoding="utf-8")
+    assert "output-of-court" not in output
+
+
+def test_start_all_refuses_group_readable_court_env(tmp_path: Path) -> None:
+    ports = dict(zip(_SERVICE_RECIPES, _unused_ports(len(_SERVICE_RECIPES)), strict=True))
+    justfile = _copy_justfile(tmp_path, ports)
+    marker = tmp_path / "starts.log"
+    marker_arg = shlex.quote(str(marker))
+    court_env = tmp_path / "services" / "court" / ".env"
+    court_env.parent.mkdir(parents=True)
+    court_env.write_text("SECRET=1\n", encoding="utf-8")
+    court_env.chmod(0o644)
+    overrides = ["", "set allow-duplicate-recipes", "", "check-keys:", "    @:"]
+    for service, recipe in _SERVICE_RECIPES.items():
+        overrides.extend(
+            ("", f"{recipe}:", f"    @printf '%s\\n' {service} >> {marker_arg}")
+        )
+    with justfile.open("a", encoding="utf-8") as handle:
+        handle.write("\n".join(overrides) + "\n")
+
+    result = _run_just(justfile, "start-all")
+
+    output = result.stdout + result.stderr
+    assert result.returncode != 0, output
+    assert not marker.exists()
+    assert "chmod 600 services/court/.env" in output

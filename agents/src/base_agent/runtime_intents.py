@@ -44,6 +44,7 @@ from base_agent.runtime_intent_models import (
     require_integer,
     require_task_id,
 )
+from base_agent.runtime_jobs import JOB_DIRECTORY, reconcile_job_directory
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -250,7 +251,7 @@ class FileTaskIntentStore:
         except OSError as exc:
             raise RuntimeIntentError("unsafe_path", "identity directory cannot be scanned") from exc
         staging = re.compile(r"^\.owner\.json\.[0-9a-f]{24}\.tmp$")
-        allowed = {"owner.json", "runtime.lock", "intents", "postings"}
+        allowed = {"owner.json", "runtime.lock", "intents", "postings", JOB_DIRECTORY}
         for name in names:
             if staging.fullmatch(name) is not None:
                 remove_private_staging_record(identity, name)
@@ -263,6 +264,8 @@ class FileTaskIntentStore:
             elif name == "postings":
                 postings = open_private_child(identity, "postings")
                 postings.close()
+            elif name == JOB_DIRECTORY:
+                reconcile_job_directory(identity)
         intents.verify()
 
     def open_posting_namespace(self) -> PostingNamespace:
@@ -283,6 +286,11 @@ class FileTaskIntentStore:
             if postings is not None:
                 postings.close()
             raise
+
+    def open_job_directory(self) -> SafeDirectory:
+        """Open the worker job directory under this store's already-held lease."""
+        identity, _intents = self._require_open()
+        return open_private_child(identity, JOB_DIRECTORY)
 
     def intent_path(self, task_id: str, slot: str) -> Path:
         task_id = require_task_id(task_id)

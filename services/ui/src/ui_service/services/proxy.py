@@ -16,9 +16,17 @@ from service_auth.task_postings import TaskPostingIntent
 from service_commons.exceptions import ServiceError
 
 from ui_service.core.state import get_app_state
+from ui_service.logging import get_logger
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from service_auth import UserAgent
+
+    from ui_service.services.task_board_reads import AuthoritativeTaskDetail
+
+# Task Board's upload replay header (task_board_service.schemas.IDEMPOTENCY_KEY_HEADER).
+IDEMPOTENCY_KEY_HEADER = "Idempotency-Key"
 
 
 class _AuthHeader(Protocol):
@@ -41,12 +49,24 @@ class _RawRequest(Protocol):
     ) -> httpx.Response: ...
 
 
+class _RawUpload(Protocol):
+    async def __call__(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: dict[str, str],
+        content: bytes,
+    ) -> httpx.Response: ...
+
+
 class _OperatorAssetTransport:
     """Typed local bridge to the inherited UserAgent signing and raw-read methods."""
 
     def __init__(self, agent: UserAgent) -> None:
         self.auth_header: _AuthHeader = agent.__getattribute__("_auth_header")
         self.request_raw: _RawRequest = agent.__getattribute__("_request_raw")
+        self.upload_raw: _RawUpload = agent.__getattribute__("_request_raw")
 
 
 _OPERATION_FIELDS = {
@@ -176,6 +196,8 @@ def _validate_operation(
         "accept_bid": ("open", "accepted", "none"),
         "approve_task": ("submitted", "approved", "bank_release"),
         "dispute_task": ("submitted", "disputed", "court_claim"),
+        "cancel_task": ("open", "cancelled", "bank_release"),
+        "submit_deliverable": ("accepted", "submitted", "none"),
     }[command]
     if (
         operation["source_status"] != source_status
@@ -184,7 +206,7 @@ def _validate_operation(
         or operation["source_lifecycle_version"] != expected_lifecycle_version
         or operation["target_lifecycle_version"] != expected_lifecycle_version + 1
         or (
-            command == "accept_bid"
+            command in {"accept_bid", "submit_deliverable"}
             and any(
                 operation[field] is not None
                 for field in ("effect_operation_id", "effect_result_reference", "effect_intent")
@@ -204,6 +226,7 @@ def _validate_operation(
                 or not isinstance(operation["effect_intent"], dict)
             )
         )
+        or (command == "cancel_task" and not isinstance(operation["effect_intent"], dict))
     ):
         _invalid_response(error_code)
     return _validate_operation_state(operation, error_code)
@@ -527,9 +550,13 @@ async def list_bids(task_id: str) -> list[dict[str, Any]]:
                 403,
                 body["details"],
             ) from exc
+        get_logger(__name__).warning(
+            "Bid listing failed",
+            extra={"task_id": task_id, "exception_type": type(exc).__name__, "error": str(exc)},
+        )
         raise ServiceError(
             "bid_listing_failed",
-            f"Failed to list bids: {exc}",
+            "Task Board could not list the bids for this task.",
             502,
             {},
         ) from exc
@@ -638,3 +665,207 @@ async def file_dispute(
         _raise_task_board_error(exc, "dispute_filing_failed")
     except Exception as exc:
         _request_failed("dispute_filing_failed", exc)
+
+
+async def _native_command(
+    *,
+    error_code: str,
+    command: str,
+    task_id: str,
+    operation_id: str,
+    expected_lifecycle_version: int,
+    call: Callable[[], Awaitable[object]],
+) -> TaskBoardCommandResponse:
+    """Run one operator-signed native command and verify its acknowledgment."""
+    try:
+        result = await call()
+        return _ensure_mutation_response(
+            result,
+            error_code,
+            task_id=task_id,
+            command=command,
+            operation_id=operation_id,
+            expected_lifecycle_version=expected_lifecycle_version,
+        )
+    except ServiceError:
+        raise
+    except TaskBoardCommandContractError as exc:
+        _task_board_contract_failed(error_code, exc)
+    except httpx.HTTPStatusError as exc:
+        _raise_task_board_error(exc, error_code)
+    except Exception as exc:
+        _request_failed(error_code, exc)
+
+
+async def cancel_task(
+    task_id: str, operation_id: str, expected_lifecycle_version: int
+) -> TaskBoardCommandResponse:
+    """Cancel the operator's own open task; Task Board refunds the escrow."""
+    agent = _get_user_agent()
+    return await _native_command(
+        error_code="task_cancellation_failed",
+        command="cancel_task",
+        task_id=task_id,
+        operation_id=operation_id,
+        expected_lifecycle_version=expected_lifecycle_version,
+        call=lambda: agent.cancel_task(
+            task_id,
+            operation_id=operation_id,
+            expected_lifecycle_version=expected_lifecycle_version,
+        ),
+    )
+
+
+async def submit_deliverable(
+    task_id: str, operation_id: str, expected_lifecycle_version: int
+) -> TaskBoardCommandResponse:
+    """Submit the operator's uploaded deliverables for the poster's review."""
+    agent = _get_user_agent()
+    return await _native_command(
+        error_code="deliverable_submission_failed",
+        command="submit_deliverable",
+        task_id=task_id,
+        operation_id=operation_id,
+        expected_lifecycle_version=expected_lifecycle_version,
+        call=lambda: agent.submit_deliverable(
+            task_id,
+            operation_id=operation_id,
+            expected_lifecycle_version=expected_lifecycle_version,
+        ),
+    )
+
+
+async def submit_bid(
+    task_id: str, amount: int, operation_id: str, expected_lifecycle_version: int
+) -> dict[str, Any]:
+    """Place a binding operator bid and verify Task Board recorded exactly it."""
+    agent = _get_user_agent()
+    error_code = "bid_submission_failed"
+    try:
+        result = await agent.submit_bid(
+            task_id,
+            amount,
+            operation_id=operation_id,
+            expected_lifecycle_version=expected_lifecycle_version,
+        )
+    except ServiceError:
+        raise
+    except TaskBoardCommandContractError as exc:
+        _task_board_contract_failed(error_code, exc)
+    except httpx.HTTPStatusError as exc:
+        _raise_task_board_error(exc, error_code)
+    except Exception as exc:
+        _request_failed(error_code, exc)
+    body = result.body
+    if (
+        result.status_code != 201
+        or not isinstance(body.get("bid_id"), str)
+        or body.get("task_id") != task_id
+        or body.get("bidder_id") != agent.agent_id
+        or body.get("amount") != amount
+        or not isinstance(body.get("submitted_at"), str)
+    ):
+        _invalid_response(error_code)
+    return body
+
+
+async def upload_asset(
+    task_id: str,
+    *,
+    content: bytes,
+    content_type: str,
+    idempotency_key: str | None,
+) -> dict[str, Any]:
+    """Forward one multipart upload to Task Board signed as the operator."""
+    agent = _get_user_agent()
+    transport = _OperatorAssetTransport(agent)
+    error_code = "asset_upload_failed"
+    url = f"{agent.config.task_board_url}/tasks/{quote(task_id, safe='')}/assets"
+    headers = transport.auth_header(
+        {"action": "upload_asset", "task_id": task_id},
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/assets",
+    )
+    headers["Content-Type"] = content_type
+    if idempotency_key is not None:
+        headers[IDEMPOTENCY_KEY_HEADER] = idempotency_key
+    try:
+        response = await transport.upload_raw("POST", url, headers=headers, content=content)
+        response.raise_for_status()
+        body: object = response.json()
+    except httpx.HTTPStatusError as exc:
+        _raise_task_board_error(exc, error_code)
+    except Exception as exc:
+        _request_failed(error_code, exc)
+    if response.status_code != 201 or not isinstance(body, dict):
+        _invalid_response(error_code)
+    return cast("dict[str, Any]", body)
+
+
+async def submit_rebuttal(task: AuthoritativeTaskDetail, rebuttal: str) -> dict[str, Any]:
+    """Rebut the dispute recorded on the operator's own disputed task."""
+    agent = _get_user_agent()
+    dispute_id = (task.model_extra or {}).get("dispute_id")
+    if task.status != "disputed" or not isinstance(dispute_id, str) or dispute_id == "":
+        raise ServiceError(
+            "invalid_status",
+            "Only a disputed task with a recorded dispute can be rebutted",
+            409,
+            {"task_id": task.task_id, "status": task.status},
+        )
+    if task.worker_id != agent.agent_id:
+        raise ServiceError("forbidden", "Only the task's worker can submit a rebuttal", 403, {})
+    error_code = "rebuttal_submission_failed"
+    try:
+        result = await agent.submit_worker_rebuttal(task.task_id, dispute_id, rebuttal)
+    except ServiceError:
+        raise
+    except httpx.HTTPStatusError as exc:
+        _raise_task_board_error(exc, error_code)
+    except Exception as exc:
+        _request_failed(error_code, exc)
+    return result
+
+
+_FEEDBACK_ELIGIBLE_STATUSES = frozenset({"approved", "ruled"})
+
+
+async def submit_feedback(
+    task: AuthoritativeTaskDetail, rating: str, comment: str | None
+) -> dict[str, Any]:
+    """Rate the counterpart: a poster rates delivery, a worker rates the spec."""
+    agent = _get_user_agent()
+    if agent.agent_id == task.poster_id and task.worker_id is not None:
+        to_agent_id, category = task.worker_id, "delivery_quality"
+    elif agent.agent_id is not None and agent.agent_id == task.worker_id:
+        to_agent_id, category = task.poster_id, "spec_quality"
+    else:
+        raise ServiceError(
+            "not_task_party",
+            "Feedback must be between the task's poster and worker",
+            403,
+            {"task_id": task.task_id},
+        )
+    if task.status not in _FEEDBACK_ELIGIBLE_STATUSES:
+        raise ServiceError(
+            "task_not_eligible",
+            "Feedback is accepted only for approved or ruled tasks",
+            409,
+            {"task_id": task.task_id, "status": task.status},
+        )
+    error_code = "feedback_submission_failed"
+    try:
+        result = await agent.submit_feedback(
+            task_id=task.task_id,
+            to_agent_id=to_agent_id,
+            category=category,
+            rating=rating,
+            comment=comment,
+        )
+    except ServiceError:
+        raise
+    except httpx.HTTPStatusError as exc:
+        _raise_task_board_error(exc, error_code)
+    except Exception as exc:
+        _request_failed(error_code, exc)
+    return result

@@ -6,9 +6,8 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-import httpx
-
 from base_agent.runtime_intents import RuntimeIntentError
+from task_feeder.resilience import RECOVERABLE_DEPENDENCY_ERRORS
 
 if TYPE_CHECKING:
     from service_auth.posting_journal import RawTask
@@ -46,8 +45,8 @@ class TaskFeederLoop:
                 logger.info("Feeder cancelled, shutting down")
                 self._running = False
                 continue
-            except httpx.HTTPError:
-                logger.exception("Recoverable feeder transport failure")
+            except RECOVERABLE_DEPENDENCY_ERRORS:
+                logger.exception("Recoverable feeder dependency failure")
             except RuntimeIntentError as exc:
                 if exc.reason not in {"source_conflict", "unresolved_posting"}:
                     raise

@@ -813,6 +813,17 @@ class IsolatedRuntime:
                 _mapping_section(config, "central_bank")["base_url"] = self._configured_url(
                     "central-bank"
                 )
+            if "task_board" in config:
+                _mapping_section(config, "task_board")["base_url"] = self._configured_url(
+                    "task-board"
+                )
+            if "registration" in config:
+                # Identity pins reserved display names to the run's own platform and
+                # operator keys; the repo-relative paths would miss this run directory.
+                _mapping_section(config, "registration")["trusted_key_files"] = [
+                    str(self.run_dir / "keys" / "platform.pub"),
+                    str(self.run_dir / "keys" / "operator.pub"),
+                ]
             if "platform" in config:
                 _mapping_section(config, "platform")["agent_config_path"] = str(
                     self.agent_config_path

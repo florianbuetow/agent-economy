@@ -19,6 +19,7 @@ from base_agent.runtime_intents import (
     RuntimeIntentError,
     RuntimeOwner,
 )
+from base_agent.runtime_jobs import WorkerJobJournal
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -129,6 +130,12 @@ class RuntimeTaskCommands:
             locks = WeakValueDictionary()
             _STORE_LOCKS[store] = locks
         self._locks = locks
+
+    @property
+    def jobs(self) -> WorkerJobJournal:
+        """Durable per-task job records sharing this journal's identity lease."""
+        self._verify_agent()
+        return WorkerJobJournal(self._store)
 
     def _verify_agent(self) -> None:
         try:

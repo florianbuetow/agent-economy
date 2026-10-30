@@ -195,6 +195,9 @@
     font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim);
     cursor: pointer; transition: color .15s; padding: 2px 0;
   }
+  a.topnav-link, a.topnav-brand, a.nav-btn { text-decoration: none; }
+  a.nav-btn { display: inline-block; }
+  .topnav-link:focus-visible, a.nav-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
   .topnav-link:hover { color: var(--text-mid); }
   .topnav-link.active { color: var(--cyan); border-bottom: 1px solid var(--cyan); }
   .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-glow 2s infinite; }

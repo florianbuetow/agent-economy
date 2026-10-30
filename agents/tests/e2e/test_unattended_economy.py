@@ -163,6 +163,7 @@ def _build_feeder_loops(
         execution_deadline_seconds=EXECUTION_DEADLINE_SECONDS,
         review_deadline_seconds=REVIEW_DEADLINE_SECONDS,
         review_interval_seconds=1,
+        retry_backoff_seconds=1,
         base_reward=BASE_REWARD,
         reward_per_level=REWARD_PER_LEVEL,
         shuffle=False,
@@ -322,7 +323,7 @@ async def _build_rig(make_funded_agent: Any, tasks_path: Path) -> _Rig:
 
         background_tasks = [
             asyncio.create_task(feed_loop.run()),
-            asyncio.create_task(acceptance_loop.run()),
+            asyncio.create_task(acceptance_loop.run(retry_backoff_seconds=1)),
             asyncio.create_task(review_loop.run(1)),
             asyncio.create_task(worker_loop_correct.run()),
             asyncio.create_task(worker_loop_wrong.run()),

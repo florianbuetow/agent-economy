@@ -176,7 +176,9 @@ async def get_task_drilldown(
     feedback = [
         FeedbackDetail(
             feedback_id=fb["feedback_id"],
+            from_agent_id=fb["from_agent_id"],
             from_agent_name=fb["from_agent_name"],
+            to_agent_id=fb["to_agent_id"],
             to_agent_name=fb["to_agent_name"],
             category=fb["category"],
             rating=fb["rating"],
@@ -225,6 +227,7 @@ async def get_task_drilldown(
         status=data["status"],
         lifecycle_version=data["lifecycle_version"],
         bid_count=data["bid_count"],
+        accepted_price=data["accepted_price"],
         deadlines=TaskDeadlines(**data["deadlines"]),
         timestamps=TaskTimestamps(**data["timestamps"]),
         bids=bids,

@@ -35,6 +35,7 @@ task_feeder:
   execution_deadline_seconds: 300
   review_deadline_seconds: 120
   review_interval_seconds: 30
+  retry_backoff_seconds: 1
   auto_approve_on_error: false
   base_reward: 10
   reward_per_level: 10

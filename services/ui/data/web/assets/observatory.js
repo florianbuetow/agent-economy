@@ -12,6 +12,8 @@
   var feedEvents = [];
   var lastEventId = 0;
   var sseSource = null;
+  var seenEventIds = {};
+  var pausedBuffer = [];
 
   function buildVitals() {
     var items = [
@@ -86,16 +88,43 @@
     }).join('');
   }
 
-  function addFeedEvent(event) {
-    if (paused) return;
+  function updatePauseButton() {
+    var button = document.getElementById('pause-btn');
+    if (!button) return;
+    var pending = pausedBuffer.length ? ' (' + pausedBuffer.length + ' new)' : '';
+    button.textContent = paused ? '▶ Resume' + pending : '⏸ Pause';
+    button.classList.toggle('paused', paused);
+  }
+
+  function insertFeedEvent(event) {
     feedEvents.unshift(event);
     if (feedEvents.length > 500) {
       feedEvents.length = 500;
     }
-    if (event.eventId && event.eventId > lastEventId) {
-      lastEventId = event.eventId;
-    }
     renderFeed();
+  }
+
+  function addFeedEvent(event) {
+    // Dedupe by event_id: an SSE reconnect must never produce duplicate rows.
+    if (event.eventId) {
+      if (seenEventIds[event.eventId]) return;
+      seenEventIds[event.eventId] = true;
+      if (event.eventId > lastEventId) {
+        lastEventId = event.eventId;
+      }
+    }
+    if (paused) {
+      pausedBuffer.push(event);
+      updatePauseButton();
+      return;
+    }
+    insertFeedEvent(event);
+  }
+
+  function flushPausedBuffer() {
+    var buffered = pausedBuffer;
+    pausedBuffer = [];
+    buffered.forEach(insertFeedEvent);
   }
 
   function renderLeaderboard() {
@@ -154,11 +183,10 @@
 
   window.togglePause = function() {
     paused = !paused;
-    var button = document.getElementById('pause-btn');
-    if (button) {
-      button.textContent = paused ? '\u25b6 Resume' : '\u23f8 Pause';
-      button.classList.toggle('paused', paused);
+    if (!paused) {
+      flushPausedBuffer();
     }
+    updatePauseButton();
   };
 
   window.switchTab = function(tab) {
@@ -191,6 +219,7 @@
       history.events.forEach(function(evt) {
         var feedItem = ATE.mapEventToFeed(evt);
         feedEvents.push(feedItem);
+        seenEventIds[evt.event_id] = true;
         if (evt.event_id > lastEventId) {
           lastEventId = evt.event_id;
         }

@@ -171,6 +171,9 @@ request:
 token_validation:
   max_lifetime_seconds: 300
   clock_skew_seconds: 30
+registration:
+  reserved_names: ["platform", "operator"]
+  trusted_key_files: []
 db_gateway:
   url: "http://gateway-test"
   timeout_seconds: 10

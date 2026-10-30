@@ -74,18 +74,12 @@ class TestPhaseEnumCanonicalVocabulary:
 @pytest.mark.unit
 class TestFullCycleBidNotAccepted:
     @pytest.mark.asyncio
-    async def test_bid_never_accepted_records_bid_timeout(self, tmp_path: Path) -> None:
+    async def test_bid_not_yet_accepted_keeps_job_pending(self, tmp_path: Path) -> None:
         async with runtime_worker(tmp_path / "runtime") as (agent, store, commands):
             mocked = cast("Any", agent)
             mocked.list_tasks = AsyncMock(return_value=[task_snapshot("open", 7)])
             mocked.get_balance = AsyncMock(return_value={"balance": 100})
-            mocked.get_task = AsyncMock(
-                side_effect=[
-                    task_snapshot("open", 7),
-                    task_snapshot("open", 7),
-                    task_snapshot("open", 7),
-                ]
-            )
+            mocked.get_task = AsyncMock(return_value=task_snapshot("open", 7))
             mocked.upload_asset = AsyncMock()
             install_successful_native_transports(agent, store)
             llm = MagicMock()
@@ -96,18 +90,20 @@ class TestFullCycleBidNotAccepted:
             assert_owner_binding(agent, store)
 
             await loop._cycle()
+            job = commands.jobs.load(TASK_ID)
 
-        assert len(loop._history.records) == 1
-        record = loop._history.records[0]
-        assert record.outcome == TaskOutcome.BID_TIMEOUT
-        assert record.payout == 0
+        assert loop._history.records == []
+        assert job is not None
+        assert job["phase"] == "bid"
+        assert job["bid_amount"] == 40
+        assert job["outcome"] is None
         mocked.upload_asset.assert_not_awaited()
 
 
 @pytest.mark.unit
 class TestFullCycleSolveFailure:
     @pytest.mark.asyncio
-    async def test_unparsable_solution_records_error(self, tmp_path: Path) -> None:
+    async def test_unparsable_solution_records_error_and_keeps_job(self, tmp_path: Path) -> None:
         async with runtime_worker(tmp_path / "runtime") as (agent, store, commands):
             mocked = cast("Any", agent)
             mocked.list_tasks = AsyncMock(return_value=[task_snapshot("open", 7)])
@@ -133,11 +129,12 @@ class TestFullCycleSolveFailure:
             loop = MathWorkerLoop(agent, llm, _make_config(), commands)
 
             await loop._cycle()
+            job = commands.jobs.load(TASK_ID)
 
-        assert len(loop._history.records) == 1
-        record = loop._history.records[0]
-        assert record.outcome == TaskOutcome.ERROR
-        assert record.payout == 0
+        assert loop._history.records == []
+        assert job is not None
+        assert job["last_error"]
+        assert job["outcome"] is None
         mocked.upload_asset.assert_not_awaited()
         mocked.submit_deliverable.assert_not_awaited()
 
@@ -156,7 +153,7 @@ class TestFullCycleApproved:
                     task_snapshot("open", 7),
                     task_snapshot("accepted", 8),
                     task_snapshot("accepted", 8),
-                    task_snapshot("accepted", 8),
+                    task_snapshot("approved", 10),
                     task_snapshot("approved", 10),
                 ]
             )
@@ -183,6 +180,7 @@ class TestFullCycleApproved:
         record = loop._history.records[0]
         assert record.outcome == TaskOutcome.APPROVED
         assert record.payout == 50
+        assert record.bid_amount == 40
         assert loop._history.total_earnings == 50
 
 
@@ -190,7 +188,7 @@ class TestFullCycleApproved:
 class TestFullCycleDisputed:
     @pytest.mark.asyncio
     async def test_full_cycle_disputed_won_records_partial_payout(self, tmp_path: Path) -> None:
-        loop, mocked = await self._run_disputed_cycle(tmp_path, worker_payout=30)
+        loop, mocked = await self._run_disputed_cycle(tmp_path, worker_pct=60)
 
         mocked.submit_worker_rebuttal.assert_awaited_once_with(
             TASK_ID, "disp-1", "The submitted answer is correct."
@@ -199,10 +197,11 @@ class TestFullCycleDisputed:
         record = loop._history.records[0]
         assert record.outcome == TaskOutcome.DISPUTED_WON
         assert record.payout == 30
+        assert record.bid_amount == 40
 
     @pytest.mark.asyncio
     async def test_full_cycle_disputed_lost_records_zero_payout(self, tmp_path: Path) -> None:
-        loop, _mocked = await self._run_disputed_cycle(tmp_path, worker_payout=0)
+        loop, _mocked = await self._run_disputed_cycle(tmp_path, worker_pct=0)
 
         assert len(loop._history.records) == 1
         record = loop._history.records[0]
@@ -213,21 +212,20 @@ class TestFullCycleDisputed:
         self,
         tmp_path: Path,
         *,
-        worker_payout: int,
+        worker_pct: int,
     ) -> tuple[MathWorkerLoop, Any]:
         async with runtime_worker(tmp_path / "runtime") as (agent, store, commands):
             mocked = cast("Any", agent)
             disputed = task_snapshot("disputed", 10)
             disputed.update({"dispute_id": "disp-1", "dispute_reason": "Wrong answer"})
             ruled = task_snapshot("ruled", 11)
-            ruled["worker_payout"] = worker_payout
+            ruled["worker_pct"] = worker_pct
             mocked.list_tasks = AsyncMock(return_value=[task_snapshot("open", 7)])
             mocked.get_balance = AsyncMock(return_value={"balance": 100})
             mocked.get_task = AsyncMock(
                 side_effect=[
                     task_snapshot("open", 7),
                     task_snapshot("open", 7),
-                    task_snapshot("accepted", 8),
                     task_snapshot("accepted", 8),
                     task_snapshot("accepted", 8),
                     task_snapshot("disputed", 10),

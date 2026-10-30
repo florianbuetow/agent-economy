@@ -1,5 +1,5 @@
 # UI Service Configuration
-# Environment variable overrides use prefix: UI__
+# Settings come from this file; the UI service has no environment-variable override prefix.
 
 service:
   name: "ui"

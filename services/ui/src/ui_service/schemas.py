@@ -227,6 +227,7 @@ class FeedbackItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
     feedback_id: str
     task_id: str
+    from_agent_id: str
     from_agent_name: str
     category: str
     rating: str
@@ -409,7 +410,9 @@ class AssetItem(BaseModel):
 class FeedbackDetail(BaseModel):
     model_config = ConfigDict(extra="forbid")
     feedback_id: str
+    from_agent_id: str
     from_agent_name: str
+    to_agent_id: str
     to_agent_name: str
     category: str
     rating: str
@@ -443,6 +446,7 @@ class DisputeInfo(BaseModel):
 class TaskDeadlines(BaseModel):
     model_config = ConfigDict(extra="forbid")
     bidding_deadline: str
+    acceptance_deadline: str
     execution_deadline: str | None
     review_deadline: str | None
 
@@ -466,6 +470,7 @@ class TaskDrilldownResponse(BaseModel):
     reward: int
     status: str
     bid_count: int
+    accepted_price: int | None
     deadlines: TaskDeadlines
     timestamps: TaskTimestamps
     bids: list[BidItem]
@@ -726,6 +731,30 @@ class FileDisputeRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=5000)
     operation_id: OperationId
     expected_lifecycle_version: LifecycleVersion
+
+
+class SubmitBidRequest(BaseModel):
+    """Operator bid on another poster's open task."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    amount: int = Field(gt=0, le=MAX_SAFE_INTEGER)
+    operation_id: OperationId
+    expected_lifecycle_version: LifecycleVersion
+
+
+class RebuttalRequest(BaseModel):
+    """Worker rebuttal text; Task Board enforces its length bound."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    rebuttal: str = Field(min_length=1)
+
+
+class FeedbackRequest(BaseModel):
+    """Operator feedback; the counterpart and category follow from the operator's role."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    rating: Literal["dissatisfied", "satisfied", "extremely_satisfied"]
+    comment: str | None
 
 
 class ProxyIdentityResponse(BaseModel):

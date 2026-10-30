@@ -32,7 +32,7 @@ def _target(tmp_path: Path) -> ServiceStopTarget:
     interpreter.touch()
     uvicorn.touch()
     config_path = service_root / "config.yaml"
-    config_path.write_text("server:\n  port: 8001\n", encoding="utf-8")
+    config_path.write_text("server:\n  host: 127.0.0.1\n  port: 8001\n", encoding="utf-8")
     return ServiceStopTarget.create(
         repo_root=repo_root,
         service_root=service_root,
@@ -68,7 +68,9 @@ def _identity(
     )
 
 
-def _uvicorn_argv(target: ServiceStopTarget, *, reload: bool) -> tuple[str, ...]:
+def _uvicorn_argv(
+    target: ServiceStopTarget, *, reload: bool, host: str = "127.0.0.1"
+) -> tuple[str, ...]:
     arguments = [
         str(target.interpreter),
         str(target.uvicorn_launcher),
@@ -77,7 +79,7 @@ def _uvicorn_argv(target: ServiceStopTarget, *, reload: bool) -> tuple[str, ...]
     ]
     if reload:
         arguments.append("--reload")
-    arguments.extend(("--host", "127.0.0.1", "--port", str(target.port)))
+    arguments.extend(("--host", host, "--port", str(target.port)))
     return tuple(arguments)
 
 
@@ -105,7 +107,7 @@ def test_relative_service_config_override_resolves_from_service_start_cwd(
 ) -> None:
     target = _target(tmp_path)
     relative_config = target.service_root / "custom.yaml"
-    relative_config.write_text("server:\n  port: 8001\n", encoding="utf-8")
+    relative_config.write_text("server:\n  host: 127.0.0.1\n  port: 8001\n", encoding="utf-8")
 
     relative_target = ServiceStopTarget.create(
         repo_root=target.repo_root,
@@ -431,3 +433,51 @@ def test_service_justfiles_share_scoped_non_escalating_kill_recipe() -> None:
     assert "scripts/stop_agent.py" in kill_recipe
     assert "--service-entrypoint" in kill_recipe
     assert "--timeout-seconds" in kill_recipe
+
+
+def _target_with_config(tmp_path: Path, config_text: str) -> ServiceStopTarget:
+    target = _target(tmp_path)
+    target.config_path.write_text(config_text, encoding="utf-8")
+    return ServiceStopTarget.create(
+        repo_root=target.repo_root,
+        service_root=target.service_root,
+        config_path=target.config_path,
+        entrypoint=target.entrypoint,
+        port=target.port,
+    )
+
+
+def test_configured_wildcard_host_is_recognised(tmp_path: Path) -> None:
+    target = _target_with_config(tmp_path, "server:\n  host: 0.0.0.0\n  port: 8001\n")
+    owned = _identity(
+        target,
+        pid=201,
+        ppid=1,
+        argv=_uvicorn_argv(target, reload=False, host="0.0.0.0"),
+    )
+
+    root, family = select_service_processes((owned,), target)
+
+    assert target.host == "0.0.0.0"
+    assert root == owned
+    assert family == (owned,)
+
+
+def test_process_bound_to_other_host_than_configured_is_refused(
+    tmp_path: Path,
+) -> None:
+    target = _target_with_config(tmp_path, "server:\n  host: 0.0.0.0\n  port: 8001\n")
+    other = _identity(
+        target,
+        pid=202,
+        ppid=1,
+        argv=_uvicorn_argv(target, reload=False, host="127.0.0.1"),
+    )
+
+    with pytest.raises(RuntimeError, match="foreign or ambiguous"):
+        select_service_processes((other,), target)
+
+
+def test_config_without_server_host_is_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="server.host"):
+        _target_with_config(tmp_path, "server:\n  port: 8001\n")

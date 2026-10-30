@@ -276,10 +276,10 @@ def test_form_edits_do_not_change_exact_retry_and_separate_action_allocates_new_
     _click_post(e2e_page)
     e2e_page.locator("#f-reward").fill("999")
 
-    assert e2e_page.get_by_text("Retry exact intent", exact=False).count() == 1
-    assert e2e_page.get_by_text("Create separate posting", exact=False).count() == 1
-    e2e_page.get_by_text("Retry exact intent", exact=False).click()
-    e2e_page.get_by_text("Create separate posting", exact=False).click()
+    assert e2e_page.get_by_text("Try posting again", exact=False).count() == 1
+    assert e2e_page.get_by_text("Post as a new task", exact=False).count() == 1
+    e2e_page.get_by_text("Try posting again", exact=False).click()
+    e2e_page.get_by_text("Post as a new task", exact=False).click()
     e2e_page.wait_for_function("() => document.getElementById('btn-post-task').disabled === false")
 
     trace = events(e2e_page)

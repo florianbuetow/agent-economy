@@ -1,6 +1,8 @@
 """Events route handlers."""
 
-from fastapi import APIRouter, Query
+from typing import Annotated
+
+from fastapi import APIRouter, Header, Query
 from service_commons.exceptions import ServiceError
 from sse_starlette.sse import EventSourceResponse
 
@@ -75,14 +77,34 @@ async def get_events(
 
 
 @router.get("/events/stream")  # nosemgrep
-async def stream_events(last_event_id: int = Query(0)) -> EventSourceResponse:
-    """Server-Sent Events stream of economy events."""
+async def stream_events(
+    last_event_id: int = Query(0),
+    last_event_id_header: Annotated[str | None, Header(alias="Last-Event-ID")] = None,
+) -> EventSourceResponse:
+    """Server-Sent Events stream of economy events.
+
+    A browser reconnect re-requests the original URL (original cursor) and adds
+    the ``Last-Event-ID`` header carrying the last delivered id. The stream
+    resumes from the larger of the two so no event is replayed.
+    """
+    cursor = last_event_id
+    if last_event_id_header is not None:
+        try:
+            header_id = int(last_event_id_header)
+        except ValueError:
+            raise ServiceError(
+                "invalid_parameter",
+                "Last-Event-ID must be an integer",
+                400,
+                {},
+            ) from None
+        cursor = max(cursor, header_id)
     db = get_db()
     settings = get_settings()
     return EventSourceResponse(
         events_service.stream_events(
             db,
-            last_event_id,
+            cursor,
             settings.sse.batch_size,
             settings.sse.poll_interval_seconds,
             settings.sse.keepalive_interval_seconds,

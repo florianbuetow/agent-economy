@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     import asyncio
@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from task_board_service.services.protocol import TaskStorageInterface
     from task_board_service.services.task_manager import TaskManager
     from task_board_service.services.token_validator import TokenValidator
+
+LoopStatus = Literal["running", "dead"]
 
 
 @dataclass
@@ -41,6 +43,19 @@ class AppState:
     posting_recovery_task: asyncio.Task[None] | None = None
     financial_effect_recovery: FinancialEffectRecovery | None = None
     financial_effect_recovery_task: asyncio.Task[None] | None = None
+    shutting_down: bool = False
+
+    def background_loops(self) -> dict[str, LoopStatus]:
+        """Liveness of each supervised background loop: "running" or "dead"."""
+        loops = {
+            "deadline_sweep": self.deadline_sweep_task,
+            "posting_recovery": self.posting_recovery_task,
+            "financial_effect_recovery": self.financial_effect_recovery_task,
+        }
+        return {
+            name: "running" if task is not None and not task.done() else "dead"
+            for name, task in loops.items()
+        }
 
     @property
     def uptime_seconds(self) -> float:

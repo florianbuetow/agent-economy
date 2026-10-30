@@ -39,6 +39,9 @@ port_court := "8005"
 port_db_gateway := "8007"
 port_ui := "8008"
 
+# Per-service stdout/stderr of services launched by start-all
+log_dir := "data/logs"
+
 # Default recipe: show help
 _default:
     @just help
@@ -80,7 +83,13 @@ help:
     @printf "  \033[0;37mjust start-mathbot [profile]\033[0;34m Start math worker agent from a named profile (default: mathbot; requires services + LM Studio)\033[0m\n"
     @printf "  \033[0;37mjust stop-mathbot [profile]\033[0;34m Stop the exact local math worker profile (default: mathbot)\033[0m\n"
     @printf "  \033[0;37mjust fund-feeder <amount> <operation-id> <reference>\033[0;34m Fund the feeder agent\033[0m\n"
+    @printf "  \033[0;37mjust fund-agent <agent-id> <amount> <operation-id> [reference]\033[0;34m Fund any registered agent (idempotent on operation id)\033[0m\n"
     @printf "  \033[0;37mjust provision        \033[0;34m Provision the treasury (idempotent; run once after first start-all)\033[0m\n"
+    @printf "  \033[0;37mjust supervise-install\033[0;34m Install launchd/systemd units that restart crashed services\033[0m\n"
+    @printf "  \033[0;37mjust supervise-uninstall\033[0;34m Remove the supervision units\033[0m\n"
+    @printf "  \033[0;37mjust supervise-status \033[0;34m Show supervision unit state\033[0m\n"
+    @printf "  \033[0;37mjust backup <dest.tar.gz>\033[0;34m Stop the stack and archive all economy state\033[0m\n"
+    @printf "  \033[0;37mjust restore <src.tar.gz>\033[0;34m Stop the stack and restore an archive (then run start-all)\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
     @printf "  \033[0;37mjust logs             \033[0;34m Tail all service logs (color-coded)\033[0m\n"
     @echo ""
@@ -223,19 +232,19 @@ start-ui:
 # Internal background launches used by start-all. These intentionally omit
 # hot reload while preserving Court's explicit local environment loading.
 _launch-db-gateway:
-    cd services/db-gateway && uv run uvicorn db_gateway_service.app:create_app --factory --host 127.0.0.1 --port {{port_db_gateway}}
+    cd services/db-gateway && uv run uvicorn db_gateway_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_db_gateway}}
 
 _launch-identity:
-    cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host 127.0.0.1 --port {{port_identity}}
+    cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_identity}}
 
 _launch-reputation:
-    cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 127.0.0.1 --port {{port_reputation}}
+    cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_reputation}}
 
 _launch-bank:
-    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 127.0.0.1 --port {{port_central_bank}}
+    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_central_bank}}
 
 _launch-taskboard:
-    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 127.0.0.1 --port {{port_task_board}}
+    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_task_board}}
 
 _launch-court:
     #!/usr/bin/env bash
@@ -245,10 +254,10 @@ _launch-court:
         . .env
         set +a
     fi
-    uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port {{port_court}}
+    uv run uvicorn court_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_court}}
 
 _launch-ui:
-    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host 127.0.0.1 --port {{port_ui}}
+    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_ui}}
 
 # Start all services in background (respects dependency order)
 start-all:
@@ -263,6 +272,28 @@ start-all:
         printf "For valid legacy 0644 keys, run 'just adopt-key-permissions' explicitly.\n"
         exit 1
     fi
+
+    mkdir -p "{{log_dir}}"
+
+    court_env=services/court/.env
+    if [ -f "$court_env" ] && [ "$(ls -ld "$court_env" | cut -c5-10)" != "------" ]; then
+        printf "\033[0;31m✗ %s is group/world accessible; refusing to start Court.\033[0m\n" "$court_env"
+        printf "Run: chmod 600 %s\n" "$court_env"
+        exit 1
+    fi
+
+    launched_dirs=()
+    start_all_ok=0
+    cleanup_partial_start() {
+        if [ "$start_all_ok" -eq 1 ]; then
+            return 0
+        fi
+        for svc_dir in "${launched_dirs[@]}"; do
+            printf "Stopping %s (launched by this run)...\n" "$svc_dir"
+            (cd "services/$svc_dir" && just kill) || true
+        done
+    }
+    trap cleanup_partial_start EXIT
 
     wait_for_health() {
         local name=$1
@@ -294,16 +325,18 @@ start-all:
         local name=$1
         local port=$2
         local recipe=$3
+        local svc_dir=$4
         if is_healthy "$port"; then
             printf "\033[0;32m✓ %s already healthy (port %s)\033[0m\n" "$name" "$port"
             return 0
         fi
-        just "$recipe" &
+        just "$recipe" >>"{{log_dir}}/${svc_dir}.out" 2>&1 &
+        launched_dirs+=("$svc_dir")
     }
 
     # Tier 1: DB Gateway first (creates economy.db needed by UI)
     printf "Starting tier 1 (DB Gateway)...\n"
-    start_unless_healthy "DB Gateway" {{port_db_gateway}} _launch-db-gateway
+    start_unless_healthy "DB Gateway" {{port_db_gateway}} _launch-db-gateway db-gateway
     if ! wait_for_health "DB Gateway" {{port_db_gateway}}; then
         printf "\033[0;31m✗ DB Gateway did not become healthy; aborting startup\033[0m\n"
         exit 1
@@ -316,7 +349,7 @@ start-all:
     # had bound its socket, raising httpx.ConnectError and aborting that
     # service's lifespan ("Application startup failed. Exiting.").
     printf "Starting tier 2 (Identity)...\n"
-    start_unless_healthy "Identity" {{port_identity}} _launch-identity
+    start_unless_healthy "Identity" {{port_identity}} _launch-identity identity
     if ! wait_for_health "Identity" {{port_identity}}; then
         printf "\033[0;31m✗ Identity did not become healthy; aborting startup\033[0m\n"
         exit 1
@@ -335,10 +368,10 @@ start-all:
     # Tier 3: economy services in parallel. Identity is healthy, so
     # platform-agent registration can no longer race.
     printf "Starting tier 3 (economy services)...\n"
-    start_unless_healthy "Reputation" {{port_reputation}} _launch-reputation
-    start_unless_healthy "Central Bank" {{port_central_bank}} _launch-bank
-    start_unless_healthy "Task Board" {{port_task_board}} _launch-taskboard
-    start_unless_healthy "Court" {{port_court}} _launch-court
+    start_unless_healthy "Reputation" {{port_reputation}} _launch-reputation reputation
+    start_unless_healthy "Central Bank" {{port_central_bank}} _launch-bank central-bank
+    start_unless_healthy "Task Board" {{port_task_board}} _launch-taskboard task-board
+    start_unless_healthy "Court" {{port_court}} _launch-court court
 
     # Wait for the rest in dependency order
     if ! wait_for_health "Central Bank" {{port_central_bank}}; then
@@ -360,13 +393,14 @@ start-all:
 
     # Tier 4: UI last, after every service it calls is healthy.
     printf "Starting tier 4 (UI)...\n"
-    start_unless_healthy "UI" {{port_ui}} _launch-ui
+    start_unless_healthy "UI" {{port_ui}} _launch-ui ui
     if ! wait_for_health "UI" {{port_ui}}; then
         printf "\033[0;31m✗ UI did not become healthy; aborting startup\033[0m\n"
         exit 1
     fi
 
     printf "\n"
+    start_all_ok=1
     printf "\033[0;32m✓ All services started\033[0m\n"
     printf "\033[0;32m  UI Service: http://localhost:{{port_ui}}\033[0m\n"
     printf "\n"
@@ -507,6 +541,43 @@ fund-feeder amount operation_id reference:
         exit 1
     fi
     printf "\n"
+
+# Fund any registered agent through the platform agent (idempotent on operation_id).
+fund-agent agent_id amount operation_id reference="":
+    #!/usr/bin/env bash
+    printf "\n"
+    printf "\033[0;34m=== Funding Agent {{agent_id}} ===\033[0m\n"
+    printf "\n"
+    cd agents && uv run python -m fund_agent_cli --agent-id {{quote(agent_id)}} --amount {{quote(amount)}} --operation-id {{quote(operation_id)}} {{ if reference == "" { "" } else { "--reference " + quote(reference) } }}
+    exit_code=$?
+    printf "\n"
+    if [ $exit_code -eq 0 ]; then
+        printf "\033[0;32m✓ Agent funded successfully\033[0m\n"
+    else
+        printf "\033[0;31m✗ Failed to fund agent\033[0m\n"
+        exit 1
+    fi
+    printf "\n"
+
+# Install launchd (macOS) or systemd (Linux) units that restart crashed services; stop/start through the supervisor afterwards
+supervise-install:
+    uv run --project agents scripts/supervise.py install
+
+# Remove the supervision units
+supervise-uninstall:
+    uv run --project agents scripts/supervise.py uninstall
+
+# Show supervision unit state
+supervise-status:
+    uv run --project agents scripts/supervise.py status
+
+# Stop the stack and archive all economy state to dest.tar.gz (stack stays stopped; run start-all afterwards)
+backup dest:
+    uv run --project agents scripts/backup.py backup {{quote(dest)}}
+
+# Stop the stack and restore an archive (stack stays stopped; run start-all afterwards)
+restore src:
+    uv run --project agents scripts/backup.py restore {{quote(src)}} --yes
 
 # Provision the treasury (idempotent genesis for the UI operator account).
 # Q-9 decision: `just start-all` does NOT auto-mint the treasury any more —

@@ -9,6 +9,7 @@ from fastapi import Depends
 from service_commons.exceptions import ServiceError
 
 from ui_service.core.state import get_app_state
+from ui_service.services.agents import QualityReader
 from ui_service.services.task_board_reads import TaskBoardReader
 
 
@@ -49,3 +50,19 @@ def get_task_board_reader() -> TaskBoardReader:
 
 
 TaskBoardRead = Annotated[TaskBoardReader, Depends(get_task_board_reader)]
+
+
+def get_quality_reader() -> QualityReader:
+    """Return the Reputation quality reader (G12)."""
+    reader = get_app_state().quality_reader
+    if reader is None:
+        raise ServiceError(
+            error="quality_reader_unavailable",
+            message="Reputation quality reader not available yet",
+            status_code=503,
+            details=None,
+        )
+    return reader
+
+
+QualityRead = Annotated[QualityReader, Depends(get_quality_reader)]

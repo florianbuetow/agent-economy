@@ -10,6 +10,17 @@ from contextlib import closing
 from pathlib import Path
 
 import pytest
+from db_gateway_service.money_audit import audit_money
+from db_gateway_service.publication_audit import audit_publications
+from db_gateway_service.receipt_audit import audit_receipt_ownership
+from db_gateway_service.recovery import (
+    PublicationState,
+    create_backup,
+    restore_backup,
+    verify_backup,
+)
+from db_gateway_service.schema import SchemaState, classify_schema, load_schema_sql
+from db_gateway_service.task_contract_audit import audit_task_contracts
 from scripts.isolated_test_runtime import IsolatedRuntime
 from scripts.recovery_targets import build_target_bindings
 from service_auth import AgentFactory
@@ -23,19 +34,25 @@ from tests.runtime.test_recovery_live_restore import (
     _task_version,
 )
 
-from db_gateway_service.money_audit import audit_money
-from db_gateway_service.publication_audit import audit_publications
-from db_gateway_service.receipt_audit import audit_receipt_ownership
-from db_gateway_service.recovery import (
-    PublicationState,
-    create_backup,
-    restore_backup,
-    verify_backup,
-)
-from db_gateway_service.schema import SchemaState, classify_schema, load_schema_sql
-from db_gateway_service.task_contract_audit import audit_task_contracts
-
 pytestmark = pytest.mark.integration
+
+
+async def signed_download_asset(agent: object, task_id: str, asset_id: str) -> bytes:
+    """Signed Task Board asset download (the SDK method sends no token)."""
+    auth_header = agent._auth_header
+    request_raw = agent._request_raw
+    base_url = agent.config.task_board_url
+    headers = auth_header(
+        {"action": "download_asset", "task_id": task_id, "asset_id": asset_id},
+        audience="task-board",
+        resource=f"GET /tasks/{task_id}/assets/{asset_id}",
+    )
+    url = f"{base_url}/tasks/{task_id}/assets/{asset_id}"
+    response = await request_raw("GET", url, headers=headers)
+    response.raise_for_status()
+    return bytes(response.content)
+
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _LEGACY_DOMAIN_TABLES = (
     "bank_accounts",
@@ -58,9 +75,7 @@ def _logical_rows(connection):
     """Snapshot frozen v0/v1 domain rows, storage types, rowids and sequences."""
     result = {}
     for table in _LEGACY_DOMAIN_TABLES:
-        columns = sorted(
-            row[1] for row in connection.execute(f'PRAGMA table_info("{table}")')
-        )
+        columns = sorted(row[1] for row in connection.execute(f'PRAGMA table_info("{table}")'))
         assert columns, f"Missing frozen legacy domain table: {table}"
         selected = ", ".join(f'"{column}"' for column in columns)
         storage_types = ", ".join(f'typeof("{column}")' for column in columns)
@@ -135,7 +150,7 @@ async def _resume_signed_workload(config_path, receipt):
         assert task["worker_id"] == receipt["worker_id"]
         assert (await poster.get_balance())["balance"] == receipt["balance"]
         assert (
-            await poster.download_asset(receipt["task_id"], receipt["asset_id"])
+            await signed_download_asset(poster, receipt["task_id"], receipt["asset_id"])
             == DELIVERABLE
         )
         before_worker = (await worker.get_balance())["balance"]
@@ -165,9 +180,7 @@ def _assert_pre_migration_restore(
     bindings = build_target_bindings(
         inventory,
         target_root=target,
-        process_cwds={
-            config.logical_id: config.process_cwd for config in inventory.configs
-        },
+        process_cwds={config.logical_id: config.process_cwd for config in inventory.configs},
         agents_package_root=REPO_ROOT / "agents",
         endpoint_values=_endpoints(inventory, runtime),
     )
@@ -348,12 +361,10 @@ def _assert_v3_database(database, original_rows, v3_backup):
             "before-task-migration",
             v3_backup.manifest_sha256,
         )
-        assert migrated.execute(
-            "SELECT COUNT(*) FROM board_task_operations"
-        ).fetchone() == (0,)
-        assert migrated.execute(
-            "SELECT COUNT(*) FROM board_task_contracts"
-        ).fetchone() == (len(original_rows["board_tasks"][1]),)
+        assert migrated.execute("SELECT COUNT(*) FROM board_task_operations").fetchone() == (0,)
+        assert migrated.execute("SELECT COUNT(*) FROM board_task_contracts").fetchone() == (
+            len(original_rows["board_tasks"][1]),
+        )
 
 
 def _upgrade_v2_to_v3(
@@ -600,12 +611,9 @@ def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(
     (tmp_path / "runtime-before-migration.json").write_bytes(
         (runtime.run_dir / "runtime.json").read_bytes()
     )
-    inventory = RecoveryInventoryV1.model_validate_json(
-        prepared.inventory_path.read_bytes()
-    )
+    inventory = RecoveryInventoryV1.model_validate_json(prepared.inventory_path.read_bytes())
     assert all(
-        not record.running and record.group_drained
-        for record in inventory.process_ownership
+        not record.running and record.group_drained for record in inventory.process_ownership
     )
     database = runtime.run_dir / "data/economy.db"
     original_rows = _install_legacy_fixture(database)
@@ -682,18 +690,16 @@ def test_migration_cli_preserves_live_receipts_and_allows_signed_continuation(
     )
     assert _file_hashes(backup.location) == original_artifact
 
-    v3_backup, v3_backup_hashes, v4_backup, v4_backup_hashes = (
-        _upgrade_v2_to_v4_preserving_v2(
-            runtime,
-            inventory,
-            prepared.inventory_path,
-            database,
-            original_rows,
-            backup_root,
-            work_root,
-            v2_backup,
-            v2_backup_hashes,
-        )
+    v3_backup, v3_backup_hashes, v4_backup, v4_backup_hashes = _upgrade_v2_to_v4_preserving_v2(
+        runtime,
+        inventory,
+        prepared.inventory_path,
+        database,
+        original_rows,
+        backup_root,
+        work_root,
+        v2_backup,
+        v2_backup_hashes,
     )
 
     v5_backup, v5_backup_hashes = _upgrade_v4_to_v5(

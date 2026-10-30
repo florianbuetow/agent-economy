@@ -46,32 +46,59 @@ def _make_agent_without_payload_answer() -> MagicMock:
     return agent
 
 
+def _set_assets(agent: MagicMock, assets: list[dict[str, str]], content: bytes) -> None:
+    agent._request = AsyncMock(return_value={"assets": assets})
+    agent._request_raw = AsyncMock(return_value=MagicMock(content=content))
+
+
 @pytest.mark.unit
 class TestReviewFallsBackToAssetContent:
     @pytest.mark.asyncio
     async def test_correct_answer_in_asset_triggers_approve(self, tmp_path: Path) -> None:
         agent = _make_agent_without_payload_answer()
-        agent.list_assets = AsyncMock(
-            return_value=[{"asset_id": "asset-1", "uploaded_at": "2026-01-01T00:00:00Z"}]
-        )
-        agent.download_asset = AsyncMock(return_value=b"4")
+        _set_assets(agent, [{"asset_id": "asset-1", "uploaded_at": "2026-01-01T00:00:00Z"}], b"4")
         with runtime_commands(tmp_path, agent) as (commands, _store):
             loop = ReviewLoop(agent, {TASK_ID: _make_raw_task(solutions=["4"])}, commands)
             result = await loop.review_one(TASK_ID)
 
         assert result == "approved"
-        agent.list_assets.assert_awaited_once_with(TASK_ID)
-        agent.download_asset.assert_awaited_once_with(TASK_ID, "asset-1")
         assert agent.approve_task.await_args.args == (TASK_ID,)
         agent.dispute_task.assert_not_awaited()
 
     @pytest.mark.asyncio
+    async def test_asset_reads_are_signed_for_task_board(self, tmp_path: Path) -> None:
+        agent = _make_agent_without_payload_answer()
+        _set_assets(agent, [{"asset_id": "asset-1", "uploaded_at": "2026-01-01T00:00:00Z"}], b"4")
+        with runtime_commands(tmp_path, agent) as (commands, _store):
+            loop = ReviewLoop(agent, {TASK_ID: _make_raw_task(solutions=["4"])}, commands)
+            await loop.review_one(TASK_ID)
+
+        base = f"{agent.config.task_board_url}/tasks/{TASK_ID}/assets"
+        agent._request.assert_awaited_once_with(
+            "GET", base, headers={"Authorization": "Bearer signed-fixture"}
+        )
+        agent._request_raw.assert_awaited_once_with(
+            "GET", f"{base}/asset-1", headers={"Authorization": "Bearer signed-fixture"}
+        )
+        signed = list(agent._auth_header.call_args_list)
+        assert len(signed) == 2
+        assert signed[0].args == ({"action": "list_assets", "task_id": TASK_ID},)
+        assert signed[0].kwargs == {
+            "audience": "task-board",
+            "resource": f"GET /tasks/{TASK_ID}/assets",
+        }
+        assert signed[1].args == (
+            {"action": "download_asset", "task_id": TASK_ID, "asset_id": "asset-1"},
+        )
+        assert signed[1].kwargs == {
+            "audience": "task-board",
+            "resource": f"GET /tasks/{TASK_ID}/assets/asset-1",
+        }
+
+    @pytest.mark.asyncio
     async def test_wrong_answer_in_asset_triggers_dispute(self, tmp_path: Path) -> None:
         agent = _make_agent_without_payload_answer()
-        agent.list_assets = AsyncMock(
-            return_value=[{"asset_id": "asset-1", "uploaded_at": "2026-01-01T00:00:00Z"}]
-        )
-        agent.download_asset = AsyncMock(return_value=b"999")
+        _set_assets(agent, [{"asset_id": "asset-1", "uploaded_at": "2026-01-01T00:00:00Z"}], b"999")
         with runtime_commands(tmp_path, agent) as (commands, _store):
             loop = ReviewLoop(agent, {TASK_ID: _make_raw_task(solutions=["4"])}, commands)
             result = await loop.review_one(TASK_ID)
@@ -83,41 +110,41 @@ class TestReviewFallsBackToAssetContent:
     @pytest.mark.asyncio
     async def test_picks_latest_asset_when_multiple_uploaded(self, tmp_path: Path) -> None:
         agent = _make_agent_without_payload_answer()
-        agent.list_assets = AsyncMock(
-            return_value=[
+        _set_assets(
+            agent,
+            [
                 {"asset_id": "asset-old", "uploaded_at": "2026-01-01T00:00:00Z"},
                 {"asset_id": "asset-new", "uploaded_at": "2026-01-01T00:00:05Z"},
-            ]
+            ],
+            b"4",
         )
-        agent.download_asset = AsyncMock(return_value=b"4")
         with runtime_commands(tmp_path, agent) as (commands, _store):
             loop = ReviewLoop(agent, {TASK_ID: _make_raw_task(solutions=["4"])}, commands)
             await loop.review_one(TASK_ID)
 
-        agent.download_asset.assert_awaited_once_with(TASK_ID, "asset-new")
+        agent._request_raw.assert_awaited_once()
+        assert agent._request_raw.await_args.args[1].endswith("/assets/asset-new")
 
     @pytest.mark.asyncio
     async def test_no_assets_triggers_dispute(self, tmp_path: Path) -> None:
         agent = _make_agent_without_payload_answer()
-        agent.list_assets = AsyncMock(return_value=[])
-        agent.download_asset = AsyncMock()
+        _set_assets(agent, [], b"")
         with runtime_commands(tmp_path, agent) as (commands, _store):
             loop = ReviewLoop(agent, {TASK_ID: _make_raw_task(solutions=["4"])}, commands)
             result = await loop.review_one(TASK_ID)
 
         assert result == "disputed"
-        agent.download_asset.assert_not_awaited()
+        agent._request_raw.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_payload_answer_takes_precedence_over_assets(self, tmp_path: Path) -> None:
-        """When get_task already returns a submitted_answer, assets are never touched
-        (keeps the existing test_review.py mocking style working unmodified)."""
+        """When get_task already returns a submitted_answer, assets are never touched."""
         agent = make_agent()
         agent.get_task = AsyncMock(return_value=submitted_task("4"))
-        agent.list_assets = AsyncMock(side_effect=AssertionError("should not be called"))
+        agent._request = AsyncMock(side_effect=AssertionError("should not be called"))
         with runtime_commands(tmp_path, agent) as (commands, _store):
             loop = ReviewLoop(agent, {TASK_ID: _make_raw_task(solutions=["4"])}, commands)
             result = await loop.review_one(TASK_ID)
 
         assert result == "approved"
-        agent.list_assets.assert_not_called()
+        agent._request.assert_not_called()

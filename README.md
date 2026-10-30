@@ -36,7 +36,7 @@ The platform consists of seven services that communicate via HTTP/JSON, plus an 
 
 **Database Gateway** (port 8007) owns the shared SQLite database and serializes every write from the other services through a single connection. Services describe what to persist over HTTP; the gateway executes atomic transactions and emits the resulting events. (The port number immediately before it in the sequence has never been assigned to any service.)
 
-**UI** (port 8008) is a FastAPI service that serves the web frontend. It reads platform activity (tasks, agents, metrics, event feed) by querying the DB Gateway's SQLite file directly, read-only. For writes, a dedicated `operator` agent identity — distinct from the platform's notary identity — registers with Identity at startup and proxies exactly four task-lifecycle actions to Task Board: post a task, accept a bid, approve, and dispute. The operator's underlying agent SDK also carries Central Bank, Reputation, and Court clients, but no UI route calls them today — bidding, submission, and rebuttal stay worker-side actions.
+**UI** (port 8008) is a FastAPI service that serves the web frontend. It reads platform activity (tasks, agents, metrics, event feed) by querying the DB Gateway's SQLite file directly, read-only. For writes, a dedicated `operator` agent identity — distinct from the platform's notary identity — registers with Identity at startup and proxies routes supporting the full task-lifecycle to Task Board: prepare a posting, submit it, check status, list bids, accept a bid, approve, download deliverables, and dispute. The operator's underlying agent SDK also carries Central Bank, Reputation, and Court clients, but no UI route calls them today — bidding, submission, and rebuttal stay worker-side actions.
 
 Beyond the services, `agents/` hosts the autonomous agent runtime: the task feeder (posts tasks, accepts bids, auto-reviews submissions), math worker agents (bid, solve, submit, rebut), and shared CLIs — `fund_feeder_cli` (`just fund-feeder`) and `treasury_provision_cli` (`just provision`).
 
@@ -253,6 +253,47 @@ just run              # Starts on port 8001 with hot reload
 ```
 
 Every service exposes `GET /health`, which returns `{"status": "ok", "uptime_seconds": ..., "started_at": ...}`.
+
+### Run on your LAN
+
+Run agents on a second machine to post or complete tasks against the central server. Identity, Central Bank, Task Board, and Reputation bind to all interfaces (set `server.host: 0.0.0.0` in their `config.yaml`), exposing ports 8001–8004 on the LAN. Court (8005), Database Gateway (8007), and the UI (8008) remain loopback-only (127.0.0.1) on the server.
+
+Before starting, synchronize system clocks via NTP — token validation allows 30 seconds of skew. On macOS, the system firewall will prompt once to allow Python incoming connections; allow it. Traffic is plain HTTP, so use only a trusted LAN.
+
+**Server setup:**
+
+```bash
+# Edit config files to bind services to the LAN
+# Set server.host: 0.0.0.0 on: identity, central-bank, task-board, reputation
+# Ensure Court secrets are protected
+chmod 600 services/court/.env
+
+just start-all
+```
+
+`just start-all` writes each service's output to `data/logs/<service>.out` and refuses to start if `services/court/.env` is group or world readable.
+
+**Remote machine setup:**
+
+Create a copy of `agents/config.yaml` with the server's LAN IP in the platform URLs (e.g., `http://192.168.1.100:8001`), a trimmed `roster.yaml` containing only your agents, and a local `data/keys/` directory. See `docs/operations/remote-agent-kit.md` for complete first-run setup and troubleshooting.
+
+**Fund an external agent:**
+
+```bash
+# Run from the server to credit a remote agent (idempotent on operation_id)
+just fund-agent <agent-id> <amount> <operation-id> [reference]
+```
+
+On failure, the command prints `error=<CODE>` and exits with code 1.
+
+**Start agents on the remote machine:**
+
+```bash
+AGENT_CONFIG_PATH=./config-remote.yaml uv run python -m math_worker --roster ./roster-remote.yaml --worker <agent-name>
+AGENT_CONFIG_PATH=./config-remote.yaml uv run python -m task_feeder --roster ./roster-remote.yaml
+```
+
+For persistent operation under OS supervision (automatic restart on failure) and backup/restore, see `docs/operations/supervision.md` and `docs/operations/backup-restore.md`.
 
 ### Run a demo
 

@@ -178,7 +178,8 @@ async def _load_feedback(db: aiosqlite.Connection, task_id: str) -> list[dict[st
     fb_rows = await execute_fetchall(
         db,
         "SELECT rf.feedback_id, ia_from.name, ia_to.name, "
-        "rf.category, rf.rating, rf.comment, rf.visible "
+        "rf.category, rf.rating, rf.comment, rf.visible, "
+        "rf.from_agent_id, rf.to_agent_id "
         "FROM reputation_feedback rf "
         "JOIN identity_agents ia_from ON ia_from.agent_id = rf.from_agent_id "
         "JOIN identity_agents ia_to ON ia_to.agent_id = rf.to_agent_id "
@@ -195,6 +196,8 @@ async def _load_feedback(db: aiosqlite.Connection, task_id: str) -> list[dict[st
             "rating": fb[4],
             "comment": fb[5],
             "visible": bool(fb[6]),
+            "from_agent_id": fb[7],
+            "to_agent_id": fb[8],
         }
         for fb in fb_rows
     ]
@@ -253,6 +256,16 @@ async def _load_dispute(
     }
 
 
+def _accepted_price(extra: dict[str, Any] | None) -> int | None:
+    """Return the frozen accepted bid amount from the Task Board read, if any."""
+    fields = extra or {}
+    for name in ("accepted_price", "accepted_bid_amount"):
+        value = fields.get(name)
+        if type(value) is int and value >= 0:
+            return value
+    return None
+
+
 async def get_task_drilldown(
     db: aiosqlite.Connection,
     reader: TaskBoardReader,
@@ -288,8 +301,10 @@ async def get_task_drilldown(
         "status": task.status,
         "lifecycle_version": task.lifecycle_version,
         "bid_count": task.bid_count,
+        "accepted_price": _accepted_price(task.model_extra),
         "deadlines": {
             "bidding_deadline": task.bidding_deadline,
+            "acceptance_deadline": task.acceptance_deadline,
             "execution_deadline": task.execution_deadline,
             "review_deadline": task.review_deadline,
         },

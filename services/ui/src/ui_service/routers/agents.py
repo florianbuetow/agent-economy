@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
-from ui_service.core.deps import DbConn
+from ui_service.core.deps import DbConn, QualityRead
 from ui_service.schemas import (
     AgentEarningsResponse,
     AgentFeedEvent,
@@ -36,6 +36,7 @@ VALID_SORT_FIELDS = {
 @router.get("/agents")  # nosemgrep
 async def list_agents(
     db: DbConn,
+    quality_reader: QualityRead,
     sort_by: str = Query("total_earned"),
     order: str = Query("desc"),
     limit: int = Query(20),
@@ -51,7 +52,9 @@ async def list_agents(
             details={"parameter": "sort_by", "value": sort_by},
         )
 
-    data = await agents_service.list_agents(db, sort_by, order, limit, offset)
+    data = await agents_service.list_agents(
+        db, quality_reader, sort_by, order, limit, offset
+    )
 
     agents = [
         AgentListItem(
@@ -84,9 +87,10 @@ async def list_agents(
 async def get_agent_profile(
     agent_id: str,
     db: DbConn,
+    quality_reader: QualityRead,
 ) -> JSONResponse:
     """Return a single agent's full profile."""
-    data = await agents_service.get_agent_profile(db, agent_id)
+    data = await agents_service.get_agent_profile(db, quality_reader, agent_id)
 
     if data is None:
         raise ServiceError(
@@ -112,6 +116,7 @@ async def get_agent_profile(
         FeedbackItem(
             feedback_id=fb["feedback_id"],
             task_id=fb["task_id"],
+            from_agent_id=fb["from_agent_id"],
             from_agent_name=fb["from_agent_name"],
             category=fb["category"],
             rating=fb["rating"],

@@ -27,7 +27,7 @@ def _target(tmp_path: Path) -> ServiceStopTarget:
     bin_dir.joinpath("python").touch()
     bin_dir.joinpath("uvicorn").touch()
     config = service_root / "config.yaml"
-    config.write_text("server:\n  port: 8001\n", encoding="utf-8")
+    config.write_text("server:\n  host: 127.0.0.1\n  port: 8001\n", encoding="utf-8")
     return ServiceStopTarget.create(
         repo_root=repo_root,
         service_root=service_root,

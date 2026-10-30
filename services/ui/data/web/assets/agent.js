@@ -208,14 +208,91 @@
     return feedback.map(function(fb) {
       var color = ratingColor[fb.rating] || 'var(--text-dim)';
       return '<div class="feedback-row">' +
-        '<span class="feedback-from">' + ATE.escapeHTML(fb.from_agent_name) + '</span>' +
+        '<a class="feedback-from" href="/agent.html?agent_id=' + encodeURIComponent(fb.from_agent_id) + '">' + ATE.escapeHTML(fb.from_agent_name) + '</a>' +
         '<span class="feedback-rating" style="color:' + color + '">' + ATE.escapeHTML(fb.category.replace('_', ' ')) + ': ' + ATE.escapeHTML(fb.rating.replace('_', ' ')) + '</span>' +
         '<span class="feedback-comment">' + ATE.escapeHTML(fb.comment || '') + '</span>' +
+        '<a href="/task.html?task_id=' + encodeURIComponent(fb.task_id) + '">task</a>' +
       '</div>';
     }).join('');
   }
 
-  function renderProfile(profile, earnings, posted, worked) {
+  // ── Activity feed (/api/agents/{id}/feed) ─────────────────────
+  var FEED_PAGE_SIZE = 25;
+  var FEED_TYPES = ['ALL', 'TASK', 'BID', 'PAYOUT', 'DISPUTE', 'RULING', 'ESCROW', 'REP'];
+  var FEED_ROLES = [
+    { value: 'ALL', label: 'All roles' },
+    { value: 'AS_POSTER', label: 'As poster' },
+    { value: 'AS_WORKER', label: 'As worker' }
+  ];
+
+  async function fetchAgentFeed(agentId, filters, before) {
+    try {
+      var url = '/api/agents/' + encodeURIComponent(agentId) + '/feed?limit=' + FEED_PAGE_SIZE;
+      if (before) url += '&before=' + encodeURIComponent(before);
+      if (filters.role !== 'ALL') url += '&role=' + encodeURIComponent(filters.role);
+      if (filters.type !== 'ALL') url += '&type=' + encodeURIComponent(filters.type);
+      var resp = await fetch(url);
+      if (!resp.ok) return null;
+      var data = await resp.json();
+      if (!data || !Array.isArray(data.events) || typeof data.has_more !== 'boolean') return null;
+      return data;
+    } catch (e) {
+      console.warn('[agent] fetchAgentFeed error:', e.message);
+      return null;
+    }
+  }
+
+  function feedBadgeType(event) {
+    if (event.event_type === 'task.disputed') return 'DISPUTE';
+    if (event.event_type === 'task.ruled') return 'RULING';
+    return event.badge;
+  }
+
+  function renderFeedRows(events) {
+    if (!events.length) {
+      return '<div class="lb-empty">No activity matches these filters.</div>';
+    }
+    return events.map(function(ev) {
+      var type = feedBadgeType(ev);
+      var task = ev.task_id
+        ? ' <a href="/task.html?task_id=' + encodeURIComponent(ev.task_id) + '">' + ATE.escapeHTML(ev.task_title || ev.task_id) + '</a>'
+        : '';
+      var actor = ev.agent_id
+        ? '<a href="/agent.html?agent_id=' + encodeURIComponent(ev.agent_id) + '">' + ATE.escapeHTML(ev.agent_id) + '</a> · '
+        : '';
+      var role = ev.role ? ev.role.toLowerCase() : '';
+      return '<div class="act-row" data-event-id="' + Number(ev.event_id) + '">' +
+        '<span class="act-badge badge-' + ATE.escapeHTML(type.toLowerCase()) + '">' + ATE.escapeHTML(type) + '</span>' +
+        '<span class="act-role">' + ATE.escapeHTML(role) + '</span>' +
+        '<span class="act-text">' + actor + ATE.escapeHTML(ev.summary) + task + '</span>' +
+        '<span class="act-time">' + ATE.timeAgo(Date.now() - new Date(ev.timestamp).getTime()) + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderActivityCard(feed) {
+    var roleOptions = FEED_ROLES.map(function(r) {
+      return '<option value="' + r.value + '"' + (r.value === feed.filters.role ? ' selected' : '') + '>' + r.label + '</option>';
+    }).join('');
+    var typeOptions = FEED_TYPES.map(function(t) {
+      return '<option value="' + t + '"' + (t === feed.filters.type ? ' selected' : '') + '>' + (t === 'ALL' ? 'All types' : t) + '</option>';
+    }).join('');
+    var body = feed.error && !feed.events.length
+      ? '<div class="lb-empty" role="status">Activity unavailable.</div><button class="load-more" id="retry-feed" type="button">Retry</button>'
+      : renderFeedRows(feed.events) +
+        (feed.error ? '<div class="lb-empty" role="status">Could not load more activity.</div><button class="load-more" id="retry-feed" type="button">Retry</button>' : '') +
+        (feed.has_more && !feed.error ? '<button class="load-more" id="load-more-feed" type="button">Load more activity</button>' : '');
+    return '<div class="card" id="activity-card">' +
+      '<div class="card-header"><span class="card-label">Activity</span>' +
+      '<div class="act-toolbar">' +
+        '<select id="feed-role" aria-label="Filter activity by role">' + roleOptions + '</select>' +
+        '<select id="feed-type" aria-label="Filter activity by type">' + typeOptions + '</select>' +
+      '</div></div>' +
+      '<div class="card-body" id="activity-body" style="padding:0">' + body + '</div>' +
+    '</div>';
+  }
+
+  function renderProfile(profile, earnings, posted, worked, feed) {
     var color = ATE.agentColor(profile.agent_id);
     var stats = profile.stats;
     var earningsPoints = earnings ? earnings.data_points.map(function(p) { return p.cumulative; }) : [];
@@ -258,6 +335,7 @@
       '</div>' +
       renderTaskSection('posted', posted) +
       renderTaskSection('worked', worked) +
+      renderActivityCard(feed) +
       '<div class="card">' +
         '<div class="card-header"><span class="card-label">Recent Feedback</span></div>' +
         '<div class="card-body" style="padding:0">' + renderRecentFeedback(profile.recent_feedback) + '</div>' +
@@ -274,19 +352,27 @@
       return;
     }
 
+    var feed = { filters: { role: 'ALL', type: 'ALL' }, events: [], has_more: false, error: false };
     var results = await Promise.all([
       fetchEarnings(agentId),
       fetchAgentTasks(agentId, 'posted', 0),
-      fetchAgentTasks(agentId, 'worked', 0)
+      fetchAgentTasks(agentId, 'worked', 0),
+      fetchAgentFeed(agentId, feed.filters, null)
     ]);
     var earnings = results[0];
     var taskPages = {
       posted: results[1] ? { tasks: results[1].tasks, total_count: results[1].total_count, error: false } : { tasks: [], total_count: 0, error: true },
       worked: results[2] ? { tasks: results[2].tasks, total_count: results[2].total_count, error: false } : { tasks: [], total_count: 0, error: true }
     };
+    if (results[3]) {
+      feed.events = results[3].events;
+      feed.has_more = results[3].has_more;
+    } else {
+      feed.error = true;
+    }
 
     function render() {
-      content.innerHTML = renderProfile(profile, earnings, taskPages.posted, taskPages.worked);
+      content.innerHTML = renderProfile(profile, earnings, taskPages.posted, taskPages.worked, feed);
       ['posted', 'worked'].forEach(function(role) {
         var button = document.getElementById('load-more-' + role) || document.getElementById('retry-' + role);
         if (!button) return;
@@ -303,9 +389,90 @@
           render();
         });
       });
+
+      ['role', 'type'].forEach(function(key) {
+        var select = document.getElementById('feed-' + key);
+        select.addEventListener('change', async function() {
+          feed.filters[key] = select.value;
+          var page = await fetchAgentFeed(agentId, feed.filters, null);
+          feed.error = !page;
+          feed.events = page ? page.events : [];
+          feed.has_more = page ? page.has_more : false;
+          render();
+        });
+      });
+      var feedButton = document.getElementById('load-more-feed') || document.getElementById('retry-feed');
+      if (feedButton) {
+        feedButton.addEventListener('click', async function() {
+          feedButton.disabled = true;
+          var last = feed.events.length ? feed.events[feed.events.length - 1].event_id : null;
+          var page = await fetchAgentFeed(agentId, feed.filters, last);
+          if (page) {
+            feed.events = feed.events.concat(page.events);
+            feed.has_more = page.has_more;
+            feed.error = false;
+          } else {
+            feed.error = true;
+          }
+          render();
+        });
+      }
     }
 
     render();
+
+    // ── Live updates from the SSE stream ──────────────────────
+    var seenEventIds = {};
+    var refreshTimer = null;
+
+    function knownTaskIds() {
+      var ids = {};
+      taskPages.posted.tasks.concat(taskPages.worked.tasks).forEach(function(t) { ids[t.task_id] = true; });
+      feed.events.forEach(function(ev) { if (ev.task_id) ids[ev.task_id] = true; });
+      return ids;
+    }
+
+    async function refreshLive() {
+      refreshTimer = null;
+      var fresh = await Promise.all([
+        fetchProfile(agentId),
+        fetchEarnings(agentId),
+        fetchAgentTasks(agentId, 'posted', 0),
+        fetchAgentTasks(agentId, 'worked', 0),
+        fetchAgentFeed(agentId, feed.filters, null)
+      ]);
+      if (fresh[0]) profile = fresh[0];
+      if (fresh[1]) earnings = fresh[1];
+      ['posted', 'worked'].forEach(function(role, i) {
+        var page = fresh[2 + i];
+        // Keep already-loaded extra pages; only replace the first page.
+        if (page && taskPages[role].tasks.length <= TASK_PAGE_SIZE) {
+          taskPages[role] = { tasks: page.tasks, total_count: page.total_count, error: false };
+        }
+      });
+      if (fresh[4]) {
+        var headIds = {};
+        fresh[4].events.forEach(function(ev) { headIds[ev.event_id] = true; });
+        var oldest = fresh[4].events.length ? fresh[4].events[fresh[4].events.length - 1].event_id : 0;
+        var tail = feed.events.filter(function(ev) { return !headIds[ev.event_id] && ev.event_id < oldest; });
+        feed.events = fresh[4].events.concat(tail);
+        feed.has_more = feed.events.length > fresh[4].events.length ? feed.has_more : fresh[4].has_more;
+        feed.error = false;
+      }
+      render();
+    }
+
+    var latest = await ATE.fetchEvents(1);
+    var cursor = latest && latest.newest_event_id ? latest.newest_event_id : 0;
+    ATE.connectSSE(function(event) {
+      if (event.event_id) {
+        if (seenEventIds[event.event_id]) return;
+        seenEventIds[event.event_id] = true;
+      }
+      var relevant = event.agent_id === agentId || (event.task_id && knownTaskIds()[event.task_id]);
+      if (!relevant || refreshTimer !== null) return;
+      refreshTimer = setTimeout(refreshLive, 500);
+    }, cursor);
   }
 
   // ── Bottom ticker ────────────────────────────────────────────
