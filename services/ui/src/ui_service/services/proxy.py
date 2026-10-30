@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import re
+import uuid
 from typing import TYPE_CHECKING, Any, Literal, NoReturn, Protocol, cast
 from urllib.parse import quote
 
 import httpx
 from service_auth import TaskBoardCommandContractError, TaskBoardCommandResponse, public_key_to_b64
+from service_auth.financial_identity import operation_id_for
 from service_auth.financial_responses import SQLITE_MAX_INTEGER, validate_operation_id
 from service_auth.posting_journal import PostingJournalError, normalize_observation
 from service_auth.task_postings import TaskPostingIntent
@@ -67,6 +70,7 @@ class _OperatorAssetTransport:
         self.auth_header: _AuthHeader = agent.__getattribute__("_auth_header")
         self.request_raw: _RawRequest = agent.__getattribute__("_request_raw")
         self.upload_raw: _RawUpload = agent.__getattribute__("_request_raw")
+        self.sign_jws: _SignJws = agent.__getattribute__("_sign_jws")
 
 
 _OPERATION_FIELDS = {
@@ -869,3 +873,269 @@ async def submit_feedback(
     except Exception as exc:
         _request_failed(error_code, exc)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Protocol-2 posting with input attachments (lane U, completion plan 4.4 / G03).
+# Used only when the browser attaches files; the protocol-1 flow above is unchanged.
+# ---------------------------------------------------------------------------
+
+_INPUT_ADMIT_RESOURCE = "POST /task-publications"
+_INPUT_ENVELOPE_STATES = frozenset(
+    {"awaiting_inputs", "awaiting_publish", "awaiting_lock", "published", "blocked_integrity"}
+)
+
+
+class _SignJws(Protocol):
+    def __call__(self, payload: dict[str, object], *, audience: str, resource: str) -> str: ...
+
+
+def _canonical_sha256(value: object) -> str:
+    rendered = json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    )
+    return hashlib.sha256(rendered.encode("utf-8")).hexdigest()
+
+
+def _invalid_input_record(message: str) -> NoReturn:
+    raise ServiceError("invalid_task_posting_record", message, 422, {})
+
+
+def prepare_input_posting(
+    *,
+    title: str,
+    spec: str,
+    reward: int,
+    bidding_deadline_seconds: int,
+    acceptance_window_seconds: int,
+    execution_deadline_seconds: int,
+    review_deadline_seconds: int,
+    expected_input_count: int,
+) -> dict[str, object]:
+    """Allocate a protocol-2 record whose intent is the exact Gateway admission request."""
+    agent = _get_user_agent()
+    scope = _posting_scope(agent)
+    agent_id = cast("str", scope["operator_agent_id"])
+    task_id = f"t-{uuid.uuid4()}"
+    intent: dict[str, object] = {
+        "protocol_version": 2,
+        "publication_operation_id": f"op-{uuid.uuid4()}",
+        "task_id": task_id,
+        "actor_kind": "agent",
+        "actor_id": agent_id,
+        "action": "task_publication_admit",
+        "resource": _INPUT_ADMIT_RESOURCE,
+        "lock_operation_id": operation_id_for("task-lock", (task_id, agent_id)),
+        "title": title,
+        "spec": spec,
+        "reward": reward,
+        "bidding_deadline_seconds": bidding_deadline_seconds,
+        "acceptance_window_seconds": acceptance_window_seconds,
+        "execution_deadline_seconds": execution_deadline_seconds,
+        "review_deadline_seconds": review_deadline_seconds,
+        "expected_input_count": expected_input_count,
+    }
+    return {
+        "record_version": 2,
+        "scope": scope,
+        "intent": intent,
+        "request_sha256": _canonical_sha256(intent),
+    }
+
+
+def _validated_input_record(
+    *, publication_operation_id: str, record: dict[str, object], agent: UserAgent
+) -> dict[str, object]:
+    intent = record.get("intent")
+    if not isinstance(intent, dict):
+        _invalid_input_record("Task posting record is invalid")
+    intent = cast("dict[str, object]", intent)
+    task_id = intent.get("task_id")
+    if (
+        record.get("record_version") != 2
+        or record.get("scope") != _posting_scope(agent)
+        or intent.get("publication_operation_id") != publication_operation_id
+        or intent.get("actor_id") != agent.agent_id
+        or not isinstance(task_id, str)
+        or intent.get("lock_operation_id")
+        != operation_id_for("task-lock", (task_id, cast("str", agent.agent_id)))
+        or record.get("request_sha256") != _canonical_sha256(intent)
+    ):
+        _invalid_input_record("Task posting record does not match the current operator or intent")
+    return intent
+
+
+def _input_envelope(response: httpx.Response, record: dict[str, object]) -> dict[str, object]:
+    body: object = response.json()
+    intent = cast("dict[str, object]", record["intent"])
+    if (
+        not isinstance(body, dict)
+        or body.get("protocol_version") != 2
+        or body.get("publication_operation_id") != intent["publication_operation_id"]
+        or body.get("task_id") != intent["task_id"]
+        or body.get("request_sha256") != record["request_sha256"]
+        or body.get("publication_state") not in _INPUT_ENVELOPE_STATES
+    ):
+        _invalid_response("task_posting_failed")
+    return cast("dict[str, object]", body)
+
+
+async def _input_post(
+    transport: _OperatorAssetTransport,
+    url: str,
+    *,
+    json_body: dict[str, object],
+    ok_statuses: frozenset[int],
+) -> httpx.Response:
+    error_code = "task_posting_failed"
+    try:
+        response = await transport.upload_raw(
+            "POST",
+            url,
+            headers={"Content-Type": "application/json"},
+            content=json.dumps(json_body).encode("utf-8"),
+        )
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        _raise_task_board_error(exc, error_code)
+    except Exception as exc:
+        _request_failed(error_code, exc)
+    if response.status_code not in ok_statuses:
+        _invalid_response(error_code)
+    return response
+
+
+async def admit_input_posting(
+    *, publication_operation_id: str, record: dict[str, object]
+) -> dict[str, object]:
+    """Admit the exact signed intent; replays return the same publication."""
+    agent = _get_user_agent()
+    intent = _validated_input_record(
+        publication_operation_id=publication_operation_id, record=record, agent=agent
+    )
+    transport = _OperatorAssetTransport(agent)
+    payload: dict[str, object] = {
+        "action": "task_publication_admit",
+        "publication_operation_id": intent["publication_operation_id"],
+        "task_id": intent["task_id"],
+        "poster_id": intent["actor_id"],
+        **{
+            field: intent[field]
+            for field in (
+                "title",
+                "spec",
+                "reward",
+                "bidding_deadline_seconds",
+                "acceptance_window_seconds",
+                "execution_deadline_seconds",
+                "review_deadline_seconds",
+                "expected_input_count",
+            )
+        },
+    }
+    token = transport.sign_jws(payload, audience="task-board", resource=_INPUT_ADMIT_RESOURCE)
+    response = await _input_post(
+        transport,
+        f"{agent.config.task_board_url}/task-publications",
+        json_body={"token": token},
+        ok_statuses=frozenset({202}),
+    )
+    return _input_envelope(response, record)
+
+
+async def upload_posting_input(
+    publication_operation_id: str,
+    *,
+    content: bytes,
+    content_type: str,
+    idempotency_key: str | None,
+) -> dict[str, Any]:
+    """Forward one multipart input file into the operator's draft input manifest."""
+    agent = _get_user_agent()
+    publication_id = validate_operation_id(publication_operation_id)
+    transport = _OperatorAssetTransport(agent)
+    error_code = "input_upload_failed"
+    resource = f"POST /task-publications/{publication_id}/inputs"
+    headers = transport.auth_header(
+        {
+            "action": "task_publication_upload_input",
+            "publication_operation_id": publication_id,
+            "poster_id": cast("str", agent.agent_id),
+        },
+        audience="task-board",
+        resource=resource,
+    )
+    headers["Content-Type"] = content_type
+    if idempotency_key is not None:
+        headers[IDEMPOTENCY_KEY_HEADER] = idempotency_key
+    url = f"{agent.config.task_board_url}/task-publications/{quote(publication_id, safe='')}/inputs"
+    try:
+        response = await transport.upload_raw("POST", url, headers=headers, content=content)
+        response.raise_for_status()
+        body: object = response.json()
+    except httpx.HTTPStatusError as exc:
+        _raise_task_board_error(exc, error_code)
+    except Exception as exc:
+        _request_failed(error_code, exc)
+    if response.status_code != 201 or not isinstance(body, dict):
+        _invalid_response(error_code)
+    return cast("dict[str, Any]", body)
+
+
+async def publish_input_posting(
+    *, publication_operation_id: str, record: dict[str, object]
+) -> tuple[int, dict[str, object]]:
+    """Freeze inputs, lock escrow and publish; 201 once published, 202 while pending."""
+    agent = _get_user_agent()
+    intent = _validated_input_record(
+        publication_operation_id=publication_operation_id, record=record, agent=agent
+    )
+    transport = _OperatorAssetTransport(agent)
+    publication_id = cast("str", intent["publication_operation_id"])
+    task_token = transport.sign_jws(
+        {
+            "action": "task_publication_publish",
+            "publication_operation_id": publication_id,
+            "task_id": intent["task_id"],
+            "poster_id": intent["actor_id"],
+        },
+        audience="task-board",
+        resource=f"POST /task-publications/{publication_id}/publish",
+    )
+    escrow_token = transport.sign_jws(
+        {
+            "action": "escrow_lock",
+            "operation_id": intent["lock_operation_id"],
+            "task_id": intent["task_id"],
+            "agent_id": intent["actor_id"],
+            "amount": intent["reward"],
+        },
+        audience="central-bank",
+        resource="POST /escrow/lock",
+    )
+    response = await _input_post(
+        transport,
+        f"{agent.config.task_board_url}/task-publications/{quote(publication_id, safe='')}/publish",
+        json_body={"task_token": task_token, "escrow_token": escrow_token},
+        ok_statuses=frozenset({201, 202}),
+    )
+    return response.status_code, _input_envelope(response, record)
+
+
+async def get_task_inputs(task_id: str) -> dict[str, Any]:
+    """Read a task's public frozen input manifest from Task Board."""
+    agent = _get_user_agent()
+    transport = _OperatorAssetTransport(agent)
+    error_code = "task_inputs_unavailable"
+    url = f"{agent.config.task_board_url}/tasks/{quote(task_id, safe='')}/inputs"
+    try:
+        response = await transport.request_raw("GET", url, headers={})
+        response.raise_for_status()
+        body: object = response.json()
+    except httpx.HTTPStatusError as exc:
+        _raise_task_board_error(exc, error_code)
+    except Exception as exc:
+        _request_failed(error_code, exc)
+    if not isinstance(body, dict) or body.get("task_id") != task_id:
+        _invalid_response(error_code)
+    return cast("dict[str, Any]", body)

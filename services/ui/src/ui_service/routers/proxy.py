@@ -15,6 +15,8 @@ from ui_service.schemas import (
     ProxyIdentityResponse,
     RebuttalRequest,
     SubmitBidRequest,
+    TaskInputPostingPrepareRequest,
+    TaskInputPostingRecord,
     TaskPostingPrepareRequest,
     TaskPostingRecord,
 )
@@ -223,3 +225,71 @@ async def submit_feedback(
     task = await get_authoritative_task(task_board_reader, task_id=task_id)
     result = await proxy_service.submit_feedback(task, body.rating, body.comment)
     return JSONResponse(status_code=201, content=result)
+
+
+# ---------------------------------------------------------------------------
+# Protocol-2 posting with input attachments (used only when files are attached)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/proxy/task-publications/prepare")
+async def prepare_input_posting(body: TaskInputPostingPrepareRequest) -> dict[str, object]:
+    """Allocate an effect-free protocol-2 record for a posting with input files."""
+    return proxy_service.prepare_input_posting(
+        title=body.title,
+        spec=body.spec,
+        reward=body.reward,
+        bidding_deadline_seconds=body.bidding_deadline_seconds,
+        acceptance_window_seconds=body.acceptance_window_seconds,
+        execution_deadline_seconds=body.execution_deadline_seconds,
+        review_deadline_seconds=body.review_deadline_seconds,
+        expected_input_count=body.expected_input_count,
+    )
+
+
+@router.post("/proxy/task-publications/{publication_operation_id}/admit")
+async def admit_input_posting(
+    publication_operation_id: str, body: TaskInputPostingRecord
+) -> JSONResponse:
+    """Admit the saved protocol-2 posting intent before any escrow lock."""
+    result = await proxy_service.admit_input_posting(
+        publication_operation_id=publication_operation_id, record=body.model_dump()
+    )
+    return JSONResponse(status_code=202, content=result)
+
+
+@router.post("/proxy/task-publications/{publication_operation_id}/inputs")
+async def upload_posting_input(publication_operation_id: str, request: Request) -> JSONResponse:
+    """Forward one multipart input file as the operator."""
+    content_type = request.headers.get("content-type", "")
+    if not content_type.lower().startswith("multipart/form-data"):
+        raise ServiceError(
+            "unsupported_media_type",
+            "Content-Type must be multipart/form-data",
+            415,
+            {},
+        )
+    result = await proxy_service.upload_posting_input(
+        publication_operation_id,
+        content=await request.body(),
+        content_type=content_type,
+        idempotency_key=request.headers.get(proxy_service.IDEMPOTENCY_KEY_HEADER),
+    )
+    return JSONResponse(status_code=201, content=result)
+
+
+@router.post("/proxy/task-publications/{publication_operation_id}/publish")
+async def publish_input_posting(
+    publication_operation_id: str, body: TaskInputPostingRecord
+) -> JSONResponse:
+    """Freeze the input manifest, lock escrow and publish the task."""
+    status_code, result = await proxy_service.publish_input_posting(
+        publication_operation_id=publication_operation_id, record=body.model_dump()
+    )
+    return JSONResponse(status_code=status_code, content=result)
+
+
+@router.get("/proxy/tasks/{task_id}/inputs")
+async def get_task_inputs(task_id: str) -> dict[str, object]:
+    """Return the task's frozen input manifest (null when posted without inputs)."""
+    return await proxy_service.get_task_inputs(task_id)

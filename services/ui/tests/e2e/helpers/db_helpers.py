@@ -107,7 +107,8 @@ def add_feedback(
     conn.execute(
         "INSERT INTO reputation_feedback "
         "(feedback_id, task_id, from_agent_id, to_agent_id, role, category, "
-        "rating, comment, submitted_at, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "rating, comment, submitted_at, visible, source) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'peer')",
         (
             feedback_id,
             task_id,

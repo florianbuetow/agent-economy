@@ -624,7 +624,9 @@ def _expected_effect(
         ):
             share_field = "worker_amount" if "worker_amount" in fields else "worker_pct"
             share = _canonical_int(fields[share_field])
-            worker_amount = share if share_field == "worker_amount" else escrow_amount * share // 100
+            worker_amount = (
+                share if share_field == "worker_amount" else escrow_amount * share // 100
+            )
             expected = (
                 {"escrow_status_at_commit": "split", share_field: share},
                 (

@@ -195,7 +195,7 @@ def _seed_graph(client: TestClient) -> _Graph:
             "expected_lifecycle_version": 0,
             "actor_kind": "agent",
             "actor_id": worker_id,
-            "arguments": {"bid_id": bid_id, "bidder_id": worker_id, "amount": 90},
+            "arguments": {"bid_id": bid_id, "bidder_id": worker_id, "amount": 100},
         },
     )
     assert bid.status_code == 200, bid.text
@@ -218,7 +218,7 @@ def _accept_command(graph: _Graph, operation_id: str) -> dict[str, object]:
             "worker_id": graph.worker_id,
             "escrow_id": graph.escrow_id,
             "reward": 100,
-            "bid_amount": 90,
+            "bid_amount": 100,
         },
     }
 
@@ -311,7 +311,7 @@ def _assert_accept_envelope(payload: dict[str, Any], graph: _Graph, operation_id
     assert result["bid_id"] == graph.bid_id
     assert result["worker_id"] == graph.worker_id
     assert result["reward"] == 100
-    assert result["bid_amount"] == 90
+    assert result["bid_amount"] == 100
 
 
 def _advance_claim_fixture_to_submitted(writer: DbWriter, graph: _Graph) -> None:
@@ -555,7 +555,7 @@ def test_signed_router_fixture_reaches_real_writer(
     snapshot = _task_snapshot(db_writer, graph)
 
     assert snapshot[0] == ("open", None, None, None, None, None)
-    assert snapshot[1] == ((graph.bid_id, graph.worker_id, 90),)
+    assert snapshot[1] == ((graph.bid_id, graph.worker_id, 100),)
     assert snapshot[2][-2:] == (("task.created",), ("bid.submitted",))
 
 

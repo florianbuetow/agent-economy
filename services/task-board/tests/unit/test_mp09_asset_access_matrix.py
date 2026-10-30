@@ -155,8 +155,8 @@ async def test_public_bytes_follow_exact_status_matrix_without_deleting_evidence
                 if status == "cancelled":
                     await _cancel(scenario)
             else:
-                scenario.bid(_TASK_ID, 90)
-                scenario.accept(_TASK_ID, 90)
+                scenario.bid(_TASK_ID, 100)
+                scenario.accept(_TASK_ID, 100)
                 upload = await manager.upload_asset(
                     _TASK_ID, "token", _CONTENT, "answer.txt", "text/plain"
                 )

@@ -644,7 +644,7 @@ class TaskOperationWriter:
         ):
             raise _service_error("payload_mismatch", "Selected bid facts do not match", 409, {})
         self._require_bid_within_budget(bid_amount, task)
-        execution_cutoff_us =add_seconds_to_epoch_us(now_us, task["deadline_seconds"])
+        execution_cutoff_us = add_seconds_to_epoch_us(now_us, task["deadline_seconds"])
         accepted_at = epoch_us_to_utc_text(now_us)
         binding = inspect_acceptance_binding(
             cursor,
@@ -740,7 +740,6 @@ class TaskOperationWriter:
             "worker_id": worker_id,
             "reward": int(task["reward"]),
             "bid_amount": bid_amount,
-            "accepted_price": bid_amount,
         }
         if binding is not None and not isinstance(binding, EmptyInputAcceptanceBinding):
             result["accepted_binding_kind"] = binding.kind
@@ -1010,6 +1009,11 @@ class TaskOperationWriter:
                 escrow_amount=int(expected_reward),
                 worker_amount=worker_amount,
                 source_reference=expected_source_reference,
+                ruling_pct=(
+                    int(request.argument("worker_pct"))
+                    if request.command == "record_ruling"
+                    else None
+                ),
             )
         except ValueError as exc:
             raise _service_error(
@@ -1038,9 +1042,7 @@ class TaskOperationWriter:
             return 0
         accepted_price = contract["accepted_bid_amount"]
         if not isinstance(accepted_price, int):
-            raise _service_error(
-                "task_contract_invalid", "Accepted price is missing", 500, {}
-            )
+            raise _service_error("task_contract_invalid", "Accepted price is missing", 500, {})
         if request.command == "record_ruling":
             return ruling_worker_amount(accepted_price, int(request.argument("worker_pct")))
         return accepted_price

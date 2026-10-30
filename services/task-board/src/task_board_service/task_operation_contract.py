@@ -414,7 +414,6 @@ def _validate_result_facts(envelope: OperationEnvelope, command: TaskCommand | N
         command_fields = command_fields | set(ACCEPT_BINDING_RESULT_FIELDS)
     # G01 accepted-bid pricing facts; results committed before G01 carry none of them.
     priced_fields = {
-        "accept_bid": {"accepted_price"},
         "approve_task": set(SETTLEMENT_RESULT_FIELDS),
         "auto_approve": set(SETTLEMENT_RESULT_FIELDS),
         "record_ruling": set(SETTLEMENT_RESULT_FIELDS),
@@ -435,8 +434,6 @@ def _validate_result_facts(envelope: OperationEnvelope, command: TaskCommand | N
             _require(isinstance(value, str) and bool(value))
         if command is not None and field in command.arguments:
             _require(value == command.arguments[field])
-    if "accepted_price" in command_fields and envelope.command == "accept_bid":
-        _require(result["accepted_price"] == result["bid_amount"])
     intent = envelope.effect_intent
     if intent is None:
         return

@@ -541,7 +541,7 @@ async def test_sealed_feedback_has_no_projection_or_aggregate_influence(
     await write_db.execute(
         "INSERT INTO reputation_feedback "
         "(feedback_id, task_id, from_agent_id, to_agent_id, role, category, rating, comment, "
-        "submitted_at, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "submitted_at, visible, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'peer')",
         (
             "fb-mp12-sealed-spec",
             "t-task8",
@@ -563,7 +563,7 @@ async def test_sealed_feedback_has_no_projection_or_aggregate_influence(
     await write_db.execute(
         "INSERT INTO reputation_feedback "
         "(feedback_id, task_id, from_agent_id, to_agent_id, role, category, rating, comment, "
-        "submitted_at, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "submitted_at, visible, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'peer')",
         (
             "fb-mp12-mutual-delivery",
             "t-task8",

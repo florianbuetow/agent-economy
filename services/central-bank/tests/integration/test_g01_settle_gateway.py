@@ -109,6 +109,4 @@ async def test_settle_budget_100_price_60_conserves_and_replays_without_new_rows
     assert _scalar(gateway_db_path, balance_sql, ("a-worker",)) == 60
     assert _scalar(gateway_db_path, balance_sql, ("a-poster",)) == 40
     assert _scalar(gateway_db_path, "SELECT SUM(balance) FROM bank_accounts") == 100
-    assert (
-        _scalar(gateway_db_path, "SELECT COUNT(*) FROM bank_escrow WHERE status = 'locked'") == 0
-    )
+    assert _scalar(gateway_db_path, "SELECT COUNT(*) FROM bank_escrow WHERE status = 'locked'") == 0

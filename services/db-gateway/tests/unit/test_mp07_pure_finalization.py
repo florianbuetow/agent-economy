@@ -90,7 +90,7 @@ def _seed_stored_bid_history(writer: DbWriter, graph: _Graph) -> None:
             graph.task_id,
             graph.worker_id,
             "Complete the pure-command fixture.",
-            90,
+            100,
             "2099-01-01T00:00:01Z",
         ),
     )
@@ -129,7 +129,7 @@ def _seed_stored_bid_history(writer: DbWriter, graph: _Graph) -> None:
         graph.task_id,
         graph.worker_id,
         "Complete the pure-command fixture.",
-        90,
+        100,
         "2099-01-01T00:00:01Z",
     )
     assert stored_event is not None and tuple(stored_event) == tuple(event.values())
@@ -220,7 +220,7 @@ def _accept_payload(graph: _Graph, operation_id: str) -> dict[str, object]:
             "worker_id": graph.worker_id,
             "escrow_id": graph.escrow_id,
             "reward": 100,
-            "bid_amount": 90,
+            "bid_amount": 100,
         },
     }
 

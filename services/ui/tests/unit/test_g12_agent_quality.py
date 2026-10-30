@@ -73,9 +73,9 @@ async def db() -> Any:
     # Contradictory local rows: a local formula would rank a-3 first.
     await conn.execute(
         "INSERT INTO reputation_feedback (feedback_id, task_id, from_agent_id, to_agent_id, "
-        "role, category, rating, comment, submitted_at, visible) "
+        "role, category, rating, comment, submitted_at, visible, source) "
         "VALUES ('f1', 't1', 'a-1', 'a-3', 'poster', 'delivery_quality', "
-        "'extremely_satisfied', NULL, '2026-01-05T00:00:00Z', 1)"
+        "'extremely_satisfied', NULL, '2026-01-05T00:00:00Z', 1, 'peer')"
     )
     await conn.commit()
     yield conn

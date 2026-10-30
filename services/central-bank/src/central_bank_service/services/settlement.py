@@ -85,8 +85,7 @@ def parse_settlement_envelope(
         receipt.operation_id != operation_id
         or receipt.operation_kind != "escrow_split"
         or receipt.request_sha256 != settlement_request_sha256(fields)
-        or receipt.result
-        != {"escrow_status_at_commit": "split", "worker_amount": worker_amount}
+        or receipt.result != {"escrow_status_at_commit": "split", "worker_amount": worker_amount}
         or receipt.escrow_id != fields["escrow_id"]
         or receipt.source_reference != fields["source_reference"]
         or escrow is None

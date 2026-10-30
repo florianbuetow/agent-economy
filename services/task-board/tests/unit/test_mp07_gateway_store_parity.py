@@ -155,7 +155,7 @@ def _bid() -> dict[str, Any]:
         "open",
         0,
         "a-worker",
-        {"bid_id": "bid-fixture", "bidder_id": "a-worker", "amount": 90},
+        {"bid_id": "bid-fixture", "bidder_id": "a-worker", "amount": 100},
     )
 
 
@@ -174,7 +174,7 @@ def _seed_submitted(store: Any) -> None:
                 "worker_id": "a-worker",
                 "escrow_id": _ESCROW_ID,
                 "reward": 100,
-                "bid_amount": 90,
+                "bid_amount": 100,
             },
         )
     )
@@ -264,7 +264,7 @@ def test_native_finalization_requires_persisted_bank_evidence(store: Any) -> Non
         pending["pending_transition"]["operation_id"] == "op-00000000-0000-4000-8000-000000000006"
     )
     assert pending["accepted_reward"] == 100
-    assert pending["accepted_bid_amount"] == 90
+    assert pending["accepted_bid_amount"] == 100
     store.writer.escrow_release(
         {
             "operation_id": "op-00000000-0000-4000-8000-000000000006",
@@ -308,7 +308,7 @@ def test_changed_command_identity_is_rejected_without_new_bid(store: Any) -> Non
     with pytest.raises(ServiceError) as caught:
         store.claim_task_operation(changed)
     assert (caught.value.status_code, caught.value.error) == (409, "operation_id_conflict")
-    assert store.get_bid("bid-fixture", _TASK_ID)["amount"] == 90
+    assert store.get_bid("bid-fixture", _TASK_ID)["amount"] == 100
 
 
 def test_court_finalization_requires_the_persisted_matching_claim(store: Any) -> None:
@@ -361,7 +361,7 @@ def test_task_asset_and_bid_reads_share_real_projection_and_counts(store: Any) -
     assert store.get_task("t-missing") is None
     assert store.get_bid("bid-missing", _TASK_ID) is None
     assert store.get_asset("asset-missing", _TASK_ID) is None
-    assert store.get_bid("bid-fixture", _TASK_ID)["amount"] == 90
+    assert store.get_bid("bid-fixture", _TASK_ID)["amount"] == 100
     assets = store.get_assets_for_task(_TASK_ID)
     assert len(assets) == store.count_assets(_TASK_ID) == 1
     internal_asset = store.get_asset("asset-fixture", _TASK_ID)

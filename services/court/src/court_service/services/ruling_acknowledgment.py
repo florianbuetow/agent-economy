@@ -40,6 +40,23 @@ def _canonical_hash(value: dict[str, Any]) -> str:
     return hashlib.sha256(encoded.encode()).hexdigest()
 
 
+def _settlement_payment(operation: dict[str, Any], *, worker_pct: int, reward: int) -> int | None:
+    """Return the G01 worker payment the result reports, or None for a pre-G01 result.
+
+    The award is floor(accepted_price * worker_pct / 100); the poster gets the rest
+    of the original escrow (the posted reward).
+    """
+    result = _mapping(operation.get("result"))
+    priced = {"accepted_price", "worker_payment", "poster_refund"}
+    if not priced & set(result):
+        return None
+    accepted_price = _strict_integer(result.get("accepted_price"), 1, reward)
+    payment = _strict_integer(result.get("worker_payment"), 0, reward)
+    _require(payment == accepted_price * worker_pct // 100)
+    _require(result.get("poster_refund") == reward - payment)
+    return payment
+
+
 def _validate_effect_intent(
     operation: dict[str, Any],
     *,
@@ -50,6 +67,9 @@ def _validate_effect_intent(
     worker_pct: int,
     reward: int,
 ) -> None:
+    payment = _settlement_payment(operation, worker_pct=worker_pct, reward=reward)
+    if payment is None:
+        payment = reward * worker_pct // 100
     intent = _mapping(operation.get("effect_intent"))
     _require(set(intent) == {"financial_request", "financial_request_sha256", "expected_escrow"})
     escrow = _mapping(intent.get("expected_escrow"))
@@ -67,20 +87,26 @@ def _validate_effect_intent(
         "escrow_id": escrow_id,
         "source_reference": f"task:{task_id}:ruling:{ruling_id}",
     }
-    if worker_pct in {0, 100}:
+    if payment in {0, reward}:
         expected = {
             **common,
             "operation_kind": "escrow_release",
-            "recipient_account_id": worker_id if worker_pct == 100 else poster_id,
+            "recipient_account_id": worker_id if payment == reward else poster_id,
         }
         _require(operation.get("effect_kind") == "bank_release")
     else:
+        # A percentage split is kept whenever it yields exactly the same legs.
+        share: dict[str, int] = (
+            {"worker_pct": worker_pct}
+            if reward * worker_pct // 100 == payment
+            else {"worker_amount": payment}
+        )
         expected = {
             **common,
             "operation_kind": "escrow_split",
             "worker_account_id": worker_id,
             "poster_account_id": poster_id,
-            "worker_pct": worker_pct,
+            **share,
         }
         _require(operation.get("effect_kind") == "bank_split")
     _require(financial == expected)
@@ -113,6 +139,11 @@ def _validate_result(
         "summary": ruling_summary,
         "reward": reward,
     }
+    payment = _settlement_payment(operation, worker_pct=worker_pct, reward=reward)
+    if payment is not None:
+        expected["accepted_price"] = result.get("accepted_price")
+        expected["worker_payment"] = payment
+        expected["poster_refund"] = reward - payment
     _require(result == expected)
 
 

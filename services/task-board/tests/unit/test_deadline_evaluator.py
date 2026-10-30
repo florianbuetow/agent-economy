@@ -41,8 +41,8 @@ def test_compute_deadline_none_base() -> None:
 
 async def test_evaluate_deadline_terminal_status_skipped(native_tasks: NativeTaskFixture) -> None:
     native_tasks.open_task(_TASK_1, _TERMS)
-    native_tasks.bid(_TASK_1, 90)
-    native_tasks.accept(_TASK_1, 90)
+    native_tasks.bid(_TASK_1, 100)
+    native_tasks.accept(_TASK_1, 100)
     native_tasks.submit(_TASK_1)
     await native_tasks.approve(_TASK_1)
     task = native_tasks.task(_TASK_1)
@@ -81,7 +81,7 @@ async def test_evaluate_deadline_open_no_bids_expired(native_tasks: NativeTaskFi
 async def test_evaluate_deadline_open_with_bids_expires(native_tasks: NativeTaskFixture) -> None:
     """Native bids retain the poster's acceptance window, then refund at its cutoff."""
     native_tasks.open_task(_TASK_1, _TERMS)
-    native_tasks.bid(_TASK_1, 90)
+    native_tasks.bid(_TASK_1, 100)
     evaluator = native_tasks.evaluator(None)
     native_tasks.clock.at_seconds(3600)
     during_window = await evaluator.evaluate_deadline(native_tasks.task(_TASK_1))
@@ -107,7 +107,7 @@ async def test_legacy_timing_contract_keeps_original_acceptance_cutoff(
     """A labeled historical sidecar fixture has no newly invented acceptance window."""
     native_tasks.open_task(_TASK_1, _TERMS)
     native_tasks.seed_legacy_timing_contract(_TASK_1)
-    native_tasks.bid(_TASK_1, 90)
+    native_tasks.bid(_TASK_1, 100)
     native_tasks.clock.at_seconds(3600)
     result = await native_tasks.evaluator(None).evaluate_deadline(native_tasks.task(_TASK_1))
     assert result["status"] == "expired"
@@ -123,8 +123,8 @@ async def test_legacy_timing_contract_keeps_original_acceptance_cutoff(
 
 async def test_evaluate_deadline_accepted_past_execution(native_tasks: NativeTaskFixture) -> None:
     native_tasks.open_task(_TASK_1, _TERMS)
-    native_tasks.bid(_TASK_1, 90)
-    native_tasks.accept(_TASK_1, 90)
+    native_tasks.bid(_TASK_1, 100)
+    native_tasks.accept(_TASK_1, 100)
     native_tasks.clock.at_seconds(3600)
     result = await native_tasks.evaluator(None).evaluate_deadline(native_tasks.task(_TASK_1))
     assert result["status"] == "expired"
@@ -145,8 +145,8 @@ async def test_evaluate_deadline_accepted_past_execution(native_tasks: NativeTas
 
 async def test_evaluate_deadline_submitted_past_review(native_tasks: NativeTaskFixture) -> None:
     native_tasks.open_task(_TASK_1, _TERMS)
-    native_tasks.bid(_TASK_1, 90)
-    native_tasks.accept(_TASK_1, 90)
+    native_tasks.bid(_TASK_1, 100)
+    native_tasks.accept(_TASK_1, 100)
     native_tasks.submit(_TASK_1)
     native_tasks.clock.at_seconds(3600)
     result = await native_tasks.evaluator(None).evaluate_deadline(native_tasks.task(_TASK_1))
@@ -231,8 +231,8 @@ async def test_bare_pending_flag_cannot_authorize_early_release(
 async def test_evaluate_deadlines_batch_processes_all(native_tasks: NativeTaskFixture) -> None:
     native_tasks.open_task(_TASK_1, _TERMS)
     native_tasks.open_task(_TASK_2, _TERMS)
-    native_tasks.bid(_TASK_2, 90)
-    native_tasks.accept(_TASK_2, 90)
+    native_tasks.bid(_TASK_2, 100)
+    native_tasks.accept(_TASK_2, 100)
     native_tasks.clock.at_seconds(3600)
     result = await native_tasks.evaluator(None).evaluate_deadlines_batch(
         [native_tasks.task(_TASK_1), native_tasks.task(_TASK_2)]

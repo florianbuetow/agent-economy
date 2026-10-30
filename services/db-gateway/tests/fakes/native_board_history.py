@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -260,10 +261,11 @@ def operation_body(
     actor_kind: str,
     actor_id: str,
     arguments: dict[str, object],
+    protocol_version: int = 1,
 ) -> dict[str, object]:
-    """Compose the exact protocol-v1 task-operation envelope."""
+    """Compose the exact task-operation envelope."""
     return {
-        "protocol_version": 1,
+        "protocol_version": protocol_version,
         "operation_id": operation_id,
         "task_id": task_id,
         "command": command,
@@ -281,7 +283,7 @@ def submit_bid(
     bidder_id: str,
     *,
     bid_id: str | None = None,
-    amount: int = 90,
+    amount: int = 100,
     operation_id: str | None = None,
 ) -> tuple[str, httpx.Response]:
     """Submit a bid through the native HTTP command endpoint."""
@@ -312,7 +314,7 @@ def accept_bid(
     worker_id: str,
     bid_id: str,
     *,
-    bid_amount: int = 90,
+    bid_amount: int = 100,
 ) -> httpx.Response:
     """Accept one stored bid through the pure native command."""
     return client.post(
@@ -336,45 +338,75 @@ def accept_bid(
     )
 
 
-def record_asset(client: TestClient, graph: TaskGraph, worker_id: str) -> str:
-    """Persist one real worker asset required for submission."""
-    asset_id = f"asset-{uuid4()}"
-    response = client.post(
-        "/board/assets",
+_ARTIFACT_BODY = b"deliverable\n"
+_ARTIFACT_POLICY: dict[str, object] = {
+    "contract_version": 1,
+    "max_file_bytes": 1024,
+    "max_files_per_manifest": 4,
+    "max_manifest_bytes": 4096,
+    "reservation_ttl_seconds": 300,
+    "reservation_renew_before_expiry_seconds": 60,
+    "max_upload_duration_seconds": 900,
+}
+
+
+def record_artifact(client: TestClient, graph: TaskGraph, worker_id: str) -> tuple[str, str, str]:
+    """Reserve and finalize one governed worker artifact through the public routes."""
+    context = client.get(f"/board/tasks/{graph.task_id}/artifact-context")
+    assert context.status_code == 200, context.text
+    binding = context.json()
+    assert binding["governed"] is True, binding
+    manifest_id = binding["submission_manifest_id"]
+    content_sha256 = hashlib.sha256(_ARTIFACT_BODY).hexdigest()
+    reserve = client.post(
+        "/board/artifact-uploads/reserve",
         json={
-            "admission": {
-                "expected_status": "accepted",
+            "policy": _ARTIFACT_POLICY,
+            "request": {
+                "protocol_version": 1,
+                "upload_operation_id": str(uuid4()),
+                "resource": "POST /board/artifact-uploads/reserve",
+                "task_id": graph.task_id,
+                "manifest_id": manifest_id,
+                "actor_id": worker_id,
+                "actor_role": "worker",
+                "display_filename": "deliverable.txt",
+                "evidence_format": "text",
+                "declared_size_bytes": len(_ARTIFACT_BODY),
+                "content_sha256": content_sha256,
                 "expected_lifecycle_version": 1,
-                "max_files_per_task": 10,
+                "accepted_binding_kind": binding["accepted_binding_kind"],
+                "accepted_binding_sha256": binding["accepted_binding_sha256"],
             },
-            "asset_id": asset_id,
-            "task_id": graph.task_id,
-            "uploader_id": worker_id,
-            "filename": "deliverable.txt",
-            "content_type": "text/plain",
-            "size_bytes": 7,
-            "storage_path": f"assets/{graph.task_id}/deliverable.txt",
-            "content_hash": "a" * 64,
-            "uploaded_at": "2099-01-01T12:00:01Z",
-            "event": make_event(
-                source="board",
-                event_type="asset.uploaded",
-                task_id=graph.task_id,
-            ),
         },
     )
-    assert response.status_code == 201, response.text
-    return asset_id
+    assert reserve.status_code == 200, reserve.text
+    reservation = reserve.json()
+    attempt = reservation["attempt"]
+    upload_operation_id = reservation["upload_operation_id"]
+    finalized = client.post(
+        f"/board/artifact-uploads/{upload_operation_id}/finalize",
+        json={
+            "policy": _ARTIFACT_POLICY,
+            "owner_id": attempt["owner_id"],
+            "generation": attempt["generation"],
+            "attempt_nonce": attempt["attempt_nonce"],
+            "observed_size_bytes": len(_ARTIFACT_BODY),
+            "observed_sha256": content_sha256,
+        },
+    )
+    assert finalized.status_code == 200, finalized.text
+    return manifest_id, binding["accepted_binding_kind"], binding["accepted_binding_sha256"]
 
 
 def prepare_submitted(client: TestClient, graph: TaskGraph) -> tuple[str, str]:
-    """Build the real bid -> accept -> asset -> submission history."""
+    """Build the real bid -> accept -> governed artifact -> submission history."""
     worker_id = register_worker(client)
     bid_id, bid = submit_bid(client, graph, worker_id)
     assert bid.status_code == 200, bid.text
     accepted = accept_bid(client, graph, worker_id, bid_id)
     assert accepted.status_code == 200, accepted.text
-    record_asset(client, graph, worker_id)
+    manifest_id, binding_kind, binding_sha256 = record_artifact(client, graph, worker_id)
     submitted = client.post(
         "/board/task-operations",
         json=operation_body(
@@ -385,7 +417,13 @@ def prepare_submitted(client: TestClient, graph: TaskGraph) -> tuple[str, str]:
             expected_lifecycle_version=1,
             actor_kind="agent",
             actor_id=worker_id,
-            arguments={"worker_id": worker_id},
+            arguments={
+                "worker_id": worker_id,
+                "manifest_id": manifest_id,
+                "accepted_binding_kind": binding_kind,
+                "accepted_binding_sha256": binding_sha256,
+            },
+            protocol_version=2,
         ),
     )
     assert submitted.status_code == 200, submitted.text

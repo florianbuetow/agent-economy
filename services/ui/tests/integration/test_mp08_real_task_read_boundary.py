@@ -172,6 +172,7 @@ async def real_boundary(  # noqa: PLR0915
         )
         board_runtime = board_state.init_app_state()
         board_runtime.task_manager = manager
+        board_runtime.store = task_store
         board_app = FastAPI()
         board_exceptions.register_exception_handlers(board_app)
         board_app.include_router(board_tasks.router)

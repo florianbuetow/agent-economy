@@ -995,7 +995,7 @@ def insert_seed_data(conn: sqlite3.Connection) -> None:
     conn.executemany(
         "INSERT INTO reputation_feedback "
         "(feedback_id, task_id, from_agent_id, to_agent_id, role, category, rating, comment, "
-        "submitted_at, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "submitted_at, visible, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'peer')",
         REPUTATION_FEEDBACK,
     )
     conn.executemany(

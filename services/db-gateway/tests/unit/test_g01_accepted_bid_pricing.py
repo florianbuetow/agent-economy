@@ -159,7 +159,7 @@ def _submitted_task(writer: DbWriter, bid_amount: int) -> _Parties:
             },
         },
     )
-    assert accepted["result"]["accepted_price"] == bid_amount
+    assert accepted["result"]["bid_amount"] == bid_amount
     writer.record_asset(
         {
             "admission": {
@@ -420,9 +420,7 @@ def test_ruling_pays_floor_of_accepted_price_and_refunds_rest(
     ) as writer:
         graph = court._seed_submitted(writer, authority=authority)
         # Fixture history: the accepted bid was 61 against the 100-credit budget.
-        writer.connection.execute(
-            "UPDATE board_bids SET amount=61 WHERE bid_id=?", (graph.bid_id,)
-        )
+        writer.connection.execute("UPDATE board_bids SET amount=61 WHERE bid_id=?", (graph.bid_id,))
         writer.connection.execute(
             "UPDATE board_task_contracts SET accepted_bid_amount=61 WHERE task_id=?",
             (graph.task_id,),

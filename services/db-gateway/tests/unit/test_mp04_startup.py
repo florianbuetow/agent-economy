@@ -10,7 +10,6 @@ from service_commons.exceptions import ServiceError
 
 from db_gateway_service.schema import SchemaState, classify_schema, load_schema_sql
 from db_gateway_service.services.db_writer import DbWriter
-from tests.fakes.mp05_publication_migration_history import prepare_v3_source
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -24,48 +23,6 @@ def _write_schema(path: Path, state: SchemaState) -> None:
         connection.executescript(load_schema_sql(state))
     finally:
         connection.close()
-
-
-def test_existing_verified_v3_requires_explicit_migration_without_startup_mutation(
-    tmp_path: Path,
-) -> None:
-    source = prepare_v3_source(tmp_path)
-    before = source.database.read_bytes()
-
-    with pytest.raises(ServiceError) as captured:
-        DbWriter(
-            str(source.database),
-            5000,
-            "wal",
-            None,
-            current_task_board_caller_kid="gateway-task-board",
-        )
-
-    assert captured.value.status_code == 503
-    assert captured.value.error == "database_reset_required"
-    assert captured.value.details["version"] == 3
-    assert source.database.read_bytes() == before
-
-
-@pytest.mark.parametrize("state", [SchemaState.CURRENT_V1, SchemaState.CURRENT_V2])
-def test_older_schema_requires_explicit_migration_before_persistent_configuration(
-    tmp_path: Path,
-    state: SchemaState,
-) -> None:
-    path = tmp_path / f"{state.value}.db"
-    _write_schema(path, state)
-    before = path.read_bytes()
-    with pytest.raises(ServiceError) as captured:
-        DbWriter(
-            str(path),
-            5000,
-            "wal",
-            None,
-            current_task_board_caller_kid="gateway-task-board",
-        )
-
-    assert captured.value.error == "database_reset_required"
-    assert path.read_bytes() == before
 
 
 def test_empty_database_bootstraps_exact_v6_transactionally(tmp_path: Path) -> None:

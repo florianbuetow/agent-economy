@@ -735,6 +735,8 @@ def _dual_recovery_owner_projection() -> dict[str, Any]:
         "review_cutoff_us": 4_070_908_982_000_000,
         "accepted_reward": 100,
         "accepted_bid_amount": 90,
+        "worker_payment": None,
+        "poster_refund": None,
         "pending_transition": {
             "operation_id": _OPERATION_ID,
             "command": "approve_task",
