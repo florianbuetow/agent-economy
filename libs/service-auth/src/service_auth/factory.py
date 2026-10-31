@@ -8,10 +8,9 @@ from typing import TYPE_CHECKING
 
 import yaml
 from cryptography.hazmat.primitives import serialization
-from service_commons.config import get_config_path as resolve_config_path
 
 from service_auth.agent import BaseAgent
-from service_auth.config import AgentConfig, _FileSettings
+from service_auth.config import AgentConfig, _FileSettings, resolve_config_path
 from service_auth.jws import TokenPolicy
 from service_auth.platform import PlatformAgent
 from service_auth.signing import adopt_keypair_permissions, generate_keypair, load_keypair

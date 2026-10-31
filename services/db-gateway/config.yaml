@@ -73,3 +73,9 @@ auth:
         - "gateway.court.read"
         - "gateway.court.write"
         - "gateway.board.task.read"
+
+telemetry:
+  enabled: true
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"

@@ -18,6 +18,12 @@ def _valid_config() -> dict[str, Any]:
     return {
         "service": {"name": "task-board", "version": "0.1.0"},
         "server": {"host": "127.0.0.1", "port": 8003, "log_level": "info"},
+        "telemetry": {
+            "enabled": False,
+            "otlp_endpoint": "http://127.0.0.1:4318",
+            "sample_ratio": 1.0,
+            "excluded_urls": "health",
+        },
         "logging": {"level": "INFO", "directory": "data/logs"},
         "database": {"path": "data/task-board.db"},
         "identity": {

@@ -11,7 +11,6 @@ from service_auth.financial_identity import operation_id_for
 
 from base_agent.runtime_task_intent_factory import review_intent
 from task_feeder.resilience import RECOVERABLE_DEPENDENCY_ERRORS
-from task_feeder.signed_assets import signed_download_asset, signed_list_assets
 from task_feeder.workloads.classification import (
     is_classification_task,
     parse_task_spec,
@@ -115,7 +114,7 @@ class ReviewLoop:
         data = parse_task_spec(raw_task.spec)
         worker_id = payload.get("worker_id")
         latest: dict[str, str] = {}
-        for asset in await signed_list_assets(self._agent, task_id):
+        for asset in await self._agent.list_assets(task_id):
             projection = _asset_projection(asset)
             name = projection.get("filename")
             asset_id = projection.get("asset_id")
@@ -129,7 +128,7 @@ class ReviewLoop:
             asset_id = latest.get(name)
             if asset_id is None:
                 return None
-            return _asset_content(await signed_download_asset(self._agent, task_id, asset_id))
+            return _asset_content(await self._agent.download_asset(task_id, asset_id))
 
         verdict = review_submission(
             raw_task,
@@ -151,7 +150,7 @@ class ReviewLoop:
         provide a task payload with those fields (e.g. existing unit tests)
         are unaffected.
         """
-        assets = await signed_list_assets(self._agent, task_id)
+        assets = await self._agent.list_assets(task_id)
         if not assets:
             return ""
 
@@ -160,7 +159,7 @@ class ReviewLoop:
         if not isinstance(asset_id, str) or asset_id == "":
             raise ValueError("asset_id must be a nonempty string")
 
-        content = await signed_download_asset(self._agent, task_id, asset_id)
+        content = await self._agent.download_asset(task_id, asset_id)
         return _asset_content(content).decode("utf-8").strip()
 
     async def run(self, interval_seconds: int, retry_backoff_seconds: int) -> None:

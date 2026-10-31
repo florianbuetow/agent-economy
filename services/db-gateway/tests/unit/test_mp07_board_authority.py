@@ -29,6 +29,12 @@ def _settings_payload(tmp_path: Path) -> dict[str, object]:
     return {
         "service": {"name": "db-gateway-test", "version": "0.1.0"},
         "server": {"host": "127.0.0.1", "port": 18007, "log_level": "warning"},
+        "telemetry": {
+            "enabled": False,
+            "otlp_endpoint": "http://127.0.0.1:4318",
+            "sample_ratio": 1.0,
+            "excluded_urls": "health",
+        },
         "logging": {
             "level": "WARNING",
             "directory": str(tmp_path / "logs"),

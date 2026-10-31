@@ -13,6 +13,8 @@ from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any
 
+from service_commons.telemetry import current_trace_ids
+
 
 class JSONFormatter(logging.Formatter):
     """
@@ -32,6 +34,10 @@ class JSONFormatter(logging.Formatter):
 
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
+
+        trace_ids = current_trace_ids()
+        if trace_ids is not None:
+            log_data["trace_id"], log_data["span_id"] = trace_ids
 
         standard_attrs = {
             "name",

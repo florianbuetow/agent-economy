@@ -26,7 +26,6 @@ from math_worker.prompts import (
     build_solve_prompt,
     build_task_selection_prompt,
 )
-from task_feeder.signed_assets import signed_list_assets
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -440,7 +439,7 @@ class MathWorkerLoop:
         self._save_job(task_id, job)
 
     async def _find_uploaded_asset(self, task_id: str, filename: str, digest: str) -> str | None:
-        for asset in await signed_list_assets(self._agent, task_id):
+        for asset in await self._agent.list_assets(task_id):
             if (
                 asset.get("uploader_id") == self._agent.agent_id
                 and asset.get("filename") == filename

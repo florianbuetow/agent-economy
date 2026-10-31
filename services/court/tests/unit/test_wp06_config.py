@@ -22,6 +22,12 @@ def _settings_with(mock_worker_pct: int, max_file_bytes: int) -> Settings:
     return Settings(
         service={"name": "court", "version": "0.1.0"},
         server={"host": "127.0.0.1", "port": 8005, "log_level": "info"},
+        telemetry={
+            "enabled": False,
+            "otlp_endpoint": "http://127.0.0.1:4318",
+            "sample_ratio": 1.0,
+            "excluded_urls": "health",
+        },
         logging={"level": "WARNING", "directory": "data/logs"},
         platform=PlatformConfig(agent_id="a-platform", agent_config_path="agents.yaml"),
         disputes={

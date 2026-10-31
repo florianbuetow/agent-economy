@@ -109,6 +109,16 @@ server:
   port: 18032
   log_level: "warning"
 
+telemetry:
+
+  enabled: false
+
+  otlp_endpoint: "http://127.0.0.1:4318"
+
+  sample_ratio: 1.0
+
+  excluded_urls: "health"
+
 logging:
   level: "WARNING"
   directory: "{Path(db_path).parent / "logs" / "db-gateway"}"
@@ -700,6 +710,11 @@ server:
   host: "127.0.0.1"
   port: 8005
   log_level: "info"
+telemetry:
+  enabled: false
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"
 logging:
   level: "WARNING"
   directory: "{tmp_path / "logs" / "court"}"

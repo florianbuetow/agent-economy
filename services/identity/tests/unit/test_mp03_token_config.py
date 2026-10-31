@@ -12,6 +12,12 @@ def _config() -> dict[str, object]:
     return {
         "service": {"name": "identity", "version": "0.1.0"},
         "server": {"host": "127.0.0.1", "port": 8001, "log_level": "info"},
+        "telemetry": {
+            "enabled": False,
+            "otlp_endpoint": "http://127.0.0.1:4318",
+            "sample_ratio": 1.0,
+            "excluded_urls": "health",
+        },
         "logging": {"level": "INFO", "directory": "data/logs"},
         "crypto": {
             "public_key_prefix": "ed25519:",

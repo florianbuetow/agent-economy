@@ -228,8 +228,8 @@ Operational defect found while doing this: `.claude/settings.json` runs `scripts
 
 ## Decisions needed from the owner
 
-1. Approve editing shared libraries, which AGENTS.md lists as not edited directly: `libs/service-commons` for the telemetry helper (Phase 6) and `libs/service-auth` for the standalone SDK split (Phase 5, item 5.1).
-2. Approve one Docker container for the observability viewer (Phase 6).
+Decisions 1 and 2 were resolved on 2026-10-31 as self-evident: the SDK (`libs/service-auth`) now matches the shipped APIs (signed asset reads, idempotent uploads, protocol-2 posting, task inputs, quality reads, typed `EconomyApiError`, config-free `agent_config_from_key_file`) and no longer depends on `service-commons`; Phase 6 is implemented (`service_commons.telemetry`, required `telemetry:` sections, agents wired, `config/otel/collector.yaml`, `just observability-up/down`). The OpenTelemetry pins are `opentelemetry-sdk~=1.45.0` with instrumentation `0.66b1`, the line the services' `semgrep` dev dependency already resolves to.
+
 3. LAN UI: keep loopback-only (recommended until a login exists) or amend Q-3 (Phase 1 note).
 4. Whether agent balances and earnings are public via the UI (today they are, while the Bank restricts them to the owner).
 5. TLS on the LAN (security finding M3): accept clear-text HTTP on a trusted home network for now (recommended), or add one TLS reverse proxy in front of the four exposed ports as a Phase 1 item.

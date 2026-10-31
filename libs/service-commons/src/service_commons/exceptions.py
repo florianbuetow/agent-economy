@@ -4,6 +4,7 @@ Shared exception primitives and handlers for services.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, cast
 
 from fastapi.responses import JSONResponse
@@ -72,7 +73,8 @@ def create_exception_handlers(
     ) -> JSONResponse:
         """Handle ServiceError exceptions."""
         logger = logger_factory()
-        logger.warning(
+        logger.log(
+            logging.INFO if exc.status_code < 500 else logging.WARNING,
             "Service error",
             extra={
                 "error_code": exc.error,

@@ -1,0 +1,46 @@
+# OpenTelemetry Collector configuration for the grafana/otel-lgtm viewer container.
+# Receives OTLP/HTTP from the seven services and the agents on 4318, and polls
+# every service's /health so health shows up next to logs and traces in Grafana.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+  httpcheck:
+    collection_interval: 15s
+    targets:
+      - endpoint: http://host.docker.internal:8001/health
+      - endpoint: http://host.docker.internal:8002/health
+      - endpoint: http://host.docker.internal:8003/health
+      - endpoint: http://host.docker.internal:8004/health
+      - endpoint: http://host.docker.internal:8005/health
+      - endpoint: http://host.docker.internal:8007/health
+      - endpoint: http://host.docker.internal:8008/health
+
+processors:
+  batch: {}
+
+exporters:
+  otlphttp/traces:
+    endpoint: http://localhost:4418
+  otlphttp/logs:
+    endpoint: http://localhost:3100/otlp
+  prometheusremotewrite:
+    endpoint: http://localhost:9090/api/v1/write
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/traces]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/logs]
+    metrics:
+      receivers: [otlp, httpcheck]
+      processors: [batch]
+      exporters: [prometheusremotewrite]

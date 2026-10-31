@@ -44,6 +44,12 @@ def _config(tmp_path: Path) -> tuple[Path, object]:
     config = {
         "service": {"name": "task-board", "version": "0.1.0"},
         "server": {"host": "127.0.0.1", "port": 8003, "log_level": "info"},
+        "telemetry": {
+            "enabled": False,
+            "otlp_endpoint": "http://127.0.0.1:4318",
+            "sample_ratio": 1.0,
+            "excluded_urls": "health",
+        },
         "logging": {"level": "INFO", "directory": str(tmp_path / "logs")},
         "database": {"path": str(tmp_path / "unused.db")},
         "identity": {

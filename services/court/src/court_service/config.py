@@ -12,6 +12,7 @@ from service_commons.config import (
     get_safe_model_config,
 )
 from service_commons.config import get_config_path as resolve_config_path
+from service_commons.telemetry import TelemetryConfig
 
 from court_service.judges.output import validate_rating
 
@@ -206,6 +207,7 @@ class Settings(BaseModel):
     service: ServiceConfig
     server: ServerConfig
     logging: LoggingConfig
+    telemetry: TelemetryConfig
     platform: PlatformConfig
     disputes: DisputesConfig
     judges: JudgesConfig

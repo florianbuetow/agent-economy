@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import uuid
 from typing import TYPE_CHECKING, Any, Protocol, cast
+from urllib.parse import quote
 
+from service_auth.errors import raise_for_api_error
 from service_auth.financial_identity import operation_id_for
 from service_auth.financial_responses import SQLITE_MAX_INTEGER, validate_operation_id
 from service_auth.task_board_responses import (
@@ -22,6 +24,9 @@ if TYPE_CHECKING:
     import httpx
 
     from service_auth.config import AgentConfig
+
+
+IDEMPOTENCY_KEY_HEADER = "Idempotency-Key"
 
 
 def _operation_identity(operation_id: str, expected_lifecycle_version: int) -> tuple[str, int]:
@@ -312,8 +317,14 @@ class TaskBoardMixin:
         task_id: str,
         filename: str,
         content: bytes,
+        *,
+        idempotency_key: str | None = None,
     ) -> dict[str, Any]:
-        """Upload a file asset for a task."""
+        """Upload a file asset for a task.
+
+        ``idempotency_key`` (1-128 chars of ``[A-Za-z0-9._:-]``) makes a retry after a
+        lost response return the already stored asset instead of a duplicate.
+        """
         url = f"{self.config.task_board_url}/tasks/{task_id}/assets"
         headers = self._auth_header(
             {
@@ -323,6 +334,8 @@ class TaskBoardMixin:
             audience="task-board",
             resource=f"POST /tasks/{task_id}/assets",
         )
+        if idempotency_key is not None:
+            headers[IDEMPOTENCY_KEY_HEADER] = idempotency_key
         return await self._request(
             "POST", url, headers=headers, files={"file": (filename, content)}
         )
@@ -423,17 +436,35 @@ class TaskBoardMixin:
         )
 
     async def list_assets(self: _TaskBoardClient, task_id: str) -> list[dict[str, Any]]:
-        """List all assets uploaded for a task (public, no auth required)."""
-        url = f"{self.config.task_board_url}/tasks/{task_id}/assets"
-        response = await self._request("GET", url)
+        """List a task's files (signed; poster, assigned worker, platform or operator)."""
+        url = f"{self.config.task_board_url}/tasks/{quote(task_id, safe='')}/assets"
+        headers = self._auth_header(
+            {"action": "list_assets", "task_id": task_id},
+            audience="task-board",
+            resource=f"GET /tasks/{task_id}/assets",
+        )
+        response = await self._request("GET", url, headers=headers)
         return cast("list[dict[str, Any]]", response["assets"])
 
     async def download_asset(self: _TaskBoardClient, task_id: str, asset_id: str) -> bytes:
-        """Download an asset's raw file content (public, no auth required)."""
-        url = f"{self.config.task_board_url}/tasks/{task_id}/assets/{asset_id}"
-        response = await self._request_raw("GET", url)
-        response.raise_for_status()
+        """Download a file's exact bytes (signed; same principals as ``list_assets``)."""
+        url = (
+            f"{self.config.task_board_url}/tasks/{quote(task_id, safe='')}"
+            f"/assets/{quote(asset_id, safe='')}"
+        )
+        headers = self._auth_header(
+            {"action": "download_asset", "task_id": task_id, "asset_id": asset_id},
+            audience="task-board",
+            resource=f"GET /tasks/{task_id}/assets/{asset_id}",
+        )
+        response = await self._request_raw("GET", url, headers=headers)
+        raise_for_api_error(response)
         return response.content
+
+    async def get_task_inputs(self: _TaskBoardClient, task_id: str) -> dict[str, Any]:
+        """Read a task's frozen input manifest (public while the task is non-terminal)."""
+        url = f"{self.config.task_board_url}/tasks/{quote(task_id, safe='')}/inputs"
+        return await self._request("GET", url)
 
     async def submit_worker_rebuttal(
         self: _TaskBoardClient,
@@ -455,3 +486,134 @@ class TaskBoardMixin:
             resource=f"POST /tasks/{task_id}/rebuttal",
         )
         return await self._request("POST", url, json={"token": token})
+
+    # --- Protocol-2 posting with input attachments -------------------------------
+
+    def new_task_publication(
+        self: _TaskBoardClient,
+        *,
+        task_id: str,
+        title: str,
+        spec: str,
+        reward: int,
+        bidding_deadline_seconds: int,
+        acceptance_window_seconds: int,
+        execution_deadline_seconds: int,
+        review_deadline_seconds: int,
+        expected_input_count: int,
+    ) -> dict[str, Any]:
+        """Build the admission intent for a protocol-2 publication (poster-signed later).
+
+        The returned dict carries ``publication_operation_id`` (fresh UUID) and the
+        derived ``lock_operation_id``; pass it to ``admit_task_publication`` and
+        ``publish_task_publication``. Persist it yourself if you need restart safety.
+        """
+        poster_id = self.agent_id
+        if poster_id is None:
+            msg = "Register the agent before building a task publication"
+            raise ValueError(msg)
+        return {
+            "publication_operation_id": f"op-{uuid.uuid4()}",
+            "lock_operation_id": operation_id_for("task-lock", (task_id, poster_id)),
+            "task_id": task_id,
+            "poster_id": poster_id,
+            "title": title,
+            "spec": spec,
+            "reward": reward,
+            "bidding_deadline_seconds": bidding_deadline_seconds,
+            "acceptance_window_seconds": acceptance_window_seconds,
+            "execution_deadline_seconds": execution_deadline_seconds,
+            "review_deadline_seconds": review_deadline_seconds,
+            "expected_input_count": expected_input_count,
+        }
+
+    async def admit_task_publication(
+        self: _TaskBoardClient, intent: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Admit a protocol-2 publication; returns the 202 body (``input_manifest_id``)."""
+        fields = (
+            "publication_operation_id",
+            "task_id",
+            "poster_id",
+            "title",
+            "spec",
+            "reward",
+            "bidding_deadline_seconds",
+            "acceptance_window_seconds",
+            "execution_deadline_seconds",
+            "review_deadline_seconds",
+            "expected_input_count",
+        )
+        token = self._sign_jws(
+            {"action": "task_publication_admit", **{field: intent[field] for field in fields}},
+            audience="task-board",
+            resource="POST /task-publications",
+        )
+        url = f"{self.config.task_board_url}/task-publications"
+        return await self._request("POST", url, json={"token": token})
+
+    async def upload_task_input(
+        self: _TaskBoardClient,
+        publication_operation_id: str,
+        filename: str,
+        content: bytes,
+        *,
+        content_type: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        """Upload one input file into an admitted publication (poster only, 201)."""
+        publication_id = validate_operation_id(publication_operation_id)
+        headers = self._auth_header(
+            {
+                "action": "task_publication_upload_input",
+                "publication_operation_id": publication_id,
+                "poster_id": self.agent_id,
+            },
+            audience="task-board",
+            resource=f"POST /task-publications/{publication_id}/inputs",
+        )
+        headers[IDEMPOTENCY_KEY_HEADER] = idempotency_key
+        url = (
+            f"{self.config.task_board_url}/task-publications/"
+            f"{quote(publication_id, safe='')}/inputs"
+        )
+        return await self._request(
+            "POST", url, headers=headers, files={"file": (filename, content, content_type)}
+        )
+
+    async def publish_task_publication(
+        self: _TaskBoardClient, intent: dict[str, Any]
+    ) -> tuple[int, dict[str, Any]]:
+        """Freeze the inputs, lock escrow and publish; ``(201, body)`` once published,
+        ``(202, body)`` while the lock is still pending. Safe to retry."""
+        publication_id = validate_operation_id(str(intent["publication_operation_id"]))
+        task_token = self._sign_jws(
+            {
+                "action": "task_publication_publish",
+                "publication_operation_id": publication_id,
+                "task_id": intent["task_id"],
+                "poster_id": self.agent_id,
+            },
+            audience="task-board",
+            resource=f"POST /task-publications/{publication_id}/publish",
+        )
+        escrow_token = self._sign_jws(
+            {
+                "action": "escrow_lock",
+                "operation_id": intent["lock_operation_id"],
+                "task_id": intent["task_id"],
+                "amount": intent["reward"],
+                "agent_id": self.agent_id,
+            },
+            audience="central-bank",
+            resource="POST /escrow/lock",
+        )
+        url = (
+            f"{self.config.task_board_url}/task-publications/"
+            f"{quote(publication_id, safe='')}/publish"
+        )
+        response = await self._request_raw(
+            "POST", url, json={"task_token": task_token, "escrow_token": escrow_token}
+        )
+        raise_for_api_error(response)
+        return response.status_code, cast("dict[str, Any]", response.json())

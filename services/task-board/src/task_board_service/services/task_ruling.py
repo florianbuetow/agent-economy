@@ -11,6 +11,7 @@ from json import JSONDecodeError
 from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
+from service_commons.telemetry import annotate
 
 from task_board_service.services.task_db_client import PlatformHttpError
 from task_board_service.services.task_helpers import is_valid_worker_pct
@@ -41,6 +42,7 @@ class TaskRulingCoordinator:
         platform_agent: PlatformAgent,
     ) -> dict[str, Any]:
         """Claim a poster dispute before creating or recovering its Court effect."""
+        annotate(task_id=task_id, action="dispute_task")
         manager = self._manager
         payload = await manager.token_validator.validate_jws_token(
             token,
@@ -102,6 +104,7 @@ class TaskRulingCoordinator:
         12b. invalid_payload — dispute_id does not match this task's dispute
         13.  invalid_rebuttal — empty or too long
         """
+        annotate(task_id=task_id, action="submit_rebuttal")
         manager = self._manager
         payload = await manager.token_validator.validate_jws_token(
             token,
@@ -197,6 +200,7 @@ class TaskRulingCoordinator:
 
     async def record_ruling(self, task_id: str, token: str) -> dict[str, Any]:
         """Claim the exact platform ruling before delivering its frozen Bank intent."""
+        annotate(task_id=task_id, action="record_ruling")
         manager = self._manager
         payload = await manager.token_validator.validate_platform_jws_token(
             token,

@@ -27,6 +27,7 @@ from base_agent.runtime_task_commands import (
     log_runtime_replay,
     runtime_owner_from_agent,
 )
+from base_agent.telemetry import configure_observability
 from base_agent.worker_factory import WorkerFactory
 from math_worker.loop import MathWorkerLoop
 
@@ -36,12 +37,7 @@ if TYPE_CHECKING:
 
 
 def _setup_logging() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S",
-        stream=sys.stderr,
-    )
+    configure_observability("math-worker")
 
 
 async def _create_account(agent: BaseAgent, logger: logging.Logger) -> None:

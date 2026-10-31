@@ -313,6 +313,24 @@ replay. Resume interrupted work with `just demo-resume <run-id>` or
 scenario under an existing run ID is rejected. Demo commands do not stop
 services or reset databases.
 
+### Observability
+
+Every service and agent ships OpenTelemetry traces and its JSON logs (with
+`trace_id`/`span_id`) over OTLP/HTTP, configured by the required `telemetry:`
+section in each `config.yaml` (`enabled`, `otlp_endpoint`, `sample_ratio`,
+`excluded_urls`). Outbound `httpx` calls carry `traceparent`, so one task's
+work across Task Board, Central Bank, Court and Reputation forms one trace;
+lifecycle handlers tag spans with `task_id`, `bid_id` and `dispute_id`
+(TraceQL: `{ span.task_id = "t-…" }`). Logs are also written to
+`services/<name>/data/logs` as before, so a missing collector loses nothing.
+
+```bash
+just observability-up    # grafana/otel-lgtm: Grafana on :3000, OTLP on :4318, /health polling
+just observability-down
+```
+
+Test runs set `telemetry.enabled: false`; the isolated runtime does the same.
+
 ## Development
 
 ### Full CI pipeline

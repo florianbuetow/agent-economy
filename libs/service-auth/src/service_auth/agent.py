@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from service_auth.errors import raise_for_api_error
 from service_auth.jws import VerifiedJws, verify_jws_for_signer
 from service_auth.mixins import (
     BankMixin,
@@ -108,10 +109,11 @@ class BaseAgent(IdentityMixin, BankMixin, TaskBoardMixin, ReputationMixin, Court
             Parsed JSON response as a dictionary.
 
         Raises:
-            httpx.HTTPStatusError: If the response status indicates an error.
+            EconomyApiError: If the service returned a structured error body.
+            httpx.HTTPStatusError: If the response status indicates an error without one.
         """
         response = await self._http.request(method, url, **kwargs)
-        response.raise_for_status()
+        raise_for_api_error(response)
         return response.json()  # type: ignore[no-any-return]
 
     async def _request_raw(

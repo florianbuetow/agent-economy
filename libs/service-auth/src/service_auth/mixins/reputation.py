@@ -58,3 +58,19 @@ class ReputationMixin:
         url = f"{self.config.reputation_url}/feedback/agent/{agent_id}"
         response = await self._request("GET", url)
         return cast("list[dict[str, Any]]", response["feedback"])
+
+    async def get_agent_quality(self: _ReputationClient, agent_id: str) -> dict[str, Any]:
+        """Public quality score: separate specification and delivery dimensions."""
+        url = f"{self.config.reputation_url}/agents/{agent_id}/quality"
+        return await self._request("GET", url)
+
+    async def get_agent_quality_report(self: _ReputationClient, agent_id: str) -> dict[str, Any]:
+        """Signed quality read; adds ``provenance`` when the caller is the subject,
+        a task participant (own tasks only) or the operator."""
+        url = f"{self.config.reputation_url}/agents/{agent_id}/quality"
+        token = self._sign_jws(
+            {"action": "get_quality", "agent_id": agent_id},
+            audience="reputation",
+            resource=f"GET /agents/{agent_id}/quality",
+        )
+        return await self._request("GET", url, headers={"Authorization": f"Bearer {token}"})

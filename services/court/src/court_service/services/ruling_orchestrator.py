@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 import httpx
 from service_auth.financial_identity import operation_id_for
 from service_commons.exceptions import ServiceError
+from service_commons.telemetry import annotate
 
 from court_service.judges import DisputeContext, JudgeVote
 from court_service.judges.output import QUALITY_RATINGS, median_rating, parse_judge_output
@@ -619,6 +620,7 @@ class RulingOrchestrator:
         load_task: TaskLoader,
     ) -> dict[str, Any]:
         """Take the lease, load the task only if judging is still needed, finish."""
+        annotate(dispute_id=dispute_id, action="rule")
         claim = await asyncio.to_thread(self.begin_ruling, dispute_id)
         task_data: dict[str, Any] | None = None
         if not claim.decided:

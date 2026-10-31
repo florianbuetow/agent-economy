@@ -28,6 +28,7 @@ from base_agent.runtime_task_commands import (
     log_runtime_replay,
     runtime_owner_from_agent,
 )
+from base_agent.telemetry import configure_observability
 from classification_worker.config import load_classification_profile
 from classification_worker.loop import ClassificationWorkerLoop, LoopSettings
 from classification_worker.solvers import KeywordSolver, LLMSolver
@@ -61,11 +62,7 @@ def _build_solver(profile: ClassificationWorkerProfile) -> tuple[Solver, LLMClie
 
 
 async def _main(profile_name: str) -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        stream=sys.stderr,
-    )
+    configure_observability("classification-worker")
     logger = logging.getLogger("classification_worker")
     config_path = resolve_config_path(
         env_var_name="AGENT_CONFIG_PATH", default_filename="config.yaml"

@@ -20,6 +20,7 @@ from service_commons.config import (
 from service_commons.config import (
     get_config_path as resolve_config_path,
 )
+from service_commons.telemetry import TelemetryConfig
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -180,6 +181,7 @@ class Settings(BaseModel):
     service: ServiceConfig
     server: ServerConfig
     logging: LoggingConfig
+    telemetry: TelemetryConfig
     platform: PlatformConfig
     identity: IdentityConfig
     task_board: TaskBoardConfig

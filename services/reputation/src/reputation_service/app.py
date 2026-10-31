@@ -4,11 +4,13 @@ FastAPI application factory.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, cast
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from service_commons.telemetry import setup_telemetry
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from reputation_service.config import get_settings
@@ -84,6 +86,12 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+    setup_telemetry(
+        settings.telemetry,
+        service_name=settings.service.name,
+        app=app,
+        log_logger=logging.getLogger(settings.service.name),
+    )
     app.add_exception_handler(
         StarletteHTTPException,
         cast("ExceptionHandler", _handle_starlette_http),

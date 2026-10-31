@@ -190,12 +190,11 @@ def _asset_agent(files: dict[str, bytes]) -> MagicMock:
     ]
     by_id = {f"asset-{index}": content for index, content in enumerate(files.values())}
 
-    async def _raw(_method: str, url: str, headers: object) -> MagicMock:
-        del headers
-        return MagicMock(content=by_id[url.rsplit("/", 1)[-1]])
+    async def _download(_task_id: str, asset_id: str) -> bytes:
+        return by_id[asset_id]
 
-    agent._request = AsyncMock(return_value={"assets": assets})
-    agent._request_raw = AsyncMock(side_effect=_raw)
+    agent.list_assets = AsyncMock(return_value=assets)
+    agent.download_asset = AsyncMock(side_effect=_download)
     return agent
 
 
