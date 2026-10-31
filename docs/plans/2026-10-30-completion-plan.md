@@ -249,7 +249,7 @@ Fixes made while getting there, all with tests:
 - Stale tests were aligned with shipped behaviour: accepted-bid amounts, governed uploads in `board_artifact_uploads`, the durable Court ruling events, the classifier-bot keypairs, and the wave-1 UI copy and live profile stream. Tests for the removed legacy migration path were deleted.
 - Judge evaluation (item 7.1): the shipped panel decided all five declared cases inside their bands; see [2026-10-31-judge-evaluation.md](2026-10-31-judge-evaluation.md).
 
-Still owed before a release claim: the full isolated root `just ci-quiet` (item 7.4), which the owner scheduled for after the merge.
+Root `just ci-quiet` (item 7.4) passed on 2026-10-31 after one fix: Task Board's artifact maintenance loop imported `httpx` directly, which its architecture test forbids, and now catches the Gateway client's `PlatformHttpError` alias instead.
 
 ## Decisions needed from the owner
 
