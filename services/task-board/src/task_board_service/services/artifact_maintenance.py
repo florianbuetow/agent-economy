@@ -6,6 +6,9 @@ import asyncio
 import time
 from typing import TYPE_CHECKING
 
+import httpx
+from service_commons.exceptions import ServiceError
+
 from task_board_service.logging import get_logger
 
 if TYPE_CHECKING:
@@ -49,7 +52,7 @@ class ArtifactMaintenance:
                 counts = await asyncio.to_thread(self.run_once, startup=startup)
                 if any(counts.values()):
                     logger.info("Artifact maintenance cycle", extra=counts)
-            except Exception:
+            except (httpx.HTTPError, ServiceError, OSError, RuntimeError):
                 logger.exception("Artifact maintenance cycle failed")
             # Only the very first cycle may treat all leftovers as stray: once the
             # service accepts uploads, removal is age-gated even if startup failed.

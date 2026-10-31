@@ -89,6 +89,8 @@ help:
     @printf "  \033[0;37mjust supervise-uninstall\033[0;34m Remove the supervision units\033[0m\n"
     @printf "  \033[0;37mjust supervise-status \033[0;34m Show supervision unit state\033[0m\n"
     @printf "  \033[0;37mjust backup <dest.tar.gz>\033[0;34m Stop the stack and archive all economy state\033[0m\n"
+    @printf "  \033[0;37mjust observability-up \033[0;34m Start the Grafana/OTLP viewer container (logs, traces, health)\033[0m\n"
+    @printf "  \033[0;37mjust observability-down\033[0;34m Stop the viewer container\033[0m\n"
     @printf "  \033[0;37mjust economy-report   \033[0;34m Per-worker selection, approval, cost and quality report\033[0m\n"
     @printf "  \033[0;37mjust start-classbot <profile>\033[0;34m Start a classification worker (classbot_keyword | classbot_llm)\033[0m\n"
     @printf "  \033[0;37mjust restore <src.tar.gz>\033[0;34m Stop the stack and restore an archive (then run start-all)\033[0m\n"
@@ -588,6 +590,16 @@ economy-report:
 # Start a classification worker from a named profile (classbot_keyword or classbot_llm)
 start-classbot profile:
     cd agents && uv run python -m classification_worker {{quote(profile)}} &
+
+# Start the single-container log/trace/health viewer (Grafana on :3000, OTLP on :4318)
+observability-up:
+    docker run -d --name otel-lgtm -p 3000:3000 -p 4318:4318 -p 4317:4317 \
+      -v "$PWD/config/otel/collector.yaml:/otel-lgtm/otelcol-config.yaml:ro" \
+      -v otel-lgtm-data:/data grafana/otel-lgtm
+
+# Stop and remove the observability viewer container (data volume is kept)
+observability-down:
+    docker rm -f otel-lgtm
 
 # Provision the treasury (idempotent genesis for the UI operator account).
 # Q-9 decision: `just start-all` does NOT auto-mint the treasury any more —

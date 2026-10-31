@@ -221,3 +221,6 @@ DEP002 = [
     "freezegun",
     "db-gateway-service",
 ]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]

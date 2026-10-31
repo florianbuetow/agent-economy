@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 from service_commons.exceptions import ServiceError
+from service_commons.telemetry import annotate
 
 from task_board_service.services.task_helpers import is_positive_int, task_to_response
 from task_board_service.services.task_operations import public_operation_identity
@@ -50,6 +51,7 @@ class TaskBiddingCoordinator:
         12a. self_bid — bidder is the poster
         12b. bid_already_exists — duplicate bid
         """
+        annotate(task_id=task_id, action="submit_bid")
         manager = self._manager
         # Steps 4-7a: Verify JWS, validate action
         payload = await manager.token_validator.validate_jws_token(
@@ -232,6 +234,7 @@ class TaskBiddingCoordinator:
         9b.  forbidden — signer != task's poster
         12.  bid_not_found
         """
+        annotate(task_id=task_id, bid_id=bid_id, action="accept_bid")
         manager = self._manager
         # Steps 4-7a: Verify JWS, validate action
         payload = await manager.token_validator.validate_jws_token(

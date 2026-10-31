@@ -98,3 +98,9 @@ posting_recovery:
 financial_effect_recovery:
   interval_seconds: 2.0
   max_delivery_attempts_per_cycle: 10
+
+telemetry:
+  enabled: true
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"

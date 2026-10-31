@@ -11,7 +11,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import signal
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -29,6 +28,7 @@ from base_agent.runtime_task_commands import (
     log_runtime_replay,
     runtime_owner_from_agent,
 )
+from base_agent.telemetry import configure_observability
 from task_feeder.acceptance import AcceptanceLoop
 from task_feeder.config import load_acceptance_settings, load_task_feeder_settings
 from task_feeder.loop import TaskFeederLoop
@@ -41,12 +41,7 @@ if TYPE_CHECKING:
 
 
 def _setup_logging() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S",
-        stream=sys.stderr,
-    )
+    configure_observability("task-feeder")
 
 
 async def _create_account(agent: BaseAgent, logger: logging.Logger) -> None:

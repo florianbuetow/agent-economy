@@ -208,3 +208,6 @@ DEP002 = [
     "pytest-base-url",
     "pytestarch",
 ]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]

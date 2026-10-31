@@ -95,6 +95,16 @@ server:
   port: 18028
   log_level: "warning"
 
+telemetry:
+
+  enabled: false
+
+  otlp_endpoint: "http://127.0.0.1:4318"
+
+  sample_ratio: 1.0
+
+  excluded_urls: "health"
+
 logging:
   level: "WARNING"
   directory: "{key_dir / "logs"}"

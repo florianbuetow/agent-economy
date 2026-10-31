@@ -951,14 +951,15 @@ def _validated_input_record(
         _invalid_input_record("Task posting record is invalid")
     intent = cast("dict[str, object]", intent)
     task_id = intent.get("task_id")
+    operator_id = agent.agent_id
     if (
         record.get("record_version") != 2
         or record.get("scope") != _posting_scope(agent)
         or intent.get("publication_operation_id") != publication_operation_id
-        or intent.get("actor_id") != agent.agent_id
+        or not isinstance(operator_id, str)
+        or intent.get("actor_id") != operator_id
         or not isinstance(task_id, str)
-        or intent.get("lock_operation_id")
-        != operation_id_for("task-lock", (task_id, cast("str", agent.agent_id)))
+        or intent.get("lock_operation_id") != operation_id_for("task-lock", (task_id, operator_id))
         or record.get("request_sha256") != _canonical_sha256(intent)
     ):
         _invalid_input_record("Task posting record does not match the current operator or intent")

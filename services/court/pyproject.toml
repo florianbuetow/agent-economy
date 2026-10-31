@@ -212,3 +212,6 @@ DEP002 = [
     "types-PyYAML",
     "db-gateway-service",
 ]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]

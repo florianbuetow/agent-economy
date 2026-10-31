@@ -780,6 +780,7 @@ class IsolatedRuntime:
         _mapping_section(agent_config, "task_feeder")["tasks_file"] = str(
             self.run_dir / "data" / "math_tasks.jsonl"
         )
+        _mapping_section(agent_config, "telemetry")["enabled"] = False
         _dump_yaml(self.agent_config_path, agent_config)
 
         gateway_auth, gateway_audience, gateway_max_lifetime, trusted_callers = (
@@ -796,6 +797,7 @@ class IsolatedRuntime:
             config = source_configs[service]
             _mapping_section(config, "server")["port"] = self.ports[service]
             _mapping_section(config, "logging")["directory"] = str(self.run_dir / "logs")
+            _mapping_section(config, "telemetry")["enabled"] = False
             if service in {"db-gateway", "task-board", "ui"}:
                 recovery = _mapping_section(config, "recovery")
                 recovery["maintenance_lock_path"] = str(self.run_dir / "maintenance.lock")

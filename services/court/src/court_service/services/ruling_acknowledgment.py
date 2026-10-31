@@ -141,7 +141,10 @@ def _validate_result(
     }
     payment = _settlement_payment(operation, worker_pct=worker_pct, reward=reward)
     if payment is not None:
-        expected["accepted_price"] = result.get("accepted_price")
+        accepted_price = result.get("accepted_price")
+        if not isinstance(accepted_price, int):
+            raise ValueError("Invalid Task Board ruling acknowledgment")
+        expected["accepted_price"] = accepted_price
         expected["worker_payment"] = payment
         expected["poster_refund"] = reward - payment
     _require(result == expected)

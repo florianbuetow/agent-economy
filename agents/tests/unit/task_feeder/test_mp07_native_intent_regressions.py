@@ -94,6 +94,12 @@ class _PublicReviewAgent:
         assert headers == {"Authorization": "Bearer fixture"}
         return {"assets": await self._list_assets(_TASK_ID)}
 
+    async def list_assets(self, task_id: str) -> list[dict[str, object]]:
+        return await self._list_assets(task_id)
+
+    async def download_asset(self, task_id: str, asset_id: str) -> bytes:
+        return await self._download_asset(task_id, asset_id)
+
     async def _list_assets(self, task_id: str) -> list[dict[str, object]]:
         assert task_id == _TASK_ID
         self.list_asset_calls += 1

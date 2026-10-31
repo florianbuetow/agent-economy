@@ -198,32 +198,6 @@ async def post_task(
     return intent.task_id
 
 
-async def signed_list_assets(agent: BaseAgent, task_id: str) -> list[dict[str, Any]]:
-    """GET /tasks/{id}/assets with a signed ``list_assets`` bearer token."""
-    headers = agent._auth_header(  # the SDK has no signed read yet
-        {"action": "list_assets", "task_id": task_id},
-        audience="task-board",
-        resource=f"GET /tasks/{task_id}/assets",
-    )
-    url = f"{agent.config.task_board_url}/tasks/{task_id}/assets"
-    response = await agent._request_raw("GET", url, headers=headers)
-    response.raise_for_status()
-    return list(response.json()["assets"])
-
-
-async def signed_download_asset(agent: BaseAgent, task_id: str, asset_id: str) -> bytes:
-    """GET /tasks/{id}/assets/{asset} with a signed ``download_asset`` bearer token."""
-    headers = agent._auth_header(  # the SDK has no signed read yet
-        {"action": "download_asset", "task_id": task_id, "asset_id": asset_id},
-        audience="task-board",
-        resource=f"GET /tasks/{task_id}/assets/{asset_id}",
-    )
-    url = f"{agent.config.task_board_url}/tasks/{task_id}/assets/{asset_id}"
-    response = await agent._request_raw("GET", url, headers=headers)
-    response.raise_for_status()
-    return response.content
-
-
 async def settle_task(
     agent: BaseAgent, task_id: str, accept: Callable[[bytes], bool], timing: Timing
 ) -> dict[str, Any]:
@@ -250,9 +224,9 @@ async def settle_task(
 
     task = await wait_for(submitted, timing, "submission")
     # Download before approving: bytes are unavailable once the task is terminal.
-    assets = await signed_list_assets(agent, task_id)
+    assets = await agent.list_assets(task_id)
     say(f"GET /tasks/{task_id}/assets", f"{len(assets)} assets")
-    content = b"".join([await signed_download_asset(agent, task_id, a["asset_id"]) for a in assets])
+    content = b"".join([await agent.download_asset(task_id, a["asset_id"]) for a in assets])
     say(f"GET /tasks/{task_id}/assets/{{asset_id}}", f"{len(content)} bytes")
     if accept(content):
         await agent.approve_task(

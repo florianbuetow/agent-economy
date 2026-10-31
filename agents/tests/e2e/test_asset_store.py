@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from task_feeder.signed_assets import signed_download_asset, signed_list_assets
-
 from .native_task_contract import lifecycle_version, new_operation_id, publish_task
 
 if TYPE_CHECKING:
@@ -60,12 +58,12 @@ async def test_download_uploaded_asset(make_funded_agent) -> None:
         assert isinstance(asset.get("asset_id"), str)
 
         # List assets to get the asset_id
-        assets = await signed_list_assets(worker, task["task_id"])
+        assets = await worker.list_assets(task["task_id"])
         assert len(assets) == 1
         asset_id = assets[0]["asset_id"]
 
         # Download the asset
-        downloaded = await signed_download_asset(worker, task["task_id"], asset_id)
+        downloaded = await worker.download_asset(task["task_id"], asset_id)
         assert downloaded == original_content
     finally:
         await _close_agents(agents_to_close)
@@ -113,7 +111,7 @@ async def test_multiple_asset_uploads(make_funded_agent) -> None:
         await worker.upload_asset(task["task_id"], "readme.md", b"# Hello")
         await worker.upload_asset(task["task_id"], "data.json", b'{"key": 1}')
 
-        assets = await signed_list_assets(worker, task["task_id"])
+        assets = await worker.list_assets(task["task_id"])
         assert len(assets) == 3
 
         filenames = {a["filename"] for a in assets}

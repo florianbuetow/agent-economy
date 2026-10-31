@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 from pathlib import Path
 from urllib.parse import unquote, urlsplit, urlunsplit
@@ -10,6 +11,7 @@ from urllib.parse import unquote, urlsplit, urlunsplit
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from service_commons.telemetry import setup_telemetry
 
 from ui_service.config import get_settings
 from ui_service.core.exceptions import register_exception_handlers
@@ -47,6 +49,12 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+    setup_telemetry(
+        settings.telemetry,
+        service_name=settings.service.name,
+        app=app,
+        log_logger=logging.getLogger(settings.service.name),
+    )
 
     app.include_router(health.router, tags=["Operations"])
     app.include_router(metrics.router, prefix="/api", tags=["Metrics"])

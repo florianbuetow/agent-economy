@@ -93,6 +93,10 @@ class _FakeOperator:
         if self.raises is not None:
             raise self.raises
 
+    def _sign_jws(self, payload: dict[str, object], *, audience: str, resource: str) -> str:
+        self._record("sign_jws", {"payload": payload, "audience": audience, "resource": resource})
+        return "signed-token"
+
     async def cancel_task(self, task_id: str, **kwargs: Any) -> TaskBoardCommandResponse:
         self._record("cancel_task", {"task_id": task_id, **kwargs})
         return TaskBoardCommandResponse(200, _operation_body("cancel_task", task_id))

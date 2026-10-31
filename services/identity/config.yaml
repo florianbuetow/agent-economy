@@ -42,3 +42,9 @@ db_gateway:
     private_key_path: "../../data/keys/gateway-identity.key"
     audience: "db-gateway"
     token_ttl_seconds: 300
+
+telemetry:
+  enabled: true
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"

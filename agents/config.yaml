@@ -180,3 +180,12 @@ economy_report:
   # Normal-approximation z for the Wilson score interval (1.96 = 95%).
   confidence_z: 1.96
   quality_timeout_seconds: 5
+
+logging:
+  level: "INFO"
+
+telemetry:
+  enabled: true
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"

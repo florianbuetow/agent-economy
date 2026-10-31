@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from service_auth.jws import TokenPolicy
 from service_auth.signing import load_public_key, public_key_to_b64
+from service_commons.telemetry import setup_telemetry
 
 from db_gateway_service.board_authority import load_board_authority
 from db_gateway_service.config import get_config_path, get_settings
@@ -69,6 +72,12 @@ def create_app() -> FastAPI:
     app.state.board_authority = board_authority
 
     register_exception_handlers(app)
+    setup_telemetry(
+        settings.telemetry,
+        service_name=settings.service.name,
+        app=app,
+        log_logger=logging.getLogger(settings.service.name),
+    )
 
     app.include_router(health.router, tags=["Operations"])
     app.include_router(identity.router)

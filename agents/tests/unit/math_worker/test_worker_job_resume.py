@@ -81,6 +81,12 @@ class _Board:
         self.assets.append(asset)
         return {"task_id": task_id, **asset}
 
+    async def list_assets(self, task_id: str) -> list[dict[str, object]]:
+        """Serve the asset list the SDK fetches with its signed read."""
+        assert task_id == TASK_ID
+        self.signed_list_calls += 1
+        return [dict(asset) for asset in self.assets]
+
     async def signed_request(
         self, method: str, url: str, *, headers: dict[str, str]
     ) -> dict[str, object]:
@@ -97,8 +103,7 @@ def _wire(agent: BaseAgent, board: _Board) -> Any:
     mocked.get_task = AsyncMock(side_effect=board.get_task)
     mocked.list_tasks = AsyncMock(side_effect=board.list_tasks)
     mocked.upload_asset = AsyncMock(side_effect=board.upload_asset)
-    mocked.list_assets = AsyncMock(side_effect=AssertionError("unsigned asset list"))
-    mocked._request = AsyncMock(side_effect=board.signed_request)
+    mocked.list_assets = AsyncMock(side_effect=board.list_assets)
     mocked.get_balance = AsyncMock(return_value={"balance": 100})
     mocked.submit_worker_rebuttal = AsyncMock(return_value={"status": "rebuttal_pending"})
     mocked.list_disputes = AsyncMock(return_value=[{"dispute_id": "disp-1"}])

@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
+from service_commons.telemetry import annotate
 
 from task_board_service.services.task_operations import (
     accepted_task_arguments,
@@ -38,6 +39,7 @@ class TaskReviewCoordinator:
         9a.  forbidden — signer != worker_id in payload
         10+. Gateway claim — task/status/version/worker/asset/cutoff predicates
         """
+        annotate(task_id=task_id, action="submit_deliverable")
         manager = self._manager
         # Steps 4-7a: Verify JWS, validate action
         payload = await manager.token_validator.validate_jws_token(
@@ -102,6 +104,7 @@ class TaskReviewCoordinator:
         11+. Gateway claim — status/version/actor/frozen-term predicates
         13.  persisted Bank-effect delivery/finalization
         """
+        annotate(task_id=task_id, action="approve_task")
         manager = self._manager
         # Steps 4-7a: Verify JWS, validate action
         payload = await manager.token_validator.validate_jws_token(

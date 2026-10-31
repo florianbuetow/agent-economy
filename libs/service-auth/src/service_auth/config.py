@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import yaml
 from pydantic import BaseModel, ConfigDict, model_validator
-from service_commons.config import get_config_path as resolve_config_path
 
 from service_auth.jws import TokenPolicy
-from service_auth.signing import load_keypair
+from service_auth.signing import load_keypair, load_private_key
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -142,4 +142,42 @@ def load_agent_config(handle: str, config_path: Path | None = None) -> AgentConf
             max_lifetime_seconds=file_settings.signing.max_lifetime_seconds,
             clock_skew_seconds=file_settings.signing.clock_skew_seconds,
         ),
+    )
+
+
+def resolve_config_path(env_var_name: str, default_filename: str) -> Path:
+    """Config path from an explicit environment variable, else the given filename."""
+    value = os.environ.get(env_var_name)
+    return Path(default_filename if value is None else value)
+
+
+def agent_config_from_key_file(
+    *,
+    name: str,
+    key_path: Path,
+    identity_url: str,
+    bank_url: str,
+    task_board_url: str,
+    reputation_url: str,
+    court_url: str,
+    token_ttl_seconds: int,
+    token_policy: TokenPolicy,
+) -> AgentConfig:
+    """Build an ``AgentConfig`` from explicit URLs and one private key file.
+
+    For external agents that do not use ``config.yaml``/``roster.yaml``; every value is
+    explicit, nothing is read from the environment.
+    """
+    private_key = load_private_key(key_path)
+    return AgentConfig(
+        name=name,
+        private_key=private_key,
+        public_key=private_key.public_key(),
+        identity_url=identity_url,
+        bank_url=bank_url,
+        task_board_url=task_board_url,
+        reputation_url=reputation_url,
+        court_url=court_url,
+        token_ttl_seconds=token_ttl_seconds,
+        token_policy=token_policy,
     )

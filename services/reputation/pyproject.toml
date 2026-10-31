@@ -201,3 +201,6 @@ DEP002 = [
 DEP003 = [
     "starlette",
 ]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]

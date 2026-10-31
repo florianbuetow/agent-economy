@@ -237,39 +237,34 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 max_files_per_task=max_files_per_task,
             )
             state.asset_manager = asset_manager
-            # The shipped config.yaml always carries `artifacts`; a config without the
-            # section (legacy test fixtures) keeps every task on the V5 board_assets path.
             artifact_settings = settings.artifacts
-            if artifact_settings is not None:
-                asset_manager.configure_artifacts(
-                    store,
-                    {
-                        "contract_version": 1,
-                        "max_file_bytes": max_file_size,
-                        "max_files_per_manifest": max_files_per_task,
-                        "max_manifest_bytes": artifact_settings.max_manifest_bytes,
-                        "reservation_ttl_seconds": artifact_settings.reservation_ttl_seconds,
-                        "reservation_renew_before_expiry_seconds": (
-                            artifact_settings.reservation_renew_before_expiry_seconds
-                        ),
-                        "max_upload_duration_seconds": (
-                            artifact_settings.max_upload_duration_seconds
-                        ),
-                    },
-                )
-                artifact_maintenance = ArtifactMaintenance(
-                    asset_manager,
-                    stale_file_seconds=artifact_settings.stale_file_seconds,
-                    archive_after_seconds=artifact_settings.archive_after_seconds,
-                    archive_batch_size=artifact_settings.archive_batch_size,
-                )
-                artifact_interval = artifact_settings.recovery_interval_seconds
-                supervise_loop(
-                    state,
-                    "artifact_maintenance_task",
-                    lambda: artifact_maintenance.run_periodic(artifact_interval),
-                    restart_delay_seconds=artifact_interval,
-                )
+            asset_manager.configure_artifacts(
+                store,
+                {
+                    "contract_version": 1,
+                    "max_file_bytes": max_file_size,
+                    "max_files_per_manifest": max_files_per_task,
+                    "max_manifest_bytes": artifact_settings.max_manifest_bytes,
+                    "reservation_ttl_seconds": artifact_settings.reservation_ttl_seconds,
+                    "reservation_renew_before_expiry_seconds": (
+                        artifact_settings.reservation_renew_before_expiry_seconds
+                    ),
+                    "max_upload_duration_seconds": (artifact_settings.max_upload_duration_seconds),
+                },
+            )
+            artifact_maintenance = ArtifactMaintenance(
+                asset_manager,
+                stale_file_seconds=artifact_settings.stale_file_seconds,
+                archive_after_seconds=artifact_settings.archive_after_seconds,
+                archive_batch_size=artifact_settings.archive_batch_size,
+            )
+            artifact_interval = artifact_settings.recovery_interval_seconds
+            supervise_loop(
+                state,
+                "artifact_maintenance_task",
+                lambda: artifact_maintenance.run_periodic(artifact_interval),
+                restart_delay_seconds=artifact_interval,
+            )
             task_manager = TaskManager(
                 store=store,
                 central_bank_client=central_bank_client,

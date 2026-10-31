@@ -83,6 +83,12 @@ def _write_service_config(
             {
                 "service": {"name": "task-board", "version": "0.1.0"},
                 "server": {"host": "127.0.0.1", "port": 8003, "log_level": "info"},
+                "telemetry": {
+                    "enabled": False,
+                    "otlp_endpoint": "http://127.0.0.1:4318",
+                    "sample_ratio": 1.0,
+                    "excluded_urls": "health",
+                },
                 "logging": {"level": "WARNING", "directory": str(tmp_path / "logs")},
                 "database": {"path": str(tmp_path / "task-board.db")},
                 "identity": {
