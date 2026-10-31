@@ -6,10 +6,10 @@ import asyncio
 import time
 from typing import TYPE_CHECKING
 
-import httpx
 from service_commons.exceptions import ServiceError
 
 from task_board_service.logging import get_logger
+from task_board_service.services.task_db_client import PlatformHttpError
 
 if TYPE_CHECKING:
     from task_board_service.services.asset_manager import AssetManager
@@ -52,7 +52,7 @@ class ArtifactMaintenance:
                 counts = await asyncio.to_thread(self.run_once, startup=startup)
                 if any(counts.values()):
                     logger.info("Artifact maintenance cycle", extra=counts)
-            except (httpx.HTTPError, ServiceError, OSError, RuntimeError):
+            except (PlatformHttpError, ServiceError, OSError, RuntimeError):
                 logger.exception("Artifact maintenance cycle failed")
             # Only the very first cycle may treat all leftovers as stray: once the
             # service accepts uploads, removal is age-gated even if startup failed.
