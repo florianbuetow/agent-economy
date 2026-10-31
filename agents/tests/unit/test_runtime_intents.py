@@ -283,6 +283,9 @@ def _action_case(action: str) -> tuple[dict[str, object], dict[str, object], dic
                 "worker_id": "a-worker-alice",
                 "reward": 100,
                 "effect_result_reference": operation_id,
+                "accepted_price": 90,
+                "worker_payment": 90,
+                "poster_refund": 10,
             },
         ),
         "dispute_task": (
@@ -321,6 +324,7 @@ def _action_case(action: str) -> tuple[dict[str, object], dict[str, object], dic
             "escrow_id": "esc-runtime-181",
             "accepted_reward": 100,
             "selected_bid_amount": 90,
+            **({"submission_binding": None} if action == "submit_deliverable" else {}),
         }
     )
     descriptor = {
@@ -414,12 +418,14 @@ def _ack_for_case(
     if action == "approve_task":
         financial = {
             "request_version": 1,
-            "operation_kind": "escrow_release",
+            "operation_kind": "escrow_split",
             "escrow_id": "esc-runtime-181",
+            "worker_account_id": "a-worker-alice",
+            "poster_account_id": "a-poster",
+            "worker_amount": 90,
             "source_reference": f"task:{_TASK_ID}:approved",
-            "recipient_account_id": "a-worker-alice",
         }
-        effect_kind, effect_state = "bank_release", "succeeded"
+        effect_kind, effect_state = "bank_split", "succeeded"
         effect_operation_id = effect_result_reference = operation_id
         effect_intent = {
             "financial_request": financial,

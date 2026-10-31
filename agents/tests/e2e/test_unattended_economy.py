@@ -324,7 +324,7 @@ async def _build_rig(make_funded_agent: Any, tasks_path: Path) -> _Rig:
         background_tasks = [
             asyncio.create_task(feed_loop.run()),
             asyncio.create_task(acceptance_loop.run(retry_backoff_seconds=1)),
-            asyncio.create_task(review_loop.run(1)),
+            asyncio.create_task(review_loop.run(1, retry_backoff_seconds=1)),
             asyncio.create_task(worker_loop_correct.run()),
             asyncio.create_task(worker_loop_wrong.run()),
         ]

@@ -237,6 +237,7 @@ def _submission_intent(
         "escrow_id": _ESCROW_ID,
         "accepted_reward": 100,
         "selected_bid_amount": 90,
+        "submission_binding": None,
     }
     native_request = {
         "protocol_version": 1,

@@ -33,7 +33,9 @@ CRASH_RUNNER = Path(__file__).with_name("mp05_demo_native_crash_runner.py")
 TIMEOUT_SECONDS = 60.0
 FUNDING_AMOUNT = 500
 REWARD = 100
-BID_AMOUNT = 80
+# Full-budget price: approval stays a whole release and a ruling the Court's
+# percentage split; accepted-bid pricing has its own Gateway and e2e coverage.
+BID_AMOUNT = REWARD
 TARGET_EVENT = {
     "bid": "bid.submitted",
     "accept_bid": "task.accepted",
@@ -58,7 +60,7 @@ PROJECTION_TABLES = (
     "board_tasks",
     "board_task_publications",
     "board_bids",
-    "board_assets",
+    "board_artifact_uploads",
     "board_task_operations",
     "court_claims",
     "events",
@@ -587,7 +589,7 @@ def _assert_target_once(
     if action != "bid":
         expected_events.append("task.accepted")
     if action in {"submit_deliverable", "approve", "dispute"}:
-        expected_events.extend(("asset.uploaded", "task.submitted"))
+        expected_events.append("task.submitted")
     if action == "approve":
         expected_events.extend(("escrow.released", "task.approved"))
     elif action == "dispute":
@@ -624,10 +626,10 @@ def _assert_target_once(
     if action == "submit_deliverable":
         assets = [
             row
-            for row in _new_rows(projection, baseline, "board_assets")
+            for row in _new_rows(projection, baseline, "board_artifact_uploads")
             if row["task_id"] == gate["task_id"]
         ]
-        assert len(assets) == 1 and assets[0]["filename"] == "restart-proof.txt"
+        assert len(assets) == 1 and assets[0]["display_filename"] == "restart-proof.txt"
     if action == "approve":
         receipts = [
             row
@@ -669,7 +671,7 @@ def _assert_global_deltas(
     tasks = _new_rows(projection, baseline, "board_tasks")
     publications = _new_rows(projection, baseline, "board_task_publications")
     bids = _new_rows(projection, baseline, "board_bids")
-    assets = _new_rows(projection, baseline, "board_assets")
+    assets = _new_rows(projection, baseline, "board_artifact_uploads")
     operations = _new_rows(projection, baseline, "board_task_operations")
     claims = _new_rows(projection, baseline, "court_claims")
     events = _new_rows(projection, baseline, "events")
@@ -720,8 +722,9 @@ def _assert_global_deltas(
     assert len(assets) == int(expects_asset)
     if assets:
         assert assets[0]["task_id"] == task["task_id"]
-        assert assets[0]["uploader_id"] == worker_id
-        assert assets[0]["filename"] == "restart-proof.txt"
+        assert assets[0]["actor_id"] == worker_id
+        assert assets[0]["display_filename"] == "restart-proof.txt"
+        assert assets[0]["state"] == "ready"
 
     expected_commands: list[str] = []
     if has_bid:
@@ -826,8 +829,6 @@ def _assert_global_deltas(
         expected_event_types.append("bid.submitted")
     if has_acceptance:
         expected_event_types.append("task.accepted")
-    if expects_asset:
-        expected_event_types.append("asset.uploaded")
     if expects_submission:
         expected_event_types.append("task.submitted")
     if action == "approve":

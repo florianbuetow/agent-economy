@@ -226,6 +226,31 @@ Root `just ci-quiet` was started after the re-lock and **aborted at 7½ minutes*
 
 Operational defect found while doing this: `.claude/settings.json` runs `scripts/ci-quiet-hook.sh` before every Bash command containing `git commit`, with a 300 s timeout, and the hook runs `just ci-quiet` in the session's current directory. From the repo root that gate takes about 50 minutes, so it cannot finish inside the timeout. Observed behaviour during this review: when the session directory was a service directory the hook ran that service's gate and blocked the first commit attempt on the `code-audit` failure above; when the session directory was the repo root (commit `032aea2`) the hook ran the root gate, hit the 300 s timeout, Claude Code terminated the hook together with its whole `just ci-quiet` subtree (verified: nothing survived at 301 s), and the commit proceeded without a completed gate. The commit hook is therefore not an effective gate for root-level commits today. Add to Phase 1: make the hook run only the component gates for the staged paths within the timeout, or raise the timeout to cover the root gate and accept the wait. Until then the root gate must be run and recorded by hand before any release claim.
 
+## Implementation verification on 2026-10-31
+
+All plan items were implemented across waves 1–2 and the SDK/OpenTelemetry commit. This run re-verified the integrated tree suite by suite (full root `just ci-quiet` was deferred by the owner until after merge).
+
+| Suite | Result |
+|---|---|
+| Cross-service integration and runtime (`just test-integration`) | 494 passed |
+| Per-service integration (`just test-integration-all`) | 498 passed (7 services) |
+| UI browser suite (`just test-ui-e2e`) | 319 passed |
+| Agents e2e, including the unattended economy | 114 passed |
+| Unit: db-gateway 1669, task-board 1084, agents 1004, SDK 562, tools 331, court 306, central-bank 283, ui 281 | all passed |
+| launchd supervision probe (kill one service, KeepAlive restarts it) | restarted in 5.1 s |
+
+Fixes made while getting there, all with tests:
+
+- Approval and auto-approval now settle the accepted price (an exact-amount split when the price is below the budget); the SDK, agents runtime, UI proxy and demo replay accept both settlement shapes.
+- Q-M2 pricing-rule version: `board_task_pricing` records rule version 1 with every job's contract at publication, and settlement refuses a job without a recorded rule instead of guessing.
+- Governed submissions: Task Board exposes the accepted submission binding, the agents runtime freezes it and replays protocol-2 submits exactly, and the demo replay validates protocol 2.
+- The task page's settlement card shows the receipt's own amounts (accepted-price based) instead of re-deriving them from the reward.
+- Court judges take a required `timeout_seconds`; judge JSON with raw newlines in strings is accepted; the output schema lists the allowed quality ratings; the rubric states that vagueness never rewards non-delivery (see the judge evaluation note).
+- Stale tests were aligned with shipped behaviour: accepted-bid amounts, governed uploads in `board_artifact_uploads`, the durable Court ruling events, the classifier-bot keypairs, and the wave-1 UI copy and live profile stream. Tests for the removed legacy migration path were deleted.
+- Judge evaluation (item 7.1): the shipped panel decided all five declared cases inside their bands; see [2026-10-31-judge-evaluation.md](2026-10-31-judge-evaluation.md).
+
+Still owed before a release claim: the full isolated root `just ci-quiet` (item 7.4), which the owner scheduled for after the merge.
+
 ## Decisions needed from the owner
 
 Decisions 1 and 2 were resolved on 2026-10-31 as self-evident: the SDK (`libs/service-auth`) now matches the shipped APIs (signed asset reads, idempotent uploads, protocol-2 posting, task inputs, quality reads, typed `EconomyApiError`, config-free `agent_config_from_key_file`) and no longer depends on `service-commons`; Phase 6 is implemented (`service_commons.telemetry`, required `telemetry:` sections, agents wired, `config/otel/collector.yaml`, `just observability-up/down`). The OpenTelemetry pins are `opentelemetry-sdk~=1.45.0` with instrumentation `0.66b1`, the line the services' `semgrep` dev dependency already resolves to.

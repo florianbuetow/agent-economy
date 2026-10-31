@@ -19,7 +19,8 @@ import pytest
 from service_commons.exceptions import ServiceError
 
 from court_service.judges.base import DisputeContext
-from court_service.judges.llm_judge import LLMJudge
+from court_service.judges.llm_judge import LLMJudge, _extract_json
+from court_service.judges.prompts import build_system_prompt
 from court_service.services.evidence_bundle import build_evidence_bundle
 
 
@@ -61,6 +62,7 @@ def _judge() -> LLMJudge:
         judge_id="judge-0",
         model="test-model",
         temperature=0.0,
+        timeout_seconds=5.0,
         api_base="http://mock-llm.invalid",
         api_key="test-key",
     )
@@ -164,3 +166,27 @@ class TestLLMJudgeErrorHandling:
         assert excinfo.value.error == "judge_unavailable"
         assert excinfo.value.status_code == 502
         assert "judge-0" in excinfo.value.message
+
+
+def test_judge_json_with_a_raw_newline_inside_a_string_is_accepted() -> None:
+    """Local models sometimes break a long explanation across lines inside the string."""
+    raw = (
+        '{"schema_version": 1, "worker_pct": 20, "spec_quality": "dissatisfied",\n'
+        ' "spec_quality_explanation": "Vague.\nNo criteria.", "delivery_quality": "dissatisfied",\n'
+        ' "delivery_quality_explanation": "TODO only.", "reasoning": "No attempt."}'
+    )
+    assert _extract_json(raw)["spec_quality_explanation"] == "Vague.\nNo criteria."
+
+
+def test_output_schema_names_every_allowed_quality_rating() -> None:
+    """The schema line itself lists the ratings, so a model cannot invent another one."""
+    schema = build_system_prompt("nonce").split("EXACTLY this shape:", 1)[1]
+    assert '"spec_quality": "dissatisfied" | "satisfied" | "extremely_satisfied"' in schema
+    assert '"delivery_quality": "dissatisfied" | "satisfied" | "extremely_satisfied"' in schema
+
+
+def test_rubric_never_rewards_non_delivery_under_a_vague_spec() -> None:
+    """Evaluation evidence: a judge paid 90% for a TODO because the spec was vague."""
+    guidance = build_system_prompt("nonce").split("=== SCORING GUIDANCE ===", 1)[1]
+    assert "Vagueness never rewards non-delivery" in guidance
+    assert "0-20" in guidance

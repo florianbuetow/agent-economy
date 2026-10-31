@@ -111,7 +111,10 @@ def _native_arguments(intent: NewTaskIntent | FrozenTaskIntent) -> dict[str, obj
             "bid_amount": frozen["selected_bid_amount"],
         }
     if intent.action == "submit_deliverable":
-        return {"worker_id": frozen["worker_id"]}
+        binding = _object(frozen.get("submission_binding"))
+        if binding is None:
+            return {"worker_id": frozen["worker_id"]}
+        return {"worker_id": frozen["worker_id"], **binding}
     common = {
         "poster_id": frozen["poster_id"],
         "worker_id": frozen["worker_id"],
@@ -125,10 +128,34 @@ def _native_arguments(intent: NewTaskIntent | FrozenTaskIntent) -> dict[str, obj
     return common
 
 
+def _protocol_version(intent: NewTaskIntent | FrozenTaskIntent) -> int:
+    """Governed submissions are protocol 2; every other command is protocol 1."""
+    if intent.action != "submit_deliverable":
+        return 1
+    return 1 if _frozen_facts(intent).get("submission_binding") is None else 2
+
+
+def _valid_binding(task_id: str, value: object) -> bool:
+    if value is None:
+        return True
+    binding = _object(value)
+    if binding is None or set(binding) != {
+        "manifest_id",
+        "accepted_binding_kind",
+        "accepted_binding_sha256",
+    }:
+        return False
+    return (
+        binding["manifest_id"] == f"manifest-submission-{task_id}"
+        and _nonempty_string(binding["accepted_binding_kind"])
+        and _is_sha256(binding["accepted_binding_sha256"])
+    )
+
+
 def expected_request_sha256(intent: NewTaskIntent | FrozenTaskIntent) -> str:
     context = _context(intent)
     request = {
-        "protocol_version": 1,
+        "protocol_version": _protocol_version(intent),
         "task_id": intent.task_id,
         "command": intent.action,
         "expected_status": intent.source_status,
@@ -193,8 +220,14 @@ def _validate_mutation_facts(
         "accepted_reward",
         "selected_bid_amount",
     }
+    if intent.action == "submit_deliverable":
+        expected_frozen_keys.add("submission_binding")
     if set(frozen) != expected_frozen_keys:
         raise RuntimeIntentError("invalid_input", "frozen task facts are incomplete")
+    if intent.action == "submit_deliverable" and not _valid_binding(
+        intent.task_id, frozen["submission_binding"]
+    ):
+        raise RuntimeIntentError("invalid_input", "submission binding is invalid")
     poster = frozen["poster_id"]
     worker = frozen["worker_id"]
     reward = frozen["accepted_reward"]
@@ -228,10 +261,14 @@ def _validate_mutation_facts(
     elif intent.action == "submit_deliverable":
         expected_result = {"worker_id": worker}
     elif intent.action == "approve_task":
+        # Accepted-bid pricing: approval pays the accepted price, refunds the rest.
         expected_result = {
             "worker_id": worker,
             "reward": reward,
             "effect_result_reference": intent.operation_id,
+            "accepted_price": bid_amount,
+            "worker_payment": bid_amount,
+            "poster_refund": cast("int", reward) - cast("int", bid_amount),
         }
     else:
         expected_result = {
@@ -249,13 +286,29 @@ def _expected_effect(
     if intent.action in {"accept_bid", "submit_deliverable"}:
         return ("none", "none", None, None, None)
     if intent.action == "approve_task":
-        financial = {
-            "request_version": 1,
-            "operation_kind": "escrow_release",
-            "escrow_id": frozen["escrow_id"],
-            "source_reference": f"task:{intent.task_id}:approved",
-            "recipient_account_id": frozen["worker_id"],
-        }
+        price = frozen["selected_bid_amount"]
+        budget = frozen["accepted_reward"]
+        source_reference = f"task:{intent.task_id}:approved"
+        effect_kind = "bank_release" if price == budget else "bank_split"
+        financial: dict[str, object] = (
+            {
+                "request_version": 1,
+                "operation_kind": "escrow_release",
+                "escrow_id": frozen["escrow_id"],
+                "source_reference": source_reference,
+                "recipient_account_id": frozen["worker_id"],
+            }
+            if price == budget
+            else {
+                "request_version": 1,
+                "operation_kind": "escrow_split",
+                "escrow_id": frozen["escrow_id"],
+                "worker_account_id": frozen["worker_id"],
+                "poster_account_id": frozen["poster_id"],
+                "worker_amount": price,
+                "source_reference": source_reference,
+            }
+        )
         effect_intent = {
             "financial_request": financial,
             "financial_request_sha256": canonical_sha256(financial),
@@ -267,7 +320,7 @@ def _expected_effect(
             },
         }
         return (
-            "bank_release",
+            effect_kind,
             "succeeded",
             intent.operation_id,
             intent.operation_id,
@@ -352,7 +405,7 @@ def _operation_shape(operation: Mapping[str, object]) -> bool:
 def _operation_identity_shape(operation: Mapping[str, object]) -> bool:
     return (
         set(operation) == _OPERATION_KEYS
-        and operation.get("protocol_version") == 1
+        and operation.get("protocol_version") in {1, 2}
         and _is_operation_id(operation.get("operation_id"))
         and _nonempty_string(operation.get("task_id"))
         and _nonempty_string(operation.get("command"))
@@ -393,7 +446,7 @@ def _operation_identity_matches(
 ) -> bool:
     frozen = _frozen_facts(intent)
     return (
-        operation.get("protocol_version") == 1
+        operation.get("protocol_version") == _protocol_version(intent)
         and operation.get("operation_id") == intent.operation_id
         and operation.get("task_id") == intent.task_id
         and operation.get("command") == intent.action
@@ -429,6 +482,19 @@ def _completed_operation_matches(intent: FrozenTaskIntent, operation: Mapping[st
         "event_id": event_id,
         **result_facts,
     }
+    if _protocol_version(intent) == 2:
+        # A governed submission freezes the exact output set: its manifest id is the
+        # bound one and its hash is computed by the server from the frozen files.
+        binding = _object(_frozen_facts(intent).get("submission_binding"))
+        manifest_sha256 = result.get("manifest_sha256")
+        if (
+            binding is None
+            or result.get("manifest_id") != binding["manifest_id"]
+            or not _is_sha256(manifest_sha256)
+        ):
+            return False
+        expected_result["manifest_id"] = binding["manifest_id"]
+        expected_result["manifest_sha256"] = manifest_sha256
     if not _exact_mapping(result, expected_result):
         return False
     effect = _expected_effect(intent, dispute_reference=dispute_reference)

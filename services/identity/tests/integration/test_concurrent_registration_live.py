@@ -157,6 +157,9 @@ request:
 token_validation:
   max_lifetime_seconds: 300
   clock_skew_seconds: 30
+registration:
+  reserved_names: ["platform", "operator"]
+  trusted_key_files: []
 db_gateway:
   url: "http://127.0.0.1:{GATEWAY_PORT}"
   timeout_seconds: 10

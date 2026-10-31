@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from court_service.app import create_app as production_create_app
-from court_service.services.dispute_service import DisputeService
+from court_service.services.ruling_orchestrator import RulingClaim, RulingOrchestrator
 
 
 def _write_gate(path: Path, value: object) -> None:
@@ -34,10 +34,11 @@ def create_app() -> Any:
     if raw_gate is None or raw_gate == "":
         raise RuntimeError("MP05_JUDGING_GATE must identify an owned evidence path")
     gate_path = Path(raw_gate)
-    original = DisputeService.begin_ruling
+    original = RulingOrchestrator.begin_ruling
 
-    def gated(self: DisputeService, dispute_id: str) -> dict[str, Any]:
-        dispute = original(self, dispute_id)
+    def gated(self: RulingOrchestrator, dispute_id: str) -> RulingClaim:
+        claim = original(self, dispute_id)
+        dispute = claim.dispute
         _write_gate(
             gate_path,
             {
@@ -52,5 +53,5 @@ def create_app() -> Any:
         threading.Event().wait()
         raise AssertionError("Judging gate returned without Court process death")
 
-    DisputeService.begin_ruling = gated
+    RulingOrchestrator.begin_ruling = gated  # type: ignore[method-assign]
     return production_create_app()

@@ -58,7 +58,12 @@ def _effect(
     }
 
 
-def _open_task(page: Page, status: str, effect: dict[str, object] | None) -> dict[str, Any]:
+def _open_task(
+    page: Page,
+    status: str,
+    effect: dict[str, object] | None,
+    extra: dict[str, object] | None = None,
+) -> dict[str, Any]:
     page_errors: list[str] = []
 
     def capture_page_error(error: Error) -> None:
@@ -93,6 +98,7 @@ def _open_task(page: Page, status: str, effect: dict[str, object] | None) -> dic
     }
     if effect is not None:
         task["financial_effect"] = effect
+    task.update(extra or {})
     if status == "ruled":
         task["dispute"] = {
             "ruling": {"worker_pct": 60, "summary": "Split the fixed reward as ruled."}
@@ -212,3 +218,20 @@ def test_confirmed_split_rounds_worker_share_down_and_preserves_total(
     expect(settlement_page.locator(".payout-box")).to_have_count(2)
     amounts = settlement_page.locator(".payout-amount").all_text_contents()
     assert amounts == ["51 ©", "50 ©"]
+
+
+def test_ruling_settlement_shows_the_receipt_amounts_on_the_accepted_price(
+    settlement_page: Page,
+) -> None:
+    """Q-M2: a 60% ruling on an accepted price of 90 pays 54 and refunds 46 of 100."""
+    _open_task(
+        settlement_page,
+        "ruled",
+        _effect("complete", "confirmed", "split", False),
+        {"accepted_price": 90, "worker_payment": 54, "poster_refund": 46},
+    )
+    settlement_page.locator(".phase-step").last.click()
+    card = settlement_page.locator(".settlement-card")
+    expect(card).to_contain_text("54")
+    expect(card).to_contain_text("46")
+    expect(card).not_to_contain_text("60 ")

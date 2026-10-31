@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from base_agent.runtime_intents import NewTaskIntent, RuntimeIntentError
+from base_agent.runtime_task_intent_factory import submission_intent
 from tests.unit.test_runtime_intents import (
     _OPERATION_ID,
     _TASK_ID,
@@ -456,3 +457,118 @@ def test_5xx_or_malformed_preclaim_error_remains_pending(
         )
     assert observed.state == "pending"
     assert observed.result is None
+
+
+_BINDING = {
+    "manifest_id": f"manifest-submission-{_TASK_ID}",
+    "accepted_binding_kind": "publication_contract",
+    "accepted_binding_sha256": "b" * 64,
+}
+
+
+def _governed_submit_ack(
+    intent: NewTaskIntent, *, manifest_id: str, manifest_sha256: str
+) -> dict[str, object]:
+    """The body a Task Board protocol-2 submit returns for this intent."""
+    request = {
+        "protocol_version": 2,
+        "task_id": _TASK_ID,
+        "command": "submit_deliverable",
+        "expected_status": "accepted",
+        "expected_lifecycle_version": 7,
+        "actor_kind": "agent",
+        "actor_id": "a-worker-alice",
+        "arguments": {"worker_id": "a-worker-alice", **_BINDING},
+    }
+    operation = {
+        "protocol_version": 2,
+        "operation_id": intent.operation_id,
+        "task_id": _TASK_ID,
+        "command": "submit_deliverable",
+        "request_sha256": _canonical_hash(request),
+        "operation_state": "completed",
+        "source_status": "accepted",
+        "source_lifecycle_version": 7,
+        "target_status": "submitted",
+        "target_lifecycle_version": 8,
+        "effect_kind": "none",
+        "effect_state": "none",
+        "effect_operation_id": None,
+        "effect_result_reference": None,
+        "effect_intent": None,
+        "event_id": 181,
+        "result": {
+            "task_id": _TASK_ID,
+            "command": "submit_deliverable",
+            "status": "submitted",
+            "lifecycle_version": 8,
+            "event_id": 181,
+            "worker_id": "a-worker-alice",
+            "manifest_id": manifest_id,
+            "manifest_sha256": manifest_sha256,
+        },
+    }
+    return {
+        "task_id": _TASK_ID,
+        "status": "submitted",
+        "lifecycle_version": 8,
+        "worker_id": "a-worker-alice",
+        "operation": operation,
+    }
+
+
+@pytest.mark.parametrize(
+    ("manifest_id", "manifest_sha256", "expected_state"),
+    [
+        (f"manifest-submission-{_TASK_ID}", "a" * 64, "completed"),
+        ("manifest-submission-other-task", "a" * 64, "attention_required"),
+        (f"manifest-submission-{_TASK_ID}", "a" * 63, "attention_required"),
+    ],
+)
+def test_governed_submit_is_protocol_two_bound_to_the_frozen_binding(
+    tmp_path: Path, manifest_id: str, manifest_sha256: str, expected_state: str
+) -> None:
+    task = {
+        "task_id": _TASK_ID,
+        "status": "accepted",
+        "lifecycle_version": 7,
+        "poster_id": "a-poster",
+        "worker_id": "a-worker-alice",
+        "escrow_id": "esc-runtime-181",
+        "accepted_reward": 100,
+        "accepted_bid_amount": 90,
+        "submission_binding": dict(_BINDING),
+    }
+    intent = submission_intent(task=task, actor_id="a-worker-alice", operation_id=_OPERATION_ID)
+    body = _governed_submit_ack(intent, manifest_id=manifest_id, manifest_sha256=manifest_sha256)
+    with _store(tmp_path, owner=_owner_for_action("submit_deliverable")) as store:
+        pending = store.create(intent)
+        observed = store.record_acknowledgment(
+            task_id=_TASK_ID,
+            slot="submission",
+            expected_revision=pending.revision,
+            status_code=200,
+            body=body,
+        )
+    assert observed.state == expected_state
+
+
+def test_protocol_one_submit_with_manifest_fields_is_not_completed(tmp_path: Path) -> None:
+    intent, base = _prepared("submit_deliverable")
+    body = copy.deepcopy(base)
+    operation = body["operation"]
+    assert isinstance(operation, dict)
+    result = operation["result"]
+    assert isinstance(result, dict)
+    result["manifest_id"] = f"manifest-submission-{_TASK_ID}"
+    result["manifest_sha256"] = "a" * 64
+    with _store(tmp_path, owner=_owner_for_action("submit_deliverable")) as store:
+        pending = store.create(intent)
+        observed = store.record_acknowledgment(
+            task_id=_TASK_ID,
+            slot="submission",
+            expected_revision=pending.revision,
+            status_code=200,
+            body=body,
+        )
+    assert observed.state == "attention_required"

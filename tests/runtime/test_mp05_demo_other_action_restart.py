@@ -39,9 +39,11 @@ JUDGING_SERVER = Path(__file__).with_name("mp05_demo_judging_phase_server.py")
 TIMEOUT_SECONDS = 75.0
 FUNDING_AMOUNT = 500
 REWARD = 100
-BID_AMOUNT = 80
+# Full-budget price: approval stays a whole release and a ruling the Court's
+# percentage split; accepted-bid pricing has its own Gateway and e2e coverage.
+BID_AMOUNT = REWARD
 EFFECT_TABLE = {
-    "upload_asset": "board_assets",
+    "upload_asset": "board_artifact_uploads",
     "feedback": "reputation_feedback",
     "file_claim": "court_claims",
     "submit_rebuttal": "court_rebuttals",
@@ -58,7 +60,7 @@ PROJECTION_TABLES = (
     "board_tasks",
     "board_task_publications",
     "board_bids",
-    "board_assets",
+    "board_artifact_uploads",
     "board_task_operations",
     "reputation_feedback",
     "court_claims",
@@ -76,7 +78,7 @@ PRIMARY_KEYS = {
     "board_tasks": ("task_id",),
     "board_task_publications": ("operation_id",),
     "board_bids": ("bid_id",),
-    "board_assets": ("asset_id",),
+    "board_artifact_uploads": ("upload_operation_id",),
     "board_task_operations": ("operation_id",),
     "reputation_feedback": ("feedback_id",),
     "court_claims": ("claim_id",),
@@ -97,7 +99,9 @@ def _expected_added_counts(action: str, phase: str) -> dict[str, int]:
         "board_tasks": 1,
         "board_task_publications": 1,
         "board_bids": 1,
-        "board_assets": 0 if action == "upload_asset" and phase == "before_send" else 1,
+        "board_artifact_uploads": (
+            0 if action == "upload_asset" and phase == "before_send" else 1
+        ),
         "board_task_operations": {
             "upload_asset": 2,
             "file_claim": 3,
@@ -121,15 +125,15 @@ def _expected_added_counts(action: str, phase: str) -> dict[str, int]:
         "court_rulings": int(action == "trigger_ruling" and phase == "after_response"),
         "events": {
             ("upload_asset", "before_send"): 9,
-            ("upload_asset", "after_response"): 10,
-            ("file_claim", "before_send"): 11,
-            ("file_claim", "after_response"): 12,
-            ("submit_rebuttal", "before_send"): 13,
-            ("submit_rebuttal", "after_response"): 14,
-            ("trigger_ruling", "before_send"): 14,
-            ("trigger_ruling", "after_response"): 20,
-            ("feedback", "before_send"): 13,
-            ("feedback", "after_response"): 14,
+            ("upload_asset", "after_response"): 9,
+            ("file_claim", "before_send"): 10,
+            ("file_claim", "after_response"): 11,
+            ("submit_rebuttal", "before_send"): 12,
+            ("submit_rebuttal", "after_response"): 13,
+            ("trigger_ruling", "before_send"): 13,
+            ("trigger_ruling", "after_response"): 22,
+            ("feedback", "before_send"): 12,
+            ("feedback", "after_response"): 13,
         }[(action, phase)],
     }
     if action == "feedback":
@@ -159,8 +163,6 @@ def _expected_event_types(action: str, phase: str) -> Counter[str]:
             "task.accepted": 1,
         }
     )
-    if action != "upload_asset" or phase == "after_response":
-        values["asset.uploaded"] += 1
     if action != "upload_asset":
         values["task.submitted"] += 1
     if action == "feedback":
@@ -176,7 +178,11 @@ def _expected_event_types(action: str, phase: str) -> Counter[str]:
     if action == "trigger_ruling" and phase == "after_response":
         values.update(
             {
-                "claim.status_changed": 1,
+                # Durable Court ruling: lease, persisted decision, one
+                # acknowledgment per downstream step (Task Board, Reputation).
+                "claim.judging_lease": 1,
+                "ruling.decided": 1,
+                "ruling.acknowledged": 2,
                 "escrow.split": 1,
                 "task.ruled": 1,
                 "feedback.submitted": 2,
@@ -941,9 +947,10 @@ def _assert_exact_projection_delta(
     assert bid["bid_id"] == task["accepted_bid_id"]
     assert bid["amount"] == BID_AMOUNT
 
-    for asset in added["board_assets"]:
+    for asset in added["board_artifact_uploads"]:
         assert asset["task_id"] == task_id
-        assert asset["uploader_id"] == task["worker_id"]
+        assert asset["actor_id"] == task["worker_id"]
+        assert asset["state"] == "ready"
     operations = added["board_task_operations"]
     expected_commands = Counter({"submit_bid": 1, "accept_bid": 1})
     if action != "upload_asset":
@@ -1031,11 +1038,11 @@ def _assert_authoritative_judging_delta(
             assert len(table_delta["added"]) == 1
             event = table_delta["added"][0]
             assert event["event_source"] == "court"
-            assert event["event_type"] == "claim.status_changed"
-            assert json.loads(event["payload"]) == {
-                "claim_id": dispute_id,
-                "status": "judging",
-            }
+            assert event["event_type"] == "claim.judging_lease"
+            lease = json.loads(event["payload"])
+            assert lease["claim_id"] == dispute_id
+            assert lease["reclaimed"] is False
+            assert isinstance(lease["lease_id"], str) and lease["lease_id"]
         else:
             assert table_delta["added"] == [], table
             assert table_delta["changed"] == [], table

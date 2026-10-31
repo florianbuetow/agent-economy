@@ -167,8 +167,10 @@ def _assert_database_receipts(
         assert connection.execute(
             "SELECT amount, status FROM bank_escrow WHERE task_id=?", (receipt["task_id"],)
         ).fetchone() == (100, "locked")
+        # Governed (V6) upload: the blob lives under the assets root at its object key.
         asset_path, size = connection.execute(
-            "SELECT storage_path, size_bytes FROM board_assets WHERE asset_id=?",
+            "SELECT object_key, declared_size_bytes FROM board_artifact_uploads "
+            "WHERE 'asset-' || artifact_id=? AND state='ready'",
             (receipt["asset_id"],),
         ).fetchone()
         return asset_path, size

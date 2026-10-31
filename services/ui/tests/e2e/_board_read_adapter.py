@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 
@@ -126,3 +126,53 @@ def reader_from_environment(environment: dict[str, str]) -> SeededTaskBoardReade
     if raw_path is None:
         raise RuntimeError(f"{_E2E_DATABASE_ENV} is required for UI E2E reads")
     return SeededTaskBoardReader(Path(raw_path))
+
+
+class SeededQualityReader:
+    """Network-free stand-in for Reputation ``GET /agents/{id}/quality``.
+
+    Projects the seeded database's visible feedback into the service report shape;
+    the real formula is tested in Reputation.
+    """
+
+    _POINTS: ClassVar[dict[str, int]] = {
+        "dissatisfied": 0,
+        "satisfied": 50,
+        "extremely_satisfied": 100,
+    }
+
+    def __init__(self, database: Path) -> None:
+        self._database = database
+
+    async def get_agent_quality(self, agent_id: str) -> dict[str, object]:
+        connection = sqlite3.connect(str(self._database))
+        try:
+            rows = connection.execute(
+                "SELECT category, rating FROM reputation_feedback "
+                "WHERE to_agent_id = ? AND visible = 1",
+                (agent_id,),
+            ).fetchall()
+        finally:
+            connection.close()
+        report: dict[str, object] = {"agent_id": agent_id, "formula_version": "quality-v1"}
+        for category, name in (
+            ("spec_quality", "specification_quality"),
+            ("delivery_quality", "delivery_quality"),
+        ):
+            ratings = [r for c, r in rows if c == category and r in self._POINTS]
+            points = [self._POINTS[r] for r in ratings]
+            report[name] = {
+                "rated": bool(points),
+                "score": (2 * sum(points) + len(points)) // (2 * len(points)) if points else None,
+                "task_count": len(points),
+                "rating_counts": {rating: ratings.count(rating) for rating in self._POINTS},
+            }
+        return report
+
+
+def quality_reader_from_environment(environment: dict[str, str]) -> SeededQualityReader:
+    """Build the seeded quality reader from the same disposable DB path."""
+    raw_path = environment.get(_E2E_DATABASE_ENV)
+    if raw_path is None:
+        raise RuntimeError(f"{_E2E_DATABASE_ENV} is required for UI E2E reads")
+    return SeededQualityReader(Path(raw_path))

@@ -31,10 +31,22 @@ class TaskInputManifest(BaseModel):
     files: list[TaskInputFile]
 
 
+class SubmissionBinding(BaseModel):
+    """Server-derived terms a protocol-2 submit is bound to (governed accepted tasks)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    manifest_id: str
+    accepted_binding_kind: str
+    accepted_binding_sha256: str
+
+
 class TaskDetailResponse(TaskResponse):
-    """Task detail plus its frozen input manifest (null for tasks posted without one)."""
+    """Task detail plus its frozen input manifest (null for tasks posted without one)
+    and, once accepted, the binding a governed submission is checked against."""
 
     input_manifest: TaskInputManifest | None
+    submission_binding: SubmissionBinding | None
 
 
-__all__ = ["TaskDetailResponse", "TaskInputFile", "TaskInputManifest"]
+__all__ = ["SubmissionBinding", "TaskDetailResponse", "TaskInputFile", "TaskInputManifest"]

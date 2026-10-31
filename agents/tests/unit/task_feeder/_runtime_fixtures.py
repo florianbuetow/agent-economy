@@ -128,14 +128,29 @@ def completion_ack(intent: FrozenTaskIntent) -> dict[str, object]:
     effect_result_reference: str | None = None
     effect_intent: dict[str, object] | None = None
     if intent.action == "approve_task":
-        financial_request = {
-            "request_version": 1,
-            "operation_kind": "escrow_release",
-            "escrow_id": frozen["escrow_id"],
-            "source_reference": f"task:{intent.task_id}:approved",
-            "recipient_account_id": frozen["worker_id"],
-        }
-        effect_kind = "bank_release"
+        price = frozen["selected_bid_amount"]
+        budget = frozen["accepted_reward"]
+        source_reference = f"task:{intent.task_id}:approved"
+        financial_request = (
+            {
+                "request_version": 1,
+                "operation_kind": "escrow_release",
+                "escrow_id": frozen["escrow_id"],
+                "source_reference": source_reference,
+                "recipient_account_id": frozen["worker_id"],
+            }
+            if price == budget
+            else {
+                "request_version": 1,
+                "operation_kind": "escrow_split",
+                "escrow_id": frozen["escrow_id"],
+                "worker_account_id": frozen["worker_id"],
+                "poster_account_id": frozen["poster_id"],
+                "worker_amount": price,
+                "source_reference": source_reference,
+            }
+        )
+        effect_kind = "bank_release" if price == budget else "bank_split"
         effect_state = "succeeded"
         effect_operation_id = intent.operation_id
         effect_result_reference = intent.operation_id

@@ -193,6 +193,9 @@ def _new_intent(
                 "worker_id": _WORKER_ID,
                 "reward": 100,
                 "effect_result_reference": operation_id,
+                "accepted_price": 90,
+                "worker_payment": 90,
+                "poster_refund": 10,
             },
         ),
         "dispute_task": (
@@ -227,6 +230,8 @@ def _new_intent(
             "accepted_reward": 100,
             "selected_bid_amount": 90,
         }
+        if action == "submit_deliverable":
+            frozen_task_facts["submission_binding"] = None
     context: dict[str, object] = {
         "response_kind": "bid" if action == "submit_bid" else "task_mutation",
         "operation_id": operation_id,

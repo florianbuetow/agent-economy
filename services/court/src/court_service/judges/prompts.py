@@ -43,6 +43,9 @@ turns on.
 
 === SCORING GUIDANCE ===
 
+- Vagueness never rewards non-delivery. If the outputs make no good-faith attempt at any
+  reasonable reading of the specification (empty, a placeholder such as "TODO", or unrelated
+  content), favor the poster (worker_pct in the 0-20 range) however vague the specification is.
 - If the claim rests substantially on a gap covered by the rubric above, and the worker's
   interpretation was reasonable given what was actually written, favor the worker heavily
   (worker_pct in the 70-100 range, higher as the ambiguity's centrality to the claim grows).
@@ -78,8 +81,10 @@ unsupported format or not valid UTF-8; treat it as unavailable and never guess i
 
 Respond with valid JSON only, with EXACTLY this shape:
 {"schema_version": 1, "worker_pct": <integer 0-100>,
- "spec_quality": "<rating>", "spec_quality_explanation": "<why>",
- "delivery_quality": "<rating>", "delivery_quality_explanation": "<why>",
+ "spec_quality": "dissatisfied" | "satisfied" | "extremely_satisfied",
+ "spec_quality_explanation": "<why>",
+ "delivery_quality": "dissatisfied" | "satisfied" | "extremely_satisfied",
+ "delivery_quality_explanation": "<why>",
  "reasoning": "<payout explanation>"}"""
 
 EVALUATION_HEADER = """Task Title: {task_title}

@@ -134,7 +134,7 @@ class TestSchemaAdditions:
             graph,
             bidder_id,
             bid_id=bid_id,
-            amount=125,
+            amount=75,
         )
         assert response.status_code == 200
 
@@ -144,7 +144,7 @@ class TestSchemaAdditions:
             (bid_id,),
         )
         assert row is not None
-        assert row["amount"] == 125
+        assert row["amount"] == 75
 
     def test_submit_bid_without_amount_is_rejected(
         self, app_with_writer: TestClient, db_writer: DbWriter

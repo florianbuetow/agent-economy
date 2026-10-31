@@ -60,7 +60,7 @@ async def _send_task_board_command(
     url: str,
     token: str,
     allowed_status_codes: frozenset[int],
-    effect_kind: str | None,
+    effect_kind: str | frozenset[str] | None,
 ) -> TaskBoardCommandResponse:
     response = await client._request_raw("POST", url, json={"token": token})
     return parse_task_board_command_response(
@@ -399,7 +399,7 @@ class TaskBoardMixin:
             url=url,
             token=token,
             allowed_status_codes=frozenset({200, 202}),
-            effect_kind="bank_release",
+            effect_kind=frozenset({"bank_release", "bank_split"}),
         )
 
     async def dispute_task(

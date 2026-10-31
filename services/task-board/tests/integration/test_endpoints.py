@@ -174,7 +174,7 @@ class TestTaskLifecycleGatewayBacked:
             "expected_lifecycle_version": created_task["lifecycle_version"],
             "task_id": task_id,
             "bidder_id": worker_id,
-            "amount": 90,
+            "amount": 100,
         }
         bid_token = make_jws_token(worker_keypair[0], worker_id, bid_payload)
         bid_resp = await client.post(f"/tasks/{task_id}/bids", json={"token": bid_token})

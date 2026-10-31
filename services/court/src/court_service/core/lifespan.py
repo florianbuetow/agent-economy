@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from court_service.services.protocol import DisputeStorageInterface
 
 
-def _build_judges(settings: Settings) -> list[Judge]:
+def build_judges(settings: Settings) -> list[Judge]:
     judges: list[Judge] = []
     for judge_cfg in settings.judges.judges:
         provider = (judge_cfg.provider or "llm").lower()
@@ -52,6 +52,9 @@ def _build_judges(settings: Settings) -> list[Judge]:
         if judge_cfg.temperature is None:
             msg = f"Judge {judge_cfg.id} is missing required temperature"
             raise ValueError(msg)
+        if judge_cfg.timeout_seconds is None or judge_cfg.timeout_seconds <= 0:
+            msg = f"Judge {judge_cfg.id} is missing a positive timeout_seconds"
+            raise ValueError(msg)
         api_key: str | None = None
         if judge_cfg.api_key_env is not None:
             api_key = os.environ.get(judge_cfg.api_key_env)
@@ -69,6 +72,7 @@ def _build_judges(settings: Settings) -> list[Judge]:
                 temperature=judge_cfg.temperature,
                 api_base=judge_cfg.api_base,
                 api_key=api_key,
+                timeout_seconds=judge_cfg.timeout_seconds,
             )
         )
 
@@ -169,7 +173,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         signer=platform_agent,
     )
 
-    state.judges = _build_judges(settings)
+    state.judges = build_judges(settings)
 
     logger.info(
         "Service starting",

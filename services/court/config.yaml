@@ -46,22 +46,25 @@ judges:
   judges:
     - id: "judge-0"
       provider: "llm"
-      model: "openai/qwen2.5-7b-instruct"
+      model: "openai/qwen/qwen3.6-35b-a3b"
       api_base: "http://localhost:1234/v1"
       api_key_env: "COURT_JUDGE_API_KEY"
       temperature: 0.2
+      timeout_seconds: 300
     - id: "judge-1"
       provider: "llm"
-      model: "openai/llama-3.1-8b-instruct"
+      model: "openai/google/gemma-4-26b-a4b"
       api_base: "http://localhost:1234/v1"
       api_key_env: "COURT_JUDGE_API_KEY"
       temperature: 0.2
+      timeout_seconds: 300
     - id: "judge-2"
       provider: "llm"
-      model: "openai/gemma-3-12b-it"
+      model: "openai/mistralai/ministral-3-14b-reasoning"
       api_base: "http://localhost:1234/v1"
       api_key_env: "COURT_JUDGE_API_KEY"
       temperature: 0.2
+      timeout_seconds: 300
 
 # Plan 3.1: evidence handed to judges is never truncated or leniently decoded.
 # Files over max_file_bytes, files beyond max_total_bytes, unsupported formats and

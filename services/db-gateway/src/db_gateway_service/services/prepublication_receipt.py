@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service.settlement_terms import CURRENT_PRICING_RULE_VERSION
 from db_gateway_service.task_publication_financial import (
     PublicationEvidenceError,
     PublicationFinancialProof,
@@ -144,6 +145,11 @@ def materialize_publication(
             bidding_cutoff_us,
             acceptance_cutoff_us,
         ),
+    )
+    _one(cursor)
+    cursor.execute(
+        "INSERT INTO board_task_pricing (task_id,pricing_rule_version) VALUES (?,?)",
+        (request.task_id, CURRENT_PRICING_RULE_VERSION),
     )
     _one(cursor)
     payload = json.dumps(

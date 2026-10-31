@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Final, cast
 
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service.settlement_terms import CURRENT_PRICING_RULE_VERSION
 from db_gateway_service.task_operation_requests import parse_operation_id
 from db_gateway_service.task_publication_financial import (
     PublicationBlockReason,
@@ -549,6 +550,10 @@ class TaskPublicationWriter:
                     bidding_cutoff_us,
                     acceptance_cutoff_us,
                 ),
+            )
+            cursor.execute(
+                "INSERT INTO board_task_pricing (task_id,pricing_rule_version) VALUES (?,?)",
+                (request.task_id, CURRENT_PRICING_RULE_VERSION),
             )
             event_payload = _json(
                 {

@@ -197,6 +197,11 @@ class _RouteManager:
         return self.mutation
 
 
+class _NoInputsStore:
+    def get_task_input_manifest(self, _task_id: str) -> dict[str, object]:
+        return {"input_manifest": None}
+
+
 @pytest.fixture
 async def projection_client() -> AsyncIterator[tuple[httpx.AsyncClient, dict[str, object]]]:
     effect = _financial_effect(
@@ -213,6 +218,7 @@ async def projection_client() -> AsyncIterator[tuple[httpx.AsyncClient, dict[str
     try:
         state = init_app_state()
         state.task_manager = cast("Any", _RouteManager(detail))
+        state.store = cast("Any", _NoInputsStore())
         state.platform_agent = cast("Any", object())
         app = FastAPI()
         app.include_router(tasks.router)

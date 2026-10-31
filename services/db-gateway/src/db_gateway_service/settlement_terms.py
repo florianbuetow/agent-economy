@@ -7,10 +7,28 @@ rest of the original escrow in the same Bank operation.
 
 from __future__ import annotations
 
+CURRENT_PRICING_RULE_VERSION = 1
+"""Version recorded for every job whose terms are established now (Q-M2)."""
+
 
 def ruling_worker_amount(accepted_price: int, worker_pct: int) -> int:
     """Return the whole-credit Court award on the accepted price, rounded down."""
     return accepted_price * worker_pct // 100
+
+
+def worker_amount_for(
+    pricing_rule_version: int, *, accepted_price: int, worker_pct: int | None
+) -> int:
+    """Worker payment under a job's recorded pricing rule.
+
+    Version 1: approval pays the accepted price; a ruling pays
+    floor(accepted_price * worker_pct / 100).
+    """
+    if pricing_rule_version != CURRENT_PRICING_RULE_VERSION:
+        raise ValueError(f"Unknown pricing rule version {pricing_rule_version}")
+    if worker_pct is None:
+        return accepted_price
+    return ruling_worker_amount(accepted_price, worker_pct)
 
 
 def settlement_request_fields(
@@ -60,4 +78,9 @@ def settlement_request_fields(
     }
 
 
-__all__ = ["ruling_worker_amount", "settlement_request_fields"]
+__all__ = [
+    "CURRENT_PRICING_RULE_VERSION",
+    "ruling_worker_amount",
+    "settlement_request_fields",
+    "worker_amount_for",
+]

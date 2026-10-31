@@ -362,6 +362,17 @@ class AssetManager:
         context = self._artifacts.get_artifact_context(task_id)
         return context if context.get("governed") is True else None
 
+    def submission_binding(self, task_id: str) -> dict[str, str] | None:
+        """Public binding a governed submission must match, once the task is accepted."""
+        context = self._governed_context(task_id)
+        if context is None or not context.get("accepted_binding_sha256"):
+            return None
+        return {
+            "manifest_id": str(context["submission_manifest_id"]),
+            "accepted_binding_kind": str(context["accepted_binding_kind"]),
+            "accepted_binding_sha256": str(context["accepted_binding_sha256"]),
+        }
+
     def submission_arguments(self, task_id: str, worker_id: str) -> dict[str, str | int] | None:
         """Return protocol-2 submit arguments for a governed task, else None (protocol 1).
 

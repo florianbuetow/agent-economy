@@ -525,7 +525,9 @@ def test_t19_t27_bid_phase(
     elif ticket == "T27":
         task_page.click_phase(0)
         assert (task_page.panel_title.text_content() or "").strip() == "Post"
-        assert "WAITING FOR BIDS" in task_page.get_lifecycle_panel_content()
+        # An open task that already has bids no longer shows the waiting footer.
+        assert api_task["bid_count"] > 0
+        assert "WAITING FOR BIDS" not in task_page.get_lifecycle_panel_content()
         task_page.click_phase(1)
         assert (task_page.panel_title.text_content() or "").strip() == "Bid"
     else:

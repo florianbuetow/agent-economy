@@ -95,7 +95,14 @@ def _context() -> DisputeContext:
 
 async def test_llm_judge_returns_both_quality_findings() -> None:
     reply = {"choices": [{"message": {"content": json.dumps(_valid())}}]}
-    judge = LLMJudge(judge_id="judge-0", model="m", temperature=0.0, api_base=None, api_key=None)
+    judge = LLMJudge(
+        judge_id="judge-0",
+        model="m",
+        temperature=0.0,
+        api_base=None,
+        api_key=None,
+        timeout_seconds=5.0,
+    )
     with patch(
         "court_service.judges.llm_judge.litellm.acompletion", new=AsyncMock(return_value=reply)
     ):
@@ -108,7 +115,14 @@ async def test_llm_judge_returns_both_quality_findings() -> None:
 
 async def test_llm_judge_legacy_payout_only_reply_fails() -> None:
     reply = {"choices": [{"message": {"content": '{"worker_pct": 70, "reasoning": "ok"}'}}]}
-    judge = LLMJudge(judge_id="judge-0", model="m", temperature=0.0, api_base=None, api_key=None)
+    judge = LLMJudge(
+        judge_id="judge-0",
+        model="m",
+        temperature=0.0,
+        api_base=None,
+        api_key=None,
+        timeout_seconds=5.0,
+    )
     with (
         patch(
             "court_service.judges.llm_judge.litellm.acompletion",

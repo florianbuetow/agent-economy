@@ -439,10 +439,13 @@ def _assert_final_projection(
         assert poster_after >= poster_before
         assert worker_after >= worker_before
         assert poster_after - poster_before + worker_after - worker_before == _REWARD
+    elif action == "approve_task":
+        # Approval pays the accepted bid and refunds the unused budget to the poster.
+        assert poster_after == poster_before + (_REWARD - _BID_AMOUNT)
+        assert worker_after == worker_before + _BID_AMOUNT
     else:
         assert poster_after == poster_before
-        expected_worker = worker_before + (_REWARD if action == "approve_task" else 0)
-        assert worker_after == expected_worker
+        assert worker_after == worker_before
 
 
 @pytest.mark.parametrize("action", _ACTIONS)
@@ -605,7 +608,8 @@ async def test_runtime_replays_exact_durable_command_after_process_sigkill(  # n
             assert operation["source_lifecycle_version"] == intent.expected_lifecycle_version
             assert operation["command"] == action
             if action == "approve_task":
-                assert operation["effect_kind"] == "bank_release"
+                # Bid 90 on a budget of 100: approval is an amount split with a refund.
+                assert operation["effect_kind"] == "bank_split"
                 assert operation["effect_state"] == "succeeded"
                 assert operation["effect_result_reference"] == intent.operation_id
             if action == "dispute_task":

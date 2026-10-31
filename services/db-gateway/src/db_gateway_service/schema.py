@@ -79,7 +79,8 @@ def load_schema_sql(state: SchemaState) -> str:
             f"{sql}\n{_load_resource('task_operations_v3.sql')}\n"
             f"{_load_resource('publication_v6.sql')}\n"
             f"{_load_resource('task_effect_recovery_v5.sql')}\n"
-            f"{_load_resource('artifacts_v6.sql')}"
+            f"{_load_resource('artifacts_v6.sql')}\n"
+            f"{_load_resource('pricing_v6.sql')}"
         )
     return sql
 

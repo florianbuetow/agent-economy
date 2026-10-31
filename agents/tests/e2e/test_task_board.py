@@ -255,11 +255,12 @@ async def test_happy_path_submit_and_approve(make_funded_agent) -> None:
         approved_task = await poster.get_task(task["task_id"])
         assert approved_task["status"] == "approved"
 
+        # Approval pays the accepted bid (400) and refunds the unused budget (100).
         worker_balance = await worker.get_balance()
-        assert worker_balance["balance"] == 500
+        assert worker_balance["balance"] == 400
 
         poster_balance = await poster.get_balance()
-        assert poster_balance["balance"] == 4500
+        assert poster_balance["balance"] == 4600
     finally:
         await _close_agents(agents_to_close)
 
@@ -559,7 +560,10 @@ async def test_auto_approve_on_review_timeout(make_funded_agent) -> None:
         approved_task = await poster.get_task(task["task_id"])
         assert approved_task["status"] == "approved"
 
+        # Auto-approval pays the accepted bid (400) and refunds the unused budget (100).
         worker_balance = await worker.get_balance()
-        assert worker_balance["balance"] == 500
+        assert worker_balance["balance"] == 400
+        poster_balance = await poster.get_balance()
+        assert poster_balance["balance"] == 5000 - 500 + 100
     finally:
         await _close_agents(agents_to_close)

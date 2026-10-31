@@ -252,8 +252,8 @@ class TaskPage:
 
     @property
     def ruling_card(self) -> Locator:
-        """The court ruling card."""
-        return self._page.locator(".ruling-card")
+        """The court ruling card (the settlement card shares its styling)."""
+        return self._page.locator(".ruling-card:not(.settlement-card)")
 
     def get_ruling_details(self) -> dict[str, str]:
         """Return ruling details as {worker_pct, summary}."""

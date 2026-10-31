@@ -35,7 +35,8 @@ def test_version_six_in_exact_current_table_shape_is_not_admitted() -> None:
         connection.execute("PRAGMA ignore_check_constraints=ON")
         connection.execute("UPDATE schema_metadata SET version=6")
         connection.execute("PRAGMA ignore_check_constraints=OFF")
-        assert classify_schema(connection).state is SchemaState.FUTURE
+        # Version 6 is the current catalog, so a V4 table set claiming it is partial.
+        assert classify_schema(connection).state is SchemaState.PARTIAL
     finally:
         connection.close()
 

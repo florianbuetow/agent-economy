@@ -12,7 +12,6 @@ from service_commons.exceptions import ServiceError
 from db_gateway_service import task_time
 from db_gateway_service.asset_admission import parse_asset_admission
 from db_gateway_service.board_authority import BoardAuthority
-from db_gateway_service.config import get_settings
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.effect_delivery_requests import (
     DELIVERY_STATES,
@@ -663,7 +662,7 @@ def _artifact_context(request: Request) -> tuple[sqlite3.Connection, str, str]:
     writer = get_app_state().db_writer
     if writer is None:
         raise ServiceError("service_not_ready", "DbWriter not initialized", 503, {})
-    current = get_settings().board_effect_recovery.current_task_board_caller_kid
+    current = get_app_state().board_effect_recovery.current_task_board_caller_kid
     return writer.connection, caller_kid, current
 
 
