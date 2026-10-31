@@ -100,6 +100,16 @@ def _write_service_config(
                     "timeout_seconds": 1,
                 },
                 "platform": platform,
+                "artifacts": {
+                    "max_manifest_bytes": 104857600,
+                    "reservation_ttl_seconds": 300,
+                    "reservation_renew_before_expiry_seconds": 60,
+                    "max_upload_duration_seconds": 900,
+                    "recovery_interval_seconds": 60.0,
+                    "stale_file_seconds": 900,
+                    "archive_after_seconds": 259200,
+                    "archive_batch_size": 50,
+                },
                 "asset_quota": {
                     "max_total_bytes_per_agent": 536_870_912,
                     "max_total_bytes": 4_294_967_296,

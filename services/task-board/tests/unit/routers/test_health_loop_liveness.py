@@ -11,7 +11,7 @@ from task_board_service.core.state import get_app_state
 
 pytestmark = pytest.mark.unit
 
-_LOOPS = {"deadline_sweep", "posting_recovery", "financial_effect_recovery"}
+_LOOPS = {"deadline_sweep", "posting_recovery", "financial_effect_recovery", "artifact_maintenance"}
 
 
 async def test_health_reports_all_loops_running(client) -> None:

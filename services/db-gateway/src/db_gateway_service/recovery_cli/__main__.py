@@ -1,4 +1,4 @@
-"""Manage immutable recovery artifacts and explicitly migrate a verified source."""
+"""Manage immutable recovery artifacts (backup, verify, finalize, restore)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 from service_commons.recovery_contract import RecoveryInventoryV1, TargetBindingsV1
 
-from db_gateway_service import migration, recovery
+from db_gateway_service import recovery
 
 
 class _InputError(ValueError):
@@ -37,20 +37,6 @@ def _parse_arguments(arguments: list[str]) -> argparse.Namespace:
     create.add_argument("--inventory", type=Path, required=True)
     for name in ("verify", "finalize"):
         _backup_options(actions.add_parser(name))
-
-    for name in (
-        "migrate",
-        "migrate-v1-to-v2",
-        "migrate-v2-to-v3",
-        "migrate-v3-to-v4",
-        "migrate-v4-to-v5",
-    ):
-        migrate = commands.add_parser(name)
-        _backup_options(migrate)
-        migrate.add_argument("--inventory", type=Path, required=True)
-        migrate.add_argument("--busy-timeout-ms", type=int, required=True)
-        if name == "migrate-v4-to-v5":
-            migrate.add_argument("--current-task-board-caller-kid", required=True)
 
     restore = commands.add_parser("restore")
     _backup_options(restore)
@@ -97,48 +83,11 @@ def _execute_backup(
     raise ValueError("Unrecognized backup action")
 
 
-def _execute_migration(args: argparse.Namespace) -> tuple[str, migration.MigrationResult]:
-    inventory = _load_contract(args.inventory, RecoveryInventoryV1, "invalid_inventory")
-    if args.command == "migrate-v4-to-v5":
-        return str(args.command), migration.migrate_v4_to_v5(
-            inventory,
-            backup_root=args.backup_root,
-            backup_id=args.backup_id,
-            work_root=args.work_root,
-            busy_timeout_ms=args.busy_timeout_ms,
-            current_task_board_caller_kid=args.current_task_board_caller_kid,
-        )
-    migrations = {
-        "migrate": migration.migrate_v0_to_v1,
-        "migrate-v1-to-v2": migration.migrate_v1_to_v2,
-        "migrate-v2-to-v3": migration.migrate_v2_to_v3,
-        "migrate-v3-to-v4": migration.migrate_v3_to_v4,
-    }
-    migrate = migrations[str(args.command)]
-    return str(args.command), migrate(
-        inventory,
-        backup_root=args.backup_root,
-        backup_id=args.backup_id,
-        work_root=args.work_root,
-        busy_timeout_ms=args.busy_timeout_ms,
-    )
-
-
 def _execute(
     args: argparse.Namespace,
-) -> tuple[
-    str, recovery.PublicationResult | recovery.VerificationResult | migration.MigrationResult
-]:
+) -> tuple[str, recovery.PublicationResult | recovery.VerificationResult]:
     if args.command == "backup":
         return _execute_backup(args)
-    if args.command in {
-        "migrate",
-        "migrate-v1-to-v2",
-        "migrate-v2-to-v3",
-        "migrate-v3-to-v4",
-        "migrate-v4-to-v5",
-    }:
-        return _execute_migration(args)
     if args.command == "restore":
         bindings = _load_contract(args.target_bindings, TargetBindingsV1, "invalid_target_bindings")
         return "restore", recovery.restore_backup(
@@ -167,42 +116,11 @@ def _report_error(reason: str) -> int:
     return 1
 
 
-def _report_migration_error(error: migration.MigrationError) -> int:
-    print(
-        json.dumps(
-            {
-                "error": error.reason,
-                "message": "Recovery operation failed",
-                "details": error.safe_details,
-            },
-            sort_keys=True,
-        ),
-        file=sys.stderr,
-    )
-    return 1
-
-
 def _result_exit_code(
-    result: recovery.PublicationResult | recovery.VerificationResult | migration.MigrationResult,
-    operation: str,
+    result: recovery.PublicationResult | recovery.VerificationResult,
 ) -> int:
     if isinstance(result, recovery.PublicationResult):
         return 0 if result.state is recovery.PublicationState.COMPLETE else 1
-    if isinstance(result, migration.MigrationResult):
-        expected = {
-            "migrate": (1, "committed_v1_verified"),
-            "migrate-v1-to-v2": (2, "committed_v2_verified"),
-            "migrate-v2-to-v3": (3, "committed_v3_verified"),
-            "migrate-v3-to-v4": (4, "committed_v4_verified"),
-            "migrate-v4-to-v5": (5, "committed_v5_verified"),
-        }.get(operation)
-        return (
-            0
-            if result.applied is True
-            and type(result.schema_version) is int
-            and (result.schema_version, result.observation) == expected
-            else 1
-        )
     return 0 if result.artifact_verified is True else 1
 
 
@@ -213,8 +131,6 @@ def main(arguments: list[str]) -> int:
         operation, result = _execute(args)
     except _InputError as exc:
         return _report_error(exc.reason)
-    except migration.MigrationError as exc:
-        return _report_migration_error(exc)
     except recovery.RecoveryError as exc:
         return _report_error(exc.reason)
     except OSError:
@@ -225,7 +141,7 @@ def main(arguments: list[str]) -> int:
             {"operation": operation, "result": result.model_dump(mode="json")}, sort_keys=True
         )
     )
-    return _result_exit_code(result, operation)
+    return _result_exit_code(result)
 
 
 if __name__ == "__main__":

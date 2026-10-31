@@ -27,7 +27,7 @@ from task_board_service.task_operation_contract import validate_operation_id
 if TYPE_CHECKING:
     from fastapi import Request
 
-    from task_board_service.core.asset_upload import AssetStorageQuota, AssetUploadLimits
+    from task_board_service.services.streaming_upload import AssetStorageQuota, AssetUploadLimits
 
 
 class PrepublicationStore(Protocol):
