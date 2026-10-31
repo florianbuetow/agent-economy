@@ -266,7 +266,7 @@ class Settings(BaseModel):
     assets: AssetsConfig | None = None
     limits: LimitsConfig | None = None
     deadline_evaluation: DeadlineEvaluationConfig | None = None
-    artifacts: ArtifactsConfig | None = None
+    artifacts: ArtifactsConfig
     recovery: RecoveryConfig
     posting_recovery: PostingRecoveryConfig
     financial_effect_recovery: FinancialEffectRecoveryConfig

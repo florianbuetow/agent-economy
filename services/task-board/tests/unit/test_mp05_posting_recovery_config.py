@@ -40,6 +40,16 @@ def _valid_config() -> dict[str, Any]:
             "agent_config_path": "agents.yaml",
         },
         "request": {"max_body_size": 1_048_576},
+        "artifacts": {
+            "max_manifest_bytes": 104857600,
+            "reservation_ttl_seconds": 300,
+            "reservation_renew_before_expiry_seconds": 60,
+            "max_upload_duration_seconds": 900,
+            "recovery_interval_seconds": 60.0,
+            "stale_file_seconds": 900,
+            "archive_after_seconds": 259200,
+            "archive_batch_size": 50,
+        },
         "asset_quota": {"max_total_bytes_per_agent": 536870912, "max_total_bytes": 4294967296},
         "asset_upload": {
             "stream_chunk_bytes": 262_144,

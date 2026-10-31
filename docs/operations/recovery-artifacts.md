@@ -135,50 +135,6 @@ paths. Finalization verifies the existing bytes and retries durability operation
 overwrite a bundle, regenerate keys, or rerun economic commands. A reserved incomplete identifier
 is never silently reused. Private keys in these artifacts retain restrictive permissions.
 
-## Explicit offline schema migration
+## Schema versions
 
-The `migrate` command accepts only the complete supported legacy v0 schema. Fresh databases use
-normal v1 bootstrap. Existing v0 databases fail startup with `migration_required`; startup does
-not migrate them automatically. Partial, unknown, future, or already-v1 schemas cannot be passed
-through this v0-to-v1 command.
-
-Stop the source runtime and create its exact pre-migration backup before invoking migration.
-Use its captured inventory and backup ID, with the same private work-root requirements above:
-
-```sh
-uv run --directory "$recovery_project_root/services/db-gateway" \
-  python -m db_gateway_service.recovery_cli migrate \
-  --inventory "$recovery_source_run/recovery-inventory.json" \
-  --backup-root "$recovery_source_run/backups" \
-  --backup-id "$recovery_backup_id" \
-  --work-root "$recovery_work" \
-  --busy-timeout-ms 5000
-```
-
-The timeout is required and accepts integer milliseconds from 0 through 2147483647. Zero requests
-an immediate failure on SQLite lock contention. The command acquires fresh backup/source authority,
-checks the verified read-only clone's schema, integrity, foreign keys and money, then opens the
-existing source for a single transaction. It rejects missing or changed backups, changed source
-bytes, unavailable maintenance locks, and invalid historical financial state before migration.
-It does not coerce money, merge duplicate escrows, regenerate keys, provision funds, or start services.
-Invalid historical records require explicit reconciliation outside this fixed migration.
-
-Success is JSON with `operation: migrate` and a result containing `applied: true`, `schema_version: 1`,
-`observation: committed_v1_verified`, exact backup/manifest identity, a plan checksum, and a retained
-`evidence_path`. The result follows both in-transaction validation and a fresh read-only validation
-after the writer closes. The schema metadata records the exact pre-migration backup provenance.
-Artifact-v1 `migration_eligible` remains false: the separate artifact verifier does not authorize
-migrations, even after a source has successfully migrated.
-
-Any commit exception exits nonzero with `error: commit_outcome_uncertain`. Its safe details report
-`committed_v1_observed`, `not_applied_v0_observed`, `inconsistent_state_observed`, or `unreadable_state`.
-An observed v1 state does not turn an uncertain commit into success. Post-commit verification or
-evidence failures are also nonzero. Retain the exact source, backup and available evidence; inspect
-the reported state before selecting recovery actions. The command never retries a commit implicitly
-or claims rollback after a possibly completed commit.
-
-Migration evidence is written once, without replacement, as a private `0600` file in the retained
-leased scratch directory. Its reported path remains usable after the operation closes. Evidence-write
-failures preserve the original failure; if no trustworthy evidence path could be published, the
-failure report omits that path. Use the ordinary backup restore command to inspect the preserved v0
-snapshot at a separate target; it does not overwrite the source or prove operational recovery.
+There is no schema migration. The Gateway initialises a fresh database with the current catalog (`current_v6`) and refuses any older or partial catalog at startup with `database_reset_required`; the error details carry the reset command (`just stop-all && rm -f <db> <db>-wal <db>-shm && just start-all`). All data is treated as disposable test data; a cold backup made with `just backup` is the only supported way to carry state across a reset.

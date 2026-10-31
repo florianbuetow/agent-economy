@@ -58,6 +58,10 @@ class _DeadlineEvaluator:
         await asyncio.Event().wait()
 
 
+async def _idle_loop(_interval: float) -> None:
+    await asyncio.Event().wait()
+
+
 class _TaskManager:
     def __init__(self, **_kwargs: object) -> None:
         pass
@@ -87,6 +91,16 @@ def _settings(lock_path: Path) -> SimpleNamespace:
             timeout_seconds=1,
         ),
         platform=SimpleNamespace(agent_config_path=str(lock_path.parent / "agents.yaml")),
+        artifacts=SimpleNamespace(
+            max_manifest_bytes=104857600,
+            reservation_ttl_seconds=300,
+            reservation_renew_before_expiry_seconds=60,
+            max_upload_duration_seconds=900,
+            recovery_interval_seconds=60.0,
+            stale_file_seconds=900,
+            archive_after_seconds=259200,
+            archive_batch_size=50,
+        ),
         assets=SimpleNamespace(
             storage_path=str(lock_path.parent / "assets"),
             max_file_size=1024,
@@ -124,7 +138,7 @@ def _patch_dependencies(monkeypatch: pytest.MonkeyPatch, lock_path: Path) -> Non
     monkeypatch.setattr(lifespan_module, "AgentFactory", _Factory)
     monkeypatch.setattr(lifespan_module, "load_operator_asset_authority", lambda _path: object())
     monkeypatch.setattr(lifespan_module, "IdentityClient", lambda **_kwargs: _Closable())
-    monkeypatch.setattr(lifespan_module, "BankClient", lambda **_kwargs: _Closable())
+    monkeypatch.setattr(lifespan_module, "SettlementBankClient", lambda **_kwargs: _Closable())
     monkeypatch.setattr(lifespan_module, "TaskDbClient", lambda **_kwargs: _Store())
     monkeypatch.setattr(lifespan_module, "EscrowCoordinator", lambda **_kwargs: object())
     monkeypatch.setattr(
@@ -134,7 +148,16 @@ def _patch_dependencies(monkeypatch: pytest.MonkeyPatch, lock_path: Path) -> Non
     )
     monkeypatch.setattr(lifespan_module, "DeadlineEvaluator", _DeadlineEvaluator)
     monkeypatch.setattr(
-        lifespan_module, "AssetManager", lambda **_kwargs: SimpleNamespace(close=lambda: None)
+        lifespan_module,
+        "AssetManager",
+        lambda **_kwargs: SimpleNamespace(
+            close=lambda: None, configure_artifacts=lambda *_args, **_kwargs: None
+        ),
+    )
+    monkeypatch.setattr(
+        lifespan_module,
+        "ArtifactMaintenance",
+        lambda *_args, **_kwargs: SimpleNamespace(run_periodic=_idle_loop),
     )
     monkeypatch.setattr(lifespan_module, "TaskManager", _TaskManager)
 
