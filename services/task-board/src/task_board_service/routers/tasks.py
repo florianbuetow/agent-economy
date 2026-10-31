@@ -387,7 +387,10 @@ async def get_task(task_id: str) -> dict[str, Any]:
     task = await state.task_manager.get_task(task_id)
     store = cast("PrepublicationStore", state.store)
     manifest = store.get_task_input_manifest(task_id)["input_manifest"]
+    asset_manager = state.asset_manager
+    binding = None if asset_manager is None else asset_manager.submission_binding(task_id)
     return {
         **task,
         "input_manifest": None if manifest is None else public_input_manifest(manifest),
+        "submission_binding": binding,
     }

@@ -299,7 +299,14 @@ async def test_llm_judge_uses_fresh_nonce_and_states_evidence_is_data() -> None:
         "reasoning": "r",
     }
     completion = AsyncMock(return_value={"choices": [{"message": {"content": json.dumps(reply)}}]})
-    judge = LLMJudge(judge_id="judge-0", model="m", temperature=0.0, api_base=None, api_key=None)
+    judge = LLMJudge(
+        judge_id="judge-0",
+        model="m",
+        temperature=0.0,
+        api_base=None,
+        api_key=None,
+        timeout_seconds=5.0,
+    )
     with patch("court_service.judges.llm_judge.litellm.acompletion", new=completion):
         await judge.evaluate(_context(_INJECTION))
         await judge.evaluate(_context(_INJECTION))

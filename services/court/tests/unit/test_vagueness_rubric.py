@@ -69,6 +69,7 @@ class TestVaguenessRubricReachesTheLLMCall:
             judge_id="judge-0",
             model="test-model",
             temperature=0.0,
+            timeout_seconds=5.0,
             api_base=None,
             api_key=None,
         )

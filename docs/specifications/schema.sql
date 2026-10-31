@@ -1,7 +1,3 @@
--- Runtime schema loaded by the DB Gateway on a fresh database (config: database.schema_path).
--- Generated from db_gateway_service/schema_resources: current_v6.sql, task_operations_v3.sql,
--- publication_v6.sql, task_effect_recovery_v5.sql, artifacts_v6.sql. Edit those, not this file.
-
 -- Agent Task Economy — Unified SQLite Schema v6 base
 -- Single file: data/economy.db
 -- Table prefix per service domain
@@ -1819,4 +1815,16 @@ CREATE TABLE board_artifact_cutover (
     created_at_us INTEGER NOT NULL CHECK (typeof(created_at_us)='integer' AND created_at_us BETWEEN 0 AND 9223372036854775807),
     completed_at_us INTEGER CHECK (completed_at_us IS NULL OR (typeof(completed_at_us)='integer' AND completed_at_us BETWEEN 0 AND 9223372036854775807)),
     CHECK ((cutover_state='completed' AND completed_at_us IS NOT NULL) OR (cutover_state!='completed' AND completed_at_us IS NULL))
+) WITHOUT ROWID;
+
+-- Q-M2 accepted-bid pricing: the immutable pricing-rule version each job's terms were
+-- established under. Written in the same transaction as the task contract; later
+-- rule changes add a version and never reinterpret an existing job. Only the
+-- contract-creating writers insert rows; nothing updates or deletes them.
+CREATE TABLE board_task_pricing (
+    task_id TEXT PRIMARY KEY NOT NULL
+            CHECK (typeof(task_id) = 'text' AND length(CAST(task_id AS BLOB)) > 0),
+    pricing_rule_version INTEGER NOT NULL
+            CHECK (typeof(pricing_rule_version) = 'integer' AND pricing_rule_version = 1),
+    FOREIGN KEY (task_id) REFERENCES board_tasks(task_id) ON UPDATE RESTRICT ON DELETE RESTRICT
 ) WITHOUT ROWID;

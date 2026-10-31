@@ -270,7 +270,9 @@ def test_generated_full_runtime_builds_exhaustive_deduplicated_inventory(
     assert (
         keypairs["gateway-identity"].registration_requirement is RegistrationRequirement.FORBIDDEN
     )
-    assert len(keypairs) == 13
+    # 13 base keypairs plus the two non-math classifier workers.
+    assert {"classbot_llm", "classbot_keyword"} <= set(keypairs)
+    assert len(keypairs) == 15
     assert {record.config_id for record in inventory.process_ownership} == {
         *SERVICE_ORDER,
         None,

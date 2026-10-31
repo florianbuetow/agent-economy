@@ -129,7 +129,7 @@ def test_open_task_nonposter_never_requests_authorized_bids(
     e2e_page.route("**/api/proxy/tasks/t-task6/bids", record_unexpected_request)
 
     e2e_page.goto(f"{e2e_server}/task.html?task_id=t-task6")
-    e2e_page.locator("#phase-content .card").wait_for()
+    e2e_page.locator("#phase-content .card").first.wait_for()
 
     assert requests == []
     assert e2e_page.locator(".phase-step.active").get_attribute("data-phase") == "1"
@@ -162,12 +162,12 @@ def test_open_task_poster_sees_explicit_bid_load_failure(
     e2e_page.route("**/api/events/stream?**", lambda route: route.fulfill(status=204, body=""))
 
     e2e_page.goto(f"{e2e_server}/task.html?task_id=t-task6")
-    e2e_page.locator("#phase-content .card").wait_for()
+    e2e_page.locator("#phase-content .card").first.wait_for()
     e2e_page.locator(".bid-load-error").wait_for()
 
     assert e2e_page.locator(".phase-step.active").get_attribute("data-phase") == "1"
     assert "1 bid received" in e2e_page.locator("#phase-content").inner_text()
     assert e2e_page.locator(".bid-load-error").count() == 1
-    assert "unavailable" in e2e_page.locator(".bid-load-error").inner_text().lower()
+    assert "could not be loaded" in e2e_page.locator(".bid-load-error").inner_text().lower()
     assert e2e_page.locator(".bid-row").count() == 0
     assert e2e_page.locator(".btn-accept-bid").count() == 0

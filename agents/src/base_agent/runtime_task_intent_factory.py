@@ -57,9 +57,10 @@ def _mutation_intent(
     frozen_task_facts: JsonObject,
     native_arguments: JsonObject,
     result_facts: JsonObject,
+    protocol_version: int,
 ) -> NewTaskIntent:
     native_request: JsonObject = {
-        "protocol_version": 1,
+        "protocol_version": protocol_version,
         "task_id": task_id,
         "command": action,
         "expected_status": source_status,
@@ -191,6 +192,7 @@ def acceptance_intent(
             "reward": reward,
             "bid_amount": bid_amount,
         },
+        protocol_version=1,
     )
 
 
@@ -207,6 +209,12 @@ def submission_intent(
     escrow_id = _text(task, "escrow_id")
     reward = _integer(task, "accepted_reward", minimum=1)
     bid_amount = _integer(task, "accepted_bid_amount", minimum=1)
+    binding = _submission_binding(task, task_id)
+    native_arguments: JsonObject = {"worker_id": worker_id}
+    if binding is not None:
+        # Governed task: the submit is protocol 2, bound to the accepted terms the
+        # task read reported, so the frozen request hash covers the binding too.
+        native_arguments = {"worker_id": worker_id, **binding}
     return _mutation_intent(
         task_id=task_id,
         slot="submission",
@@ -227,9 +235,11 @@ def submission_intent(
             "escrow_id": escrow_id,
             "accepted_reward": reward,
             "selected_bid_amount": bid_amount,
+            "submission_binding": binding,
         },
-        native_arguments={"worker_id": worker_id},
+        native_arguments=native_arguments,
         result_facts={"worker_id": worker_id},
+        protocol_version=1 if binding is None else 2,
     )
 
 
@@ -266,6 +276,9 @@ def review_intent(
             "worker_id": worker_id,
             "reward": reward,
             "effect_result_reference": operation_id,
+            "accepted_price": bid_amount,
+            "worker_payment": bid_amount,
+            "poster_refund": reward - bid_amount,
         }
         public_arguments: JsonObject = {
             "task_id": task_id,
@@ -311,4 +324,35 @@ def review_intent(
         },
         native_arguments=native_arguments,
         result_facts=result_facts,
+        protocol_version=1,
     )
+
+
+def _submission_binding(task: Mapping[str, object], task_id: str) -> JsonObject | None:
+    """The governed submission binding from the task read, or None for protocol 1."""
+    raw = task.get("submission_binding")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict) or set(raw) != {
+        "manifest_id",
+        "accepted_binding_kind",
+        "accepted_binding_sha256",
+    }:
+        raise RuntimeIntentError("invalid_input", "submission_binding is malformed")
+    manifest_id = raw["manifest_id"]
+    kind = raw["accepted_binding_kind"]
+    digest = raw["accepted_binding_sha256"]
+    if (
+        manifest_id != f"manifest-submission-{task_id}"
+        or not isinstance(kind, str)
+        or not kind
+        or not isinstance(digest, str)
+        or len(digest) != 64
+        or any(char not in "0123456789abcdef" for char in digest)
+    ):
+        raise RuntimeIntentError("invalid_input", "submission_binding is invalid")
+    return {
+        "manifest_id": manifest_id,
+        "accepted_binding_kind": kind,
+        "accepted_binding_sha256": digest,
+    }

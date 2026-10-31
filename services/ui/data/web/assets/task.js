@@ -471,16 +471,28 @@
     var html = '';
     var effect = financialEffect(task);
 
-    // A ruling alone is not proof that either payout happened.
-    if (effect && effect.receipt_state === 'confirmed' && effect.outcome === 'split' &&
+    // A ruling alone is not proof that either payout happened: only a confirmed
+    // receipt is. Prefer the receipt's own amounts (accepted-bid pricing pays the
+    // accepted price and refunds the rest of the budget); without them, derive the
+    // split from the accepted price the way the Gateway does.
+    var workerPayout = null;
+    var posterPayout = null;
+    var confirmed = effect && effect.receipt_state === 'confirmed';
+    if (confirmed && Number.isSafeInteger(task.worker_payment) && Number.isSafeInteger(task.poster_refund)) {
+      workerPayout = task.worker_payment;
+      posterPayout = task.poster_refund;
+    } else if (confirmed && effect.outcome === 'split' &&
         task.dispute && task.dispute.ruling && Number.isSafeInteger(task.reward) && task.reward > 0 &&
         Number.isInteger(task.dispute.ruling.worker_pct) &&
         task.dispute.ruling.worker_pct >= 0 && task.dispute.ruling.worker_pct <= 100) {
-      var ruling = task.dispute.ruling;
+      var price = Number.isSafeInteger(task.accepted_price) && task.accepted_price > 0 ?
+        task.accepted_price : task.reward;
       // Match the Bank's integer floor and give the exact remainder to the poster.
-      var workerPayout = Number(BigInt(task.reward) * BigInt(ruling.worker_pct) / 100n);
-      var posterPayout = task.reward - workerPayout;
-      html += '<div class="ruling-card"><div class="ruling-header">' +
+      workerPayout = Number(BigInt(price) * BigInt(task.dispute.ruling.worker_pct) / 100n);
+      posterPayout = task.reward - workerPayout;
+    }
+    if (workerPayout !== null) {
+      html += '<div class="ruling-card settlement-card"><div class="ruling-header">' +
         '<span class="gavel">&#9878;&#65039;</span><span class="ruling-title">Settlement</span>' +
         '</div><div class="ruling-body"><div class="ruling-payout">' +
         '<div class="payout-box"><div class="payout-agent">' + agentLink(task.poster.agent_id, task.poster.name) + ' (Poster)</div><div class="payout-amount" style="color:var(--green)">' + posterPayout + ' &copy;</div></div>' +

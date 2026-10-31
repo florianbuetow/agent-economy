@@ -75,18 +75,9 @@ This amendment supersedes historical flat-response, split-amount and caller fina
 expectations below. Existing authorization, atomicity and monetary assertions retain their intent
 under the new request/receipt contract; unrelated domain commands are unaffected.
 
-Runtime migration reconciliation (root18): `tests/runtime/test_migration_live_workload.py` and
-`test_migration_process_crash.py` construct synthetic v0 history from an isolated live workload.
-Their domain-row snapshot must use the frozen v0/v1 table set, retaining exact rowid, storage-type
-and sqlite_sequence assertions. The five v2 receipt/observation sidecars do not belong to that
-synthetic legacy fixture and cannot be selected/copied as rowid-based v0 tables. This does not
-authorize a production downgrade or discard receipt ownership from a real v2 database.
-Retain the original explicit v0-to-v1 `migrate` result, row preservation and both process-death
-barriers. Before restarting the current v2-only service, create and verify a new backup and execute
-the separate `migrate-v1-to-v2` command. Assert exact v2 readiness, historical ownership/markers and
-unchanged legacy domain rows before signed continuation. Do not chain migrations implicitly,
-relax startup admission, skip barriers or change the frozen v1 target into v2. Root18's three
-`no such column: rowid` failures are fixture-contract drift, not new product-red proof.
+Runtime migration tests were retired with the legacy migration CLI (2026-10-31): the Gateway
+creates only the current schema and refuses any other at startup, so no v0/v1/v2 history
+fixture or migrate command remains to test.
 
 Use the [financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md) for native
 operation identity and historical observation semantics. Existing valid fixtures must explicitly

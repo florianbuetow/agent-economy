@@ -796,6 +796,8 @@ class IsolatedRuntime:
         for service in self.services:
             config = source_configs[service]
             _mapping_section(config, "server")["port"] = self.ports[service]
+            # Test runs always bind loopback, whatever LAN host the shipped config uses.
+            _mapping_section(config, "server")["host"] = "127.0.0.1"
             _mapping_section(config, "logging")["directory"] = str(self.run_dir / "logs")
             _mapping_section(config, "telemetry")["enabled"] = False
             if service in {"db-gateway", "task-board", "ui"}:

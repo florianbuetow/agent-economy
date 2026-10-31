@@ -102,6 +102,7 @@ class JudgeConfig(BaseModel):
     api_base: str | None = None
     api_key_env: str | None = None
     temperature: float | None = None
+    timeout_seconds: float | None = None
 
 
 class JudgesConfig(BaseModel):

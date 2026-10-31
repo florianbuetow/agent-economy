@@ -396,7 +396,7 @@ async def test_public_ruling_uses_native_claim_and_actual_receipt(
     assert operation["effect_state"] == "succeeded"
     assert operation["effect_result_reference"] == operation_id
     assert operation["result"]["reward"] == accepted["reward"] == 100
-    assert bid.amount == 90
+    assert bid.amount == 100
     assert money.await_count == 1
     assert _operation_rows(gateway_db_path, setup.task_id) == operations_before_replay
     assert _lifecycle_events(gateway_db_path, setup.task_id, "task.ruled") == events_before_replay

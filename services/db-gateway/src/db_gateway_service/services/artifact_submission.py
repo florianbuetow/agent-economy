@@ -118,7 +118,9 @@ def freeze_submission_manifest(
         (manifest_id,),
     ).fetchone()
     if manifest is None:
-        raise _error("manifest_not_found", "Submission manifest not found", 404)
+        # The draft manifest is created by the first upload, so a missing manifest
+        # means nothing was uploaded.
+        raise _error("no_assets", "At least one ready artifact is required", 400)
     if (
         str(manifest[0]) != request.task_id
         or str(manifest[1]) != "submission"

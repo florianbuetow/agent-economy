@@ -305,3 +305,24 @@ async def test_v1_task_read_reports_null_input_manifest(
     detail = await client.get(f"/tasks/{task_id}")
     assert detail.status_code == 200, detail.text
     assert detail.json()["input_manifest"] is None
+
+
+@pytest.mark.usefixtures("input_store")
+async def test_task_read_exposes_submission_binding_only_after_acceptance(
+    client: AsyncClient, alice_keypair: Keypair, bob_keypair: Keypair
+) -> None:
+    task_id, _publication_id = await _published_with_input(client, alice_keypair)
+    open_detail = (await client.get(f"/tasks/{task_id}")).json()
+    assert open_detail["submission_binding"] is None
+
+    bid = await submit_bid(client, bob_keypair, BOB_AGENT_ID, task_id)
+    assert bid.status_code == 201, bid.text
+    accepted = await accept_bid(
+        client, alice_keypair, ALICE_AGENT_ID, task_id, bid.json()["bid_id"]
+    )
+    assert accepted.status_code in {200, 202}, accepted.text
+
+    binding = (await client.get(f"/tasks/{task_id}")).json()["submission_binding"]
+    assert binding["manifest_id"] == f"manifest-submission-{task_id}"
+    assert binding["accepted_binding_kind"]
+    assert len(binding["accepted_binding_sha256"]) == 64

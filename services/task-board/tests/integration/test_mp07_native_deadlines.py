@@ -34,7 +34,7 @@ _WINDOW_SECONDS = 20
 _EXECUTION_SECONDS = 60
 _REVIEW_SECONDS = 60
 _REWARD = 100
-_BID_AMOUNT = 90
+_BID_AMOUNT = 100  # full-budget price: autoapproval releases the whole escrow
 
 
 class _MutableClock:

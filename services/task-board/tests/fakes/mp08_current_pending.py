@@ -43,8 +43,6 @@ if TYPE_CHECKING:
     import pytest
     from httpx import AsyncClient
 
-    from task_board_service.services.task_db_client import TaskDbClient
-
 
 PLATFORM_AGENT_ID = "a-platform-test-id"
 _ORIGINAL_POSTING_RUN_BATCH = PostingRecovery.run_batch
@@ -259,22 +257,16 @@ async def create_submitted_task(
         },
     )
     assert accepted.status_code == 200, accepted.text
-    store = cast("TaskDbClient", get_app_state().store)
-    store.insert_asset(
-        {
-            "asset_id": f"asset-{uuid.uuid4()}",
-            "task_id": task_id,
-            "uploader_id": worker_id,
-            "filename": "work.txt",
-            "content_type": "text/plain",
-            "size_bytes": 4,
-            "storage_path": f"assets/{task_id}/work.txt",
-            "content_hash": "c" * 64,
-            "uploaded_at": "2026-10-22T05:00:02Z",
-        },
-        expected_lifecycle_version=1,
-        max_files_per_task=10,
+    # Submission is governed: upload one real ready artifact through the public route.
+    upload_token = make_jws_token(
+        worker_key, worker_id, {"action": "upload_asset", "task_id": task_id}
     )
+    upload = await client.post(
+        f"/tasks/{task_id}/assets",
+        headers={"Authorization": f"Bearer {upload_token}"},
+        files={"file": ("work.txt", b"work", "text/plain")},
+    )
+    assert upload.status_code == 201, upload.text
     submitted = await post_signed(
         client,
         path=f"/tasks/{task_id}/submit",
@@ -291,7 +283,7 @@ async def create_submitted_task(
     assert submitted.status_code == 200, submitted.text
     assert submitted.json()["status"] == "submitted"
     assert submitted.json()["review_deadline"] is not None
-    return SubmittedTask(task_id, poster_id, worker_id, escrow_id, bid_id, 90, reward)
+    return SubmittedTask(task_id, poster_id, worker_id, escrow_id, bid_id, 100, reward)
 
 
 def persisting_release(
@@ -538,7 +530,7 @@ deadline_evaluation:
     def identity_factory(**_kwargs: object) -> AsyncMock:
         return identity
 
-    monkeypatch.setattr("task_board_service.core.lifespan.BankClient", bank_factory)
+    monkeypatch.setattr("task_board_service.core.lifespan.SettlementBankClient", bank_factory)
     monkeypatch.setattr("task_board_service.core.lifespan.IdentityClient", identity_factory)
     completed_ticks: asyncio.Queue[None] = asyncio.Queue()
 

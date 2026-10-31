@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from task_board_service.core.state import get_app_state
+from tests.integration.conftest import make_jws_token
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -79,12 +80,14 @@ async def _create_accepted_task(
     worker_key: Ed25519PrivateKey,
 ) -> tuple[_TaskSetup, _BidSetup, dict[str, Any]]:
     setup = await _create_open_task(client, gateway_client, poster_key)
+    # A full-budget price keeps settlement a whole release (or the Court's
+    # percentage split); accepted-bid pricing is covered by the Gateway tests.
     bid = await _create_bid(
         client,
         worker_key,
         setup,
         operation_id=f"op-{uuid.uuid4()}",
-        amount=90,
+        amount=100,
     )
     response = await _post_signed(
         client,
@@ -272,7 +275,18 @@ async def test_public_submission_replays_original_native_result_after_response_l
         poster_keypair[0],
         worker_keypair[0],
     )
-    _insert_owned_asset(setup)
+    # The public route submits the governed manifest, so upload a real ready artifact.
+    upload_token = make_jws_token(
+        worker_keypair[0],
+        setup.worker_id,
+        {"action": "upload_asset", "task_id": setup.task_id},
+    )
+    upload = await client.post(
+        f"/tasks/{setup.task_id}/assets",
+        headers={"Authorization": f"Bearer {upload_token}"},
+        files={"file": ("completed-work.txt", b"completed work", "text/plain")},
+    )
+    assert upload.status_code == 201, upload.text
     operation_id = f"op-{uuid.uuid4()}"
     payload = {
         "action": "submit_deliverable",
@@ -317,8 +331,11 @@ async def test_public_submission_replays_original_native_result_after_response_l
         "lifecycle_version": 2,
         "event_id": operation["event_id"],
         "worker_id": setup.worker_id,
+        "manifest_id": f"manifest-submission-{setup.task_id}",
+        "manifest_sha256": operation["result"]["manifest_sha256"],
     }
     assert len([row for row in operations if row[0] == operation_id]) == 1
+    assert len(operation["result"]["manifest_sha256"]) == 64
     assert len(events) == 1
 
 
@@ -392,7 +409,7 @@ async def test_public_approval_claims_before_bank_and_replays_one_fixed_reward_r
     assert operation["effect_state"] == "succeeded"
     assert operation["effect_result_reference"] == operation_id
     assert operation["result"]["reward"] == accepted["reward"] == 100
-    assert bid.amount == 90
+    assert bid.amount == 100
     assert release.await_count == 1
     assert _operation_rows(gateway_db_path, setup.task_id) == before_replay_operations
     assert (

@@ -104,7 +104,7 @@ def _seed_task(
         "open",
         0,
         worker_id,
-        {"bid_id": bid_id, "bidder_id": worker_id, "amount": 50},
+        {"bid_id": bid_id, "bidder_id": worker_id, "amount": 100},
     )
     assert bid["operation_state"] == "completed"
     accepted = claim(
@@ -117,9 +117,10 @@ def _seed_task(
             "worker_id": worker_id,
             "escrow_id": escrow_id,
             "reward": 100,
-            "bid_amount": 50,
+            "bid_amount": 100,
         },
     )
+    # A full-budget bid keeps the approval a plain release to the worker.
     assert accepted["operation_state"] == "completed"
     writer.record_asset(
         {

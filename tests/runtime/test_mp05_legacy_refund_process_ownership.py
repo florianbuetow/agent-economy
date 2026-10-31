@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from tests.runtime import test_mp05_legacy_refund_process_restart as proof
+from tests.runtime import owned_board_process as proof
 
 pytestmark = pytest.mark.integration
 

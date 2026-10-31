@@ -63,9 +63,10 @@ def test_agent_page_leaderboard_row_navigates_to_profile(e2e_page: Page) -> None
 def test_agent_profile_page_renders_known_agent(e2e_page: Page) -> None:
     """?agent_id=a-alice renders that agent's real profile data."""
     e2e_page.goto(f"{e2e_page.base_url}/agent.html?agent_id=a-alice")  # type: ignore[attr-defined]
-    e2e_page.wait_for_load_state("networkidle")
+    # A profile keeps a live event stream open, so wait for content, not network idle.
 
     e2e_page.wait_for_selector(".profile-name", timeout=5000)
+    e2e_page.wait_for_selector(".quality-row", timeout=5000)
     name = e2e_page.locator(".profile-name").text_content()
     assert name and name.strip() == "Alice"
 
@@ -93,7 +94,7 @@ def test_agent_profile_page_unknown_agent_shows_not_found(e2e_page: Page) -> Non
 def test_agent_profile_back_link_returns_to_leaderboard(e2e_page: Page) -> None:
     """The back link on a profile view returns to the plain leaderboard URL."""
     e2e_page.goto(f"{e2e_page.base_url}/agent.html?agent_id=a-alice")  # type: ignore[attr-defined]
-    e2e_page.wait_for_load_state("networkidle")
+    # A profile keeps a live event stream open, so wait for content, not network idle.
     e2e_page.wait_for_selector("#back-to-leaderboard", timeout=5000)
 
     e2e_page.locator("#back-to-leaderboard").click()

@@ -14,7 +14,7 @@ from court_service.config import (
     PlatformConfig,
     Settings,
 )
-from court_service.core.lifespan import _build_judges
+from court_service.core.lifespan import build_judges
 from court_service.judges.base import MockJudge
 
 
@@ -69,9 +69,9 @@ def _settings_with(mock_worker_pct: int, max_file_bytes: int) -> Settings:
 
 @pytest.mark.unit
 def test_mock_judge_uses_configured_worker_pct() -> None:
-    """_build_judges must source the MockJudge fixed worker_pct from config."""
+    """build_judges must source the MockJudge fixed worker_pct from config."""
     settings = _settings_with(mock_worker_pct=37, max_file_bytes=65536)
-    judges = _build_judges(settings)
+    judges = build_judges(settings)
     assert len(judges) == 1
     judge = judges[0]
     assert isinstance(judge, MockJudge)
@@ -115,3 +115,5 @@ def test_shipped_profile_is_a_three_judge_openai_compatible_panel() -> None:
         assert judge.api_base is not None
         assert judge.api_key_env is not None
         assert judge.temperature is not None
+        assert judge.timeout_seconds is not None
+        assert judge.timeout_seconds > 0

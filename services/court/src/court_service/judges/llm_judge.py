@@ -66,7 +66,8 @@ def _extract_json(text: str) -> dict[str, Any]:
     if start == -1 or end == -1 or end <= start:
         msg = f"No JSON object found in LLM response: {text[:200]}"
         raise ValueError(msg)
-    return cast("dict[str, Any]", json.loads(stripped[start : end + 1]))
+    # strict=False tolerates raw newlines inside strings; the fields are validated next.
+    return cast("dict[str, Any]", json.loads(stripped[start : end + 1], strict=False))
 
 
 class LLMJudge(Judge):
@@ -79,10 +80,12 @@ class LLMJudge(Judge):
         temperature: float,
         api_base: str | None,
         api_key: str | None,
+        timeout_seconds: float,
     ) -> None:
         self._judge_id = judge_id
         self._model = model
         self._temperature = temperature
+        self._timeout_seconds = timeout_seconds
         self._api_base = api_base
         self._api_key = api_key
 
@@ -100,6 +103,7 @@ class LLMJudge(Judge):
                 temperature=self._temperature,
                 api_base=self._api_base,
                 api_key=self._api_key,
+                timeout=self._timeout_seconds,
             )
             content = _extract_content(response)
             findings = parse_judge_output(_extract_json(content))

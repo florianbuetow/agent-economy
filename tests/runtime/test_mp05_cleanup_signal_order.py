@@ -18,11 +18,11 @@ from scripts.isolated_test_runtime import (
     _release_owned_launch,
     _start_owned_launch,
 )
+from tests.runtime import owned_board_process as legacy_refund
 from tests.runtime import test_mp05_demo_cli_restart as demo_cli
 from tests.runtime import test_mp05_demo_native_restart as demo_native
 from tests.runtime import test_mp05_demo_other_action_restart as demo_other_action
 from tests.runtime import test_mp05_demo_setup_restart as demo_setup
-from tests.runtime import test_mp05_legacy_refund_process_restart as legacy_refund
 
 if TYPE_CHECKING:
     from pathlib import Path

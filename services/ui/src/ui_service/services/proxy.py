@@ -196,17 +196,19 @@ def _validate_operation(
         or (operation["result"] is not None and not isinstance(operation["result"], dict))
     ):
         _invalid_response(error_code)
-    source_status, target_status, effect_kind = {
-        "accept_bid": ("open", "accepted", "none"),
-        "approve_task": ("submitted", "approved", "bank_release"),
-        "dispute_task": ("submitted", "disputed", "court_claim"),
-        "cancel_task": ("open", "cancelled", "bank_release"),
-        "submit_deliverable": ("accepted", "submitted", "none"),
+    # Approval pays the accepted price: a full-budget price is a release, a lower
+    # price is an amount split that refunds the rest of the budget to the poster.
+    source_status, target_status, effect_kinds = {
+        "accept_bid": ("open", "accepted", {"none"}),
+        "approve_task": ("submitted", "approved", {"bank_release", "bank_split"}),
+        "dispute_task": ("submitted", "disputed", {"court_claim"}),
+        "cancel_task": ("open", "cancelled", {"bank_release"}),
+        "submit_deliverable": ("accepted", "submitted", {"none"}),
     }[command]
     if (
         operation["source_status"] != source_status
         or operation["target_status"] != target_status
-        or operation["effect_kind"] != effect_kind
+        or operation["effect_kind"] not in effect_kinds
         or operation["source_lifecycle_version"] != expected_lifecycle_version
         or operation["target_lifecycle_version"] != expected_lifecycle_version + 1
         or (

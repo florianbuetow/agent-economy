@@ -456,3 +456,28 @@ def test_ruling_pays_floor_of_accepted_price_and_refunds_rest(
             assert locked == 0
             assert audit_task_contracts(writer.connection).contracts_clean
             assert audit_receipt_ownership(writer.connection).ownership_clean
+
+
+def test_publication_records_the_current_pricing_rule_version(writer: DbWriter) -> None:
+    """Q-M2: every job's terms carry the pricing rule they were established under."""
+    parties = _submitted_task(writer, 60)
+    row = writer.connection.execute(
+        "SELECT pricing_rule_version FROM board_task_pricing WHERE task_id = ?",
+        (parties.task_id,),
+    ).fetchone()
+    assert row is not None
+    assert row[0] == 1
+
+
+def test_settlement_refuses_a_job_without_a_recorded_pricing_rule(writer: DbWriter) -> None:
+    """A job whose pricing rule is unknown is never settled under a guessed rule."""
+    parties = _submitted_task(writer, 60)
+    writer.connection.execute("PRAGMA foreign_keys = OFF")
+    writer.connection.execute(
+        "DELETE FROM board_task_pricing WHERE task_id = ?", (parties.task_id,)
+    )
+    writer.connection.commit()
+    writer.connection.execute("PRAGMA foreign_keys = ON")
+    with pytest.raises(ServiceError) as raised:
+        _claim(writer, _BIDDING_US, _approval_payload(parties, timeout=False, writer=writer))
+    assert raised.value.error == "task_contract_invalid"

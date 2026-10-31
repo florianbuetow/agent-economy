@@ -33,8 +33,8 @@ from db_gateway_service.services.task_operation_court import (
 )
 from db_gateway_service.services.task_operation_guards import assert_no_competing_task_work
 from db_gateway_service.settlement_terms import (
-    ruling_worker_amount,
     settlement_request_fields,
+    worker_amount_for,
 )
 from db_gateway_service.task_operation_requests import (
     COMMAND_TARGET_STATUS,
@@ -469,9 +469,11 @@ class TaskOperationWriter:
     @staticmethod
     def _task_contract(cursor: sqlite3.Cursor, task_id: str) -> dict[str, Any]:
         row = cursor.execute(
-            "SELECT lifecycle_version, bidding_cutoff_us, acceptance_cutoff_us, "
-            "execution_cutoff_us, review_cutoff_us, accepted_reward, accepted_bid_amount "
-            "FROM board_task_contracts WHERE task_id = ?",
+            "SELECT c.lifecycle_version, c.bidding_cutoff_us, c.acceptance_cutoff_us, "
+            "c.execution_cutoff_us, c.review_cutoff_us, c.accepted_reward, "
+            "c.accepted_bid_amount, p.pricing_rule_version "
+            "FROM board_task_contracts AS c "
+            "LEFT JOIN board_task_pricing AS p ON p.task_id = c.task_id WHERE c.task_id = ?",
             (task_id,),
         ).fetchone()
         if row is None:
@@ -489,6 +491,7 @@ class TaskOperationWriter:
             "review_cutoff_us": None if row[4] is None else int(row[4]),
             "accepted_reward": None if row[5] is None else int(row[5]),
             "accepted_bid_amount": None if row[6] is None else int(row[6]),
+            "pricing_rule_version": None if row[7] is None else int(row[7]),
         }
 
     @staticmethod
@@ -1041,11 +1044,22 @@ class TaskOperationWriter:
         if request.command not in {"approve_task", "auto_approve", "record_ruling"}:
             return 0
         accepted_price = contract["accepted_bid_amount"]
-        if not isinstance(accepted_price, int):
-            raise _service_error("task_contract_invalid", "Accepted price is missing", 500, {})
-        if request.command == "record_ruling":
-            return ruling_worker_amount(accepted_price, int(request.argument("worker_pct")))
-        return accepted_price
+        rule_version = contract["pricing_rule_version"]
+        if not isinstance(accepted_price, int) or not isinstance(rule_version, int):
+            raise _service_error(
+                "task_contract_invalid", "Accepted price or pricing rule is missing", 500, {}
+            )
+        worker_pct = (
+            int(request.argument("worker_pct")) if request.command == "record_ruling" else None
+        )
+        try:
+            return worker_amount_for(
+                rule_version, accepted_price=accepted_price, worker_pct=worker_pct
+            )
+        except ValueError as exc:
+            raise _service_error(
+                "task_contract_invalid", "Unknown pricing rule version", 500, {}
+            ) from exc
 
     @staticmethod
     def _require_bid_within_budget(amount: int, task: dict[str, Any]) -> None:

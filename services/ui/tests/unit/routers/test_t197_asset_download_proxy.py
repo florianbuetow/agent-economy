@@ -27,6 +27,10 @@ def _configure_agent(response: httpx.Response) -> Any:
     agent._request_raw = AsyncMock(  # type: ignore[attr-defined]
         return_value=response
     )
+    # The operator transport binds the signer too; a download must never sign.
+    agent._sign_jws = MagicMock(  # type: ignore[attr-defined]
+        side_effect=AssertionError("asset download must not sign a token")
+    )
     return agent
 
 

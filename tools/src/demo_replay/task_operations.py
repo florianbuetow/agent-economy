@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from service_auth.financial_responses import SQLITE_MAX_INTEGER, validate_operation_id
 
@@ -181,6 +181,25 @@ def completed_bid(intent: TaskIntent, value: object) -> dict[str, Any]:
     return dict(value)
 
 
+_BINDING_KEYS = frozenset({"manifest_id", "accepted_binding_kind", "accepted_binding_sha256"})
+
+
+def _submission_binding(intent: TaskIntent) -> dict[str, str] | None:
+    """The governed-submission binding observed when the submit intent was frozen."""
+    if intent.action != "submit_deliverable":
+        return None
+    binding = intent.observed_task().get("submission_binding")
+    if binding is None:
+        return None
+    _require(
+        isinstance(binding, dict)
+        and set(binding) == _BINDING_KEYS
+        and all(isinstance(binding[key], str) and binding[key] for key in _BINDING_KEYS),
+        "submission binding",
+    )
+    return cast("dict[str, str]", binding)
+
+
 def _native_arguments(intent: TaskIntent) -> dict[str, Any]:
     observed = intent.observed_task()
     args = intent.arguments()
@@ -193,7 +212,7 @@ def _native_arguments(intent: TaskIntent) -> dict[str, Any]:
             "bid_amount": args["bid_amount"],
         }
     if intent.action == "submit_deliverable":
-        return {"worker_id": intent.actor_id}
+        return {"worker_id": intent.actor_id, **(_submission_binding(intent) or {})}
     common = {
         "poster_id": observed["poster_id"],
         "worker_id": observed["worker_id"],
@@ -219,8 +238,10 @@ def completed_mutation(intent: TaskIntent, value: object) -> tuple[dict[str, Any
     command, source, target = PHASES[intent.action]
     version = intent.expected_lifecycle_version
     arguments = _native_arguments(intent)
+    binding = _submission_binding(intent)
+    protocol_version = 1 if binding is None else 2
     native = {
-        "protocol_version": 1,
+        "protocol_version": protocol_version,
         "task_id": intent.task_id,
         "command": command,
         "expected_status": source,
@@ -230,7 +251,7 @@ def completed_mutation(intent: TaskIntent, value: object) -> tuple[dict[str, Any
         "arguments": arguments,
     }
     expected = {
-        "protocol_version": 1,
+        "protocol_version": protocol_version,
         "operation_id": intent.operation_id,
         "task_id": intent.task_id,
         "command": command,
@@ -260,6 +281,15 @@ def completed_mutation(intent: TaskIntent, value: object) -> tuple[dict[str, Any
         "lifecycle_version": version + 1,
         "event_id": event_id,
     }
+    if binding is not None:
+        expected_result["manifest_id"] = binding["manifest_id"]
+        manifest_sha256 = result.get("manifest_sha256")
+        _require(
+            isinstance(manifest_sha256, str)
+            and len(manifest_sha256) == 64
+            and all(char in "0123456789abcdef" for char in manifest_sha256),
+            "result manifest_sha256",
+        )
     for key, item in expected_result.items():
         _require(type(result.get(key)) is type(item) and result.get(key) == item, f"result {key}")
     expected_worker = intent.arguments().get("worker_id", intent.observed_task().get("worker_id"))
@@ -316,19 +346,39 @@ def _validate_effect(
     }
     _require(operation.get("effect_state") == "succeeded", "effect is not confirmed")
     if intent.action == "approve":
-        financial = {
-            "request_version": 1,
-            "operation_kind": "escrow_release",
-            "escrow_id": arguments["escrow_id"],
-            "recipient_account_id": arguments["worker_id"],
-            "source_reference": arguments["source_reference"],
-        }
+        # Approval pays the accepted price; below the budget it is an amount split.
+        price = intent.observed_task().get("accepted_price")
+        _require(type(price) is int, "accepted price")
+        full_budget = price == arguments["reward"]
+        financial: dict[str, Any] = (
+            {
+                "request_version": 1,
+                "operation_kind": "escrow_release",
+                "escrow_id": arguments["escrow_id"],
+                "recipient_account_id": arguments["worker_id"],
+                "source_reference": arguments["source_reference"],
+            }
+            if full_budget
+            else {
+                "request_version": 1,
+                "operation_kind": "escrow_split",
+                "escrow_id": arguments["escrow_id"],
+                "worker_account_id": arguments["worker_id"],
+                "poster_account_id": arguments["poster_id"],
+                "worker_amount": price,
+                "source_reference": arguments["source_reference"],
+            }
+        )
         expected_intent = {
             "financial_request": financial,
             "financial_request_sha256": _hash(financial),
             "expected_escrow": escrow,
         }
-        _require(operation.get("effect_kind") == "bank_release", "approval effect kind")
+        _require(
+            operation.get("effect_kind") == ("bank_release" if full_budget else "bank_split"),
+            "approval effect kind",
+        )
+        _require(result.get("worker_payment") == price, "approval worker payment")
         _require(operation.get("effect_operation_id") == intent.operation_id, "financial identity")
         reference = intent.operation_id
         _require(

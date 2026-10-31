@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import sqlite3
 from typing import TYPE_CHECKING
 
 import pytest
 from service_commons.exceptions import ServiceError
 
-from db_gateway_service.schema import SchemaState, load_schema_sql
 from db_gateway_service.services.task_operation_writer import TaskOperationWriter
 from db_gateway_service.task_operation_requests import (
     TaskOperationRequest,
@@ -24,6 +22,7 @@ from tests.fakes.mp09_v6_artifact_fixture import (
 )
 
 if TYPE_CHECKING:
+    import sqlite3
     from pathlib import Path
 
 pytestmark = pytest.mark.unit
@@ -232,69 +231,3 @@ def _seed_true_v5(connection: sqlite3.Connection) -> None:
         (_TASK_ID, NOW_US + 60_000_000, NOW_US + 120_000_000, NOW_US + 3_600_000_000),
     )
     _record_asset(connection)
-
-
-def test_true_v5_without_governance_tables_allows_pre_cutover_protocol_v1(
-    tmp_path: Path,
-) -> None:
-    connection = sqlite3.connect(tmp_path / "true-v5.sqlite3")
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys=ON")
-    try:
-        connection.executescript(load_schema_sql(SchemaState.CURRENT_V5))
-        _seed_true_v5(connection)
-        governance_tables = connection.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name IN "
-            "('board_task_artifact_contracts','board_artifact_cutover')"
-        ).fetchall()
-        assert governance_tables == []
-        result = _writer(connection).claim_operation(_request(8), BOARD_KID)
-        assert result["operation_state"] == "completed"
-        assert result["target_status"] == "submitted"
-    finally:
-        connection.close()
-
-
-def test_stored_v1_replay_precedes_interrupted_cutover_and_current_state_checks(
-    tmp_path: Path,
-) -> None:
-    connection = sqlite3.connect(tmp_path / "v1-replay-interrupted-cutover.sqlite3")
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys=ON")
-    try:
-        connection.executescript(load_schema_sql(SchemaState.CURRENT_V5))
-        _seed_true_v5(connection)
-        request = _request(9)
-        original = _writer(connection).claim_operation(request, BOARD_KID)
-
-        # This marker proves stored replay precedes governance checks. It is not migration proof.
-        connection.execute(
-            "CREATE TABLE board_artifact_cutover ("
-            "singleton INTEGER PRIMARY KEY NOT NULL,cutover_state TEXT NOT NULL,"
-            "source_schema_version INTEGER NOT NULL,migration_plan_sha256 TEXT NOT NULL,"
-            "source_row_set_sha256 TEXT NOT NULL,created_at_us INTEGER NOT NULL,"
-            "completed_at_us INTEGER) WITHOUT ROWID"
-        )
-        connection.execute(
-            "INSERT INTO board_artifact_cutover (singleton,cutover_state,source_schema_version,"
-            "migration_plan_sha256,source_row_set_sha256,created_at_us,completed_at_us) "
-            "VALUES (1,'copying',5,?,?,?,NULL)",
-            ("c" * 64, "d" * 64, NOW_US),
-        )
-        connection.execute("UPDATE board_tasks SET status='approved' WHERE task_id=?", (_TASK_ID,))
-        connection.execute(
-            "UPDATE board_task_contracts SET lifecycle_version=3 WHERE task_id=?", (_TASK_ID,)
-        )
-        connection.commit()
-
-        replay = _writer(connection).claim_operation(request, BOARD_KID)
-        assert replay == original
-        assert replay["protocol_version"] == 1
-        operation_count = connection.execute(
-            "SELECT COUNT(*) FROM board_task_operations WHERE operation_id=?",
-            (request.operation_id,),
-        ).fetchone()
-        assert operation_count is not None
-        assert tuple(operation_count) == (1,)
-    finally:
-        connection.close()

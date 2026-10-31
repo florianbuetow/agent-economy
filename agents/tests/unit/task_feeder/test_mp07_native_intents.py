@@ -351,6 +351,9 @@ def _new_intent(
             "worker_id": _WORKER_ID,
             "reward": 100,
             "effect_result_reference": operation_id,
+            "accepted_price": selected_amount,
+            "worker_payment": selected_amount,
+            "poster_refund": 100 - selected_amount,
         }
     else:
         assert reason is not None
@@ -417,14 +420,27 @@ def _completion_ack(intent: FrozenTaskIntent) -> dict[str, object]:
     effect_result_reference: str | None = None
     effect_intent: dict[str, object] | None = None
     if intent.action == "approve_task":
-        financial = {
-            "request_version": 1,
-            "operation_kind": "escrow_release",
-            "escrow_id": _ESCROW_ID,
-            "source_reference": f"task:{_TASK_ID}:approved",
-            "recipient_account_id": _WORKER_ID,
-        }
-        effect_kind = "bank_release"
+        price = frozen["selected_bid_amount"]
+        financial = (
+            {
+                "request_version": 1,
+                "operation_kind": "escrow_release",
+                "escrow_id": _ESCROW_ID,
+                "source_reference": f"task:{_TASK_ID}:approved",
+                "recipient_account_id": _WORKER_ID,
+            }
+            if price == frozen["accepted_reward"]
+            else {
+                "request_version": 1,
+                "operation_kind": "escrow_split",
+                "escrow_id": _ESCROW_ID,
+                "worker_account_id": _WORKER_ID,
+                "poster_account_id": _POSTER_ID,
+                "worker_amount": price,
+                "source_reference": f"task:{_TASK_ID}:approved",
+            }
+        )
+        effect_kind = "bank_release" if price == frozen["accepted_reward"] else "bank_split"
         effect_state = "succeeded"
         effect_operation_id = intent.operation_id
         effect_result_reference = intent.operation_id

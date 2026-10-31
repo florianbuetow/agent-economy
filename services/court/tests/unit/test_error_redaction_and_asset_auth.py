@@ -39,6 +39,7 @@ async def test_llm_judge_failure_message_is_generic() -> None:
         judge_id="judge-0",
         model="m",
         temperature=0.0,
+        timeout_seconds=5.0,
         api_base="http://10.0.0.5:1234",
         api_key="sk-live-SECRET",
     )

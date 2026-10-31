@@ -252,7 +252,7 @@ async def _create_submitted_task(
             "expected_lifecycle_version": 0,
             "task_id": task_id,
             "bidder_id": worker_id,
-            "amount": 90,
+            "amount": 100,
         },
     )
     bid_response = await client.post(f"/tasks/{task_id}/bids", json={"token": bid_token})

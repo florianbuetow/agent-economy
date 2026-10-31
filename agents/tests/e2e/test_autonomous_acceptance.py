@@ -180,7 +180,8 @@ async def test_feeder_autonomously_accepts_lowest_bid(
         completed = await feeder.get_task(task_id)
         _task_version(completed, expected_status="approved")
 
+        # Accepted-bid pricing: the winning worker is paid its own bid, not the budget.
         low_balance_after = (await worker_low.get_balance())["balance"]
-        assert low_balance_after == low_balance_before + REWARD
+        assert low_balance_after == low_balance_before + LOW_BID
     finally:
         await _close_agents_and_journals(agents_to_close, journal_stack)

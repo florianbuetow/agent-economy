@@ -15,7 +15,6 @@ from service_commons.exceptions import ServiceError
 
 from db_gateway_service import task_time
 from db_gateway_service.artifact_upload_requests import ArtifactPolicy, parse_artifact_policy
-from db_gateway_service.config import get_settings
 from db_gateway_service.core.state import get_app_state
 from db_gateway_service.routers.helpers import parse_json_body
 from db_gateway_service.services.input_manifest_reader import read_task_input_manifest
@@ -47,7 +46,7 @@ def _context(
             clock_us=task_time.utc_now_us,
             artifact_policy=policy,
             current_task_board_caller_kid=(
-                get_settings().board_effect_recovery.current_task_board_caller_kid
+                get_app_state().board_effect_recovery.current_task_board_caller_kid
             ),
         ),
         caller_kid,

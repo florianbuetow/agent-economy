@@ -215,8 +215,9 @@ def test_startup_rejects_historical_pending_publication_with_missing_actor_witho
             current_task_board_caller_kid="gateway-task-board",
         )
 
-    assert raised.value.error == "database_publication_contract_failed"
-    assert raised.value.details["finding_codes"] == ["publication_actor_missing"]
+    # V6 publications carry a foreign key to identity_agents, so the missing actor is
+    # refused by the integrity admission before the publication contract audit runs.
+    assert raised.value.error == "database_integrity_failed"
     with sqlite3.connect(path) as connection:
         assert tuple(connection.iterdump()) == before
 

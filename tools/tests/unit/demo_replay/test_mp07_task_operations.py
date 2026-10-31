@@ -103,6 +103,7 @@ def _task(status: str, version: object) -> dict[str, Any]:
         "review_cutoff_us": 1792324980000000 if submitted else None,
         "accepted_reward": 100 if accepted else None,
         "accepted_bid_amount": 90 if accepted else None,
+        "accepted_price": 90 if accepted else None,
         "pending_transition": None,
         "legacy_reconciliations": [],
     }
@@ -153,12 +154,14 @@ def _response(action: str, operation_id: str, version: int, *, pending: bool) ->
             "reward": 100,
         }
         if action == "approve":
-            effect_kind, effect_id, reference = "bank_release", operation_id, operation_id
+            effect_kind, effect_id, reference = "bank_split", operation_id, operation_id
             financial = {
                 "request_version": 1,
-                "operation_kind": "escrow_release",
+                "operation_kind": "escrow_split",
                 "escrow_id": "esc-demo",
-                "recipient_account_id": "a-bob",
+                "worker_account_id": "a-bob",
+                "poster_account_id": "a-alice",
+                "worker_amount": 90,
                 "source_reference": f"task:{TASK}:approved",
             }
             intent = {
@@ -167,7 +170,9 @@ def _response(action: str, operation_id: str, version: int, *, pending: bool) ->
                 "expected_escrow": escrow,
             }
             arguments["source_reference"] = f"task:{TASK}:approved"
-            result["reward"] = 100
+            result.update(
+                {"reward": 100, "accepted_price": 90, "worker_payment": 90, "poster_refund": 10}
+            )
         else:
             effect_kind, reference = "court_claim", "clm-demo"
             arguments["reason"] = REASON
